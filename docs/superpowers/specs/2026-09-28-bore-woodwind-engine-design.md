@@ -1920,7 +1920,9 @@ at the full amount 9, and at twice it 10.7, which is why the audition's ladder i
   0.6, and at the full amount the fuzz test's SAX corner (step 1, LIP .33, BREATH .23) read 2.2e-3
   against the bar of 1e-3. A LOOP therefore carries the bell and no rasp, and closes exactly as merged
   (the fuzz test's worst seam is unchanged at 5.06e-4). SOLO LOOP is less raspy than the one-shots it
-  is named after. A bent loop wants a crossfaded wrap, which is R2's.
+  is named after. A bent loop wants a crossfaded wrap, which is R2's. *(Superseded by Round 1.5: a LOOP carries the
+  rasp now, and this diagnosis was wrong. The wrap needed no crossfade; the loop's pitch match was loose and the
+  rasp multiplied what it left by about four.)*
 - **The classifier's margin, again.** All seven SAX one-shot presets still read PERC or LOOP; the closest
   to the SNARE line are GROWL 0.47, LOW HONK 0.46 and BITE 0.45 (line 0.5), where the bell alone left
   0.46, 0.45 and 0.46. HIGH STAB's attack-burst count rose from 5 to 7, with flatness 0.19 against a
@@ -1993,7 +1995,8 @@ reads PERC or LOOP at its low notes (a high-frequency share of 0.36-0.47; two of
   as a LOOP went from 3 (the merged reed, no rasp) to **19-21** with the voicing in the loop, with or without the
   9 kHz roll-off, with fuzz corners at 3.2e-3 and 5.8e-3 against a bar of 1e-3. A LOOP carries the bell and neither the rasp nor the voicing,
   so SOLO LOOP and the loops of the roster are darker than the one-shots they are named after. A bent, lifted loop
-  wants a crossfaded wrap; it is the same R2 item as the rasp's.
+  wants a crossfaded wrap; it is the same R2 item as the rasp's. *(Superseded by Round 1.5: a LOOP carries both now,
+  the voicing as a plain full-strength filter, and no crossfade was needed.)*
 - **The classifier's margin is thin and it is not monotonic.** With the voicing the SAX one-shot presets read
   0.27-0.46 (BITE 0.46, HIGH STAB 0.39, SMOOTH 0.40, LOW HONK 0.43, GROWL 0.40, line 0.5), but a preset's reading
   moves up and down by 0.03-0.05 with CHIFF (LOW HONK: 0.43 at 0.15, 0.50 at 0.45) and the next sound design step can
@@ -2089,13 +2092,123 @@ AIRY REED 0.21, SMOOTH 0.16); PAD REED, the loop, reads LOOP.
 - **Still open, from the same measurements:** BREATH-linked brightness (the real centroid moved 327 to 711 Hz from
   soft to loud across a player's dynamics; ours moves within a note, not across the knob), the noise floor between
   the harmonics, and the crossfaded wrap that would let a LOOP carry the rasp and the voicing (so loops are still
-  darker than the one-shots).
+  darker than the one-shots). *(The last is done in Round 1.5, without a crossfade.)*
 
 **Verification.** `BoreTest`: a note at the default knobs speaks within 0.16 s at C3 and 0.12 s elsewhere, and the
 seed saves at least 0.05 s at all five; CHIFF's onset shortens at every step (0.40 to 0.04 s) and a BREATH 0 note
 is still slow; a flute blown with the seed forced on is the flute without it, to the sample; the voicing's bloom
 (the 4 kHz lift halfway up is under a quarter of the plateau's, the plateau at least +7.5 dB and -13.5 dB). Each
 guard was broken alone and a test named it; the list is in the pull request.
+
+### Round 1.5: the loop — 2026-10-04
+
+The attack was kept (every seeded clip got KEEP, no swell did), and the same listening had one more note, on the kit
+card: "Solo loop sounds like a cheap keyboard". A LOOP carried the bell and nothing after, because Rounds 1.2 and 1.3
+had taken the rasp and the voicing out of loops (they made loops fail to close) and put it down to a wrap that "wants
+a crossfade". Measured, that diagnosis was wrong; it was two other things.
+
+**What was measured.** A probe over 50 SAX loops (the 25 notes, once at the default knobs and once at a random LIP,
+BREATH and CHIFF), seam by `Keys.seamError`, bar 1e-3:
+
+| the loop's chain | mean seam | corners over the bar of 50 |
+|---|---|---|
+| bell only (what shipped) | 3.8e-5 | 0 |
+| + the rasp | 1.4e-4 | 1 |
+| + the voicing | 5.1e-4 | 6 |
+| + both | 8.9e-4 | 11 |
+
+*The voicing's follower.* The one-shot's voicing sets its shelves per 64-sample block from a block RMS of the tone, and
+a low note's block RMS ripples within its cycle (a 64-sample block against a 339-sample period at C3): the gain is a
+faint time-varying EQ that is not periodic in the loop's length. The worst voicing-only loops were the notes near a
+multiple of the 689 Hz block rate: 138, 175 and 234 Hz read 4.6e-3, 2.5e-3 and 1.8e-3 with the follower against
+5.2e-4, 7.3e-4 and 1.3e-4 with the same shelves held at full strength. A LOOP is filed by length (the classifier calls
+anything over 1.5 s a LOOP), so it has no head window to guard and takes the plateau as a plain time-invariant filter
+(`Bore.voice` with `follow` off).
+
+*The pitch match.* With the raw stretch shifted by the best fractional lag (the later copy read between its samples),
+the seam falls three to five orders of magnitude (3.0e-5 to 2.9e-9 at C3, 2.7e-5 to 2.0e-6 at the next step): the loop
+was nearly periodic, in a period that was not its length. The offset needed was 0.05-0.2 frames at 44.1 kHz at the low
+notes, while the loop's own convergence test read 0.3 ppm (0.026 frames) or less everywhere. The test used the same
+estimator as the correction: a parabola through the correlations at three lags, over the first quarter second. A
+parabola through a sharp peak is off by up to a quarter of a raw sample (the ladder's comment already said so), and
+the quarter second is a mean over a note that is still settling (a low reed creeps 0.1-0.2% in amplitude over the loop,
+and its period with it), while the click depends on the few milliseconds after the join alone. The rasp and the voicing
+weight the edges and the high harmonics, where an offset shows first: the rasp multiplied the seam by about four, the
+voicing by about ten, and the two together by thirty to forty.
+
+**What shipped.** `measureLoopSamples`'s last rung is read at the join: a golden-section search for the lag over the
+correlation with the later copy read between its samples by a cubic, weighted by a Hann window of at least four periods
+(and 2048 raw samples) starting at the join. Two attempts before it are kept so they are not tried again. The first took
+the search to a quarter second and fixed nothing (the estimator and the click disagreed by the same 0.2 frames: the
+average against the join). The second read the join over a plain window of two periods or 2048 samples and fixed the low
+notes at once (step 4: 1.0e-5 to 1.8e-10) while breaking many of the high ones to 7e-4-1.4e-3 with the bell alone: a
+plain sum over a stretch that is not a whole number of periods is tilted by its two ends (the slope of the correlation
+at the true lag is half the difference of the signal's energy at the ends), and 2048 samples is 2.15 periods at 185 Hz.
+The Hann weight takes the tilt out. With it, the 50 loops after four passes: none over the bar with the bell only, none
+with the voicing at full strength, none with the rasp and the voicing (the production chain), worst seam 8.1e-6, and the
+independent offset at the join 0.014 frames or less. The estimate converges up to 2100 ppm off on the first render, under 6
+ppm on the second and under 0.15 ppm on the third, where it stops: the floor is the float the tuned pitch is carried in.
+
+*The hard corner and the retry.* One corner failed on the full chain: the loosest, hardest reed at C3 (LIP 0, BREATH 1)
+read 4.7e-3 (bell alone 9.6e-5, voicing alone 1.0e-3, rasp alone 4.9e-4). It was still creeping 0.14% in amplitude, and
+its shape with it, at 400 periods of settle. Settled 1.5 times as long it reads 3.0e-5, twice as long 1.7e-5; the two
+neighbours that also failed (LIP 0.1 and BREATH 0.8) fall to 2.4e-5 and 1.5e-6 at twice the settle. So a loop whose first seam is not under a
+tenth of the bar is settled twice as long and the better of the two is kept (the Organ's rule, "one retry with twice the
+settle"), and `renderLoop` still refuses one over the bar. The attempts are counted (`LoopRender.attempts`) so a test
+can pin where the retry fires.
+
+**Measured on the whole grid.** The production loop on 125 SAX corners (TUNE 0, .25, .5, .75, 1 by LIP by BREATH at the
+same five values) and 27 FLUTE corners, the old code and the new:
+
+| | old: median / worst | old: over a tenth of the bar | new: median / worst | new: over a tenth of the bar |
+|---|---|---|---|---|
+| SAX, 125 corners | 2.2e-5 / 1.2 | 19 | 1.4e-6 / 2.2 | 4 |
+| FLUTE, 27 corners | 6.4e-6 / 4.4e-5 | 0 | 4.6e-7 / 1.6e-5 | 0 |
+
+The new SAX loops carry the rasp and the voicing and close about sixteen times better at the median. Eight corners
+needed the retry (all at TUNE 0 or .25, C3 to F#3). **Four SAX corners never close, on the old code too** (TUNE .25 LIP 1
+BREATH .75; TUNE 0 LIP .25 BREATH .75; TUNE 0 LIP .5 BREATH 1; TUNE .25 LIP .25 BREATH .5: seams 0.7-1.2 old, 0.8-2.2
+new, with the bell alone as well): their signal is not periodic over the loop's length, and a shift or a longer settle
+cannot change that. `renderLoop` refuses them as it did. This is the "2 of 117" the Round 1.2 note recorded, on a
+different grid; it wants its own investigation (a period-doubled or quasi-periodic regime, where an even number of
+periods might close it) and is not this round's.
+
+**How bright, and a finding about the one-shot.** The loop is brighter than its one-shot at the same knobs, by 7.6 dB of
+bite at C3 and less higher up (loop 13.8, 6.5, 2.5 against one-shot 6.2, 3.9, 1.8 at C3, C4, C5; the bell-only loop read
+-17.2, -13.4, -9.7). The reason is in the one-shot: its voicing follows the note's loudness and the ceiling it is
+measured against is the attack's accent, so its plateau reaches about two-thirds of the shelves, where a loop, steady
+from its first sample, takes them whole. Whole is the prototype the owner kept (the static -20 and +18 filter on the
+rendered reed); the shipped one-shot is milder than what was kept, and the real tenor's bite (about +8.5 dB at this
+pitch, an estimate from the band table in Round 1.3, not measured the way ours is) is between the two. `LOOP_VOICE_SHARE` is 1; the audition puts 0.67 beside it,
+which matches the one-shot at C3 with the default knobs and sits under it at the SOLO LOOP's note (+2.2 dB against its
+one-shot's +4.5; whole is +7.8; before, -14.3).
+
+**What it cost, said plainly.**
+
+- **Not heard.** The numbers say a loop carries the one-shot's rasp and voicing; whether it stops sounding like a cheap
+  keyboard is the audition's question (the new first section: BELL ONLY, TWO-THIRDS and SHIPPED for the SOLO LOOP and the
+  PAD REED, the defaults at three notes, each with its one-shot).
+- **A loop is brighter than its one-shot at low notes** (above), by choice of the constant and the prototype's strength,
+  and the one-shot may be the one that is low.
+- **The four corners that never close are still there.**
+- **Render time was not measured.** The retry doubles the settle at about 6% of the SAX grid corners (8 of 125, four of
+  them the unclosable ones, which also pay it); the estimator's extra work (about twenty correlations of a window of at
+  most 44,100 samples per rung) is small against a render.
+- **The first rounds' account was wrong, and is marked so** in place (Round 1.2's "A bent loop wants a crossfaded wrap",
+  Round 1.3's note, and its "Still open"). No crossfade was needed.
+- **Two kit pads were regenerated:** A16 SOLO LOOP, and A12's FLUTE steady loop, whose pitch match is better too.
+
+**Verification.** `BoreTest`: a LOOP's bite is over the one-shot's floors, no darker than its one-shot and 25, 15 and 10
+dB over the bell-only loop at C3, C4, C5 (measured 31, 20, 12); the voicing at full strength from the first sample
+(`follow` off: 20.5 dB down at 130 Hz and at least 6 up at 4 kHz in the first 30 ms, against the one-shot's near-unity); the hard
+corner needs and gets the retry (attempts 2, seam under a tenth of the bar) and an ordinary one does not; the estimator on
+synthetic waves, whose lags are known exactly (a fractional period to 0.01 sample at four periods, and a drifting period
+read at the join, 0.03 from it and 0.32 from the quarter-second average); the claims test's bound is a twentieth of the
+bar (the hard corner reads 1.7e-5 of it) and the fuzz test's 100 loops read 2.95e-5 at worst. Ten guards were each
+broken alone and a named test failed: no rasp and no voicing in the loop (the bite test), the follower in the loop (the
+claims test), no retry and a retry always (the retry test), no join-local last rung (the join test), a plain window
+(the precision, claims and fuzz tests), no sub-sample refinement (five tests), the full-strength branch off (the
+voicing test and the claims test) and a loose convergence tolerance (four tests).
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 

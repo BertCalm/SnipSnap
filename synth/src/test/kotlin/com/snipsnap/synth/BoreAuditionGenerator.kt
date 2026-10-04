@@ -16,16 +16,23 @@ import kotlin.math.roundToInt
  * nowhere else, then copies the listening page from the test resources. Run via
  * `./gradlew :synth:generateBoreAudition`, then publish the folder as the listening artifact.
  *
- * The first section is the reed's attack (round 1.4, after the voicing: "let's fix the attack speed next"): the same
+ * The first section is the reed's loop (round 1.5, after the kit card's note "Solo loop sounds like a cheap keyboard"):
+ * the SOLO LOOP and the PAD REED with the bell and nothing after (the first rounds' chain, built with this round's
+ * pitch match: their timbre, not their wrap), with the rasp and two thirds of the
+ * voicing (the one-shot's bite at C3 with the default knobs) and the whole of it (shipped), and the loops of the defaults at three notes,
+ * with the one-shot of the same note beside them. Each clip's description carries the bite and the seam measured on
+ * that very render.
+ *
+ * The second section is the reed's attack (round 1.4, after the voicing: "let's fix the attack speed next"): the same
  * notes with the tongue's seed off (the swell, 0.44 s to 80% at C3), light, as shipped and strong, then CHIFF's
  * range and a soft breath at C3, then the two presets a fast attack could have tipped over. Every description
  * carries the onset measured on that very note, so the page says what the clip is, not what it was meant to be.
  *
- * The second section is the reed's voicing (round 1.3, after the last round's answer: a prototype filter
+ * The third section is the reed's voicing (round 1.3, after the last round's answer: a prototype filter
  * on the rasped reed, measured against a real tenor, with the deeper cut and the brighter lift both kept):
  * the same SAX phrase and three presets with no voicing (what the last round merged), a milder one, the
  * shipped one and a stronger one, so its strength is a choice made by ear. The clips are one-shots; a LOOP
- * carries the presence bell and no rasp or voicing ([Bore.RASP_DRIVE], [Bore.VOICE_LOW_DB]).
+ * carries the rasp and the voicing too since round 1.5 ([Bore.RASP_DRIVE], [Bore.VOICE_LOW_DB]).
  *
  * Nothing in BORE has been heard by anyone when this is first run: it is the gate that decides
  * whether the measured engine is a woodwind. The page says so.
@@ -58,6 +65,60 @@ object BoreAuditionGenerator {
         val sections = StringBuilder()
 
         val phrase = listOf(7f / 24, 0.5f, 19f / 24)
+        // The reed's loop: what it was, what it is, and the one-shot it should be a held version of.
+        val loopDir = File(root, "LOOP")
+        fun loopClip(id: String, name: String, what: String, macros: Map<String, Float>, carry: Boolean, share: Float): Clip {
+            val m = Bore.settled(macros + mapOf("HOLD" to 1f), BoreVoice.SAX)
+            val r = Bore.renderLoopMeasured(BoreVoice.SAX, m, carry = carry, voiceShare = share)
+            val snip = Snip(r.loop, channels = 1, sampleRate = Dsp.RATE)
+            WavWriter.write(File(loopDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+            count++
+            val bite = BoreMeasure.biteDb(snip, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")), fromSec = 0.5f)
+            return Clip(id, name, "%s: bite %+.1f dB, seam %.0e".format(java.util.Locale.ROOT, what, bite, r.seam))
+        }
+        fun shotClip(id: String, name: String, macros: Map<String, Float>): Clip {
+            val m = Bore.settled(macros + mapOf("HOLD" to 0.5f), BoreVoice.SAX)
+            val snip = Bore.render(BoreVoice.SAX, m)
+            WavWriter.write(File(loopDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+            count++
+            val bite = BoreMeasure.biteDb(snip, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")), fromSec = 0.5f)
+            return Clip(id, name, "the one-shot of this note, for reference: bite %+.1f dB".format(java.util.Locale.ROOT, bite))
+        }
+        val matched = 0.67f
+        fun threeWays(tag: String, macros: Map<String, Float>) = listOf(
+            loopClip("${tag}_0_before", "BELL ONLY", "the first rounds' chain, the bell and nothing after (built with this round's pitch match, so it is their timbre, not their wrap)", macros, carry = false, share = Bore.LOOP_VOICE_SHARE),
+            loopClip("${tag}_1_matched", "TWO-THIRDS", "the rasp and %.2f of the voicing: the one-shot's bite at C3 with the default knobs, under it elsewhere".format(java.util.Locale.ROOT, matched), macros, carry = true, share = matched),
+            loopClip("${tag}_2_full", "SHIPPED", "the rasp and the voicing whole", macros, carry = true, share = Bore.LOOP_VOICE_SHARE),
+        )
+        val solo = BorePresets.forVoice(BoreVoice.SAX).first { it.name == "SOLO LOOP" }.macros
+        val padReed = BorePresets.forVoice(BoreVoice.SAX).first { it.name == "PAD REED" }.macros
+        val soloClips = threeWays("solo", solo) + shotClip("solo_3_oneshot", "ONE-SHOT", solo)
+        val padClips = threeWays("pad", padReed) + shotClip("pad_3_oneshot", "ONE-SHOT", padReed)
+        val notes = listOf("C3" to 0f, "C4" to 0.5f, "C5" to 1f)
+        val noteClips = notes.flatMap { (name, tune) ->
+            val m = Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to tune)
+            listOf(
+                loopClip("note_${name.lowercase()}_0_before", "$name BELL ONLY", "the default knobs' loop with the bell and nothing after (this round's pitch match)", m, carry = false, share = Bore.LOOP_VOICE_SHARE),
+                loopClip("note_${name.lowercase()}_1_full", "$name SHIPPED", "the default knobs' loop now", m, carry = true, share = Bore.LOOP_VOICE_SHARE),
+                shotClip("note_${name.lowercase()}_2_oneshot", "$name ONE-SHOT", m),
+            )
+        }
+        sections.append(
+            sectionJson(
+                id = "LOOP", display = "THE SAX'S LOOP", body = "held notes: the kit card's SOLO LOOP sounded like a cheap keyboard, so loops now carry the rasp and the voicing",
+                readout = listOf(
+                    "SOLO LOOP " + DOT + " PAD REED " + DOT + " THE DEFAULTS AT C3, C4, C5",
+                    "REPEAT ON: A LOOP IS TWO SECONDS AND MUST NOT CLICK AT THE WRAP",
+                ),
+                groups = listOf(
+                    Group("SOLO LOOP (THE ONE YOU HEARD AS A CHEAP KEYBOARD)", key = true, clips = soloClips),
+                    Group("PAD REED", key = true, clips = padClips),
+                    Group("THE DEFAULT KNOBS AT THREE NOTES", key = false, clips = noteClips),
+                ),
+            ),
+        )
+        sections.append(",\n")
+
         // The reed's attack: the tongue's seed at four strengths on the same notes, and what CHIFF and BREATH do to it.
         val attackDir = File(root, "ATTACK")
         val attackSteps = listOf<Triple<String, Float?, Pair<String, String>>>(
@@ -292,7 +353,7 @@ object BoreAuditionGenerator {
     /**
      * A one-shot SAX note with the bell and the rasp as shipped and [voicing] on the output: [Bore.Voicing.NONE]
      * is the last round's reed, [Bore.voicingFor] is [Bore.render] exactly (checked above). One-shots only - a
-     * LOOP renders through [Bore.renderLoop], which has the bell and neither the rasp nor the voicing.
+     * LOOP renders through [Bore.renderLoop], which since round 1.5 has the rasp and the voicing as well.
      */
     private fun renderVoiced(macros: Map<String, Float>, voicing: Bore.Voicing): Snip {
         val m = Bore.settled(macros, BoreVoice.SAX)
