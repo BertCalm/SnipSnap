@@ -23,15 +23,20 @@ import kotlin.random.Random
  * - **Design:** `docs/superpowers/specs/2026-10-01-mercury-modal-glass-engine-design.md`.
  * - **Phase-0 record:** `docs/superpowers/plans/2026-10-01-mercury-phase-0-spike.md`.
  *
- * **The object** is a [Modes.Bank] of up to 12 primary modes and 4 vessel modes:
- * - **Primary ratios** are Rayleigh's closed forms. PING and SING use the thin
- *   ring's inextensional bending modes, f_k ∝ k(k²−1)/√(k²+1) (a glass rim).
- *   BLADE uses the free-free beam, β_k², whose first four are
+ * **The object** is a [Modes.Bank] of up to 12 primary modes and 4 vessel modes, and a voice is the
+ * [Geometry] it hangs on (`MercuryGeometry.kt`: the mode table, where the contact and the pickup sit, how
+ * the mass loads each mode, how BEND deforms it, how the vessel is hung):
+ * - **PING and SING** use the thin ring's inextensional bending modes, f_k ∝ k(k²−1)/√(k²+1) (a glass
+ *   rim), Rayleigh's closed form; **BLADE** the free-free beam, β_k², whose first four are
  *   `Modes.METAL_BAR`'s ratios.
- * - **Vessel modes** sit 3.5–7 % from the first four primaries (designed
- *   numbers). They are never struck or rubbed and only gain energy through
- *   the springs, which is what makes COUPLE audible as an exchange rather
- *   than as a gain.
+ * - **EDDY** (R2c) is a rubbed singing bowl: a *measured* table of six doublets (Inácio, Henrique and
+ *   Antunes 2006). **VESSEL** is a thin cylindrical shell, a pipe or a tank, whose table is derived from
+ *   its Love/Sanders energy; each vessel is the quadrature partner of a primary. **SHARD** is a free
+ *   rectangular plate cut a little off square: a converged Rayleigh-Ritz table, dense and irregular. The
+ *   tables are *designed* in the design doc's sense, frozen as numbers with their sources named.
+ * - **Vessel modes** sit near the primaries they hang from (3.5–7 % for the first three voices, wider
+ *   for VESSEL where the loop needs it). They are never struck or rubbed and only gain energy through
+ *   the springs, which is what makes COUPLE audible as an exchange rather than as a gain.
  *
  * **One contact vector** carries both the strike and the friction. RUB moves
  * energy from the one to the other along the same vector, so a tap can seed a
