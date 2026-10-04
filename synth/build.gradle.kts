@@ -407,7 +407,7 @@ tasks.register<JavaExec>("generateBallastAudition") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.BallastAuditionGenerator")
     workingDir = projectDir
-    args("${rootDir}/testkit/ballast-audition")
+    args(providers.gradleProperty("ballastOutput").getOrElse("${rootDir}/testkit/ballast-audition"))
 }
 
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
