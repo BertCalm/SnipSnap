@@ -221,6 +221,8 @@ class DeterminismTest {
             assertContentEquals(shot.render().samples, shot.render().samples, "$voice defaults")
             val moved = MercuryPatch("Canary", voice, mapOf("TUNE" to 0.3f, "BEND" to 0.8f, "RUB" to 0.6f, "WATER" to 0.7f, "GLASS" to 0.2f, "COUPLE" to 0.9f, "HOLD" to 0.2f))
             assertContentEquals(moved.render().samples, moved.render().samples, "$voice moved")
+            val loop = MercuryPatch("Canary", voice, Mercury.defaults(voice) + ("HOLD" to 1f))
+            assertContentEquals(loop.render().samples, loop.render().samples, "$voice LOOP")
         }
     }
 
@@ -241,6 +243,17 @@ class DeterminismTest {
         for (voice in MagnetVoice.entries) {
             val a = MagnetPatch("Canary", voice, Magnet.defaults(voice))
             val b = MagnetPatch("Canary", voice, Magnet.defaults(voice))
+            assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
+
+    // TREMOR seeds its drummers, its bead placement and its fault thresholds from the voice and
+    // the note, and the bead/contact solver is ordered by index. A saved recipe regenerates bit for bit.
+    @Test
+    fun `TREMOR is byte-identical across renders, every voice`() {
+        for (voice in TremorVoice.entries) {
+            val a = TremorPatch("Canary", voice, Tremor.defaults(voice))
+            val b = TremorPatch("Canary", voice, Tremor.defaults(voice))
             assertContentEquals(a.render().samples, b.render().samples, "$voice")
         }
     }

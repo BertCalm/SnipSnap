@@ -38,6 +38,7 @@ class PadRecipeTest {
         MercuryPatch("Ping Test", MercuryVoice.PING, mapOf("GLASS" to 0.4f)),
         GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
+        TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
     )
 
     @Test

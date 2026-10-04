@@ -468,6 +468,16 @@ tasks.register<JavaExec>("generateTerraR1BAudition") {
     args("${rootDir}/testkit/terra-audition", "r1b")
 }
 
+/** Render the TREMOR audition clips, manifest and page under testkit/tremor-audition/. See TremorAuditionGenerator. */
+tasks.register<JavaExec>("generateTremorAudition") {
+    group = "distribution"
+    description = "Render the TREMOR audition clips, manifest and listening page under testkit/tremor-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TremorAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tremor-audition")
+}
+
 /** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */
 tasks.register<JavaExec>("generateValveAudition") {
     group = "distribution"
