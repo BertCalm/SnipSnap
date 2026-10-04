@@ -161,18 +161,18 @@ internal object BowlGeometry : Geometry() {
     /**
      * How far the mass swings a pair apart: its loads are 0.5 +/- 0.5 times this times the mass's reach, so the pair's
      * mean stays one half. At 1 the members swing 2.7% apart, leave the friction's lock range and hop, and the loop stops
-     * closing; 0.6 closed the bottom of the range but missed the bar at five scattered keys, 0.5 closes every key
-     * the probe tried (worst seam 2e-4 against the bar's 1e-3). The WATER bar wants it as high as it goes.
+     * closing. The loop is marginal for this object at every key, and chaotic in it: 0.6 missed the bar at five
+     * scattered keys, 0.5 at C4 or at G4 depending on the WATER curve, 0.45 closes all 25 keys (worst seam 2e-4 against
+     * the bar's 1e-3). The WATER bar (8 cents at 0.05) wants it as high as it goes.
      */
-    @Volatile internal var pairSwing = 0.5
+    const val PAIR_SWING = 0.45
 
     /**
      * EDDY's WATER curve is steeper at the start than the other voices' (0.25): the pair's centre never moves, so the
      * cents come only from the members hopping, and at 0.25 WATER 0.05 added 6 cents against the 8 a listener needs
-     * (0.10 gave 8.8, 0.06 gives about 10). WATER 1 is unchanged by any curve.
+     * (0.04 gives 9.2 cents and 3.4 dB). WATER 1 is unchanged by any curve.
      */
-    @Volatile internal var curve = 0.06
-    override val waterCurve: Double get() = curve
+    override val waterCurve = 0.04
 
     override fun vesselHost(v: Int) = 2 * v
 
@@ -192,7 +192,7 @@ internal object BowlGeometry : Geometry() {
 
     override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double): Double {
         val reach = min(1.0, rho2 / Mercury.RING_ORBIT_LOAD)
-        val swing = 0.5 * pairSwing * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
+        val swing = 0.5 * PAIR_SWING * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
         return if (i % 2 == 0) 0.5 + swing else 0.5 - swing
     }
 
