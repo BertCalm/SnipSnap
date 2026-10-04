@@ -1920,7 +1920,9 @@ at the full amount 9, and at twice it 10.7, which is why the audition's ladder i
   0.6, and at the full amount the fuzz test's SAX corner (step 1, LIP .33, BREATH .23) read 2.2e-3
   against the bar of 1e-3. A LOOP therefore carries the bell and no rasp, and closes exactly as merged
   (the fuzz test's worst seam is unchanged at 5.06e-4). SOLO LOOP is less raspy than the one-shots it
-  is named after. A bent loop wants a crossfaded wrap, which is R2's.
+  is named after. A bent loop wants a crossfaded wrap, which is R2's. *(Superseded by Round 1.5: a LOOP carries the
+  rasp now, and this diagnosis was wrong. The wrap needed no crossfade; the loop's pitch match was loose and the
+  rasp multiplied what it left by about four.)*
 - **The classifier's margin, again.** All seven SAX one-shot presets still read PERC or LOOP; the closest
   to the SNARE line are GROWL 0.47, LOW HONK 0.46 and BITE 0.45 (line 0.5), where the bell alone left
   0.46, 0.45 and 0.46. HIGH STAB's attack-burst count rose from 5 to 7, with flatness 0.19 against a
@@ -1993,7 +1995,8 @@ reads PERC or LOOP at its low notes (a high-frequency share of 0.36-0.47; two of
   as a LOOP went from 3 (the merged reed, no rasp) to **19-21** with the voicing in the loop, with or without the
   9 kHz roll-off, with fuzz corners at 3.2e-3 and 5.8e-3 against a bar of 1e-3. A LOOP carries the bell and neither the rasp nor the voicing,
   so SOLO LOOP and the loops of the roster are darker than the one-shots they are named after. A bent, lifted loop
-  wants a crossfaded wrap; it is the same R2 item as the rasp's.
+  wants a crossfaded wrap; it is the same R2 item as the rasp's. *(Superseded by Round 1.5: a LOOP carries both now,
+  the voicing as a plain full-strength filter, and no crossfade was needed.)*
 - **The classifier's margin is thin and it is not monotonic.** With the voicing the SAX one-shot presets read
   0.27-0.46 (BITE 0.46, HIGH STAB 0.39, SMOOTH 0.40, LOW HONK 0.43, GROWL 0.40, line 0.5), but a preset's reading
   moves up and down by 0.03-0.05 with CHIFF (LOW HONK: 0.43 at 0.15, 0.50 at 0.45) and the next sound design step can
@@ -2089,7 +2092,7 @@ AIRY REED 0.21, SMOOTH 0.16); PAD REED, the loop, reads LOOP.
 - **Still open, from the same measurements:** BREATH-linked brightness (the real centroid moved 327 to 711 Hz from
   soft to loud across a player's dynamics; ours moves within a note, not across the knob), the noise floor between
   the harmonics, and the crossfaded wrap that would let a LOOP carry the rasp and the voicing (so loops are still
-  darker than the one-shots).
+  darker than the one-shots). *(The last is done in Round 1.5, without a crossfade.)*
 
 **Verification.** `BoreTest`: a note at the default knobs speaks within 0.16 s at C3 and 0.12 s elsewhere, and the
 seed saves at least 0.05 s at all five; CHIFF's onset shortens at every step (0.40 to 0.04 s) and a BREATH 0 note

@@ -142,14 +142,16 @@ object Bore {
      * ([RASP_SOFT_SHARE] at the softest): a loose, hard reed rasps, a pinched or soft one stays
      * clean. The drive runs from 1 (a gentle bend) to 1 + [RASP_DRIVE].
      *
-     * **One-shots only.** A LOOP carries the presence bell and no rasp. The bend keeps a periodic
-     * wave periodic, but it flattens the tops and steepens the edges, and an edge is where a
-     * timing error shows: the reed's slow drift over a two-second loop (see the design doc's
-     * "R1, the reed's bite") moves a sine's zero crossing by a hair and a clipped wave's edge by
-     * a step. Measured on the SAX scan (142 corners: the 117
-     * grid and the fuzz set), the corners that do not close as a LOOP went from 3 with no rasp
-     * to 9 at 0.15 of the amount and 11 at 0.6, worst seam past the bar at the fuzz corner.
-     * Closing a bent loop wants a crossfaded wrap, which is R2.
+     * **A LOOP carries it too** (Round 1.5; the first rounds left it out). The bend steepens the
+     * wave's edges, and an edge is where a timing error shows, so the rasp multiplies whatever the
+     * loop's wrap already got wrong by about four. What the wrap got wrong was the loop's pitch
+     * match: the lag was found over a quarter second with a parabola through three correlation
+     * points, which is a mean over a note that is still settling and sits up to a quarter of a raw
+     * sample off a sharp peak, so the true period at the join was 0.05-0.2 frames (at 44.1 kHz) off
+     * while the loop's own convergence test, which used the same parabola, read 0.3 ppm. With the lag
+     * found at the join itself ([measureLoopSamples]), the 50 SAX loops of the probe (the 25 notes at the
+     * defaults and at a random corner) close to 8e-6 at worst with the rasp and the voicing, against
+     * 1.0e-2 before and a bar of 1e-3.
      */
     const val RASP_DRIVE = 3f
     const val RASP_BIAS = 0.4f
@@ -170,6 +172,7 @@ object Bore {
      * ([VOICE_HIGH_DB]). The audition owner heard the cut at -12 (meh) and -20 (keep) and the lift at
      * +12 (meh) and +18 (keep), and cut the version without the rasp; the shipped numbers are the two
      * keeps together. Reed voice only: the flute has its own radiation story and was not measured.
+     * A LOOP carries it at full strength from the first sample ([voice] with `follow` off).
      */
     const val VOICE_LOW_HZ = 200f
     const val VOICE_LOW_DB = -26f
@@ -205,8 +208,25 @@ object Bore {
      * 0.63 (a SNARE).
      * Block by block ([VOICE_HOP] samples) the gains are set and the filters keep their state.
      */
-    internal fun voice(buf: FloatArray, v: Voicing) {
+    internal fun voice(buf: FloatArray, v: Voicing, follow: Boolean = true) {
         if (v.none || buf.isEmpty()) return
+        if (!follow) {
+            // A LOOP's voicing: the plateau of the one-shot's, at full strength from the first sample, as a plain
+            // time-invariant filter. The loudness-following gain above is set per [VOICE_HOP] block from a block
+            // RMS that ripples within a low note's cycle, out of step with the loop's length, so it is a faint
+            // time-varying EQ the wrap cannot repeat: with the follower the loops at 138, 175 and 234 Hz closed at
+            // 4.6e-3, 2.5e-3 and 1.8e-3 against 5.2e-4, 7.3e-4 and 1.3e-4 at full strength. The classifier's
+            // guard that the follower serves (the first 93 ms of a one-shot must not read as a snare) has no
+            // work here: it files anything over 1.5 s as a LOOP by length.
+            val low = Dsp.Biquad()
+            val high = Dsp.Biquad()
+            low.lowShelf(VOICE_LOW_HZ, v.lowDb)
+            high.highShelf(VOICE_HIGH_HZ, v.highDb)
+            val top1 = Dsp.OnePole(RATE)
+            val top2 = Dsp.OnePole(RATE)
+            for (i in buf.indices) buf[i] = top2.lp(top1.lp(high.process(low.process(buf[i])), VOICE_TOP_HZ), VOICE_TOP_HZ)
+            return
+        }
         val hop = VOICE_HOP
         val blocks = (buf.size + hop - 1) / hop
         val toneLp = Dsp.OnePole(RATE)
@@ -511,9 +531,13 @@ object Bore {
 
     /**
      * The most times the loop's pitch is corrected so its whole periods fill its whole frames, and
-     * how close to 1 the measured length over the wanted one must be to stop early. The measure
-     * settles to about 1e-7 (a hundred-thousandth of a cent); three passes left 4e-7 at 262
-     * periods, and the bite bell weights the top partials, where that is a visible seam.
+     * how close to 1 the measured length over the wanted one must be to stop early. The measure,
+     * taken at the join ([measureLoopSamples]), is 1000-2000 ppm off on the first render, 0.4-12 ppm on
+     * the second and under 0.15 ppm on the third, where it stops at about 0.05-0.1 ppm: the floor is the
+     * float the tuned pitch is carried in (6e-8). 0.1 ppm is 0.009 frames over a loop of 88,326, and
+     * the rasp and the voicing, which weight the edges and the top partials, make a seam of that size
+     * visible: three passes of the first, parabolic measure left what read as 0.3 ppm and was 0.05-0.2
+     * frames.
      */
     private const val LOOP_PASSES = 5
     private const val LOOP_CONVERGED = 3e-7
@@ -868,7 +892,7 @@ object Bore {
      * decimator, the DC removed twice. The level and the tail come after, on the
      * kept part ([finish]), so a LOOP's warm-up never counts in its loudness.
      */
-    private fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing): FloatArray {
+    internal fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing, follow: Boolean = true): FloatArray {
         raspBend(raw, rate, rasp)
         Tide.bandLimit(raw, rate)
         val out = Dsp.decimate(raw, RATE)
@@ -885,7 +909,7 @@ object Bore {
             bell.peaking(BITE_HZ, biteDb, BITE_Q)
             for (i in out.indices) out[i] = bell.process(out[i])
         }
-        voice(out, voicing)
+        voice(out, voicing, follow)
         return out
     }
 
@@ -929,31 +953,79 @@ object Bore {
             lag = peakLag(x, from, (centre - LADDER_SPAN).toInt()..(centre + LADDER_SPAN).toInt())
             k = next
         }
-        return lag
+        // The last word is the join's own: a note this long is still settling (a low reed creeps 0.1-0.2% in
+        // amplitude over the loop and its period with it), so the lag that matches the first quarter second to
+        // the same stretch a loop later is an average, and the click depends on none of it but the few
+        // milliseconds right after the join. Measured over those alone, the offset there can be taken to zero;
+        // what the rest of the loop does is a creep nobody hears.
+        val local = maxOf(LOCAL_WINDOW, (4 * onePeriod).toInt())
+        return peakLag(x, from, (lag - 2).toInt()..(lag + 2).toInt(), local)
     }
+
+    /** The shortest stretch after the join the last rung of [measureLoopSamples] reads, in raw samples (11.6 ms at 176.4 kHz; at least four periods). */
+    private const val LOCAL_WINDOW = 2048
 
     /** How many samples either side of its estimate each rung of [measureLoopSamples] searches. */
     private const val LADDER_SPAN = 3.0
 
-    /** The lag in [lags] where [x] best matches itself from [from], refined between samples. */
-    private fun peakLag(x: FloatArray, from: Int, lags: IntRange): Double {
-        val window = minOf((0.25 * RATE * Dsp.OVERSAMPLE).toInt(), x.size - from - lags.last - 2).coerceAtLeast(64)
+    /**
+     * The lag in [lags] where [x] best matches itself from [from], refined between samples: a golden-section
+     * search over the whole sample either side of the best integer lag, on the correlation with [x] read
+     * between its samples ([correlateAt]). It replaces a parabola through the three correlations around the
+     * peak, which sits off a sharp peak by up to a quarter of a raw sample (the ladder's comment above): over
+     * a loop that is 0.05-0.15 frames at 44.1 kHz and the loop's own convergence test could not see it, since
+     * it measured with the same parabola.
+     */
+    private fun peakLag(x: FloatArray, from: Int, lags: IntRange, length: Int = (0.25 * RATE * Dsp.OVERSAMPLE).toInt()): Double {
+        val window = minOf(length, x.size - from - lags.last - 5).coerceAtLeast(64)
+        // A Hann weight over the window: a plain sum over a stretch that is not a whole number of periods is tilted
+        // by its two edges (the slope of the correlation at the true lag is half the difference of the signal's
+        // energy at the window's ends), which put the last rung 0.2 frames off on a window of 2.15 periods.
+        val w = DoubleArray(window) { 0.5 - 0.5 * cos(2.0 * PI * (it + 0.5) / window) }
         var bestLag = lags.first
         var best = Double.NEGATIVE_INFINITY
         for (lag in lags) {
-            val r = correlate(x, from, lag, window)
+            val r = correlateAt(x, from, lag.toDouble(), w)
             if (r > best) { best = r; bestLag = lag }
         }
-        val a = correlate(x, from, bestLag - 1, window)
-        val c = correlate(x, from, bestLag + 1, window)
-        val d = a - 2 * best + c
-        return if (abs(d) < 1e-30) bestLag.toDouble() else bestLag + 0.5 * (a - c) / d
+        var lo = bestLag - 1.0
+        var hi = bestLag + 1.0
+        var c = hi - GOLDEN * (hi - lo)
+        var d = lo + GOLDEN * (hi - lo)
+        var fc = correlateAt(x, from, c, w)
+        var fd = correlateAt(x, from, d, w)
+        while (hi - lo > LAG_RESOLUTION) {
+            if (fc > fd) {
+                hi = d; d = c; fd = fc
+                c = hi - GOLDEN * (hi - lo); fc = correlateAt(x, from, c, w)
+            } else {
+                lo = c; c = d; fc = fd
+                d = lo + GOLDEN * (hi - lo); fd = correlateAt(x, from, d, w)
+            }
+        }
+        return 0.5 * (lo + hi)
     }
 
-    private fun correlate(x: FloatArray, from: Int, lag: Int, window: Int): Double {
-        var s = 0.0
-        for (i in from until from + window) s += x[i].toDouble() * x[i + lag]
-        return s
+    private const val GOLDEN = 0.6180339887498949
+
+    /** How finely [peakLag] places the lag, in raw samples (a quarter of a thousandth of a frame at 44.1 kHz). */
+    private const val LAG_RESOLUTION = 1e-3
+
+    /** The weighted correlation of [x] with itself [lag] samples on, [lag] fractional: the later copy read between its samples by a cubic (Catmull-Rom). */
+    private fun correlateAt(x: FloatArray, from: Int, lag: Double, weight: DoubleArray): Double {
+        val whole = Math.floor(lag).toInt()
+        val t = lag - whole
+        val w0 = -0.5 * t * (1 - t) * (1 - t)
+        val w1 = 0.5 * (3 * t * t * t - 5 * t * t + 2)
+        val w2 = 0.5 * (-3 * t * t * t + 4 * t * t + t)
+        val w3 = -0.5 * t * t * (1 - t)
+        var sum = 0.0
+        for (k in weight.indices) {
+            val i = from + k
+            val j = i + whole
+            sum += weight[k] * x[i].toDouble() * (w0 * x[j - 1] + w1 * x[j] + w2 * x[j + 1] + w3 * x[j + 2])
+        }
+        return sum
     }
 
     /** The steady stretch: attack, then constant pressure to the end. [seed] is the tongue's seed override, for a test: a steady stretch takes none. */
@@ -984,15 +1056,47 @@ object Bore {
         return r.loop
     }
 
-    /** A rendered LOOP and how well its stretch closes on itself ([Keys.seamError]). */
-    internal class LoopRender(val loop: FloatArray, val seam: Double)
+    /** A rendered LOOP, how well its stretch closes on itself ([Keys.seamError]), and how many settles it took (1, or 2 when the first did not close with room to spare). */
+    internal class LoopRender(val loop: FloatArray, val seam: Double, val attempts: Int = 1)
 
-    internal fun renderLoopMeasured(voice: BoreVoice, macros: Map<String, Float>): LoopRender {
+    /**
+     * [carry] false is the loop as the first rounds shipped it, the presence bell and nothing after: for the audition's
+     * before-and-after and for a test that the rasp and the voicing are really in the loop.
+     */
+    internal fun renderLoopMeasured(voice: BoreVoice, macros: Map<String, Float>, carry: Boolean = true, voiceShare: Float = LOOP_VOICE_SHARE): LoopRender {
+        val first = renderLoopAttempt(voice, macros, carry, voiceShare, 1f)
+        if (first.seam < LOOP_ROOM) return first
+        // The house habit (the Organ's pad: "one retry with twice the settle"), and here it fires: the loosest,
+        // hardest reed at C3 was still creeping 0.14% in amplitude across its loop at 400 periods of settle and its
+        // shape with it, a seam of 9.6e-5 with the bell alone and 4.7e-3 with the rasp and the voicing, which weight
+        // the high harmonics a creeping shape moves most. At 1.5 times the settle it reads 3.0e-5, at twice 1.7e-5.
+        // The better of the two is kept, and [renderLoop] still refuses a loop over the bar.
+        val second = renderLoopAttempt(voice, macros, carry, voiceShare, LOOP_RETRY_SETTLE)
+        return if (second.seam < first.seam) LoopRender(second.loop, second.seam, 2) else LoopRender(first.loop, first.seam, 2)
+    }
+
+    /**
+     * The share of the voicing's decibels a LOOP takes. 1 is the shelves whole - the prototype the owner kept
+     * (-20 under 200 Hz, +18 over 3 kHz) before the one-shot's voicing was made to follow the note's loudness.
+     * The one-shot's plateau is lower than that, about two-thirds of it at the default knobs, because it follows
+     * the loudness and its ceiling is the attack's accent; a loop is steady from the first sample and has no
+     * accent, so at 1 it reads 13.8 dB of bite at C3 where the one-shot reads 6.2. A listening value: the
+     * audition puts it beside 0.67, which would match.
+     */
+    const val LOOP_VOICE_SHARE = 1f
+
+    /** A loop's seam must be under this share of the bar on the first settle, or it is settled again ([renderLoopMeasured]). */
+    private val LOOP_ROOM = Keys.MAX_SEAM_ERROR / 10
+
+    /** The retry's settle, as a multiple of the first. */
+    private const val LOOP_RETRY_SETTLE = 2f
+
+    private fun renderLoopAttempt(voice: BoreVoice, macros: Map<String, Float>, carry: Boolean, voiceShare: Float, settle: Float): LoopRender {
         val m = settled(macros, voice)
         val target = frequencyFor(voice, m.getValue("TUNE"))
         val plan = planLoop(target)
         val over = Dsp.OVERSAMPLE
-        val warm = Math.round(max(LOOP_WARMUP_SECONDS, LOOP_WARMUP_PERIODS / target) * RATE)
+        val warm = Math.round(settle * max(LOOP_WARMUP_SECONDS, LOOP_WARMUP_PERIODS / target) * RATE)
         val wanted = plan.frames.toDouble() * over
         var tuned = tunedHz(voice, target).toDouble()
         var raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
@@ -1002,10 +1106,12 @@ object Bore {
             tuned *= ratio
             raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
         }
-        // No rasp and no voicing in a LOOP ([RASP_DRIVE], [VOICE_LOW_DB]): a bent wave has steep edges and a
-        // lifted top weights the loop's slow drift, and on the 142-corner SAX scan the corners that do not close
-        // went from 3 to 11 with the rasp and to 19 with the voicing.
-        val conditioned = condition(raw, RATE * over, biteBoostDb(voice, m.getValue("LIP")), 0f, Voicing.NONE)
+        // The one-shot's own chain: the rasp, the bell and the voicing ([RASP_DRIVE], [VOICE_LOW_DB]). The
+        // voicing is the plain full-strength filter, not the one-shot's loudness-following one: the follower's
+        // gain ripples out of step with the loop's length, and a wrap cannot repeat it.
+        val rasp = if (carry) raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH")) else 0f
+        val voicing = if (carry) voicingFor(voice).let { Voicing(it.lowDb * voiceShare, it.highDb * voiceShare) } else Voicing.NONE
+        val conditioned = condition(raw, RATE * over, biteBoostDb(voice, m.getValue("LIP")), rasp, voicing, follow = false)
         // The check that means something: the kept stretch against itself one loop later. (The loop
         // played twice is tautologically periodic - it would pass whatever was in it.)
         val seam = Keys.seamError(conditioned.copyOfRange(warm, warm + plan.frames + SEAM_FRAMES), SEAM_FRAMES)
