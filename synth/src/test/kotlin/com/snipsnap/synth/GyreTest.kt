@@ -31,6 +31,16 @@ class GyreTest {
 
         /** SPIN 0.25 on a short note, in the median partial's swing. */
         const val SPIN_SWING_DB = 5.0
+
+        /** The short note SPIN is judged on: the hand lands this long after the pluck. */
+        const val SHORT_NOTE_SECONDS = 0.55f
+
+        /** Each HOLD step's hand, in dB under the attack: HOLD 0 cuts a loud note, the top lands on a rung-out one, and every step is heard. */
+        const val CHOKE_DB = -15.0
+        const val OPEN_DB = -33.0
+
+        /** Neighbouring HOLD steps: the difference between their renders, against the louder, at least this. */
+        const val HOLD_CHANGE_DB = -36.0
     }
 
     private fun rms(x: FloatArray, from: Int = 0, to: Int = x.size): Double {
@@ -164,14 +174,14 @@ class GyreTest {
         // (FLICK, one partial near a notch carrying most of it) and 2.7 (HALO), the rotor 0.23 of a
         // turn round in FLICK's 0.53 s.
         val block = 2_048
-        val hold = 0.3f
-        assertTrue(Gyre.rotorHz(0.25f) * Gyre.dampSeconds(GyreVoice.FLICK, hold) >= 0.75f, "SPIN 0.25 does not get round a short note")
         for (voice in GyreVoice.entries) {
+            val hold = holdFor(voice, SHORT_NOTE_SECONDS)
             val m = Gyre.defaults(voice) + ("HOLD" to hold)
+            assertTrue(Gyre.rotorHz(0.25f) * Gyre.dampSeconds(hold, m.getValue("SYMPATHY")) >= 0.75f, "$voice: SPIN 0.25 does not get round a short note")
             val f = Gyre.frequencyFor(voice, m.getValue("TUNE")).toDouble()
             val still = Gyre.render(voice, m + ("SPIN" to 0f)).samples
             val spun = Gyre.render(voice, m + ("SPIN" to 0.25f)).samples
-            val end = (Gyre.dampSeconds(voice, hold) * RATE).toInt()
+            val end = (Gyre.dampSeconds(hold, m.getValue("SYMPATHY")) * RATE).toInt()
             val diff = ArrayList<DoubleArray>()
             val level = ArrayList<DoubleArray>()
             var b = (0.05f * RATE).toInt()
@@ -191,8 +201,52 @@ class GyreTest {
                 rest.max() - rest.min()
             }.sorted()
             val median = swings[swings.size / 2]
-            println("$voice SPIN 0.25 on a ${"%.2f".format(Gyre.dampSeconds(voice, hold))} s note: partials swing ${swings.joinToString(" ") { "%.1f".format(it) }} dB, median ${"%.1f".format(median)}")
+            println("$voice SPIN 0.25 on a ${"%.2f".format(Gyre.dampSeconds(hold, m.getValue("SYMPATHY")))} s note: partials swing ${swings.joinToString(" ") { "%.1f".format(it) }} dB, median ${"%.1f".format(median)}")
             assertTrue(median >= SPIN_SWING_DB, "$voice: SPIN 0.25 swings a short note's partials only $median dB (median)")
+        }
+    }
+
+    /** The HOLD at which the hand lands [seconds] after the pluck, at the voice's default SYMPATHY. */
+    private fun holdFor(voice: GyreVoice, seconds: Float): Float {
+        val open = Gyre.openSeconds(Gyre.defaults(voice).getValue("SYMPATHY"))
+        return (ln(seconds / Gyre.CHOKE_SECONDS.toDouble()) / ln(open / Gyre.CHOKE_SECONDS.toDouble())).toFloat() * Gyre.LOOP_THRESHOLD
+    }
+
+    @Test
+    fun `HOLD runs from choked to open, and every step is heard`() {
+        // The owner's second listen: "I don't hear the distinction". Round one's FLICK hand landed
+        // 25 dB under the attack at HOLD 0, 50 at 0.5 and 108 at 0.95 (HALO 14, 32, 77): the note had
+        // rung out before the hand came, and neighbouring steps were the same sound. Five steps, both
+        // voices, at SYMPATHY 0, the default and 1: the level at the moment the hand lands (a choke at
+        // the bottom, a rung-out note at the top), and how much of the sound changes from each step to
+        // the next (the difference's energy against the note's, as rendered). Measured: the hand lands
+        // 2 to 4 dB down at HOLD 0 and 41 to 45 at the top, about 10 dB lower each step; each step
+        // changes the sound by -10.8 to -33.0 dB, the top step least (near open it trims a quiet tail).
+        val w = (0.02 * RATE).toInt()
+        for (voice in GyreVoice.entries) for (sym in listOf(0f, Gyre.defaults(voice).getValue("SYMPATHY"), 1f)) {
+            val holds = floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 0.95f)
+            val renders = holds.map { Gyre.render(voice, Gyre.defaults(voice) + mapOf("HOLD" to it, "SYMPATHY" to sym)).samples }
+            val levels = holds.indices.map { k ->
+                val x = renders[k]
+                val attack = (0 until 5).maxOf { rms(x, it * w, (it + 1) * w) }
+                val d = (Gyre.dampSeconds(holds[k], sym) * RATE).toInt()
+                20 * log10(rms(x, maxOf(0, d - w), maxOf(w, d)) / attack)
+            }
+            val changes = (1 until holds.size).map { k ->
+                val a = renders[k - 1]; val b = renders[k]
+                var d = 0.0; var e = 0.0
+                for (i in 0 until maxOf(a.size, b.size)) {
+                    val x = if (i < a.size) a[i].toDouble() else 0.0
+                    val y = if (i < b.size) b[i].toDouble() else 0.0
+                    d += (x - y) * (x - y); e += maxOf(x * x, y * y)
+                }
+                10 * log10(d / e)
+            }
+            println("$voice SYMPATHY $sym: the hand lands at ${levels.joinToString(" ") { "%.0f".format(it) }} dB; each step changes the sound by ${changes.joinToString(" ") { "%.1f".format(it) }} dB")
+            assertTrue(levels.first() >= CHOKE_DB, "$voice SYMPATHY $sym: HOLD 0's hand lands ${levels.first()} dB down, not a choke")
+            assertTrue(levels.last() <= OPEN_DB, "$voice SYMPATHY $sym: the top's hand lands only ${levels.last()} dB down, not open")
+            for (k in changes.indices) assertTrue(changes[k] >= HOLD_CHANGE_DB, "$voice SYMPATHY $sym: HOLD steps $k and ${k + 1} differ by only ${changes[k]} dB")
+            for (k in 1 until levels.size) assertTrue(levels[k] < levels[k - 1], "$voice SYMPATHY $sym: HOLD step $k's hand lands no lower than step ${k - 1}'s")
         }
     }
 
