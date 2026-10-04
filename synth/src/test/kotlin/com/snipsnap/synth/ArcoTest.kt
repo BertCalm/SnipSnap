@@ -169,7 +169,7 @@ class ArcoTest {
      * Every TUNE step of both voices (25 and 20), at GRIP 0 / default / 1 and BOW 0 / default / 1 (nine cells a step, 405 in
      * all, no vibrato, BODY 0) sounds within 5 cents of [Arco.frequencyFor]. The pitch is read the way the record asks: a
      * windowed FFT ([FineTuning.measuredHz], zero-padded to 65536 points) on the finished 44.1 kHz render, the raw wave
-     * taken through [Arco.finish]. The autocorrelation of the raw wave ([BowMeter.pitch]) is the cross-check and is
+     * taken through [Arco.finished]. The autocorrelation of the raw wave ([BowMeter.pitch]) is the cross-check and is
      * printed beside it.
      *
      * R1c saw the FFT within 3.48 cents at CELLO (C4 at GRIP 0) and 3.10 cents at ERHU, autocorrelation within 3.40 and
@@ -607,7 +607,7 @@ class ArcoTest {
     private val rawMeanBar = mapOf(ArcoVoice.CELLO to 0.09, ArcoVoice.ERHU to 0.02)
 
     /** The finished peak must stay under this, clear of the 0.99 where [Dsp.levelTo] starts turning a peak down: a limited note sits at exactly 0.99, and fails. */
-    private val finishedPeakBar = 0.95f
+    private val finishedPeakBar = Arco.FINISHED_PEAK_BAR
 
     /**
      * Bounded, pinned and DC-free over the grid: TUNE, BOW, GRIP and BODY each at 0, 0.5 and 1, HOLD at 0 and 0.5 (HOLD 1 is a
@@ -618,7 +618,8 @@ class ArcoTest {
      *
      * R1c saw: no non-finite sample; the raw peak at most 0.737 at CELLO (C3, BOW 0.5, GRIP 1, BODY 0, HOLD 0.5: no bite there; the grid's cells at BOW 1 are lower) and 0.623 at ERHU (D4, BOW 0, GRIP 1, HOLD 0) against the ceiling 1.25, which has room because the overshoot's
      * worst corner (BOW 1 at the window's top) is inside the grid; the finished peak at most 0.840 (CELLO C2, BOW 0, GRIP 0, HOLD 0) and 0.761 (ERHU A5, BOW 0,
-     * GRIP 0.5, BODY 1, HOLD 0), 0.11 under the 0.95 bar (R1c's louder box at BODY 1, 1.75 times the string, reads 0.761 in that ERHU cell, where R1b's box, only as loud as the string, read 0.763; the CELLO peak is at BODY 0). [Dsp.levelTo] sets the level by loudness and turns a peak down only
+     * GRIP 0.5, BODY 1, HOLD 0), 0.11 under the 0.95 bar (R1c's louder box at BODY 1, 1.75 times the string, reads 0.761 in that ERHU cell, where R1b's box, only as loud as the string, read 0.763; the CELLO peak is at BODY 0). R1g saw, with the lift above the knee (the lift is capped to leave 0.01 under the bar,
+     * [Arco.PEAK_CAP]): the finished peak at most 0.940 in both voices, on the cap, 0.01 under the 0.95 bar (not 0.11), at CELLO C2 (BOW 0, GRIP 0, BODY 1, HOLD 0) and at ERHU A5 (BOW 0, GRIP 0.5, BODY 1, HOLD 0), the same ERHU cell that read 0.761 with R1c's box, where the lift's cap acts; the bar did not move and the margin is smaller by design. [Dsp.levelTo] sets the level by loudness and turns a peak down only
      * when it passes 0.99, so a note the limiter had acted on would sit at exactly 0.99 and fail the bar: that is what makes "the
      * limiter stays idle" a claim this test can fail, where a bar at 0.99 itself never could. The finished mean is at most 0.0042
      * and 0.0002 against 0.05. The raw mean reached 0.0714 at CELLO (C2, BOW 0, GRIP 1, HOLD 0) and 0.0130 at ERHU (D4, BOW 0,

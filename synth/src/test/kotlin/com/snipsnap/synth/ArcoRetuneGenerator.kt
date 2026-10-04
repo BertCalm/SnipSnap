@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
  * every one through [AuditionLevel.level], so one loudness for all of them as on the big page.
  *
  *  - **BODY**, for CELLO then ERHU at the voice's default note and default knobs but BODY: the default (BODY .5, which R1c leaves exactly
- *    as it was), BODY 1 BEFORE (the box rung as loud as the string, 1.00 times) and BODY 1 NOW (the box [Arco.BODY_TOP] times the string).
+ *    as it was), BODY 1 BEFORE (the box rung as loud as the string, 1.00 times) and BODY 1 NOW (the box [ArcoBodyCandidates.R1C_BODY_TOP] times the string).
  *  - **BOW**, CELLO only, BOW 1 and every other knob at its default, at the default note and at the root (TUNE 0): BEFORE (the old bite),
  *    NOW (the engine's own) and STRONGER (a calibration, not in the engine: a bigger and longer bite of the same kind, with the same
  *    share of it pressing the string; if NOW is still not enough this is the next step). STRONGER is held to a lock inside the clip's
@@ -116,9 +116,20 @@ object ArcoRetuneGenerator {
         require(!Arco.isLoop(m.getValue("HOLD"))) { "renderWith is for one-shots" }
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val raw = rawBow(voice, m, variant, rate)
-        val rung = if (variant.macroBox) macroBox(raw, voice, m.getValue("BODY"), rate) else Arco.withBody(raw, voice, m.getValue("BODY"), rate)
-        return Snip(Arco.finish(rung, rate), channels = 1, sampleRate = Dsp.RATE)
+        val finished = if (variant.macroBox) {
+            // BODY 0 hands an already-boxed string back untouched, so this is the engine's one finish ([Arco.finished]) of R1b's box alone.
+            Arco.finished(macroBox(raw, voice, m.getValue("BODY"), rate), voice, 0f, rate)
+        } else {
+            Arco.finished(raw, voice, m.getValue("BODY"), rate)
+        }
+        return Snip(finished, channels = 1, sampleRate = Dsp.RATE)
     }
+
+    /**
+     * R1c's BODY 1 NOW clip. R1g retired R1c's climb: the engine's BODY 1 is the lift now and no longer the NOW this page describes, so the clip is rendered from R1c's own box ([ArcoBodyCandidates.last]),
+     * which is what [Arco.render] made at BODY 1 on R1c's engine (the retired checks of [ArcoBodyGenerator] held it to the sample).
+     */
+    private fun r1cBodyNow(voice: ArcoVoice): Snip = ArcoBodyCandidates.renderThrough(voice, mapOf("BODY" to 1f), ArcoBodyCandidates::last)
 
     /** The bow's own wave ([Arco.bow]) with [variant]'s overrides, [bowPointOut] receiving the string's velocity under the bow. */
     private fun rawBow(voice: ArcoVoice, m: Map<String, Float>, variant: Variant, rate: Int, bowPointOut: FloatArray? = null): FloatArray =
@@ -177,7 +188,7 @@ object ArcoRetuneGenerator {
      */
     private fun checkBefore() {
         for (voice in listOf(CELLO, ERHU)) {
-            check(!same(renderWith(voice, mapOf("BODY" to 1f), BEFORE), Arco.render(voice, mapOf("BODY" to 1f)))) { "$voice BODY 1 BEFORE is the same as NOW" }
+            check(!same(renderWith(voice, mapOf("BODY" to 1f), BEFORE), r1cBodyNow(voice))) { "$voice BODY 1 BEFORE is the same as NOW" }
         }
         val bow1 = mapOf("BOW" to 1f)
         val before = renderWith(CELLO, bow1, BEFORE)
@@ -189,7 +200,7 @@ object ArcoRetuneGenerator {
             CELLO, Arco.frequencyFor(CELLO, m.getValue("TUNE")), m, rate,
             overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f, vibratoShape = Arco.VIBRATO_PLAIN,
         )
-        val direct = Snip(Arco.finish(macroBox(raw, CELLO, m.getValue("BODY"), rate), rate), channels = 1, sampleRate = Dsp.RATE)
+        val direct = Snip(Arco.finished(macroBox(raw, CELLO, m.getValue("BODY"), rate), CELLO, 0f, rate), channels = 1, sampleRate = Dsp.RATE)
         check(same(before, direct)) { "CELLO BOW 1 BEFORE is not the engine called with R1b's four overrides" }
         val stronger = renderWith(CELLO, bow1, STRONGER)
         check(!same(stronger, now) && !same(stronger, before)) { "CELLO BOW 1 STRONGER is the same as NOW or BEFORE" }
@@ -201,7 +212,7 @@ object ArcoRetuneGenerator {
                 CELLO, Arco.frequencyFor(CELLO, sm.getValue("TUNE")), sm, rate,
                 overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f, vibratoShape = Arco.VIBRATO_PLAIN,
             )
-            val stabDirect = Snip(Arco.finish(macroBox(stabRaw, CELLO, sm.getValue("BODY"), rate), rate), channels = 1, sampleRate = Dsp.RATE)
+            val stabDirect = Snip(Arco.finished(macroBox(stabRaw, CELLO, sm.getValue("BODY"), rate), CELLO, 0f, rate), channels = 1, sampleRate = Dsp.RATE)
             val stabBefore = renderWith(CELLO, macros, BEFORE)
             check(same(stabBefore, stabDirect)) { "the stab's ${spell(midi)} BEFORE is not the engine called with R1b's four overrides" }
             check(!same(stabBefore, Arco.render(CELLO, macros))) { "the stab's ${spell(midi)} BEFORE is the same as NOW" }
@@ -362,7 +373,7 @@ object ArcoRetuneGenerator {
     }
 
     /** The numbers and names the page's own question text carries, which the page fills from the manifest and which are checked against the page's fallback above. */
-    private fun facts(): Map<String, String> = mapOf("bodyTop" to f2(Arco.BODY_TOP), "stabLost" to spell(stabLost().single()))
+    private fun facts(): Map<String, String> = mapOf("bodyTop" to f2(ArcoBodyCandidates.R1C_BODY_TOP), "stabLost" to spell(stabLost().single()))
 
     private fun bodySection(write: (String, String, Snip) -> Unit): Section {
         val groups = listOf(CELLO, ERHU).map { voice ->
@@ -371,7 +382,7 @@ object ArcoRetuneGenerator {
             val t = voice.name.lowercase()
             val default = Arco.render(voice)
             val before = renderWith(voice, mapOf("BODY" to 1f), BEFORE)
-            val now = Arco.render(voice, mapOf("BODY" to 1f))
+            val now = r1cBodyNow(voice)
             write("BODY", t + "_default", default)
             write("BODY", t + "_before", before)
             write("BODY", t + "_now", now)
@@ -380,7 +391,7 @@ object ArcoRetuneGenerator {
                 listOf(
                     Clip(t + "_default", "BODY .5 $DOT THE DEFAULT", "the default knobs: the box rings ${f2(Arco.boxAmountFor(Arco.DEFAULT_BODY))} times as loud as the string, as it always did"),
                     Clip(t + "_before", "BODY 1 $DOT BEFORE", "what you heard: the box as loud as the string, 1.00 times"),
-                    Clip(t + "_now", "BODY 1 $DOT NOW", "the box ${f2(Arco.boxAmountFor(1f))} times the string, ${f1(20f * log10(Arco.boxAmountFor(1f)))} dB more box than BEFORE"),
+                    Clip(t + "_now", "BODY 1 $DOT NOW", "the box ${f2(ArcoBodyCandidates.R1C_BODY_TOP)} times the string, ${f1(20f * log10(ArcoBodyCandidates.R1C_BODY_TOP))} dB more box than BEFORE"),
                 ),
             )
         }
@@ -537,7 +548,7 @@ object ArcoRetuneGenerator {
             Block(
                 "WHAT CHANGED",
                 listOf(
-                    "BODY is as it was up to ${fmt(Arco.BODY_KNEE)}, where the box rings ${f2(Arco.BODY_KNEE)} times as loud as the string. Above that it climbs to ${f2(Arco.BODY_TOP)} times the string at BODY 1, in both voices. It was 1.00 times, so ${f1(20f * log10(Arco.BODY_TOP))} dB more box.",
+                    "BODY is as it was up to ${fmt(Arco.BODY_KNEE)}, where the box rings ${f2(Arco.BODY_KNEE)} times as loud as the string. Above that it climbs to ${f2(ArcoBodyCandidates.R1C_BODY_TOP)} times the string at BODY 1, in both voices. It was 1.00 times, so ${f1(20f * log10(ArcoBodyCandidates.R1C_BODY_TOP))} dB more box.",
                     "CELLO's BOW 1: the bite is ${f2(now.max)} times the sustain speed (it was ${f2(before.max)}), and the speed peaks at ${f2(peakSpeed(now))} times (it was ${f2(peakSpeed(before))}), because the stroke is still rising for its first $strokeMs ms. " +
                         "The excess relaxes with a ${ms(now.tauSeconds)} ms time constant (it was the stroke's own ${ms(before.tauSeconds)} ms), ${shareOf(now.pressure)} of it presses the string and the rest is speed alone (before, ${shareOf(before.pressure)} of it pressed the string). " +
                         "A bass string needs many milliseconds to build a period, and a bite with a ${ms(before.tauSeconds)} ms time constant had mostly gone before it did. At BOW ${fmt(Arco.OVERSHOOT_FROM)} and under there is still no bite.",

@@ -158,6 +158,30 @@ class DeterminismTest {
         }
     }
 
+    // R1g: BODY above the middle of the knob is a lift on the plain note (a low shelf and a bell, a cap searched by bisection on the note's own peak, and for a loop a cut chosen on the lifted window), none of it seeded,
+    // and none of the rows above renders above the knee (the default BODY is the knee itself, which is the old finish to the sample). So the same canary again at BODY 0.75 and BODY 1, both voices, one-shot and LOOP, at the
+    // default note (where the cap is idle or nearly so) and at the root of the voice (CELLO C2, where the cap acts at both BODYs: its bisection and its halving check are arithmetic that must repeat to the last bit). The control
+    // beside each row: the render differs from the same note at BODY 0.5, so the row is a row of the lift and not of the plain it would equal if BODY were ignored above the knee. Loops also close, under the Organ's bar at both BODYs.
+    @Test
+    fun `ARCO above the knee is byte-identical across renders, BODY 0 point 75 and 1, both voices, one-shot and loop`() {
+        for (voice in ArcoVoice.entries) for ((noteName, base) in listOf("default note" to Arco.defaults(voice), "root" to Arco.defaults(voice) + ("TUNE" to 0f))) for (body in listOf(0.75f, 1f)) {
+            val where = "$voice $noteName at BODY $body"
+            val plainShot = ArcoPatch("Canary", voice, base + ("BODY" to 0.5f))
+            val shot = ArcoPatch("Canary", voice, base + ("BODY" to body))
+            assertContentEquals(shot.render().samples, shot.render().samples, "$where, one-shot")
+            assertTrue(!plainShot.render().samples.contentEquals(shot.render().samples), "$where, one-shot: the render equals the plain's, so the row is not above the knee")
+            val loopMacros = base + mapOf("BODY" to body, "HOLD" to 1f)
+            val first = Arco.renderLoopMeasured(voice, loopMacros)
+            val second = Arco.renderLoopMeasured(voice, loopMacros)
+            assertContentEquals(first.loop, second.loop, "$where, loop")
+            assertTrue(first.seam == second.seam, "$where, loop: the seam differs between renders (${first.seam} and ${second.seam})")
+            assertTrue(first.seam < Keys.MAX_SEAM_ERROR, "$where, loop: the loop does not close (seam ${first.seam}, bar ${Keys.MAX_SEAM_ERROR})")
+            val plainLoop = Arco.renderLoopMeasured(voice, base + mapOf("BODY" to 0.5f, "HOLD" to 1f))
+            assertTrue(!plainLoop.loop.contentEquals(first.loop), "$where, loop: the render equals the plain's, so the row is not above the knee")
+            println("ARCO determinism $where: one-shot and loop repeat to the sample, loop seam ${"%.2e".format(java.util.Locale.ROOT, first.seam)} (bar ${"%.0e".format(java.util.Locale.ROOT, Keys.MAX_SEAM_ERROR)})")
+        }
+    }
+
     // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29) and
     // BUZZ's noise (13, 23) per voice (Terra.kt), so a saved pad
     // regenerates only if all of them stay fixed. One per voice, with BUZZ

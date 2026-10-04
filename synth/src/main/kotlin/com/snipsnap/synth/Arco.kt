@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
@@ -556,7 +557,8 @@ object Arco {
      * (the default CELLO would render 1.585 s and be filed a LOOP) - so the ring is cut where the stopped
      * string ends, and the 4 ms fade at the end of the render finishes it. What the cut takes is the box's
      * own tail, a few hundred milliseconds of a ring the stop has already faded to near nothing (the stop
-     * takes the drive to nothing over at least 150 ms). BODY 0 is the string itself.
+     * takes the drive to nothing over at least 150 ms). BODY 0 is the string itself. The box is the knob's own value up to [BODY_KNEE] and stays at the knee's size above it ([boxAmountFor]), so
+     * every BODY above the middle rings the box the default rings; what BODY adds above the middle is the lift, on the conditioned note and not in the box ([finished]).
      */
     internal fun withBody(raw: FloatArray, voice: ArcoVoice, amount: Float, rate: Int): FloatArray {
         val rung = Strings.bodyRing(raw, bodyFor(voice), boxAmountFor(amount), rate, BODY_CEILING_SECONDS)
@@ -564,19 +566,228 @@ object Arco {
     }
 
     /**
-     * BODY is how loud the box rings against the string ([Strings.bodyRing]'s `amount`, the box's RMS over the string's own),
-     * and the owner heard BODY 1 as "nearly" and "not enough" in both voices: at 1 the box was only as loud as the string. So
-     * the knob is unchanged up to [BODY_KNEE] (the box is what R1b rang at the default BODY 0.5 and at every preset at or under it: [withBody] is R1b's call there, to the bit)
-     * and above it climbs more steeply, to [BODY_TOP] times the string at BODY 1, 4.9 dB over it. Listening values.
+     * BODY is two things, split at [BODY_KNEE]. Up to it BODY is how loud the box rings against the string ([Strings.bodyRing]'s `amount`, the box's RMS over the string's own): the knob's own value, which is what R1b rang
+     * at the default BODY 0.5 and at every sound at or under it, so [finished] is R1b's finish there, to the bit. Above it the box stays the size it is at the knee. R1c had climbed it to 1.75 times the string at BODY 1,
+     * and the level step after the box took most of that climb back (CELLO C3 against the plain: the low band up 0.84 dB, the 3 to 8 kHz band down 4.96 dB; the owner then wrote "Body doesn't seem to do anything"),
+     * so the climb is retired. What BODY adds above the knee is the lift ([liftDbFor]), on top of the plain note at the plain's own gain, and it is continuous there: 0 dB at the knee.
      */
     const val BODY_KNEE = 0.5f
-    const val BODY_TOP = 1.75f
 
-    internal fun boxAmountFor(body: Float): Float =
-        if (body <= BODY_KNEE) body else BODY_KNEE + (body - BODY_KNEE) * (BODY_TOP - BODY_KNEE) / (1f - BODY_KNEE)
+    /** The box's amount at [body]: the knob's own value up to [BODY_KNEE], and the knee's amount above it. */
+    internal fun boxAmountFor(body: Float): Float = min(body, BODY_KNEE)
 
     /** The longest string plus the box's ring, with room: [Strings.bodyRing]'s own ceiling. */
     const val BODY_CEILING_SECONDS = 8f
+
+    // ---- BODY above the knee: the lift ----------------------------------------
+
+    /**
+     * What BODY adds above [BODY_KNEE]: a *lift* on top of the conditioned note, a low shelf and then a broad bell in series, each [liftDbFor] dB, at the plain's own gain (R1e's warmth page played this shape on the plain).
+     * Its two sizes are R1e's rungs, per element: [LIFT_HALF_DB] at BODY 0.75 (R1e's small rung) and [LIFT_TOP_DB] at BODY 1 (its large rung). The owner marked some of those clips FULLER and some SAME, with low confidence
+     * in his own words, and nobody has listened to this curve. Listening values.
+     */
+    const val LIFT_HALF_DB = 3.5f
+    const val LIFT_TOP_DB = 6.0f
+
+    /**
+     * The lift BODY asks for, in dB for the shelf and the same again for the bell: none at or under [BODY_KNEE], then the one quadratic through zero at the knee, [LIFT_HALF_DB] at BODY 0.75 and [LIFT_TOP_DB] at BODY 1.
+     * With `u` the way from the knee to BODY 1 (0 to 1) it is `(4 H - T) u + (2 T - 4 H) u^2` for H = [LIFT_HALF_DB] and T = [LIFT_TOP_DB], which for 3.5 and 6.0 is `8 u - 2 u^2`: 0.78 dB at BODY 0.55, 1.52 at 0.6,
+     * 2.22 at 0.65, 2.88 at 0.7, 3.50 at 0.75, 4.08 at 0.8, 5.12 at 0.9, 5.58 at 0.95 and 6.00 at 1. It rises at every BODY above the knee (slope 8 at the knee, 4 at the top) as long as 3 T is more than 4 H, and it has
+     * no step at the knee.
+     */
+    internal fun liftDbFor(body: Float): Float {
+        if (body <= BODY_KNEE) return 0f
+        val u = ((body - BODY_KNEE) / (1f - BODY_KNEE)).coerceIn(0f, 1f)
+        return (4f * LIFT_HALF_DB - LIFT_TOP_DB) * u + (2f * LIFT_TOP_DB - 4f * LIFT_HALF_DB) * u * u
+    }
+
+    /**
+     * The lift's two stages for each voice. CELLO: a low shelf with its corner at 200 Hz and a bell at 300 Hz, Q 0.8, broad on purpose (a held note's partials meet a narrow bell only where one happens to land, which
+     * is what R1d's narrow box found). ERHU: a low shelf at 600 Hz and a bell at 800 Hz, Q 1.0 (R1e's scouts found a 450 Hz shelf lifts C5's fundamental only 1.4 dB, hence 600). The shelves have [Dsp.Biquad.lowShelf]'s
+     * fixed slope (see [LiftSection]: the same section, run in Double). R1e's scouts, kept as they were; listening values.
+     */
+    const val CELLO_LIFT_SHELF_HZ = 200f
+    const val CELLO_LIFT_BELL_HZ = 300f
+    const val CELLO_LIFT_BELL_Q = 0.8f
+    const val ERHU_LIFT_SHELF_HZ = 600f
+    const val ERHU_LIFT_BELL_HZ = 800f
+    const val ERHU_LIFT_BELL_Q = 1.0f
+
+    /** The low shelf's corner for [voice]. */
+    internal fun liftShelfHz(voice: ArcoVoice): Float = when (voice) {
+        ArcoVoice.CELLO -> CELLO_LIFT_SHELF_HZ
+        ArcoVoice.ERHU -> ERHU_LIFT_SHELF_HZ
+    }
+
+    /** The bell's centre for [voice]. */
+    internal fun liftBellHz(voice: ArcoVoice): Float = when (voice) {
+        ArcoVoice.CELLO -> CELLO_LIFT_BELL_HZ
+        ArcoVoice.ERHU -> ERHU_LIFT_BELL_HZ
+    }
+
+    /** The bell's Q for [voice]. */
+    internal fun liftBellQ(voice: ArcoVoice): Float = when (voice) {
+        ArcoVoice.CELLO -> CELLO_LIFT_BELL_Q
+        ArcoVoice.ERHU -> ERHU_LIFT_BELL_Q
+    }
+
+    /**
+     * The bar every finished note is held to, strictly under it: ArcoTest and ArcoProductTest read this one number, 0.95, so the engine and its tests cannot disagree about it. It is never loosened. Not a listening value: it is the bar.
+     */
+    internal const val FINISHED_PEAK_BAR = 0.95f
+
+    /**
+     * What the lift is held to: the bar less 0.01. A note [Dsp.levelTo] limits sits at exactly 0.99 and would fail the bar, so the cap works on the lift and never on the level. Where the plain's own peak is already above
+     * it the plain's peak is the cap instead, so a plain that is already hot gets no lift and there is no step at the knee. It sets how much lift the lowest CELLO notes can have (they are the ones that reach it). Listening value.
+     */
+    internal const val PEAK_CAP = FINISHED_PEAK_BAR - 0.01f
+
+    /**
+     * The cap search's bisection steps (the cap is found to 6 dB over 2 to the 20th) and how many times a delivered lift that fails its own peak check is halved before it is dropped to nothing. Not listening values: the cost
+     * and the safety net of [liftPlan].
+     */
+    private const val LIFT_SEARCH_STEPS = 20
+    private const val LIFT_HALVINGS_MAX = 8
+
+    /**
+     * What [finishedMeasured] did above the knee, in dB per element: what BODY [asked] for, the [cap] the note's own peak allows (found without looking at BODY, so it is one number for a note), what was [delivered] (the
+     * least of the two, checked against the peak, and halved [halvings] times if the check failed, which a peak that rises with the lift never needs: a test asserts it is 0). At or under the knee nothing is asked or
+     * delivered ([NONE]).
+     */
+    internal class Lift(val asked: Float, val cap: Float, val delivered: Float, val halvings: Int) {
+        companion object {
+            val NONE = Lift(0f, 0f, 0f, 0)
+        }
+    }
+
+    /** The largest `|x * gain|` in [buf], computed the way [Dsp.limitPeak] reads a peak (one float multiply, then the magnitude). */
+    private fun peakOf(buf: FloatArray, gain: Float = 1f): Float {
+        var peak = 0f
+        for (x in buf) {
+            val a = abs(x * gain)
+            if (a > peak) peak = a
+        }
+        return peak
+    }
+
+    /**
+     * One RBJ cookbook section, its coefficients and its running state in Double: the lift's own filter, in place of [Dsp.Biquad]. The formulas are [Dsp.Biquad.lowShelf]'s and [Dsp.Biquad.peaking]'s, line for line (the same
+     * shelf slope of 1, the same division by `a0`, the same direct form I recursion); only the arithmetic is wider. That is what the knee needs. At a 200 to 600 Hz corner and [RATE] the poles sit close to 1 (the cause as R1g
+     * read it, not isolated), and [Dsp.Biquad]'s Float coefficients and Float state leave rounding of up to about 2e-4 of the peak on a CELLO note and 3e-5 on an ERHU one even at a lift of a few millionths of a dB (R1g's
+     * measure over the 45 TUNE steps, the Float lift at BODY 0.5000001 against the plain: up to 2.09e-4 CELLO at step 9 and 3.19e-5 ERHU at step 1). That rounding is
+     * larger than the lift itself at BODY 0.5000001, so with Dsp.Biquad the render just above the knee missed the knee's bar of 1e-5 of the peak by up to 2.1e-4 (CELLO). [Strings.Membrane] already runs its RBJ bank in
+     * Double for the same reason. [Dsp] is not touched, so everything else that uses [Dsp.Biquad] keeps its Float sections.
+     */
+    private class LiftSection private constructor(b0: Double, b1: Double, b2: Double, a0: Double, a1: Double, a2: Double) {
+        private val nb0 = b0 / a0
+        private val nb1 = b1 / a0
+        private val nb2 = b2 / a0
+        private val na1 = a1 / a0
+        private val na2 = a2 / a0
+        private var x1 = 0.0
+        private var x2 = 0.0
+        private var y1 = 0.0
+        private var y2 = 0.0
+
+        /** One sample through the section, in Double. */
+        fun process(x: Double): Double {
+            val y = nb0 * x + nb1 * x1 + nb2 * x2 - na1 * y1 - na2 * y2
+            x2 = x1
+            x1 = x
+            y2 = y1
+            y1 = y
+            return y
+        }
+
+        companion object {
+            /** [Dsp.Biquad.lowShelf]'s section (slope 1) for a corner of [f0] Hz and [gainDb] dB, at [rate]. */
+            fun lowShelf(f0: Double, gainDb: Double, rate: Int): LiftSection {
+                val a = 10.0.pow(gainDb / 40.0)
+                val w0 = 2.0 * PI * f0 / rate
+                val cw = cos(w0)
+                val sw = sin(w0)
+                val alpha = sw / 2.0 * sqrt(2.0)
+                val sqA = sqrt(a)
+                return LiftSection(
+                    a * ((a + 1) - (a - 1) * cw + 2 * sqA * alpha),
+                    2 * a * ((a - 1) - (a + 1) * cw),
+                    a * ((a + 1) - (a - 1) * cw - 2 * sqA * alpha),
+                    (a + 1) + (a - 1) * cw + 2 * sqA * alpha,
+                    -2 * ((a - 1) + (a + 1) * cw),
+                    (a + 1) + (a - 1) * cw - 2 * sqA * alpha,
+                )
+            }
+
+            /** [Dsp.Biquad.peaking]'s section for a bell at [f0] Hz of [gainDb] dB and [q], at [rate]. */
+            fun peaking(f0: Double, gainDb: Double, q: Double, rate: Int): LiftSection {
+                val a = 10.0.pow(gainDb / 40.0)
+                val w0 = 2.0 * PI * f0 / rate
+                val cw = cos(w0)
+                val sw = sin(w0)
+                val alpha = sw / (2.0 * q)
+                return LiftSection(
+                    1 + alpha * a,
+                    -2 * cw,
+                    1 - alpha * a,
+                    1 + alpha / a,
+                    -2 * cw,
+                    1 - alpha / a,
+                )
+            }
+        }
+    }
+
+    /**
+     * [src] through the lift at [db] dB per element, times [gain], and the largest magnitude of what comes out. [LiftSection.lowShelf] then [LiftSection.peaking], in series, at [RATE] (after the conditioning has
+     * taken the DC off), one sample at a time, in Double from the sample in to the end of the second section and narrowed to Float once there, then times [gain] in Float as [Dsp.levelTo] multiplies; [src] is never
+     * changed. With [out] given, the samples are written there as well, so the peak that was tested and the samples that ship come from the same arithmetic.
+     */
+    private fun liftPass(src: FloatArray, voice: ArcoVoice, db: Float, gain: Float, out: FloatArray?): Float {
+        val shelf = LiftSection.lowShelf(liftShelfHz(voice).toDouble(), db.toDouble(), RATE)
+        val bell = LiftSection.peaking(liftBellHz(voice).toDouble(), db.toDouble(), liftBellQ(voice).toDouble(), RATE)
+        var peak = 0f
+        for (i in src.indices) {
+            val v = bell.process(shelf.process(src[i].toDouble())).toFloat() * gain
+            if (out != null) out[i] = v
+            val a = abs(v)
+            if (a > peak) peak = a
+        }
+        return peak
+    }
+
+    /** A copy of the conditioned [conditioned] through the lift at [db] dB per element (a gain of 1): the shape alone, with no level and no cap. Probes and controls use it; [finishedMeasured] does not. */
+    internal fun lifted(conditioned: FloatArray, voice: ArcoVoice, db: Float): FloatArray =
+        FloatArray(conditioned.size).also { liftPass(conditioned, voice, db, 1f, it) }
+
+    /**
+     * How much of the lift [asked] a note can have: [peakAt] says the largest sample the note would have at a given lift, [limit] is the most it may have. The cap is the largest lift in 0 to [LIFT_TOP_DB] that fits: the top
+     * is tried first (no search if it fits), else [LIFT_SEARCH_STEPS] bisection steps, and what is returned is always a lift that was itself tried and fitted (or 0, the plain, which fits by the way [limit] is made). It looks at
+     * the note only, never at BODY, so a note has one cap and the knob never goes backwards over it. Delivered is the least of [asked] and the cap, checked once more (the cap search trusts that a peak rises with the lift, this
+     * does not) and halved, up to [LIFT_HALVINGS_MAX] times, until it fits, then 0. [Dsp.limitPeak] never runs: the peak is met by lifting less, never by turning the note down.
+     */
+    private fun liftPlan(asked: Float, limit: Float, peakAt: (Float) -> Float): Lift {
+        var cap = LIFT_TOP_DB
+        if (peakAt(LIFT_TOP_DB) > limit) {
+            var low = 0f
+            var high = LIFT_TOP_DB
+            repeat(LIFT_SEARCH_STEPS) {
+                val mid = (low + high) / 2f
+                if (peakAt(mid) <= limit) low = mid else high = mid
+            }
+            cap = low
+        }
+        var delivered = min(asked, cap)
+        var halvings = 0
+        while (delivered > 0f && peakAt(delivered) > limit) {
+            if (halvings == LIFT_HALVINGS_MAX) {
+                delivered = 0f
+                break
+            }
+            delivered /= 2f
+            halvings++
+        }
+        return Lift(asked, cap, delivered, halvings)
+    }
 
     // ---- the output chain -----------------------------------------------------
 
@@ -601,11 +812,70 @@ object Arco {
         return out
     }
 
-    internal fun finish(raw: FloatArray, rate: Int): FloatArray {
-        val out = condition(raw, rate)
-        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+    /**
+     * [withBody], then [condition]: the string through the box and the output chain's cleaning (the band limit, the decimation to [RATE], the mean and the 20 Hz high-pass), run once. It is the one place BODY is composed with the
+     * string, and the stage every branch of [finished] and of the loop starts from. [raw] is band-limited in place at BODY 0 (the box hands back the string itself), so pass a copy to keep it.
+     */
+    internal fun conditionedWithBody(raw: FloatArray, voice: ArcoVoice, body: Float, rate: Int): FloatArray =
+        condition(withBody(raw, voice, body, rate), rate)
+
+    /**
+     * [Dsp.levelTo]'s own numbers, copied because its defaults cannot be read from here: a signal [Loudness.of] puts at or under [LEVEL_SILENCE] is left alone, and no sample is left past [LEVEL_CEILING]. A test holds [plainGain]
+     * equal to [Dsp.levelTo] on a normal and a hot buffer, so a change to either number there fails here. Not listening values.
+     */
+    private const val LEVEL_SILENCE = 1e-6f
+    private const val LEVEL_CEILING = 0.99f
+
+    /**
+     * The gain [Dsp.levelTo] puts on [conditioned], as one number, without changing it: [Dsp.MELODIC_LOUDNESS_TARGET] over its [Loudness.of], and then, if that puts a sample past [LEVEL_CEILING], scaled so the largest sample sits
+     * there (levelTo's own limiter step; its two multiplies come out as one here, which is a last-place rounding from them). A signal [Loudness.of] cannot see is left as levelTo leaves it, a gain of 1 (so a silent note stays exactly silent
+     * and nothing is divided by zero). Above the knee every note gets the plain's gain: the box is frozen there, so the conditioned note is the plain's conditioned note, and nothing re-levels the lift away.
+     */
+    internal fun plainGain(conditioned: FloatArray): Float {
+        if (conditioned.isEmpty()) return 1f
+        val measured = Loudness.of(Snip(conditioned.copyOf(), channels = 1, sampleRate = RATE))
+        if (measured <= LEVEL_SILENCE) return 1f
+        val gain = Dsp.MELODIC_LOUDNESS_TARGET / measured
+        val peak = peakOf(conditioned, gain)
+        return if (peak > LEVEL_CEILING) gain * (LEVEL_CEILING / peak) else gain
+    }
+
+    /** The plain's finish, in place on [conditioned]: [Dsp.levelTo] to [Dsp.MELODIC_LOUDNESS_TARGET], then the 4 ms [Dsp.fadeTail]. Today's two statements, in today's order. */
+    private fun levelled(conditioned: FloatArray): FloatArray {
+        Dsp.levelTo(conditioned, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(conditioned)
+        return conditioned
+    }
+
+    /** A finished note and what the lift did to it ([Lift.NONE] at or under the knee). */
+    internal class Finished(val samples: FloatArray, val lift: Lift)
+
+    /**
+     * The one finish of a note: the string [raw] at the oversampled [rate], through the box, the output chain and BODY [body]. Every render and every test, probe and generator copy that was re-pointed finishes through this one
+     * function, so such a copy cannot test a path the engine does not play. The declared exceptions, each on purpose: the frozen reference (ArcoFrozenR1cTest, today's pipeline kept verbatim to hold the sound at and under the knee), the cap-off
+     * controls and the CI-equality rebuild (ArcoBodyLiftTest, built from [conditionedWithBody], [plainGain] and [lifted] so each can fail where the engine's own finish cannot), and the R1e helper's own copy of the conditioning
+     * (ArcoWarmthCandidates, which exists to be compared with this function). [raw] is band-limited in place at BODY 0 ([conditionedWithBody]), so pass a copy to keep it.
+     *
+     * At or under [BODY_KNEE] it is today's finish to the sample: the same statements in the same order, which is a branch and not a 0 dB filter (a 0 dB biquad is not bit-identical to none). Above it the box is the knee's
+     * ([boxAmountFor]) and the note keeps the plain's own gain ([plainGain]), with [lifted]'s shape by [liftDbFor] on top, backed off only as far as the peak needs ([PEAK_CAP], or the plain's own peak if that is higher; see
+     * [liftPlan]). [Dsp.levelTo] and [Dsp.limitPeak] never run after the lift: the level is not matched back to the plain and the top of the note is never turned down. The last step is the 4 ms [Dsp.fadeTail], which only lowers
+     * a peak. If nothing can be lifted the result is the plain's finish exactly.
+     */
+    internal fun finished(raw: FloatArray, voice: ArcoVoice, body: Float, rate: Int): FloatArray =
+        finishedMeasured(raw, voice, body, rate).samples
+
+    /** [finished] and what the lift did ([Lift]): the same function, so a test reads the engine's own numbers. */
+    internal fun finishedMeasured(raw: FloatArray, voice: ArcoVoice, body: Float, rate: Int): Finished {
+        val conditioned = conditionedWithBody(raw, voice, body, rate)
+        if (body <= BODY_KNEE) return Finished(levelled(conditioned), Lift.NONE)
+        val gain = plainGain(conditioned)
+        val limit = max(PEAK_CAP, peakOf(conditioned, gain))
+        val lift = liftPlan(liftDbFor(body), limit) { db -> liftPass(conditioned, voice, db, gain, null) }
+        if (lift.delivered <= 0f) return Finished(levelled(conditioned), lift)
+        val out = FloatArray(conditioned.size)
+        liftPass(conditioned, voice, lift.delivered, gain, out)
         Dsp.fadeTail(out)
-        return out
+        return Finished(out, lift)
     }
 
     // ---- the length of a note: one place --------------------------------------
@@ -817,15 +1087,63 @@ object Arco {
         return play(voice, tuned, macros, rate, Gate(total, attackN, 0, 0, steady = true), null, null, null, null, false, null, null)
     }
 
-    /** A rendered LOOP and how well its stretch closes on itself ([Keys.seamError]). */
-    internal class LoopRender(val loop: FloatArray, val seam: Double)
+    /** A rendered LOOP, how well its stretch closes on itself ([Keys.seamError]), and what the lift did to it ([Lift.NONE] at or under the knee). */
+    internal class LoopRender(val loop: FloatArray, val seam: Double, val lift: Lift = Lift.NONE)
+
+    /** What [cutLoop] reads off a conditioned stretch: its seam, the kept window [one], where the cut falls in it, and the window rotated to start at the cut. */
+    private class LoopCut(val seam: Double, val one: FloatArray, val cut: Int, val loop: FloatArray)
+
+    /** [one] rotated to start at [cut]: from the cut to the end, then from the start to the cut. */
+    private fun rotated(one: FloatArray, cut: Int): FloatArray = one.copyOfRange(cut, one.size) + one.copyOfRange(0, cut)
+
+    /**
+     * The seam, cut and rotate tail of a LOOP, for the plain stretch and for the lifted one alike (one helper, so the two cannot drift apart): the seam is read on [stretch] ([Keys.seamError], over the [frames] kept after
+     * [warm] frames and the [SEAM_FRAMES] before the wrap), the kept window is cut where the two neighbours are smallest ([Siren.bestCut]) and rotated to start there. Not levelled: the caller does that.
+     */
+    private fun cutLoop(stretch: FloatArray, warm: Int, frames: Int): LoopCut {
+        val seam = Keys.seamError(stretch.copyOfRange(warm, warm + frames + SEAM_FRAMES), SEAM_FRAMES)
+        val one = stretch.copyOfRange(warm, warm + frames)
+        val cut = Siren.bestCut(one, frames)
+        return LoopCut(seam, one, cut, rotated(one, cut))
+    }
+
+    /** The plain's loop: the cut loop levelled by [Dsp.levelTo], in place, today's last line (no fade: a loop wraps). */
+    private fun levelledLoop(cut: LoopCut): LoopRender {
+        Dsp.levelTo(cut.loop, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        return LoopRender(cut.loop, cut.seam)
+    }
+
+    /**
+     * A LOOP from its conditioned stretch at BODY [body]. At or under [BODY_KNEE] it is the old lines: the seam, cut and rotate tail on the conditioned stretch, then [Dsp.levelTo]. Above it the lift runs on the whole
+     * conditioned stretch before the seam is read (the filters have settled long before the kept window begins, and the seam is the lifted note's own), the cut is chosen on the lifted window, and the gain is the plain's:
+     * [plainGain] of the plain's own window rotated at that same cut, so nothing levels the lift away. The cap is found on that finished loop (its peak is at most [PEAK_CAP], or the plain's own if that is higher), tried at
+     * every lift it tests with its own cut and gain, so what is checked is what ships. If nothing can be lifted the result is the plain's loop exactly.
+     */
+    private fun loopFrom(conditioned: FloatArray, voice: ArcoVoice, body: Float, warm: Int, frames: Int): LoopRender {
+        val plain = cutLoop(conditioned, warm, frames)
+        if (body <= BODY_KNEE) return levelledLoop(plain)
+        val limit = max(PEAK_CAP, peakOf(plain.one, plainGain(plain.loop)))
+
+        fun liftedAt(db: Float): LoopRender {
+            val t = cutLoop(lifted(conditioned, voice, db), warm, frames)
+            val gain = plainGain(rotated(plain.one, t.cut))
+            for (i in t.loop.indices) t.loop[i] *= gain
+            return LoopRender(t.loop, t.seam)
+        }
+
+        val lift = liftPlan(liftDbFor(body), limit) { db -> peakOf(liftedAt(db).loop) }
+        if (lift.delivered <= 0f) return LoopRender(levelledLoop(plain).loop, plain.seam, lift)
+        val r = liftedAt(lift.delivered)
+        return LoopRender(r.loop, r.seam, lift)
+    }
 
     /**
      * The held note as one loop, [Bore.LoopPlan.periods] whole periods in [Bore.LoopPlan.frames] whole frames, so the wrap is
      * seamless: a steady bow, the warm-up discarded, the *played* pitch corrected until the periods fill the
      * frames (BORE's route: a fresh bow rendered at `tuned * ratio` until the ratio is 1 to 3e-7), then cut where
      * the two neighbours are smallest and levelled. A bow's pitch is a limit cycle's, not an accumulator's, so
-     * the planned pitch does not close it; the measured one does.
+     * the planned pitch does not close it; the measured one does. BODY is composed with the stretch once ([conditionedWithBody]) and
+     * finished by [loopFrom]: at or under the knee as it always was, above it with the lift on the stretch before the seam is read, the cut chosen on the lifted window and the plain's gain.
      *
      * Checked, not assumed: the kept stretch is compared with itself one loop later ([Keys.seamError], the
      * Organ's bar), because the loop played twice is tautologically periodic.
@@ -846,13 +1164,8 @@ object Arco {
             tuned *= ratio
             raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
         }
-        val conditioned = condition(withBody(raw, voice, m.getValue("BODY"), rate), rate)
-        val seam = Keys.seamError(conditioned.copyOfRange(warm, warm + plan.frames + SEAM_FRAMES), SEAM_FRAMES)
-        val one = conditioned.copyOfRange(warm, warm + plan.frames)
-        val cut = Siren.bestCut(one, plan.frames)
-        val loop = one.copyOfRange(cut, plan.frames) + one.copyOfRange(0, cut)
-        Dsp.levelTo(loop, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
-        return LoopRender(loop, seam)
+        val body = m.getValue("BODY")
+        return loopFrom(conditionedWithBody(raw, voice, body, rate), voice, body, warm, plan.frames)
     }
 
     /** The loop, refused by name if its corner cannot close: a click shipped silently is the worse failure. */
@@ -867,12 +1180,16 @@ object Arco {
 
     // ---- the render -----------------------------------------------------------
 
+    /**
+     * One note: [renderLoop] at HOLD's top step, else the bow at the note's exact pitch finished by [finished], the one place BODY, the level and the lift are worked out. The render is a pure function of [macros] and its
+     * length is the string's own at every BODY (the box is cut to it and the lift runs on a buffer of the same length), so [renderFrames] and [drumClassFor] stay closed form.
+     */
     fun render(voice: ArcoVoice, macros: Map<String, Float> = emptyMap()): Snip {
         val m = settled(macros, voice)
         if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
         val hz = frequencyFor(voice, m.getValue("TUNE"))
         val rate = RATE * Dsp.OVERSAMPLE
         val raw = bow(voice, hz, m, rate)
-        return Snip(finish(withBody(raw, voice, m.getValue("BODY"), rate), rate), channels = 1, sampleRate = RATE)
+        return Snip(finished(raw, voice, m.getValue("BODY"), rate), channels = 1, sampleRate = RATE)
     }
 }
