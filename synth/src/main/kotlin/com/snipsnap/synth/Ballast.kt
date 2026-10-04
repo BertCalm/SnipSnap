@@ -264,7 +264,7 @@ object Ballast {
             var wires = 0f
             if (probe.strings) for (j in 0 until STRINGS) {
                 val lower = j < 2
-                val onsetRelease = if (lower) gesture * (.0025f + .004f * span) * noise.next() else 0f
+                val onsetRelease = if (lower && probe.actuator) gesture * (.0025f + .004f * span) * noise.next() else 0f
                 val harmonicDrive = if (lower) 0f else actuator * (.00035f + .0012f * sympathy)
                 val structural = frameWave * (.001f + .004f * sympathy) * stringWeights[j]
                 val y = stringLoops[j].next(onsetRelease + harmonicDrive + structural)
