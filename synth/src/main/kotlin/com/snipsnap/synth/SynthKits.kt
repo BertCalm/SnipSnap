@@ -396,6 +396,37 @@ object SynthKits {
     }
 
     /**
+     * The FLOTILLA kit: RIPPLE up the minor pentatonic from C4 on A01–A08, then eight presets
+     * that walk the rest of the idea (open wood, a large hull, crossing routes, the warm dome,
+     * a gentle drift, a dense gather, and the two held notes). Every pad is dry. The length rule
+     * files them LOOP. A drum program plays each pad once; the held pads' wrap is the audition's.
+     */
+    fun flotilla(): List<ArrangedPad?> {
+        val walk = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17)
+        fun note(n: Int, semi: Int) = FlotillaPatch(
+            "Wake $n",
+            FlotillaVoice.RIPPLE,
+            Flotilla.defaults(FlotillaVoice.RIPPLE),
+            midi = (60 + semi).coerceIn(Flotilla.MIDI_MIN, Flotilla.MIDI_MAX),
+        ).let { pad(it, Flotilla.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: FlotillaVoice, name: String) =
+            FlotillaPresets.forVoice(voice).first { it.name == name }
+                .let { pad(it, Flotilla.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, walk[0]), note(2, walk[1]), note(3, walk[2]), note(4, walk[3]),
+            note(5, walk[4]), note(6, walk[5]), note(7, walk[6]), note(8, walk[7]),
+            preset(FlotillaVoice.KNOCK, "Open Wood"),
+            preset(FlotillaVoice.HOLLOW, "Deep Cavity"),
+            preset(FlotillaVoice.CROSSWAVE, "Crossing Paths"),
+            preset(FlotillaVoice.DRIFT, "Warm Canopy"),
+            preset(FlotillaVoice.DRIFT, "Gentle Current"),
+            preset(FlotillaVoice.GATHER, "Gathered Vessels"),
+            preset(FlotillaVoice.DRIFT, "Held Sparse"),
+            preset(FlotillaVoice.GATHER, "Held Dense"),
+        )
+    }
+
+    /**
      * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
      * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
      * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).

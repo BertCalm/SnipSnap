@@ -487,3 +487,22 @@ tasks.register<JavaExec>("generateValveAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/valve-audition")
 }
+
+tasks.register<JavaExec>("generateFlotillaKit") {
+    group = "distribution"
+    description = "Render the FLOTILLA acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlotillaKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the FLOTILLA audition clips, manifest and page under testkit/flotilla-audition/. See FlotillaAuditionGenerator. */
+tasks.register<JavaExec>("generateFlotillaAudition") {
+    group = "distribution"
+    description = "Render the FLOTILLA audition clips, manifest and listening page under testkit/flotilla-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlotillaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/flotilla-audition")
+}

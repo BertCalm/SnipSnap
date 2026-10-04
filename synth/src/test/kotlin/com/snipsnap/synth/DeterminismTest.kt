@@ -258,6 +258,17 @@ class DeterminismTest {
         }
     }
 
+    // FLOTILLA seeds geometry from the voice, the note and the hull knobs, and the
+    // aquatic noise from a second seed. A saved recipe has to come back bit for bit.
+    @Test
+    fun `FLOTILLA is byte-identical across renders, every voice`() {
+        for (voice in FlotillaVoice.entries) {
+            val a = FlotillaPatch("Canary", voice, Flotilla.defaults(voice), midi = 67)
+            val b = FlotillaPatch("Canary", voice, Flotilla.defaults(voice), midi = 67)
+            assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
+
     // TREMOR seeds its drummers, its bead placement and its fault thresholds from the voice and
     // the note, and the bead/contact solver is ordered by index. A saved recipe regenerates bit for bit.
     @Test
