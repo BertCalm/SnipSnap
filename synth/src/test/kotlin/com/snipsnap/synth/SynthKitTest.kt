@@ -274,4 +274,47 @@ class SynthKitTest {
         )
         for (k in 8 until 16) assertEquals(MercuryPresets.forVoice(patches[k].voice).first { it.name == patches[k].name }, patches[k], "pad ${k + 1} is the preset itself")
     }
+
+    @Test
+    fun `the flotilla kit is eight ripples up the pentatonic and eight presets, all dry, and exports at 44100`() {
+        val kit = SynthKits.flotilla()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a FLOTILLA render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val again = PadRecipe.fromJsonText(recipe.toJsonText())
+            assertEquals(recipe.patch, again.patch, "pad ${i + 1} recipe")
+            val patch = recipe.patch as? FlotillaPatch
+            assertTrue(patch != null, "pad ${i + 1} should be a FLOTILLA patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry")
+            assertEquals(DrumClass.LOOP, pad.drumClass, "pad ${i + 1}")
+            patch!!
+        }
+        val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val defaults = Flotilla.defaults(FlotillaVoice.RIPPLE)
+        for (k in 0 until 8) {
+            assertEquals(FlotillaVoice.RIPPLE, patches[k].voice)
+            assertEquals("Wake ${k + 1}", patches[k].name)
+            assertEquals(60 + walk[k], patches[k].midi)
+            assertEquals(defaults, patches[k].macros)
+        }
+        assertEquals(
+            listOf(
+                "KNOCK Open Wood",
+                "HOLLOW Deep Cavity",
+                "CROSSWAVE Crossing Paths",
+                "DRIFT Warm Canopy",
+                "DRIFT Gentle Current",
+                "GATHER Gathered Vessels",
+                "DRIFT Held Sparse",
+                "GATHER Held Dense",
+            ),
+            patches.drop(8).map { "${it.voice} ${it.name}" },
+        )
+        val kitDir = File(temp, "flotilla")
+        val assembled = KitAssembler.assembleArranged("Flotilla", kit, kitDir)
+        val result = KitExporter.exportProgramFolder(assembled, kitDir, File(temp, "sd"))
+        assertEquals(16, result.samples.size)
+        for (wav in result.samples) assertEquals(44_100, WavInfo.read(wav).sampleRate)
+    }
 }

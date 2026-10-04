@@ -273,6 +273,18 @@ names, previews under `[Previews]/`. Regenerate with
 import accept the file? A yes means one-file kit sharing; a no costs
 nothing — the folder exports stay the path.
 
+### SnipSnap Flotilla Kit — does a pool of vessels stay in tune?
+
+FLOTILLA: pitched emitters on a circular pool, floating vessels, a warm dome.
+A01–A08 walk a minor pentatonic from C4 on RIPPLE. A09–A16 are Open Wood,
+Deep Cavity, Crossing Paths, Warm Canopy, Gentle Current, Gathered Vessels,
+and two held notes (Held Sparse, Held Dense). Regenerate with
+`./gradlew :synth:generateFlotillaKit`. Things to confirm: the row plays in
+tune and ascending, a wood pad and a hollow pad are not drums, the two held
+pads wrap without a click, and no pad is filed as a kick, snare, clap, hat
+or tom. The listening page is `./gradlew :synth:generateFlotillaAudition`,
+then `testkit/flotilla-audition/index.html`.
+
 ### One check that applies to every kit: pad colours
 
 All the synth kits now write per-pad colours into the program (24-bit RGB in
