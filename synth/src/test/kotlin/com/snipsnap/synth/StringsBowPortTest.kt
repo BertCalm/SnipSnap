@@ -136,6 +136,23 @@ class StringsBowPortTest {
     }
 
     @Test
+    fun `a retune that would shorten the bridge segment to its port is refused, and changes neither segment`() {
+        // Copilot's review of #449: the guard sits after the capacity check and before either segment
+        // is retuned, so a refused retune leaves a bow whose two halves are tuned to the same note.
+        // An octave and a bit up halves the bridge segment to its port; an octave short of that still
+        // retunes (the port is at half the segment's built length).
+        val f = 220f
+        val refused = Strings.Bow(f, 0.133f, rate = rate)
+        val untouched = Strings.Bow(f, 0.133f, rate = rate)
+        val e = assertFailsWith<IllegalArgumentException> { refused.retune(f * 2.2f) }
+        assertTrue("bridge port" in (e.message ?: ""), "refused for another reason: ${e.message}")
+        val a = FloatArray(rate / 4) { refused.next(0.13f, 1.4f) }
+        val b = FloatArray(rate / 4) { untouched.next(0.13f, 1.4f) }
+        assertContentEquals(b, a, "a refused retune changed the bow")
+        Strings.Bow(f, 0.133f, rate = rate).retune(f * 1.8f)
+    }
+
+    @Test
     fun `a contact outside 0 to 1 is refused`() {
         val bow = Strings.Bow(220f, 0.133f, rate = rate)
         assertFailsWith<IllegalArgumentException> { bow.next(0.1f, 2f, 0f, 1.5f) }
