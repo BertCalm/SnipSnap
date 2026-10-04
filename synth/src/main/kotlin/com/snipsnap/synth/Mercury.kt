@@ -71,9 +71,6 @@ object Mercury {
     const val PRIMARIES = 12
     const val VESSELS = 4
 
-    /** Vessel mode v sits this far from primary v: near enough for COUPLE to trade energy with it. Designed, not sourced. */
-    private val VESSEL_DETUNE = doubleArrayOf(0.035, -0.045, 0.06, -0.07)
-
     /** Spring kappa per COUPLE, before WATER's loading lifts it. The busiest mode has four springs, so its sum stays under 0.77. */
     const val KAPPA_PER_COUPLE = 0.12
 
@@ -395,11 +392,11 @@ object Mercury {
         return DoubleArray(n) { (b[it] / b[0]).pow(2) }
     }
 
-    private fun isRing(voice: MercuryVoice) = voice != MercuryVoice.BLADE
-
-    /** BEND's signed per-mode deformation: the first mode never moves; the others drift up or down. Designed. */
-    private fun bendA(i: Int) = if (i == 0) 0.0 else 0.12 * sin(1.3 * i + 0.4)
-    private fun bendB(i: Int, n: Int) = if (i == 0) 0.0 else 0.05 * i / n
+    /** The object a voice is: its mode table, contact, pickup, load, BEND and vessel ([Geometry]). */
+    internal fun geometryOf(voice: MercuryVoice): Geometry = when (voice) {
+        MercuryVoice.PING, MercuryVoice.SING -> RingGeometry
+        MercuryVoice.BLADE -> BeamGeometry
+    }
 
     // ---- the render ---------------------------------------------------------
 
@@ -448,50 +445,52 @@ object Mercury {
         val frames = steady?.total ?: rawFrames(m)
 
         // Which modes take part: those that cannot reach the ceiling at the widest bend.
-        val base = if (isRing(voice)) ringRatios(PRIMARIES) else beamRatios(PRIMARIES)
+        val geo = geometryOf(voice)
+        val base = geo.ratios
         val primaries = (0 until PRIMARIES).count { hz * base[it] * MODE_HEADROOM < MODE_CEILING_HZ }.coerceAtLeast(1)
-        val vessels = min(VESSELS, primaries)
+        val vessels = (0 until VESSELS).count { geo.vesselHost(it) < primaries }
         val n = primaries + vessels
-        val ratio0 = DoubleArray(n) { i -> if (i < primaries) base[i] else base[i - primaries] * (1 + VESSEL_DETUNE[i - primaries]) }
+        val ratio0 = DoubleArray(n) { i ->
+            if (i < primaries) base[i] else base[geo.vesselHost(i - primaries)] * (1 + geo.vesselDetune[i - primaries])
+        }
         val isVessel = BooleanArray(n) { it >= primaries }
-        val modeIndex = IntArray(n) { if (it < primaries) it else it - primaries }
+        // The primary a mode is: itself, or the one its vessel hangs from.
+        fun hostOf(i: Int) = if (i < primaries) i else geo.vesselHost(i - primaries)
 
         // GLASS: correlated damping, its slope up the modes, and the pickup's tilt.
         val t60Fund = t60Fundamental(glass.toFloat())
         val slope = T60_SLOPE_LOW + (T60_SLOPE_HIGH - T60_SLOPE_LOW) * glass
-        val t60Base = DoubleArray(n) { i ->
-            if (isVessel[i]) VESSEL_T60_LOW + (VESSEL_T60_HIGH - VESSEL_T60_LOW) * glass
-            else max(0.02, t60Fund * ratio0[i].pow(-slope))
+        val t60Base = DoubleArray(n)
+        for (i in 0 until n) {
+            t60Base[i] = if (isVessel[i]) geo.vesselT60(glass, t60Base[hostOf(i)]) else max(0.02, t60Fund * ratio0[i].pow(-slope))
         }
         val tilt = TILT_LOW + (TILT_HIGH - TILT_LOW) * glass
-        fun beamShape(k: Int, x: Double) = cos((k + 1.5) * PI * x)
-        val contact0 = DoubleArray(n) { i -> if (isVessel[i]) 0.0 else ratio0[i].pow(-CONTACT_TAPER) }
+        val contact0 = DoubleArray(n) { i -> if (isVessel[i]) 0.0 else geo.contact(i, ratio0[i]) }
         val pickup0 = DoubleArray(n) { i ->
-            if (isVessel[i]) {
-                0.5 * (if ((i - primaries) % 2 == 0) 1 else -1)
-            } else {
-                val s = if (isRing(voice)) cos((modeIndex[i] + 2) * 0.4) else beamShape(modeIndex[i], 0.3)
-                s * ratio0[i].pow(-tilt)
-            }
+            if (isVessel[i]) geo.vesselPickup(i - primaries) else geo.pickup(i, ratio0[i], tilt)
         }
 
         // BEND: a gesture from flat toward the target curvature, with a signed pitch excursion that settles to the note.
         val cTarget = 2 * bend - 1
         val tau = gestureSeconds(voice)
-        fun ratioAt(i: Int, c: Double) = ratio0[i] * exp(bendA(i) * c + bendB(i, n) * c * c)
+        val bendA = DoubleArray(n) { geo.bendA(it, primaries) }
+        val bendB = DoubleArray(n) { geo.bendB(it, n, primaries) }
+        fun ratioAt(i: Int, c: Double) = ratio0[i] * exp(bendA[i] * c + bendB[i] * c * c)
 
         // The bank, at the settled shape, for the anchor fix.
         val bank = Modes.Bank(n, rate)
         val kappa = KAPPA_PER_COUPLE * couple
         val edgeI = ArrayList<Int>()
         val edgeJ = ArrayList<Int>()
-        for (i in 0 until primaries - 1) { edgeI += i; edgeJ += i + 1 }
+        val edgeScale = ArrayList<Double>()
+        for (i in 0 until primaries - 1) { edgeI += i; edgeJ += i + 1; edgeScale += geo.neighbourScale(i) }
         for (v in 0 until vessels) {
-            edgeI += primaries + v; edgeJ += v
-            if (v + 1 < primaries) { edgeI += primaries + v; edgeJ += v + 1 }
+            val host = geo.vesselHost(v)
+            edgeI += primaries + v; edgeJ += host; edgeScale += geo.vesselKappaScale
+            if (geo.vesselSpringsToNext && host + 1 < primaries) { edgeI += primaries + v; edgeJ += host + 1; edgeScale += geo.vesselKappaScale }
         }
         for (i in 0 until n) bank.tune(i, (hz * ratioAt(i, cTarget)).coerceAtMost(MODE_CEILING_HZ), t60Base[i])
-        val edges = IntArray(edgeI.size) { e -> bank.connect(edgeI[e], edgeJ[e], kappa) }
+        val edges = IntArray(edgeI.size) { e -> bank.connect(edgeI[e], edgeJ[e], kappa * edgeScale[e]) }
         val pitchFix = bank.anchorScale()
 
         // WATER: one damped, circularly forced mass that every mode reads.
@@ -501,11 +500,12 @@ object Mercury {
         var my = 0.3 * massRng.next()
         var mvx = 0.0
         var mvy = 0.0
-        val waterCurve = if (water > 0.0) water.pow(WATER_CURVE) else 0.0
+        val waterCurve = if (water > 0.0) water.pow(geo.waterCurve) else 0.0
         val mu = WATER_DEPTH * waterCurve
         val shimmer = WATER_SHIMMER * waterCurve
-        // Every load swings between 0 and 1 and averages about a half; the pitch is centred there.
-        val anchorNominal = 1.0 / sqrt(1 + mu * 0.5)
+        // Every load swings between 0 and 1 and averages about a half; the pitch is centred on the fundamental's mean.
+        val anchorNominal = 1.0 / sqrt(1 + mu * geo.anchorMeanLoad)
+        val unit = DoubleArray(n)
         val load = DoubleArray(n)
         val ctrlDt = CTRL * dt
 
@@ -520,7 +520,7 @@ object Mercury {
         val releaseFrames = (CONTACT_RELEASE_SECONDS * rate).toInt()
         val rampFrames = (DRIVER_RAMP_SECONDS * (1 + VELOCITY_RAMP * (1 - velocity)) * rate).toInt()
 
-        val strikeFrames = ((STRIKE_MS_HARD + (STRIKE_MS_SOFT - STRIKE_MS_HARD) * (1 - glass)) * 1e-3 * rate).toInt().coerceAtLeast(2)
+        val strikeFrames = ((geo.strikeMsHard + (geo.strikeMsSoft - geo.strikeMsHard) * (1 - glass)) * 1e-3 * rate).toInt().coerceAtLeast(2)
         val strikePeak = STRIKE_IMPULSE * tapW * PI / (2 * strikeFrames * dt)
         val noiseFrames = (STRIKE_NOISE_SECONDS * rate).toInt()
         val noise = Dsp.Noise(Dsp.seedFor("MERCURY", voice, hz, "strike"))
@@ -556,24 +556,24 @@ object Mercury {
                 val xm = (0.5 + 0.45 * mx).coerceIn(0.0, 1.0)
                 val env = if (steady != null) 0.0 else exp(-time / tau)
                 val c = cTarget * (1 - env)
-                val excursion = 2.0.pow(BEND_EXCURSION_SEMITONES * cTarget * env / 12)
+                val excursion = 2.0.pow(geo.bendExcursionSemitones * cTarget * env / 12)
                 for (i in 0 until n) {
-                    load[i] = when {
+                    unit[i] = when {
                         mu == 0.0 -> 0.0
-                        isVessel[i] -> 0.5 * rho2
-                        isRing(voice) -> min(1.0, rho2 / RING_ORBIT_LOAD) * cos(ang - RING_LOAD_PHASE * modeIndex[i]).let { it * it }
-                        else -> beamShape(modeIndex[i], xm).let { it * it }
+                        isVessel[i] -> geo.vesselUnitLoad(i - primaries, rho2, ang)
+                        else -> geo.unitLoad(i, rho2, ang, xm)
                     }
+                    load[i] = geo.loadWeight(hostOf(i)) * unit[i]
                     val f = (hz * pitchFix * excursion * ratioAt(i, c) / sqrt(1 + mu * load[i]) / anchorNominal)
                         .coerceAtMost(MODE_CEILING_HZ)
                     val fade = fade(f)
                     contact[i] = contact0[i] * fade * (1 - WATER_CONTACT * water * load[i])
-                    pickup[i] = pickup0[i] * fade * (if (isVessel[i]) 1.0 else 1 + shimmer * (2 * load[i] - 1))
+                    pickup[i] = pickup0[i] * fade * (if (isVessel[i]) 1.0 else 1 + shimmer * (2 * unit[i] - 1))
                     bank.tune(i, f, t60Base[i] / (1 + WATER_DAMPING * mu * load[i]))
                 }
                 if (water > 0.0) {
                     for (e in edges.indices) {
-                        bank.setKappa(edges[e], kappa * (1 + KAPPA_WATER_LIFT * water * (load[edgeI[e]] + load[edgeJ[e]])))
+                        bank.setKappa(edges[e], kappa * edgeScale[e] * (1 + KAPPA_WATER_LIFT * water * (load[edgeI[e]] + load[edgeJ[e]])))
                     }
                 }
                 compliance = bank.compliance(contact)
