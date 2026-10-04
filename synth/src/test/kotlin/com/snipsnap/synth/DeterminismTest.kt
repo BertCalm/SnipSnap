@@ -200,6 +200,22 @@ class DeterminismTest {
         }
     }
 
+    // BALLAST seeds its oscillators' phases, its wires' tiny detunes and its tiles' resting positions from the voice and
+    // the note (Dsp.seedFor), and steps a coupled bank, a ladder and a contact chain with a threshold in them every
+    // sample, so one stray last bit would move every sample after it. One per voice, at its defaults, with every knob
+    // moved, and as a held loop.
+    @Test
+    fun `BALLAST is byte-identical across renders, every voice`() {
+        for (voice in BallastVoice.entries) {
+            val shot = BallastPatch("Canary", voice, Ballast.defaults(voice))
+            assertContentEquals(shot.render().samples, shot.render().samples, "$voice defaults")
+            val moved = BallastPatch("Canary", voice, mapOf("TUNE" to 0.3f, "DRIVE" to 0.8f, "SYMPATHY" to 0.6f, "SPAN" to 0.9f, "GLASS" to 0.7f, "FRAME" to 0.2f, "HOLD" to 0.2f))
+            assertContentEquals(moved.render().samples, moved.render().samples, "$voice moved")
+            val held = BallastPatch("Canary", voice, Ballast.defaults(voice) + ("HOLD" to 1f))
+            assertContentEquals(held.render().samples, held.render().samples, "$voice held")
+        }
+    }
+
     // GYRE seeds each string's pluck from Dsp.seedFor per voice, note and string, and its rotor
     // starts at phase 0 on every render - a saved recipe regenerates bit for bit.
     @Test

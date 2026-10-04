@@ -238,6 +238,47 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the ballast kit is four roots up the pentatonic and twelve presets, all dry and filed by the engine`() {
+        val kit = SynthKits.ballast()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a BALLAST render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? BallastPatch
+            assertTrue(patch != null, "pad ${i + 1} should be a BALLAST patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry: BALLAST has no landing chain")
+            patch!!
+        }
+        for (k in 0 until 16) {
+            assertEquals(Ballast.drumClassFor(patches[k].voice, patches[k].macros), kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+            assertEquals(Ballast.renderFrames(patches[k].voice, patches[k].macros), kit[k]!!.snip.frameCount, "pad ${k + 1}'s class is not read from its rendered length")
+        }
+        // Every one of these runs past the classifier's 1.5 s line, so the length rule files them LOOP.
+        for (k in 0 until 16) assertEquals(DrumClass.LOOP, kit[k]!!.drumClass)
+        val walk = listOf(0, 3, 5, 7)
+        val defaults = Ballast.defaults(BallastVoice.ROOT)
+        for (k in 0 until 4) {
+            val macros = patches[k].macros
+            assertEquals(BallastVoice.ROOT, patches[k].voice, "pad ${k + 1} is ROOT")
+            assertEquals("Root ${k + 1}", patches[k].name)
+            assertEquals(Ballast.rootMidi(BallastVoice.ROOT) + 12 + walk[k], Ballast.midiFor(BallastVoice.ROOT, macros.getValue("TUNE")), "pad ${k + 1} is the ${walk[k]}th semitone over C2")
+            for ((name, default) in defaults) {
+                if (name == "TUNE") continue
+                assertEquals(default, macros.getValue(name), "pad ${k + 1}: $name is at its default")
+            }
+        }
+        val names = patches.drop(4).map { "${it.voice} ${it.name}" }
+        assertEquals(
+            listOf(
+                "WIRE LONG STRING", "WIRE UPPER HALO", "DEEP LOWER REPLY", "DEEP LOOSE MOUNT", "GLINT GLASS WAKE", "GLINT DENSE TILES",
+                "BLOOM DELAYED OPEN", "BLOOM SLOW CLIMB", "SWARM DENSE RATTLE", "SWARM TILE STORM", "DEEP LOW WELL", "BLOOM WARM LIFT",
+            ),
+            names,
+        )
+        for (k in 4 until 16) assertEquals(BallastPresets.forVoice(patches[k].voice).first { it.name == patches[k].name }, patches[k], "pad ${k + 1} is the preset itself")
+    }
+
+    @Test
     fun `the mercury kit is eight pings up the pentatonic, four sing and four blade presets, all dry`() {
         val kit = SynthKits.mercury()
         assertEquals(16, kit.size)

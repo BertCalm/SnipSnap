@@ -376,11 +376,11 @@ object SynthKits {
         return listOf(
             note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),   // A01-A04
             preset(BallastVoice.WIRE, "LONG STRING"), preset(BallastVoice.WIRE, "UPPER HALO"),                // A05 A06
-            preset(BallastVoice.DEEP, "LOWER ECHO"), preset(BallastVoice.DEEP, "LOOSE MOUNT"),                // A07 A08
+            preset(BallastVoice.DEEP, "LOWER REPLY"), preset(BallastVoice.DEEP, "LOOSE MOUNT"),                // A07 A08
             preset(BallastVoice.GLINT, "GLASS WAKE"), preset(BallastVoice.GLINT, "DENSE TILES"),              // A09 A10
-            preset(BallastVoice.BLOOM, "DELAYED OPEN"), preset(BallastVoice.BLOOM, "SLOW SWELL"),             // A11 A12
+            preset(BallastVoice.BLOOM, "DELAYED OPEN"), preset(BallastVoice.BLOOM, "SLOW CLIMB"),             // A11 A12
             preset(BallastVoice.SWARM, "DENSE RATTLE"), preset(BallastVoice.SWARM, "TILE STORM"),             // A13 A14
-            preset(BallastVoice.DEEP, "LOW WELL"), preset(BallastVoice.BLOOM, "WARM SWELL"),                  // A15 A16
+            preset(BallastVoice.DEEP, "LOW WELL"), preset(BallastVoice.BLOOM, "WARM LIFT"),                  // A15 A16
         )
     }
 

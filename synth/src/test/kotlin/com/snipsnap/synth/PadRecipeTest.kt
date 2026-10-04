@@ -36,6 +36,7 @@ class PadRecipeTest {
         TerraPatch("Djembe Test", TerraVoice.COMPOUND_MEMBRANE, mapOf("POS" to 0.4f)),
         ArcoPatch("Cello Test", ArcoVoice.CELLO, mapOf("GRIP" to 0.4f)),
         MercuryPatch("Ping Test", MercuryVoice.PING, mapOf("GLASS" to 0.4f)),
+        BallastPatch("Wire Test", BallastVoice.WIRE, mapOf("SYMPATHY" to 0.4f)),
         GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
     )

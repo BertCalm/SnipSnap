@@ -58,12 +58,12 @@ object BallastPresets {
         p(BallastVoice.GLINT, "CLEAR TOPS", "TUNE" to 12 / 36f, "DRIVE" to 0.35f, "SYMPATHY" to 0.5f, "SPAN" to 0.8f, "GLASS" to 0.6f, "FRAME" to 0.5f, "HOLD" to 0.35f), // C2
         p(BallastVoice.GLINT, "SPARK ROW", "TUNE" to 7 / 36f, "DRIVE" to 0.55f, "SYMPATHY" to 0.45f, "SPAN" to 0.6f, "GLASS" to 0.75f, "FRAME" to 0.3f, "HOLD" to 0.25f), // G1
         p(BallastVoice.GLINT, "FROST LINE", "TUNE" to 14 / 36f, "DRIVE" to 0.3f, "SYMPATHY" to 0.55f, "SPAN" to 0.7f, "GLASS" to 0.55f, "FRAME" to 0.5f, "HOLD" to 0.45f), // D2
-        p(BallastVoice.GLINT, "SMALL BELLS", "TUNE" to 21 / 36f, "DRIVE" to 0.4f, "SYMPATHY" to 0.4f, "SPAN" to 0.5f, "GLASS" to 0.85f, "FRAME" to 0.45f, "HOLD" to 0.3f), // A2
+        p(BallastVoice.GLINT, "SMALL BELLS", "TUNE" to 21 / 36f, "DRIVE" to 0.3f, "SYMPATHY" to 0.5f, "SPAN" to 0.45f, "GLASS" to 0.9f, "FRAME" to 0.25f, "HOLD" to 0.15f), // A2
         p(BallastVoice.GLINT, "DENSE TILES", "TUNE" to 12 / 36f, "DRIVE" to 0.45f, "SYMPATHY" to 0.4f, "SPAN" to 0.55f, "GLASS" to 0.95f, "FRAME" to 0.55f, "HOLD" to 0.4f), // C2
     )
 
     private val deepPresets = listOf(
-        p(BallastVoice.DEEP, "LOWER ECHO", "TUNE" to 0 / 36f, "DRIVE" to 0.45f, "SYMPATHY" to 0.45f, "SPAN" to 0.8f, "GLASS" to 0.15f, "FRAME" to 0.65f, "HOLD" to 0.45f), // C1
+        p(BallastVoice.DEEP, "LOWER REPLY", "TUNE" to 0 / 36f, "DRIVE" to 0.45f, "SYMPATHY" to 0.45f, "SPAN" to 0.8f, "GLASS" to 0.15f, "FRAME" to 0.65f, "HOLD" to 0.45f), // C1
         p(BallastVoice.DEEP, "SUB WEIGHT", "TUNE" to 0 / 36f, "DRIVE" to 0.5f, "SYMPATHY" to 0.5f, "SPAN" to 0.7f, "GLASS" to 0.1f, "FRAME" to 0.7f, "HOLD" to 0.35f), // C1
         p(BallastVoice.DEEP, "LOOSE MOUNT", "TUNE" to 5 / 36f, "DRIVE" to 0.45f, "SYMPATHY" to 0.4f, "SPAN" to 0.7f, "GLASS" to 0.2f, "FRAME" to 0.85f, "HOLD" to 0.5f), // F1
         p(BallastVoice.DEEP, "CAVE FLOOR", "TUNE" to 7 / 36f, "DRIVE" to 0.4f, "SYMPATHY" to 0.55f, "SPAN" to 0.85f, "GLASS" to 0.15f, "FRAME" to 0.6f, "HOLD" to 0.55f), // G1
@@ -75,13 +75,13 @@ object BallastPresets {
 
     private val bloomPresets = listOf(
         p(BallastVoice.BLOOM, "DELAYED OPEN", "TUNE" to 12 / 36f, "DRIVE" to 0.55f, "SYMPATHY" to 0.65f, "SPAN" to 0.5f, "GLASS" to 0.4f, "FRAME" to 0.7f, "HOLD" to 0.5f), // C2
-        p(BallastVoice.BLOOM, "SLOW SWELL", "TUNE" to 7 / 36f, "DRIVE" to 0.5f, "SYMPATHY" to 0.7f, "SPAN" to 0.55f, "GLASS" to 0.35f, "FRAME" to 0.75f, "HOLD" to 0.6f), // G1
-        p(BallastVoice.BLOOM, "LATE ARRIVAL", "TUNE" to 12 / 36f, "DRIVE" to 0.6f, "SYMPATHY" to 0.6f, "SPAN" to 0.45f, "GLASS" to 0.45f, "FRAME" to 0.65f, "HOLD" to 0.45f), // C2
+        p(BallastVoice.BLOOM, "SLOW CLIMB", "TUNE" to 7 / 36f, "DRIVE" to 0.5f, "SYMPATHY" to 0.7f, "SPAN" to 0.55f, "GLASS" to 0.35f, "FRAME" to 0.75f, "HOLD" to 0.6f), // G1
+        p(BallastVoice.BLOOM, "LATE ARRIVAL", "TUNE" to 14 / 36f, "DRIVE" to 0.65f, "SYMPATHY" to 0.55f, "SPAN" to 0.35f, "GLASS" to 0.55f, "FRAME" to 0.55f, "HOLD" to 0.2f), // D2
         p(BallastVoice.BLOOM, "RISING HALO", "TUNE" to 19 / 36f, "DRIVE" to 0.55f, "SYMPATHY" to 0.75f, "SPAN" to 0.6f, "GLASS" to 0.3f, "FRAME" to 0.7f, "HOLD" to 0.55f), // G2
         p(BallastVoice.BLOOM, "SOFT CLOUD", "TUNE" to 14 / 36f, "DRIVE" to 0.45f, "SYMPATHY" to 0.65f, "SPAN" to 0.65f, "GLASS" to 0.35f, "FRAME" to 0.8f, "HOLD" to 0.7f), // D2
         p(BallastVoice.BLOOM, "OPEN FIELD", "TUNE" to 12 / 36f, "DRIVE" to 0.5f, "SYMPATHY" to 0.7f, "SPAN" to 0.7f, "GLASS" to 0.4f, "FRAME" to 0.6f, "HOLD" to 0.5f), // C2
         p(BallastVoice.BLOOM, "WIDE DAWN", "TUNE" to 5 / 36f, "DRIVE" to 0.6f, "SYMPATHY" to 0.65f, "SPAN" to 0.75f, "GLASS" to 0.45f, "FRAME" to 0.7f, "HOLD" to 0.65f), // F1
-        p(BallastVoice.BLOOM, "WARM SWELL", "TUNE" to 0 / 36f, "DRIVE" to 0.55f, "SYMPATHY" to 0.6f, "SPAN" to 0.5f, "GLASS" to 0.3f, "FRAME" to 0.85f, "HOLD" to 0.55f), // C1
+        p(BallastVoice.BLOOM, "WARM LIFT", "TUNE" to 0 / 36f, "DRIVE" to 0.55f, "SYMPATHY" to 0.6f, "SPAN" to 0.5f, "GLASS" to 0.3f, "FRAME" to 0.85f, "HOLD" to 0.55f), // C1
     )
 
     private val swarmPresets = listOf(
