@@ -37,19 +37,23 @@ else()
 endif()
 
 set(ENGINE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+include("${ENGINE_DIR}/EngineSources.cmake")
+
+set(ENGINE_ABS)
+foreach(src ${SNIPSNAP_ENGINE_SOURCES})
+    list(APPEND ENGINE_ABS "${ENGINE_DIR}/${src}")
+endforeach()
 
 add_executable(engine_tests
     engine_tests.cpp
     jni_tests.cpp
     oboe_stubs.cpp
-    "${ENGINE_DIR}/SurfaceEngine.cpp"
-    "${ENGINE_DIR}/PadEngine.cpp"
-    "${ENGINE_DIR}/LiveSnapEngine.cpp"
-    # The bridge, built here against stub/jni.h. It needs a JVM to link in
-    # the app, which is why it went untested for so long; the stub is
-    # enough to run it, and android-build against the NDK's own header is
-    # what keeps the two honest.
-    "${ENGINE_DIR}/jni.cpp"
+    # The bridge (jni.cpp) is in SNIPSNAP_ENGINE_SOURCES. It is built
+    # here against stub/jni.h. It needs a JVM to link in the app, which
+    # is why it went untested for so long; the stub is enough to run it,
+    # and android-build against the NDK's own header is what keeps the
+    # two honest.
+    ${ENGINE_ABS}
 )
 target_include_directories(engine_tests PRIVATE
     "${ENGINE_DIR}"

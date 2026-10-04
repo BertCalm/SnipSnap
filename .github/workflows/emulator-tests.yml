@@ -10,7 +10,10 @@ name: emulator-tests
 # metered minutes (ten to fifteen a run against three for the app build),
 # so this workflow runs only when something under app/ changes, and the
 # same once-per-branch and cancel-superseded rules as tests.yml apply.
-# Anything else that wants it can start it by hand (workflow_dispatch).
+# A :shell / :kit change that only the Compose bindings consume does not
+# start this job — start it by hand (workflow_dispatch) if the UI path
+# needs proving. The default branch this push trigger names is
+# `claude/mobile-mpc-drum-sampler-t58x74`.
 on:
   push:
     branches: [claude/mobile-mpc-drum-sampler-t58x74]

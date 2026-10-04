@@ -9,11 +9,9 @@ project(snipsnap_surface CXX)
 
 find_package(oboe REQUIRED CONFIG)
 
+include("${CMAKE_CURRENT_LIST_DIR}/EngineSources.cmake")
 add_library(snipsnap_surface SHARED
-    SurfaceEngine.cpp
-    PadEngine.cpp
-    LiveSnapEngine.cpp
-    jni.cpp
+    ${SNIPSNAP_ENGINE_SOURCES}
 )
 
 target_compile_features(snipsnap_surface PRIVATE cxx_std_17)

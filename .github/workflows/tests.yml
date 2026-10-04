@@ -51,10 +51,12 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      # The Android SDK is required from the moment :app exists: AGP resolves it
-      # at configuration time, so without it every module fails to configure and
-      # all the pure-JVM tests go red for a reason that has nothing to do with
-      # them.
+      # setup-android stands up ANDROID_HOME so settings.gradle.kts includes
+      # :app, which is why this job can exclude :app:test. Without an SDK the
+      # nine JVM modules configure fine on their own — :app is simply left
+      # out. AGP used to resolve the SDK at configuration time for every
+      # module (true until the conditional include landed); that is no
+      # longer why this step exists.
       #
       # packages: '' skips this action's own default install (`tools
       # platform-tools`) — Google removed the legacy `tools` package from

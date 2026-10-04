@@ -159,16 +159,12 @@ costs a full CI cycle. Re-read the diff adversarially instead.
 Also worth knowing: PR runs are cancel-in-progress, so a superseded run
 showing "cancelled" after you pushed again is expected.
 
-**One comment in that workflow is stale — don't reason from it.** It says
-the Android SDK is required "from the moment `:app` exists" because AGP
-resolves it at configuration time, and that without it every module fails
-to configure. That was true when it was written (`a0a8fb0`, 2026-08-24),
-when `:app` was included unconditionally. The conditional include landed
-five days later (`982f103`) and inverts it: with no SDK, `settings.gradle.kts`
-simply leaves `:app` out and the nine JVM modules configure perfectly well
-— which is what a cloud session does every day. What `setup-android` buys
-`jvm-tests` is that `:app` *is* in the graph there, which is why that job
-can exclude it. A no-SDK run is not a configuration failure.
+The `jvm-tests` job's `setup-android` comment records why that step is
+there: so `settings.gradle.kts` includes `:app` and the job can exclude
+`:app:test`. A no-SDK run is not a configuration failure — the nine JVM
+modules configure on their own. The older story (AGP resolving the SDK
+at configuration time for every module) was true until the conditional
+include (`982f103`) and is not why the step exists now.
 
 ## When CI is red
 

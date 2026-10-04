@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# M0 exit test — browse kits, tap pads, hear WAVs, flip schemes.
+# M0-era smoke: install, wait for the factory kit, grab screenshots.
+# The full device pass is docs/BENCH.md / DEVICE_TEST_GUIDE.md.
+# :app has no host unit tests — this script only installs.
 # Run against a booted emulator or a connected phone.
 set -euo pipefail
 
-export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
+if [ -z "${ANDROID_HOME:-}" ]; then
+  echo "ANDROID_HOME is not set (example: /opt/android-sdk, or Homebrew's android-commandlinetools)." >&2
+  exit 1
+fi
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 OUT="${1:-/tmp/m0}"
 mkdir -p "$OUT"
@@ -13,7 +18,7 @@ echo "== install =="
 # of this script had `eval "$(fnm env)" && fnm use 20` on this line; under
 # `set -euo pipefail` that kills the run on any machine without fnm
 # installed, for a reason unrelated to the app. Removed.)
-./gradlew :app:testDebugUnitTest :app:installDebug
+./gradlew :app:installDebug
 
 echo "== launch =="
 adb logcat -c
@@ -72,8 +77,8 @@ Remaining checks a script cannot make — do these on the device:
 
   3. Open a second kit, tap its pads: you hear THAT kit, not the first one.
 
-  4. Menu -> the gear -> pick each of the six schemes.
-     Chrome recolours; the LCD stays dark in all six.
+  4. Menu -> the gear -> pick each scheme in the picker.
+     The chrome recolours; the LCD stays dark in every scheme.
 
   5. Force-stop and relaunch: the chosen scheme is still set, and the
      shelf still has every tape (no re-seed).
