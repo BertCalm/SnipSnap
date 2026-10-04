@@ -6,10 +6,13 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, ten
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, the
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
-play). No Android layer yet.
+play) — and the Android app over it (`:app`: capture, the tape, the kit,
+PLAY / KEYS / SURFACE on the native engine, synth, and export). What still
+needs a phone or the Live III is [`docs/BENCH.md`](docs/BENCH.md). Where
+the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
 ## The loop
 
@@ -29,11 +32,15 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 
 ## Modules
 
-All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
-on a normal JVM and the Android layer stays a thin shell over proven code.
+Nine of the modules are plain Kotlin/JVM with no Android APIs, so the fiddly
+parts are unit tested on a normal JVM. `:app` is the Android shell over them
+and joins the Gradle build only when an SDK is present (`settings.gradle.kts`).
+It has no host unit-test source set; its Compose suites live in
+`app/src/androidTest`, and the native engines have host tests under
+`app/src/main/cpp/test`.
 
 ```
-./gradlew test    # 2403 tests across nine modules
+./gradlew test    # the nine JVM modules
 ```
 
 ### `:audio`
@@ -673,10 +680,19 @@ grid uses; `OrbitStore` keeps `orbits.json` beside the kit. Reached from
 GROOVE's **ORBIT ▸**. Phone-side only for now — export is a listed
 follow-up.
 
+### `:app`
+
+The Android shell: Compose bound to `:shell`, kit storage, capture
+services, and the native library (`SurfaceEngine`, `PadEngine`,
+`LiveSnapEngine`). How to build it, and the per-feature phone notes, are
+in [`app/README.md`](app/README.md). CI compiles it in `android-build`.
+
 ## Docs
 
-- [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
-- [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — **the remaining work, scoped**: the Android app milestone by milestone, the hardware queue, and the odds and ends
+- [`docs/README.md`](docs/README.md) — which document is current, and which are dated notes
+- [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, the original MVP cut, architecture
+- [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — milestone record of the Android app, and what is still open
+- [`docs/BENCH.md`](docs/BENCH.md) — the phone and Live III checks, in the order to run them
 - [`docs/FEATURE_PLAN.md`](docs/FEATURE_PLAN.md) — the six product features ranked by ROI, each planned to done with owners and exit tests
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/CLI.md`](docs/CLI.md) — the SnipSnap CLI: chop a file into a kit from any desktop
@@ -710,6 +726,5 @@ file in `reference/golden/liveiii-36/` — the last word on what firmware
 itself writes. Procedure in [`reference/README.md`](reference/README.md).
 
 MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
-— nobody here owns an MPC One or a 2.x Live II — but `:xpm` is live regardless,
-since it is the only thing producing loadable output today and MPC 3 loads MPC 2
-content.
+— nobody here owns an MPC One or a 2.x Live II. Both writers are shipping
+paths the Live III has already loaded, and MPC 3 loads MPC 2 content.

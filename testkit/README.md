@@ -13,8 +13,9 @@ match (`--check` only reports, and exits 1 if any are stale).
 1. Download `SnipSnap_Diag_Kit.zip` (and optionally `SnipSnap_Test_Kit.zip`).
 2. Unzip and copy the kit **folder** anywhere onto the MPC's SD card / USB
    drive (not inside `Expansions` — anywhere browsable is fine).
-3. On the MPC (**MPC One first** — it's the acceptance device): Browser →
-   navigate to the folder → load `SnipSnap Diag Kit.xpm`.
+3. On the MPC (the **Live III** — the only machine in hand, and the
+   acceptance device): Browser → navigate to the folder → load
+   `SnipSnap Diag Kit.xpm`.
 
 ## What each kit answers
 
