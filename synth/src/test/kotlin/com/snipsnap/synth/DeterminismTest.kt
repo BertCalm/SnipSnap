@@ -197,6 +197,8 @@ class DeterminismTest {
             assertContentEquals(shot.render().samples, shot.render().samples, "$voice defaults")
             val moved = MercuryPatch("Canary", voice, mapOf("TUNE" to 0.3f, "BEND" to 0.8f, "RUB" to 0.6f, "WATER" to 0.7f, "GLASS" to 0.2f, "COUPLE" to 0.9f, "HOLD" to 0.2f))
             assertContentEquals(moved.render().samples, moved.render().samples, "$voice moved")
+            val loop = MercuryPatch("Canary", voice, Mercury.defaults(voice) + ("HOLD" to 1f))
+            assertContentEquals(loop.render().samples, loop.render().samples, "$voice LOOP")
         }
     }
 

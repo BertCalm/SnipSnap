@@ -30,7 +30,7 @@ object MercuryAuditionGenerator {
         Knob("WATER", "still: no mass moving, the object exactly as struck", "a lot of water: the mass sloshes slow and deep, every mode drifts, swells and damps in its own phase"),
         Knob("GLASS", "a damped, flexible, rough surface: short highs, a gritty rub", "clear glass: long, selective ringing, a pure rub"),
         Knob("COUPLE", "the modes independent: the vessel never answers", "strong springs: the vessel blooms after the hit, energy sloshes and beats"),
-        Knob("HOLD", "the shortest contact: 0.3 s, then the ring", "the longest: 4 s of contact, then the ring"),
+        Knob("HOLD", "the shortest contact: 0.3 s, then the ring", "the longest one-shot (HOLD .98): 3.8 s of contact, then the ring; the top step is the LOOP"),
     )
 
     private val BODIES = mapOf(
@@ -114,7 +114,8 @@ object MercuryAuditionGenerator {
                 val lo = knob.name.lowercase() + "_0"
                 val hi = knob.name.lowercase() + "_1"
                 write(lo, mapOf(knob.name to 0f))
-                write(hi, mapOf(knob.name to 1f))
+                // HOLD's top step is the LOOP (its own group below), so HOLD's high end is the longest one-shot.
+                write(hi, mapOf(knob.name to if (knob.name == "HOLD") 0.98f else 1f))
                 groups += Group(
                     knob.name + " " + DOT + " DEFAULT " + fmt(defaults.getValue(knob.name)), key = false,
                     clips = listOf(Clip(lo, "${knob.name} 0", knob.low), Clip(hi, "${knob.name} 1", knob.high)),
@@ -133,6 +134,21 @@ object MercuryAuditionGenerator {
                 Clip(id, "WATER ${fmt(w)}", if (w == 0f) "still" else "a little water: round 2 should be heard drifting and swelling")
             }
             groups += Group("A LITTLE WATER (NO DEAD ZONE?)", key = false, clips = waterProbe)
+
+            // The LOOP (HOLD's top step), each played eight times end to end: the spec's eight-wrap listen.
+            val loops = listOf(
+                Triple("loop_default", "DEFAULT", emptyMap<String, Float>()),
+                Triple("loop_still", "WATER 0", mapOf("WATER" to 0f)),
+                Triple("loop_water", "WATER 1", mapOf("WATER" to 1f)),
+                Triple("loop_low", "LOW NOTE, HARD CORNER", mapOf("TUNE" to 0f, "GLASS" to 0.1f, "COUPLE" to 1f, "WATER" to 1f)),
+            ).map { (id, label, c) ->
+                val r = Mercury.renderLoopNudged(voice, defaults + c + ("HOLD" to 1f))
+                val eight = FloatArray(r.loop.size * 8) { r.loop[it % r.loop.size] }
+                writeSnip(id, Snip(eight, channels = 1, sampleRate = Dsp.RATE))
+                val nudged = if (r.nudge > 0f) "; it did not close as asked, so it was nudged ${(r.nudge * 100).roundToInt()}% toward GLASS .6 and COUPLE .5" else ""
+                Clip(id, label, "%.2f s loop, eight wraps, seam %.0e".format(java.util.Locale.ROOT, r.loop.size / Dsp.RATE.toDouble(), r.seam) + nudged)
+            }
+            groups += Group("LOOP (HOLD AT THE TOP)", key = false, clips = loops)
 
             val presets = MercuryPresets.forVoice(voice).map { preset ->
                 val id = "preset_" + preset.name.lowercase().replace(' ', '_')
