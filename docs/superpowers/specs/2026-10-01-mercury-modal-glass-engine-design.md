@@ -838,7 +838,8 @@ R1.1 needs `:app` to compile, so it needs a machine with the Android SDK
 (`settings.gradle.kts` only adds `:app` when it finds one; a cloud session
 has none). The owner asked for it to be done there (2026-10-04).
 
-**What to add,** all in `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt`:
+**What to add.** Items 1–3 are in `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt`; item 4 is in
+`README.md`:
 1. `MERCURY` in `private enum class Engine` (`:1855`), with the KDoc's
    cycle line (`… → FORK → …`) updated to match.
 2. A `MERCURY ->` arm in each of the enum's `when` blocks, the same shape
@@ -852,12 +853,17 @@ has none). The owner asked for it to be done there (2026-10-04).
    - `buildPatch()`: `MercuryPatch(name, voice as MercuryVoice, macros)`
    - and whatever arms the enum has grown by then (read the whole enum).
 3. The imports: `Mercury`, `MercuryVoice`, `MercuryPatch`.
-4. The README's engine count (`README.md:348`, "thirteen engines in the
-   `Engine` picker").
+4. The README's roster at `README.md:348-350`: the count ("thirteen engines
+   in the `Engine` picker") *and* the sentence around it, which names the
+   lineup ("VOX, FORK and GRAINS round out the lineup", "counting SKIN, RESIN,
+   TIDE, GLINT, SIREN and FORK"). Add MERCURY to that sentence too, or the
+   README contradicts itself.
+5. **HOLD's LOOP readout,** now that R2's LOOP is in (below): show "LOOP" when
+   `Mercury.isLoop(macros.getValue("HOLD"))`, the way SIREN's is shown
+   (`SynthScreen.kt:1026`, `:1080`).
 
-**Not in R1.1:** HOLD's LOOP readout and the held-instrument path (the
-`Engine.SIREN` / `RESIN` / `GLINT` branches at `:511-1209`). Those wait for
-R2's LOOP and `Keys.mercuryPad`.
+**Not in R1.1:** the held-instrument path (the `Engine.SIREN` / `RESIN` /
+`GLINT` branches at `:511-1209`). That waits for `Keys.mercuryPad` (R2b).
 
 **How to check it:** `./gradlew :app:assembleDebug` on the SDK machine,
 then the `android-build` and `emulator-tests` jobs on the PR. A cloud
@@ -866,4 +872,82 @@ session's `./gradlew test` does not compile `:app`.
 **Worth knowing:** the picker stops at FORK. TERRA, SILK, BORE, ARCO,
 GYRE and MAGNET are not in it either, so the same desktop session may want
 to add them together. Each engine's own spec says what its entry needs.
+
+## R2a, as built — 2026-10-04: the LOOP
+
+HOLD's top step (`LOOP_THRESHOLD` .99, BORE's and SIREN's) renders the held
+rub as one seamless loop (`Mercury.renderLoopNudged`). Below the step HOLD
+is R1's contact length, unchanged, so no one-shot, kit pad or preset moved.
+SCRAMBLE stays under .95.
+
+**The steady stretch** (`Mercury.Steady`, the spec's §13 recipe):
+- no strike and no scrape; the BEND settled from the first sample;
+- the contact never released, with RUB at least `LOOP_RUB_FLOOR` (.6), so
+  PING rubs too (decision 10). At .4, PING at GLASS 0 died inside the
+  warm-up at every TUNE;
+- the WATER mass on its exact steady orbit (x = .6 sin ωt, y = −.6 cos ωt,
+  what the forced mass settles to), with whole orbits per loop;
+- **no roughness.** Even as a sequence repeating every loop, the jittered
+  pressure made the stick-slip settle into motion that did not repeat: 16
+  of 90 probe corners missed the bar with it, 5 without (all PING at the old
+  floor);
+- a warm-up of at least 2 s or 0.6 of the fundamental's t60, discarded.
+
+**The plan** (`Mercury.planLoop`): whole periods of the note, at least 2 s,
+lengthened to whole orbits of the mass when WATER moves (up to 4 s); the
+frames they fill, rounded to an even count so the 8-sample control grid lands
+on the same samples every loop; then the orbit snapped to whole orbits of
+those frames (within 5% of its rate). The note stays within 0.1 cent; fixing
+the loop's length first and snapping the note to it had moved a low C by
+2.6 cents.
+
+**The retune** (`Mercury.loopLag`): the stretch is rendered, its lag one loop
+later is read directly (the best correlation over 0.5 s within half a period
+of the planned loop), and the note is retuned by that ratio, up to 8 times.
+Two findings:
+- BORE's ladder (`Bore.measureLoopSamples`) climbs from one period, which
+  WATER's pitch movement makes unequal along the loop. Reading the whole
+  loop's lag fixed most WATER corners.
+- The window must be half a period, not one. A rubbed note is near a sine,
+  so the neighbouring periods' peaks are as tall as the right one; with a
+  full period either side the retune chased a period's slip forever (the
+  ratio stuck at 1 ± 1/periods).
+
+Then the house chain (band limit, decimate, DC twice), the seam read on the
+conditioned stretch against itself one loop later (`Keys.seamError`, bar
+1e-3), the cut where the neighbours are smallest (`Siren.bestCut`), and the
+melodic level.
+
+**What closes.** Every preset at every other TUNE step (312 of 312) and every
+voice's defaults at all 25 steps close as asked; seams are typically 1e-7 to
+1e-9. Of 315 loops in a fuzz (every default TUNE step plus 240 random
+corners), 31 did not close as asked. They sit in one corner: the bottom of
+the range, low GLASS (under about .45) with COUPLE .75–1 and/or WATER near 1,
+where the rub sustains two neighbouring resonances at once. Two unrelated
+frequencies never close, whatever the retune.
+
+**The nudge (the owner's choice, 2026-10-04).** Offered refusing the loop,
+nudging it, or crossfading the wrap, the owner chose the nudge: a loop that
+does not close as asked is re-rendered with GLASS raised toward .6 and COUPLE
+lowered toward .5 in four equal steps, and the first that closes is kept.
+WATER is never nudged (§13.4). One-shots are never nudged. Everything at
+GLASS .6 and COUPLE .5 closed in the probe; a loop that still would not close
+throws rather than ship a click.
+
+**Measured** (`MercuryLoopTest`):
+
+| Claim | Measured |
+|---|---|
+| Seam, every voice at TUNE 0, .5, 1: defaults, WATER 1, GLASS 0, COUPLE 1, and the hard corner | 1e-9 to 3e-5; the defaults never nudged; the hard corner nudged in 6 of 9 places (25–100%), always at the bottom of the range |
+| In tune, WATER 0, every voice at TUNE 0, .5, 1 | within 0.29 cents |
+| WATER still moves in the loop | about 40 cents of drift at WATER .5, 0.0 at WATER 0 |
+| Plan | even frames, whole orbits, the note within 0.1 cent, the orbit within 5% |
+| HOLD 1 | renders the loop, filed LOOP; SCRAMBLE never reaches it; byte-identical across renders |
+
+**The audition (round 5)** adds a LOOP group to each voice: the default, WATER
+0, WATER 1 and the hard corner, each loop played eight times end to end (the
+spec's eight-wrap listen), with its seam and any nudge printed beside it.
+
+**Next.** The owner's listen to the loops; then R2b (`Keys.mercuryPad`, the
+held keys) and R2c (EDDY, VESSEL and SHARD).
 

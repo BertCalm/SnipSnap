@@ -117,3 +117,7 @@ testkit/magnet-audition/
 # The FLOTILLA audition clips, manifest and page, rendered by :synth:generateFlotillaAudition
 # and published as the listening artifact; never committed.
 testkit/flotilla-audition/
+
+# The TREMOR audition clips, manifest and page, rendered by :synth:generateTremorAudition
+# and published as the listening artifact; never committed.
+testkit/tremor-audition/

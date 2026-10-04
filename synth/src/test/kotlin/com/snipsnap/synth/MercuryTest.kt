@@ -90,13 +90,13 @@ class MercuryTest {
 
     /**
      * BEND is a gesture into the note: it starts up to [Mercury.BEND_EXCURSION_SEMITONES] away (up for BEND 1, down for 0)
-     * and settles onto the note. Read on a long rubbed BLADE (HOLD 1, four seconds of contact) in the first tenth of a second
+     * and settles onto the note. Read on a long rubbed BLADE (HOLD .98, the longest one-shot: 3.8 s of contact) in the first tenth of a second
      * and after 2.5 s. R1 measured about +160 and -160 cents early and under 1 cent late.
      */
     @Test
     fun `the bend gesture glides into the note and settles on it`() {
         for ((bend, sign) in listOf(1f to 1.0, 0f to -1.0)) {
-            val snip = render(MercuryVoice.BLADE, "TUNE" to 0.5f, "BEND" to bend, "WATER" to 0f, "HOLD" to 1f)
+            val snip = render(MercuryVoice.BLADE, "TUNE" to 0.5f, "BEND" to bend, "WATER" to 0f, "HOLD" to 0.98f)
             // FineTuning searches one semitone either side of the frequency it is given, and the gesture is about 1.6 semitones
             // out in this window, so the early read is centred 1.5 semitones out, where the gesture is, and reported against the note.
             val hz = Mercury.frequencyFor(MercuryVoice.BLADE, 0.5f)
@@ -270,14 +270,19 @@ class MercuryTest {
         }
     }
 
-    /** HOLD is the contact's length: the render grows by exactly HOLD's seconds and nothing else moves its length. */
+    /**
+     * HOLD is the contact's length: the render grows by exactly HOLD's seconds and nothing else moves its length. Its
+     * top step is the LOOP (`MercuryLoopTest`), so the longest one-shot is HOLD .98. The expectation is R1's own mapping
+     * (0.3 s to 4 s, exponential), written out here rather than read back through [Mercury.holdSeconds], so a rescaled
+     * one-shot fails this test instead of moving with it.
+     */
     @Test
     fun `HOLD sets the contact's length and GLASS the tail's`() {
         for (voice in MercuryVoice.entries) {
             val short = render(voice, "HOLD" to 0f).frameCount
-            val long = render(voice, "HOLD" to 1f).frameCount
-            val expected = (Mercury.HOLD_MAX_SECONDS - Mercury.HOLD_MIN_SECONDS) * rate
-            assertTrue(abs((long - short) - expected) <= 2, "$voice: HOLD 0 to 1 added ${long - short} frames, expected $expected")
+            val long = render(voice, "HOLD" to 0.98f).frameCount
+            val expected = (0.3 * Math.pow(4.0 / 0.3, 0.98) - 0.3) * rate
+            assertTrue(abs((long - short) - expected) <= 2, "$voice: HOLD 0 to .98 added ${long - short} frames, expected $expected")
             assertEquals(render(voice, "COUPLE" to 0f).frameCount, render(voice, "COUPLE" to 1f).frameCount, "$voice: COUPLE moved the length")
             assertTrue(render(voice, "GLASS" to 1f).frameCount > render(voice, "GLASS" to 0f).frameCount, "$voice: GLASS should lengthen the ring")
         }
