@@ -555,7 +555,7 @@ object ArcoWarmthGenerator {
         check(failures.isEmpty()) { "the ruler's controls fail: $failures" }
         val ceilingFailures = ArcoWarmthCandidates.ceilingFailures()
         println(
-            "ARCO warmth ceiling control: ${if (ceilingFailures.isEmpty()) "CEILING ${ArcoWarmthCandidates.CEILING} is the engine's: a hot buffer through Dsp.levelTo and through Arco.finish equals the helper's gain then limitPeak(CEILING) (and a 0.98 ceiling is told apart)" else ceilingFailures.joinToString("; ")}",
+            "ARCO warmth ceiling control: ${if (ceilingFailures.isEmpty()) "CEILING ${ArcoWarmthCandidates.CEILING} is the engine's: a hot buffer through Dsp.levelTo and through Arco.finished equals the helper's gain then limitPeak(CEILING) (and a 0.98 ceiling is told apart)" else ceilingFailures.joinToString("; ")}",
         )
         check(ceilingFailures.isEmpty()) { "the ceiling control fails: $ceilingFailures" }
 

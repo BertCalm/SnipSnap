@@ -9,7 +9,7 @@ import kotlin.math.pow
 
 /**
  * The candidates of R1e's warmth page ([ArcoWarmthGenerator]) and the helper that renders them: a test-side emulation of what the engine step would do in
- * [Arco.finish] for BODY above the knee, so the owner can hear it before `src/main` changes. Nothing in `src/main` is touched.
+ * [Arco.finished] for BODY above the knee, so the owner can hear it before `src/main` changes. Nothing in `src/main` is touched.
  *
  * **Why they exist.** On R1d's page every candidate was DIFFERENT and none was more box: "dull and muffled rather than full and resonant". The owner asked for
  * **warmth and weight** at the top of the knob and said louder is fine. R1d's page levelled every clip to one loudness, so a low-mid boost ducked the top of the note
@@ -29,7 +29,7 @@ import kotlin.math.pow
  * except **one**: CELLO F#2's BOTH-LARGE, which it renders **with** it, because that is the clip the engine could actually make (the string at the plain's level peaks at 1.277, x2.04 the plain's 0.625, so the ceiling takes
  * 2.2 dB off the whole clip and the string is ducked by that much). It prints every other clip that would need the ceiling and by how much; a design that needs the ceiling has to be backed off or given headroom by the engine step.
  * The plain itself must not be ceiling-limited (the gain would no longer be one number); [note] throws if it is. [CEILING] is [Dsp.levelTo]'s unnamed default argument copied, and [ceilingFailures] is the control that ties it
- * to the engine: a hot buffer through [Dsp.levelTo] and through [Arco.finish] must equal the same buffer through the gain then [Dsp.limitPeak] at [CEILING], and a ceiling 0.01 off must be told apart.
+ * to the engine: a hot buffer through [Dsp.levelTo] and through [Arco.finished] must equal the same buffer through the gain then [Dsp.limitPeak] at [CEILING], and a ceiling 0.01 off must be told apart.
  *
  * **The engine step (read this before it starts).** (1) The bit-identity proof above runs at generation time only (`:synth:generateArcoWarmth`, which is not in CI: nothing here is a test), so it does not guard the engine;
  * the engine step should delete these three files, or replace them with a test that compares the engine's BODY-above-the-knee render to this helper. (2) The engine step will meet [ArcoTest]'s finished-peak bar of 0.95
@@ -146,7 +146,7 @@ internal object ArcoWarmthCandidates {
 
     // ---- the engine's output chain, split open --------------------------------------------------
 
-    /** [Dsp.levelTo]'s default ceiling, the engine's own: [Arco.finish] calls it with the default. */
+    /** [Dsp.levelTo]'s default ceiling, the engine's own: [Arco.finished] calls it with the default. */
     const val CEILING = 0.99f
 
     /** [Arco]'s private `condition`, verbatim: the band limit, the decimation, the mean off and the 20 Hz high-pass. In place on [raw] (the band limit is), so pass a copy. */
@@ -257,7 +257,7 @@ internal object ArcoWarmthCandidates {
 
     /**
      * What is wrong with [CEILING] as a copy of the engine's (empty: nothing). Two hot buffers, each of which must need the ceiling to act (the control checks the peak it needs): one at [Dsp.RATE] through [Dsp.levelTo]
-     * (its default ceiling) must equal the same buffer through the gain `target / Loudness.of` then [Dsp.limitPeak] at [CEILING], to the sample; the other, at the raw rate, through [Arco.finish] must equal [condition], that gain,
+     * (its default ceiling) must equal the same buffer through the gain `target / Loudness.of` then [Dsp.limitPeak] at [CEILING], to the sample; the other, at the raw rate, through [Arco.finished] must equal [condition], that gain,
      * [Dsp.limitPeak] at [CEILING] and [Dsp.fadeTail]. The control that must fail: the same chain with a ceiling of 0.98 must NOT equal the engine's. A [CEILING] the engine changed (or a [condition] that drifted) fails the first two.
      */
     fun ceilingFailures(): List<String> {
@@ -281,20 +281,21 @@ internal object ArcoWarmthCandidates {
 
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val rawHot = hotBuffer(rate, 64 * Dsp.OVERSAMPLE, rate)
-        val finished = Arco.finish(rawHot.copyOf(), rate)
+        // BODY 0 hands the string back untouched, so this is the engine's finish of the raw hot buffer alone, with Dsp.levelTo's ceiling acting.
+        val finished = Arco.finished(rawHot.copyOf(), ArcoVoice.CELLO, 0f, rate)
         val c = condition(rawHot.copyOf(), rate)
         val gain = target / loudnessOf(c.copyOf())
         for (i in c.indices) c[i] *= gain
         val rawNeeds = peakOf(c)
-        if (rawNeeds <= CEILING * 1.05f) out += "the hot raw buffer needs a peak of $rawNeeds at the engine's gain: it does not exercise the ceiling in Arco.finish"
+        if (rawNeeds <= CEILING * 1.05f) out += "the hot raw buffer needs a peak of $rawNeeds at the engine's gain: it does not exercise the ceiling in Arco.finished"
         Dsp.limitPeak(c, CEILING)
         Dsp.fadeTail(c)
-        if (!finished.contentEquals(c)) out += "Arco.finish is not the helper's condition, gain, limitPeak(CEILING), fadeTail on a hot buffer"
+        if (!finished.contentEquals(c)) out += "Arco.finished is not the helper's condition, gain, limitPeak(CEILING), fadeTail on a hot buffer"
         val wrongFinish = condition(rawHot.copyOf(), rate)
         for (i in wrongFinish.indices) wrongFinish[i] *= gain
         Dsp.limitPeak(wrongFinish, 0.98f)
         Dsp.fadeTail(wrongFinish)
-        if (finished.contentEquals(wrongFinish)) out += "control failed to fail: Arco.finish equals the helper's chain with a ceiling of 0.98"
+        if (finished.contentEquals(wrongFinish)) out += "control failed to fail: Arco.finished equals the helper's chain with a ceiling of 0.98"
         return out
     }
 }

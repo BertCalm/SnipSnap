@@ -94,6 +94,14 @@ class ArcoPresetsTest {
         const val MIN_TONAL_DECAY_MS = 560f
         const val MAX_ONE_SHOT_SECONDS = 1.48f
 
+        /** The GRIP at which the G#2 swell (BOW 0.3, BODY 1, HOLD 0.44) reads KICK since R1g: 441 ms past its peak, 59 ms under the classifier's 500 ms line, but only 11 ms over what the plain reads there (430), so it is printed and no longer the control. R1c's was GRIP 0.5. */
+        const val SWELL_KICK_GRIP = 0.9f
+
+        /** The corner the G#2 swell control stands on since R1g's review: BOW 0.25, HOLD 0.42, GRIP 0.7, where the lift moves the reading by about 70 ms (BODY 1 reads KICK 453 ms, the plain's BODY 0.5 KICK 383 ms). */
+        const val SWELL_AIMED_BOW = 0.25f
+        const val SWELL_AIMED_HOLD = 0.42f
+        const val SWELL_AIMED_GRIP = 0.7f
+
         val readings: List<Reading> by lazy { ArcoPresets.all().parallelStream().map { Reading(it) }.toList() }
 
         private val noteNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
@@ -173,6 +181,10 @@ class ArcoPresetsTest {
      * where the same swell stays clear of the line (627 ms, R1c and R1b alike). R1b's own render of that swell (its bite, its plain vibrato and its box at the macro BODY, the four-override recipe
      * [the G sharp 2 swell is on the classifier's line, and what moved it] plays) read 569 and 557 ms, TONAL at both GRIPs: the KICK at GRIP 0.5 is new with R1c, a 57 ms margin over the line turned into 59 ms under it, and it is the louder box
      * and the drifting vibrato together that did it, neither alone (that test prints all four readings). R1b's own KDoc here quoted 580 and 488 ms (KICK) for this swell: that was read on the block-retune vibrato before it became a read-back delay and was never re-measured; the 569 and 557 ms of the exact R1b engine are the figure for what merged.
+     *
+     * R1g saw the same bars hold with the nine presets above BODY 0.5 (DEEP PEDAL, CINEMA LOW, ENDLESS DRAW, NASAL LINE, MOON FIDDLE, HIGH CRY, SLOW CRY, TEA HOUSE, TWO STRING) now carrying the lift on the plain's gain instead of R1c's climbed box, every BODY as it was
+     * and no bar moved: PERC head under 200 Hz at most 0.45 (DEEP PEDAL), over 2 kHz at most 0.40 (TWO STRING), TONAL rings at least 627 ms (SLOW BOW and CINEMA LOW, 633), the longest note 1.44 s. The G#2 swell's KICK corner is no longer GRIP 0.5 (TONAL, 604 ms now): it is GRIP 0.9, 441 ms, and the swell test's control stands at BOW 0.25, HOLD 0.42, GRIP 0.7, where the lift
+     * moves the reading (BODY 1 453 ms against the plain's 383) (the swell test below prints the sweep).
      */
     @Test
     fun `every classifier reading keeps its room to its line`() {
@@ -211,7 +223,8 @@ class ArcoPresetsTest {
     /**
      * A CELLO note as R1b rendered it, from the engine's own probe overrides: the bite `overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f` and the vibrato `vibratoShape = Arco.VIBRATO_PLAIN` (R1b's sine), through R1b's box,
      * `Strings.bodyRing` at the macro BODY itself (not [Arco.boxAmountFor] of it) cut to the string's length, then the same finish. With [humanVibrato] true the vibrato is CELLO's own, and with [louderBox] true the box is R1c's:
-     * one or the other put back, which is how the test says which of the two moved a reading.
+     * one or the other put back, which is how the test says which of the two moved a reading. R1g retired R1c's climb from the engine ([Arco.withBody] keeps the box at the knee's size above the knee now), so [louderBox] reads R1c's own box
+     * from its frozen copy in the test tree ([ArcoBodyCandidates.last], R1c's box at BODY 1: this recipe is only asked for at BODY 1), and not [Arco.withBody].
      */
     private fun r1bRender(macros: Map<String, Float>, humanVibrato: Boolean = false, louderBox: Boolean = false): Snip {
         val voice = ArcoVoice.CELLO
@@ -220,28 +233,37 @@ class ArcoPresetsTest {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val raw = Arco.bow(voice, hz, m, rate, overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f, vibratoShape = if (humanVibrato) null else Arco.VIBRATO_PLAIN)
         val boxed = if (louderBox) {
-            Arco.withBody(raw, voice, m.getValue("BODY"), rate)
+            check(m.getValue("BODY") == 1f) { "R1c's box is only written out at BODY 1" }
+            ArcoBodyCandidates.last(raw, voice, rate)
         } else {
             val rung = Strings.bodyRing(raw, Arco.bodyFor(voice), m.getValue("BODY"), rate, Arco.BODY_CEILING_SECONDS)
             if (rung.size == raw.size) rung else rung.copyOf(raw.size)
         }
-        return Snip(Arco.finish(boxed, rate), channels = 1, sampleRate = Dsp.RATE)
+        // BODY 0 hands an already-boxed string back untouched, so this is the engine's one finish ([Arco.finished]) of [boxed] alone.
+        return Snip(Arco.finished(boxed, voice, 0f, rate), channels = 1, sampleRate = Dsp.RATE)
     }
 
     /**
-     * The knife edge under CINEMA LOW's A#2, read four ways. A CELLO swell at G#2 (BOW 0.3, BODY 1, HOLD 0.44) is on the classifier's KICK/TONAL line: TONAL when it rings more than 500 ms past its peak, KICK when it does not,
-     * and GRIP moves it across. R1c saw, at GRIP 0.7 then 0.5, the shipped engine at 575 ms (TONAL) and 441 ms (KICK); R1b's exact render (`r1bRender`: its bite, its plain vibrato, its box at the macro BODY) at 569 ms (TONAL) and 557 ms
-     * (TONAL), so **R1b's swell was TONAL at both GRIPs and R1c's GRIP 0.5 swell is KICK**: the knife edge is newly created at that macro setting, 57 ms over the line before and 59 ms under it now. Neither change alone does it: at GRIP 0.5 R1c's louder
-     * box with R1b's plain vibrato reads 575 ms (TONAL; 563 ms at GRIP 0.7) and R1b's box with CELLO's drifting vibrato 557 ms (TONAL; 569 ms at GRIP 0.7, the same as R1b's own at both GRIPs: the drift alone moves nothing here), and the two
-     * together read 441 ms, so it is the louder box and the drifting vibrato together that move the swell across (BOW 0.3 has no bite, so the bite is not in it), and not by adding two small moves (+18 ms and 0). The reading is a decay time
-     * measured on a note that is nearly on the line, and a change that does nothing alone can move it together with another. That is why CINEMA LOW sits at A#2, where the same swell is clear of the line (627 ms), and why the classifier
-     * reading is a bar of the roster and not a thing to leave to chance. Asserted: the shipped swell at GRIP 0.7 is TONAL and at GRIP 0.5 reads a choking class (the corner the roster stays out of, so it is a control for
-     * [the classifier guard can fail - the corners the roster avoids do read as drums]), and R1b's render is TONAL at both. The other two are printed.
+     * The knife edge under CINEMA LOW's A#2, read four ways, and where the lift moved it. A CELLO swell at G#2 (BOW 0.3, BODY 1, HOLD 0.44) is on the classifier's KICK/TONAL line: TONAL when it rings more than 500 ms past its peak,
+     * KICK when it does not, and GRIP moves it across. R1c saw, at GRIP 0.7 then 0.5, the shipped engine at 575 ms (TONAL) and 441 ms (KICK); R1b's exact render (`r1bRender`: its bite, its plain vibrato, its box at the macro BODY) at 569 ms (TONAL)
+     * and 557 ms (TONAL), so R1b's swell was TONAL at both GRIPs and R1c's GRIP 0.5 swell was KICK: neither the louder box nor CELLO's drifting vibrato did it alone (R1c's box with R1b's plain vibrato read 575 ms at GRIP 0.5 and 563 at 0.7, R1b's box
+     * with the drifting vibrato 557 and 569) and the two together read 441 ms. The reading is a decay time measured on a note that is nearly on the line, and a change that does nothing alone can move it together with another. That is why CINEMA LOW
+     * sits at A#2, where the same swell is clear of the line (627 ms), and why the classifier reading is a bar of the roster and not a thing to leave to chance.
+     *
+     * R1g retired R1c's climb: above BODY 0.5 the box stays at the knee's size and BODY adds the lift on the plain's own gain ([Arco.finished]), which rings the held note on longer. R1g saw the shipped swell at GRIP 0.7 read 615 ms (TONAL) and at GRIP 0.5
+     * read 604 ms (TONAL), so the corner this control stood on moved off the line by design, 104 ms to the TONAL side where it had been 59 ms to the KICK side. The same swell at GRIP 0.9 reads 441 ms, KICK, 59 ms under the line, and R1g first re-aimed the control
+     * there; R1g's review (T4) saw that corner is KICK at the plain too (430 ms at BODY 0.5) and the lift moves it by only 11 ms, so it could not show the lift at work and a considerably stronger lift could still pass it. It is now printed and not asserted
+     * as the control. The control stands where the lift matters: BOW 0.25, HOLD 0.42, GRIP 0.7 ([SWELL_AIMED_BOW], [SWELL_AIMED_HOLD], [SWELL_AIMED_GRIP]). R1g saw BODY 1 read KICK at 453 ms there, 47 ms under the line, and the plain at BODY 0.5 read KICK at 383 ms,
+     * so the lift moves the reading by 70 ms and no more than that (the sweep below prints the cell with the other 29, where the lift moves the reading by 6 to 70 ms, this cell the largest move, and carries 6 of the 30 cells from a drum class at BODY 0.5 to TONAL at BODY 1: GRIP 0.5 to 0.9, BOW 0.25 to 0.35, HOLD 0.42 and 0.44, BODY 1 and the plain at BODY 0.5, on `ARCO G#2 swell sweep` lines). Asserted, both readings of the aimed
+     * cell: BODY 1 reads a choking class between 400 and 499 ms (within 100 ms under the line; at this corner the cap, not [Arco.LIFT_TOP_DB], sets the delivered lift, so this sees a lift that is absent or that moves the reading through the shape or the cap, and not a change of the lift's two stops), the plain at BODY 0.5 reads a choking class between 350 and 420 ms (the plain is the frozen sound at and
+     * under the knee), and the lift moves the reading by between 30 and 100 ms (R1g saw 70; a lift that did nothing, or one whose shape or cap moved it by under 30 or over 100 ms, fails by name); the shipped swell at GRIP 0.7 (BOW 0.3, HOLD 0.44) is TONAL; the neighbourhood holds a cell
+     * where the plain reads a drum class and BODY 1 reads TONAL (the lift carries a swell across the line, which a lift that did nothing could not show: a sweep that held a drum class and TONAL anywhere would have been satisfied by cells the test already asserts); and R1b's
+     * own render is TONAL at GRIP 0.7 and 0.5, as R1b saw it. The old corner (GRIP 0.9) and the R1c and R1b-box-with-drift readings are printed, not asserted. The control for [the classifier guard can fail - the corners the roster avoids do read as drums] is unchanged.
      */
     @Test
     fun `the G sharp 2 swell is on the classifier's line, and what moved it`() {
         val g2 = Arco.defaults(ArcoVoice.CELLO) + mapOf("TUNE" to 8f / 24, "BOW" to 0.3f, "BODY" to 1f, "HOLD" to 0.44f)
-        val rows = listOf(0.7f, 0.5f).map { grip ->
+        val rows = listOf(0.7f, 0.5f, SWELL_KICK_GRIP).map { grip ->
             val macros = g2 + ("GRIP" to grip)
             grip to listOf(
                 "shipped" to heardOf(Arco.render(ArcoVoice.CELLO, macros)),
@@ -251,11 +273,39 @@ class ArcoPresetsTest {
             )
         }
         for ((grip, readings) in rows) println("ARCO G#2 swell GRIP $grip: " + readings.joinToString(", ") { (name, r) -> "$name ${r.first} ${r.second} ms" })
-        val shipped = rows.map { (_, readings) -> readings[0].second }
-        val r1b = rows.map { (_, readings) -> readings[1].second }
-        assertEquals(DrumClass.TONAL, shipped[0].first, "the shipped G#2 swell at GRIP 0.7 reads ${shipped[0]}, not TONAL")
-        assertTrue(shipped[1].first in choking, "the shipped G#2 swell at GRIP 0.5 reads ${shipped[1]}, not a drum: the line this test names has moved")
-        for ((i, grip) in listOf(0.7f, 0.5f).withIndex()) assertEquals(DrumClass.TONAL, r1b[i].first, "R1b's G#2 swell at GRIP $grip reads ${r1b[i]}, not TONAL")
+        val shipped = rows.associate { (grip, readings) -> grip to readings[0].second }
+        val r1b = rows.associate { (grip, readings) -> grip to readings[1].second }
+
+        // The neighbourhood: BOW and HOLD one step either side of the swell, GRIP from 0.5 to 0.9, at BODY 1 and at the plain's BODY 0.5 (the same corner without the lift), rendered in parallel and printed in order.
+        val cells = listOf(0.25f, 0.3f, 0.35f).flatMap { bow -> listOf(0.42f, 0.44f).flatMap { hold -> listOf(0.5f, 0.6f, 0.7f, 0.8f, 0.9f).map { grip -> Triple(bow, hold, grip) } } }
+        val sweep = cells.parallelStream().map { (bow, hold, grip) ->
+            val at = g2 + mapOf("BOW" to bow, "HOLD" to hold, "GRIP" to grip)
+            Triple(Triple(bow, hold, grip), heardOf(Arco.render(ArcoVoice.CELLO, at)), heardOf(Arco.render(ArcoVoice.CELLO, at + ("BODY" to Arco.DEFAULT_BODY))))
+        }.toList()
+        for ((cell, lifted, plain) in sweep) {
+            println("ARCO G#2 swell sweep BOW ${cell.first} HOLD ${cell.second} GRIP ${cell.third}: BODY 1 ${lifted.first} ${lifted.second} ms, BODY 0.5 ${plain.first} ${plain.second} ms")
+        }
+        val crossing = sweep.filter { it.third.first in choking && it.second.first == DrumClass.TONAL }
+        println("ARCO G#2 swell sweep: the lift carries ${crossing.size} of ${sweep.size} cells from a drum class at BODY 0.5 to TONAL at BODY 1, and moves the reading by ${sweep.minOf { it.second.second - it.third.second }} to ${sweep.maxOf { it.second.second - it.third.second }} ms (mean ${f2(sweep.map { it.second.second - it.third.second }.average())})")
+
+        // The aimed corner: both readings, so the lift's effect and its distance from the line are both asserted.
+        val aimed = g2 + mapOf("BOW" to SWELL_AIMED_BOW, "HOLD" to SWELL_AIMED_HOLD, "GRIP" to SWELL_AIMED_GRIP)
+        val aimedLifted = heardOf(Arco.render(ArcoVoice.CELLO, aimed))
+        val aimedPlain = heardOf(Arco.render(ArcoVoice.CELLO, aimed + ("BODY" to Arco.DEFAULT_BODY)))
+        val oldCorner = shipped.getValue(SWELL_KICK_GRIP)
+        println(
+            "ARCO G#2 swell control: BOW $SWELL_AIMED_BOW HOLD $SWELL_AIMED_HOLD GRIP $SWELL_AIMED_GRIP: BODY 1 ${aimedLifted.first} ${aimedLifted.second} ms, BODY 0.5 ${aimedPlain.first} ${aimedPlain.second} ms, " +
+                "the lift moves it ${aimedLifted.second - aimedPlain.second} ms, ${500 - aimedLifted.second} ms under the 500 ms line; the old corner (GRIP $SWELL_KICK_GRIP, BOW 0.3, HOLD 0.44) reads ${oldCorner.first} ${oldCorner.second} ms at BODY 1",
+        )
+
+        assertEquals(DrumClass.TONAL, shipped.getValue(0.7f).first, "the shipped G#2 swell at GRIP 0.7 reads ${shipped.getValue(0.7f)}, not TONAL")
+        assertTrue(aimedLifted.first in choking, "the lifted G#2 swell (BOW $SWELL_AIMED_BOW, HOLD $SWELL_AIMED_HOLD, GRIP $SWELL_AIMED_GRIP, BODY 1) reads $aimedLifted, not a drum: the lift now rings it past the classifier's 500 ms line")
+        assertTrue(aimedLifted.second in 400..499, "the lifted G#2 swell rings ${aimedLifted.second} ms past its peak, not within 100 ms under the 500 ms line")
+        assertTrue(aimedPlain.first in choking, "the plain G#2 swell (the same corner at BODY 0.5) reads $aimedPlain, not a drum: the plain's sound moved")
+        assertTrue(aimedPlain.second in 350..420, "the plain G#2 swell rings ${aimedPlain.second} ms past its peak, not 350 to 420 ms (R1g saw 383): the plain's sound moved")
+        assertTrue(aimedLifted.second - aimedPlain.second in 30..100, "the lift moves the aimed G#2 swell by ${aimedLifted.second - aimedPlain.second} ms (BODY 1 ${aimedLifted.second}, plain ${aimedPlain.second}), not 30 to 100 ms: the lift is not what it was")
+        assertTrue(crossing.isNotEmpty(), "no cell of the neighbourhood goes from a drum class at BODY 0.5 to TONAL at BODY 1: the lift no longer carries a swell across the line")
+        for (grip in listOf(0.7f, 0.5f)) assertEquals(DrumClass.TONAL, r1b.getValue(grip).first, "R1b's G#2 swell at GRIP $grip reads ${r1b.getValue(grip)}, not TONAL")
     }
 
     private class Control(val voice: ArcoVoice, val label: String, val macros: Map<String, Float>)
