@@ -43,11 +43,15 @@ import kotlin.random.Random
  * Their harmonics that are (4th and 8th of the 1/4 string, and so on) are driven steadily. There is no sub
  * oscillator anywhere.
  *
- * **The actuator has two parts.** The fast one is the source signal itself, high-passed and soft-bounded, driving
+ * **The actuator has three parts.** The fast one is the source signal itself, high-passed and soft-bounded, driving
  * the audio-rate frame modes: this is what the strings hear. The slow one is the source's rectified energy
  * between [SLOW_LOW_HZ] and [SLOW_HIGH_HZ], driving the rocking mode: onsets, releases, the beat of the two
  * oscillators and the filter's wobble move it, and the audio cycle does not. The tiles ride on the frame's
- * acceleration, so they knock when the bass's energy moves and not at every cycle.
+ * acceleration, so they knock when the bass's energy moves and not at every cycle. The third is the kick: the same
+ * rectified energy, low-passed at [KICK_CUTOFF_MULTIPLE] times the note and high-passed at [KICK_LOW_HZ], applied to
+ * the wires under the note. It is the change of the bass's envelope and nothing else, so it is a pulse at an onset, a
+ * release or a sweep, and zero in a steady tone. A linear resonator cannot turn a stationary tone into a subharmonic,
+ * and this does not try: the lower wires are rung by these pulses and fade.
  *
  * **The glass.** Six tiles hang on soft mounts inside the frame and hit each other and the housing through
  * compression-only springs with dissipative damping, integrated at 44.1 kHz. A knock's dissipated energy, once
@@ -159,6 +163,17 @@ object Ballast {
     const val SLOW_LOW = 0.15
     const val SLOW_HIGH = 1.0
     const val SLOW_LOW_HZ = 0.8
+
+    /**
+     * The onset and release kick: the source's rectified energy, low-passed at this multiple of the note and high-passed at
+     * [KICK_LOW_HZ], so what is left is the change of the bass's own envelope (an onset, a release, a filter sweep, the beat),
+     * as a force on the wires under the note (the bridge moving under them). A steady tone leaves nothing of it.
+     */
+    const val KICK_CUTOFF_MULTIPLE = 0.7
+    const val KICK_LOW_HZ = 2.5
+    const val KICK_GAIN_LOW = 5.0e3
+    const val KICK_GAIN_HIGH = 5.0e4
+    const val KICK_BELOW = 0.9
     const val SLOW_HIGH_HZ = 18.0
 
     /** The source's high-pass into the actuator, and the soft bound on the force (a tanh knee: it can never exceed 1/[FORCE_KNEE] of its scale). */
@@ -224,7 +239,10 @@ object Ballast {
     const val DIRECT_GAIN = 1.0
     const val STRING_PICK = 8.0e-3
     const val FRAME_PICK_GAIN = 2.0e-3
-    const val GLASS_PICK = 18.0
+    const val GLASS_PICK = 10.0
+
+    /** The pickup saturates the glass at about this level (a tanh knee), so a dense rattle is loud and not a wall. */
+    const val GLASS_KNEE = 0.2
 
     // ---- velocity ---------------------------------------------------------------------------
 
@@ -562,7 +580,9 @@ object Ballast {
 
         // Each string mode is sprung to the audio frame mode nearest it in pitch; the springs' total kappa on each
         // frame mode is SYMPATHY's, shared out by the mode's weight, so the node bound can never be passed.
-        val attach = IntArray(strings) { s -> if (ln(freq[s] / (hz * frameRatios[0])).let { abs(it) } <= ln(freq[s] / (hz * frameRatios[1])).let { abs(it) }) 1 else 2 }
+        val attach = IntArray(strings) { s ->
+            if (abs(ln(freq[s] / (hz * frameRatios[0]))) <= abs(ln(freq[s] / (hz * frameRatios[1])))) 1 else 2
+        }
         val springWeight = DoubleArray(strings) { s -> sqrt(weights[modeString[s]]) * modeFade[s] * modeHarmonic[s].toDouble().pow(-0.3) }
         val kappaTotal = stringKappaTotal(sympathy, frame)
         val sums = DoubleArray(3)
@@ -579,6 +599,8 @@ object Ballast {
         val mountVec = DoubleArray(size)
         for (k in 0 until 3) mountVec[k] = MOUNT_VECTOR[k]
         val rockOnly = DoubleArray(size).also { it[0] = 1.0 }
+        val kickVec = DoubleArray(size)
+        for (s in 0 until strings) if (freq[s] < hz * KICK_BELOW) kickVec[3 + s] = weights[modeString[s]] * modeFade[s] * modeHarmonic[s].toDouble().pow(-0.5)
         val framePick = DoubleArray(size)
         for (k in 0 until 3) framePick[k] = FRAME_PICKUP[k] * FRAME_PICK_GAIN
         val stringPick = DoubleArray(size)
@@ -665,6 +687,12 @@ object Ballast {
         var e1 = 0.0
         var e2 = 0.0
         var eSlow = 0.0
+        var k1 = 0.0
+        var k2 = 0.0
+        var kSlow = 0.0
+        val aKickHi = onePoleA(KICK_CUTOFF_MULTIPLE * hz, rate)
+        val aKickLo = onePoleA(KICK_LOW_HZ, rate)
+        val kickScale = lerp(sympathy.toDouble().pow(0.9), KICK_GAIN_LOW, KICK_GAIN_HIGH) * lerp(v, VELOCITY_FORCE_SOFT, 1.0)
         val riseTau = shape.riseSeconds
         val sourceOffN = probe.sourceOffAt?.let { (it * rate).toInt() } ?: Int.MAX_VALUE
 
@@ -722,6 +750,10 @@ object Ballast {
             e2 += aSlowHi * (e1 - e2)
             eSlow += aSlowLo * (e2 - eSlow)
             val slow = if (t < sourceOffN) slowScale * rise * (e2 - eSlow) else 0.0
+            k1 += aKickHi * (rectified - k1)
+            k2 += aKickHi * (k1 - k2)
+            kSlow += aKickLo * (k2 - kSlow)
+            val kick = if (t < sourceOffN) kickScale * rise * (k2 - kSlow) else 0.0
             if (force != 0.0) {
                 val vel = bank.velocityAlong(actuator)
                 stats.work += force * vel * dt
@@ -729,6 +761,7 @@ object Ballast {
                 bank.drive(actuator, force)
             }
             if (slow != 0.0) bank.drive(rockOnly, slow)
+            if (kick != 0.0) bank.drive(kickVec, kick)
             bank.step()
             glassBank.step()
 
@@ -754,7 +787,7 @@ object Ballast {
             // ---- the pickup ----
             val d = src * DIRECT_GAIN
             val fs = bank.velocityAlong(bothPick)
-            val g = if (probe.glass) glassBank.velocityAlong(glassPick) else 0.0
+            val g = if (probe.glass) GLASS_KNEE * tanh(glassBank.velocityAlong(glassPick) / GLASS_KNEE) else 0.0
             out[t] = (d + fs + g).toFloat()
             if (probe.record) {
                 direct!![t] = d.toFloat()
