@@ -3,8 +3,11 @@
 The specification below is the engineering proposal this round implemented.
 The decisions that diverged from it, and the constants that are still
 listening guesses, are in **R1, as built** at the end. Roadmap row S24.
-The audition page is `./gradlew :synth:generateAerostatAudition`, then
-`testkit/aerostat-audition/index.html`.
+The audition page a person opens is `docs/aerostat-audition/index.html`.
+Double-click it. The clip list is in the file, and the wavs sit beside it,
+because a page opened from disk cannot fetch its neighbour and the testkit
+render is gitignored. `./gradlew :synth:generateAerostatAudition` refreshes
+both that copy and `testkit/aerostat-audition/`.
 
 Version: 0.1 • 3 October 2026 • Working name, not cleared for release
 

@@ -224,11 +224,37 @@ object AerostatAuditionGenerator {
             ),
         )
 
-        File(root, "manifest.json").writeText("{\"voices\": [\n$sections\n]}\n")
+        val manifest = "{\"voices\": [\n$sections\n]}\n"
+        File(root, "manifest.json").writeText(manifest)
         val page = AerostatAuditionGenerator::class.java.getResourceAsStream("/audition/aerostat-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
-        File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
+        val html = page.use { it.readBytes() }.toString(Charsets.UTF_8)
+        File(root, "index.html").writeText(html)
+        val published = publish(root, html, manifest)
         println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
+        if (published != null) println("published a file you can open at ${published.absolutePath}")
+    }
+
+    /**
+     * The testkit folder is gitignored, so a reviewer never receives it.
+     * When this render lands in testkit/, also copy it to docs/aerostat-audition
+     * and inline the clip list. Opening that index.html from disk works:
+     * a file URL cannot fetch manifest.json, and the wavs stay as neighbours.
+     */
+    private fun publish(rendered: File, html: String, manifest: String): File? {
+        val parent = rendered.parentFile ?: return null
+        if (parent.name != "testkit") return null
+        val dest = File(parent.parentFile, "docs/aerostat-audition")
+        if (dest.exists()) dest.deleteRecursively()
+        rendered.copyRecursively(dest)
+        val marker = "<!-- AEROSTAT_MANIFEST -->"
+        val inlined = html.replace(
+            marker,
+            "<script>window.AEROSTAT_MANIFEST = ${manifest.trim()};</script>",
+        )
+        require(inlined != html) { "the listening page has no place to inline the clip list" }
+        File(dest, "index.html").writeText(inlined)
+        return File(dest, "index.html")
     }
 
     private const val SEP = "-"
