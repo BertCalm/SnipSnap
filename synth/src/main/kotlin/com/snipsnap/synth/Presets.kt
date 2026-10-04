@@ -5,7 +5,7 @@ package com.snipsnap.synth
  *
  * Authored engine by engine, not all at once — THUMP was first (U1 of
  * `docs/SYNTH_UPGRADE.md`, PR #189) and SKIN was last, a whole wave after
- * the engine itself shipped. This dispatcher now covers all fifteen
+ * the engine itself shipped. This dispatcher now covers all sixteen
  * registered engines with a roster.
  *
  * An unregistered engine name (or a future one with no roster yet)
@@ -75,6 +75,10 @@ object Presets {
             val v = MercuryVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MercuryPresets.forVoice(v)
         }
+        TremorPatch.ENGINE -> {
+            val v = TremorVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TremorPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -103,5 +107,5 @@ object Presets {
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all()
+            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + TremorPresets.all()
 }
