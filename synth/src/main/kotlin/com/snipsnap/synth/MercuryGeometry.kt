@@ -159,7 +159,9 @@ internal object BowlGeometry : Geometry() {
     const val PICKUP_THETA = 0.15
 
     /** How far the mass swings a pair apart: its loads are 0.5 +/- 0.5 times this times the mass's reach, so the pair's mean stays one half. */
-    const val PAIR_SWING = 0.5
+    @Volatile internal var pairSwing = 0.5
+    @Volatile internal var curve = Mercury.WATER_CURVE
+    override val waterCurve: Double get() = curve
 
     override fun vesselHost(v: Int) = 2 * v
 
@@ -179,7 +181,7 @@ internal object BowlGeometry : Geometry() {
 
     override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double): Double {
         val reach = min(1.0, rho2 / Mercury.RING_ORBIT_LOAD)
-        val swing = 0.5 * PAIR_SWING * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
+        val swing = 0.5 * pairSwing * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
         return if (i % 2 == 0) 0.5 + swing else 0.5 - swing
     }
 
