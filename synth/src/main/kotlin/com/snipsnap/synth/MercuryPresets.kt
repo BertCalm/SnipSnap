@@ -65,8 +65,41 @@ object MercuryPresets {
         p(MercuryVoice.BLADE, "TAPPED STEEL", "TUNE" to 14 / 24f, "BEND" to 0.65f, "RUB" to 0.3f, "WATER" to 0.1f, "GLASS" to 0.5f, "COUPLE" to 0.3f, "HOLD" to 0.35f), // A4
     )
 
-    // R2c: the three new voices' presets are written once their defaults have been measured.
-    private val eddyPresets: List<MercuryPatch> = emptyList()
-    private val vesselPresets: List<MercuryPatch> = emptyList()
-    private val shardPresets: List<MercuryPatch> = emptyList()
+    // EDDY's root is A2 (MIDI 45), so TUNE n/24 is n semitones above it. Every preset is within the 4-cent lock bar
+    // (GLASS .45 and up where it sits low: the rub at the bottom of the range with a rough surface locks sharp).
+    private val eddyPresets: List<MercuryPatch> = listOf(
+        p(MercuryVoice.EDDY, "HEARTH HUM", "TUNE" to 12 / 24f, "BEND" to 0.5f, "RUB" to 0.7f, "WATER" to 0.6f, "GLASS" to 0.65f, "COUPLE" to 0.55f, "HOLD" to 0.75f), // A3
+        p(MercuryVoice.EDDY, "STILL BASIN", "TUNE" to 7 / 24f, "BEND" to 0.5f, "RUB" to 0.6f, "WATER" to 0.05f, "GLASS" to 0.85f, "COUPLE" to 0.25f, "HOLD" to 0.9f), // E3
+        p(MercuryVoice.EDDY, "TWIN BEATING", "TUNE" to 10 / 24f, "BEND" to 0.5f, "RUB" to 0.35f, "WATER" to 0.3f, "GLASS" to 0.7f, "COUPLE" to 1f, "HOLD" to 0.6f), // G3
+        p(MercuryVoice.EDDY, "SLOW SWIRL", "TUNE" to 3 / 24f, "BEND" to 0.5f, "RUB" to 0.75f, "WATER" to 1f, "GLASS" to 0.75f, "COUPLE" to 0.45f, "HOLD" to 0.8f), // C3
+        p(MercuryVoice.EDDY, "DEEP BASIN", "TUNE" to 0 / 24f, "BEND" to 0.45f, "RUB" to 0.8f, "WATER" to 0.4f, "GLASS" to 0.9f, "COUPLE" to 0.4f, "HOLD" to 0.95f), // A2
+        p(MercuryVoice.EDDY, "RIM WAVER", "TUNE" to 5 / 24f, "BEND" to 0.82f, "RUB" to 0.65f, "WATER" to 0.5f, "GLASS" to 0.8f, "COUPLE" to 0.5f, "HOLD" to 0.7f), // D3
+        p(MercuryVoice.EDDY, "STRUCK BOWL", "TUNE" to 15 / 24f, "BEND" to 0.5f, "RUB" to 0.08f, "WATER" to 0.2f, "GLASS" to 0.7f, "COUPLE" to 0.7f, "HOLD" to 0.5f), // C4
+        p(MercuryVoice.EDDY, "HALF LIGHT", "TUNE" to 19 / 24f, "BEND" to 0.35f, "RUB" to 0.55f, "WATER" to 0.55f, "GLASS" to 0.45f, "COUPLE" to 0.55f, "HOLD" to 0.6f), // E4
+    )
+
+    // VESSEL's root is A2 as well.
+    private val vesselPresets: List<MercuryPatch> = listOf(
+        p(MercuryVoice.VESSEL, "CISTERN", "TUNE" to 7 / 24f, "BEND" to 0.4f, "RUB" to 0.3f, "WATER" to 0.4f, "GLASS" to 0.4f, "COUPLE" to 0.65f, "HOLD" to 0.45f), // E3
+        p(MercuryVoice.VESSEL, "DRAIN PIPE", "TUNE" to 17 / 24f, "BEND" to 0.5f, "RUB" to 0.05f, "WATER" to 0.1f, "GLASS" to 0.85f, "COUPLE" to 0.3f, "HOLD" to 0.25f), // D4
+        p(MercuryVoice.VESSEL, "BOILER HUM", "TUNE" to 0 / 24f, "BEND" to 0.45f, "RUB" to 0.8f, "WATER" to 0.3f, "GLASS" to 0.7f, "COUPLE" to 0.5f, "HOLD" to 0.9f), // A2
+        p(MercuryVoice.VESSEL, "WATER TOWER", "TUNE" to 10 / 24f, "BEND" to 0.4f, "RUB" to 0.45f, "WATER" to 0.85f, "GLASS" to 0.55f, "COUPLE" to 0.7f, "HOLD" to 0.6f), // G3
+        p(MercuryVoice.VESSEL, "SILO BOOM", "TUNE" to 3 / 24f, "BEND" to 0.2f, "RUB" to 0.15f, "WATER" to 0.25f, "GLASS" to 0.6f, "COUPLE" to 0.55f, "HOLD" to 0.7f), // C3
+        p(MercuryVoice.VESSEL, "TWIN PIPES", "TUNE" to 14 / 24f, "BEND" to 0.5f, "RUB" to 0.2f, "WATER" to 0.2f, "GLASS" to 0.75f, "COUPLE" to 0.95f, "HOLD" to 0.5f), // B3
+        p(MercuryVoice.VESSEL, "DENTED CAN", "TUNE" to 19 / 24f, "BEND" to 0.1f, "RUB" to 0.35f, "WATER" to 0.5f, "GLASS" to 0.25f, "COUPLE" to 0.6f, "HOLD" to 0.35f), // E4
+        p(MercuryVoice.VESSEL, "TAUT TANK", "TUNE" to 9 / 24f, "BEND" to 0.9f, "RUB" to 0.25f, "WATER" to 0.35f, "GLASS" to 0.65f, "COUPLE" to 0.45f, "HOLD" to 0.4f), // F#3
+    )
+
+    // SHARD shares PING's root, C4. BEND stays under .8: from about .8 the plate's third vessel crosses its sixth mode
+    // (the design doc's R2c, the critique), which is a BEND x COUPLE capture worth hearing once, not in six presets.
+    private val shardPresets: List<MercuryPatch> = listOf(
+        p(MercuryVoice.SHARD, "BROKEN PANE", "TUNE" to 7 / 24f, "BEND" to 0.75f, "RUB" to 0.45f, "WATER" to 0.75f, "GLASS" to 0.8f, "COUPLE" to 0.75f, "HOLD" to 0.55f), // G4
+        p(MercuryVoice.SHARD, "SPLINTER", "TUNE" to 19 / 24f, "BEND" to 0.6f, "RUB" to 0.08f, "WATER" to 0.15f, "GLASS" to 0.6f, "COUPLE" to 0.5f, "HOLD" to 0.1f), // G5
+        p(MercuryVoice.SHARD, "SKITTER", "TUNE" to 15 / 24f, "BEND" to 0.78f, "RUB" to 0.35f, "WATER" to 0.9f, "GLASS" to 0.7f, "COUPLE" to 0.6f, "HOLD" to 0.3f), // D#5
+        p(MercuryVoice.SHARD, "HAIRLINE", "TUNE" to 22 / 24f, "BEND" to 0.5f, "RUB" to 0.6f, "WATER" to 0.3f, "GLASS" to 1f, "COUPLE" to 0.4f, "HOLD" to 0.5f), // A#5
+        p(MercuryVoice.SHARD, "FRAYED EDGE", "TUNE" to 5 / 24f, "BEND" to 0.65f, "RUB" to 0.9f, "WATER" to 0.5f, "GLASS" to 0.55f, "COUPLE" to 0.85f, "HOLD" to 0.7f), // F4
+        p(MercuryVoice.SHARD, "BENT FOIL", "TUNE" to 10 / 24f, "BEND" to 0.1f, "RUB" to 0.3f, "WATER" to 0.45f, "GLASS" to 0.75f, "COUPLE" to 0.7f, "HOLD" to 0.3f), // A#4
+        p(MercuryVoice.SHARD, "TIN SKY", "TUNE" to 17 / 24f, "BEND" to 0.5f, "RUB" to 0.15f, "WATER" to 0.65f, "GLASS" to 0.9f, "COUPLE" to 0.85f, "HOLD" to 0.35f), // F5
+        p(MercuryVoice.SHARD, "SHARP GLASS", "TUNE" to 24 / 24f, "BEND" to 0.78f, "RUB" to 0.2f, "WATER" to 0.1f, "GLASS" to 0.95f, "COUPLE" to 0.3f, "HOLD" to 0.2f), // C6
+    )
 }
