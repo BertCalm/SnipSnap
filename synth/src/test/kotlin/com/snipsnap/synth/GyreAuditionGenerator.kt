@@ -23,6 +23,8 @@ import kotlin.math.sqrt
  * Round 1b re-renders it after the owner's first listen, which kept SYMPATHY and HOLD and sent BODY ("Body
  * doesn't make an impact") and SPIN ("Spin not noticable on short notes") back; SPIN gains a short FLICK note,
  * still and turning. Its verdicts save under their own prefix, beside the first listen's.
+ * Round 1c re-renders it after the second listen, which passed BODY and SPIN and found no difference between
+ * HOLD's steps ("I don't hear the distinction"): HOLD now runs from choked to open at five settings.
  */
 object GyreAuditionGenerator {
 
@@ -100,10 +102,13 @@ object GyreAuditionGenerator {
         }, ::write) { voice, groups ->
             if (voice == GyreVoice.FLICK) {
                 // The first listen's complaint, as its own pair: a short note, still and at a quarter turn.
-                val short = Gyre.defaults(voice) + ("HOLD" to 0.3f)
+                // The hand 0.55 s after the pluck, the test's short note.
+                val open = Gyre.openSeconds(Gyre.defaults(voice).getValue("SYMPATHY"))
+                val hold = (ln(0.55 / Gyre.CHOKE_SECONDS) / ln(open / Gyre.CHOKE_SECONDS.toDouble())).toFloat() * Gyre.LOOP_THRESHOLD
+                val short = Gyre.defaults(voice) + ("HOLD" to hold)
                 write("SPIN", "flick_short_still", render(voice, short + ("SPIN" to 0f)))
                 write("SPIN", "flick_short_spun", render(voice, short + ("SPIN" to 0.25f)))
-                groups += Group("FLICK: A SHORT NOTE (%.2f S), STILL AND TURNING".format(java.util.Locale.ROOT, Gyre.dampSeconds(voice, 0.3f)), key = true, clips = listOf(
+                groups += Group("FLICK: A SHORT NOTE (%.2f S), STILL AND TURNING".format(java.util.Locale.ROOT, Gyre.dampSeconds(hold, short.getValue("SYMPATHY"))), key = true, clips = listOf(
                     Clip("flick_short_still", "STILL", "SPIN 0: the rotor still"),
                     Clip("flick_short_spun", "SPIN .25", "the rotor at %.2f Hz: it should move before the hand lands".format(java.util.Locale.ROOT, Gyre.rotorHz(0.25f))),
                 ))
@@ -122,7 +127,10 @@ object GyreAuditionGenerator {
                 Clip("halo_tremolo", "TREMOLO", "the still sound with its volume swung by the same amount: only the level moves"),
             ))
         }
-        sections += knob("HOLD", listOf(0f, 0.5f, 0.95f), { voice, v -> "the hand lands after %.2f s".format(java.util.Locale.ROOT, Gyre.dampSeconds(voice, v)) }, ::write)
+        sections += knob("HOLD", listOf(0f, 0.25f, 0.5f, 0.75f, 0.95f), { voice, v ->
+            "the hand lands after %.2f s".format(java.util.Locale.ROOT, Gyre.dampSeconds(v, Gyre.defaults(voice).getValue("SYMPATHY"))) +
+                if (v <= 0f) ": choked" else if (v >= 0.95f) ": open, the note has rung out" else ""
+        }, ::write)
 
         // 7. Together.
         fun corners(a: String, b: String): List<Group> = GyreVoice.entries.map { voice ->
