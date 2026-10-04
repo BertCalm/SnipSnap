@@ -158,10 +158,19 @@ internal object BowlGeometry : Geometry() {
     /** The pickup's angle round the rim, radians. The members must differ here or the water's complementary swing cancels in a locked pair. */
     const val PICKUP_THETA = 0.15
 
-    /** How far the mass swings a pair apart: its loads are 0.5 +/- 0.5 times this times the mass's reach, so the pair's mean stays one half. */
-    @Volatile internal var pairSwing = 0.5
-    @Volatile internal var curve = Mercury.WATER_CURVE
-    override val waterCurve: Double get() = curve
+    /**
+     * How far the mass swings a pair apart: its loads are 0.5 +/- 0.5 times this times the mass's reach, so the pair's
+     * mean stays one half. At 1 the members swing 2.7% apart, leave the friction's lock range and hop, and the loop stops
+     * closing; 0.6 closed every default corner in the probe, and the WATER bar (8 cents at 0.05) wants it as high as it goes.
+     */
+    const val PAIR_SWING = 0.6
+
+    /**
+     * EDDY's WATER curve is steeper at the start than the other voices' (0.25): the pair's centre never moves, so the
+     * cents come only from the members hopping, and at 0.25 WATER 0.05 added 6 cents against the 8 a listener needs.
+     * WATER 1 is unchanged by any curve.
+     */
+    override val waterCurve = 0.10
 
     override fun vesselHost(v: Int) = 2 * v
 
@@ -181,7 +190,7 @@ internal object BowlGeometry : Geometry() {
 
     override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double): Double {
         val reach = min(1.0, rho2 / Mercury.RING_ORBIT_LOAD)
-        val swing = 0.5 * pairSwing * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
+        val swing = 0.5 * PAIR_SWING * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
         return if (i % 2 == 0) 0.5 + swing else 0.5 - swing
     }
 
