@@ -8,8 +8,8 @@ package com.snipsnap.synth
  * stratified spread of PEAK, BODY, BLOOM and DEPTH, rendered as held pads), and the trailing comment is its number.
  * The values are the candidate's, to the bit. The eight per voice were chosen by a stated rule: drop the shrill
  * (a centroid over 5 kHz, or most of the power above 4 kHz), drop the nearly-plain-sine (DEPTH 0.84 or more, or
- * nearly half the power in the fundamental), then take the eight whose settings differ most; and the owner heard
- * them and approved. The names describe what was measured.
+ * nearly half the power in the fundamental), then take the eight whose settings differ most; and the owner was
+ * sent them and approved them. The names describe what was measured.
  *
  * TUNE, DECAY and FOLLOW were not part of the spread, so they ship at their defaults: TUNE is overridden per zone in
  * a pad, a held pad ignores DECAY, and FOLLOW does nothing at the pitch the audition used. The final listen is where

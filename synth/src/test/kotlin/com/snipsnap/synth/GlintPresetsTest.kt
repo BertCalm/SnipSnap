@@ -12,7 +12,8 @@ import kotlin.test.assertTrue
  * one plays as a pad at the lowest, the middle and the top key. No spread test: this roster is picked, and good picks
  * cluster (PLUCK, TINES and THUMP have none either).
  *
- * These prove the roster is sound and is what the owner heard. They cannot prove it is good: his ear did that.
+ * These prove the roster is sound and is what the owner was sent. They cannot prove it is good: only his ear can,
+ * at the final listen.
  */
 class GlintPresetsTest {
 

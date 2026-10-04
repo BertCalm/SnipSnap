@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin 2.0 / JVM in `:synth` (tests with `kotlin.test` on JUnit), Gradle. `:shell`'s roster-line tooling and the app's preset chips follow from `Presets.forVoice` with no code of their own.
 
-**Spec:** `docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md` §6.1, §6.3 and the end of §6.2 (the final listen). This is the roster's second half; the first half is `docs/superpowers/plans/2026-10-02-glint-roster-candidates.md` (done: the candidates, the clips the owner heard, the picks). Read §6 and that plan's As-built section before Task 1.
+**Spec:** `docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md` §6.1, §6.3 and the end of §6.2 (the final listen). This is the roster's second half; the first half is `docs/superpowers/plans/2026-10-02-glint-roster-candidates.md` (done: the candidates, the clips sent to the owner, the picks). Read §6 and that plan's As-built section before Task 1.
 
 ## Global Constraints
 
@@ -88,7 +88,8 @@ import kotlin.test.assertTrue
  * one plays as a pad at the lowest, the middle and the top key. No spread test: this roster is picked, and good picks
  * cluster (PLUCK, TINES and THUMP have none either).
  *
- * These prove the roster is sound and is what the owner heard. They cannot prove it is good: his ear did that.
+ * These prove the roster is sound and is what the owner was sent. They cannot prove it is good: only his ear can,
+ * at the final listen.
  */
 class GlintPresetsTest {
 
@@ -264,8 +265,8 @@ package com.snipsnap.synth
  * stratified spread of PEAK, BODY, BLOOM and DEPTH, rendered as held pads), and the trailing comment is its number.
  * The values are the candidate's, to the bit. The eight per voice were chosen by a stated rule: drop the shrill
  * (a centroid over 5 kHz, or most of the power above 4 kHz), drop the nearly-plain-sine (DEPTH 0.84 or more, or
- * nearly half the power in the fundamental), then take the eight whose settings differ most; and the owner heard
- * them and approved. The names describe what was measured.
+ * nearly half the power in the fundamental), then take the eight whose settings differ most; and the owner was
+ * sent them and approved them. The names describe what was measured.
  *
  * TUNE, DECAY and FOLLOW were not part of the spread, so they ship at their defaults: TUNE is overridden per zone in
  * a pad, a held pad ignores DECAY, and FOLLOW does nothing at the pitch the audition used. The final listen is where
@@ -355,7 +356,7 @@ One change at a time to `GlintPresets.kt`, the same command, confirm the named t
 
 - [ ] **Step 6: Commit**
 
-`git add` the two files, one per call. Title: `Give GLINT the factory roster the owner approved`. Body: the roster is 32 presets, eight per voice, each one of the numbered candidates of the stratified spread the owner heard as held pads on his phone, in the rank order of the stated rule (not shrill, not nearly a plain sine, then the most different, most typical first), with values generated from the candidates and printed exactly (the project's own roster-line tool writes values the same way) so no row was retyped; the test pins every varied macro to its candidate to the bit, which is the guard against a slip in 32 rows. TUNE, DECAY and FOLLOW ship at their defaults and are flagged: FOLLOW is exactly inert at the pitch the audition used, so nobody could hear it. Six names differ from the list he approved because a house rule forbids a word that is a voice, an engine or a rack section (the test says so); he can veto them at the final listen. Each guard was shown to fail when undone on its own.
+`git add` the two files, one per call. Title: `Give GLINT the factory roster the owner approved`. Body: the roster is 32 presets, eight per voice, each one of the numbered candidates of the stratified spread the owner was sent as held pads on his phone, in the rank order of the stated rule (not shrill, not nearly a plain sine, then the most different, most typical first), with values generated from the candidates and printed exactly (the project's own roster-line tool writes values the same way) so no row was retyped; the test pins every varied macro to its candidate to the bit, which is the guard against a slip in 32 rows. TUNE, DECAY and FOLLOW ship at their defaults and are flagged: FOLLOW is exactly inert at the pitch the audition used, so nobody could hear it. Six names differ from the list he approved because a house rule forbids a word that is a voice, an engine or a rack section (the test says so); he can veto them at the final listen. Each guard was shown to fail when undone on its own.
 
 ---
 
@@ -770,7 +771,7 @@ In `docs/SYNTH_ROADMAP.md`, replace exactly this text (the end of the S10 row's 
 with
 
 ```
-**DEPTH shipped** (PR #431) — a seventh macro (VOWEL's sixth), default 0 so every sound is unchanged, that rounds the window's edge over its lower half and fades a plain sine in over its upper half (the sine scaled to the burst's loudness, its share of the power the square of `2·DEPTH − 1`, a bare sine at 1); both ingredients are zero at the wrap, so `k` still moves only there. It was heard as probe clips by the owner before it was specified, and on the real engine's pads before it merged. **Factory roster built** — eight presets per voice, 32 in all (`GlintPresets`), each one of the numbered held-pad candidates of a stratified spread of PEAK, BODY, BLOOM and DEPTH (`GlintRosterCandidates`, the clips the owner heard), chosen by a stated rule (not shrill, not nearly a plain sine, then the most different) and approved by him by ear. FOLLOW is exactly inert at the audition's pitch, so it ships with TUNE and DECAY at its default and is heard across the keyboard at the final listen. SCRAMBLE now seeds from a random preset, as every other engine's does. Design in `docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md`. | S1 + U5 + U6 |
+**DEPTH shipped** (PR #431) — a seventh macro (VOWEL's sixth), default 0 so every sound is unchanged, that rounds the window's edge over its lower half and fades a plain sine in over its upper half (the sine scaled to the burst's loudness, its share of the power the square of `2·DEPTH − 1`, a bare sine at 1); both ingredients are zero at the wrap, so `k` still moves only there. It was heard as probe clips by the owner before it was specified, and on the real engine's pads before it merged. **Factory roster built** — eight presets per voice, 32 in all (`GlintPresets`), each one of the numbered held-pad candidates of a stratified spread of PEAK, BODY, BLOOM and DEPTH (`GlintRosterCandidates`, the clips sent to the owner), chosen by a stated rule (not shrill, not nearly a plain sine, then the most different) and approved by him; the final listen is his ear's check. FOLLOW is exactly inert at the audition's pitch, so it ships with TUNE and DECAY at its default and is heard across the keyboard at the final listen. SCRAMBLE now seeds from a random preset, as every other engine's does. Design in `docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md`. | S1 + U5 + U6 |
 ```
 
 - [ ] **Step 2: Spec §6.2, how the picks were made**
@@ -778,7 +779,7 @@ with
 In `docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md`, after the paragraph that ends `so it is the one he is most likely to move.` add a blank line and:
 
 ```
-**As run.** Hearing 64 clips and choosing 32 was more than the owner wanted to do, so he had the eight per voice ranked for him and kept the veto: this is a waiver of "No value in the roster comes from Claude's taste", by the owner, for this step. The ranking is a stated rule applied to measurements of each clip's sustained breath (its last three seconds): drop the shrill (a spectral centroid over 5 kHz, or over 85% of the power above 4 kHz), drop the nearly-plain-sine (DEPTH 0.84 or more, or over 45% of the power in the fundamental), then take the eight whose settings differ most, starting from the most typical, which is the roster order. The rule used measurements, not ears, and no measurement says a sound is good; the owner heard the eight per voice as one reel each and approved them, and hears all 32 again at the final listen. Six names changed afterwards because the house naming rule forbids a word that is a voice, an engine or a rack section (`GlintPresetsTest`).
+**As run.** Hearing 64 clips and choosing 32 was more than the owner wanted to do, so he had the eight per voice ranked for him and kept the veto: this is a waiver of "No value in the roster comes from Claude's taste", by the owner, for this step. The ranking is a stated rule applied to measurements of each clip's sustained breath (its last three seconds): drop the shrill (a spectral centroid over 5 kHz, or over 85% of the power above 4 kHz), drop the nearly-plain-sine (DEPTH 0.84 or more, or over 45% of the power in the fundamental), then take the eight whose settings differ most, starting from the most typical, which is the roster order. The rule used measurements, not ears, and no measurement says a sound is good; the owner was sent the eight per voice as one reel each and approved them, and hears all 32 at the final listen. Six names changed afterwards because the house naming rule forbids a word that is a voice, an engine or a rack section (`GlintPresetsTest`).
 ```
 
 - [ ] **Step 3: Verify**
