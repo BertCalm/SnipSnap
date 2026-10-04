@@ -1,9 +1,12 @@
 package com.snipsnap.synth
 
 import com.snipsnap.synth.Dsp.RATE
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -426,4 +429,378 @@ internal object Modes {
         }
         return out
     }
+
+    /**
+     * A bank of modes that can be driven, retuned on any sample, and coupled to
+     * each other. [ring] can do none of these: it is buffer-in, buffer-out, with
+     * its coefficients fixed for the whole call. MERCURY's R0. The design is
+     * `docs/superpowers/specs/2026-10-01-mercury-modal-glass-engine-design.md`
+     * ("Phase 0, as measured"); every number below is from the record,
+     * `docs/superpowers/plans/2026-10-01-mercury-phase-0-spike.md`.
+     *
+     * **A mode is one complex number**, `z = ω·q − i·v`, in mass-normalised
+     * coordinates (q is the displacement, v the velocity). Over one sample, a
+     * free, damped mode's motion is *exactly* a rotation of z by `e^{iωT}` and a
+     * shrink by `r = e^{−6.9078·T/t60}`. Two things follow:
+     * - `|z|² = v² + ω²q²` is twice the mode's energy, so [tune] can move ω on
+     *   any sample without pumping the level. Phase 0 measured energy within
+     *   0.1 % under a ±12-semitone sweep, where a retuned trapezoidal SVF
+     *   swung ±6 dB.
+     * - The step is exact, so even a very high-Q mode keeps its pitch and its
+     *   decay.
+     *
+     * **Coupling** is a set of reciprocal springs between modes, [connect]ed in
+     * pairs. Each is applied as a velocity kick after the rotation, and that
+     * kick is the exact flow of the spring potential. The stiffness matrix is
+     * `K = diag(ω²) − A`: the springs `½·k·(q_i − q_j)²` sit on modes whose own
+     * stiffness is pre-reduced by the sum of their springs, so an uncoupled
+     * mode keeps its ω on the diagonal. Each edge's stiffness is
+     * `k_ij = kappa·min(ω_i, ω_j)²`. Phase 0 also measured the plain form,
+     * `diag(ω²) + L`. It is equally passive but moves the note further, so it
+     * is not offered here.
+     *
+     * **Why the split is stable, and where it stops being.** Eliminating v
+     * turns the undamped rotate-then-kick step into a leapfrog recurrence,
+     * `M·(q_{n+1} − 2q_n + q_{n−1}) = −K̂·q_n`, with θ = ωT and
+     * - `M = diag(ω/(T·sin θ))`, which is positive while θ < π;
+     * - `K̂ = diag(2ω·tan(θ/2)/T) − A`.
+     *
+     * Such a recurrence is stable exactly when both `K̂` and `4M − K̂` are
+     * positive definite. With S_i the mode's kappa sum and `x = θ/2 = π·f/rate`,
+     * diagonal dominance gives each in turn:
+     * - `K̂` from `S_i < 1`, because `tan x ≥ x`. That is [MAX_NODE_KAPPA].
+     * - `4M − K̂`, whose diagonal is `2ω·cot(θ/2)/T`, from `S_i·x·tan x < 1`.
+     *
+     * The second bound only bites near Nyquist. At MERCURY's mode ceiling,
+     * 19 kHz at 176.4 kHz, `x·tan x` is 0.12; with S → 1 the bound sits at
+     * about 0.27·rate. [tune], [connect] and [setKappa] each refuse a change
+     * that would break either bound, and leave the bank untouched when they
+     * do. Damping only shrinks the rotation, and the damped claims tests show
+     * no energy rise.
+
+     * **Springs move the coupled pitch.** Near modes repel, and COUPLE flattened
+     * Phase 0's anchor by 13–85 cents. [coupledHz] is where the anchor really
+     * rings. [anchorScale] is the factor between the anchor's tuning and that.
+     * Multiply every mode's frequency by it and the coupled anchor lands on
+     * the frequency the anchor was tuned to before the multiply. Because every
+     * spring scales with ω², that is exact, and the factor itself does not
+     * change under the retune.
+     *
+     * **One sample** is [step] (rotate, then springs), then any number of
+     * [drive] calls (the strike, the contact). A drive lands as velocity, so the
+     * next [velocityAlong] or [velocity] read sees it. Every mode must be
+     * [tune]d before the first [step].
+     */
+    class Bank(val size: Int, val rate: Int) {
+        private val dt = 1.0 / rate
+        private val re = DoubleArray(size)
+        private val im = DoubleArray(size)
+        private val omega = DoubleArray(size)
+        private val cr = DoubleArray(size)
+        private val sr = DoubleArray(size)
+        private val q = DoubleArray(size)
+        private val kick = DoubleArray(size)
+        private val nodeKappa = DoubleArray(size)
+        private var untuned = size
+        private var edgeI = IntArray(0)
+        private var edgeJ = IntArray(0)
+        private var kappa = DoubleArray(0)
+        private var k = DoubleArray(0)
+        private var springsStale = false
+
+        init {
+            require(size > 0) { "a bank needs at least one mode" }
+            require(rate > 0) { "rate must be positive: $rate" }
+        }
+
+        val edges: Int get() = kappa.size
+
+        /** Sets mode [i] to [hz], decaying 60 dB in [t60] seconds. Its state is kept, so its energy is too. */
+        fun tune(i: Int, hz: Double, t60: Double) {
+            require(hz > 0.0 && hz < rate / 2.0) { "mode $i at $hz Hz is outside (0, ${rate / 2}) Hz" }
+            require(t60 > 0.0) { "mode $i t60 must be positive: $t60" }
+            val w = 2.0 * Math.PI * hz
+            requireStable(i, nodeKappa[i], w)
+            if (omega[i] == 0.0) untuned--
+            omega[i] = w
+            val r = exp(-T60_LN * dt / t60)
+            cr[i] = r * cos(w * dt)
+            sr[i] = r * sin(w * dt)
+            springsStale = true
+        }
+
+        /** Adds a spring between modes [i] and [j]; returns its index for [setKappa]. */
+        fun connect(i: Int, j: Int, kappa: Double): Int {
+            require(i != j && i in 0 until size && j in 0 until size) { "bad spring $i–$j in a bank of $size" }
+            require(kappa >= 0.0) { "kappa must be non-negative: $kappa" }
+            // Validate before anything is appended, so a refused spring leaves no trace.
+            requireStable(i, nodeKappa[i] + kappa, omega[i])
+            requireStable(j, nodeKappa[j] + kappa, omega[j])
+            edgeI = edgeI.copyOf(edgeI.size + 1).also { it[it.size - 1] = i }
+            edgeJ = edgeJ.copyOf(edgeJ.size + 1).also { it[it.size - 1] = j }
+            this.kappa = this.kappa.copyOf(this.kappa.size + 1)
+            k = k.copyOf(k.size + 1)
+            setKappa(this.kappa.size - 1, kappa)
+            return this.kappa.size - 1
+        }
+
+        /** Re-sets spring [edge]'s kappa, holding both of its modes inside the bounds above. */
+        fun setKappa(edge: Int, kappa: Double) {
+            require(kappa >= 0.0) { "kappa must be non-negative: $kappa" }
+            val i = edgeI[edge]
+            val j = edgeJ[edge]
+            val old = this.kappa[edge]
+            val si = nodeKappa[i] - old + kappa
+            val sj = nodeKappa[j] - old + kappa
+            requireStable(i, si, omega[i])
+            requireStable(j, sj, omega[j])
+            nodeKappa[i] = si
+            nodeKappa[j] = sj
+            this.kappa[edge] = kappa
+            springsStale = true
+        }
+
+        /** Mode [i] at angular frequency [w] (0 = not yet tuned) with kappa sum [sum]: both bounds, or refuse. */
+        private fun requireStable(i: Int, sum: Double, w: Double) {
+            require(sum < MAX_NODE_KAPPA) {
+                "mode $i's kappa sum would be $sum; it must stay under $MAX_NODE_KAPPA for K to stay positive definite"
+            }
+            if (sum == 0.0 || w == 0.0) return
+            val x = w / (2.0 * rate)
+            require(sum * x * kotlin.math.tan(x) < 1.0) {
+                "mode $i at ${w / (2.0 * Math.PI)} Hz with kappa sum $sum is past the split's stability bound " +
+                    "(kappa sum × x·tan x must stay under 1, x = π·f/rate = $x)"
+            }
+        }
+
+        private fun refreshSprings() {
+            for (e in k.indices) {
+                val w = minOf(omega[edgeI[e]], omega[edgeJ[e]])
+                k[e] = kappa[e] * w * w
+            }
+            springsStale = false
+        }
+
+        /** One sample of free motion: every mode rotates and decays, then the springs kick. */
+        fun step() {
+            check(untuned == 0) { "$untuned of $size modes were never tuned" }
+            if (springsStale) refreshSprings()
+            for (i in 0 until size) {
+                val r0 = re[i]
+                val i0 = im[i]
+                re[i] = cr[i] * r0 - sr[i] * i0
+                im[i] = sr[i] * r0 + cr[i] * i0
+            }
+            if (k.isEmpty()) return
+            for (i in 0 until size) {
+                q[i] = re[i] / omega[i]
+                kick[i] = 0.0
+            }
+            for (e in k.indices) {
+                val i = edgeI[e]
+                val j = edgeJ[e]
+                kick[i] += k[e] * q[j]
+                kick[j] += k[e] * q[i]
+            }
+            for (i in 0 until size) im[i] -= kick[i] * dt
+        }
+
+        /** Applies [force] through the participation vector [b] for one sample: `v_i += b_i·force·T`. */
+        fun drive(b: DoubleArray, force: Double) {
+            val f = force * dt
+            for (i in 0 until size) im[i] -= b[i] * f
+        }
+
+        fun velocity(i: Int): Double = -im[i]
+
+        fun displacement(i: Int): Double = re[i] / omega[i]
+
+        /** `Σ w_i·v_i`: a pickup when [w] is pickup weights, the surface speed when it is a contact vector. */
+        fun velocityAlong(w: DoubleArray): Double {
+            var s = 0.0
+            for (i in 0 until size) s -= w[i] * im[i]
+            return s
+        }
+
+        /** How far one unit of force through [b] moves `velocityAlong(b)` in one sample: `T·Σ b_i²`. */
+        fun compliance(b: DoubleArray): Double {
+            var s = 0.0
+            for (i in 0 until size) s += b[i] * b[i]
+            return s * dt
+        }
+
+        /** Kinetic plus modal plus spring energy: `½·vᵀv + ½·qᵀKq`. */
+        fun energy(): Double {
+            if (springsStale) refreshSprings()
+            var e = 0.0
+            for (i in 0 until size) e += 0.5 * (re[i] * re[i] + im[i] * im[i])
+            for (s in k.indices) e -= k[s] * (re[edgeI[s]] / omega[edgeI[s]]) * (re[edgeJ[s]] / omega[edgeJ[s]])
+            return e
+        }
+
+        /**
+         * The factor to multiply every mode's frequency by so that the coupled
+         * normal mode that is mostly [anchor] rings where [anchor] is tuned now.
+         * It is exact, because every spring scales with ω². It is also
+         * invariant: after the retune it returns the same factor, while
+         * [coupledHz] reads the note. Returns 1 when there are no springs.
+         */
+        fun anchorScale(anchor: Int = 0): Double {
+            if (k.isEmpty()) {
+                check(untuned == 0) { "$untuned of $size modes were never tuned" }
+                return 1.0
+            }
+            return omega[anchor] / sqrt(anchorEigenvalue(anchor))
+        }
+
+        /** Where the coupled normal mode that is mostly [anchor] rings, in Hz. */
+        fun coupledHz(anchor: Int = 0): Double {
+            if (k.isEmpty()) {
+                check(untuned == 0) { "$untuned of $size modes were never tuned" }
+                return omega[anchor] / (2.0 * Math.PI)
+            }
+            return sqrt(anchorEigenvalue(anchor)) / (2.0 * Math.PI)
+        }
+
+        private fun anchorEigenvalue(anchor: Int): Double {
+            check(untuned == 0) { "$untuned of $size modes were never tuned" }
+            refreshSprings()
+            val m = Array(size) { DoubleArray(size) }
+            for (i in 0 until size) m[i][i] = omega[i] * omega[i]
+            for (e in k.indices) {
+                m[edgeI[e]][edgeJ[e]] -= k[e]
+                m[edgeJ[e]][edgeI[e]] -= k[e]
+            }
+            val (values, vectors) = symmetricEigen(m)
+            var best = 0
+            for (c in 0 until size) if (abs(vectors[anchor][c]) > abs(vectors[anchor][best])) best = c
+            return values[best]
+        }
+    }
+
+    /**
+     * A friction contact: a finger on glass, a bow on a saw. The friction curve
+     * is `φ(η) = √(2a)·η·e^(−aη² + ½)`, with η the slip (driver speed minus
+     * surface speed). It peaks at 1 when `η = η* = 1/√(2a)`, and its falling
+     * side beyond η* is the negative damping that lets a contact sustain a
+     * mode. MERCURY's Phase 0 used `a = 5000` (η* = 0.01) with the finger at 3η*.
+     *
+     * [force] is solved *implicitly*. The force moves the very surface speed it
+     * depends on, by `compliance·force` (see [Bank.compliance]). So each sample
+     * solves `η + p·c·φ(η) = v_driver − v_surface`, with p the pressure and c
+     * the compliance.
+     * - The root is unique while `p·c·√(2a)·2/e < 1` (the curve's steepest
+     *   fall), which [force] requires. The left side is then strictly
+     *   increasing.
+     * - Because `|φ| ≤ 1`, the root lies within `±p·c` of the free slip. Newton's
+     *   method, warm-started from the last slip, runs inside that bracket and
+     *   bisects whenever a step would leave it. Plain Newton can oscillate
+     *   near the bound, where the slope approaches 0.
+     *
+     * One instance per contact per render: it carries the last slip.
+     */
+    class Friction(val a: Double) {
+        private val root2a = sqrt(2.0 * a)
+        private var slip = 0.0
+
+        init {
+            require(a > 0.0) { "friction curve a must be positive: $a" }
+        }
+
+        fun curve(eta: Double): Double = root2a * eta * exp(-a * eta * eta + 0.5)
+
+        fun slope(eta: Double): Double = root2a * exp(-a * eta * eta + 0.5) * (1.0 - 2.0 * a * eta * eta)
+
+        /** The steepest the curve falls: `√(2a)·2/e`, at `aη² = 3/2`. */
+        val steepestFall: Double get() = root2a * 2.0 / Math.E
+
+        /**
+         * The contact force for this sample. [surfaceVelocity] is read before the
+         * force is applied (`bank.velocityAlong(b)`), and [compliance] is
+         * `bank.compliance(b)`. Apply the result with `bank.drive(b, force)`.
+         */
+        fun force(driverVelocity: Double, surfaceVelocity: Double, pressure: Double, compliance: Double): Double {
+            val rhs = driverVelocity - surfaceVelocity
+            if (pressure <= 0.0) {
+                slip = rhs
+                return 0.0
+            }
+            val c = pressure * compliance
+            require(c * steepestFall < 1.0) {
+                "pressure $pressure × compliance $compliance is past the unique-root bound (${1.0 / steepestFall})"
+            }
+            var lo = rhs - c
+            var hi = rhs + c
+            var x = slip.coerceIn(lo, hi)
+            for (n in 0 until SOLVE_STEPS) {
+                val g = x + c * curve(x) - rhs
+                if (g == 0.0) break
+                if (g > 0.0) hi = x else lo = x
+                var next = x - g / (1.0 + c * slope(x))
+                if (!(next > lo && next < hi)) next = 0.5 * (lo + hi)
+                if (next == x) break
+                x = next
+            }
+            slip = x
+            return pressure * curve(x)
+        }
+    }
+
+    /**
+     * Eigenvalues and eigenvectors of a small symmetric matrix, by cyclic
+     * Jacobi rotations. The eigenvectors are the *columns* of the second array.
+     * It is meant for [Bank.anchorScale]'s 16×16 solve, once per note, not for
+     * anything per sample.
+     */
+    fun symmetricEigen(m: Array<DoubleArray>): Pair<DoubleArray, Array<DoubleArray>> {
+        val n = m.size
+        val a = Array(n) { r -> require(m[r].size == n) { "matrix is not square" }; m[r].copyOf() }
+        for (r in 0 until n) for (c in r + 1 until n) {
+            require(abs(a[r][c] - a[c][r]) <= 1e-12 * (abs(a[r][c]) + abs(a[c][r]) + 1e-300)) { "matrix is not symmetric at $r,$c" }
+        }
+        val v = Array(n) { r -> DoubleArray(n) { c -> if (r == c) 1.0 else 0.0 } }
+        for (sweep in 0 until JACOBI_SWEEPS) {
+            var off = 0.0
+            var diag = 0.0
+            for (r in 0 until n) {
+                diag += a[r][r] * a[r][r]
+                for (c in r + 1 until n) off += a[r][c] * a[r][c]
+            }
+            if (off <= 1e-30 * diag) break
+            for (p in 0 until n) for (qq in p + 1 until n) {
+                if (a[p][qq] == 0.0) continue
+                val theta = (a[qq][qq] - a[p][p]) / (2.0 * a[p][qq])
+                val t = (if (theta >= 0.0) 1.0 else -1.0) / (abs(theta) + sqrt(theta * theta + 1.0))
+                val c = 1.0 / sqrt(t * t + 1.0)
+                val s = t * c
+                for (r in 0 until n) {
+                    val arp = a[r][p]
+                    val arq = a[r][qq]
+                    a[r][p] = c * arp - s * arq
+                    a[r][qq] = s * arp + c * arq
+                }
+                for (r in 0 until n) {
+                    val apr = a[p][r]
+                    val aqr = a[qq][r]
+                    a[p][r] = c * apr - s * aqr
+                    a[qq][r] = s * apr + c * aqr
+                }
+                for (r in 0 until n) {
+                    val vrp = v[r][p]
+                    val vrq = v[r][qq]
+                    v[r][p] = c * vrp - s * vrq
+                    v[r][qq] = s * vrp + c * vrq
+                }
+            }
+        }
+        return DoubleArray(n) { a[it][it] } to v
+    }
+
+    /** A mode's kappa sum must stay under this, so K stays strictly diagonally dominant (see [Bank]). */
+    const val MAX_NODE_KAPPA = 1.0
+
+    /** ln(1000): the decay of 60 dB, in nepers. */
+    private const val T60_LN = 6.907755278982137
+    private const val SOLVE_STEPS = 64
+    private const val JACOBI_SWEEPS = 100
 }

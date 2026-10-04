@@ -142,15 +142,21 @@ object Silk {
             // factory SANTUR pad still carries a trace of the "prompt
             // then aftersound" coupled-string character the spec asks for.
             MacroSpec("COURSE", 0.05f),
-            // Raised from 0.2 (Phase 4 audition finding: measured directly,
-            // the default render ran only 0.96s against WASH 0's own 0.71s -
-            // the bank was real but essentially inaudible at its own
-            // default, while WASH 1 measured a genuine, smoothly decaying
-            // 2.8s tail. 0.45 pushes both of WASH's own levers at once -
-            // Dsp.lin's own t60 (0.5-3s) and bodyRing's own mix amount -
-            // enough that a factory pad already carries an audible "prompt
-            // then aftersound", not just the shipped-at-max version of it.
-            MacroSpec("WASH", 0.45f),
+            // Raised again, to 0.85 from 0.45 (round 2 of the Phase 4
+            // listening pass: "WASH's sympathetic bank is too quiet/absent"
+            // persisted even after the first bump above). The first fix
+            // was real but couldn't go further: WASH's two levers were
+            // coupled then, so pushing level also pushed t60, and 0.7+ on
+            // that single knob measured past Classifier.LOOP_MIN_SECONDS
+            // (2.06s+, misclassified LOOP). [withWash]'s own KDoc covers
+            // the fix - decoupling the two levers (own t60/amount ranges,
+            // see [WASH_T60_FLOOR]/[WASH_AMOUNT_CEILING]) - which is what
+            // let this default move at all: measured directly, 0.85 lands
+            // the tail (RMS from 0.6s on) about 23% above the old default's
+            // own level, with real room left on the knob (1.0 measures a
+            // further 51% over the old default), and the render itself at
+            // 1.26s, a 240ms/16% margin under the 1.5s LOOP line.
+            MacroSpec("WASH", 0.85f),
         )
         SilkVoice.SHAMISEN -> listOf(
             MacroSpec("TUNE", 0.3f),
@@ -605,27 +611,54 @@ object Silk {
         return shamisenLoop(freq, pick, seconds, damping, pickHz, position, sawari, dispersion, rate, seed)
     }
 
-    private const val WASH_T60_FLOOR = 0.5f
-    private const val WASH_T60_CEILING = 3f
+    // Decoupled from the level range below - a deliberate departure from
+    // the spec's own stated design ("WASH sets the bank's level and its
+    // t60 together"), forced by something the spec couldn't have known:
+    // Classifier.LOOP_MIN_SECONDS reads length *first*, before any
+    // spectral check, so a long enough WASH tail silently reclassifies
+    // the whole pad from a drum hit to a LOOP regardless of what it
+    // sounds like. Measured directly: SANTUR's own dry+body length before
+    // WASH is ~0.71s, and the Phase 4 listening pass's own first WASH
+    // bump (0.2 -> 0.45, t60 0.5-3s linear) already put that default at
+    // 1.49s - a hair under the 1.5s line - while 0.5 alone (1.62s) was
+    // already over it, and 0.7+ (2.06s+) landed well past it. 0.3-1.1s
+    // keeps the total safely under 1.5s at every WASH setting including
+    // 1 (measured 1.37s, a 130ms/9% margin), not just the default.
+    private const val WASH_T60_FLOOR = 0.3f
+    private const val WASH_T60_CEILING = 1.1f
+
+    // The level lever WASH now drives on its own, freed from the length
+    // budget above: 8 lets the bank's own RMS-matched mix (see
+    // Strings.bodyRing's own "amount" contract) land several times louder
+    // than the string's own level at WASH 1, not just match it. Diminishing
+    // returns past here are real, not a guess: Silk.render's own final
+    // stage (Dsp.levelTo) renormalizes the WHOLE buffer to one fixed
+    // loudness target, so past a few multiples the extra amount just
+    // reshapes how that fixed loudness is split between the attack and
+    // the tail rather than adding headroom - measured directly, pushing
+    // this to 20 moved the default's own tail level by under 10%.
+    private const val WASH_AMOUNT_CEILING = 8f
 
     /**
      * SANTUR's WASH, applied after [withBody] (architecture diagram:
      * `body (Modes) -> [sympathetic bank]`): [washModesFor] built fresh
      * from [scale]/[root] every call - SCALE-following, not a fixed
      * table - rung via [Strings.bodyRing], the same function [withBody]
-     * calls, a second time with a dynamic one. WASH drives both the
-     * bank's level ([Strings.bodyRing]'s own `amount`) and its t60
-     * together (spec, "SANTUR": "WASH sets the bank's level and its t60
-     * together"); the "a few seconds" range is unsourced ("no santur t60
-     * is measured") - shape, like this file's other placeholder ranges.
-     * [root]/[scale] carry no INFLECT bend - the un-inflected table the
-     * spec asks for ("WASH's sympathetic bank stays on the *un-inflected*
-     * table - the santur's strings are tuned to the dastgah").
+     * calls, a second time with a dynamic one. WASH no longer drives the
+     * bank's level and its t60 together (see [WASH_T60_FLOOR]'s own KDoc
+     * for why the Phase 4 listening pass split them); the "a few seconds"
+     * range is unsourced ("no santur t60 is measured") - shape, like this
+     * file's other placeholder ranges, now a shorter shape than the spec's
+     * own first guess. [root]/[scale] carry no INFLECT bend - the
+     * un-inflected table the spec asks for ("WASH's sympathetic bank stays
+     * on the *un-inflected* table - the santur's strings are tuned to the
+     * dastgah").
      */
     private fun withWash(string: FloatArray, scale: SilkScales.Scale, root: Float, wash: Float, rate: Int): FloatArray {
         val t60 = Dsp.lin(wash, WASH_T60_FLOOR, WASH_T60_CEILING)
+        val amount = Dsp.lin(wash, 0f, WASH_AMOUNT_CEILING)
         val modes = washModesFor(root, scale, gain = 1f, t60 = t60)
-        return Strings.bodyRing(string, modes, wash, rate, RING_CEILING_SECONDS)
+        return Strings.bodyRing(string, modes, amount, rate, RING_CEILING_SECONDS)
     }
 
     /** The fixed body of each voice - see [Pluck.bodyFor]'s own KDoc for the drive's reasoning, shared via [Strings.bodyRing]. */

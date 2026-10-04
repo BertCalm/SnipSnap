@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
@@ -90,9 +91,12 @@ internal object Strings {
      *    takes, in (0, 1]: 1.0 for a loop whose reflection keeps its sign (a
      *    string, a cone, an open pipe), 0.5 for one that inverts it (a closed
      *    cylinder), whose wave needs two trips to come back in phase, so
-     *    its loop is half as long and its harmonics are the odd ones. It
-     *    multiplies the period only - never the filters' own delays, which
-     *    are what they are at the fundamental whatever the loop's length.
+     *    its loop is half as long and its harmonics are the odd ones, and any
+     *    fraction for one segment of a string split at a junction (a bow at
+     *    position beta is two loops, beta and 1 - beta, whose budgets sum to a
+     *    period less every stage's delay: [Bow]). It multiplies the period
+     *    only - never the filters' own delays, which are what they are at the
+     *    fundamental whatever the loop's length.
      */
     fun tune(
         freq: Float,
@@ -683,6 +687,337 @@ internal object Strings {
          */
         fun gain(scale: Float) {
             fb = baseFb * scale
+        }
+    }
+
+    /**
+     * A bowed string: STK's `Bowed` on two [Loop]s split at the bow, so the string is two segments with
+     * the friction junction between them and never one ring (a single ring with a bow in it parks at DC,
+     * plays an octave down, or is a clarinet; the Phase-0 spike measured every variant).
+     *
+     * The bow sits at [beta] of the way from the bridge: the bridge segment carries [beta] of a period,
+     * the nut segment the rest. Each is a [Loop] built from its own [tune] with a fractional `roundTrip`,
+     * so the two filters and the two two-tap averages are each charged to the segment that has them and
+     * the round trip through both is one period of [f] (at a full [share]; a smaller one lengthens the
+     * bridge segment on purpose, see below). Per sample the wave coming back from each end
+     * ([Loop.reflected]) meets under the bow, the string's velocity there is their sum, the bow adds
+     * `deltaV * rho(deltaV)` against it (the reflection table, [rho]), and each side's wave crosses to the
+     * other side with that push added ([Loop.inject]). Both ends invert (the bridge's loss is 0.95, the
+     * nut's is 1), so the string is zero-mean with no DC blocker. [next] returns the wave leaving the bow
+     * toward the bridge; [bowPoint] is the string's velocity under the bow.
+     *
+     * The bridge corner [bridgeHz] is a frequency, not STK's pole: STK's formula is not rate-invariant,
+     * and at this rate it puts the corner at 9028 Hz, three times as high as the 3023.6 Hz a 44.1 kHz
+     * player hears, so the upper harmonics are damped about a third as much, which is the difference
+     * between one slip a period and two to four. [BRIDGE_HZ] is the value that sounds like STK.
+     *
+     * [share] is how much of the bridge filter's phase delay at [f] the tuning budget takes out of the
+     * bridge segment. [tune] subtracts the whole delay at the fundamental (what a sinusoid sees), but a
+     * bowed string's period is set by the Helmholtz corner arriving through the filter, which comes
+     * earlier, so the whole delay comes out of the loop one or two samples too many: sharp by 1.6 cents at
+     * C3 and 11 at A5. The bridge segment is lengthened by `(1 - share) * tau` samples (it is tuned lower
+     * by that much; three [tune] calls, one to read `tau` back, one for each segment). The correction is
+     * a measured constant and not a formula: it depends on pitch and on how hard the bow presses. [SHARE]
+     * is the CELLO range's value; a voice that plays higher pins its own.
+     *
+     * Measured on this class at [BRIDGE_HZ], at 176.4 kHz, from the string's own raw wave (the Phase-0
+     * spike's numbers were its own model's; these are the built bow's):
+     *  - It speaks in Helmholtz motion, one slip a period, at pressure 0.7 and 0.9 at C3 and A3 and at 0.5
+     *    at C3 (at A3 pressure 0.5 is two slips, so "speaks" is never tested there). At pressure 0.9 the
+     *    harmonics 2 to 4 sit at -5.9, -9.3 and -11.6 dB against a sawtooth's -6.0, -9.5 and -12.0, the
+     *    fastest rise is 0.18 to 0.20 of the fastest fall (the flyback is five times as steep as the
+     *    ramp) and the wave moves at under a fifth of its steepest step for 0.95 to 0.98 of the period.
+     *  - How many times a period the string slips depends on pitch, corner and pressure, and the map is
+     *    the engine's to draw, not the bow's. At C2 (65.41 Hz), position 0.133, with the full corner, it
+     *    slips three times a period at pressure 0.5 to 0.7, once at 0.8 and twice at 0.9 and 1.0; with
+     *    a 1000 to 1500 Hz corner it is one slip across pressure 0.8 to 1.0.
+     *  - Cents from the note by autocorrelation, at pressure 0.5 / 0.9, by share (the table is printed by
+     *    `StringsBowTest`; 1.174 kHz is the top of an ERHU's range, and there only the claim that the CELLO
+     *    share does not hold it is asserted):
+     *
+     *        share    65 Hz       131 Hz      220 Hz      440 Hz      880 Hz      1175 Hz
+     *        1.0      0.3/0.4     1.0/1.6     1.1/2.8     6.1/5.8     10.9/8.6    19.6/13.9
+     *        0.85    -0.6/-0.7   -1.0/-0.0   -0.1/-0.0   -3.8/0.7     0.1/-2.8    6.8/2.4
+     *        0.8     -0.8/-0.9   -1.6/-0.6   -1.5/-1.0   -5.6/-1.0   -3.5/-6.3    2.4/-1.7
+     *
+     *    so the pinned 0.85 holds a note to within 3.8 cents from 65 to 880 Hz and a full share, [tune]'s
+     *    own rule, is 11 cents sharp at 880.
+     *  - Lifted, it rings down at -0.439 dB a period at C3 against the loop's own -0.454 (the formula
+     *    `20 log10(0.95 |H(f0)|)`), to -60 dB in 1.02 s against 1.011; a bow left resting on the string
+     *    stops it at the bow and rings for 3.2 s, so a release must [lift].
+     *  - Over 31 cells (pressure 0.3 to 1, amplitude 0.2 to 1, position 0.08 to 0.3 at C3, and C2 and A5
+     *    at the extreme) every sample is finite, the mean is at most 0.0049, and the raw peak is at most
+     *    1.169 (C2, pressure 1, amplitude 1, position 0.3), under [RAW_PEAK_CEILING].
+     *  - The position has a floor where the bridge segment would be shorter than two samples after its
+     *    filter's delay: `(2.5 + tau) / T`, 0.0724 at D6 with the 3023.6 Hz corner, and a lower corner
+     *    raises it (a bow at 0.133 builds at D6 with a 1500 Hz corner and is refused with a 1000 Hz one).
+     *  - A retune of a vibrato's few cents, or small steps every 64 samples, does not click; a jump of
+     *    semitones does (the delay line reads a different place), so a glide is steps and not a jump.
+     *  - About 19 to 28 ms per rendered second at this rate on the JVM, through the tests' harness (the
+     *    spike's own two-segment loop was 9.9).
+     *
+     * Not here, on purpose: the bow's stroke and its overshoot, how hard it presses (the caller passes
+     * [slope] and [vBow] each sample), the body, the output chain, vibrato, and the LOOP plan. [lift]
+     * and [gain] are the two hooks a release needs.
+     */
+    class Bow(
+        f: Float,
+        val beta: Float,
+        private val bridgeHz: Float = BRIDGE_HZ,
+        private val share: Float = SHARE,
+        private val rate: Int,
+        private val rhoMax: Float = RHO_MAX,
+    ) {
+        private val nutHz = rate * 0.45f
+        private val bridge: Loop
+        private val nut: Loop
+        private val bridgeCapacity: Int
+        private val nutCapacity: Int
+        private var bowDown = true
+
+        /** The string's velocity under the bow after the last [next]: the sum of the two arriving waves plus the bow's push. */
+        var bowPoint = 0f
+            private set
+
+        init {
+            require(beta > 0f && beta < 1f) { "the bow sits strictly between the bridge and the nut: beta must be in (0, 1), got $beta" }
+            require(share in 0f..1f) { "share is a fraction of the filter's phase delay, in [0, 1], got $share" }
+            val tb = tune(bridgeFreq(f), bridgeHz, rate, roundTrip = beta.toDouble())
+            val tn = tune(f, nutHz, rate, roundTrip = 1.0 - beta)
+            bridge = Loop(tb.n, tb.a, -REFLECTION, bridgeHz, rate, roundTrip = beta.toDouble())
+            nut = Loop(tn.n, tn.a, -1f, nutHz, rate, roundTrip = 1.0 - beta)
+            bridgeCapacity = tb.n
+            nutCapacity = tn.n
+        }
+
+        /**
+         * The pitch the bridge segment is tuned at for a string of [f]: lowered so the segment is
+         * longer by `(1 - share)` of the filter's delay. The delay is read back from [tune]'s own
+         * budget (`rate / f` is a Float division there, so it is one here).
+         */
+        private fun bridgeFreq(f: Float): Float {
+            val first = tune(f, bridgeHz, rate, roundTrip = beta.toDouble())
+            val tau = (rate / f) * beta.toDouble() - 0.5 - first.exact
+            val extra = (1.0 - share) * tau
+            return (f / (1.0 + extra * f / (beta.toDouble() * rate))).toFloat()
+        }
+
+        /** Lifts the bow: it pushes nothing from now on and the string rings free. One way; a note that begins again is a new [Bow]. */
+        fun lift() {
+            bowDown = false
+        }
+
+        /**
+         * One sample. [vBow] is the bow's velocity (the caller's envelope, in the string's own units) and
+         * [slope] is `5 - 4 * pressure` (pressure 0 is slope 5 and still plays: only [lift] lifts the
+         * bow). Returns the wave leaving the bow toward the bridge, the body's input; [bowPoint] is the
+         * string's velocity under the bow.
+         */
+        fun next(vBow: Float, slope: Float): Float {
+            val fromBridge = bridge.reflected()
+            val fromNut = nut.reflected()
+            val v = fromBridge + fromNut
+            val dv = vBow - v
+            val push = if (bowDown) dv * rho(dv, slope, rhoMax) else 0f
+            nut.inject(fromBridge + push)
+            bridge.inject(fromNut + push)
+            bowPoint = v + push
+            return fromNut + push
+        }
+
+        /**
+         * Both segments re-solved for a new [f], the filters' and allpasses' state carried (no click).
+         * Build the [Bow] at the lowest pitch it will be asked for: a [Loop]'s ring never grows, and a
+         * [f] that needs a longer ring in either segment is refused before either segment is touched,
+         * so a caller who catches the refusal still has a bow whose two halves are tuned to the same note.
+         */
+        fun retune(f: Float) {
+            val bridgeNeeds = tune(bridgeFreq(f), bridgeHz, rate, roundTrip = beta.toDouble()).n
+            val nutNeeds = tune(f, nutHz, rate, roundTrip = 1.0 - beta).n
+            require(bridgeNeeds <= bridgeCapacity && nutNeeds <= nutCapacity) {
+                "retune($f) needs segments of $bridgeNeeds (bridge) and $nutNeeds (nut) samples, past the $bridgeCapacity and " +
+                    "$nutCapacity this Bow was built for - construct it at the lowest note it will play, not the one it is moving toward"
+            }
+            bridge.retune(bridgeFreq(f))
+            nut.retune(f)
+        }
+
+        /** Scales the bridge segment's loss only (the string's loss lives at the bridge); `gain(1f)` restores it. */
+        fun gain(scale: Float) {
+            bridge.gain(scale)
+        }
+
+        companion object {
+            /** STK's bridge loss. */
+            const val REFLECTION = 0.95f
+
+            /** The reflection table's constants (STK's `BowTable`). */
+            const val OFFSET = 0.001f
+            const val RHO_MIN = 0.01f
+            const val RHO_MAX = 0.98f
+
+            /** The bridge corner that sounds like STK at any rate: its pole at 44.1 kHz, as a frequency. */
+            const val BRIDGE_HZ = 3023.6f
+
+            /** The share of the bridge filter's delay the budget takes out (see the class KDoc). */
+            const val SHARE = 0.85f
+
+            /** The raw peak no bow may exceed: the worst measured was 1.169, so the ceiling has 7 percent over it (re-measure if [RHO_MAX] moves). */
+            const val RAW_PEAK_CEILING = 1.25f
+
+            /** STK's reflection table: `(|slope * (deltaV + OFFSET)| + 0.75) ^ -4`, held between [RHO_MIN] and [rhoMax]. */
+            fun rho(dv: Float, slope: Float, rhoMax: Float = RHO_MAX): Float {
+                val s = abs((dv + OFFSET) * slope) + 0.75f
+                val r = s.toDouble().pow(-4.0).toFloat()
+                return r.coerceIn(RHO_MIN, rhoMax)
+            }
+        }
+    }
+
+    /**
+     * GYRE's membrane: a few constant-peak (RBJ) bandpass modes, summed with weights that are
+     * each at least 0 and together at most 1. That shape is what makes [Bridge] passive: this
+     * bandpass has `Re H = |H|^2` at every frequency, and a sum with non-negative weights adding
+     * to at most 1 keeps `Re H >= |H|^2` (Cauchy-Schwarz needs the signs), which is exactly
+     * `|1 - 2c H| <= 1` for every `c` in [0, 1]. A peak gain of 1 alone would not do: an
+     * inverting filter has gain 1 and makes `|1 + 2c|`. So weights outside that shape are
+     * refused, loudly, at [tune] and at every [weigh].
+     *
+     * The modes run in Double, not on [Dsp.Biquad]: with Float coefficients a narrow mode is no
+     * longer the filter it was designed as (measured at 176.4 kHz: `Re H - |H|^2` reaches -9.8e-4
+     * at 110 Hz, Q 3000, and -4.6e-4 at 440 Hz, Q 300), which is more than a string's own loss
+     * at GYRE's ceiling (`1 - fb` = 5e-4) and would let the bridge add energy. [MAX_Q] keeps the
+     * modes far from that corner too; a membrane is a broad resonator, and GYRE's run Q 3 to 12.
+     */
+    class Membrane(private val rate: Int) {
+        private var b0 = DoubleArray(0)
+        private var a1 = DoubleArray(0)
+        private var a2 = DoubleArray(0)
+        private var x1 = DoubleArray(0)
+        private var x2 = DoubleArray(0)
+        private var y1 = DoubleArray(0)
+        private var y2 = DoubleArray(0)
+        private var weights = DoubleArray(0)
+
+        val size: Int get() = b0.size
+
+        /**
+         * Sets the modes: centre [hz], [q] (at most [MAX_Q]), and their [weights] (each >= 0, summing
+         * to <= 1). State is cleared. Everything is checked before anything changes, so a refused
+         * call leaves the membrane as it was.
+         */
+        fun tune(hz: FloatArray, q: FloatArray, weights: FloatArray) {
+            require(hz.size == q.size && hz.size == weights.size) { "membrane: ${hz.size} modes, ${q.size} Qs, ${weights.size} weights" }
+            for (h in hz) require(h > 0f && h < 0.45f * rate) { "membrane mode at $h Hz is outside (0, 0.45 x $rate)" }
+            for (v in q) require(v > 0f && v <= MAX_Q) { "membrane Q must be in (0, $MAX_Q], got $v" }
+            val w = passive(weights)
+            val k = hz.size
+            b0 = DoubleArray(k); a1 = DoubleArray(k); a2 = DoubleArray(k)
+            x1 = DoubleArray(k); x2 = DoubleArray(k); y1 = DoubleArray(k); y2 = DoubleArray(k)
+            for (i in 0 until k) {
+                val w0 = 2.0 * PI * hz[i] / rate
+                val alpha = sin(w0) / (2.0 * q[i])
+                val a0 = 1.0 + alpha
+                b0[i] = alpha / a0
+                a1[i] = -2.0 * cos(w0) / a0
+                a2[i] = (1.0 - alpha) / a0
+            }
+            this.weights = w
+        }
+
+        /**
+         * Re-weights the modes without touching their state (the rotor's emphasis); the same rule as
+         * [tune]. A sum within [WEIGHT_SLACK] over 1 is Float rounding and is accepted, then scaled
+         * back to exactly 1, so the weights the membrane runs with never sum past 1.
+         */
+        fun weigh(weights: FloatArray) {
+            require(weights.size == size) { "membrane: ${weights.size} weights for $size modes" }
+            passive(weights).copyInto(this.weights)
+        }
+
+        /** [weights] checked for the passive shape (each >= 0, sum <= 1 within [WEIGHT_SLACK]) and scaled back to a sum of 1 if over it; nothing is stored. */
+        private fun passive(weights: FloatArray): DoubleArray {
+            var sum = 0.0
+            for (w in weights) {
+                require(w >= 0f) { "a membrane weight must not be negative (the bridge bound needs it), got $w" }
+                sum += w
+            }
+            require(sum <= 1.0 + WEIGHT_SLACK) { "membrane weights must sum to at most 1 (the bridge bound needs it), got $sum" }
+            val scale = if (sum > 1.0) 1.0 / sum else 1.0
+            return DoubleArray(weights.size) { weights[it] * scale }
+        }
+
+        /** One sample: each mode `b0 (x - x[-2]) - a1 y[-1] - a2 y[-2]` (the RBJ bandpass, b1 = 0, b2 = -b0), weighted and summed. */
+        fun process(x: Float): Float {
+            val xd = x.toDouble()
+            var y = 0.0
+            for (i in b0.indices) {
+                val yi = b0[i] * (xd - x2[i]) - a1[i] * y1[i] - a2[i] * y2[i]
+                x2[i] = x1[i]; x1[i] = xd
+                y2[i] = y1[i]; y1[i] = yi
+                y += weights[i] * yi
+            }
+            return y.toFloat()
+        }
+
+        /** The membrane's response at [hz] as `[re, im]`, from the coefficients it runs with - a measuring tool. */
+        internal fun response(hz: Double): DoubleArray {
+            val w = 2.0 * PI * hz / rate
+            val c1 = cos(w); val s1 = -sin(w)
+            val c2 = cos(2 * w); val s2 = -sin(2 * w)
+            var re = 0.0; var im = 0.0
+            for (i in b0.indices) {
+                val nr = b0[i] * (1.0 - c2); val ni = -b0[i] * s2
+                val dr = 1.0 + a1[i] * c1 + a2[i] * c2; val di = a1[i] * s1 + a2[i] * s2
+                val den = dr * dr + di * di
+                re += weights[i] * (nr * dr + ni * di) / den
+                im += weights[i] * (ni * dr - nr * di) / den
+            }
+            return doubleArrayOf(re, im)
+        }
+
+        companion object {
+            /** A membrane is broad; past this a mode is a tuned string, not a body, and precision starts to cost. */
+            const val MAX_Q = 100f
+
+            /** Float rounding room on the weights' sum; a sum inside it is scaled back to 1 ([weigh]). */
+            const val WEIGHT_SLACK = 1e-6
+        }
+    }
+
+    /**
+     * GYRE's shared bridge: [n] strings meet one [membrane]. Each sample, every string's
+     * returning wave ([Loop.reflected]) comes in, and what goes back to string `i` is
+     * `r_i - (2c/n) * m`, where `m` is the membrane rung by the sum of the returning waves.
+     * That is the matrix `I - (2c/n) H 1 1^T`: identity on everything but the strings' common
+     * motion, and on that `1 - 2c H`, whose size is at most 1 for a [Membrane]. So the bridge
+     * moves energy between strings and never adds any; with every loop's own `fb < 1` the
+     * network decays at any fixed [c] in [0, 1] and fixed membrane weights. A [c] or weights that
+     * move ([Membrane.weigh]; GYRE's rotor moves both) are outside that argument: a time-varying
+     * filter can release energy it stored. That case is held to a measured bound instead
+     * (`StringsBridgeTest`, and GYRE's own tests at its rotor's settings).
+     */
+    class Bridge(val n: Int, val membrane: Membrane) {
+        init { require(n >= 1) { "a bridge needs at least one string, got $n" } }
+
+        /**
+         * Couples one sample: [reflected] (one wave per string) into [out] (what to inject back),
+         * at coupling [c] in [0, 1]. Returns the membrane's output `m`, the bridge's own sound.
+         * At [c] 0 [out] is [reflected], value for value.
+         */
+        fun couple(reflected: FloatArray, c: Float, out: FloatArray): Float {
+            require(c in 0f..1f) { "bridge coupling must be in [0, 1], got $c" }
+            require(reflected.size >= n && out.size >= n) { "bridge of $n strings given ${reflected.size} waves and room for ${out.size}" }
+            var sum = 0f
+            for (i in 0 until n) sum += reflected[i]
+            val m = membrane.process(sum)
+            if (c == 0f) {
+                reflected.copyInto(out, 0, 0, n)
+                return m
+            }
+            val k = 2f * c / n * m
+            for (i in 0 until n) out[i] = reflected[i] - k
+            return m
         }
     }
 

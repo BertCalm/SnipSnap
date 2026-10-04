@@ -87,6 +87,16 @@ tasks.register<JavaExec>("generateGlintPathsAudition") {
     args("${rootDir}/testkit/glint-paths-audition")
 }
 
+/** Render the GLINT DEPTH audition (held pads, WAVs only) under testkit/glint-depth-audition/. See GlintDepthAuditionGenerator. */
+tasks.register<JavaExec>("generateGlintDepthAudition") {
+    group = "distribution"
+    description = "Render the GLINT DEPTH audition pads under testkit/glint-depth-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintDepthAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-depth-audition")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"
@@ -293,6 +303,103 @@ tasks.register<JavaExec>("generateBoreAudition") {
     args("${rootDir}/testkit/bore-audition")
 }
 
+tasks.register<JavaExec>("generateArcoKit") {
+    group = "distribution"
+    description = "Render the ARCO bowed-string acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the ARCO audition clips, manifest and page under testkit/arco-audition/. See ArcoAuditionGenerator. */
+tasks.register<JavaExec>("generateArcoAudition") {
+    group = "distribution"
+    description = "Render the ARCO audition clips, manifest and listening page under testkit/arco-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-audition")
+}
+
+/** Render the ARCO R1c re-listen clips, manifest and page under testkit/arco-retune/. See ArcoRetuneGenerator. */
+tasks.register<JavaExec>("generateArcoRetune") {
+    group = "distribution"
+    description = "Render the ARCO R1c re-listen clips, manifest and listening page under testkit/arco-retune/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoRetuneGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-retune")
+}
+
+/** Render the ARCO R1d BODY listening clips, manifest and page under testkit/arco-body/ and the key beside it. See ArcoBodyGenerator. */
+tasks.register<JavaExec>("generateArcoBody") {
+    group = "distribution"
+    description = "Render the ARCO R1d BODY listening clips, manifest and listening page under testkit/arco-body/ and the key to it beside the folder as testkit/arco-body-key.json."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoBodyGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-body")
+}
+
+/** Render the ARCO R1e warmth listening clips, manifest and page under testkit/arco-warmth/ and the key beside it. See ArcoWarmthGenerator. */
+tasks.register<JavaExec>("generateArcoWarmth") {
+    group = "distribution"
+    description = "Render the ARCO R1e warmth listening clips, manifest and listening page under testkit/arco-warmth/ and the key to it beside the folder as testkit/arco-warmth-key.json."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoWarmthGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-warmth")
+}
+
+tasks.register<JavaExec>("generateMercuryKit") {
+    group = "distribution"
+    description = "Render the MERCURY modal-glass acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MercuryKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the MERCURY audition clips, manifest and page under testkit/mercury-audition/. See MercuryAuditionGenerator. */
+tasks.register<JavaExec>("generateMercuryAudition") {
+    group = "distribution"
+    description = "Render the MERCURY audition clips, manifest and listening page under testkit/mercury-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MercuryAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/mercury-audition")
+}
+
+/** Render the GYRE round-one audition clips, manifest and page under testkit/gyre-audition/. See GyreAuditionGenerator. */
+tasks.register<JavaExec>("generateGyreAudition") {
+    group = "distribution"
+    description = "Render the GYRE audition clips, manifest and listening page under testkit/gyre-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GyreAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/gyre-audition")
+}
+
+tasks.register<JavaExec>("generateMagnetKit") {
+    group = "distribution"
+    description = "Render the MAGNET electric-string acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MagnetKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the MAGNET R1 audition clips and manifest under testkit/magnet-audition/. See MagnetAuditionGenerator. */
+tasks.register<JavaExec>("generateMagnetAudition") {
+    group = "distribution"
+    description = "Render the MAGNET R1 audition clips and manifest under testkit/magnet-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MagnetAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/magnet-audition")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"
@@ -311,6 +418,26 @@ tasks.register<JavaExec>("generateTerraAudition") {
     mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/terra-audition")
+}
+
+/** Render TERRA R1's listening clips (HIT in the engine) and manifest under testkit/terra-audition/R1/. See TerraAuditionGenerator.renderR1. */
+tasks.register<JavaExec>("generateTerraR1Audition") {
+    group = "distribution"
+    description = "Render the TERRA R1 (HIT) listening clips and manifest under testkit/terra-audition/R1/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/terra-audition", "r1")
+}
+
+/** Render TERRA R1b's listening clips (HIT's ladder and its floor) and manifest under testkit/terra-audition/R1B/. See TerraAuditionGenerator.renderR1B. */
+tasks.register<JavaExec>("generateTerraR1BAudition") {
+    group = "distribution"
+    description = "Render the TERRA R1b (HIT's ladder and floor) listening clips and manifest under testkit/terra-audition/R1B/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/terra-audition", "r1b")
 }
 
 /** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */

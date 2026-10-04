@@ -72,6 +72,14 @@ tasks.test {
             .withPathSensitivity(PathSensitivity.RELATIVE)
     }
 
+    // AuditionCopiesTest reads :synth's audition loudness rule as text to hold
+    // :shell's copy of it identical (Dsp.kt is already covered by the synth
+    // main-source directory above). Undeclared, an edit to the original would
+    // leave this task UP-TO-DATE and the guard would go green without re-reading it.
+    inputs.file(layout.projectDirectory.file("../synth/src/test/kotlin/com/snipsnap/synth/AuditionLevel.kt"))
+        .withPropertyName("synthAuditionLevelScannedByAuditionCopiesTest")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+
     // The roster-count law reads these as prose, for the same reason and with
     // the same hazard: undeclared, the task stays UP-TO-DATE after a README
     // edit and the law goes green having never re-read the sentence that
@@ -82,4 +90,14 @@ tasks.test {
             .withPropertyName("${owner}ReadmeScannedByConventionTest")
             .withPathSensitivity(PathSensitivity.RELATIVE)
     }
+}
+
+/** Render the BECOME A1 gate's clips, manifest and listening page under testkit/become-audition/. See BecomeAuditionGenerator. */
+tasks.register<JavaExec>("generateBecomeAudition") {
+    group = "distribution"
+    description = "Render the BECOME A1 gate's ten clips, manifest and listening page under testkit/become-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BecomeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/become-audition")
 }

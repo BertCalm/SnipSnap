@@ -98,6 +98,95 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the arco kit is eight cello stabs up the pentatonic, six erhu presets and a loop for each voice, all dry`() {
+        val kit = SynthKits.arco()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is an ARCO render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? ArcoPatch
+            assertTrue(patch != null, "pad ${i + 1} should be an ARCO patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry: ARCO has no landing chain")
+            patch!!
+        }
+        // The kit files every pad with Arco.drumClassFor, so comparing to that call would pass whatever it said: the expected
+        // class is written out. Fourteen notes under the 1.5 s line are PERC and the last two pads are the loops.
+        for (k in 0 until 16) {
+            val expected = if (k >= 14) DrumClass.LOOP else DrumClass.PERC
+            assertEquals(expected, kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+        }
+        // A01-A08: CELLO up the minor pentatonic from its root, every stab a note and not a LOOP. The stab's HOLD is the bottom of the
+        // knob (SynthKits.ARCO_STAB_HOLD is private, so the test writes 0) and every other macro is at its default: the row is what
+        // the knobs sound like before anyone touches them.
+        val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val defaults = Arco.defaults(ArcoVoice.CELLO)
+        for (k in 0 until 8) {
+            val macros = patches[k].macros
+            assertEquals(ArcoVoice.CELLO, patches[k].voice, "pad ${k + 1} is CELLO")
+            assertEquals("Cello ${k + 1}", patches[k].name, "pad ${k + 1}'s patch name")
+            assertEquals(Arco.rootMidi(ArcoVoice.CELLO) + walk[k], Arco.midiFor(ArcoVoice.CELLO, macros.getValue("TUNE")), "pad ${k + 1} is the ${walk[k]}th semitone")
+            assertEquals(0f, macros.getValue("HOLD"), "pad ${k + 1} is a stab: HOLD at the bottom of the knob")
+            for ((name, default) in defaults) {
+                if (name == "TUNE" || name == "HOLD") continue
+                assertEquals(default, macros.getValue(name), "pad ${k + 1}: $name is at its default")
+            }
+        }
+        // A09-A14: the six ERHU presets, in this order; A15 and A16 the two loops, one a voice.
+        val erhu = listOf("NASAL LINE", "MOON FIDDLE", "THIN SCRAPE", "HIGH CRY", "SLOW CRY", "TEA HOUSE")
+        for (k in 8 until 14) {
+            assertEquals(ArcoVoice.ERHU, patches[k].voice, "pad ${k + 1} is ERHU")
+            assertEquals(erhu[k - 8], patches[k].name, "pad ${k + 1} is the preset ${erhu[k - 8]}")
+        }
+        assertEquals(ArcoVoice.CELLO to "ENDLESS DRAW", patches[14].voice to patches[14].name, "A15 is CELLO's LOOP")
+        assertEquals(ArcoVoice.ERHU to "ENDLESS CRY", patches[15].voice to patches[15].name, "A16 is ERHU's LOOP")
+        for (k in 14..15) {
+            val hz = Arco.frequencyFor(patches[k].voice, patches[k].macros.getValue("TUNE"))
+            val cents = FineTuning.cents(FineTuning.measuredHz(kit[k]!!.snip, hz, fromSec = 0.1f, bodySeconds = 1.4f), hz.toDouble())
+            assertTrue(Math.abs(cents) < 5.0, "the LOOP on pad ${k + 1} plays ${"%.2f".format(java.util.Locale.ROOT, cents)} cents from its note")
+        }
+    }
+
+    @Test
+    fun `the magnet kit is a chug riff, a jangle chord and a lead pair, each landed through its amp`() {
+        val kit = SynthKits.magnet()
+        assertEquals(16, kit.size)
+        assertTrue(kit.none { it == null }, "no empty pad in the magnet kit")
+        // The notes the kit plays (MIDI): B1 D2 E2 F#2 A2 B2 D3 E3 on CHUG, E2 B2 E3 G#3 B3 E4 on JANGLE,
+        // then F#3 and B3 on CHUG for the lead pair.
+        val expectedMidi = listOf(35, 38, 40, 42, 45, 47, 50, 52) + listOf(40, 47, 52, 56, 59, 64) + listOf(54, 59)
+        val leadValve = mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f)
+        for (i in kit.indices) {
+            val n = i + 1
+            val pad = kit[i]!!
+            assertEquals(DrumClass.TONAL, pad.drumClass, "pad $n is a note")
+            val recipe = PadRecipe.fromJsonValue(pad.recipe ?: error("pad $n carries no recipe"))
+            val patch = recipe.patch as? MagnetPatch ?: error("pad $n should be a MAGNET patch, got ${recipe.patch?.engine}")
+
+            val voice = patch.voice
+            val expectedVoice = if (i in 8..13) MagnetVoice.JANGLE else MagnetVoice.CHUG
+            assertEquals(expectedVoice, voice, "pad $n is the wrong voice")
+            val lead = i >= 14
+            assertEquals(if (lead) 0.35f else Magnet.defaults(voice).getValue("BLEND"), patch.macros.getValue("BLEND"), "pad $n BLEND")
+            assertTrue(recipe.fx?.valve != null, "pad $n lands through VALVE")
+            assertEquals(if (lead) leadValve else Magnet.LANDING_VALVE.getValue(voice), recipe.fx?.valve, "pad $n amp")
+
+            // The pitch is read on the dry patch render: pad.snip has been through the landing VALVE.
+            val tune = patch.macros.getValue("TUNE")
+            assertEquals(expectedMidi[i], Magnet.rootMidi(voice) + Magnet.semitonesFor(tune), "pad $n plays the wrong note")
+            val want = Magnet.frequencyFor(voice, tune)
+            val dry = patch.render()
+            assertEquals(Dsp.RATE, dry.sampleRate, "pad $n dry render rate")
+            val cents = FineTuning.cents(FineTuning.measuredHz(dry.samples, Dsp.RATE, want), want.toDouble())
+            val rounded = Math.round(cents * 100.0) / 100.0
+            println("MAGNET kit pad $n $voice midi ${expectedMidi[i]} $want Hz, dry read $rounded cents")
+            assertTrue(Math.abs(cents) <= 10.0, "pad $n ($voice) reads $rounded cents from $want Hz")
+
+            val regenerated = recipe.render()
+            assertTrue(regenerated.samples.contentEquals(pad.snip.samples), "pad $n does not regenerate bit for bit from its recipe")
+        }
+    }
+
+    @Test
     fun `the chip kit is sixteen crunched pads that keep their identities`() {
         val kit = SynthKits.chip()
         assertEquals(16, kit.size)
@@ -146,5 +235,43 @@ class SynthKitTest {
             assertTrue(patch != null, "pad ${i + 1} should be a TINES patch, got ${recipe.patch?.engine}")
             assertEquals(TinesVoice.KALIMBA, patch!!.voice, "pad ${i + 1} voice")
         }
+    }
+
+    @Test
+    fun `the mercury kit is eight pings up the pentatonic, four sing and four blade presets, all dry`() {
+        val kit = SynthKits.mercury()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a MERCURY render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? MercuryPatch
+            assertTrue(patch != null, "pad ${i + 1} should be a MERCURY patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry: MERCURY has no landing chain")
+            patch!!
+        }
+        // Written out, not read back from Mercury.drumClassFor: every pad here is its contact plus a ringing tail past the
+        // classifier's 1.5 s line, so the length rule files every one LOOP.
+        for (k in 0 until 16) assertEquals(DrumClass.LOOP, kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+        val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val defaults = Mercury.defaults(MercuryVoice.PING)
+        for (k in 0 until 8) {
+            val macros = patches[k].macros
+            assertEquals(MercuryVoice.PING, patches[k].voice, "pad ${k + 1} is PING")
+            assertEquals("Ping ${k + 1}", patches[k].name, "pad ${k + 1}'s patch name")
+            assertEquals(Mercury.rootMidi(MercuryVoice.PING) + walk[k], Mercury.midiFor(MercuryVoice.PING, macros.getValue("TUNE")), "pad ${k + 1} is the ${walk[k]}th semitone")
+            for ((name, default) in defaults) {
+                if (name == "TUNE") continue
+                assertEquals(default, macros.getValue(name), "pad ${k + 1}: $name is at its default")
+            }
+        }
+        val names = patches.drop(8).map { "${it.voice} ${it.name}" }
+        assertEquals(
+            listOf(
+                "SING LONG RUB", "SING SINGING EDGE", "SING GLASS CURRENT", "SING LOW HUM",
+                "BLADE BENT RIBBON", "BLADE WHISTLE BEND", "BLADE DOWN BEND", "BLADE WOBBLE STEEL",
+            ),
+            names,
+        )
+        for (k in 8 until 16) assertEquals(MercuryPresets.forVoice(patches[k].voice).first { it.name == patches[k].name }, patches[k], "pad ${k + 1} is the preset itself")
     }
 }

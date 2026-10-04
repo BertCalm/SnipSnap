@@ -525,7 +525,7 @@
     <div class="voice-hd">
       <h2>Hold the surface</h2>
       <div class="body-note">the four LOOP renders, held under a finger</div>
-      <div class="readout"><span>PRESS AND HOLD</span><span>LIFT TO LET GO</span><span>ECHO 3/8 BAR &middot; FEEDBACK .35</span></div>
+      <div class="readout"><span>PRESS AND HOLD</span><span>LIFT TO LET GO</span><span>ECHO 220 ms FREE &middot; FEEDBACK .35</span></div>
     </div>
     <div class="field lcd">
       <div class="holds" id="holds"><button class="raised hold" type="button" disabled>LOADING</button></div>
@@ -690,7 +690,7 @@
   // closes a 3 ms gain glide on lift, and feeds its echo the gated signal
   // so the tail rings on. Web Audio can do exactly that: a looping buffer
   // source wraps sample-accurately, a gain node is the gate, a delay with
-  // feedback is the echo (SurfaceEngine's own 0.35).
+  // feedback is the echo (SurfaceEngine's own 220 ms FREE time and 0.35).
   var ctx = null, dry = null, echoSend = null, echoOn = true, semis = 0;
   var loopBuffers = {};
   var holding = null;
@@ -701,7 +701,7 @@
     ctx = new AC();
     dry = ctx.createGain(); dry.gain.value = 0.9; dry.connect(ctx.destination);
     var delay = ctx.createDelay(2);
-    delay.delayTime.value = 0.375;
+    delay.delayTime.value = 0.22;
     var fb = ctx.createGain(); fb.gain.value = 0.35;
     var tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 3200;
     var wet = ctx.createGain(); wet.gain.value = 0.55;
@@ -757,8 +757,8 @@
       var t = ctx.currentTime;
       h.gain.gain.cancelScheduledValues(t);
       h.gain.gain.setValueAtTime(h.gain.gain.value, t);
-      h.gain.gain.linearRampToValueAtTime(0, t + 0.06);
-      h.src.stop(t + 0.08);
+      h.gain.gain.linearRampToValueAtTime(0, t + 0.003);
+      h.src.stop(t + 0.02);
     }
     if (!current) { nowEl.textContent = 'TAP A PAD TO PLAY'; nowEl.classList.add('idle'); }
   }

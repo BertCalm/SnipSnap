@@ -45,7 +45,7 @@ object GlintPathsAuditionGenerator {
      * Plays the note as a held key would: to the end, then the loop again, for at
      * least [seconds] and always two wraps.
      */
-    private fun heldFor(note: KeyNote, seconds: Float): Snip {
+    internal fun heldFor(note: KeyNote, seconds: Float): Snip {
         val s = note.snip.samples
         val start = note.loopStartFrame.toInt()
         val loop = s.size - start
