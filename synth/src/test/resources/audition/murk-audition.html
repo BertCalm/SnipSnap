@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23111b19'/%3E%3Cpath d='M17 42V22M27 49V15M37 43V21M47 36V28' stroke='%23c9ec83' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>MURK · a grove you can play — SnipSnap audition</title>
+  <style>
+    :root { color-scheme: dark; --bg:#111b19; --panel:#182823; --raised:#20332c; --ink:#f0f4e8; --muted:#c1cebd; --accent:#c9ec83; --line:#56685a; --focus:#fbd58b; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; scroll-padding-top:13rem; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:1rem/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:var(--accent); text-underline-offset:.2em; }
+    button,input,select { font:inherit; }
+    input::placeholder { color:var(--muted); opacity:1; }
+    button,select,input[type="search"] { border:1px solid var(--line); border-radius:.4rem; background:var(--raised); color:var(--ink); }
+    button { padding:.65rem 1rem; font-weight:650; cursor:pointer; min-height:44px; }
+    button:hover:not(:disabled) { background:#334e3e; }
+    button:disabled { color:#b2baae; background:#243128; cursor:default; }
+    input[type="checkbox"],input[type="range"] { accent-color:var(--accent); }
+    input[type="checkbox"] { width:1.15rem; height:1.15rem; }
+    :focus-visible { outline:3px solid var(--focus); outline-offset:4px; }
+    [hidden] { display:none!important; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .skip { position:absolute; z-index:20; left:1rem; top:1rem; transform:translateY(-160%); background:var(--accent); color:var(--bg); padding:.6rem 1rem; }
+    .skip:focus { transform:translateY(0); }
+    .shell { max-width:1280px; margin:0 auto; padding:0 clamp(1rem,4vw,3rem); }
+    .hero { padding-block:1.5rem 1.2rem; position:relative; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.16em; font-size:.78rem; font-weight:750; margin:0 0 .5rem; }
+    h1 { font:700 clamp(2.75rem,7vw,4rem)/1 Georgia,"Times New Roman",serif; letter-spacing:-.07em; margin:.25rem 0 .6rem; }
+    .hero-title { display:flex; align-items:end; gap:1rem; flex-wrap:wrap; }
+    .hero-title span { margin-bottom:.6rem; color:var(--muted); font-size:1.05rem; }
+    .hero .intro { max-width:800px; font-size:1.05rem; line-height:1.5; }
+    .hero p { margin:.5rem 0; }
+    .read-first { max-width:800px; border-left:3px solid var(--accent); padding:.4rem .8rem; background:var(--panel); font-size:.95rem; }
+    .read-first strong { color:var(--accent); }
+    .listening-guide { max-width:900px; }
+    .listening-guide > summary { font-size:.95rem; }
+    .story { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-top:.6rem; margin-bottom:1rem; }
+    .story div { border-top:1px solid var(--line); padding-top:1rem; }
+    .story span { color:var(--accent); font-size:.8rem; }
+    .story h2 { margin:.4rem 0; font-size:1.1rem; }
+    .story p { margin:0; color:var(--muted); font-size:.95rem; }
+    .transport { position:sticky; top:0; z-index:10; background:var(--panel); border-block:1px solid var(--line); padding-block:.8rem; box-shadow:0 5px 20px #0004; }
+    .transport-main { display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:center; }
+    .enable { display:flex; align-items:center; gap:.65rem; font-weight:650; min-height:44px; cursor:pointer; }
+    .volume { display:flex; gap:.65rem; align-items:center; flex-wrap:wrap; max-width:100%; }
+    .volume input { width:130px; min-height:44px; }
+    .volume output { min-width:3ch; font-variant-numeric:tabular-nums; color:var(--muted); }
+    #playback-status { margin:.45rem 0 0; color:var(--muted); font-size:.95rem; min-height:1.5rem; }
+    .filters { display:grid; grid-template-columns:1fr 1.3fr 2fr; gap:1rem; padding-block:1.5rem .7rem; }
+    .filters label { display:grid; gap:.35rem; font-weight:600; }
+    .filters input,.filters select { width:100%; min-height:44px; padding:.65rem; }
+    .browse-meta { display:flex; gap:1rem; align-items:baseline; justify-content:space-between; flex-wrap:wrap; color:var(--muted); }
+    #filter-status { margin:0; }
+    .section-nav { display:flex; gap:.55rem 1.2rem; flex-wrap:wrap; list-style:none; padding:0; margin:1rem 0 0; font-size:.95rem; }
+    .audition-section { padding-block:2.5rem 1rem; border-top:1px solid var(--line); margin-top:2rem; }
+    .section-heading { max-width:780px; margin-bottom:1.5rem; }
+    .section-heading h2 { font:600 clamp(1.5rem,3vw,2rem)/1.3 Georgia,"Times New Roman",serif; margin:.2rem 0 .7rem; }
+    .section-heading p:last-child { color:var(--muted); }
+    .clip-group { margin-bottom:2rem; }
+    .clip-group h3 { font-size:1rem; margin:0 0 .8rem; color:var(--accent); }
+    .clip-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+    .clip { min-width:0; border:1px solid var(--line); border-radius:.65rem; background:var(--panel); padding:1.2rem; display:flex; flex-direction:column; }
+    .clip.playing { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+    .clip-badges { display:flex; gap:.45rem; flex-wrap:wrap; }
+    .clip-badges span { color:var(--muted); border:1px solid var(--line); border-radius:1rem; padding:.08rem .5rem; font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; }
+    .clip h4 { font-size:1.08rem; line-height:1.45; margin:.75rem 0 .5rem; }
+    .description { margin:0 0 .8rem; font-size:1rem; }
+    .macro-line { font: .875rem/1.8 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--muted); margin:.2rem 0 .6rem; }
+    .clip-meta { color:var(--muted); font-size:.875rem; margin:auto 0 .8rem; font-variant-numeric:tabular-nums; }
+    .clip-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; }
+    .play { flex:1; }
+    .repeat { display:flex; align-items:center; gap:.35rem; min-height:44px; font-size:.9rem; }
+    .download { min-height:44px; display:flex; align-items:center; font-size:.9rem; }
+    progress { width:100%; height:.3rem; margin:1rem 0 .55rem; accent-color:var(--accent); }
+    details { font-size:.875rem; }
+    summary { cursor:pointer; min-height:36px; padding:.3rem 0; color:var(--muted); }
+    dl { display:grid; grid-template-columns:1fr 1fr; gap:.25rem .75rem; margin:.5rem 0; font-variant-numeric:tabular-nums; }
+    dd { margin:0; text-align:right; }
+    audio { width:100%; margin:.5rem 0; }
+    footer { border-top:1px solid var(--line); color:var(--muted); padding-block:2rem 3rem; margin-top:2rem; font-size:.9rem; }
+    footer p { max-width:850px; }
+    .empty { padding:2rem 0; }
+    @media(max-width:980px) { .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:650px) { html { scroll-padding-top:15rem; } .hero { padding-top:1rem; } .story { grid-template-columns:1fr; gap:1rem; } .filters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; padding-top:1rem; } .filters label:last-child { grid-column:1/-1; } .clip-grid { grid-template-columns:1fr; } .transport-main { gap:.4rem 1rem; } .volume { margin-left:auto; } .volume input { width:90px; } .clip { padding:1rem; } }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media(forced-colors:active) { .clip.playing { outline:2px solid Highlight; } .transport,.clip { border:1px solid CanvasText; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#audition">Skip to the audition clips</a>
+  <header class="shell hero">
+    <p class="eyebrow">SnipSnap / dry engine audition</p>
+    <div class="hero-title"><h1>Murk.</h1><span>A grove you can play.</span></div>
+    <p class="intro">A pitched wood strike sends a front through an imaginary grove, prompting finite owl replies.</p>
+    <p class="read-first"><strong>Audio starts off.</strong> Read each clip's description before enabling playback. Nothing plays automatically.</p>
+    <details class="listening-guide"><summary>What to listen for: wood, atmosphere and response</summary><div class="story" aria-label="The sound's three connected parts">
+      <div><span>01 / Wood</span><h2>A pitched point of contact</h2><p>A bat-like clunk or sharper thwack excites a tuned trunk and its hollow cavity.</p></div>
+      <div><span>02 / Atmosphere</span><h2>A disturbance that travels</h2><p>Loaded wood sends damped arrivals between trees; returns can wake the trunks again.</p></div>
+      <div><span>03 / Response</span><h2>A finite living reply</h2><p>Triggered hoots, barks and restrained alarm calls can disturb the same fog before the grove settles.</p></div>
+    </div></details>
+  </header>
+  <div class="transport">
+    <div class="shell">
+      <div class="transport-main">
+        <label class="enable"><input id="audio-enabled" type="checkbox"> Enable audio playback</label>
+        <button id="stop-all" type="button">Stop all <span aria-hidden="true">· Esc</span></button>
+        <div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="100" value="65"><output id="volume-value" for="volume">65%</output></div>
+      </div>
+      <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Audio off. Descriptions are ready to read.</p>
+    </div>
+  </div>
+  <main id="audition" class="shell" tabindex="-1">
+    <form class="filters" aria-label="Filter audition clips" onsubmit="return false">
+      <label for="voice-filter">Voice<select id="voice-filter"><option value="all">All six voices</option><option>CLUNK</option><option>THWACK</option><option>FRONT</option><option>HOOT</option><option>GROVE</option><option>ALARM</option></select></label>
+      <label for="category-filter">Section<select id="category-filter"><option value="all">All sections</option><option value="voices">Voices and registers</option><option value="presets">Factory presets</option><option value="energy">Event energy</option><option value="sweeps">Macro sweeps</option><option value="grids">Interaction grids</option><option value="levels">Raw and matched pairs</option><option value="diagnostics">Causal probes and edge cases</option><option value="hold">HOLD and loops</option></select></label>
+      <label for="search-filter">Search descriptions<input id="search-filter" type="search" placeholder="For example: fog, low-register, no owls" autocomplete="off"></label>
+    </form>
+    <div class="browse-meta"><p id="filter-status" role="status" aria-live="polite" aria-atomic="true">All audition clips.</p><a href="manifest.json">Full evidence manifest</a></div>
+    <nav aria-label="Audition sections"><ul class="section-nav"><li><a href="#voices">Voices</a></li><li><a href="#presets">Presets</a></li><li><a href="#energy">Energy</a></li><li><a href="#sweeps">Sweeps</a></li><li><a href="#grids">Interactions</a></li><li><a href="#levels">Raw / matched</a></li><li><a href="#diagnostics">Diagnostics</a></li><li><a href="#hold">HOLD</a></li></ul></nav>
+    <noscript><p>The clip descriptions and native audio controls work without JavaScript. Filters, global volume and Stop all require JavaScript. Use each clip's native pause control when finished.</p></noscript>
+    <p class="empty" id="empty-state" hidden>No clips match these filters. Choose another voice or section, or clear the search.</p>
+    <!-- MURK_CARDS -->
+  </main>
+  <footer class="shell"><p>Dry mono audio, no effects. Matched full clips share a quiet audition level; isolated source taps retain their full reference's gain, and raw partners preserve synthesis amplitude. Measurements establish behavior and stability. These descriptions describe intended character; sonic acceptance still needs the owner's listening verdict.</p><p>Everything on this page works from local relative assets. <a href="README.md">Audition notes</a> · <a href="manifest.json">Manifest and render measurements</a></p></footer>
+  <!-- MURK_MANIFEST -->
+  <script>
+  (() => {
+    'use strict';
+    const cards = Array.from(document.querySelectorAll('.clip'));
+    const audioEnabled = document.getElementById('audio-enabled');
+    const volume = document.getElementById('volume');
+    const status = document.getElementById('playback-status');
+    const voiceFilter = document.getElementById('voice-filter');
+    const categoryFilter = document.getElementById('category-filter');
+    const searchFilter = document.getElementById('search-filter');
+    // A reload must start silent even when the browser restores checkbox state.
+    audioEnabled.checked = false;
+    let active = null;
+    const title = card => card.querySelector('h4').textContent;
+    const announce = message => { status.textContent = message; };
+    const resetButton = card => {
+      const button = card.querySelector('.play');
+      const media = card.querySelector('audio');
+      const playing = !media.paused && !media.ended;
+      button.textContent = playing ? 'Pause' : 'Play';
+      button.setAttribute('aria-label', `${playing ? 'Pause' : 'Play'} ${title(card)}`);
+      button.setAttribute('aria-pressed', String(playing));
+      card.classList.toggle('playing', playing);
+    };
+    const stop = card => {
+      const media = card.querySelector('audio');
+      media.pause();
+      media.currentTime = 0;
+      card.querySelector('progress').value = 0;
+      resetButton(card);
+    };
+    const stopAll = () => {
+      cards.forEach(stop);
+      active = null;
+      announce(audioEnabled.checked ? 'All playback stopped.' : 'Audio off. Descriptions are ready to read.');
+    };
+    const activate = card => {
+      if (active && active !== card) stop(active);
+      active = card;
+    };
+    cards.forEach(card => {
+      const media = card.querySelector('audio');
+      const button = card.querySelector('.play');
+      const repeat = card.querySelector('.loop-toggle');
+      if (repeat) repeat.checked = false;
+      media.loop = false;
+      media.controls = false;
+      card.querySelector('.native-hint').hidden = false;
+      media.volume = Number(volume.value) / 100;
+      media.addEventListener('play', () => {
+        if (!audioEnabled.checked) { media.pause(); return; }
+        activate(card);
+        resetButton(card);
+        announce(`Playing ${title(card)}${media.loop ? ', repeating' : ''}.`);
+      });
+      media.addEventListener('pause', () => {
+        resetButton(card);
+        if (active === card && !media.ended && media.currentTime > 0) announce(`Paused ${title(card)}.`);
+      });
+      media.addEventListener('ended', () => { resetButton(card); if (active === card) { active = null; announce(`Finished ${title(card)}.`); } });
+      media.addEventListener('error', () => announce(`Cannot load ${title(card)}. Check that its WAV is beside this page, or use the download link.`));
+      media.addEventListener('timeupdate', () => { card.querySelector('progress').value = media.currentTime; });
+      button.addEventListener('click', async () => {
+        if (!audioEnabled.checked) return;
+        if (!media.paused) { media.pause(); return; }
+        activate(card);
+        try { await media.play(); }
+        catch (_) { resetButton(card); announce(`Playback did not start for ${title(card)}. Try its native audio controls or WAV download.`); }
+      });
+      if (repeat) repeat.addEventListener('change', () => { media.loop = repeat.checked; if (active === card && !media.paused) announce(`${title(card)}: repeat ${repeat.checked ? 'on' : 'off'}.`); });
+    });
+    audioEnabled.addEventListener('change', () => {
+      if (!audioEnabled.checked) stopAll();
+      cards.forEach(card => {
+        card.querySelector('.play').disabled = !audioEnabled.checked;
+        card.querySelector('audio').controls = audioEnabled.checked;
+        card.querySelector('.native-hint').hidden = audioEnabled.checked;
+      });
+      announce(audioEnabled.checked ? 'Audio enabled. Choose a clip to play.' : 'Audio off. Descriptions are ready to read.');
+    });
+    volume.addEventListener('input', () => {
+      document.getElementById('volume-value').value = `${volume.value}%`;
+      cards.forEach(card => { card.querySelector('audio').volume = Number(volume.value) / 100; });
+    });
+    document.getElementById('stop-all').addEventListener('click', stopAll);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') stopAll(); });
+    const filter = () => {
+      const query = searchFilter.value.trim().toLocaleLowerCase();
+      let visible = 0;
+      cards.forEach(card => {
+        card.hidden = (voiceFilter.value !== 'all' && card.dataset.voice !== voiceFilter.value)
+          || (categoryFilter.value !== 'all' && card.dataset.category !== categoryFilter.value)
+          || !card.textContent.toLocaleLowerCase().includes(query);
+        if (!card.hidden) visible++;
+        else if (active === card) { stop(card); active = null; announce('Playback stopped because the clip is outside the current filters.'); }
+      });
+      document.querySelectorAll('.clip-group').forEach(group => { group.hidden = !Array.from(group.querySelectorAll('.clip')).some(card => !card.hidden); });
+      document.querySelectorAll('.audition-section').forEach(section => { section.hidden = !Array.from(section.querySelectorAll('.clip')).some(card => !card.hidden); });
+      document.getElementById('filter-status').textContent = `${visible} of ${cards.length} clips shown.`;
+      document.getElementById('empty-state').hidden = visible !== 0;
+    };
+    voiceFilter.addEventListener('change', filter);
+    categoryFilter.addEventListener('change', filter);
+    searchFilter.addEventListener('input', filter);
+    document.querySelectorAll('.section-nav a').forEach(link => link.addEventListener('click', () => {
+      // Section navigation also reveals a target hidden by the current filters.
+      voiceFilter.value = 'all';
+      categoryFilter.value = link.hash.slice(1);
+      searchFilter.value = '';
+      filter();
+    }));
+    filter();
+  })();
+  </script>
+</body>
+</html>

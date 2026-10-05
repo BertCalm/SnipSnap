@@ -516,3 +516,13 @@ tasks.register<JavaExec>("generateFlotillaAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/flotilla-audition")
 }
+
+/** Render MURK's dry voices, causal probes and accessible offline listening page. */
+tasks.register<JavaExec>("generateMurkAudition") {
+    group = "distribution"
+    description = "Render the MURK audition WAVs, evidence manifest and accessible page under testkit/murk-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurkAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/murk-audition")
+}
