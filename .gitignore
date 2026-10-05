@@ -127,3 +127,6 @@ testkit/flotilla-audition/
 # The TREMOR audition clips, manifest and page, rendered by :synth:generateTremorAudition
 # and published as the listening artifact; never committed.
 testkit/tremor-audition/
+
+# Corolla acceptance clips and listening page, generated locally.
+testkit/corolla-audition/

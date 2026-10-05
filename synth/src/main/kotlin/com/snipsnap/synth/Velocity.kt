@@ -224,6 +224,7 @@ object Velocity {
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
         is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
+        is CorollaPatch -> Corolla.macrosFor(patch.voice)
     }
 
     /**
@@ -282,7 +283,7 @@ object Velocity {
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
-            patch is AerostatPatch || patch is TremorPatch
+            patch is AerostatPatch || patch is TremorPatch || patch is CorollaPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -308,6 +309,8 @@ object Velocity {
                 is MercuryPatch -> Mercury.render(patch.voice, patch.macros, velocity = v)
                 is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
                 is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+                // COROLLA scales the pull and contact energy; PULL keeps the playing character.
+                is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
             }
         }

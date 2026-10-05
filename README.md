@@ -353,6 +353,16 @@ the top is a stationary loop (the slider reads LOOP), not a claim the
 hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
 `docs/superpowers/specs/2026-10-04-flotilla-engine-design.md`.
 
+COROLLA is a mechanical flower of coupled metal petals around a powered
+magnetic core and a shared chamber. TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT
+and HUSK share TUNE, PULL, BLOOM, FIELD, CONTACT, CHAMBER and HOLD. It
+renders dry; finite notes route as TONAL for IN KEY, and HOLD's top step
+returns settled LOOP material. Twelve
+presets and `SynthKits.corolla()` expose the first implementation, awaiting
+the owner's listening review. Audition: `./gradlew :synth:generateCorollaAudition`.
+Individual presets can also be rendered with
+`./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -360,9 +370,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA and GRAINS round out the lineup — fourteen engines in
-the `Engine` picker counting SKIN, RESIN, TIDE, GLINT, SIREN, FORK and
-FLOTILLA; GRAINS is a fifteenth thing entirely, out of the picker's scope
+VOX, FORK, FLOTILLA, COROLLA and GRAINS round out the lineup — fifteen engines in
+the `Engine` picker counting SKIN, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA
+and COROLLA; GRAINS is a sixteenth thing entirely, out of the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs

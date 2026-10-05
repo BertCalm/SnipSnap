@@ -87,6 +87,10 @@ object Presets {
             val v = TremorVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TremorPresets.forVoice(v)
         }
+        CorollaPatch.ENGINE -> {
+            val v = CorollaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CorollaPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -117,5 +121,5 @@ object Presets {
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() +
             AerostatPresets.all() +
-            TremorPresets.all()
+            TremorPresets.all() + CorollaPresets.all()
 }
