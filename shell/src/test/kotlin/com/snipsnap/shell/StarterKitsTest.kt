@@ -61,9 +61,9 @@ class StarterKitsTest {
     }
 
     @Test
-    fun `nine starters, and blank leads them`() {
+    fun `starter roster includes Thaw, and blank leads it`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "skin", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "thaw", "skin", "velocity"),
             StarterKits.ALL.map { it.id },
         )
     }

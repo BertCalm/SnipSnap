@@ -130,3 +130,7 @@ testkit/tremor-audition/
 
 # Corolla acceptance clips and listening page, generated locally.
 testkit/corolla-audition/
+# The THAW raw/matched audition and diagnostic traces, generated locally.
+testkit/thaw-audition/
+testkit/thaw-first-listen/
+testkit/SnipSnap Thaw Kit/

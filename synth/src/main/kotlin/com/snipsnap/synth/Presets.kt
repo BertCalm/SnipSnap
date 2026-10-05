@@ -5,8 +5,7 @@ package com.snipsnap.synth
  *
  * Authored engine by engine, not all at once — THUMP was first (U1 of
  * `docs/SYNTH_UPGRADE.md`, PR #189) and SKIN was last, a whole wave after
- * the engine itself shipped. This dispatcher now covers all sixteen
- * registered engines with a roster.
+ * the engine itself shipped. This dispatcher covers every registered engine with a roster.
  *
  * An unregistered engine name (or a future one with no roster yet)
  * returns an empty list rather than throwing, so the UI can ask before
@@ -87,6 +86,10 @@ object Presets {
             val v = TremorVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TremorPresets.forVoice(v)
         }
+        ThawPatch.ENGINE -> {
+            val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ThawPresets.forVoice(v)
+        }
         CorollaPatch.ENGINE -> {
             val v = CorollaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             CorollaPresets.forVoice(v)
@@ -121,5 +124,5 @@ object Presets {
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() +
             AerostatPresets.all() +
-            TremorPresets.all() + CorollaPresets.all()
+            TremorPresets.all() + ThawPresets.all() + CorollaPresets.all()
 }

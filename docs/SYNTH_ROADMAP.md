@@ -281,6 +281,21 @@ What follows from it:
 | S27 | **R1 implemented, awaiting the audition** — COROLLA, a mechanical flower of coupled metal petals (TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT, HUSK). TUNE spans C3–C5; PULL, BLOOM, FIELD, CONTACT and CHAMBER control the shared physical model. HOLD at 0.99 returns settled sustain material: the initial opening gesture belongs to the finite render, because the current sample API has no attack-plus-loop region. Velocity is event strength on the render. Twelve complete presets, two held; dry `SynthKits.corolla()` has eight TONGUE scale notes and eight contrasts. Registered through `Patches`, `Presets`, `Velocity` and the Android engine picker; the generic CLI can audition presets. Finite renders route as TONAL for IN KEY and pad tuning; HOLD alone selects LOOP. This engine metadata overrides the generic classifier's length-based LOOP bucket; neither class receives a drum choke group. `generateCorollaAudition` is the listening gate. Design: `docs/superpowers/specs/2026-10-05-corolla-engine-design.md`. The modal ratios, coupling, powered mechanism and preset settings remain provisional until heard | S22 (`Modes.Bank`) |
 | S11 | **Built, rounds 1-4** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER); round 4's SPEAK (a talking voice counting one to eight, speech chip to person) — under S11 below | S3.7 + U6 |
 
+THAW is the next material-state engine (S27), ported from
+`docs/superpowers/specs/2026-10-03-thaw-engine-design.md`: four modal ice
+plates, two powered copper runners, local enthalpy and liquid layers,
+delayed conserved channels, passive acoustic exchanges, bounded phase stress
+and a small wooden enclosure. BRITTLE, RUNNER, MELT, CHANNEL, FROST and SHEET
+share TUNE (C3–C5), CONTACT, HEAT, FREEZE, CHANNELS, THICKNESS and HOLD. Twelve
+dry presets, `SynthKits.thaw()`, the THAW FRESH TAPE starter and the phone
+picker are included. `generateThawAudition` supplies raw/matched clips and
+diagnostics; `generateThawKit` exports the sixteen-pad acceptance kit.
+Independent pads start frozen; HOLD exports settled sustain without a cold
+attack because a pad has no attack-plus-loop-region field. Implementation
+and verification notes are in `docs/THAW.md`. **Awaiting the owner's sonic
+verdict.** The normalized material constants and preset names remain
+provisional.
+
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
 
