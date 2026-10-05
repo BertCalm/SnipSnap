@@ -430,6 +430,29 @@ tasks.register<JavaExec>("generateGyreAudition") {
     args("${rootDir}/testkit/gyre-audition")
 }
 
+/** Render THAW's raw/matched listening gate under testkit/thaw-audition/. */
+tasks.register<JavaExec>("generateThawAudition") {
+    group = "distribution"
+    description = "Render THAW's voices, macro sweeps, material diagnostics, interaction grids and held loops with a listening page under testkit/thaw-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ThawAuditionGenerator")
+    workingDir = projectDir
+    val firstListen = project.hasProperty("thawFirstListen")
+    args("${rootDir}/testkit/" + if (firstListen) "thaw-first-listen" else "thaw-audition")
+    if (firstListen) args("--first-listen")
+    (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
+}
+
+/** Export the sixteen dry THAW acceptance pads as an MPC program folder. */
+tasks.register<JavaExec>("generateThawKit") {
+    group = "distribution"
+    description = "Render the THAW ice-plate acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ThawKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 tasks.register<JavaExec>("generateMagnetKit") {
     group = "distribution"
     description = "Render the MAGNET electric-string acceptance kit under testkit/."

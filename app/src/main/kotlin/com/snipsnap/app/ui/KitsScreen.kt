@@ -83,7 +83,7 @@ private const val EMPTY_ROOMS_BIN_ARM_MS = 3_000L
 /**
  * The tape shelf: every kit folder on the device, plus the NEW KIT ▸ PICK
  * A STARTER menu (the cold-start answer — the shelf is never uselessly
- * empty when starters are one tap away).
+ * empty when the starter kits are one tap away).
  */
 @Composable
 fun KitsScreen(

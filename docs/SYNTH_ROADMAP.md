@@ -281,6 +281,21 @@ What follows from it:
 | S27 | **Port implemented; owner listening verdict pending** — CIRCUIT, an invented moving pitched ensemble: three distinct pressure/lip-driven breath resonators plus finite stone-rattle, paired wooden-clapper, clay-vessel and synthesized grunt/uh-huh gestures. ROOT, PROCESSION, ANSWER, VOICED, EXPANSE and CONFLUENCE share seven macros: TUNE (C2–C4), BREATH, DIAMETER, ORBIT, PACE, CANYON, HOLD. Movement and playing use independent clocks; mono motion follows source facing, direct/reflected fractional delays and loss to an off-center observer. Separate performer-listening paths cue bounded replies. One-shots are approximately 5–7.7-second phrases; HOLD ≥ .99 supplies a settled loop without the initiating gesture, with compatible clocks and measured state convergence. Twelve dry presets, `SynthKits.circuit()`, patch/preset/velocity registration and host selection. `generateCircuitAudition` writes raw/matched WAVs, event/path/clock/cost diagnostics and a standalone local listening page; `-Pquick` selects a development subset. All full mixes retain the pitched trio and surrounding percussion and use existing pitched classifier guards. Models, held-rate approximations and listening matrix: [`CIRCUIT.md`](CIRCUIT.md). **Not heard.** | S1 + existing patch, rack and kit pipeline |
 | S11 | **Built, rounds 1-4** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER); round 4's SPEAK (a talking voice counting one to eight, speech chip to person) — under S11 below | S3.7 + U6 |
 
+THAW is the next material-state engine (S27), ported from
+`docs/superpowers/specs/2026-10-03-thaw-engine-design.md`: four modal ice
+plates, two powered copper runners, local enthalpy and liquid layers,
+delayed conserved channels, passive acoustic exchanges, bounded phase stress
+and a small wooden enclosure. BRITTLE, RUNNER, MELT, CHANNEL, FROST and SHEET
+share TUNE (C3–C5), CONTACT, HEAT, FREEZE, CHANNELS, THICKNESS and HOLD. Twelve
+dry presets, `SynthKits.thaw()`, the THAW FRESH TAPE starter and the phone
+picker are included. `generateThawAudition` supplies raw/matched clips and
+diagnostics; `generateThawKit` exports the sixteen-pad acceptance kit.
+Independent pads start frozen; HOLD exports settled sustain without a cold
+attack because a pad has no attack-plus-loop-region field. Implementation
+and verification notes are in `docs/THAW.md`. **Awaiting the owner's sonic
+verdict.** The normalized material constants and preset names remain
+provisional.
+
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
 

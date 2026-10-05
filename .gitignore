@@ -130,3 +130,8 @@ testkit/tremor-audition/
 
 # CIRCUIT's generated raw/matched listening matrix, manifests and diagnostic sidecars.
 testkit/circuit-audition/
+
+# The THAW raw/matched audition and diagnostic traces, generated locally.
+testkit/thaw-audition/
+testkit/thaw-first-listen/
+testkit/SnipSnap Thaw Kit/
