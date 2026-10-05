@@ -1,5 +1,8 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Fft
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,5 +66,87 @@ class CorollaOrbitTest {
             assertTrue(played.raw.all { it == 0f }, "HOLD $hold creates sound from an unseeded zero state")
             assertTrue(requireNotNull(played.taps).poweredInput.all { it == 0f })
         }
+    }
+
+    /** The upper-bank analytic envelope resolves partial beating that the slower
+     * spectral-frame motion test cannot see. Keep it at audio rate: decimating an
+     * unfiltered envelope would alias unrelated harmonic differences into roughness. */
+    private fun upperEnvelopePower(samples: FloatArray): Pair<Double, Double> {
+        fun paddedSize(n: Int): Int {
+            var size = 1
+            while (size < n) size = size shl 1
+            return size
+        }
+        val size = paddedSize(samples.size)
+        val real = samples.copyOf(size)
+        val imaginary = FloatArray(size)
+        Fft.forward(real, imaginary)
+        for (i in real.indices) {
+            val hz = i.toDouble() * Dsp.RATE / size
+            if (hz in 400.0..1800.0) {
+                // Keep twice the positive-frequency band only: inverse complex
+                // magnitude is its analytic envelope, with no carrier rectification.
+                real[i] *= 2f
+                imaginary[i] *= 2f
+            } else {
+                real[i] = 0f
+                imaginary[i] = 0f
+            }
+        }
+        Fft.inverse(real, imaginary)
+
+        // Discard both the attack and FFT band-filter boundary transients. Eight
+        // seconds covers several default turns and resolves sub-Hz beating.
+        val from = 2 * Dsp.RATE
+        val count = 8 * Dsp.RATE
+        val envelope = DoubleArray(count) { i ->
+            val r = real[from + i].toDouble()
+            val im = imaginary[from + i].toDouble()
+            sqrt(r * r + im * im)
+        }
+        val mean = envelope.average()
+        require(mean > 1e-8) { "ORBIT has no audible upper bank" }
+        var trendCross = 0.0
+        var trendSquare = 0.0
+        for (i in envelope.indices) {
+            val t = i.toDouble() / (count - 1) - .5
+            envelope[i] = envelope[i] / mean - 1.0
+            trendCross += t * envelope[i]
+            trendSquare += t * t
+        }
+        val slope = trendCross / trendSquare
+        val modulationSize = paddedSize(count)
+        val modulation = FloatArray(modulationSize)
+        for (i in envelope.indices) {
+            val t = i.toDouble() / (count - 1) - .5
+            val hann = .5 - .5 * cos(2 * PI * i / (count - 1))
+            modulation[i] = ((envelope[i] - slope * t) * hann).toFloat()
+        }
+        val phase = FloatArray(modulationSize)
+        Fft.forward(modulation, phase)
+        var total = 0.0
+        var slow = 0.0
+        var rough = 0.0
+        for (i in 1..modulationSize / 2) {
+            val hz = i.toDouble() * Dsp.RATE / modulationSize
+            if (hz < .5 || hz >= 95.0) continue
+            val power = modulation[i].toDouble() * modulation[i] + phase[i].toDouble() * phase[i]
+            total += power
+            if (hz < 5.0) slow += power
+            if (hz >= 20.0) rough += power
+        }
+        require(total > 1e-8) { "ORBIT has no measurable upper-bank motion" }
+        return slow / total to rough / total
+    }
+
+    @Test
+    fun `sustained upper petals circulate without rapid partial beating`() {
+        val played = Corolla.play(voice, mapOf("TUNE" to .5f, "HOLD" to 1f), seconds = 12f)
+        val samples = Corolla.finish(played.raw, normalize = false, fade = false)
+        val (slow, rough) = upperEnvelopePower(samples)
+        assertTrue(slow > .60,
+            "ORBIT's upper-bank motion is not mostly slow circulation: slow share $slow, rough share $rough")
+        assertTrue(rough < .20,
+            "ORBIT retains audible rapid partial beating despite a slow core: rough share $rough")
     }
 }

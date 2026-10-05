@@ -72,7 +72,9 @@ object Corolla {
             contactElastic = .6, contactLoss = .028, contactGapScale = .35,
             contactProjection = doubleArrayOf(.18, .85, .65))
         CorollaVoice.ORBIT -> Shape(.35f, .60f, .80f, .10f, .40f, 4.0,
-            ratios = doubleArrayOf(1.0, 2.66, 5.75), excitation = doubleArrayOf(1.0, .95, .55),
+            // Align upper modes with responding petals so slow circulation does not
+            // acquire rapid beats from neighboring inharmonic partials.
+            ratios = doubleArrayOf(1.0, 3.0, 6.0), excitation = doubleArrayOf(1.0, .95, .55),
             radiation = doubleArrayOf(1.0, .85, .6), decay = doubleArrayOf(1.0, .85, .7),
             neighborWeight = 1.7, fieldDepth = 1.15, fieldSpread = 1.0,
             fieldRates = doubleArrayOf(.08, .20, .50, 1.0, 2.0),
