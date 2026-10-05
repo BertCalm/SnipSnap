@@ -940,7 +940,7 @@ object Ballast {
      */
     fun render(voice: BallastVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
         val m = settled(macros, voice)
-        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
+        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m, velocity.coerceIn(0f, 1f).toDouble()), channels = 1, sampleRate = RATE)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val run = simulate(voice, oneShotPlan(voice, hz, m), m, velocity.coerceIn(0f, 1f).toDouble())
         val tail = totalSeconds(voice, m) - gateSeconds(m.getValue("HOLD")) - RELEASE_SECONDS
@@ -952,8 +952,8 @@ object Ballast {
     /** A rendered LOOP and how well its stretch closes on itself ([Keys.seamError]). */
     internal class LoopRender(val loop: FloatArray, val seam: Double, val prerollSeconds: Double, val calm: Int)
 
-    internal fun renderLoop(voice: BallastVoice, macros: Map<String, Float>): FloatArray {
-        val r = renderLoopMeasured(voice, macros)
+    internal fun renderLoop(voice: BallastVoice, macros: Map<String, Float>, velocity: Double = 1.0): FloatArray {
+        val r = renderLoopMeasured(voice, macros, velocity)
         require(r.seam < Keys.MAX_SEAM_ERROR) {
             "BALLAST $voice ${midiFor(voice, settled(macros, voice).getValue("TUNE"))}: the loop does not close (seam %.2e, bar %.0e)"
                 .format(java.util.Locale.ROOT, r.seam, Keys.MAX_SEAM_ERROR)
