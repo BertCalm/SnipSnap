@@ -116,9 +116,11 @@ object Aerostat {
     private const val V_MAX = 2.0
     private const val MODES = 6
 
-    private val MODE_RATIO = doubleArrayOf(1.0, 3.0, 5.0, 7.0, 9.0, 11.0)
-    private val QUICK_GAIN = doubleArrayOf(1.0, 0.48, 0.26, 0.14, 0.07, 0.035)
-    private val HEAVY_GAIN = doubleArrayOf(1.0, 0.22, 0.08, 0.03, 0.012, 0.005)
+    // Once the paddle lifts, the open pipe supports a whole harmonic ladder.
+    // Even partials fill out the hollow tone targeted by the PVC reference.
+    private val MODE_RATIO = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
+    private val QUICK_GAIN = doubleArrayOf(1.0, 0.90, 0.52, 0.30, 0.15, 0.075)
+    private val HEAVY_GAIN = doubleArrayOf(1.0, 0.75, 0.38, 0.18, 0.08, 0.035)
 
     fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: AerostatVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f, neutral = 0.5f),
@@ -690,7 +692,7 @@ object Aerostat {
                 val w = 2.0 * PI * freq * ratio
                 c[i] = cos(w * dt)
                 s[i] = sin(w * dt)
-                val tau = t60 / ratio.pow(1.15)
+                val tau = t60 / ratio.pow(0.45)
                 decay[i] = exp(-dt * 6.907755 / tau)
             }
         }

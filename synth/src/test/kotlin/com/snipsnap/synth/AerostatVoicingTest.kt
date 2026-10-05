@@ -15,6 +15,26 @@ class AerostatVoicingTest {
     }
 
     @Test
+    fun `the open tube has a substantial second harmonic in its early ring`() {
+        val samples = Aerostat.render(voice, base, tap = AerostatTap.TUBE, normalize = false).samples
+        val start = (0.02 * Dsp.RATE).toInt()
+        val n = 4096
+        fun energy(harmonic: Int): Double {
+            var re = 0.0
+            var im = 0.0
+            for (i in 0 until n) {
+                val window = 0.5 - 0.5 * kotlin.math.cos(2.0 * kotlin.math.PI * i / (n - 1))
+                val angle = 2.0 * kotlin.math.PI * Aerostat.frequencyFor(0f) * harmonic * i / Dsp.RATE
+                val x = samples[start + i] * window
+                re += x * kotlin.math.cos(angle)
+                im += x * kotlin.math.sin(angle)
+            }
+            return re * re + im * im
+        }
+        assertTrue(energy(2) > energy(1) * 0.08, "tube lost its open-pipe second partial")
+    }
+
+    @Test
     fun `the full mix leaves room for airflow as its valve opens`() {
         for (tune in listOf(0f, 0.5f, 1f)) {
             val macros = base + ("TUNE" to tune)
