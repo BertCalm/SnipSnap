@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.json.JsonException
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipEntry
@@ -80,7 +81,18 @@ object KitBackup {
         try {
             ZipOutputStream(outFile.outputStream()).use { zip ->
                 for (dir in kitDirs) {
-                    val kit = KitStore.load(dir)
+                    val kit = try {
+                        KitStore.load(dir)
+                    } catch (e: JsonException) {
+                        skipped[dir.name] = e.message ?: "kit metadata could not be read"
+                        continue
+                    } catch (e: IllegalArgumentException) {
+                        skipped[dir.name] = e.message ?: "kit metadata could not be read"
+                        continue
+                    } catch (e: IOException) {
+                        skipped[dir.name] = e.message ?: "kit metadata could not be read"
+                        continue
+                    }
                     val findings = Preflight.check(kit, dir)
                     if (findings.blocked()) {
                         skipped[kit.name] = findings.first { it.severity == Severity.FAIL }.message
