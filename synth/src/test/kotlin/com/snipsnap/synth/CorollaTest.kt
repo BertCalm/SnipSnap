@@ -76,7 +76,7 @@ class CorollaTest {
                 val snip = Corolla.render(voice, macros)
                 assertEquals(Dsp.RATE, snip.sampleRate)
                 assertEquals(1, snip.channels)
-                assertTrue(snip.durationSeconds in 2f..6.01f, "$voice duration ${snip.durationSeconds} at $macros")
+                assertTrue(snip.durationSeconds in 2.2f..14.01f, "$voice duration ${snip.durationSeconds} at $macros")
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice invalid samples at $macros")
                 assertTrue(abs(snip.samples.average()) < .02, "$voice DC offset at $macros")
                 val loudness = Loudness.of(snip)

@@ -25,6 +25,7 @@ object Corolla {
     const val TUNE_SEMITONES = 24
     const val LOOP_THRESHOLD = 0.99f
     const val HOLD_LOOP = LOOP_THRESHOLD
+    internal const val MAX_FINITE_SECONDS = 14f
     private const val INTERNAL_RATE = RATE * Dsp.OVERSAMPLE
     private const val PETALS = 6
     private const val MODES = 3
@@ -134,6 +135,13 @@ object Corolla {
         val poweredInput = FloatArray(n)
         val contactEnergy = FloatArray(n)
         val passiveCorrection = FloatArray(n)
+        fun trimmed(n: Int) = Taps(n).also { result ->
+            for ((source, destination) in listOf(direct to result.direct, neighbors to result.neighbors,
+                chamber to result.chamber, contact to result.contact, opening to result.opening,
+                energy to result.energy, poweredInput to result.poweredInput,
+                contactEnergy to result.contactEnergy, passiveCorrection to result.passiveCorrection))
+                source.copyInto(destination, endIndex = n)
+        }
     }
     internal class Played(val raw: FloatArray, val taps: Taps?, val loopStart: Int = -1)
 
@@ -169,13 +177,18 @@ object Corolla {
         val w0 = 2 * PI * hz
         val resting = .08 + .66 * bloom
         val driveEnd = .35 + 1.3 * field + 1.3 * hold
-        val naturalSeconds = (driveEnd + .80 * s.t60).coerceIn(2.2, 6.0)
+        val naturalTail = seconds == null && !held
         val periodN = plan.frames * Dsp.OVERSAMPLE
         val prerollN = (max(2.0, s.t60 * .65) * INTERNAL_RATE).toInt() / periodN * periodN + periodN
         val n = if (seconds != null) (seconds.coerceIn(.01f, 30f) * INTERNAL_RATE).toInt()
-            else if (held) prerollN + 3 * periodN else (naturalSeconds * INTERNAL_RATE).toInt()
+            else if (held) prerollN + 3 * periodN else (MAX_FINITE_SECONDS * INTERNAL_RATE).toInt()
         val out = FloatArray(n)
         val taps = if (probe.record) Taps(n) else null
+        var renderedN = n
+        var peakEnergy = 0.0
+        var peakPickup = 0.0
+        var quietSamples = 0
+        val quietWindow = (.15 * INTERNAL_RATE).roundToInt()
 
         val target = DoubleArray(COUNT)
         val loss = DoubleArray(COUNT)
@@ -506,8 +519,25 @@ object Corolla {
             }
             phase += phaseStep
             if (phase > 2 * PI) phase -= 2 * PI
+            if (naturalTail) {
+                peakEnergy = max(peakEnergy, e)
+                peakPickup = max(peakPickup, abs(out[sample].toDouble()))
+                // Let the same unpowered object resolve. Stored energy prevents a
+                // cancellation trough from ending a note; quiet pickup and a sustained
+                // quiet window make the final click-prevention fade inaudible.
+                val quiet = sample * STEP >= driveEnd + .25 &&
+                    e <= peakEnergy * 1e-8 && abs(out[sample].toDouble()) <= peakPickup * 1e-4
+                quietSamples = if (quiet) quietSamples + 1 else 0
+                if (quietSamples >= quietWindow && (sample + 1) * STEP >= 2.2 &&
+                    (sample + 1) % Dsp.OVERSAMPLE == 0) {
+                    renderedN = sample + 1
+                    break
+                }
+            }
         }
-        return Played(out, taps, if (held && seconds == null) n - periodN else -1)
+        return Played(if (renderedN == n) out else out.copyOf(renderedN),
+            if (renderedN == n) taps else taps?.trimmed(renderedN),
+            if (held && seconds == null) n - periodN else -1)
     }
 
     internal fun finish(raw: FloatArray, normalize: Boolean = true, fade: Boolean = true): FloatArray {

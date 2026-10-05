@@ -68,7 +68,11 @@ object CorollaAuditionGenerator {
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/corolla-audition")
         val quick = "--quick" in args
         val onlyVoice = args.firstOrNull { it.startsWith("--voice=") }?.substringAfter('=')?.let(CorollaVoice::valueOf)
-        val cases = (if (quick) quickCases() else acceptanceCases()).filter { onlyVoice == null || it.voice == onlyVoice }
+        val finiteOnly = "--finite-only" in args
+        val cases = (if (quick) quickCases() else acceptanceCases()).filter {
+            (onlyVoice == null || it.voice == onlyVoice) &&
+                (!finiteOnly || !Corolla.isLoop(Corolla.settled(it.macros, it.voice).getValue("HOLD")))
+        }
         check(cases.map { it.id }.distinct().size == cases.size) { "duplicate Corolla audition IDs" }
         root.mkdirs()
         val clips = ArrayList<String>(cases.size)
