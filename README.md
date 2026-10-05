@@ -207,6 +207,19 @@ engine and sits before the filter — saturation makes harmonics and the filter
 has to be downstream to shape them, which is why bass through an FX rack
 distortion sounds like a blanket.
 
+THAW is a pitched ice-plate engine: powered copper runners warm the contact
+layer, changing brittle friction into a smoother sustain; delayed liquid
+channels load and couple four plates, and cooling can release small stored
+stress events. BRITTLE, RUNNER, MELT, CHANNEL, FROST and SHEET share that
+material model. TUNE spans C3–C5; CONTACT, HEAT, FREEZE, CHANNELS and THICKNESS
+shape it, and HOLD extends the gesture before its top step becomes a settled
+sustain loop. Twelve presets, a dry sixteen-pad kit and the phone synth picker
+use the same deterministic engine. Run
+`./gradlew :synth:generateThawAudition` for raw and matched clips, diagnostics
+and a listening page under `testkit/thaw-audition/`. The sound still awaits
+the owner's listening verdict; [implementation notes](docs/THAW.md) describe
+the model and its limits.
+
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
 decaying sine partials at inharmonic ratios, the textbook recipe for a
@@ -360,9 +373,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA and GRAINS round out the lineup — fourteen engines in
-the `Engine` picker counting SKIN, RESIN, TIDE, GLINT, SIREN, FORK and
-FLOTILLA; GRAINS is a fifteenth thing entirely, out of the picker's scope
+VOX, FORK, FLOTILLA, THAW and GRAINS round out the lineup — fifteen engines
+in the `Engine` picker counting SKIN, RESIN, TIDE, GLINT, SIREN, FORK,
+FLOTILLA and THAW; GRAINS is a separate processor, out of the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -544,9 +557,9 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, plus GRAINS, SNAP and DRAW, which sit beside the
+GLINT, SIREN, FORK, FLOTILLA, THAW, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-MERCURY and TREMOR have preset rosters, so `snipsnap synth` renders them.
+MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
 

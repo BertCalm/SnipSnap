@@ -280,6 +280,21 @@ What follows from it:
 | S26 | **R1 built, awaiting the audition gate** — AEROSTAT, a struck tube and a shared-reservoir whistle (one voice, FLOAT): both banks always play, Quick brighter and earlier, Heavy at 2.6 times the inertia with a darker tube and a whistle 5 cents sharp. The gesture is knock, catch, bloom, relaxation, floating tail. Macros are TUNE (C3–C5, a host note because a patch has no separate MIDI field), STRIKE 0.60, PRESSURE 0.55, INERTIA 0.45, RELEASE 0.50, LIFT 0.40 and HOLD 0. Velocity is event energy, a render argument, not a second STRIKE. Diagnostic taps (tube, flow, quick, heavy, full) and a forced pressure of 0 are render arguments. `phrase` is the shared-reservoir harness and is not `Patch.render`. HOLD at 0.99 and above returns the settled loop only: a pad sample has no loop-start field, so the strike is not in that buffer, and Heavy is pulled onto the same period so the seam can close (`Keys.seamError` under 1e-3). Output is the existing 4× render and decimate. Five presets (SOFT CATCH, TWIN PIPES, HEAVY ROTOR, DRIFTING STEAM, HIGH ENVELOPE). `SynthKits.aerostat()` is sixteen dry pads. `generateAerostatAudition` publishes the gate at `docs/aerostat-audition/index.html` (open that file; the testkit copy is gitignored) and is the gate (kit, taps, C3/C4/C5, each knob at 0/.25/.5/.75/1, presets, the held loop, a phrase, raw against levelled, PRESSURE×INERTIA and STRIKE×RELEASE). Registered through `Patches`/`Presets`/`Velocity`. The phone picker is not in this round. Constants marked listening in `Aerostat.kt` are guesses. Design: `docs/superpowers/specs/2026-10-04-aerostat-engine-design.md`. **Not heard.** | S1 |
 | S11 | **Built, rounds 1-4** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER); round 4's SPEAK (a talking voice counting one to eight, speech chip to person) — under S11 below | S3.7 + U6 |
 
+THAW is the next material-state engine (S27), ported from
+`docs/superpowers/specs/2026-10-03-thaw-engine-design.md`: four modal ice
+plates, two powered copper runners, local enthalpy and liquid layers,
+delayed conserved channels, passive acoustic exchanges, bounded phase stress
+and a small wooden enclosure. BRITTLE, RUNNER, MELT, CHANNEL, FROST and SHEET
+share TUNE (C3–C5), CONTACT, HEAT, FREEZE, CHANNELS, THICKNESS and HOLD. Twelve
+dry presets, `SynthKits.thaw()`, the THAW FRESH TAPE starter and the phone
+picker are included. `generateThawAudition` supplies raw/matched clips and
+diagnostics; `generateThawKit` exports the sixteen-pad acceptance kit.
+Independent pads start frozen; HOLD exports settled sustain without a cold
+attack because a pad has no attack-plus-loop-region field. Implementation
+and verification notes are in `docs/THAW.md`. **Awaiting the owner's sonic
+verdict.** The normalized material constants and preset names remain
+provisional.
+
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
 
