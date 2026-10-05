@@ -32,3 +32,9 @@ Balance the tube contribution before levelling (0.78 to 0.06), leaving its excit
 The third gate compares round two (`214ea61c3c130c1951a318fd47c09a5c2f3766f3`) with the remix on identical recipes. It emphasizes the full sound, isolated layers, Pressure/Inertia/Lift/Release endpoints, soft velocity and held sound. The renderer now emits 20 source clips; the focused page selects 14 pairs. `comparisonVersion` only selects the output directory, so the round-two clips were captured before the DSP changes.
 
 New regression checks require airflow to compete during the catch at C3/C4/C5, a body that survives whole-sample levelling, and distinct upper-band energy for Pressure and Lift endpoints at the same strike. These are audibility gates, not listener acceptance of the flute/steam-whistle character. A sonic reference was requested to guide further voicing.
+
+## Round four: paddle contact
+
+The listener asked for a little more contact between the paddle and tube. Add a finite 6–16 ms surface-contact envelope, shaped by Strike and velocity, alongside the short bore-excitation impulse. A low-pass contact filter follows Strike hardness and settles after the paddle leaves. Give the surface contact a separate mix gain and split it between Quick and Heavy; scaling it with the quieted resonant tube had made the contact nearly inaudible.
+
+The tube resonance, mechanical impulse and airflow gain remain as in round three. Raw C3/C4 renders differ only at the head, with identical samples after 40 ms. Airflow and held comparison WAVs are byte-identical to round three. All 34 Aerostat tests pass, including onset/body balance and pitch/loop closure. The small contact audition selects eight matched pairs: full C3/C4, isolated tube, soft/hard touch, Quick bank, plus airflow and held controls.

@@ -295,6 +295,14 @@ object Aerostat {
         return 3.5 * velocity * (0.3 + 0.7 * strike) * sin(PI * t / dur)
     }
 
+    /** Broad paddle seat, distinct from the short impulse that excites the bore. */
+    private fun paddleAt(t: Double, strike: Double, velocity: Double): Double {
+        val duration = 0.006 + 0.010 * (1.0 - strike)
+        if (t < 0.0 || t >= duration) return 0.0
+        val seat = sin(PI * t / duration)
+        return velocity * (0.4 + 0.6 * strike) * seat * seat
+    }
+
     private fun puffAt(t: Double, strike: Double, velocity: Double): Double {
         val dur = 0.016 + 0.014 * (1.0 - strike)
         if (t < 0.0 || t >= dur) return 0.0
@@ -489,7 +497,7 @@ object Aerostat {
         // this, tube/air cancellation can pull the attack's apparent pitch.
         quick.prime(freq, contactDuration(strike))
         heavy.prime(freq * heavyRatio, contactDuration(strike))
-        val tubes = TubePair(freq, internal)
+        val tubes = TubePair(freq, internal, strike)
         var lip = 0.0
         var i = 0
         val dt = 1.0 / internal
@@ -505,13 +513,13 @@ object Aerostat {
                 val ratio = 2.0.pow(cents / 1200.0)
                 val puff = puffAt(t, strike, vel)
                 val contact = contactAt(t, strike, vel)
-                var tex = 0.0
-                if (contact > 0.0) {
-                    val n = contactNoise.next().toDouble()
-                    tex = n * contact * 0.12
-                    // One pole keeps the contact under 2 kHz so the head is not a snare.
-                    tex = tubes.shapeContact(tex)
-                }
+                val paddle = paddleAt(t, strike, vel)
+                // Let the contact filter settle after the paddle lifts away.
+                // This short surface sound has its own gain: scaling it with
+                // the resonant tube made physical contact almost inaudible.
+                val tex = tubes.shapeContact(
+                    if (paddle > 0.0) contactNoise.next().toDouble() * paddle * 0.95 else 0.0,
+                )
                 val tubeQ = tubes.sampleQuick(contact, dt)
                 val tubeH = tubes.sampleHeavy(contact, dt)
                 val radiation = lift * (1.0 - exp(-24.0 * height))
@@ -527,11 +535,11 @@ object Aerostat {
                 // separately to choose their contribution to the full mix.
                 val tubeScale = 0.06
                 val mixed = when (tap) {
-                    AerostatTap.TUBE -> (tubeQ + tubeH + tex) * tubeScale
+                    AerostatTap.TUBE -> (tubeQ + tubeH) * tubeScale + tex
                     AerostatTap.FLOW -> wQ + wH
-                    AerostatTap.QUICK -> tubeQ * tubeScale + tex * tubeScale + wQ
-                    AerostatTap.HEAVY -> tubeH * tubeScale + wH
-                    AerostatTap.FULL -> (tubeQ + tubeH + tex) * tubeScale + wQ + wH
+                    AerostatTap.QUICK -> tubeQ * tubeScale + tex * QUICK_SPLIT + wQ
+                    AerostatTap.HEAVY -> tubeH * tubeScale + tex * HEAVY_SPLIT + wH
+                    AerostatTap.FULL -> (tubeQ + tubeH) * tubeScale + tex + wQ + wH
                 }
                 val open = (lift * (1.0 - exp(-24.0 * height))).coerceIn(0.0, 1.0)
                 val cutoff = 650.0 + 8000.0 * open
@@ -650,11 +658,11 @@ object Aerostat {
         return LoopRender(loop, seam, continuous, frames)
     }
 
-    private class TubePair(freq: Double, rate: Int) {
+    private class TubePair(freq: Double, rate: Int, strike: Double) {
         private val quick = Modes(freq, rate, QUICK_GAIN, t60 = 0.32)
         private val heavy = Modes(freq, rate, HEAVY_GAIN, t60 = 0.46)
         private var contactLp = 0.0
-        private val contactA = 1.0 - exp(-2.0 * PI * 900.0 / rate)
+        private val contactA = 1.0 - exp(-2.0 * PI * (650.0 + 1800.0 * strike) / rate)
 
         fun sampleQuick(contact: Double, dt: Double): Double = quick.tick(contact, dt)
 
