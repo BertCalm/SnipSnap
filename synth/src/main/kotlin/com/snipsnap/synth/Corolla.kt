@@ -32,18 +32,53 @@ object Corolla {
     private const val COUNT = BODY + 4
     private const val LN1000 = 6.907755278982137
     private const val STEP = 1.0 / INTERNAL_RATE
-    private val UPPER_RATIOS = doubleArrayOf(1.0, 2.7, 5.4)
-
     private data class Shape(val pull: Float, val bloom: Float, val field: Float,
-        val contact: Float, val chamber: Float, val t60: Double, val metal: Double)
+        val contact: Float, val chamber: Float, val t60: Double,
+        val ratios: DoubleArray = doubleArrayOf(1.0, 2.7, 5.4),
+        val excitation: DoubleArray = doubleArrayOf(1.0, .8, .45),
+        val radiation: DoubleArray = doubleArrayOf(1.0, .7, .4),
+        val decay: DoubleArray = doubleArrayOf(1.0, .8, .55),
+        val neighborWeight: Double = 1.0, val coupling: Double = .14,
+        val bodyWeight: Double = 1.0, val bodyLink: Double = 1.0,
+        val fieldDepth: Double = .6, val fieldSpread: Double = .4,
+        val bloomRadiation: Double = .6,
+        val contactElastic: Double = .18, val contactLoss: Double = .035,
+        val contactGapScale: Double = 1.0,
+        val contactProjection: DoubleArray = doubleArrayOf(1.0, .5, .3))
 
     private fun shape(voice: CorollaVoice) = when (voice) {
-        CorollaVoice.TONGUE -> Shape(.45f, .25f, .10f, .10f, .30f, 2.8, .90)
-        CorollaVoice.BLOSSOM -> Shape(.60f, .70f, .25f, .20f, .55f, 3.8, 1.00)
-        CorollaVoice.CHOIR -> Shape(.30f, .55f, .55f, .10f, .65f, 4.8, .80)
-        CorollaVoice.CHATTER -> Shape(.60f, .35f, .45f, .75f, .40f, 3.2, 1.10)
-        CorollaVoice.ORBIT -> Shape(.35f, .60f, .80f, .35f, .40f, 4.0, 1.05)
-        CorollaVoice.HUSK -> Shape(.40f, .20f, .30f, .30f, .85f, 3.5, .65)
+        CorollaVoice.TONGUE -> Shape(.45f, .25f, .10f, .10f, .30f, 2.8,
+            ratios = doubleArrayOf(1.0, 2.73, 5.43), excitation = doubleArrayOf(1.0, 1.0, .4),
+            radiation = doubleArrayOf(1.0, 1.0, .65), decay = doubleArrayOf(1.0, .65, .35),
+            coupling = .08, bodyWeight = .7, fieldDepth = .3, fieldSpread = .15,
+            contactGapScale = 1.1)
+        CorollaVoice.BLOSSOM -> Shape(.60f, .70f, .25f, .20f, .55f, 3.8,
+            ratios = doubleArrayOf(1.0, 2.15, 3.85), excitation = doubleArrayOf(1.0, 1.15, .8),
+            radiation = doubleArrayOf(2.0, .9, .65), decay = doubleArrayOf(1.0, .95, .8),
+            neighborWeight = 1.4, coupling = .30, bodyWeight = 2.0, bodyLink = 2.0,
+            fieldDepth = .7, fieldSpread = .4, bloomRadiation = 1.8,
+            contactElastic = .4)
+        CorollaVoice.CHOIR -> Shape(.30f, .55f, .55f, .10f, .65f, 4.8,
+            ratios = doubleArrayOf(1.0, 2.006, 4.012), excitation = doubleArrayOf(1.0, 1.2, .7),
+            radiation = doubleArrayOf(1.0, .9, .65), decay = doubleArrayOf(1.0, 1.1, .9),
+            neighborWeight = 1.5, bodyWeight = 1.4, fieldDepth = .8, fieldSpread = .8,
+            contactGapScale = 1.1)
+        CorollaVoice.CHATTER -> Shape(.60f, .35f, .45f, .75f, .40f, 3.2,
+            ratios = doubleArrayOf(1.0, 3.13, 7.47), excitation = doubleArrayOf(1.0, 1.6, 1.0),
+            radiation = doubleArrayOf(1.0, 1.1, .8), decay = doubleArrayOf(1.0, .9, .65),
+            neighborWeight = 1.2, fieldDepth = 1.1, fieldSpread = .5,
+            contactElastic = .6, contactLoss = .028, contactGapScale = .35,
+            contactProjection = doubleArrayOf(.18, .85, .65))
+        CorollaVoice.ORBIT -> Shape(.35f, .60f, .80f, .35f, .40f, 4.0,
+            ratios = doubleArrayOf(1.0, 2.66, 5.75), excitation = doubleArrayOf(1.0, .95, .55),
+            radiation = doubleArrayOf(1.0, .85, .6), decay = doubleArrayOf(1.0, .85, .7),
+            neighborWeight = 1.7, fieldDepth = 1.8, fieldSpread = 1.0,
+            contactElastic = .25, contactGapScale = .7)
+        CorollaVoice.HUSK -> Shape(.40f, .20f, .30f, .30f, .85f, 3.5,
+            ratios = doubleArrayOf(1.0, 1.48, 3.12), excitation = doubleArrayOf(1.0, 1.3, .28),
+            radiation = doubleArrayOf(.8, 1.2, .18), decay = doubleArrayOf(1.0, .95, .4),
+            bodyWeight = 5.0, bodyLink = 5.0, fieldDepth = .7, fieldSpread = .3,
+            bloomRadiation = .3, contactElastic = .6, contactGapScale = 1.1)
     }
 
     fun macrosFor(voice: CorollaVoice): List<MacroSpec> {
@@ -91,6 +126,8 @@ object Corolla {
         val opening = FloatArray(n)
         val energy = FloatArray(n)
         val poweredInput = FloatArray(n)
+        val contactEnergy = FloatArray(n)
+        val passiveCorrection = FloatArray(n)
     }
     internal class Played(val raw: FloatArray, val taps: Taps?, val loopStart: Int = -1)
 
@@ -141,19 +178,18 @@ object Corolla {
         for (p in 0 until PETALS) for (j in 0 until MODES) {
             val i = p * MODES + j
             val variation = if (p == 0 && j == 0) 1.0 else 1.0 + (random.nextDouble() - .5) * .002
-            val upper = if (j == 0) 1.0 else UPPER_RATIOS[j] * (1 + (s.metal - 1) * .015)
+            val upper = s.ratios[j]
             target[i] = w0 * (p + 1) * upper * variation
-            loss[i] = s.t60 * (.80 + .4 * chamber) / (1 + .65 * j + .10 * p)
+            loss[i] = s.t60 * (.80 + .4 * chamber) * s.decay[j] / (1 + .10 * p)
             // Modes near the final supported bandwidth are attenuated, never folded.
             val bandwidth = ((19_000 - target[i] / (2 * PI)) / 3_000).coerceIn(0.0, 1.0)
-            pickup[i] = bandwidth * (if (p == 0) 1.0 else .95 / sqrt(p + 1.0)) *
-                (if (j == 0) 1.0 else .35 * s.metal / j)
+            pickup[i] = bandwidth * (if (p == 0) 1.0 else s.neighborWeight / sqrt(p + 1.0)) * s.radiation[j]
         }
         val bodyRatios = doubleArrayOf(1.0, 1.57, 2.31, 3.62)
         for (j in 0 until 4) {
             target[BODY + j] = 2 * PI * (620.0 * (145.0 / 620).pow(chamber)) * bodyRatios[j]
             loss[BODY + j] = .20 + .8 * chamber
-            pickup[BODY + j] = if (probe.chamber) (.08 + .65 * chamber) / (j + 1) else 0.0
+            pickup[BODY + j] = if (probe.chamber) s.bodyWeight * (.08 + .65 * chamber) / sqrt(j + 1.0) else 0.0
         }
         val edgeI = IntArray(10) { if (it < 6) it * MODES else 0 }
         val edgeJ = IntArray(10) { if (it < 6) ((it + 1) % PETALS) * MODES else BODY + it - 6 }
@@ -161,8 +197,17 @@ object Corolla {
         val unloaded = target.copyOf()
         fun setSprings(b: Double) {
             for (e in spring.indices) spring[e] = if (e < 6) {
-                if (probe.coupling) w0 * w0 * (.025 + .14 * (1 - b).pow(2)) else 0.0
-            } else if (probe.chamber) min(unloaded[0], unloaded[edgeJ[e]]).pow(2) * (.006 + .028 * chamber) / (e - 5) else 0.0
+                if (probe.coupling) w0 * w0 * (.025 + s.coupling * (1 - b).pow(2)) else 0.0
+            } else if (probe.chamber) min(unloaded[0], unloaded[edgeJ[e]]).pow(2) *
+                s.bodyLink * (.012 + .05 * chamber) / (e - 5) else 0.0
+            // Preserve positive unloaded stiffness, so the tuning eigensolve describes
+            // the actual network even in a folded, strongly loaded chamber.
+            val load = DoubleArray(COUNT)
+            for (e in spring.indices) { load[edgeI[e]] += spring[e]; load[edgeJ[e]] += spring[e] }
+            var bound = 1.0
+            for (i in load.indices) if (load[i] > 0)
+                bound = min(bound, .40 * unloaded[i] * unloaded[i] / load[i])
+            if (bound < 1.0) for (e in spring.indices) spring[e] *= bound
         }
         setSprings(resting)
         // Preload subtraction leaves each diagonal stiffness at its requested value. The
@@ -185,7 +230,7 @@ object Corolla {
         val sr = DoubleArray(COUNT)
         val force = DoubleArray(COUNT)
         val loadingLoss = DoubleArray(COUNT)
-        val contactProjection = doubleArrayOf(1.0, .34, .12)
+        val contactProjection = s.contactProjection
         var b = resting
         var bv = 0.0
         var sensed = 0.0
@@ -195,7 +240,8 @@ object Corolla {
         val phaseStep = 2 * PI * (if (held) plan.core else coreHz(field.toFloat())) * STEP
         val pullN = ((.0025 - .0020 * pull) * INTERNAL_RATE).roundToInt().coerceAtLeast(16)
         val amplitude = strength * (.16 + .48 * pull)
-        val upperPull = doubleArrayOf(1.0, (.05 + .40 * pull * pull) * s.metal, (.018 + .23 * pull.pow(3)) * s.metal)
+        val upperPull = doubleArrayOf(1.0, s.excitation[1] * (.3 + .9 * pull),
+            s.excitation[2] * (.2 + .8 * pull * pull))
         // Total powered work per second, in these mass-normalised coordinates. Each force
         // proposal is shrunk to this budget before touching the object. No output limiter.
         val powerBudget = if (!probe.powered) 0.0 else (.025 + .45 * field) * (if (held) 1.0 else field) * strength
@@ -207,8 +253,8 @@ object Corolla {
             for (e in spring.indices) {
                 preload[edgeI[e]] += spring[e]; preload[edgeJ[e]] += spring[e]
                 if (spring[e] > 0) {
-                    loadingLoss[edgeI[e]] += .0008 * w0
-                    loadingLoss[edgeJ[e]] += .0008 * w0
+                    loadingLoss[edgeI[e]] += .00018 * w0
+                    loadingLoss[edgeJ[e]] += .00018 * w0
                 }
             }
             for (i in omega.indices) {
@@ -220,48 +266,62 @@ object Corolla {
             }
         }
         coefficients()
-        fun energy(): Double {
-            var energy = 0.0
-            for (i in x.indices) energy += .5 * (x[i] * x[i] + v[i] * v[i])
-            for (e in spring.indices) {
-                val d = x[edgeI[e]] / omega[edgeI[e]] - x[edgeJ[e]] / omega[edgeJ[e]]
-                energy += .5 * spring[e] * d * d
-            }
-            return energy
+        fun contactGap() = (.37 - .34 * sqrt(contact) + .16 * b) * s.contactGapScale
+        // Integral of z^2 / (softness + z). Elastic contact work is stored here and
+        // returned on separation, rather than mistaken for new passive input.
+        fun contactPotential(penetration: Double): Double {
+            if (penetration <= 0.0) return 0.0
+            val softness = .03
+            return contact * s.contactElastic * max(0.0,
+                .5 * penetration * penetration - softness * penetration +
+                    softness * softness * ln1p(penetration / softness))
         }
-        for (sample in 0 until n) {
-            if (sample % 64 == 0) {
-                if (probe.opening) {
-                    val dt = 64 * STEP
-                    sensed += (lastEnergy - sensed) * (1 - exp(-dt / .035))
-                    val acceleration = (12 + 40 * bloom) * sensed - 26 * (b - resting) - 9 * bv
-                    bv += dt * acceleration
-                    val next = b + dt * bv
-                    b = next.coerceIn(0.0, 1.0)
-                    if (next != b) bv *= .0
+        fun contactStored(scale: Double = 1.0): Double {
+            if (contact <= 0.0) return 0.0
+            val gap = contactGap()
+            var stored = 0.0
+            for (p in 0 until PETALS) {
+                val other = (p + 1) % PETALS
+                var delta = 0.0
+                for (j in 0 until MODES) {
+                    val i = p * MODES + j
+                    val k = other * MODES + j
+                    delta += contactProjection[j] * (x[i] / omega[i] - x[k] / omega[k]) * w0
                 }
-                coefficients()
+                stored += contactPotential(abs(delta * scale) - gap)
             }
+            return stored
+        }
+        fun energy(scale: Double = 1.0): Double {
+            var energy = 0.0
+            for (i in x.indices) energy += .5 * (x[i] * x[i] + v[i] * v[i]) * scale * scale
+            for (e in spring.indices) {
+                val d = (x[edgeI[e]] / omega[edgeI[e]] - x[edgeJ[e]] / omega[edgeJ[e]]) * scale
+                val maxTravel = 4.0 / w0
+                val a = abs(d / maxTravel)
+                // Exact potential of the bounded tanh link; evaluating it stably also
+                // keeps the diagnostic meaningful outside the usual small-motion range.
+                val logCosh = if (a < 1e-4) .5 * a * a else if (a < 20.0) ln(cosh(a)) else a - ln(2.0)
+                energy += spring[e] * maxTravel * maxTravel * logCosh
+            }
+            return energy + contactStored(scale)
+        }
+        fun passiveKick(fraction: Double) {
             for (i in x.indices) {
-                val old = x[i]
-                x[i] = cr[i] * old + sr[i] * v[i]
-                v[i] = cr[i] * v[i] - sr[i] * old
                 q[i] = x[i] / omega[i]
                 force[i] = 0.0
             }
             for (e in spring.indices) {
                 val i = edgeI[e]; val j = edgeJ[e]
-                // Bounded gradient: the supported states lie in its linear region. Opposite
-                // reactions are applied once. Small structural and magnetic transfer share
-                // this passive link, so FIELD zero still has answering petals.
+                // Opposite reactions occur once per edge. FIELD zero still has these
+                // passive structural/magnetic links and answering petals.
                 val delta = q[j] - q[i]
                 val maxTravel = 4.0 / w0
                 val f = spring[e] * maxTravel * tanh(delta / maxTravel)
-                val damping = .0008 * w0 * (v[j] - v[i])
+                val damping = .00018 * w0 * (v[j] - v[i])
                 force[i] += f + (if (spring[e] > 0) damping else 0.0)
                 force[j] -= f + (if (spring[e] > 0) damping else 0.0)
             }
-            contactActivity = 0.0
             if (contact > 0) for (p in 0 until PETALS) {
                 val other = (p + 1) % PETALS
                 var delta = 0.0; var relative = 0.0
@@ -269,33 +329,71 @@ object Corolla {
                     delta += contactProjection[j] * (q[p * MODES + j] - q[other * MODES + j]) * w0
                     relative += contactProjection[j] * (v[p * MODES + j] - v[other * MODES + j])
                 }
-                val gap = .37 - .34 * sqrt(contact) + .16 * b
-                val penetration = abs(delta) - gap
+                val penetration = abs(delta) - contactGap()
                 if (penetration > 0) {
-                    // C1 compliant, non-adhesive spring plus closing-only loss. The elastic
-                    // energy is subject to the same passive bound; contact cannot add energy.
                     val sign = if (delta > 0) 1.0 else -1.0
                     val smooth = penetration * penetration / (.03 + penetration)
-                    val magnitude = w0 * contact * (.18 * smooth + .035 * max(0.0, sign * relative))
+                    // The first term is the gradient of contactPotential; the second
+                    // dissipates only during closing and stores no fictitious energy.
+                    val magnitude = w0 * contact * (s.contactElastic * smooth +
+                        s.contactLoss * max(0.0, sign * relative))
                     val f = sign * magnitude
                     for (j in 0 until MODES) {
                         force[p * MODES + j] -= f * contactProjection[j]
                         force[other * MODES + j] += f * contactProjection[j]
                     }
-                    contactActivity += magnitude / w0
+                    contactActivity += fraction * magnitude / w0
                 }
             }
-            for (i in v.indices) v[i] += force[i] * STEP
+            for (i in v.indices) v[i] += force[i] * STEP * fraction
+        }
+        for (sample in 0 until n) {
+            if (sample % 64 == 0) {
+                if (probe.opening) {
+                    val dt = 64 * STEP
+                    sensed += (lastEnergy - sensed) * (1 - exp(-dt / .035))
+                    val acceleration = (20 + 100 * bloom) * sensed - 26 * (b - resting) - 9 * bv
+                    bv += dt * acceleration
+                    val next = b + dt * bv
+                    b = next.coerceIn(0.0, 1.0)
+                    if (next != b) bv *= .0
+                }
+                // Changing the hinge changes stiffness, not physical displacement.
+                // Any positive geometry work is removed by the passive guard below.
+                for (i in x.indices) q[i] = x[i] / omega[i]
+                coefficients()
+                for (i in x.indices) x[i] = q[i] * omega[i]
+            }
+            contactActivity = 0.0
+            passiveKick(.5)
+            for (i in x.indices) {
+                val old = x[i]
+                x[i] = cr[i] * old + sr[i] * v[i]
+                v[i] = cr[i] * v[i] - sr[i] * old
+            }
+            passiveKick(.5)
             var e = energy()
-            // Bounded energy correction is a documented reduced passive formulation: moving
-            // hinge geometry and the nonlinear split may dissipate energy but never replenish
-            // it. It also enforces finite state at the source, independently of output gain.
+            var correction = 0.0
+            // Symmetric elastic kicks preserve normal contact exchange. This guard still
+            // forbids passive geometry/integration gains, measured with all stored potentials.
             if (!e.isFinite()) {
                 x.fill(0.0); v.fill(0.0); e = 0.0
             } else if (sample >= pullN && e > lastEnergy && e > 0) {
-                val g = sqrt(lastEnergy / e)
+                val before = e
+                var g = sqrt(lastEnergy / e)
+                // Contact and tanh potentials are nonquadratic. A radial bound avoids
+                // pretending that their stored energy necessarily scales by g squared.
+                if (energy(g) > lastEnergy) {
+                    var lo = 0.0; var hi = g
+                    repeat(24) {
+                        val mid = (lo + hi) * .5
+                        if (energy(mid) > lastEnergy) hi = mid else lo = mid
+                    }
+                    g = lo
+                }
                 for (i in x.indices) { x[i] *= g; v[i] *= g }
-                e = lastEnergy
+                e = energy()
+                correction = max(0.0, before - e)
             }
             if (probe.pull && sample < pullN) {
                 val t = (sample + 1.0) / pullN
@@ -314,20 +412,22 @@ object Corolla {
                 // losses, with a rotating spatial preference and amplitude-dependent gain.
                 // HOLD at FIELD0 uses a gentle feedback maintenance drive on this same bank.
                 val available = powerBudget * envelope * STEP
-                var proposed = 0.0
+                var rootLinear = 0.0; var rootQuadratic = 0.0
+                var otherLinear = 0.0; var otherQuadratic = 0.0
                 for (p in 0 until PETALS) {
                     val facing = .5 + .5 * cos(phase - p * 2 * PI / PETALS)
-                    val spatial = if (p == 0) .80 + .20 * facing else .20 + .80 * facing
+                    val spatial = (.65 + s.fieldDepth * (facing - .5)).coerceAtLeast(.04)
                     for (j in 0 until MODES) {
                         val i = p * MODES + j
                         val own = .5 * (x[i] * x[i] + v[i] * v[i])
-                        val targetEnergy = (.015 + .09 * field) * spatial / (1 + p * .50 + j * 3.0)
-                        // Fundamental modes also supply the mounting and neighbor losses.
-                        // Upper modes receive less maintenance, preserving the requested root
-                        // instead of letting the easiest isolated upper mode win the budget.
-                        val driveRate = if (j == 0) LN1000 / loss[i] * 2.8 + loadingLoss[i] + 3 + field * 8
-                            else LN1000 / loss[i] * 1.65 + field * 4
-                        val gain = driveRate * spatial / (1 + own / targetEnergy)
+                        val targetEnergy = (.02 + .10 * field) * (if (p == 0) 1.0 else s.fieldSpread) *
+                            (if (j == 0) 1.0 else .35 * s.excitation[j]) / (1 + p * .35 + j * .65)
+                        // The anchored mode also loses energy through the mounted network.
+                        // Its separate work allocation prevents isolated upper modes from
+                        // consuming the source while the loaded fundamental dies away.
+                        val passiveRate = 2 * LN1000 * (1 + .15 * b) / loss[i] + loadingLoss[i]
+                        val driveRate = passiveRate * (1.3 + 1.2 * field) / .65 + if (i == 0) 32.0 else 0.0
+                        val gain = driveRate * spatial / (1 + own / targetEnergy.coerceAtLeast(.0001))
                         force[i] = v[i] * gain * STEP
                         // A finite, smooth field-induced release starts the feedback network
                         // even with the performer's pull disabled. It drives the actual root
@@ -335,12 +435,40 @@ object Corolla {
                         val releaseTime = (sample - pullN) * STEP
                         if (p == 0 && releaseTime < .008 && field > 0)
                             force[i] += w0 * .04 * field * upperPull[j] * sin(PI * releaseTime / .008) * STEP
-                        proposed += v[i] * force[i] + .5 * force[i] * force[i]
+                        // The motor can pull and release whichever petal it faces. This is a
+                        // smooth acoustic-clock force inside the bank, not gain on its output.
+                        // It seeds responding modes that velocity feedback cannot wake from zero.
+                        val sweep = ((phase - p * 2 * PI / PETALS) % (2 * PI) + 2 * PI) % (2 * PI)
+                        val coreRate = phaseStep / (2 * PI * STEP)
+                        val pulseSeconds = .0008 + .0014 * (1 - pull)
+                        val passageSeconds = if (coreRate > 0) sweep / (2 * PI * coreRate) else Double.POSITIVE_INFINITY
+                        val magneticRelease = if (passageSeconds < pulseSeconds)
+                            sin(PI * passageSeconds / pulseSeconds) else 0.0
+                        // Repeated pulses excite responding petals. The anchored root
+                        // keeps its free pitch: a periodic impulse comb can entrain it to
+                        // a core harmonic. Its initial release and feedback suffice.
+                        if (field > 0 && p > 0)
+                            force[i] += target[i] * .10 * field * s.fieldSpread * s.excitation[j] *
+                                magneticRelease * STEP
+                        if (i == 0) {
+                            rootLinear += v[i] * force[i]
+                            rootQuadratic += .5 * force[i] * force[i]
+                        } else {
+                            otherLinear += v[i] * force[i]
+                            otherQuadratic += .5 * force[i] * force[i]
+                        }
                     }
                 }
-                val g = if (proposed > available) available / proposed else 1.0
+                // Solve the actual kick work a*g + b*g², including release impulses.
+                // Each group stays within its share; their sum never exceeds source power.
+                fun workScale(a: Double, q: Double, budget: Double): Double =
+                    if (a + q <= budget) 1.0 else if (q > 0)
+                        ((sqrt(a * a + 4 * q * budget) - a) / (2 * q)).coerceIn(0.0, 1.0)
+                    else (budget / a).coerceIn(0.0, 1.0)
+                val rootGain = workScale(rootLinear, rootQuadratic, available * .55)
+                val otherGain = workScale(otherLinear, otherQuadratic, available * .45)
                 for (i in 0 until BODY) {
-                    val dv = force[i] * g
+                    val dv = force[i] * if (i == 0) rootGain else otherGain
                     work += v[i] * dv + .5 * dv * dv
                     v[i] += dv
                 }
@@ -349,7 +477,8 @@ object Corolla {
             lastEnergy = e
             var direct = 0.0; var responding = 0.0; var cavity = 0.0
             for (i in 0 until BODY) {
-                val value = pickup[i] * v[i]
+                val aperture = if (i % MODES == 0) 1.0 else .35 + s.bloomRadiation * b
+                val value = pickup[i] * aperture * v[i]
                 if (i < MODES) direct += value else responding += value
             }
             for (i in BODY until COUNT) cavity += pickup[i] * v[i] * (1 - .65 * b)
@@ -360,6 +489,8 @@ object Corolla {
                 it.chamber[sample] = cavity.toFloat(); it.contact[sample] = contactActivity.toFloat()
                 it.opening[sample] = b.toFloat(); it.energy[sample] = e.toFloat()
                 it.poweredInput[sample] = work.toFloat()
+                it.contactEnergy[sample] = contactStored().toFloat()
+                it.passiveCorrection[sample] = correction.toFloat()
             }
             phase += phaseStep
             if (phase > 2 * PI) phase -= 2 * PI

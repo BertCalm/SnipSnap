@@ -21,7 +21,8 @@ import kotlin.math.sqrt
  * assets, and keeps listening notes in the browser until the owner exports them.
  *
  * Run `./gradlew :synth:generateCorollaAudition`; output is under testkit/corolla-audition/.
- * For a small tooling smoke check, pass `-PcorollaQuick` (defaults plus one loop per voice).
+ * For a small tooling smoke check, pass `-PcorollaQuick` (fixed-duration comparisons,
+ * defaults and one loop per voice).
  * This generator provides audition evidence; it does not imply human sonic acceptance.
  */
 object CorollaAuditionGenerator {
@@ -42,6 +43,7 @@ object CorollaAuditionGenerator {
         val velocity: Float = 1f,
         val probe: Corolla.Probe = Corolla.Probe(),
         val outputMod: Boolean = false,
+        val comparisonSeconds: Float? = null,
     )
 
     private data class Metrics(
@@ -82,7 +84,10 @@ object CorollaAuditionGenerator {
                     (source.samples[i] * (1.0 + OUTPUT_MOD_DEPTH * sin(2.0 * PI * hz * i / Dsp.RATE))).toFloat()
                 })
             } else source
-            val raw = rendered.samples
+            val raw = case.comparisonSeconds?.let { seconds ->
+                check(!loop)
+                rendered.samples.copyOf((seconds * Dsp.RATE).roundToInt()).also { Dsp.fadeTail(it) }
+            } ?: rendered.samples
             val renderMs = (System.nanoTime() - before) / 1_000_000.0
             require(raw.isNotEmpty() && raw.all { it.isFinite() }) { "non-finite or empty clip: ${case.id}" }
             val native = Snip(raw, channels = 1, sampleRate = Dsp.RATE)
@@ -152,6 +157,7 @@ object CorollaAuditionGenerator {
 
     private fun quickCases(): List<Case> = CorollaVoice.entries.flatMap { voice ->
         listOf(
+            comparisonCase(voice),
             case("Defaults", voice, "default", "${voice.name} default", "Every macro at its voice default."),
             case("Held loops", voice, "held", "${voice.name} held", "Settled loop at the voice defaults.", mapOf("HOLD" to 1f)),
         )
@@ -159,6 +165,7 @@ object CorollaAuditionGenerator {
 
     private fun acceptanceCases(): List<Case> = buildList {
         for (voice in CorollaVoice.entries) {
+            add(comparisonCase(voice))
             add(case("Defaults", voice, "default", "${voice.name} default", "Every macro at its voice default."))
             // Both pitch and event strength vary: low/high registration can change collision thresholds.
             for ((tune, note) in NOTES) for (velocity in VELOCITIES) {
@@ -231,8 +238,12 @@ object CorollaAuditionGenerator {
 
     private fun case(section: String, voice: CorollaVoice, suffix: String, label: String, description: String,
                      macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
-                     probe: Corolla.Probe = Corolla.Probe(), outputMod: Boolean = false) =
-        Case("${voice.name.lowercase()}_$suffix", section, voice, label, description, macros, velocity, probe, outputMod)
+                     probe: Corolla.Probe = Corolla.Probe(), outputMod: Boolean = false, comparisonSeconds: Float? = null) =
+        Case("${voice.name.lowercase()}_$suffix", section, voice, label, description, macros, velocity, probe, outputMod, comparisonSeconds)
+
+    private fun comparisonCase(voice: CorollaVoice) = case("Same note and duration", voice, "comparison",
+        "${voice.name} · C4 · 1.25 s", "Same C4, velocity 1 and 1.25-second window; level matching happens after cropping. Listen for partial balance, cavity colour, contact and evolving texture.",
+        mapOf("TUNE" to .5f), comparisonSeconds = 1.25f)
 
     private fun sweepDescription(macro: String, value: Float): String = when (macro) {
         "PULL" -> "Soft rounded release → firm bright displacement. Same velocity; PULL changes the gesture."
