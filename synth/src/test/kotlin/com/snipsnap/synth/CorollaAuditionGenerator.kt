@@ -67,7 +67,8 @@ object CorollaAuditionGenerator {
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/corolla-audition")
         val quick = "--quick" in args
-        val cases = if (quick) quickCases() else acceptanceCases()
+        val onlyVoice = args.firstOrNull { it.startsWith("--voice=") }?.substringAfter('=')?.let(CorollaVoice::valueOf)
+        val cases = (if (quick) quickCases() else acceptanceCases()).filter { onlyVoice == null || it.voice == onlyVoice }
         check(cases.map { it.id }.distinct().size == cases.size) { "duplicate Corolla audition IDs" }
         root.mkdirs()
         val clips = ArrayList<String>(cases.size)
@@ -79,7 +80,7 @@ object CorollaAuditionGenerator {
             val source = renderRaw(case.voice, macros, case.velocity, loop, case.probe)
             val rendered = if (case.outputMod) {
                 check(!loop) { "output-only modulation is a finite diagnostic, not a held voice" }
-                val hz = Corolla.coreHz(macros.getValue("FIELD"))
+                val hz = Corolla.coreHz(macros.getValue("FIELD"), case.voice)
                 source.copy(samples = FloatArray(source.samples.size) { i ->
                     (source.samples[i] * (1.0 + OUTPUT_MOD_DEPTH * sin(2.0 * PI * hz * i / Dsp.RATE))).toFloat()
                 })
@@ -108,7 +109,7 @@ object CorollaAuditionGenerator {
                 "\"requestedMidi\":${Corolla.midiFor(case.voice, macros.getValue("TUNE"))}," +
                 "\"requestedHz\":${Corolla.frequencyFor(case.voice, macros.getValue("TUNE"))},\"probe\":${probeJson(case.probe)}," +
                 "\"outputMod\":${case.outputMod},\"outputModDepth\":${if (case.outputMod) OUTPUT_MOD_DEPTH else 0.0}," +
-                "\"outputModHz\":${if (case.outputMod) Corolla.coreHz(macros.getValue("FIELD")) else 0.0}," +
+                "\"outputModHz\":${if (case.outputMod) Corolla.coreHz(macros.getValue("FIELD"), case.voice) else 0.0}," +
                 "\"frames\":${raw.size},\"seconds\":${raw.size.toDouble() / Dsp.RATE}," +
                 "\"renderMs\":$renderMs,\"renderMsPerAudioSecond\":${renderMs / (raw.size.toDouble() / Dsp.RATE)}," +
                 "\"rawPath\":${q(rawPath)},\"matchedPath\":${q(matchedPath)},\"rawExportGain\":$exportGain," +
@@ -225,7 +226,7 @@ object CorollaAuditionGenerator {
                 TIMBRE.associateWith { 1f } + mapOf("TUNE" to tune, "HOLD" to 1f)))
         }
         for (voice in listOf(CorollaVoice.ORBIT, CorollaVoice.CHATTER)) {
-            val hz = Corolla.coreHz(Corolla.defaults(voice).getValue("FIELD"))
+            val hz = Corolla.coreHz(Corolla.defaults(voice).getValue("FIELD"), voice)
             add(case("Internal field vs output modulation", voice, "field_internal",
                 "${voice.name} · internal powered field",
                 "Full object at its defaults: powered excitation enters the resonators and changes the petal/contact/opening states."))

@@ -51,7 +51,7 @@ class CorollaTest {
             listOf(.60f, .70f, .25f, .20f, .55f),
             listOf(.30f, .55f, .55f, .10f, .65f),
             listOf(.60f, .35f, .45f, .75f, .40f),
-            listOf(.35f, .60f, .80f, .35f, .40f),
+            listOf(.35f, .60f, .80f, .10f, .40f),
             listOf(.40f, .20f, .30f, .30f, .85f),
         )
         for ((i, voice) in CorollaVoice.entries.withIndex()) {

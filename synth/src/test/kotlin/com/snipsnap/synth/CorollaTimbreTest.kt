@@ -105,17 +105,17 @@ class CorollaTimbreTest {
 
     @Test
     fun `orbit moves partial balance at the core rate rather than only the volume`() {
-        val field = .55f
         val voice = CorollaVoice.ORBIT
-        val played = Corolla.play(voice, mapOf("FIELD" to field, "HOLD" to 1f), seconds = 5f)
+        val field = Corolla.defaults(voice).getValue("FIELD")
+        val played = Corolla.play(voice, mapOf("FIELD" to field, "HOLD" to 1f), seconds = 7f)
         val samples = Corolla.finish(played.raw, normalize = false, fade = false)
         val frames = CorollaTimbreMetrics.frames(samples,
-            Corolla.frequencyFor(voice, .5f).toDouble(), 1.0, 4.8)
-        val rate = Corolla.coreHz(field)
+            Corolla.frequencyFor(voice, .5f).toDouble(), 1.0, 6.8)
+        val rate = Corolla.coreHz(field, voice)
         val centroid = orbitAmplitude(frames.map { it.centroidHz }.toDoubleArray(), rate)
         val balance = orbitAmplitude(frames.map { it.rootShare }.toDoubleArray(), rate)
-        // Rejected audition: 1.06 Hz / .0041 of power. The source revision has
-        // 18.1 Hz / .038. Frame normalization removes an overall gain modulation.
+        // Capture several slow turns so a transient cannot masquerade as circulation.
+        // Frame normalization removes an overall gain modulation.
         assertTrue(centroid > 10.0, "ORBIT's core barely changes the timbre: centroid swing $centroid Hz")
         assertTrue(balance > .01, "ORBIT's core barely redistributes partial power: swing $balance")
     }

@@ -37,8 +37,8 @@ object CorollaPresets {
         p(CorollaVoice.CHATTER, "BRIGHT CONTACT", "TUNE" to 0.5f, "PULL" to 0.78f, "BLOOM" to 0.22f, "FIELD" to 0.62f, "CONTACT" to 0.90f, "CHAMBER" to 0.24f, "HOLD" to 0f),
     )
     private val orbit = listOf(
-        p(CorollaVoice.ORBIT, "SLOW ORBIT", "TUNE" to 0.5f, "PULL" to 0.30f, "BLOOM" to 0.72f, "FIELD" to 0.28f, "CONTACT" to 0.16f, "CHAMBER" to 0.58f, "HOLD" to 0f),
-        p(CorollaVoice.ORBIT, "FAST ORBIT", "TUNE" to 0.5f, "PULL" to 0.52f, "BLOOM" to 0.46f, "FIELD" to 0.92f, "CONTACT" to 0.52f, "CHAMBER" to 0.32f, "HOLD" to 0f),
+        p(CorollaVoice.ORBIT, "SLOW ORBIT", "TUNE" to 0.5f, "PULL" to 0.30f, "BLOOM" to 0.72f, "FIELD" to 0.28f, "CONTACT" to 0.08f, "CHAMBER" to 0.58f, "HOLD" to 0f),
+        p(CorollaVoice.ORBIT, "FAST ORBIT", "TUNE" to 0.5f, "PULL" to 0.52f, "BLOOM" to 0.46f, "FIELD" to 0.92f, "CONTACT" to 0.14f, "CHAMBER" to 0.32f, "HOLD" to 0f),
     )
     private val husk = listOf(
         p(CorollaVoice.HUSK, "HOLLOW HUSK", "TUNE" to 0.25f, "PULL" to 0.40f, "BLOOM" to 0.16f, "FIELD" to 0.26f, "CONTACT" to 0.28f, "CHAMBER" to 0.94f, "HOLD" to 0f),

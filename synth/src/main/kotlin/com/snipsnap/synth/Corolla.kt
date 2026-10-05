@@ -41,6 +41,8 @@ object Corolla {
         val neighborWeight: Double = 1.0, val coupling: Double = .14,
         val bodyWeight: Double = 1.0, val bodyLink: Double = 1.0,
         val fieldDepth: Double = .6, val fieldSpread: Double = .4,
+        val fieldRates: DoubleArray = doubleArrayOf(.15, .3, 2.0, 10.0, 40.0),
+        val fieldPassages: Boolean = true, val initialFieldSpread: Double = 0.0,
         val bloomRadiation: Double = .6,
         val contactElastic: Double = .18, val contactLoss: Double = .035,
         val contactGapScale: Double = 1.0,
@@ -69,10 +71,12 @@ object Corolla {
             neighborWeight = 1.2, fieldDepth = 1.1, fieldSpread = .5,
             contactElastic = .6, contactLoss = .028, contactGapScale = .35,
             contactProjection = doubleArrayOf(.18, .85, .65))
-        CorollaVoice.ORBIT -> Shape(.35f, .60f, .80f, .35f, .40f, 4.0,
+        CorollaVoice.ORBIT -> Shape(.35f, .60f, .80f, .10f, .40f, 4.0,
             ratios = doubleArrayOf(1.0, 2.66, 5.75), excitation = doubleArrayOf(1.0, .95, .55),
             radiation = doubleArrayOf(1.0, .85, .6), decay = doubleArrayOf(1.0, .85, .7),
-            neighborWeight = 1.7, fieldDepth = 1.8, fieldSpread = 1.0,
+            neighborWeight = 1.7, fieldDepth = 1.15, fieldSpread = 1.0,
+            fieldRates = doubleArrayOf(.08, .20, .50, 1.0, 2.0),
+            fieldPassages = false, initialFieldSpread = .30,
             contactElastic = .25, contactGapScale = .7)
         CorollaVoice.HUSK -> Shape(.40f, .20f, .30f, .30f, .85f, 3.5,
             ratios = doubleArrayOf(1.0, 1.48, 3.12), excitation = doubleArrayOf(1.0, 1.3, .28),
@@ -107,9 +111,9 @@ object Corolla {
             .toMutableMap().also { it["HOLD"] = it.getValue("HOLD").coerceAtMost(.95f) }
 
     /** Rate anchors are interpolated in log frequency; FIELD zero supplies exactly no drive. */
-    internal fun coreHz(field: Float): Double {
+    internal fun coreHz(field: Float, voice: CorollaVoice = CorollaVoice.TONGUE): Double {
         if (field <= 0f) return 0.0
-        val a = doubleArrayOf(.15, .3, 2.0, 10.0, 40.0)
+        val a = shape(voice).fieldRates
         val x = field.coerceIn(0f, 1f) * 4
         val j = x.toInt().coerceAtMost(3)
         return a[j] * (a[j + 1] / a[j]).pow(x - j.toDouble())
@@ -132,8 +136,8 @@ object Corolla {
     internal class Played(val raw: FloatArray, val taps: Taps?, val loopStart: Int = -1)
 
     private data class LoopPlan(val frames: Int, val core: Double, val hz: Double)
-    private fun loopPlan(hz: Double, field: Float): LoopPlan {
-        val core = coreHz(field)
+    private fun loopPlan(hz: Double, field: Float, voice: CorollaVoice): LoopPlan {
+        val core = coreHz(field, voice)
         // At least one slow core orbit, at most four seconds. The nearest compatible nonzero
         // rate is used for very slow fields. Root moves less than 0.1 cent by the frame snap.
         val seconds = if (core > 0) (ceil(core * 1.8).coerceAtLeast(1.0) / core).coerceIn(1.8, 4.0) else 2.0
@@ -158,7 +162,7 @@ object Corolla {
         val held = isLoop(hold.toFloat())
         val strength = if (velocity.isFinite()) velocity.coerceIn(0f, 1f).toDouble() else 1.0
         val requestedHz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
-        val plan = loopPlan(requestedHz, field.toFloat())
+        val plan = loopPlan(requestedHz, field.toFloat(), voice)
         val hz = if (held) plan.hz else requestedHz
         val w0 = 2 * PI * hz
         val resting = .08 + .66 * bloom
@@ -237,7 +241,7 @@ object Corolla {
         var phase = 0.0
         var lastEnergy = 0.0
         var contactActivity = 0.0
-        val phaseStep = 2 * PI * (if (held) plan.core else coreHz(field.toFloat())) * STEP
+        val phaseStep = 2 * PI * (if (held) plan.core else coreHz(field.toFloat(), voice)) * STEP
         val pullN = ((.0025 - .0020 * pull) * INTERNAL_RATE).roundToInt().coerceAtLeast(16)
         val amplitude = strength * (.16 + .48 * pull)
         val upperPull = doubleArrayOf(1.0, s.excitation[1] * (.3 + .9 * pull),
@@ -435,21 +439,27 @@ object Corolla {
                         val releaseTime = (sample - pullN) * STEP
                         if (p == 0 && releaseTime < .008 && field > 0)
                             force[i] += w0 * .04 * field * upperPull[j] * sin(PI * releaseTime / .008) * STEP
+                        // ORBIT wakes its answering modes once, then the smooth rotating
+                        // feedback sustains their free pitches without a recurring pulse comb.
+                        if (p > 0 && releaseTime < .008 && field > 0 && s.initialFieldSpread > 0)
+                            force[i] += target[i] * .04 * field * s.initialFieldSpread * s.excitation[j] *
+                                sin(PI * releaseTime / .008) * STEP
                         // The motor can pull and release whichever petal it faces. This is a
                         // smooth acoustic-clock force inside the bank, not gain on its output.
                         // It seeds responding modes that velocity feedback cannot wake from zero.
-                        val sweep = ((phase - p * 2 * PI / PETALS) % (2 * PI) + 2 * PI) % (2 * PI)
-                        val coreRate = phaseStep / (2 * PI * STEP)
-                        val pulseSeconds = .0008 + .0014 * (1 - pull)
-                        val passageSeconds = if (coreRate > 0) sweep / (2 * PI * coreRate) else Double.POSITIVE_INFINITY
-                        val magneticRelease = if (passageSeconds < pulseSeconds)
-                            sin(PI * passageSeconds / pulseSeconds) else 0.0
-                        // Repeated pulses excite responding petals. The anchored root
-                        // keeps its free pitch: a periodic impulse comb can entrain it to
-                        // a core harmonic. Its initial release and feedback suffice.
-                        if (field > 0 && p > 0)
+                        if (s.fieldPassages && field > 0 && p > 0) {
+                            val sweep = ((phase - p * 2 * PI / PETALS) % (2 * PI) + 2 * PI) % (2 * PI)
+                            val coreRate = phaseStep / (2 * PI * STEP)
+                            val pulseSeconds = .0008 + .0014 * (1 - pull)
+                            val passageSeconds = if (coreRate > 0) sweep / (2 * PI * coreRate) else Double.POSITIVE_INFINITY
+                            val magneticRelease = if (passageSeconds < pulseSeconds)
+                                sin(PI * passageSeconds / pulseSeconds) else 0.0
+                            // Repeated pulses excite responding petals. The anchored root
+                            // keeps its free pitch: a periodic impulse comb can entrain it to
+                            // a core harmonic. Its initial release and feedback suffice.
                             force[i] += target[i] * .10 * field * s.fieldSpread * s.excitation[j] *
                                 magneticRelease * STEP
+                        }
                         if (i == 0) {
                             rootLinear += v[i] * force[i]
                             rootQuadratic += .5 * force[i] * force[i]
