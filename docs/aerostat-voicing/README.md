@@ -46,3 +46,21 @@ Reference: https://youtube.com/shorts/JAXO_EDdULk . The supplied screen recordin
 Use the reference to change the tube's odd-only 1/3/5/7/9/11 ladder to 1/2/3/4/5/6. Weight the second partial more strongly and slow upper-mode decay relative to the fundamental, retaining Quick/Heavy differences. The paddle texture and balanced steam remain from the prior candidate. No audio from the reference is sampled into the engine or included in the hosted assets.
 
 In the C3 isolated tube's 20–113 ms early-ring window, second/fundamental power rises from near zero to about 0.144. A regression gate requires a substantial second partial. Airflow and held WAVs remain byte-identical to round four. The focused audition compares eight matched prior/PVC candidates: full C3/C4/C5, isolated tube/Quick/Heavy, soft velocity and hard Strike. Listening acceptance remains pending.
+
+## Round six: distinct factory recipes on the preferred voice
+
+The listener preferred the PVC candidate and asked to continue refining presets. Retain that DSP and the five existing names/factory notes; reshape the recipes into five roles:
+
+| Preset | Factory note | Role |
+| --- | --- | --- |
+| SOFT CATCH | C4 | Gentle paddle/tube contact below the airflow catch; dry PVC ring |
+| TWIN PIPES | C4 | Both banks catch, with a modest powered bloom |
+| HEAVY ROTOR | G3 | Retain the distinctive high-inertia hard hit; darker later air |
+| DRIFTING STEAM | E4 | Long powered airflow, strong lift and release |
+| HIGH ENVELOPE | G4 | Fast hard contact and a short bright burst |
+
+The factory recipe values change; previously saved patches retain their stored macros. New factory kits use the refined roster. The default voice and preferred PVC sound model remain the same.
+
+`./gradlew :synth:generateAerostatPresetComparison` renders eleven clips: five factory notes, the five recipes at C3, and an all-five C3 lineup in roster order. Capture the prior recipes with `-PpresetComparisonVersion=before` before applying recipe edits; that property changes only the output folder. The baseline uses the same preferred DSP from `6b1e11aa60bbd2b8e44d988d8a4acce894f57a3e`. Each paired preset has the same pitch on both sides. The lineup and common-C3 pass check character beyond different note choices.
+
+All 37 Aerostat tests pass. Added gates check Soft Catch's shut valves, Twin Pipes catching both banks, and Drifting Steam retaining substantially more late body than High Envelope at identical C3 after levelling. The accepted-direction core voicing is unchanged; listening acceptance of the new recipes remains pending.
