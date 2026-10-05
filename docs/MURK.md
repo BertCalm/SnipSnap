@@ -31,6 +31,26 @@ Then compare links on/off, calls on/off, and owl-to-fog coupling on/off.
 Finally audition the high-register THWACK, low-register CLUNK, all-high
 corners, and several wraps of each held loop.
 
+The bat revision moves the original THWACK character into CLUNK. At the
+same settings, CLUNK retains that reference's material, decay, and seed.
+THWACK now drives a short rough contact through the upper wood modes, then
+releases a sharper impulse into the full tuned trunk. Listen for a distinct
+"thhh" before the "wack" and for the pitched wood that follows it.
+
+The hosted revision starts with matched before/after clips at C3, C4, and
+C5. To reproduce those comparisons, generate the original audition from
+commit `60b3a3634a8446dd0d38057f14604d4dbd80b708` in a separate checkout,
+then supply that output directory to the current generator:
+
+```sh
+./gradlew --no-daemon :synth:generateMurkAudition \
+  -PmurkBaselineDir=/absolute/path/to/original/murk-audition \
+  -PmurkBaselineRevision=60b3a3634a8446dd0d38057f14604d4dbd80b708
+```
+
+The manifest identifies each original recipe and WAV checksum. Without a
+baseline, the generator produces the current 295-clip library.
+
 The owner's listening verdict remains open. JVM checks establish numerical
 and integration behavior; phone playback, MPC export feel, and subjective
 sound quality require listening on the intended devices.

@@ -42,9 +42,9 @@ object MurkPresets {
     fun all(): List<MurkPatch> = MurkVoice.entries.flatMap { forVoice(it) }
 
     private val clunk = listOf(
-        sound(MurkVoice.CLUNK, "HOLLOW BAT", 12, 0.15f, 0.65f, 0.35f, 0.20f, 0.30f),
-        sound(MurkVoice.CLUNK, "DEEP TRUNK", 0, 0.10f, 0.90f, 0.55f, 0.15f, 0.45f),
-        sound(MurkVoice.CLUNK, "HELD TREES", 7, 0.24f, 0.72f, 0.48f, 0.25f, 0.65f, 1f),
+        sound(MurkVoice.CLUNK, "HOLLOW BAT", 12, 0.85f, 0.45f, 0.40f, 0.30f, 0.40f),
+        sound(MurkVoice.CLUNK, "DEEP TRUNK", 0, 0.68f, 0.80f, 0.50f, 0.15f, 0.45f),
+        sound(MurkVoice.CLUNK, "HELD TREES", 7, 0.75f, 0.52f, 0.48f, 0.25f, 0.65f, 1f),
     )
     private val thwack = listOf(
         sound(MurkVoice.THWACK, "TONAL AXE", 12, 0.92f, 0.35f, 0.25f, 0.35f, 0.40f),

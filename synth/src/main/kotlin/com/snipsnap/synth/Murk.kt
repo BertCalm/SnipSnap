@@ -71,7 +71,9 @@ object Murk {
     )
 
     private fun shape(voice: MurkVoice) = when (voice) {
-        MurkVoice.CLUNK -> Shape(.15f, .65f, .35f, .20f, .30f, 1.0, .45, .37, 1.20, 1.0)
+        // Listening revision: the original THWACK was the requested bat. Preserve its
+        // compact contact and material here; THWACK below adds scrub into a sharp release.
+        MurkVoice.CLUNK -> Shape(.85f, .45f, .40f, .30f, .40f, 1.0, .52, .40, .97, 1.15)
         MurkVoice.THWACK -> Shape(.85f, .45f, .40f, .30f, .40f, 1.0, .52, .40, .97, 1.15)
         MurkVoice.FRONT -> Shape(.45f, .60f, .85f, .25f, .65f, .85, .95, .42, 1.08, .92)
         MurkVoice.HOOT -> Shape(.25f, .50f, .45f, .50f, .50f, .64, .48, .82, 1.12, .83)
@@ -182,7 +184,9 @@ object Murk {
     ): Probe {
         val m = settled(voice, macros)
         val eventEnergy = energy.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
-        val seed = Dsp.seedFor("MURK", voice, m.values.joinToString(","), eventEnergy, options.seedContext)
+        // CLUNK inherits the exact original THWACK bat, including its contact/breath grains.
+        val seedVoice = if (voice == MurkVoice.CLUNK) MurkVoice.THWACK else voice
+        val seed = Dsp.seedFor("MURK", seedVoice, m.values.joinToString(","), eventEnergy, options.seedContext)
         val held = isLoop(m.getValue("HOLD"))
         if (!held) {
             val seconds = (options.durationSeconds ?: (5.8f + 2.1f * m.getValue("GROVE") + .8f * m.getValue("FOG"))).coerceIn(.1f, MAX_SECONDS)
@@ -460,13 +464,33 @@ object Murk {
         private var primaryTree = 0
         private var primaryStrength = 0.0
         private var contactNoise = Dsp.Noise(seed)
+        private var scrubLow = 0.0
+        private var scrubBand = 0.0
+        private var scrubBand2 = 0.0
         // A soft contact must not span the fundamental's Fourier zero at a high TUNE.
         // The width cap keeps wood, rather than normalization or a later owl, carrying the note.
         private val contactFrames = (minOf(.0028 - .0021 * strike, .65 / root) * INTERNAL_RATE).roundToInt().coerceAtLeast(8)
+        // THWACK's "thhh" is rough pressure on wood before its short "wack/k" release.
+        // Every sample goes through the tree modes; there is no separate noise output layer.
+        private val scrubFrames = if (voice == MurkVoice.THWACK) ((.020 + .025 * strike) * INTERNAL_RATE).roundToInt() else 0
+        private val scrubContact = doubleArrayOf(.10, .62, .58, .52, 0.0, 0.0).also { b ->
+            val norm = sqrt(b.sumOf { it * it })
+            for (i in b.indices) b[i] /= norm
+        }
+        private val scrubHighPass = 1.0 - exp(-2.0 * PI * .70 * root / INTERNAL_RATE)
+        private val scrubLowPass = 1.0 - exp(-2.0 * PI * minOf(9.0 * root, 9_000.0) / INTERNAL_RATE)
+        private val scrubKick = if (scrubFrames > 0) .78 * (.55 + .45 * strike) / sqrt(scrubFrames.toDouble()) else 0.0
         private val gestureFrames = mutableListOf<Pair<Int, Int>>()
         private val owlRelax = exp(-1.0 / ((.50 + .65 * grove) * INTERNAL_RATE))
         private val pendingFloor = (.10 + .17 * (1 - agitation) + .07 * grove) * INTERNAL_RATE
         private val frontTransfer = .42 + .25 * fog + .12 * grove
+
+        private fun impact(frame: Int, tree: Int, strength: Double) {
+            val compression = strength * (.68 + .4 * strike + .48 * strike * fog) * (1 + .15 * grove)
+            trees[tree].stimulate(compression * (.15 + .6 * fog))
+            stimulateOwl(tree, strength * (.63 + .35 * strike), frame, 0)
+            event(frame, tree, compression, 0, tree, false)
+        }
 
         private fun event(frame: Int, tree: Int, value: Double, generation: Int, origin: Int, fromCall: Boolean) {
             if (!options.linksEnabled || value < .012) return
@@ -554,12 +578,13 @@ object Murk {
                     primaryTree = gesture
                     primaryStrength = energy * if (gesture == 0) 1.0 else .58
                     contactNoise = Dsp.Noise(Dsp.seedFor(seed, gesture, if (cycle > 0) frame % cycle else frame))
-                    val compression = primaryStrength * (.68 + .4 * strike + .48 * strike * fog) * (1 + .15 * grove)
-                    trees[gesture].stimulate(compression * (.15 + .6 * fog))
-                    stimulateOwl(gesture, primaryStrength * (.63 + .35 * strike), frame, 0)
-                    event(frame, gesture, compression, 0, gesture, false)
+                    scrubLow = 0.0
+                    scrubBand = 0.0
+                    scrubBand2 = 0.0
+                    if (scrubFrames == 0) impact(frame, gesture, primaryStrength)
                     if (options.recordDiagnostics) gestures.add(GestureEvent(frame.toFloat() / INTERNAL_RATE, gesture, primaryStrength.toFloat()))
                 }
+                if (scrubFrames > 0 && primaryFrame >= 0 && frame == primaryFrame + scrubFrames) impact(frame, primaryTree, primaryStrength)
                 while (frontQueue.isNotEmpty() && frontQueue.peek().frame <= frame) {
                     val front = frontQueue.remove()
                     trees[front.destination].stimulate(front.strength * (.18 + .62 * fog))
@@ -595,8 +620,20 @@ object Murk {
                 if (frame % CONTROL_FRAMES == 0) for (tree in trees) tree.load()
                 for (tree in trees) tree.step()
                 val contactTime = frame - primaryFrame
-                if (primaryFrame >= 0 && contactTime in 0 until contactFrames) {
-                    val t = (contactTime + .5) / contactFrames
+                if (primaryFrame >= 0 && contactTime in 0 until scrubFrames) {
+                    val t = (contactTime + .5) / scrubFrames
+                    val grain = contactNoise.next().toDouble()
+                    scrubLow += scrubHighPass * (grain - scrubLow)
+                    scrubBand += scrubLowPass * (grain - scrubLow - scrubBand)
+                    scrubBand2 += scrubLowPass * (scrubBand - scrubBand2)
+                    val pressure = sin(PI * t).pow(1.4)
+                    // sqrt(N) keeps the finite rough-contact energy from growing with duration.
+                    // This is a modal force, so its woody pitch and decay belong to the trunk.
+                    trees[primaryTree].direct.drive(scrubContact, primaryStrength * scrubKick * INTERNAL_RATE * pressure * scrubBand2)
+                }
+                val snapTime = contactTime - scrubFrames
+                if (primaryFrame >= 0 && snapTime in 0 until contactFrames) {
+                    val t = (snapTime + .5) / contactFrames
                     val pulse = sin(PI * t)
                     val texture = 1 + (.025 + .045 * strike) * contactNoise.next() * sin(PI * t)
                     // Integral of the half sine is 2/pi; contact character changes its duration,

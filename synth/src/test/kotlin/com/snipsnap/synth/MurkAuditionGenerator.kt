@@ -2,10 +2,12 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import java.io.File
+import java.security.MessageDigest
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -19,26 +21,26 @@ object MurkAuditionGenerator {
     private val steps = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
     private val timbral = listOf("STRIKE", "TRUNK", "FOG", "AGITATION", "GROVE")
     private val voiceDescriptions = mapOf(
-        MurkVoice.CLUNK to "Dense, pitched bat-like wood; a rounded attack and a distant reply.",
-        MurkVoice.THWACK to "Sharper tonal wood; a compact thwack followed by articulate returns.",
+        MurkVoice.CLUNK to "Pitched bat-like wood, drawing on the earlier THWACK sound identified as the bat reference; a firm attack and a distant reply.",
+        MurkVoice.THWACK to "A two-stage axe-like gesture: a brief 'thhh' contact lead-in followed by a distinct pitched 'wack'. This revision still needs listening review.",
         MurkVoice.FRONT to "Loaded wood pushes a broader traveling pressure front through the grove.",
         MurkVoice.HOOT to "Soft wood provides the cause; rounded root-related owl calls provide the answer.",
         MurkVoice.GROVE to "Staggered trunks and animal responses form a finite conversation.",
         MurkVoice.ALARM to "A hard gesture prompts faster barks and controlled, tonally anchored alarm calls.",
     )
     private val macroDescriptions = mapOf(
-        "STRIKE" to "Broad bat-like contact becomes a sharper axe-like contact. Compare the wood attack and the response it provokes.",
+        "STRIKE" to "Broad bat-like contact becomes sharper axe-like contact. On THWACK, compare the lead-in and the pitched impact as well as the response they provoke.",
         "TRUNK" to "Lighter tight wood becomes a denser hollow resonating tree. The requested root should remain stable.",
         "FOG" to "Light loading and clear arrivals become heavier loading and broader traveling fronts. Listen to the first trunk as well as its returns.",
         "AGITATION" to "Quiet sparse replies become firmer, faster, rougher calls. Compare articulation and response latency.",
         "GROVE" to "Compact local coupling becomes more spaced arrivals and an extended conversation. Compare both nearby transfer and timing.",
     )
     private val presetDescriptions = mapOf(
-        "HOLLOW BAT" to "Rounded, dense wood at C4 with restrained fog and a quiet distant response.",
+        "HOLLOW BAT" to "The earlier THWACK bat character recast as CLUNK at C4, with restrained fog and a quiet distant response.",
         "DEEP TRUNK" to "Low C3 and a dense hollow trunk, with a soft gesture and restrained animal activity.",
         "HELD TREES" to "A recurring wood-led grove at G3, with spaced gestures and quiet replies.",
-        "TONAL AXE" to "Sharp C4 contact with clear wood and relatively light atmospheric loading.",
-        "SOFT CHOP" to "A gentler high G4 chop through a denser trunk, with restrained replies.",
+        "TONAL AXE" to "Revised C4 axe contact: a short 'thhh' lead-in resolves into a pitched 'wack', with relatively light atmospheric loading. Listening acceptance is pending.",
+        "SOFT CHOP" to "A gentler high G4 version of the revised two-stage contact, through a denser trunk with restrained replies.",
         "FIRST PULSE" to "C4 wood drives a strong, broad pressure front into a spaced grove.",
         "HEAVY AIR" to "Low F3, dense wood and heavy loading favor broad arrivals and an extended response.",
         "DISTANT CALL" to "Soft C4 wood invites rounded calls across a wide grove.",
@@ -57,7 +59,27 @@ object MurkAuditionGenerator {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val root = File(args.firstOrNull() ?: "../testkit/murk-audition")
+        val positional = args.filterNot { it.startsWith("--") }
+        require(positional.size <= 1) { "supply one output directory, then --baseline-dir= and --baseline-revision=" }
+        require(args.filter { it.startsWith("--") }.all {
+            it.startsWith("--baseline-dir=") || it.startsWith("--baseline-revision=")
+        }) { "unknown MURK audition option" }
+        fun argument(prefix: String): String? = args.filter { it.startsWith(prefix) }.let {
+            require(it.size <= 1) { "duplicate $prefix argument" }
+            it.singleOrNull()?.removePrefix(prefix)?.also { value -> require(value.isNotBlank()) }
+        }
+        val root = File(positional.firstOrNull() ?: "../testkit/murk-audition")
+        val baselineDir = argument("--baseline-dir=")?.let(::File)
+        val baselineRevision = argument("--baseline-revision=")
+        require((baselineDir == null) == (baselineRevision == null)) { "baseline directory and full source revision must be supplied together" }
+        require(baselineRevision == null || baselineRevision.matches(Regex("[0-9a-f]{40}"))) { "baseline revision must be the full 40-character Git commit" }
+        require(baselineDir == null || baselineDir.canonicalFile != root.canonicalFile) { "preserve the baseline in a separate directory before rendering" }
+        val baselineManifest = baselineDir?.let { Json.parse(File(it, "manifest.json").readText()).obj() }
+        require(baselineManifest == null || baselineManifest.getValue("engine").str() == "MURK") { "baseline manifest must describe MURK" }
+        val baselineRows = baselineManifest?.getValue("clips")?.arr()?.associate { row ->
+            val fields = row.obj()
+            fields.getValue("id").str() to fields
+        }.orEmpty()
         root.mkdirs()
         val clips = mutableListOf<Clip>()
         var totalRenderNanos = 0L
@@ -168,12 +190,68 @@ object MurkAuditionGenerator {
             return probe
         }
 
+        fun copyBaseline(voice: MurkVoice, register: String, note: String, tune: Float) {
+            val sourceId = "${voice.name.lowercase()}_$register"
+            val source = baselineRows[sourceId] ?: error("baseline has no $sourceId clip")
+            require(source.getValue("voice").str() == voice.name && source.getValue("level").str() == "matched"
+                && !source.getValue("loop").bool() && source.getValue("branch").str() == "full") { "$sourceId is not a matched finite full-voice baseline" }
+            require(kotlin.math.abs(source.getValue("macros").obj().getValue("TUNE").num() - tune) < 1e-6) { "$sourceId has the wrong note" }
+            val preserved = requireNotNull(baselineDir)
+            fun baselineFile(path: String): File {
+                val file = File(preserved, path).canonicalFile
+                require(file.toPath().startsWith(preserved.canonicalFile.toPath()) && file.isFile) { "baseline asset is missing or outside its directory: $path" }
+                return file
+            }
+            val sourceWav = baselineFile(source.getValue("path").str())
+            val baselineAudio = WavReader.read(sourceWav)
+            require(baselineAudio.channels == 1 && baselineAudio.sampleRate == 44_100 && baselineAudio.samples.all { it.isFinite() }) { "$sourceId is not finite mono 44.1 kHz audio" }
+            require(kotlin.math.abs(Loudness.of(baselineAudio) - .03f) < .0001f) { "$sourceId is not at the shared audition level" }
+            val id = "comparison_before_$sourceId"
+            val path = "clips/$id.wav"
+            File(root, path).also { it.parentFile.mkdirs(); sourceWav.copyTo(it, overwrite = true) }
+            val sourceEvent = baselineFile(source.getValue("eventPath").str())
+            val events = Json.parse(sourceEvent.readText()).obj().toMutableMap()
+            events["id"] = JsonValue.Str(id)
+            events["baselineSourceClipId"] = JsonValue.Str(sourceId)
+            events["baselineSourceRevision"] = JsonValue.Str(requireNotNull(baselineRevision))
+            val eventPath = "events/$id.json"
+            File(root, eventPath).also { it.parentFile.mkdirs(); it.writeText(Json.write(JsonValue.Obj(events)) + "\n") }
+            val originalEvidence = source.mapValues { fromJson(it.value) }
+            val description = if (voice == MurkVoice.THWACK)
+                "Earlier THWACK at $note: the owner described this as the imagined bat sound. Its preserved audio is the reference for revised CLUNK; compare the revised THWACK's 'thhh' lead-in and pitched 'wack'."
+            else "Earlier CLUNK at $note, preserved before the contact revision. Compare its attack with the revised CLUNK, which draws on the earlier THWACK bat reference."
+            val evidence = originalEvidence + linkedMapOf(
+                "id" to id, "title" to "Before · ${voice.name} · $note", "description" to description,
+                "category" to "comparison", "group" to "${voice.name} · $note",
+                "path" to path, "eventPath" to eventPath, "comparisonVersion" to "before",
+                "baselineSourceRevision" to baselineRevision, "baselineSourceClipId" to sourceId,
+                "baselineSourceAudioSha256" to sha256(sourceWav),
+                "baselineSourceEventSha256" to sha256(sourceEvent),
+                "exportPeak" to baselineAudio.peak(), "exportLoudness" to Loudness.of(baselineAudio),
+                "renderMilliseconds" to 0,
+            )
+            clips += Clip(evidence, "${voice.name} · $note")
+        }
+
         for (voice in MurkVoice.entries) {
             for ((tune, register) in listOf(0f to "low", 0.5f to "middle", 1f to "high")) {
                 val note = noteName(Murk.midiFor(voice, tune))
-                render("${voice.name.lowercase()}_$register", "${voice.name} · $note · $register",
+                val noteMacros = Murk.defaults(voice) + ("TUNE" to tune)
+                val probe = render("${voice.name.lowercase()}_$register", "${voice.name} · $note · $register",
                     "${voiceDescriptions.getValue(voice)} TUNE ${fmt(tune)}; the other controls use this voice's defaults.",
-                    "voices", voice.name, voice, Murk.defaults(voice) + ("TUNE" to tune))
+                    "voices", voice.name, voice, noteMacros)
+                if (baselineDir != null && voice in listOf(MurkVoice.CLUNK, MurkVoice.THWACK)) {
+                    copyBaseline(voice, register, note, tune)
+                    render("comparison_after_${voice.name.lowercase()}_$register", "After · ${voice.name} · $note",
+                        if (voice == MurkVoice.CLUNK)
+                            "Revised CLUNK at $note: the earlier THWACK bat reference now informs this voice. Compare its pitched contact with both Before CLUNK and Before THWACK. This revised sound still needs listening review."
+                        else "Revised THWACK at $note: a short 'thhh' lead-in followed by a distinct pitched 'wack'. Compare that two-stage gesture with the earlier bat-like THWACK. This revision still needs listening review.",
+                        "comparison", "${voice.name} · $note", voice, noteMacros, existing = probe)
+                    val after = clips.last()
+                    clips[clips.lastIndex] = after.copy(evidence = after.evidence + mapOf(
+                        "comparisonVersion" to "after", "comparisonBaselineRevision" to baselineRevision,
+                        "currentSourceClipId" to "${voice.name.lowercase()}_$register"))
+                }
             }
         }
 
@@ -299,6 +377,11 @@ object MurkAuditionGenerator {
             "elapsedMilliseconds" to (System.nanoTime() - started) / 1_000_000.0,
             "peakObservedUsedHeapBytes" to peakObservedHeap,
             "memoryMeasurement" to "JVM used-heap observations before and after renders; includes retained JVM allocations and excludes native memory.",
+            "comparison" to baselineDir?.let { linkedMapOf(
+                "baselineSourceRevision" to baselineRevision, "clipCount" to 12,
+                "baselineManifestSha256" to sha256(File(it, "manifest.json")),
+                "baselineAudio" to "Six preserved matched WAVs copied byte-for-byte; revision, recipe and source hashes are recorded per clip.",
+                "currentAudio" to "Six matched copies of the current CLUNK and THWACK note renders; listening acceptance remains pending.") },
             "clips" to clips.map { it.evidence },
         )
         val manifestText = Json.write(json(manifest)) + "\n"
@@ -308,7 +391,28 @@ object MurkAuditionGenerator {
         require(template.contains("<!-- MURK_CARDS -->") && template.contains("<!-- MURK_MANIFEST -->"))
         File(root, "index.html").writeText(template
             .replace("<!-- MURK_CARDS -->", sectionsHtml(clips))
+            .replace("<!-- MURK_COMPARISON_NOTE -->", if (baselineDir == null) "" else "<p class=\"comparison-note\"><a href=\"#comparison\">Start with the CLUNK / THWACK before-and-after comparison</a> · Earlier THWACK is the bat reference; revised THWACK aims for a 'thhh — wack' gesture. Listening review is pending.</p>")
+            .replace("<!-- MURK_COMPARISON_FILTER -->", if (baselineDir == null) "" else "<option value=\"comparison\">Before / after contact revision</option>")
+            .replace("<!-- MURK_COMPARISON_NAV -->", if (baselineDir == null) "" else "<li><a href=\"#comparison\">Before / after</a></li>")
             .replace("<!-- MURK_MANIFEST -->", "<script type=\"application/json\" id=\"murk-manifest\">${manifestText.replace("<", "\\u003c")}</script>"))
+        val comparisonNotes = if (baselineDir == null) "" else """
+
+            ## Reproduce the contact comparison
+
+            The six Before WAVs are preserved byte-for-byte from source revision `$baselineRevision`.
+            Every baseline card records that revision, its original recipe and SHA-256 of its WAV
+            and event record. After cards reuse the current note render at the same audition level.
+            Earlier THWACK is the owner's bat reference; revised CLUNK draws on it, while revised
+            THWACK aims for a distinct lead-in and impact. The owner has not accepted the revision.
+
+            To rebuild the baseline, check out `$baselineRevision` separately and run
+            `./gradlew :synth:generateMurkAudition` there. Preserve its `testkit/murk-audition`
+            directory, then render the current checkout with
+            `./gradlew :synth:generateMurkAudition -PmurkBaselineDir=/absolute/path/to/preserved-baseline -PmurkBaselineRevision=$baselineRevision`.
+            A baseline directory must include its original manifest and the six CLUNK/THWACK
+            low/middle/high WAVs and event JSON. It must differ from the current output directory.
+            Without those optional arguments the ordinary audition contains no comparison section.
+        """.trimIndent()
         File(root, "README.md").writeText("""
             # MURK audition
 
@@ -333,12 +437,13 @@ object MurkAuditionGenerator {
 
             Descriptions express expected behavior. Numerical checks and generated descriptions
             do not replace the owner's listening verdict; sonic acceptance remains pending.
-        """.trimIndent() + "\n")
+        """.trimIndent() + "\n" + comparisonNotes + "\n")
         println("wrote ${clips.size} clips, event records, manifest and accessible index.html under ${root.absolutePath}")
         println("render time ${number(totalRenderNanos / 1_000_000_000.0)} s; observed JVM used heap ${number(peakObservedHeap / 1048576.0)} MiB")
     }
 
     private val categories = linkedMapOf(
+        "comparison" to ("CLUNK and THWACK: before / after" to "Earlier THWACK was identified as the imagined bat sound. Revised CLUNK draws on that reference; revised THWACK adds a 'thhh' lead-in before its pitched 'wack'. Compare both voices at C3, C4 and C5 at the same quiet level. Listening acceptance of the revision is pending."),
         "voices" to ("Six voices, three registers" to "Begin with each voice's defaults at C3, C4 and C5. Each sound begins with pitched wood, travels through the grove and can prompt a finite vocal reply."),
         "presets" to ("Fourteen factory sounds" to "The named recipes available in SnipSnap, rendered dry with their exact saved controls. These descriptions are intended characters; the factory roster still needs listening sign-off."),
         "energy" to ("Quiet, medium and strong events" to "Event energy uses the existing host velocity contract. Loudness matching helps expose changes in propagation and behavior."),
@@ -351,6 +456,7 @@ object MurkAuditionGenerator {
 
     private fun sectionsHtml(clips: List<Clip>): String = buildString {
         for ((category, copy) in categories) {
+            if (clips.none { it.category == category }) continue
             append("<section class=\"audition-section\" id=\"$category\" aria-labelledby=\"heading-$category\"><div class=\"section-heading\"><p class=\"eyebrow\">${h(category)}</p><h2 id=\"heading-$category\">${h(copy.first)}</h2><p>${h(copy.second)}</p></div>")
             for ((group, members) in clips.filter { it.category == category }.groupBy { it.group }) {
                 append("<div class=\"clip-group\"><h3>${h(group)}</h3><div class=\"clip-grid\">")
@@ -370,17 +476,21 @@ object MurkAuditionGenerator {
         val loop = e.getValue("loop") as Boolean
         val firstCall = (e["firstCallSeconds"] as? Number)?.let { "first call ${number(it.toDouble())} s" } ?: "no calls"
         val seam = (e["seamError"] as? Number)?.let { "<dt>Loop seam error</dt><dd>${h(String.format(Locale.ROOT, "%.3g", it.toDouble()))}</dd>" } ?: ""
-        val macros = (e.getValue("macros") as Map<*, *>).entries.joinToString(" · ") { "${it.key} ${fmt(it.value as Float)}" }
+        val macros = (e.getValue("macros") as Map<*, *>).entries.joinToString(" · ") { "${it.key} ${fmt((it.value as Number).toFloat())}" }
+        val version = e["comparisonVersion"] as? String
+        val provenance = (e["baselineSourceRevision"] as? String)?.let {
+            "<dt>Before source</dt><dd><code>${h(it.take(12))}</code></dd><dt>WAV SHA-256</dt><dd><code>${h((e.getValue("baselineSourceAudioSha256") as String).take(12))}…</code></dd>"
+        }.orEmpty()
         return """
             <article class="clip" id="clip-${clip.id}" data-voice="$voice" data-category="${clip.category}" aria-labelledby="title-${clip.id}">
-              <div class="clip-badges"><span>${h(voice)}</span><span>${h(e.getValue("level").toString())}</span>${if (loop) "<span>loop</span>" else ""}</div>
+              <div class="clip-badges"><span>${h(voice)}</span><span>${h(e.getValue("level").toString())}</span>${if (version == null) "" else "<span>${h(version)}</span>"}${if (loop) "<span>loop</span>" else ""}</div>
               <h4 id="title-${clip.id}">${h(title)}</h4>
               <p class="description" id="desc-${clip.id}">${h(description)}</p>
               <p class="macro-line">${h(macros)}</p>
               <p class="clip-meta">$duration s · ${e.getValue("arrivalCount")} arrivals · ${e.getValue("callCount")} calls · $firstCall</p>
               <div class="clip-actions"><button class="play" type="button" aria-label="Play ${h(title)}" aria-describedby="desc-${clip.id}" aria-pressed="false" disabled>Play</button>${if (loop) "<label class=\"repeat\"><input type=\"checkbox\" class=\"loop-toggle\"> Repeat</label>" else ""}<a class="download" href="${e.getValue("path")}" download>WAV <span class="sr-only">${h(title)}</span></a></div>
               <progress value="0" max="$duration" aria-label="Playback progress for ${h(title)}"></progress>
-              <details class="evidence"><summary>Measurements and event record</summary><dl><dt>Raw peak</dt><dd>${number((e.getValue("rawPeak") as Number).toDouble())}</dd><dt>Export peak</dt><dd>${number((e.getValue("exportPeak") as Number).toDouble())}</dd><dt>Final passive energy</dt><dd>${String.format(Locale.ROOT, "%.3g", (e.getValue("finalPassiveEnergy") as Number).toDouble())}</dd>$seam</dl><a href="${e.getValue("eventPath")}">Causal event JSON <span class="sr-only">for ${h(title)}</span></a></details>
+              <details class="evidence"><summary>Measurements and event record</summary><dl><dt>Raw peak</dt><dd>${number((e.getValue("rawPeak") as Number).toDouble())}</dd><dt>Export peak</dt><dd>${number((e.getValue("exportPeak") as Number).toDouble())}</dd><dt>Final passive energy</dt><dd>${String.format(Locale.ROOT, "%.3g", (e.getValue("finalPassiveEnergy") as Number).toDouble())}</dd>$seam$provenance</dl><a href="${e.getValue("eventPath")}">Causal event JSON <span class="sr-only">for ${h(title)}</span></a></details>
               <details class="native"><summary>Native audio controls</summary><p class="native-hint" hidden>Enable audio playback above to show these controls.</p><audio controls preload="none" src="${e.getValue("path")}" aria-label="${h(title)}" aria-describedby="desc-${clip.id}">Your browser can download the WAV above.</audio></details>
             </article>
         """.trimIndent()
@@ -395,6 +505,18 @@ object MurkAuditionGenerator {
         is Iterable<*> -> JsonValue.Arr(value.map { json(it) })
         else -> error("unsupported audition evidence ${value.javaClass}")
     }
+
+    private fun fromJson(value: JsonValue): Any? = when (value) {
+        JsonValue.Null -> null
+        is JsonValue.Str -> value.value
+        is JsonValue.Bool -> value.value
+        is JsonValue.Num -> value.value
+        is JsonValue.Obj -> value.entries.mapValues { fromJson(it.value) }
+        is JsonValue.Arr -> value.items.map { fromJson(it) }
+    }
+
+    private fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+        .joinToString("") { "%02x".format(Locale.ROOT, it.toInt() and 255) }
 
     private fun macroLine(macros: Map<String, Float>) = macros.entries.joinToString(", ") { "${it.key} ${fmt(it.value)}" }
     private fun tag(value: Float) = (value * 100).roundToInt().toString().padStart(3, '0')

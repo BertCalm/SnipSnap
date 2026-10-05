@@ -2,9 +2,12 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Pitch
 import com.snipsnap.json.JsonException
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -235,6 +238,31 @@ class MurkTest {
     }
 
     @Test
+    fun `thwack prepares upper wood before its distinct impact`() {
+        // Listening requested "thhh wackk" after the original THWACK was accepted as the bat.
+        // Measure the rendered profile, not the exciter's timing or coefficient table.
+        val options = Murk.ProbeOptions(linksEnabled = false, owlsEnabled = false, durationSeconds = 0.45f)
+        val bat = Murk.probe(MurkVoice.CLUNK, options = options).directTrunks
+        val thwack = Murk.probe(MurkVoice.THWACK, options = options).directTrunks
+        val attackEnd = (0.08f * Dsp.RATE).roundToInt()
+        fun peakTime(samples: FloatArray) =
+            (0 until attackEnd).maxBy { abs(samples[it]) }.toDouble() / Dsp.RATE
+        val batPeak = peakTime(bat)
+        val thwackPeak = peakTime(thwack)
+        val preparationRatio = rms(thwack, (0.008f * Dsp.RATE).roundToInt(), (0.030f * Dsp.RATE).roundToInt()) /
+            rms(thwack, (0.045f * Dsp.RATE).roundToInt(), (0.075f * Dsp.RATE).roundToInt())
+        val root = Keys.midiHz(60)
+        val upperShare = upperBandShare(thwack, 0.008f, 0.030f, 3f * root, 10f * root)
+        println("MURK attack: bat peak ${batPeak * 1000} ms, THWACK peak ${thwackPeak * 1000} ms, preparation/impact $preparationRatio, upper share $upperShare")
+        // Measured C4: 10.14 / 51.45 ms, 0.0657 preparation ratio, 0.4687 upper share.
+        // A delayed silent strike or a single bat impulse cannot satisfy this complete profile.
+        assertTrue(
+            thwackPeak > batPeak + 0.025 && preparationRatio >= 0.05 && upperShare > 0.20,
+            "THWACK lost its prepared impact: bat peak $batPeak, THWACK peak $thwackPeak, preparation/impact $preparationRatio, upper share $upperShare",
+        )
+    }
+
+    @Test
     fun `the low agitation range changes quiet calls and all required macro pairs interact`() {
         val options = Murk.ProbeOptions(durationSeconds = 1.5f)
         val quiet = Murk.probe(MurkVoice.CLUNK, mapOf("AGITATION" to 0.1f), options = options)
@@ -380,5 +408,26 @@ class MurkTest {
             energy += max(x * x, y * y)
         }
         return sqrt(difference / energy.coerceAtLeast(1e-30))
+    }
+
+    private fun upperBandShare(samples: FloatArray, fromSeconds: Float, toSeconds: Float, lowHz: Float, highHz: Float): Double {
+        val from = (fromSeconds * Dsp.RATE).roundToInt()
+        val count = (toSeconds * Dsp.RATE).roundToInt() - from
+        val n = 2048
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) {
+            re[i] = (samples[from + i] * (0.5 - 0.5 * cos(2 * PI * i / (count - 1)))).toFloat()
+        }
+        Fft.forward(re, im)
+        var upper = 0.0
+        var total = 0.0
+        for (k in 1 until n / 2) {
+            val energy = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            val hz = k.toDouble() * Dsp.RATE / n
+            total += energy
+            if (hz >= lowHz && hz < highHz) upper += energy
+        }
+        return upper / total.coerceAtLeast(1e-30)
     }
 }

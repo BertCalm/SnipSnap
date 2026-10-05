@@ -525,4 +525,6 @@ tasks.register<JavaExec>("generateMurkAudition") {
     mainClass.set("com.snipsnap.synth.MurkAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/murk-audition")
+    providers.gradleProperty("murkBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("murkBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
 }
