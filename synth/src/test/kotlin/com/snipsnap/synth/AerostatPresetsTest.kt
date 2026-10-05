@@ -1,8 +1,6 @@
 package com.snipsnap.synth
 
-import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
-import com.snipsnap.audio.FeatureExtractor
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.test.Test
@@ -64,7 +62,7 @@ class AerostatPresetsTest {
             val restored = AerostatPatch.fromJsonText(preset.toJsonText())
             assertEquals(preset, restored)
             assertContentEquals(preset.render().samples, restored.render().samples)
-            val heard = Classifier.classify(FeatureExtractor.extract(preset.render())).drumClass
+            val heard = Aerostat.drumClassFor(preset.voice, preset.macros)
             assertTrue(heard !in choking, "${preset.name} classified as $heard")
         }
     }
@@ -92,6 +90,31 @@ class AerostatPresetsTest {
             val d = PresetTestSupport.rmsDistance(a.macros, b.macros)
             assertTrue(d > 0.05f, "${a.name} and ${b.name} are nearly the same sound ($d)")
         }
+    }
+
+    @Test
+    fun `soft contact is dry while twin pipes catches both banks`() {
+        fun trace(name: String) = Aerostat.mechanics(AerostatPresets.all().first { it.name == name }.macros)
+        val soft = trace("SOFT CATCH")
+        val twin = trace("TWIN PIPES")
+        assertTrue(soft.valveQuick.max() < 0.05 && soft.valveHeavy.max() < 0.05,
+            "soft contact unexpectedly became a steam voice")
+        assertTrue(twin.valveQuick.max() > 0.5 && twin.valveHeavy.max() > 0.5,
+            "twin pipes failed to catch both banks")
+    }
+
+    @Test
+    fun `steam and high pulse stay distinct at the same pitch after levelling`() {
+        fun common(name: String) = AerostatPresets.all().first { it.name == name }
+            .let { Aerostat.render(it.voice, it.macros + ("TUNE" to 0f)).samples }
+        fun rms(samples: FloatArray): Double {
+            val start = (0.55 * Dsp.RATE).toInt()
+            val end = (0.75 * Dsp.RATE).toInt()
+            return kotlin.math.sqrt((start until end).sumOf { samples[it].toDouble() * samples[it] } / (end - start))
+        }
+        val steam = rms(common("DRIFTING STEAM"))
+        val pulse = rms(common("HIGH ENVELOPE"))
+        assertTrue(steam > pulse * 8, "late body converged at C3: steam $steam, pulse $pulse")
     }
 
     @Test

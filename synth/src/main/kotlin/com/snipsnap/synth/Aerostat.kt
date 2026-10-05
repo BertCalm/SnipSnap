@@ -15,7 +15,6 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
-import kotlin.math.tanh
 import kotlin.random.Random
 
 /**
@@ -117,9 +116,11 @@ object Aerostat {
     private const val V_MAX = 2.0
     private const val MODES = 6
 
-    private val MODE_RATIO = doubleArrayOf(1.0, 3.0, 5.0, 7.0, 9.0, 11.0)
-    private val QUICK_GAIN = doubleArrayOf(1.0, 0.48, 0.26, 0.14, 0.07, 0.035)
-    private val HEAVY_GAIN = doubleArrayOf(1.0, 0.22, 0.08, 0.03, 0.012, 0.005)
+    // Once the paddle lifts, the open pipe supports a whole harmonic ladder.
+    // Even partials fill out the hollow tone targeted by the PVC reference.
+    private val MODE_RATIO = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
+    private val QUICK_GAIN = doubleArrayOf(1.0, 0.90, 0.52, 0.30, 0.15, 0.075)
+    private val HEAVY_GAIN = doubleArrayOf(1.0, 0.75, 0.38, 0.18, 0.08, 0.035)
 
     fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: AerostatVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f, neutral = 0.5f),
@@ -288,10 +289,20 @@ object Aerostat {
         return max(0.0, impulse * env * split * TORQUE_SCALE * (1.0 + mod))
     }
 
+    private fun contactDuration(strike: Double): Double = 0.0008 + 0.0022 * (1.0 - strike)
+
     private fun contactAt(t: Double, strike: Double, velocity: Double): Double {
-        val dur = 0.0035 + 0.007 * (1.0 - strike)
+        val dur = contactDuration(strike)
         if (t < 0.0 || t >= dur) return 0.0
-        return velocity * (0.3 + 0.7 * strike) * sin(PI * t / dur)
+        return 3.5 * velocity * (0.3 + 0.7 * strike) * sin(PI * t / dur)
+    }
+
+    /** Broad paddle seat, distinct from the short impulse that excites the bore. */
+    private fun paddleAt(t: Double, strike: Double, velocity: Double): Double {
+        val duration = 0.006 + 0.010 * (1.0 - strike)
+        if (t < 0.0 || t >= duration) return 0.0
+        val seat = sin(PI * t / duration)
+        return velocity * (0.4 + 0.6 * strike) * seat * seat
     }
 
     private fun puffAt(t: Double, strike: Double, velocity: Double): Double {
@@ -475,6 +486,7 @@ object Aerostat {
         val strike = m.getValue("STRIKE").toDouble()
         val vel = velocity.coerceIn(0f, 1f).toDouble()
         val lift = m.getValue("LIFT").toDouble()
+        val pressure = m.getValue("PRESSURE").toDouble()
         val freq = frequencyFor(m.getValue("TUNE")).toDouble()
         val seed = Dsp.seedFor("AEROSTAT", midiFor(m.getValue("TUNE")), strikeBits(m), velocity)
         val noiseQ = Dsp.Noise(seed)
@@ -483,7 +495,11 @@ object Aerostat {
         val quick = Whistle(internal, quick = true, noiseQ)
         val heavy = Whistle(internal, quick = false, noiseH)
         val heavyRatio = centsToRatio(HEAVY_DETUNE_CENTS)
-        val tubes = TubePair(freq, internal)
+        // Match the fundamental phase of the symmetric contact pulse. Without
+        // this, tube/air cancellation can pull the attack's apparent pitch.
+        quick.prime(freq, contactDuration(strike))
+        heavy.prime(freq * heavyRatio, contactDuration(strike))
+        val tubes = TubePair(freq, internal, strike)
         var lip = 0.0
         var i = 0
         val dt = 1.0 / internal
@@ -499,28 +515,35 @@ object Aerostat {
                 val ratio = 2.0.pow(cents / 1200.0)
                 val puff = puffAt(t, strike, vel)
                 val contact = contactAt(t, strike, vel)
-                var tex = 0.0
-                if (contact > 0.0) {
-                    val n = contactNoise.next().toDouble()
-                    tex = n * contact * 0.12
-                    // One pole keeps the contact under 2 kHz so the head is not a snare.
-                    tex = tubes.shapeContact(tex)
-                }
+                val paddle = paddleAt(t, strike, vel)
+                // Let the contact filter settle after the paddle lifts away.
+                // This short surface sound has its own gain: scaling it with
+                // the resonant tube made physical contact almost inaudible.
+                val tex = tubes.shapeContact(
+                    if (paddle > 0.0) contactNoise.next().toDouble() * paddle * 0.95 else 0.0,
+                )
                 val tubeQ = tubes.sampleQuick(contact, dt)
                 val tubeH = tubes.sampleHeavy(contact, dt)
-                val wQ = quick.sample(flowQ, freq * ratio, puff, dt)
-                val wH = heavy.sample(flowH, freq * ratio * heavyRatio, puff, dt)
+                val radiation = lift * (1.0 - exp(-24.0 * height))
+                val breath = 0.12 + 0.65 * pressure + 0.70 * radiation
+                val wQ = quick.sample(flowQ, freq * ratio, puff, dt, noiseAmp = breath)
+                val wH = heavy.sample(flowH, freq * ratio * heavyRatio, puff, dt, noiseAmp = breath * 0.85)
                 // The tube is the knock. It has to be audible, and it has to lose
                 // to the whistle once the valve is open, or the note files as a tom.
-                val tubeScale = 0.42
+                // Modal excitation accumulates at the oversampled rate. Its
+                // raw knock used to dwarf flow by 8–9x during the catch; whole-
+                // sample peak levelling then hid both steam and its controls.
+                // Balance the branches before levelling, never normalize taps
+                // separately to choose their contribution to the full mix.
+                val tubeScale = 0.06
                 val mixed = when (tap) {
-                    AerostatTap.TUBE -> (tubeQ + tubeH + tex) * tubeScale
+                    AerostatTap.TUBE -> (tubeQ + tubeH) * tubeScale + tex
                     AerostatTap.FLOW -> wQ + wH
-                    AerostatTap.QUICK -> tubeQ * tubeScale + tex * tubeScale + wQ
-                    AerostatTap.HEAVY -> tubeH * tubeScale + wH
-                    AerostatTap.FULL -> (tubeQ + tubeH + tex) * tubeScale + wQ + wH
+                    AerostatTap.QUICK -> tubeQ * tubeScale + tex * QUICK_SPLIT + wQ
+                    AerostatTap.HEAVY -> tubeH * tubeScale + tex * HEAVY_SPLIT + wH
+                    AerostatTap.FULL -> (tubeQ + tubeH) * tubeScale + tex + wQ + wH
                 }
-                val open = (height * lift).coerceIn(0.0, 1.0)
+                val open = (lift * (1.0 - exp(-24.0 * height))).coerceIn(0.0, 1.0)
                 val cutoff = 650.0 + 8000.0 * open
                 val a = 1.0 - exp(-2.0 * PI * cutoff / internal)
                 lip += a * (mixed - lip)
@@ -584,16 +607,10 @@ object Aerostat {
         val cents = height * lift * MAX_LIFT_CENTS
         val ratio = centsToRatio(cents)
         val sounded = freq * ratio
-        // The loop is K periods of the requested note. Heavy's one-shot detune
-        // is 5 cents, which is not a whole number of this period, so the held
-        // Heavy whistle is pulled onto the nearest odd harmonic of the same
-        // loop (at 5 cents that harmonic is the fundamental). The strike is
-        // not in this buffer: the static sample contract has no loop-start field.
-        // Whole output periods, so 4x oversampling decimates onto the same
-        // cycle. Half a frame of pitch is the cost; a fractional period will
-        // not close. Heavy's 5 cent one-shot detune is not a whole number of
-        // this period (the nearest odd harmonic is the fundamental), so the
-        // held Heavy whistle sits on the same cycle.
+        // Whole output periods survive oversampling and decimation. Heavy's
+        // one-shot 5-cent offset is snapped to Quick for the held buffer.
+        // The long periodic air texture supplies motion without a loop seam.
+        // There is no opening strike: Snip has no separate loop-start field.
         val periodOut = (RATE / sounded).roundToInt().coerceIn(32, 4096)
         val k = max(8, (0.50 * RATE / periodOut).roundToInt())
         val frames = k * periodOut
@@ -609,16 +626,25 @@ object Aerostat {
         quick.prime(fPlay)
         heavy.prime(fPlay)
         val dt = 1.0 / internal
+        val airNoise = Dsp.Noise(seed xor 0x2baf)
+        val airCycle = DoubleArray(frames * OVERSAMPLE) { airNoise.next().toDouble() }
+        var airLow = 0.0
+        var airHigh = 0.0
+        val airLowA = 1.0 - exp(-2.0 * PI * (1800.0 + 7.0 * fPlay) / internal)
+        val airHighA = 1.0 - exp(-2.0 * PI * (220.0 + 1.2 * fPlay) / internal)
         var lip = 0.0
-        val open = (height * lift).coerceIn(0.0, 1.0)
+        val open = (lift * (1.0 - exp(-24.0 * height))).coerceIn(0.0, 1.0)
         val cutoff = 650.0 + 8000.0 * open
         val a = 1.0 - exp(-2.0 * PI * cutoff / internal)
         for (i in 0 until totalIn) {
-            // No breath noise in the loop: a noise stream is not periodic, and the
-            // tone is already speaking. Flow is constant, so the delay oscillator is too.
+            // Both the tone and the long air texture repeat after the complete
+            // held buffer. Padding settles the filters before measuring closure.
             val wQ = quick.sample(flowQ, fPlay, puff = 0.0, dt, noiseAmp = 0.0, exact = true)
             val wH = heavy.sample(flowH * 0.55, fPlay, puff = 0.0, dt, noiseAmp = 0.0, exact = true)
-            val mixed = (wQ + wH) * (0.85 + 0.15 * velocity.coerceIn(0f, 1f))
+            airLow += airLowA * (airCycle[i % airCycle.size] - airLow)
+            airHigh += airHighA * (airLow - airHigh)
+            val air = (airLow - airHigh) * (0.12 + 0.65 * pressure + 0.70 * open) * sqrt(flowQ + flowH)
+            val mixed = (wQ + wH + air) * (0.85 + 0.15 * velocity.coerceIn(0f, 1f))
             lip += a * (mixed - lip)
             buf[i] = mixed * (0.62 + 0.38 * open) + lip * (0.38 * (1.0 - open))
         }
@@ -634,11 +660,11 @@ object Aerostat {
         return LoopRender(loop, seam, continuous, frames)
     }
 
-    private class TubePair(freq: Double, rate: Int) {
-        private val quick = Modes(freq, rate, QUICK_GAIN, t60 = 0.20)
-        private val heavy = Modes(freq, rate, HEAVY_GAIN, t60 = 0.30)
+    private class TubePair(freq: Double, rate: Int, strike: Double) {
+        private val quick = Modes(freq, rate, QUICK_GAIN, t60 = 0.32)
+        private val heavy = Modes(freq, rate, HEAVY_GAIN, t60 = 0.46)
         private var contactLp = 0.0
-        private val contactA = 1.0 - exp(-2.0 * PI * 900.0 / rate)
+        private val contactA = 1.0 - exp(-2.0 * PI * (650.0 + 1800.0 * strike) / rate)
 
         fun sampleQuick(contact: Double, dt: Double): Double = quick.tick(contact, dt)
 
@@ -666,7 +692,7 @@ object Aerostat {
                 val w = 2.0 * PI * freq * ratio
                 c[i] = cos(w * dt)
                 s[i] = sin(w * dt)
-                val tau = t60 / ratio.pow(1.15)
+                val tau = t60 / ratio.pow(0.45)
                 decay[i] = exp(-dt * 6.907755 / tau)
             }
         }
@@ -687,82 +713,51 @@ object Aerostat {
     }
 
     /**
-     * A flue whistle: a delay of one period and a memoryless jet.
-     * The delay is the pitch. Darkening is feed-forward, so it cannot add
-     * samples to the loop and walk the note off. At the internal rate a
-     * reflection like 0.99 is a few milliseconds of decay, so the ring
-     * coefficient is an exponential of the sample rate, not a constant
-     * borrowed from 44.1 kHz.
+     * Gently voiced flue tone plus band-limited turbulent air. The previous
+     * high-gain nonlinear delay saturated toward a reed-like buzz. Flow now
+     * controls an envelope rather than the gain of an unstable feedback loop.
+     * Quick speaks sooner and has more upper tone; Heavy blooms more slowly.
      */
     private class Whistle(val rate: Int, val quick: Boolean, val noise: Dsp.Noise) {
-        private val buf = DoubleArray(8192)
-        private var w = 0
-        private var lp = 0.0
-        private val sustainDecay = exp(-1.0 / (rate * 6.0))
-        private val ringDecay = exp(-6.907755 / ((if (quick) 0.42 else 0.62) * rate))
+        private var phase = PI
+        private var amplitude = 0.0
+        private var airLow = 0.0
+        private var airHigh = 0.0
+        private val attack = 1.0 - exp(-1.0 / (rate * if (quick) 0.008 else 0.024))
+        private val release = 1.0 - exp(-1.0 / (rate * if (quick) 0.060 else 0.095))
 
-        fun prime(freq: Double) {
-            val n = (rate / freq).roundToInt().coerceIn(8, buf.size - 2)
-            for (i in buf.indices) buf[i] = 0.0
-            for (i in 0 until n) buf[i] = 0.55 * sin(2.0 * PI * i / n)
-            // The first reads are delay samples behind the write, so the sine
-            // has to sit there, not under the write pointer.
-            w = n % buf.size
+        fun prime(freq: Double, contactDuration: Double = 0.0) {
+            phase = PI - PI * freq * contactDuration
         }
 
         fun sample(
             flow: Double,
             freq: Double,
             puff: Double,
-            @Suppress("UNUSED_PARAMETER") dt: Double,
-            noiseAmp: Double = 0.01,
+            dt: Double,
+            noiseAmp: Double = 0.18,
             exact: Boolean = false,
         ): Double {
-            val f = freq.coerceAtLeast(20.0)
-            val delay = if (exact) {
-                (rate / f).roundToInt().toDouble()
-            } else {
-                rate / f
-            }.coerceIn(4.0, (buf.size - 4).toDouble())
-            val bore = read(delay)
-            val speaking = (flow - 0.05).coerceAtLeast(0.0)
-            val flowing = flow > 1e-4
-            if (!flowing && abs(bore) < 1e-12 && puff == 0.0) {
-                write(0.0)
-                return 0.0
+            phase += 2.0 * PI * freq.coerceAtLeast(20.0) * dt
+            if (phase >= 2.0 * PI) phase -= 2.0 * PI
+            val target = flow.coerceAtLeast(0.0).pow(0.85)
+            amplitude += (if (target > amplitude) attack else release) * (target - amplitude)
+            if (amplitude < 1e-18) amplitude = 0.0
+            val drive = flow.coerceIn(0.0, 1.0)
+            val second = (if (quick) 0.07 else 0.025) + drive * (if (quick) 0.20 else 0.08)
+            val third = if (quick) 0.025 + drive * 0.025 else 0.012
+            val tone = sin(phase) + second * sin(2.0 * phase) + third * sin(3.0 * phase)
+            var air = 0.0
+            if (!exact && noiseAmp > 0.0) {
+                val n = noise.next().toDouble()
+                val lowA = 1.0 - exp(-2.0 * PI * (1800.0 + 7.0 * freq) / rate)
+                val highA = 1.0 - exp(-2.0 * PI * (220.0 + 1.2 * freq) / rate)
+                airLow += lowA * (n - airLow)
+                airHigh += highA * (airLow - airHigh)
+                // Air remains proportionally stronger as pressure falls away.
+                air = (airLow - airHigh) * noiseAmp * sqrt(amplitude)
             }
-            val breath = if (!flowing || noiseAmp == 0.0) 0.0 else noise.next().toDouble() * noiseAmp * sqrt(flow)
-            val kick = if (flowing) puff * 0.12 else 0.0
-            val written = if (speaking > 0.02) {
-                val jet = 1.35 + 2.8 * speaking
-                sustainDecay * tanh(jet * bore + breath + kick)
-            } else {
-                ringDecay * bore + breath + kick
-            }
-            write(written)
-            if (!flowing && abs(bore) < 1e-10) return 0.0
-            if (exact) return bore
-            val follow = if (quick) 0.18 else 0.06
-            lp += follow * (bore - lp)
-            if (abs(lp) < 1e-18) lp = 0.0
-            return if (quick) bore + 0.18 * (bore - lp) else 0.72 * bore + 0.28 * lp
-        }
-
-        private fun read(delay: Double): Double {
-            var pos = w - delay
-            val n = buf.size.toDouble()
-            pos %= n
-            if (pos < 0.0) pos += n
-            val i = pos.toInt()
-            val frac = pos - i
-            val j = if (i + 1 >= buf.size) 0 else i + 1
-            return buf[i] * (1.0 - frac) + buf[j] * frac
-        }
-
-        private fun write(x: Double) {
-            buf[w] = if (x.isFinite()) x.coerceIn(-1.5, 1.5) else 0.0
-            w++
-            if (w >= buf.size) w = 0
+            return 0.62 * amplitude * tone + air + puff * air * 0.3
         }
     }
 }

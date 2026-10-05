@@ -390,6 +390,24 @@ tasks.register<JavaExec>("generateMercuryKit") {
 }
 
 /** Render the AEROSTAT audition clips, manifest and page under testkit/aerostat-audition/. See AerostatAuditionGenerator. */
+tasks.register<JavaExec>("generateAerostatPresetComparison") {
+    group = "distribution"
+    description = "Render factory and common-C3 Aerostat preset listening comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AerostatPresetComparisonGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/aerostat-presets/${providers.gradleProperty("presetComparisonVersion").getOrElse("candidate")}")
+}
+
+tasks.register<JavaExec>("generateAerostatVoicingComparison") {
+    group = "distribution"
+    description = "Render identical recipes for the Aerostat air/tube comparison."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AerostatVoicingComparisonGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/aerostat-voicing/${providers.gradleProperty("comparisonVersion").getOrElse("candidate")}")
+}
+
 tasks.register<JavaExec>("generateAerostatAudition") {
     group = "distribution"
     description = "Render the AEROSTAT audition clips, manifest and listening page under testkit/aerostat-audition/."
