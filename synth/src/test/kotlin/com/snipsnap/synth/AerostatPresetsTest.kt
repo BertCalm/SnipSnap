@@ -1,8 +1,6 @@
 package com.snipsnap.synth
 
-import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
-import com.snipsnap.audio.FeatureExtractor
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.test.Test
@@ -64,7 +62,7 @@ class AerostatPresetsTest {
             val restored = AerostatPatch.fromJsonText(preset.toJsonText())
             assertEquals(preset, restored)
             assertContentEquals(preset.render().samples, restored.render().samples)
-            val heard = Classifier.classify(FeatureExtractor.extract(preset.render())).drumClass
+            val heard = Aerostat.drumClassFor(preset.voice, preset.macros)
             assertTrue(heard !in choking, "${preset.name} classified as $heard")
         }
     }
