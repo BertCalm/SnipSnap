@@ -24,6 +24,13 @@ audio off; controls have keyboard focus and accessible names. Stop all
 ends playback, and starting another clip stops the previous one. Native
 audio controls provide a fallback.
 
+MURK's audition files use loudest-200-ms RMS 0.12 with a 0.90 peak ceiling,
+and the page starts at 85% playback volume with audio off. This listening
+gain affects the audition exports only. Raw comparison partners keep their
+original amplitude, while isolated source taps inherit their full reference's
+gain to retain the actual wood, fog, and owl balance. Matched WAV filenames
+end in `_listen_012.wav` so browsers request the louder files.
+
 Start with the six default voices. Listen for a woody pitched attack,
 separate traveling arrivals, and an owl answer that belongs to the same
 event. Compare the raw/matched pairs before judging component balance.
@@ -48,8 +55,11 @@ then supply that output directory to the current generator:
   -PmurkBaselineRevision=60b3a3634a8446dd0d38057f14604d4dbd80b708
 ```
 
-The manifest identifies each original recipe and WAV checksum. Without a
-baseline, the generator produces the current 295-clip library.
+The original baseline sources remain at RMS 0.03 and retain their recipe,
+Git revision, and source WAV checksum. The generator validates that level,
+then applies a linear gain to match the current RMS 0.12 listening target;
+the manifest records the source level and applied baseline playback gain.
+Without a baseline, the generator produces the current 295-clip library.
 
 The owner's listening verdict remains open. JVM checks establish numerical
 and integration behavior; phone playback, MPC export feel, and subjective

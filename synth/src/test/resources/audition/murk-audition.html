@@ -111,7 +111,7 @@
       <div class="transport-main">
         <label class="enable"><input id="audio-enabled" type="checkbox"> Enable audio playback</label>
         <button id="stop-all" type="button">Stop all <span aria-hidden="true">· Esc</span></button>
-        <div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="100" value="65"><output id="volume-value" for="volume">65%</output></div>
+        <div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="100" value="85"><output id="volume-value" for="volume">85%</output></div>
       </div>
       <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Audio off. Descriptions are ready to read.</p>
     </div>
@@ -128,7 +128,7 @@
     <p class="empty" id="empty-state" hidden>No clips match these filters. Choose another voice or section, or clear the search.</p>
     <!-- MURK_CARDS -->
   </main>
-  <footer class="shell"><p>Dry mono audio, no effects. Matched full clips share a quiet audition level; isolated source taps retain their full reference's gain, and raw partners preserve synthesis amplitude. Measurements establish behavior and stability. These descriptions describe intended character; sonic acceptance still needs the owner's listening verdict.</p><p>Everything on this page works from local relative assets. <a href="README.md">Audition notes</a> · <a href="manifest.json">Manifest and render measurements</a></p></footer>
+  <footer class="shell"><p>Dry mono audio, no effects. Matched full clips share a clear listening level, and Before and After levels match. Isolated parts retain their relative balance; raw partners preserve synthesis amplitude. Read the descriptions, then listen and compare when ready.</p><p>Everything on this page works from local relative assets. <a href="README.md">Audition notes</a> · <a href="manifest.json">Manifest and render measurements</a></p></footer>
   <!-- MURK_MANIFEST -->
   <script>
   (() => {
@@ -142,6 +142,8 @@
     const searchFilter = document.getElementById('search-filter');
     // A reload must start silent even when the browser restores checkbox state.
     audioEnabled.checked = false;
+    volume.value = '85';
+    document.getElementById('volume-value').value = '85%';
     let active = null;
     const title = card => card.querySelector('h4').textContent;
     const announce = message => { status.textContent = message; };

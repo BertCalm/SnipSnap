@@ -18,6 +18,9 @@ import kotlin.math.roundToInt
  * No generated description constitutes a listening verdict.
  */
 object MurkAuditionGenerator {
+    private const val LISTENING_TARGET = .12f
+    private const val LISTENING_CEILING = .90f
+    private const val BASELINE_SOURCE_TARGET = .03f
     private val steps = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
     private val timbral = listOf("STRIKE", "TRUNK", "FOG", "AGITATION", "GROVE")
     private val voiceDescriptions = mapOf(
@@ -125,17 +128,17 @@ object MurkAuditionGenerator {
             require(matched || raw.peak() <= 1f) { "$id raw peak ${raw.peak()} exceeds PCM range" }
             val output = when {
                 !matched -> raw
-                branch == "full" -> AuditionLevel.level(raw)
+                branch == "full" -> listeningLevel(raw)
                 else -> {
                     // Source taps inherit the full reference's gain. Matching each quiet owl or
                     // fog tap independently would conceal its actual balance against the wood.
                     val reference = Snip(probe.samples, channels = 1, sampleRate = probe.sampleRate)
-                    val gain = Loudness.of(AuditionLevel.level(reference)) / Loudness.of(reference).coerceAtLeast(1e-9f)
+                    val gain = Loudness.of(listeningLevel(reference)) / Loudness.of(reference).coerceAtLeast(1e-9f)
                     Snip(raw.samples.map { it * gain }.toFloatArray(), channels = 1, sampleRate = probe.sampleRate)
                 }
             }
-            require(output.peak() <= 1f) { "$id export peak ${output.peak()} exceeds PCM range" }
-            val path = "clips/$id.wav"
+            require(output.peak() <= if (matched) LISTENING_CEILING else 1f) { "$id export peak ${output.peak()} exceeds its ceiling" }
+            val path = "clips/$id${if (matched) "_listen_012" else ""}.wav"
             WavWriter.write(File(root, path), output, WavWriter.BitDepth.PCM_16)
             val isLoop = (macros["HOLD"] ?: 0f) >= Murk.LOOP_THRESHOLD
             val events = linkedMapOf<String, Any?>(
@@ -190,7 +193,7 @@ object MurkAuditionGenerator {
             return probe
         }
 
-        fun copyBaseline(voice: MurkVoice, register: String, note: String, tune: Float) {
+        fun importBaseline(voice: MurkVoice, register: String, note: String, tune: Float) {
             val sourceId = "${voice.name.lowercase()}_$register"
             val source = baselineRows[sourceId] ?: error("baseline has no $sourceId clip")
             require(source.getValue("voice").str() == voice.name && source.getValue("level").str() == "matched"
@@ -205,10 +208,13 @@ object MurkAuditionGenerator {
             val sourceWav = baselineFile(source.getValue("path").str())
             val baselineAudio = WavReader.read(sourceWav)
             require(baselineAudio.channels == 1 && baselineAudio.sampleRate == 44_100 && baselineAudio.samples.all { it.isFinite() }) { "$sourceId is not finite mono 44.1 kHz audio" }
-            require(kotlin.math.abs(Loudness.of(baselineAudio) - .03f) < .0001f) { "$sourceId is not at the shared audition level" }
+            val sourceLoudness = Loudness.of(baselineAudio)
+            require(kotlin.math.abs(sourceLoudness - BASELINE_SOURCE_TARGET) < .0001f) { "$sourceId is not at the original baseline audition level" }
+            val playbackAudio = listeningLevel(baselineAudio)
+            val playbackGain = Loudness.of(playbackAudio) / sourceLoudness.coerceAtLeast(1e-9f)
             val id = "comparison_before_$sourceId"
-            val path = "clips/$id.wav"
-            File(root, path).also { it.parentFile.mkdirs(); sourceWav.copyTo(it, overwrite = true) }
+            val path = "clips/${id}_listen_012.wav"
+            WavWriter.write(File(root, path), playbackAudio, WavWriter.BitDepth.PCM_16)
             val sourceEvent = baselineFile(source.getValue("eventPath").str())
             val events = Json.parse(sourceEvent.readText()).obj().toMutableMap()
             events["id"] = JsonValue.Str(id)
@@ -218,8 +224,8 @@ object MurkAuditionGenerator {
             File(root, eventPath).also { it.parentFile.mkdirs(); it.writeText(Json.write(JsonValue.Obj(events)) + "\n") }
             val originalEvidence = source.mapValues { fromJson(it.value) }
             val description = if (voice == MurkVoice.THWACK)
-                "Earlier THWACK at $note: the owner described this as the imagined bat sound. Its preserved audio is the reference for revised CLUNK; compare the revised THWACK's 'thhh' lead-in and pitched 'wack'."
-            else "Earlier CLUNK at $note, preserved before the contact revision. Compare its attack with the revised CLUNK, which draws on the earlier THWACK bat reference."
+                "Earlier THWACK at $note: the owner described this as the imagined bat sound. Its preserved source is raised with linear listening gain to match the revised clips; compare the revised THWACK's 'thhh' lead-in and pitched 'wack'."
+            else "Earlier CLUNK at $note, preserved before the contact revision and raised with linear listening gain. Compare its attack with the revised CLUNK, which draws on the earlier THWACK bat reference."
             val evidence = originalEvidence + linkedMapOf(
                 "id" to id, "title" to "Before · ${voice.name} · $note", "description" to description,
                 "category" to "comparison", "group" to "${voice.name} · $note",
@@ -227,7 +233,10 @@ object MurkAuditionGenerator {
                 "baselineSourceRevision" to baselineRevision, "baselineSourceClipId" to sourceId,
                 "baselineSourceAudioSha256" to sha256(sourceWav),
                 "baselineSourceEventSha256" to sha256(sourceEvent),
-                "exportPeak" to baselineAudio.peak(), "exportLoudness" to Loudness.of(baselineAudio),
+                "baselineSourceLevel" to BASELINE_SOURCE_TARGET,
+                "baselineSourceLoudness" to sourceLoudness, "baselineSourcePeak" to baselineAudio.peak(),
+                "baselinePlaybackGain" to playbackGain,
+                "exportPeak" to playbackAudio.peak(), "exportLoudness" to Loudness.of(playbackAudio),
                 "renderMilliseconds" to 0,
             )
             clips += Clip(evidence, "${voice.name} · $note")
@@ -241,7 +250,7 @@ object MurkAuditionGenerator {
                     "${voiceDescriptions.getValue(voice)} TUNE ${fmt(tune)}; the other controls use this voice's defaults.",
                     "voices", voice.name, voice, noteMacros)
                 if (baselineDir != null && voice in listOf(MurkVoice.CLUNK, MurkVoice.THWACK)) {
-                    copyBaseline(voice, register, note, tune)
+                    importBaseline(voice, register, note, tune)
                     render("comparison_after_${voice.name.lowercase()}_$register", "After · ${voice.name} · $note",
                         if (voice == MurkVoice.CLUNK)
                             "Revised CLUNK at $note: the earlier THWACK bat reference now informs this voice. Compare its pitched contact with both Before CLUNK and Before THWACK. This revised sound still needs listening review."
@@ -294,7 +303,7 @@ object MurkAuditionGenerator {
                 "Dry synthesis before engine loudness targeting or audition matching. Its original amplitude is preserved; compare the matched partner's balance and quiet details.",
                 "levels", voice.name, voice, matched = false)
             render("${voice.name.lowercase()}_matched", "${voice.name} · matched synthesis",
-                "The exact same synthesis as the raw partner, matched to the shared audition level: loudest 200 ms RMS 0.03, with a peak guard. It has no added effects.",
+                "The exact same synthesis as the raw partner, raised to MURK's listening level: loudest 200 ms RMS 0.12, with a 0.90 peak ceiling. It has no added effects.",
                 "levels", voice.name, voice, existing = raw)
         }
 
@@ -371,7 +380,9 @@ object MurkAuditionGenerator {
             "engine" to "MURK", "formatVersion" to 1,
             "description" to "Dry audition evidence. Text describes intended behavior; owner listening acceptance is pending.",
             "clipCount" to clips.size, "audioStartsOff" to true,
-            "loudness" to "Matched full clips use loudest 200 ms RMS 0.03 with a peak guard. Source taps inherit their full reference's gain; raw partners retain synthesis amplitude.",
+            "loudness" to "Matched full clips use MURK listening level: loudest 200 ms RMS 0.12 with a 0.90 peak ceiling. Source taps inherit their full reference's gain; raw partners retain synthesis amplitude.",
+            "listeningTarget" to LISTENING_TARGET, "listeningPeakCeiling" to LISTENING_CEILING,
+            "defaultPlaybackVolume" to .85f,
             "noteRange" to "C3–C5", "velocityContract" to "Existing host velocity scales event energy; STRIKE remains contact character.",
             "renderMilliseconds" to totalRenderNanos / 1_000_000.0,
             "elapsedMilliseconds" to (System.nanoTime() - started) / 1_000_000.0,
@@ -380,7 +391,7 @@ object MurkAuditionGenerator {
             "comparison" to baselineDir?.let { linkedMapOf(
                 "baselineSourceRevision" to baselineRevision, "clipCount" to 12,
                 "baselineManifestSha256" to sha256(File(it, "manifest.json")),
-                "baselineAudio" to "Six preserved matched WAVs copied byte-for-byte; revision, recipe and source hashes are recorded per clip.",
+                "baselineAudio" to "Six preserved source WAVs at original level 0.03, exported with linear gain to the same 0.12 listening target as current clips. Original revision, recipe and source hashes remain recorded per clip.",
                 "currentAudio" to "Six matched copies of the current CLUNK and THWACK note renders; listening acceptance remains pending.") },
             "clips" to clips.map { it.evidence },
         )
@@ -399,9 +410,11 @@ object MurkAuditionGenerator {
 
             ## Reproduce the contact comparison
 
-            The six Before WAVs are preserved byte-for-byte from source revision `$baselineRevision`.
-            Every baseline card records that revision, its original recipe and SHA-256 of its WAV
-            and event record. After cards reuse the current note render at the same audition level.
+            The six Before sources are preserved from source revision `$baselineRevision`.
+            Their original loudest-200-ms RMS 0.03 is validated, then a linear listening gain
+            brings them to the same RMS 0.12 target and 0.90 peak ceiling as the After clips.
+            Every baseline card records the original revision, recipe, source WAV/event SHA-256,
+            source level and applied gain. After cards reuse the current note render.
             Earlier THWACK is the owner's bat reference; revised CLUNK draws on it, while revised
             THWACK aims for a distinct lead-in and impact. The owner has not accepted the revision.
 
@@ -419,6 +432,7 @@ object MurkAuditionGenerator {
             Open `index.html` directly in a browser. All assets are relative and the descriptions
             and manifest are embedded: no web server, external fonts or network access are needed.
             Audio starts off. Enable playback, then choose Play; Stop all or Escape stops playback.
+            The page's volume starts at 85%.
             Every clip also has native audio controls and a WAV download. A single clip plays at a
             time. Voice, section and text filters support reading before listening.
 
@@ -428,7 +442,7 @@ object MurkAuditionGenerator {
             five 3×3 interaction grids, raw/matched pairs, causal switches, source taps, edge cases
             and representative and extreme HOLD loops. No effects are included.
 
-            Matched full clips share loudest-200-ms RMS 0.03, with a peak guard; source taps use
+            Matched full clips use MURK's loudest-200-ms RMS 0.12 with a 0.90 peak ceiling; source taps use
             their full reference's gain to preserve relative balance, and raw partners retain
             their original amplitude. The manifest records measured peaks, loudness, timing,
             event counts, passive energy, loop seam evidence and render costs. Per-clip event JSON
@@ -443,13 +457,13 @@ object MurkAuditionGenerator {
     }
 
     private val categories = linkedMapOf(
-        "comparison" to ("CLUNK and THWACK: before / after" to "Earlier THWACK was identified as the imagined bat sound. Revised CLUNK draws on that reference; revised THWACK adds a 'thhh' lead-in before its pitched 'wack'. Compare both voices at C3, C4 and C5 at the same quiet level. Listening acceptance of the revision is pending."),
+        "comparison" to ("CLUNK and THWACK: before / after" to "Earlier THWACK was identified as the imagined bat sound. Revised CLUNK draws on that reference; revised THWACK adds a 'thhh' lead-in before its pitched 'wack'. Compare both voices at C3, C4 and C5 at the same listening level. Listening acceptance of the revision is pending."),
         "voices" to ("Six voices, three registers" to "Begin with each voice's defaults at C3, C4 and C5. Each sound begins with pitched wood, travels through the grove and can prompt a finite vocal reply."),
         "presets" to ("Fourteen factory sounds" to "The named recipes available in SnipSnap, rendered dry with their exact saved controls. These descriptions are intended characters; the factory roster still needs listening sign-off."),
         "energy" to ("Quiet, medium and strong events" to "Event energy uses the existing host velocity contract. Loudness matching helps expose changes in propagation and behavior."),
         "sweeps" to ("Macro sweeps on every voice" to "Each timbral control is sampled at 0, 0.25, 0.5, 0.75 and 1; its companions use their declared neutral values."),
         "grids" to ("Five interaction grids" to "HOOT at neutral companions. Each 3 × 3 grid tests a required pair of controls at 0, 0.5 and 1."),
-        "levels" to ("Raw and matched pairs" to "The same dry synthesis appears twice. Raw preserves its original amplitude; matched uses this audition's shared quiet level."),
+        "levels" to ("Raw and matched pairs" to "The same dry synthesis appears twice. Raw preserves its original amplitude; matched uses MURK's RMS 0.12 listening target with a 0.90 peak ceiling."),
         "diagnostics" to ("Causal probes and edge cases" to "Engineering switches and separate source taps help explain how a gesture becomes a finite ecosystem response. These switches are absent from the instrument's public controls."),
         "hold" to ("Recurring groves and HOLD transition" to "Settled loops contain repeated explicit gestures. Repeat is optional and starts off; listen across the seam for double strikes, clipped calls or timing discontinuities."),
     )
@@ -479,7 +493,7 @@ object MurkAuditionGenerator {
         val macros = (e.getValue("macros") as Map<*, *>).entries.joinToString(" · ") { "${it.key} ${fmt((it.value as Number).toFloat())}" }
         val version = e["comparisonVersion"] as? String
         val provenance = (e["baselineSourceRevision"] as? String)?.let {
-            "<dt>Before source</dt><dd><code>${h(it.take(12))}</code></dd><dt>WAV SHA-256</dt><dd><code>${h((e.getValue("baselineSourceAudioSha256") as String).take(12))}…</code></dd>"
+            "<dt>Before source</dt><dd><code>${h(it.take(12))}</code></dd><dt>Source WAV SHA-256</dt><dd><code>${h((e.getValue("baselineSourceAudioSha256") as String).take(12))}…</code></dd><dt>Baseline listening gain</dt><dd>${number((e.getValue("baselinePlaybackGain") as Number).toDouble())}×</dd>"
         }.orEmpty()
         return """
             <article class="clip" id="clip-${clip.id}" data-voice="$voice" data-category="${clip.category}" aria-labelledby="title-${clip.id}">
@@ -513,6 +527,14 @@ object MurkAuditionGenerator {
         is JsonValue.Num -> value.value
         is JsonValue.Obj -> value.entries.mapValues { fromJson(it.value) }
         is JsonValue.Arr -> value.items.map { fromJson(it) }
+    }
+
+    /** MURK's audition gain only. Shared audition helpers and production rendering stay separate. */
+    private fun listeningLevel(snip: Snip): Snip {
+        val samples = snip.samples.copyOf()
+        Dsp.levelTo(samples, snip.sampleRate, target = LISTENING_TARGET,
+            ceiling = LISTENING_CEILING, channels = snip.channels)
+        return Snip(samples, channels = snip.channels, sampleRate = snip.sampleRate)
     }
 
     private fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
