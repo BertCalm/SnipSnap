@@ -478,4 +478,27 @@ object SynthKits {
             preset("LATE STRAND"), preset("BROKEN RETURN"), preset("HELD DRUM"), preset("HELD BLOOM"),
         )
     }
+
+    /**
+     * The THAW kit. A01–A08 walk C minor pentatonic from C3 on BRITTLE. A09–A14 explore the
+     * warming runner, melt, channels, frozen bridges, heavy sheet and returning frost; A15–A16
+     * are settled held material. Each dry pad carries its full recipe and uses THAW's pitched
+     * duration-aware filing.
+     * Held samples contain the settled loop alone, and the kit plays them once like other held
+     * factory pads. No external effect supplies the material transition.
+     */
+    fun thaw(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = ThawPatch(
+            "Ice $n", ThawVoice.BRITTLE,
+            Thaw.defaults(ThawVoice.BRITTLE) + ("TUNE" to semitone / Thaw.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Thaw.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = ThawPresets.all().first { it.name == name }
+            .let { pad(it, Thaw.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("COPPER RUNNER"), preset("SOFT MELT"), preset("CLEAR CHANNEL"), preset("FROZEN BRIDGE"),
+            preset("SLOW SHEET"), preset("RETURNING FROST"), preset("COLD CHOIR"), preset("THERMAL CYCLE"),
+        )
+    }
 }

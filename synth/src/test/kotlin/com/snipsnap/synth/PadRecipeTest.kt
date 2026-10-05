@@ -41,6 +41,7 @@ class PadRecipeTest {
         AerostatPatch("Float Test", AerostatVoice.FLOAT, mapOf("STRIKE" to 0.7f)),
         FlotillaPatch("Wake Test", FlotillaVoice.RIPPLE, mapOf("SURFACE" to 0.4f), midi = 64),
         TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
+        ThawPatch("Ice Test", ThawVoice.BRITTLE, mapOf("HEAT" to 0.4f)),
     )
 
     @Test

@@ -127,3 +127,8 @@ testkit/flotilla-audition/
 # The TREMOR audition clips, manifest and page, rendered by :synth:generateTremorAudition
 # and published as the listening artifact; never committed.
 testkit/tremor-audition/
+
+# The THAW raw/matched audition and diagnostic traces, generated locally.
+testkit/thaw-audition/
+testkit/thaw-first-listen/
+testkit/SnipSnap Thaw Kit/
