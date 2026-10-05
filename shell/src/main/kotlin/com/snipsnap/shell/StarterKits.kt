@@ -52,7 +52,7 @@ object StarterKits {
     }
 
     val ALL: List<Starter> = listOf(
-        // displayName is "EMPTY GRID", not "BLANK" — the other eight
+        // displayName is "EMPTY GRID", not "BLANK" — the other
         // entries are all pre-composed kits, and a plain "BLANK" reads as
         // just one more label in that list rather than the one option
         // that's actually empty. This has to work as both a menu entry
@@ -100,6 +100,12 @@ object StarterKits {
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,
         ) { SynthKits.cloud() },
+        Starter(
+            "circuit", "CIRCUIT",
+            "Three breaths, moving accents, and canyon answers in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.circuit() },
         Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",

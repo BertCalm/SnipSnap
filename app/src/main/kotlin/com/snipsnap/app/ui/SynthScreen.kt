@@ -157,6 +157,9 @@ import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
+import com.snipsnap.synth.Circuit
+import com.snipsnap.synth.CircuitPatch
+import com.snipsnap.synth.CircuitVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -190,10 +193,10 @@ private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the twelve-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * SYNTH — the drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
- * Compose surface plus the SEND TO PAD action, multiplexed over all eleven
+ * Compose surface plus the SEND TO PAD action, multiplexed over the
  * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
@@ -201,9 +204,9 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
- * only; reality wins: THUMP alone ships eight voices, and eleven more engines
+ * only; reality wins: THUMP alone ships eight voices, and other engines
  * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT,
- * SIREN) join it here.
+ * SIREN, FORK, FLOTILLA, CIRCUIT) join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -1039,6 +1042,7 @@ fun SynthScreen(
                             readout = when {
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
@@ -1870,9 +1874,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CIRCUIT;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → FORK → FLOTILLA → THUMP. */
+    /** Cycle through the registered synth engines. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1890,6 +1894,7 @@ private enum class Engine {
         SIREN -> SirenVoice.entries
         FORK -> ForkVoice.entries
         FLOTILLA -> FlotillaVoice.entries
+        CIRCUIT -> CircuitVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1907,6 +1912,7 @@ private enum class Engine {
         SIREN -> Siren.macrosFor(voice as SirenVoice)
         FORK -> Fork.macrosFor(voice as ForkVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
+        CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1924,6 +1930,7 @@ private enum class Engine {
         SIREN -> Siren.defaults(voice as SirenVoice)
         FORK -> Fork.defaults(voice as ForkVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
+        CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1941,6 +1948,7 @@ private enum class Engine {
         SIREN -> Siren.scramble(voice as SirenVoice, random)
         FORK -> Fork.scramble(voice as ForkVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
+        CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1963,6 +1971,7 @@ private enum class Engine {
         SIREN -> Siren.render(voice as SirenVoice, macros)
         FORK -> Fork.render(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
+        CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
     }
 
     /**
@@ -1986,6 +1995,7 @@ private enum class Engine {
         // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
+        CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2003,6 +2013,7 @@ private enum class Engine {
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
+        CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

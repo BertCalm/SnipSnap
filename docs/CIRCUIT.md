@@ -1,0 +1,207 @@
+# CIRCUIT in SnipSnap
+
+CIRCUIT ports the [supplied Circuit engineering specification](superpowers/specs/2026-10-03-circuit-engine-engineering-spec.md) into SnipSnap's
+offline, mono synth pipeline. Three distinct breath resonators share a root;
+stone rattle, paired wooden clapper, clay vessel and intermittent synthesized
+grunt/uh-huh gestures surround them. The instruments and performance rules are
+invented. The engine makes no claim to reproduce a real tradition.
+
+The implementation is a first listening candidate. Numerical checks and patch
+round-trips do not establish the owner's acceptance of its sound. In particular,
+the usefulness of mono movement, the balance of percussion and vocals, and the
+feeling of an ensemble listening to its surroundings still need listening.
+
+## Host contract
+
+`Circuit.render(voice, macros, velocity, normalize, probe)` returns a 44.1 kHz
+mono `Snip`. Defaults fill any omitted macros. Unknown, non-finite and out-of-range
+macro values are rejected. `CircuitPatch` stores its name, voice and macros in
+the existing versioned JSON format; its ordinary `render()` uses velocity 1.
+Velocity is a render argument and routes through `Velocity.atVelocity`, rather
+than becoming an eighth macro or an independently persisted patch field.
+
+TUNE snaps across MIDI 36–60, C2–C4, with C3 at .5. BREATH, DIAMETER, ORBIT,
+PACE, CANYON and HOLD complete the seven controls. Finite phrases sustain
+performer input for about 3.2–5 seconds, then allow a canyon-dependent tail;
+their total duration is about 5–7.7 seconds. HOLD values below .99 extend that
+finite phrase; HOLD at or above .99 selects a settled loop of approximately
+sixteen seconds.
+
+The host carries one buffer without an attack-plus-loop marker. A held Circuit
+pad therefore starts in the settled procession and omits its initiating gesture.
+All Circuit buffers route as `DrumClass.LOOP`: the finite outputs are phrases
+past the classifier's 1.5-second boundary, and HOLD outputs recur. The central
+pitched sources and surrounding instruments remain in the full mix; classifier
+guards do not remove percussion to obtain this routing.
+
+## Voices and controls
+
+| Voice | Character | BREATH | DIAMETER | ORBIT | PACE | CANYON |
+|---|---|---:|---:|---:|---:|---:|
+| ROOT | Central trio, sparse accents | .55 | .30 | .15 | .20 | .35 |
+| PROCESSION | Interlocking playing and movement | .50 | .45 | .55 | .55 | .45 |
+| ANSWER | Gaps and returned replies | .45 | .55 | .25 | .30 | .75 |
+| VOICED | Stronger tube color and coordination voice | .75 | .40 | .30 | .40 | .50 |
+| EXPANSE | Wide, slow formation and longer returns | .50 | .85 | .20 | .25 | .85 |
+| CONFLUENCE | Rapid playing and faster movement | .70 | .55 | .75 | .80 | .65 |
+
+All voices default to TUNE .5 and HOLD 0. Neutral companion values for
+controlled auditions are BREATH .45, DIAMETER .40, ORBIT 0, PACE .35,
+CANYON .40, HOLD 0 and TUNE .5. Neutral is distinct from each voice's defaults.
+
+- BREATH changes the bounded periodic lip drive's stiffness and coloration,
+  tube pressure and articulation, and synthesized voice breathiness.
+- DIAMETER changes the surrounding players' radius from approximately
+  1.2 to 4 metres, with compatible canyon boundaries.
+- ORBIT 0 is stationary. Nonzero ORBIT requests approximately .025–.125
+  revolutions per second. Movement changes direct and reflected delay,
+  distance loss, radiation facing and spectral loss in mono.
+- PACE requests approximately .5–6 playing slots per second. Complementary
+  patterns assign subsets of those slots to each surrounding instrument and
+  to tube accents. PACE does not change the requested root or motion clock.
+- CANYON changes the two unequal wall paths, reflection loss, later returns,
+  returning tube influence and the opportunities for behavioral answers.
+- HOLD lengthens a finite phrase until .99, then delivers its settled loop.
+
+The first three sources form the central trio; the other four move with fixed
+angular offsets. The observer is off-center. Direct and reflected observer
+paths use fractional delays, smoothed motion and path-dependent low-pass loss.
+Performer-listening arrivals are calculated separately from observer arrivals.
+Tagged tube or clapper accents may cue one extra gesture after a return reaches
+another player. Replies have refractory intervals, an event budget of at most
+12, a cumulative energy budget and depth 1; replies never become new cues.
+Disabling replies in a diagnostic retains canyon audio.
+
+The tube model is an abstract periodic pressure/lip source feeding stable
+lossy resonators, with different partials and articulation for the three roles.
+The upper tube has a subordinate band-limited throat modulation source that
+changes excitation pressure; it does not radiate an independent lead voice.
+It is a reduced model rather than a detailed lip-reed waveguide or a claim of
+real instrument fidelity. Local neighbor radiation changes its nonlinear
+excitation. Finite collision/contact gestures excite the surrounding modal
+instruments; vocals use a bounded harmonic source, filtered air and moving
+tract resonances. No sampled chants, continuous rattle noise bed or footsteps
+are included. Nonlinear sources and contacts run at 4× output rate and use
+the shared band-limited decimator. Normal output uses
+`Dsp.MELODIC_LOUDNESS_TARGET` after synthesis.
+
+## Held clock approximation
+
+HOLD rounds the two clocks independently onto cycles that fit an approximately
+sixteen-second loop. PACE completes a whole eight-step pattern, preserving
+alternating grunt and uh-huh gestures. ORBIT 0 stays stationary; every requested
+nonzero orbit rounds to at least one whole turn per loop. The current
+.025–.125 Hz request range rounds to one or two turns, approximately .0625 or
+.125 Hz. Slow requested motion therefore speeds up to the nearest compatible
+nonzero rate. Requested ORBIT also changes source-facing/spectral modulation
+depth, so nearby values retain a tonal distinction after clock rounding. This
+delivery approximation needs listening, particularly for EXPANSE and the
+slow-orbit HOLD diagnostic. One-shot clocks retain their requested independent
+rates.
+
+The engine settles tube states and acoustic buffers through bounded preroll,
+measures two adjacent real cycles and refuses a held render if its seam or
+state convergence error exceeds 1e-3. Periodic gesture seeds and bounded reply
+scheduling repeat with the held cycle. The sidecar records the actual and
+requested rates, loop duration, preroll cycles, convergence and seam evidence.
+Phrase timing still needs listening: a numerical seam cannot certify that a
+clapper pair or vocal gesture feels continuous.
+
+## Presets, kit and audition
+
+`CircuitPresets` supplies twelve dry starting points across the six voices.
+`SynthKits.circuit()` builds sixteen editable pads: a C-minor-pentatonic ROOT
+row from C2 on A01–A08, followed by formation, wood, clay, vocal, wide and rapid
+presets, and a held procession. Internal canyon paths belong to the engine;
+the rack is handled by the existing `PadRecipe`/`FxChain` pipeline.
+
+Generate the full owner listening matrix from the repository root:
+
+```bash
+./gradlew --no-daemon :synth:generateCircuitAudition
+```
+
+For a smaller development pack:
+
+```bash
+./gradlew --no-daemon :synth:generateCircuitAudition -Pquick
+```
+
+The generator also accepts `--quick` directly. Its default destination is
+`testkit/circuit-audition/`, which is gitignored. Open that folder's `index.html`
+directly: the manifest is embedded so local file URLs work. Generated artifacts
+are not automatically published or committed.
+
+Every variant has a 24-bit raw WAV and a WAV at the shared `AuditionLevel`
+target, plus a diagnostic JSON sidecar. Raw retains source gain; matched
+clips support fair comparison of tone and timing. A raw peak above the PCM
+range or a non-finite sample stops the generator instead of being hidden by
+file conversion. Standard full mixes reject KICK, SNARE, CLAP, either HAT and
+TOM classifications. Source isolates and passive-decay diagnostics omit that
+guard so their individual roles can be heard.
+
+The complete pack includes:
+
+- Every voice at defaults, plus C2/C3/C4 at velocities .25/.6/1.
+- Every voice's TUNE, BREATH, DIAMETER, ORBIT, PACE, CANYON and HOLD at
+  0/.25/.5/.75/1, with neutral companions.
+- Five 3 × 3 interactions: DIAMETER × ORBIT, DIAMETER × CANYON,
+  PACE × CANYON, ORBIT × PACE and BREATH × CANYON.
+- Seven source isolates, isolated dry grunt and uh-huh gestures; replies
+  enabled/disabled; local coupling enabled/disabled; performer input off at 1 s.
+- Stationary fast playing, fast movement with sparse playing, close/wide
+  formations, every voice at all-high extremes, and difficult held clocks.
+- All twelve presets and the sixteen-pad kit recipes.
+
+The quick pack keeps the six voice defaults, ROOT's low/high register at
+quiet/strong velocity, ORBIT/PACE endpoints, seven source isolates, the reply
+comparison, one all-high phrase and a slow-orbit held loop. It does not replace
+the full acceptance matrix.
+
+Sidecars retain event kind, source, time, energy, reply depth and trigger,
+cue emission and separate performer/observer arrival times, cue source/wall,
+sampled source positions and
+direct/reflected distances, actual clocks, recovery count, raw peak and loop
+evidence. Render time and JVM used heap at the render boundaries are recorded;
+those heap readings are not peak-memory measurements. The page permits repeating
+clips, recording choices and downloading an owner verdict JSON.
+
+`measurements.json` summarizes the completed pack using those same renders:
+variant/WAV counts, classifier-guarded count and class distribution, total
+recoveries, all-variant/full-mix duration and render-time ranges, total render time, loop count,
+seam/convergence ranges and the clips at each extreme. For raw, engine-normalized
+and audition-matched audio it records output-rate peak, absolute DC and
+whole-buffer RMS ranges. These audio values describe the floating-point buffers
+before PCM quantization; RMS is not the loudest-window loudness target. Heap
+boundary ranges remain process-wide observations, not peak render allocation.
+No extra renders are made to produce this summary. A summary is written only
+after the requested pack finishes successfully.
+
+Run the repository's JVM checks with `./gradlew --no-daemon test`; host and
+phone checks remain subject to the repository's build setup. Preserve the
+owner's listening verdict alongside any measured results. No listening verdict
+has been supplied for this port.
+
+## Build and runtime evidence
+
+The Circuit-enabled Android debug APK builds with JDK 17, Gradle 8.14.3,
+AGP 8.7.3, Kotlin 2.0.21, API 35, NDK 27.2.12479018 and CMake 3.22.1.
+All four configured native ABIs are packaged. `apksigner verify --verbose`
+passes; the manifest targets API 35 with minimum API 29. This verifies assembly
+and signing; no emulator or physical phone run has been performed.
+
+Fresh desktop OpenJDK 17 JVMs also rendered default CONFLUENCE one-shots and
+HOLD loops successfully with both 128 MiB and 192 MiB maximum heaps. At 128 MiB,
+the 5.585-second phrase took 2.066 seconds and the 16.008-second held buffer took
+10.938 seconds under concurrent test load. Linux peak resident sizes were
+108.79 MiB and 181.03 MiB respectively; resident memory includes JVM native
+memory as well as heap. Every returned sample was finite. These probes cover
+the renderer alone; they do not establish Android ART or whole-app memory use,
+and 128 MiB is the lowest capacity tested, rather than a measured minimum.
+
+Anti-aliasing uses the shared 4× renderer and band-limited decimator within the
+C2–C4 register. A Circuit-specific residual-alias threshold or high-register
+spectral comparison has not been calibrated. Acoustic timing evidence uses
+the path and performer-cue diagnostics rather than a rendered moving-impulse
+arrival probe. Those limits, ensemble balance, vocal integration, mono motion
+and held phrase continuity remain part of listening acceptance.

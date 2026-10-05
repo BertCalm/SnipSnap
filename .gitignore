@@ -127,3 +127,6 @@ testkit/flotilla-audition/
 # The TREMOR audition clips, manifest and page, rendered by :synth:generateTremorAudition
 # and published as the listening artifact; never committed.
 testkit/tremor-audition/
+
+# CIRCUIT's generated raw/matched listening matrix, manifests and diagnostic sidecars.
+testkit/circuit-audition/

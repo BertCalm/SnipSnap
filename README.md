@@ -353,6 +353,15 @@ the top is a stationary loop (the slider reads LOOP), not a claim the
 hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
 `docs/superpowers/specs/2026-10-04-flotilla-engine-design.md`.
 
+CIRCUIT is an invented moving ensemble: three rooted breath resonators,
+stone rattle, paired wood, clay vessel and synthesized coordination voice.
+DIAMETER, ORBIT and PACE independently set formation, movement and playing;
+CANYON supplies asymmetric mono paths and bounded echo-cued replies.
+Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
+clips. HOLD at .99 returns its settled procession without an opening gesture.
+The owner's listening verdict is pending. Contract and audition commands:
+[`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -360,9 +369,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA and GRAINS round out the lineup — fourteen engines in
+VOX, FORK, FLOTILLA, CIRCUIT and GRAINS round out the lineup — fifteen engines in
 the `Engine` picker counting SKIN, RESIN, TIDE, GLINT, SIREN, FORK and
-FLOTILLA; GRAINS is a fifteenth thing entirely, out of the picker's scope
+FLOTILLA and CIRCUIT; GRAINS is a sixteenth thing entirely, out of the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs

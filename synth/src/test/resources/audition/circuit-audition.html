@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CIRCUIT audition</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #100c19; color: #ddd3ed; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 1.2rem; }
+    main { max-width: 1050px; margin: auto; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { color: #6fe0df; letter-spacing: .08em; }
+    h2 { color: #cdb3fc; font-size: 1.3rem; }
+    h3 { font-size: 1rem; color: #6fe0df; }
+    p { line-height: 1.5; }
+    a { color: #6fe0df; }
+    button, select, textarea { font: inherit; }
+    button, select { padding: .5rem; border: 1px solid #665684; border-radius: .3rem; background: #292036; color: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid #6fe0df; outline-offset: 3px; }
+    textarea { display: block; width: 100%; min-height: 110px; margin: .5rem 0; padding: .6rem; background: #15101f; border: 1px solid #665684; color: inherit; }
+    header, section { border: 1px solid #59476f; border-radius: .5rem; padding: 1rem; margin: 0 0 1rem; background: #1b1426; }
+    .toolbar { position: sticky; top: 0; z-index: 1; background: #100c19; border-bottom: 1px solid #59476f; padding: .6rem 0; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+    .clip { padding: .9rem 0; border-top: 1px solid #3b2e4e; }
+    .clip-name { margin-bottom: .3rem; font-weight: 650; }
+    .description, .metadata, #status { color: #b5a8c8; font-size: .9rem; }
+    .players { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: .5rem 0; }
+    audio { width: 100%; display: block; margin: .3rem 0; }
+    .reaction { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .5rem; }
+    label { display: block; }
+    #mode { color: #ffc868; }
+    details { padding-bottom: 1rem; }
+    summary { cursor: pointer; padding: .3rem 0; }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+    @media (max-width: 600px) { .players { grid-template-columns: 1fr; gap: .3rem; } body { padding: .6rem; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>CIRCUIT</h1>
+    <p>Three breath roles share a root while an invented surrounding ensemble moves through asymmetric canyon paths. Listen for coordination between formation, movement, playing and replies.</p>
+    <p>Each pair compares the physical source level (<strong>RAW</strong>) with the shared audition loudness (<strong>MATCHED</strong>). RAW files keep their original gain. Use MATCHED when judging changes in tone and timing; normalization can hide changes in source energy.</p>
+    <p>HOLD returns the settled procession without its opening gesture. Repeat those clips and listen for broken clapper pairs, cut syllables, timing jumps, clicks or pumping. The diagnostic files report requested and actual clock rates.</p>
+    <p id="mode"></p>
+    <nav id="navigation" aria-label="Audition sections"></nav>
+  </header>
+  <div class="toolbar">
+    <label><input id="repeat" type="checkbox"> Repeat clips</label>
+    <button id="stop" type="button">Stop audio</button>
+    <a href="manifest.json">Manifest</a>
+    <span id="status" role="status">Owner listening verdict pending.</span>
+  </div>
+  <div id="sections"></div>
+  <section>
+    <h2>Owner verdict</h2>
+    <p>Numerical checks establish bounded renders and routing. They cannot decide whether this feels like one coordinated ensemble. Describe what works and which clips need changes.</p>
+    <label for="verdict">Trio identity, note stability, mono movement, playing independence, returned answers, vocal gestures, controls and loop timing</label>
+    <textarea id="verdict" placeholder="Record headphones/speakers and browser, then the clips and changes you heard."></textarea>
+    <button id="save" type="button">Download verdict JSON</button>
+    <p class="metadata">Clip choices and notes stay in this browser when local storage is available. Download the verdict to share it.</p>
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const manifest = /* CIRCUIT_MANIFEST */null;
+  const storageKey = 'circuit-audition:v1:' + (manifest.quick ? 'quick' : 'full');
+  const state = { formatVersion: 1, engine: 'CIRCUIT', quick: manifest.quick, clips: {}, verdict: '' };
+  const status = document.getElementById('status');
+  let currentAudio = null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+    if (saved && saved.clips && typeof saved.verdict === 'string') {
+      state.clips = saved.clips;
+      state.verdict = saved.verdict;
+    }
+  } catch (_) { /* Keep a usable page when storage is unavailable. */ }
+  function persist() {
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); status.textContent = 'Draft saved in this browser.'; }
+    catch (_) { status.textContent = 'Draft held in this page. Download before closing.'; }
+  }
+  function node(tag, text, cls) {
+    const result = document.createElement(tag);
+    if (text !== undefined) result.textContent = text;
+    if (cls) result.className = cls;
+    return result;
+  }
+  function player(url, caption) {
+    const box = node('div');
+    const label = node('span', caption);
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.preload = 'none';
+    audio.src = url;
+    audio.setAttribute('aria-label', caption);
+    audio.addEventListener('play', () => {
+      if (currentAudio && currentAudio !== audio) currentAudio.pause();
+      currentAudio = audio;
+      audio.loop = document.getElementById('repeat').checked;
+    });
+    const download = node('a', 'Download WAV');
+    download.href = url;
+    download.download = '';
+    box.append(label, audio, download);
+    return box;
+  }
+  document.getElementById('mode').textContent = manifest.quick
+    ? 'Development smoke pack: ' + manifest.variants + ' variants. Run the full generator for all voices, sweeps, grids, presets and kit.'
+    : 'Full listening matrix: ' + manifest.variants + ' variants. Owner acceptance is pending.';
+  manifest.sections.forEach(section => {
+    const card = node('section');
+    card.id = section.id;
+    card.append(node('h2', section.title), node('p', section.description));
+    const link = node('a', section.title);
+    link.href = '#' + section.id;
+    document.getElementById('navigation').append(link);
+    section.groups.forEach(group => {
+      const details = document.createElement('details');
+      details.open = section.id === 'DEFAULTS';
+      details.append(node('summary', group.label + ' (' + group.clips.length + ')'));
+      group.clips.forEach(clip => {
+        const item = node('div', undefined, 'clip');
+        item.append(node('div', clip.name, 'clip-name'), node('div', clip.description, 'description'));
+        const players = node('div', undefined, 'players');
+        players.append(player(clip.raw, clip.name + ' / RAW'), player(clip.matched, clip.name + ' / MATCHED'));
+        item.append(players);
+        const metadata = node('div', clip.voice + ' · ' + clip.seconds.toFixed(2) + ' s · ' + clip.renderMs.toFixed(0) + ' ms render · ' + clip.classification + ' · ', 'metadata');
+        const diagnostics = node('a', 'Diagnostics');
+        diagnostics.href = clip.diagnostics;
+        metadata.append(diagnostics);
+        item.append(metadata);
+        const key = section.id + '/' + clip.id;
+        const reaction = node('div', undefined, 'reaction');
+        const label = node('label', 'Verdict for ' + clip.name);
+        const choice = document.createElement('select');
+        choice.id = 'choice-' + key.replace(/[^a-z0-9]/gi, '-');
+        label.htmlFor = choice.id;
+        ['', 'keep', 'needs-change', 'cut'].forEach(value => {
+          const option = node('option', value ? value.replace('-', ' ') : 'Choose…');
+          option.value = value;
+          choice.append(option);
+        });
+        choice.value = state.clips[key] || '';
+        choice.addEventListener('change', () => { state.clips[key] = choice.value; persist(); });
+        reaction.append(label, choice);
+        item.append(reaction);
+        details.append(item);
+      });
+      card.append(details);
+    });
+    document.getElementById('sections').append(card);
+  });
+  document.getElementById('repeat').addEventListener('change', event => {
+    document.querySelectorAll('audio').forEach(audio => { audio.loop = event.target.checked; });
+  });
+  document.getElementById('stop').addEventListener('click', () => {
+    document.querySelectorAll('audio').forEach(audio => { audio.pause(); audio.currentTime = 0; });
+  });
+  const verdict = document.getElementById('verdict');
+  verdict.value = state.verdict;
+  verdict.addEventListener('input', () => { state.verdict = verdict.value; persist(); });
+  document.getElementById('save').addEventListener('click', () => {
+    state.verdict = verdict.value;
+    persist();
+    const result = Object.assign({}, state, { savedAt: new Date().toISOString(), userAgent: navigator.userAgent });
+    const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2) + '\n'], { type: 'application/json' }));
+    const download = node('a');
+    download.href = url;
+    download.download = 'circuit-' + (manifest.quick ? 'quick-' : '') + 'verdict.json';
+    document.body.append(download);
+    download.click();
+    download.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    status.textContent = 'Verdict downloaded.';
+  });
+})();
+</script>
+</body>
+</html>
