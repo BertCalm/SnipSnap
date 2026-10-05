@@ -1,6 +1,8 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonException
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
@@ -18,6 +20,7 @@ import java.io.File
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -58,6 +61,30 @@ class UserPresetsTest {
         assertEquals(UserPresets.Check.Replaces("MY KICK"), UserPresets.check("my kick", "THUMP", "KICK", mine))
         assertEquals(UserPresets.Check.Fresh("MY KICK"), UserPresets.check("my kick", "THUMP", "SNARE", mine), "yours are per voice too")
         assertEquals("HAT CLOSED 2", UserPresets.normalize("  hat\tclosed   2 "))
+    }
+
+    @Test
+    fun `title-case cistern factory names reserve their normalized saved names`() {
+        val factory = Presets.byName("CISTERN", "FIRST", "First Drop") as CisternPatch
+        assertEquals(null, Presets.byName("CISTERN", "FIRST", "FIRST DROP"), "factory lookup keeps its exact-label contract")
+        for (raw in listOf("First Drop", "FIRST DROP", " first\t drop ")) {
+            assertEquals(UserPresets.Check.Factory("FIRST DROP"), UserPresets.check(raw, "CISTERN", "FIRST", emptyList()))
+        }
+        assertEquals(UserPresets.Check.Fresh("FIRST DROP"), UserPresets.check("First Drop", "CISTERN", "DRIP", emptyList()), "factory names remain per voice")
+
+        val root = shelf()
+        try {
+            val own = UserPresets.save(root, factory.copy(name = "MY SURFACE"), 1L)
+            val before = UserPresets.file(root).readText()
+            val refusal = assertFailsWith<IllegalArgumentException> {
+                UserPresets.save(root, factory.copy(name = "FIRST DROP"), 2L)
+            }
+            assertTrue("the factory already has FIRST DROP" in refusal.message.orEmpty(), "the normalized factory collision is the refusal")
+            assertEquals(before, UserPresets.file(root).readText(), "a refused duplicate leaves the existing store unchanged")
+            assertEquals(listOf(own), UserPresets.read(root))
+        } finally {
+            root.deleteRecursively()
+        }
     }
 
     @Test
@@ -107,6 +134,7 @@ class UserPresetsTest {
                 "VOX" to VoxVoice.entries.map { it.name }, "PLUCK" to PluckVoice.entries.map { it.name },
                 "TONEWHEEL" to TonewheelVoice.entries.map { it.name }, "FATHOM" to FathomVoice.entries.map { it.name },
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
+                "CISTERN" to CisternVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -155,6 +183,30 @@ class UserPresetsTest {
         val rendered = UserPresets.renderAll(two)
         assertTrue(rendered.startsWith("ThumpPresets.kt\n  p(ThumpVoice.KICK, \"MY KICK\", "), rendered)
         assertTrue("\n  p(ThumpVoice.SNARE, \"MY KICK\", " in rendered, rendered)
+    }
+
+    @Test
+    fun `a saved cistern roster line retains a custom note and strike velocity`() {
+        val root = shelf()
+        try {
+            val source = CisternPatch(
+                "LOW SURFACE", CisternVoice.POOL,
+                linkedMapOf("DROP" to 0.73f, "DRAIN" to 0.21f),
+                midi = 36, velocity = 0.3f,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "the shelf retains state outside the macros")
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(CisternVoice.POOL, \"LOW SURFACE\", \"DROP\" to 0.73f, \"DRAIN\" to 0.21f).copy(midi = 36, velocity = 0.3f),",
+                line,
+                "the pasteable factory line reconstructs the saved sound, including its non-default note and energy",
+            )
+            assertEquals("CisternPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
     }
 
     @Test

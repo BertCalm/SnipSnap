@@ -83,6 +83,10 @@ object Presets {
             val v = FlotillaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             FlotillaPresets.forVoice(v)
         }
+        CisternPatch.ENGINE -> {
+            val v = CisternVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CisternPresets.forVoice(v)
+        }
         TremorPatch.ENGINE -> {
             val v = TremorVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TremorPresets.forVoice(v)
@@ -115,7 +119,7 @@ object Presets {
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() +
+            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all()
 }

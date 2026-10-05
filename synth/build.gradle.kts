@@ -516,3 +516,13 @@ tasks.register<JavaExec>("generateFlotillaAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/flotilla-audition")
 }
+
+/** Render CISTERN's raw/matched listening matrix and diagnostics under testkit/cistern-audition/. */
+tasks.register<JavaExec>("generateCisternAudition") {
+    group = "distribution"
+    description = "Render the CISTERN raw/matched clips, causal diagnostics, manifest and local listening page under testkit/cistern-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CisternAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/cistern-audition")
+}

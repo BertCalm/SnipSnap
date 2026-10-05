@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cistern · listening audition</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101719; color: #e0eeee; }
+  body { max-width: 1080px; margin: auto; padding: 24px; }
+  h1 { font-size: 2.4rem; margin-bottom: 8px; font-weight: 550; }
+  h2 { margin: 32px 0 8px; font-size: 1.65rem; }
+  h3 { margin: 24px 0 12px; font-weight: 500; }
+  p { line-height: 1.55; max-width: 800px; color: #b9cece; }
+  a { color: #8de0d1; }
+  button, select, input, textarea { font: inherit; }
+  button, select { background: #213235; color: #e0eeee; border: 1px solid #486165; border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+  button:hover, button:focus-visible { border-color: #8de0d1; }
+  input[type=search], textarea { background: #192426; color: #e0eeee; border: 1px solid #486165; border-radius: 8px; padding: 10px; }
+  input[type=search] { min-width: 220px; }
+  textarea { display: block; width: 100%; box-sizing: border-box; margin: 10px 0; min-height: 96px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .player { position: sticky; top: 0; padding: 14px 0; background: #101719f2; z-index: 1; border-bottom: 1px solid #31494d; }
+  audio { width: 100%; margin-top: 8px; }
+  #now { margin: 0; min-height: 1.5em; }
+  .clips { display: grid; grid-template-columns: repeat(auto-fit,minmax(270px,1fr)); gap: 12px; }
+  article { background: #192426; border: 1px solid #31494d; border-radius: 12px; padding: 16px; }
+  article.playing { border-color: #8de0d1; }
+  article h4 { margin: 0 0 8px; font-size: 1rem; }
+  article p { margin: 8px 0 12px; font-size: .9rem; }
+  .meta { color: #8fa9aa; font-size: .8rem; }
+  .plays { display: flex; gap: 8px; flex-wrap: wrap; }
+  details { font-size: .82rem; color: #a8c2c2; margin-top: 12px; }
+  summary { cursor: pointer; }
+  dl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+  dt, dd { margin: 0; }
+  dd { overflow-wrap: anywhere; }
+  [hidden] { display: none !important; }
+  small { color: #8fa9aa; }
+  @media(max-width: 480px) { body { padding: 16px; } h1 { font-size: 2rem; } select,input[type=search] { width: 100%; } }
+</style>
+<header>
+  <small>SNIPSNAP · PROVISIONAL ENGINE · LISTENING PENDING</small>
+  <h1>Cistern</h1>
+  <p>An elastic strike brings down the droplets that reshape its own surface. Listen for the delayed answers, accumulating weight, and draining recovery. Every gesture has a raw version and a version matched to the other clips' loudness. The raw versions preserve level differences and may be quiet.</p>
+  <p>HOLD clips contain the settled powered circulation cycle and omit the initiating strike. Use Repeat to hear the wrap. The model, voice characters and preset names await your listening verdict.</p>
+  <div class="controls">
+    <label for="section">Listen to</label>
+    <select id="section"></select>
+    <input id="search" type="search" aria-label="Filter clips" placeholder="Filter names or controls">
+    <button id="export" type="button">Export listening notes</button>
+  </div>
+</header>
+<div class="player">
+  <div class="controls"><p id="now" aria-live="polite">Choose a raw or matched clip.</p><label><input id="repeat" type="checkbox"> Repeat</label></div>
+  <audio id="audio" controls preload="none"></audio>
+</div>
+<main id="content"></main>
+<footer><p id="totals"></p><p><a href="manifest.json">Download the clip manifest</a>. Listening notes are saved in this browser and can be exported as JSON.</p></footer>
+<script id="manifest" type="application/json">__CISTERN_MANIFEST__</script>
+<script>
+(() => {
+  'use strict';
+  const manifest = JSON.parse(document.getElementById('manifest').textContent);
+  const content = document.getElementById('content');
+  const chooser = document.getElementById('section');
+  const search = document.getElementById('search');
+  const audio = document.getElementById('audio');
+  const repeat = document.getElementById('repeat');
+  const notesKey = 'snipsnap_cistern_v1_listening';
+  let notes = {};
+  try { notes = JSON.parse(localStorage.getItem(notesKey) || '{}'); } catch (_) { /* Notes remain usable in memory. */ }
+  let playingCard = null;
+  function element(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+  function number(n, places = 3) { return Number(n).toFixed(places); }
+  function metric(dl, name, value) { dl.append(element('dt', name), element('dd', value)); }
+  function play(clip, mode, card) {
+    if (playingCard) playingCard.classList.remove('playing');
+    playingCard = card;
+    card.classList.add('playing');
+    audio.src = clip[mode];
+    audio.loop = repeat.checked;
+    document.getElementById('now').textContent = `${clip.name} · ${mode}${clip.loop ? ' · settled HOLD' : ''}`;
+    audio.play().catch(() => { document.getElementById('now').textContent += ' · press Play on the audio player'; });
+  }
+  function clipCard(clip) {
+    const card = element('article');
+    card.dataset.filter = [clip.name, clip.description, clip.voice, ...Object.entries(clip.macros).map(([name, value]) => `${name} ${value}`)].join(' ').toLowerCase();
+    card.append(element('h4', clip.name));
+    card.append(element('div', `${clip.voice} · MIDI ${clip.midi} · velocity ${clip.velocity}${clip.loop ? ' · HOLD loop' : ''}`, 'meta'));
+    card.append(element('p', clip.description));
+    const buttons = element('div', undefined, 'plays');
+    for (const mode of ['raw', 'matched']) {
+      const button = element('button', mode === 'raw' ? 'Play raw' : 'Play matched');
+      button.type = 'button';
+      button.addEventListener('click', () => play(clip, mode, card));
+      buttons.append(button);
+    }
+    card.append(buttons);
+    const details = element('details');
+    details.append(element('summary', 'Controls and measurements'));
+    const dl = element('dl');
+    for (const [name, value] of Object.entries(clip.macros)) metric(dl, name, number(value, 2));
+    const m = clip.metrics;
+    metric(dl, 'Duration', `${number(m.durationSeconds)} s`);
+    metric(dl, 'Raw peak / RMS', `${number(m.raw.peak, 5)} / ${number(m.raw.rms, 5)}`);
+    metric(dl, 'Raw loudness / DC', `${number(m.raw.loudness, 5)} / ${Number(m.raw.dc).toExponential(2)}`);
+    metric(dl, 'Matched peak / loudness', `${number(m.matched.peak, 5)} / ${number(m.matched.loudness, 5)}`);
+    metric(dl, 'Releases / landings', `${m.releases} / ${m.landings} (${m.slots} slots)`);
+    metric(dl, 'Secondary releases', String(m.secondaryReleases));
+    metric(dl, 'Maximum wet load', number(m.maxLoad, 4));
+    metric(dl, 'Inventory error', Number(m.maxInventoryError).toExponential(2));
+    metric(dl, 'Final / maximum energy', `${Number(m.finalEnergy).toExponential(2)} / ${Number(m.maxEnergy).toExponential(2)}`);
+    metric(dl, 'Non-finite recoveries', String(m.nonFiniteRecoveries));
+    metric(dl, 'Pending landings at end', String(m.pendingLandings));
+    metric(dl, 'Render / audio buffers', `${number(m.renderMillis, 1)} ms / ${number(m.bufferBytes / 1048576, 2)} MiB`);
+    if (m.loopReport) {
+      const loop = m.loopReport;
+      metric(dl, 'Period / preroll cycles', `${number(loop.periodSeconds)} s / ${loop.iterations}`);
+      metric(dl, 'Complete state converged', String(loop.converged));
+      metric(dl, 'Independent cycle seam', Number(loop.independentCycleSeam).toExponential(2));
+      metric(dl, 'Raw PCM wrap step / slope ratios', `${number(loop.rawBoundary.stepRatio)} / ${number(loop.rawBoundary.slopeRatio)}`);
+      metric(dl, 'Matched PCM wrap step / slope ratios', `${number(loop.matchedBoundary.stepRatio)} / ${number(loop.matchedBoundary.slopeRatio)}`);
+      metric(dl, 'Maximum boundary ratio', String(loop.boundaryRatioLimit));
+      metric(dl, 'Audio / acoustic state difference', `${Number(loop.periodDiff).toExponential(2)} / ${Number(loop.stateDiff).toExponential(2)}`);
+      metric(dl, 'Material state difference', Number(loop.materialDiff).toExponential(2));
+      metric(dl, 'Event sequence difference', Number(loop.eventDiff).toExponential(2));
+      metric(dl, 'Maximum cycle difference', Number(loop.cycleDifferenceLimit).toExponential(2));
+      metric(dl, 'Relative audio difference', Number(loop.relativePeriodDiff).toExponential(2));
+      metric(dl, 'Maximum relative audio difference', Number(loop.relativeCycleDifferenceLimit).toExponential(2));
+      metric(dl, 'Carried boundary step / slope error', `${Number(loop.boundaryStepError).toExponential(2)} / ${Number(loop.boundarySlopeError).toExponential(2)}`);
+      metric(dl, 'Maximum carried boundary error', Number(loop.carriedBoundaryErrorLimit).toExponential(2));
+      metric(dl, 'Audio seam crossfade', `${loop.crossfadeSamples} samples`);
+      metric(dl, 'Landings per period', String(loop.eventsPerPeriod));
+      metric(dl, 'Pump delay / capacity', `${number(loop.pumpDelay)} s / ${number(loop.pumpCapacity, 4)}`);
+    }
+    details.append(dl);
+    if (clip.diagnostics) {
+      const link = element('a', 'Event lineage and liquid traces');
+      link.href = clip.diagnostics;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      details.append(link);
+    }
+    card.append(details);
+    return card;
+  }
+  function filter() {
+    const query = search.value.trim().toLowerCase();
+    for (const card of content.querySelectorAll('article')) card.hidden = query !== '' && !card.dataset.filter.includes(query);
+    for (const group of content.querySelectorAll('.group')) group.hidden = !Array.from(group.querySelectorAll('article')).some(card => !card.hidden);
+  }
+  function build() {
+    const section = manifest.sections.find(s => s.id === chooser.value);
+    content.replaceChildren();
+    content.append(element('h2', section.display), element('p', section.body));
+    for (const group of section.groups) {
+      const wrapper = element('section', undefined, 'group');
+      wrapper.append(element('h3', group.label));
+      const clips = element('div', undefined, 'clips');
+      group.clips.forEach(clip => clips.append(clipCard(clip)));
+      wrapper.append(clips);
+      content.append(wrapper);
+    }
+    const label = element('label', 'Your listening notes');
+    label.htmlFor = 'notes';
+    const textarea = element('textarea');
+    textarea.id = 'notes';
+    textarea.placeholder = 'What changed, what did you hear, and what should be kept or revised?';
+    textarea.value = notes[section.id] || '';
+    textarea.addEventListener('input', () => {
+      notes[section.id] = textarea.value;
+      try { localStorage.setItem(notesKey, JSON.stringify(notes)); } catch (_) { /* Export still works. */ }
+    });
+    content.append(label, textarea);
+    filter();
+  }
+  for (const section of manifest.sections) {
+    const option = element('option', section.display);
+    option.value = section.id;
+    chooser.append(option);
+  }
+  chooser.addEventListener('change', build);
+  search.addEventListener('input', filter);
+  repeat.addEventListener('change', () => { audio.loop = repeat.checked; });
+  document.getElementById('export').addEventListener('click', () => {
+    const body = JSON.stringify({engine: 'CISTERN', model: 1, savedAt: new Date().toISOString(), notes}, null, 2);
+    const url = URL.createObjectURL(new Blob([body], {type: 'application/json'}));
+    const link = element('a');
+    link.href = url;
+    link.download = 'cistern-listening-notes.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  document.getElementById('totals').textContent = `${manifest.gestures} gestures · ${manifest.wavFiles} 24-bit WAVs · dry mono at 44.1 kHz. Render timing and buffer sizes are included for review.`;
+  build();
+})();
+</script>
+</html>

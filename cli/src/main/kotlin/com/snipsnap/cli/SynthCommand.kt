@@ -10,6 +10,10 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.synth.Cistern
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.Flotilla
+import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
@@ -41,13 +45,16 @@ import java.util.Locale
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
+ *
+ * `--midi N` and `--velocity 0..1` (CISTERN and FLOTILLA only) override
+ * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
             boolean = setOf("--all", "--instrument", "--drone"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -60,14 +67,31 @@ object SynthCommand {
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
 
         val instrument = opts.has("--instrument")
+        val drone = opts.has("--drone")
+        val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
+        val noteRange = if (noteFlags.isEmpty()) null else {
+            if (instrument || drone) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            when (engine) {
+                CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
+                FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN and FLOTILLA, got $engine")
+            }
+        }
+        val midiOverride = opts["--midi"]?.let { raw ->
+            raw.toIntOrNull()?.takeIf { it in noteRange!! }
+                ?: throw CliError("--midi for $engine is ${noteRange!!.first}..${noteRange.last}, got '$raw'")
+        }
+        val velocityOverride = opts["--velocity"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
+                ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
+        }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine != "RESIN") throw CliError("only RESIN can hold a note yet - $engine renders one-shots; try snipsnap synth RESIN BRASS --instrument")
+            if (engine != "RESIN") throw CliError("only RESIN can make a held instrument yet - $engine renders pads; try snipsnap synth RESIN BRASS --instrument")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
         }
-        val drone = opts.has("--drone")
         val droneFlags = listOf("--root", "--motion", "--rate", "--bpm", "--bars", "--loop").filter { opts[it] != null }
         if (!drone && droneFlags.isNotEmpty()) {
             throw CliError("${droneFlags.joinToString()} shape a drone - add --drone")
@@ -82,7 +106,7 @@ object SynthCommand {
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
 
-        val chosen: List<Patch> = when {
+        val chosen: List<Patch> = (when {
             opts.has("--all") -> presets
             opts["--preset"] != null -> {
                 val n = opts["--preset"]!!.toIntOrNull()
@@ -91,6 +115,12 @@ object SynthCommand {
                 listOf(presets[n - 1])
             }
             else -> listOf(presets.first())
+        }).map { patch ->
+            if (noteFlags.isEmpty()) patch else when (patch) {
+                is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                else -> patch
+            }
         }
 
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)

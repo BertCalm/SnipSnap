@@ -454,6 +454,34 @@ object SynthKits {
     }
 
     /**
+     * FIRST walks C minor pentatonic on A01–A08. The other pads explore
+     * delayed drops, cascades, retained liquid, drainage and the held circle.
+     * Every recipe is dry so the changing membrane supplies its own tail.
+     */
+    fun cistern(): List<ArrangedPad?> {
+        val walk = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17)
+        fun note(n: Int, semitone: Int) = CisternPatch(
+            "Surface $n", CisternVoice.FIRST, Cistern.defaults(CisternVoice.FIRST),
+            midi = Cistern.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: CisternVoice, name: String) =
+            CisternPresets.forVoice(voice).first { it.name == name }
+                .let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, walk[0]), note(2, walk[1]), note(3, walk[2]), note(4, walk[3]),
+            note(5, walk[4]), note(6, walk[5]), note(7, walk[6]), note(8, walk[7]),
+            preset(CisternVoice.DRIP, "Hanging Rain"),
+            preset(CisternVoice.CASCADE, "Wide Cascade"),
+            preset(CisternVoice.CASCADE, "Heavy Landing"),
+            preset(CisternVoice.POOL, "Wet Basin"),
+            preset(CisternVoice.RIPPLE, "Thin Ripple"),
+            preset(CisternVoice.POOL, "Slow Drain"),
+            preset(CisternVoice.RECOVERY, "Clear Return"),
+            preset(CisternVoice.RECOVERY, "Replenished Circle"),
+        )
+    }
+
+    /**
      * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
      * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
      * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).
