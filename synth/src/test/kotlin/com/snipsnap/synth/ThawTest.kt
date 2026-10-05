@@ -375,6 +375,9 @@ class ThawTest {
         } + listOf(
             ThawVoice.MELT to mapOf("HEAT" to 0.7f, "FREEZE" to 0.5f),
             ThawVoice.FROST to mapOf("HEAT" to 0.75f, "FREEZE" to 0.9f, "CHANNELS" to 0.8f),
+            ThawVoice.MELT to mapOf("HEAT" to 1f, "FREEZE" to 0f, "CHANNELS" to 1f),
+            ThawVoice.FROST to mapOf("CONTACT" to 1f, "HEAT" to 1f, "FREEZE" to 1f, "CHANNELS" to 1f),
+            ThawVoice.CHANNEL to mapOf("CONTACT" to 1f, "HEAT" to 1f, "FREEZE" to 1f, "CHANNELS" to 1f, "THICKNESS" to 0f),
         )
         for ((voice, macros) in cases) assertHeld(voice, macros)
     }

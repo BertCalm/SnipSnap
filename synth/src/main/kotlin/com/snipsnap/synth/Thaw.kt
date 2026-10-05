@@ -276,7 +276,7 @@ object Thaw {
                 // Broad cold engagement excites bending modes; the narrower sustained
                 // footprint leaves their response beneath the dominant pitch capture.
                 b[runner][k] = configuration.footprint[j] * if (j == 0) 1.0 else
-                    (1 - .35 * thick)
+                    (1 - .35 * thick) * if (held) .65 else 1.0
                 strike[runner][j] = configuration.strike[j] * if (j == 0) 1.0 else (1 - .30 * thick)
             }
             for (p in 0 until PLATES) for (j in 0 until MODES) {
@@ -340,6 +340,14 @@ object Thaw {
                 refractory[p] = max(0.0, refractory[p] - controlDt)
                 stress[p] = stress[p].coerceIn(0.0, .45)
                 val threshold = .055 + .035 * thick
+                // HOLD's compliant support lets a steady freezing film relax before
+                // it repeatedly fractures. Bound the relaxation by the maximum
+                // channel source so sustained cooling settles below the release
+                // threshold; a transient phase change can still spend stored stress.
+                val relaxedSupport = if (held) max(15.0,
+                    2 * (.22 + 2.6 * freeze) * capacity * configuration.constraint *
+                        (.35 + channels) / threshold) * driveEnvelope(time, 0) else 0.0
+                if (held) stress[p] *= exp(-relaxedSupport * controlDt)
                 if (stress[p] >= threshold && refractory[p] == 0.0) {
                     // The norm of this velocity impulse is limited by the stored stress energy.
                     pulses[p] += configuration.fracture * sqrt(stress[p]) * (.3 + .7 * freeze)
@@ -349,8 +357,7 @@ object Thaw {
                     lastEvents++
                 }
                 // Constraint can relax silently as well; neither dry coldness nor idle noise creates stress.
-                val relaxedSupport = if (held) 15 * driveEnvelope(time, 0) else 0.0
-                stress[p] *= exp(-(.45 + relaxedSupport) * controlDt)
+                stress[p] *= exp(-.45 * controlDt)
             }
             if (probe.channelTransfer && probe.thermal && channels > 0.0) {
                 for (p in 0 until PLATES) {
@@ -787,7 +794,7 @@ object Thaw {
         var seam = Double.POSITIVE_INFINITY
         var cycles = 0
         var groupErrors = emptyMap<String, Double>()
-        for (cycle in 1..10) {
+        for (cycle in 1..14) {
             val start = engine.rootCrossings
             val data = FloatArray((2.8 * RATE).toInt())
             var length = 0

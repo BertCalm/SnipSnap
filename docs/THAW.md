@@ -82,9 +82,13 @@ material cycle. Its slow clock follows plate phase, and preroll compares modal,
 contact, thermal, liquid, channel, stress, transport and coefficient states in
 separate groups. Export requires both compatible state and
 `Keys.seamError < 1e-3`; a small seam alone cannot certify a loop.
-The responding held contact stays below independent pitch capture, letting
-upper modes settle into the dominant plate's forced response. Modal coordinates
-are interpolated to the same root crossing for the state comparison, removing
+Held contact narrows its footprint, and the responding held contact stays
+below independent pitch capture. Upper modes settle into the dominant plate's
+forced response, with bounded extra preroll for slowly equilibrating wet states.
+The held support relaxes steady freezing stress below the release threshold;
+its rate is bounded from channel capacity and cooling, while transient phase
+changes can still release stored stress. Modal coordinates are interpolated
+to the same root crossing for the state comparison, removing
 sub-sample timing differences. Candidate cuts also match actual sample phase;
 the exported seam is measured on the actual audio samples. A loop must contain
 nonzero raw audio; rendering rejects a loop that fails certification.
