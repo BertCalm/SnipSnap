@@ -389,6 +389,16 @@ tasks.register<JavaExec>("generateMercuryKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the AEROSTAT audition clips, manifest and page under testkit/aerostat-audition/. See AerostatAuditionGenerator. */
+tasks.register<JavaExec>("generateAerostatAudition") {
+    group = "distribution"
+    description = "Render the AEROSTAT audition clips, manifest and listening page under testkit/aerostat-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AerostatAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/aerostat-audition")
+}
+
 /** Render the MERCURY audition clips, manifest and page under testkit/mercury-audition/. See MercuryAuditionGenerator. */
 tasks.register<JavaExec>("generateMercuryAudition") {
     group = "distribution"
@@ -486,4 +496,23 @@ tasks.register<JavaExec>("generateValveAudition") {
     mainClass.set("com.snipsnap.synth.ValveAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/valve-audition")
+}
+
+tasks.register<JavaExec>("generateFlotillaKit") {
+    group = "distribution"
+    description = "Render the FLOTILLA acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlotillaKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the FLOTILLA audition clips, manifest and page under testkit/flotilla-audition/. See FlotillaAuditionGenerator. */
+tasks.register<JavaExec>("generateFlotillaAudition") {
+    group = "distribution"
+    description = "Render the FLOTILLA audition clips, manifest and listening page under testkit/flotilla-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlotillaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/flotilla-audition")
 }

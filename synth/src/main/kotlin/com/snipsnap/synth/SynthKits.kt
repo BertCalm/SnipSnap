@@ -396,6 +396,64 @@ object SynthKits {
     }
 
     /**
+     * The AEROSTAT acceptance kit. A01–A08 walk the minor pentatonic from C3 with
+     * every other knob at its default, so the row is the instrument before anyone
+     * touches it. A09–A13 are the five factory presets. A14 and A15 climb two
+     * more notes, and A16 is the held loop (the strike is not in that buffer).
+     * Every pad is dry: the whistle and the vessel are the engine, not a rack
+     * section. Filed by [Aerostat.drumClassFor], which is PERC or LOOP and never
+     * a drum class.
+     */
+    fun aerostat(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int, extra: Map<String, Float> = emptyMap()) = AerostatPatch(
+            "Float $n", AerostatVoice.FLOAT,
+            Aerostat.defaults(AerostatVoice.FLOAT) + mapOf("TUNE" to semitone / Aerostat.TUNE_SEMITONES.toFloat()) + extra,
+        ).let { pad(it, Aerostat.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = AerostatPresets.forVoice(AerostatVoice.FLOAT).first { it.name == name }
+            .let { pad(it, Aerostat.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("SOFT CATCH"), preset("TWIN PIPES"), preset("HEAVY ROTOR"), preset("DRIFTING STEAM"),
+            preset("HIGH ENVELOPE"),
+            note(9, 14),
+            note(10, 19),
+            note(11, 24, mapOf("HOLD" to 1f)),
+        )
+    }
+
+    /**
+     * The FLOTILLA kit: RIPPLE up the minor pentatonic from C4 on A01–A08, then eight presets
+     * that walk the rest of the idea (open wood, a large hull, crossing routes, the warm dome,
+     * a gentle drift, a dense gather, and the two held notes). Every pad is dry. The length rule
+     * files them LOOP. A drum program plays each pad once; the held pads' wrap is the audition's.
+     */
+    fun flotilla(): List<ArrangedPad?> {
+        val walk = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17)
+        fun note(n: Int, semi: Int) = FlotillaPatch(
+            "Wake $n",
+            FlotillaVoice.RIPPLE,
+            Flotilla.defaults(FlotillaVoice.RIPPLE),
+            midi = (60 + semi).coerceIn(Flotilla.MIDI_MIN, Flotilla.MIDI_MAX),
+        ).let { pad(it, Flotilla.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: FlotillaVoice, name: String) =
+            FlotillaPresets.forVoice(voice).first { it.name == name }
+                .let { pad(it, Flotilla.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, walk[0]), note(2, walk[1]), note(3, walk[2]), note(4, walk[3]),
+            note(5, walk[4]), note(6, walk[5]), note(7, walk[6]), note(8, walk[7]),
+            preset(FlotillaVoice.KNOCK, "Open Wood"),
+            preset(FlotillaVoice.HOLLOW, "Deep Cavity"),
+            preset(FlotillaVoice.CROSSWAVE, "Crossing Paths"),
+            preset(FlotillaVoice.DRIFT, "Warm Canopy"),
+            preset(FlotillaVoice.DRIFT, "Gentle Current"),
+            preset(FlotillaVoice.GATHER, "Gathered Vessels"),
+            preset(FlotillaVoice.DRIFT, "Held Sparse"),
+            preset(FlotillaVoice.GATHER, "Held Dense"),
+        )
+    }
+
+    /**
      * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
      * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
      * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).

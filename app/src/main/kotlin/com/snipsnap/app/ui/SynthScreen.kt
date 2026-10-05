@@ -150,6 +150,9 @@ import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.Vox
 import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
+import com.snipsnap.synth.Flotilla
+import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
@@ -1023,7 +1026,11 @@ fun SynthScreen(
                             // one seamless loop for the SURFACE, not a longer
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
-                            readout = if (engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name))) "LOOP" else null,
+                            readout = when {
+                                engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                else -> null
+                            },
                             onValueChange = { v -> updateMacro(spec.name, v) },
                         )
                     }
@@ -1853,9 +1860,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → FORK → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → FORK → FLOTILLA → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1872,6 +1879,7 @@ private enum class Engine {
         GLINT -> GlintVoice.entries
         SIREN -> SirenVoice.entries
         FORK -> ForkVoice.entries
+        FLOTILLA -> FlotillaVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1888,6 +1896,7 @@ private enum class Engine {
         GLINT -> Glint.macrosFor(voice as GlintVoice)
         SIREN -> Siren.macrosFor(voice as SirenVoice)
         FORK -> Fork.macrosFor(voice as ForkVoice)
+        FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1904,6 +1913,7 @@ private enum class Engine {
         GLINT -> Glint.defaults(voice as GlintVoice)
         SIREN -> Siren.defaults(voice as SirenVoice)
         FORK -> Fork.defaults(voice as ForkVoice)
+        FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1920,6 +1930,7 @@ private enum class Engine {
         GLINT -> Glint.scramble(voice as GlintVoice, random)
         SIREN -> Siren.scramble(voice as SirenVoice, random)
         FORK -> Fork.scramble(voice as ForkVoice, random)
+        FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1941,6 +1952,7 @@ private enum class Engine {
         GLINT -> Glint.render(voice as GlintVoice, macros)
         SIREN -> Siren.render(voice as SirenVoice, macros)
         FORK -> Fork.render(voice as ForkVoice, macros)
+        FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
     }
 
     /**
@@ -1963,6 +1975,7 @@ private enum class Engine {
         SIREN -> Siren.drumClassFor(voice as SirenVoice, macros)
         // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
+        FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -1979,6 +1992,7 @@ private enum class Engine {
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
+        FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
