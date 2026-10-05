@@ -75,6 +75,10 @@ object Presets {
             val v = MercuryVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MercuryPresets.forVoice(v)
         }
+        AerostatPatch.ENGINE -> {
+            val v = AerostatVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            AerostatPresets.forVoice(v)
+        }
         FlotillaPatch.ENGINE -> {
             val v = FlotillaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             FlotillaPresets.forVoice(v)
@@ -112,5 +116,6 @@ object Presets {
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() +
+            AerostatPresets.all() +
             TremorPresets.all()
 }

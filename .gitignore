@@ -98,6 +98,9 @@ testkit/arco-body-gate-key.json
 # The MERCURY audition clips, manifest and page, rendered by :synth:generateMercuryAudition
 # and published as the listening artifact; never committed.
 testkit/mercury-audition/
+# The AEROSTAT audition clips, manifest and page, rendered by :synth:generateAerostatAudition
+# and published as the listening artifact; never committed.
+testkit/aerostat-audition/
 # The GYRE audition clips, manifest and page, rendered by :synth:generateGyreAudition
 testkit/gyre-audition/
 

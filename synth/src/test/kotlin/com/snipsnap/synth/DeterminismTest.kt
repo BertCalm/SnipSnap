@@ -247,6 +247,22 @@ class DeterminismTest {
         }
     }
 
+    // AEROSTAT seeds its breath and contact from Dsp.seedFor. The rotor, the
+    // reservoir and the whistle are pure functions of that seed, so a recipe
+    // regenerates bit for bit, including the held loop.
+    @Test
+    fun `AEROSTAT is byte-identical across renders`() {
+        val shot = AerostatPatch("Canary", AerostatVoice.FLOAT, Aerostat.defaults(AerostatVoice.FLOAT))
+        assertContentEquals(shot.render().samples, shot.render().samples, "defaults")
+        val moved = AerostatPatch(
+            "Canary", AerostatVoice.FLOAT,
+            mapOf("TUNE" to 0.25f, "STRIKE" to 0.8f, "PRESSURE" to 0.7f, "INERTIA" to 0.2f, "RELEASE" to 0.6f, "LIFT" to 0.9f, "HOLD" to 0.3f),
+        )
+        assertContentEquals(moved.render().samples, moved.render().samples, "moved")
+        val held = AerostatPatch("Canary", AerostatVoice.FLOAT, Aerostat.defaults(AerostatVoice.FLOAT) + ("HOLD" to 1f))
+        assertContentEquals(held.render().samples, held.render().samples, "held")
+    }
+
     // MAGNET seeds its pluck burst from Dsp.seedFor per voice and note, and nothing else in the
     // render is random: a saved recipe must regenerate bit for bit.
     @Test
