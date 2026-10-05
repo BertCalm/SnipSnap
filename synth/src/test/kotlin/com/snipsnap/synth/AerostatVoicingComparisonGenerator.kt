@@ -27,6 +27,12 @@ object AerostatVoicingComparisonGenerator {
             Case("lift1", "C3 · Lift 1", "Touch and motion", base + ("LIFT" to 1f)),
             Case("release", "C3 · long release", "Release and hold", base + ("RELEASE" to 1f)),
             Case("steam", "Drifting Steam preset", "Release and hold", AerostatPresets.all().first { it.name == "DRIFTING STEAM" }.macros),
+            Case("pressure0", "C3 · Pressure 0", "Pressure and inertia", base + ("PRESSURE" to 0f)),
+            Case("pressure1", "C3 · Pressure 1", "Pressure and inertia", base + ("PRESSURE" to 1f)),
+            Case("inertia0", "C3 · Inertia 0", "Pressure and inertia", base + ("INERTIA" to 0f)),
+            Case("inertia1", "C3 · Inertia 1", "Pressure and inertia", base + ("INERTIA" to 1f)),
+            Case("release0", "C3 · Release 0", "Release and hold", base + ("RELEASE" to 0f)),
+            Case("strike1", "C3 · Strike 1", "Touch and motion", base + ("STRIKE" to 1f)),
             Case("held", "C3 · held loop (no opening strike)", "Release and hold", base + ("HOLD" to 1f)),
         )
         val json = cases.joinToString(",\n") { c ->

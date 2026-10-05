@@ -349,7 +349,7 @@ class AerostatTest {
             }
         }
         // Log magnitude interpolation avoids the systematic flat bias of
-        // interpolating Hann-window power (about 25 cents at C3).
+        // interpolating Hann-window power.
         val left = ln(mag(best - 1).coerceAtLeast(1e-30))
         val center = ln(mag(best).coerceAtLeast(1e-30))
         val right = ln(mag(best + 1).coerceAtLeast(1e-30))

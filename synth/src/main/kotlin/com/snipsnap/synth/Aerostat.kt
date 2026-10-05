@@ -476,6 +476,7 @@ object Aerostat {
         val strike = m.getValue("STRIKE").toDouble()
         val vel = velocity.coerceIn(0f, 1f).toDouble()
         val lift = m.getValue("LIFT").toDouble()
+        val pressure = m.getValue("PRESSURE").toDouble()
         val freq = frequencyFor(m.getValue("TUNE")).toDouble()
         val seed = Dsp.seedFor("AEROSTAT", midiFor(m.getValue("TUNE")), strikeBits(m), velocity)
         val noiseQ = Dsp.Noise(seed)
@@ -513,13 +514,18 @@ object Aerostat {
                 }
                 val tubeQ = tubes.sampleQuick(contact, dt)
                 val tubeH = tubes.sampleHeavy(contact, dt)
-                val radiation = lift * (1.0 - exp(-6.0 * height))
-                val breath = 0.18 + 0.24 * radiation
+                val radiation = lift * (1.0 - exp(-24.0 * height))
+                val breath = 0.12 + 0.65 * pressure + 0.70 * radiation
                 val wQ = quick.sample(flowQ, freq * ratio, puff, dt, noiseAmp = breath)
                 val wH = heavy.sample(flowH, freq * ratio * heavyRatio, puff, dt, noiseAmp = breath * 0.85)
                 // The tube is the knock. It has to be audible, and it has to lose
                 // to the whistle once the valve is open, or the note files as a tom.
-                val tubeScale = 0.78
+                // Modal excitation accumulates at the oversampled rate. Its
+                // raw knock used to dwarf flow by 8–9x during the catch; whole-
+                // sample peak levelling then hid both steam and its controls.
+                // Balance the branches before levelling, never normalize taps
+                // separately to choose their contribution to the full mix.
+                val tubeScale = 0.06
                 val mixed = when (tap) {
                     AerostatTap.TUBE -> (tubeQ + tubeH + tex) * tubeScale
                     AerostatTap.FLOW -> wQ + wH
@@ -527,7 +533,7 @@ object Aerostat {
                     AerostatTap.HEAVY -> tubeH * tubeScale + wH
                     AerostatTap.FULL -> (tubeQ + tubeH + tex) * tubeScale + wQ + wH
                 }
-                val open = (lift * (1.0 - exp(-6.0 * height))).coerceIn(0.0, 1.0)
+                val open = (lift * (1.0 - exp(-24.0 * height))).coerceIn(0.0, 1.0)
                 val cutoff = 650.0 + 8000.0 * open
                 val a = 1.0 - exp(-2.0 * PI * cutoff / internal)
                 lip += a * (mixed - lip)
@@ -617,7 +623,7 @@ object Aerostat {
         val airLowA = 1.0 - exp(-2.0 * PI * (1800.0 + 7.0 * fPlay) / internal)
         val airHighA = 1.0 - exp(-2.0 * PI * (220.0 + 1.2 * fPlay) / internal)
         var lip = 0.0
-        val open = (lift * (1.0 - exp(-6.0 * height))).coerceIn(0.0, 1.0)
+        val open = (lift * (1.0 - exp(-24.0 * height))).coerceIn(0.0, 1.0)
         val cutoff = 650.0 + 8000.0 * open
         val a = 1.0 - exp(-2.0 * PI * cutoff / internal)
         for (i in 0 until totalIn) {
@@ -627,7 +633,7 @@ object Aerostat {
             val wH = heavy.sample(flowH * 0.55, fPlay, puff = 0.0, dt, noiseAmp = 0.0, exact = true)
             airLow += airLowA * (airCycle[i % airCycle.size] - airLow)
             airHigh += airHighA * (airLow - airHigh)
-            val air = (airLow - airHigh) * (0.18 + 0.24 * open) * sqrt(flowQ + flowH)
+            val air = (airLow - airHigh) * (0.12 + 0.65 * pressure + 0.70 * open) * sqrt(flowQ + flowH)
             val mixed = (wQ + wH + air) * (0.85 + 0.15 * velocity.coerceIn(0f, 1f))
             lip += a * (mixed - lip)
             buf[i] = mixed * (0.62 + 0.38 * open) + lip * (0.38 * (1.0 - open))
