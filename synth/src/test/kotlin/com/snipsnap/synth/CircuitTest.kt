@@ -137,6 +137,18 @@ class CircuitTest {
         for (a in 0..2) for (b in a + 1..2) {
             assertTrue(shapeDifference(sources[a], sources[b]) > 1e-4, "tube $b is a scaled copy of tube $a")
         }
+        // Compare raw branches at one shared gain. Independently normalized solos
+        // made the original players seem audible despite being 25 dB below the bed.
+        val trio = FloatArray(sources.first().size) { i -> (0..2).sumOf { sources[it][i].toDouble() }.toFloat() }
+        val players = FloatArray(trio.size) { i -> (3..6).sumOf { sources[it][i].toDouble() }.toFloat() }
+        val from = Dsp.RATE / 5
+        val until = 3 * Dsp.RATE
+        val foreground = rms(players, from, until)
+        val backing = rms(trio, from, until)
+        assertTrue(foreground > 2 * backing, "VOICED breath bed masks its players: $backing vs $foreground RMS")
+        val root = Circuit.frequencyFor(m.getValue("TUNE")).toDouble()
+        assertTrue(tonePower(sources[2], 2 * root, from, until) > 4 * tonePower(sources[2], root, from, until),
+            "upper tube collapsed back to the anchor's root tone")
         val vocal = Circuit.inspect(voice, m).events.filter { it.source == 6 }
         assertTrue(vocal.isNotEmpty(), "the voiced configuration lost its gestures")
         assertTrue(vocal.map { it.kind }.distinct().size >= 2, "vocal diagnostics lost grunt or two-part gesture")
@@ -348,6 +360,17 @@ class CircuitTest {
             energy += a[i].toDouble() * a[i] + b[i].toDouble() * b[i]
         }
         return difference / energy.coerceAtLeast(1e-20)
+    }
+
+    private fun tonePower(samples: FloatArray, hz: Double, from: Int, until: Int): Double {
+        var real = 0.0
+        var imaginary = 0.0
+        for (i in from until minOf(until, samples.size)) {
+            val angle = 2 * kotlin.math.PI * hz * i / Dsp.RATE
+            real += samples[i] * kotlin.math.cos(angle)
+            imaginary += samples[i] * kotlin.math.sin(angle)
+        }
+        return real * real + imaginary * imaginary
     }
 
     /** Remove the best-fit scalar so an amplitude-only change cannot pass. */

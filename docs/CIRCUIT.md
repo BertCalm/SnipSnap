@@ -6,10 +6,62 @@ stone rattle, paired wooden clapper, clay vessel and intermittent synthesized
 grunt/uh-huh gestures surround them. The instruments and performance rules are
 invented. The engine makes no claim to reproduce a real tradition.
 
-The implementation is a first listening candidate. Numerical checks and patch
-round-trips do not establish the owner's acceptance of its sound. In particular,
-the usefulness of mono movement, the balance of percussion and vocals, and the
-feeling of an ensemble listening to its surroundings still need listening.
+The owner rejected the initial audio: “It all sounds the same. The brrrr sound
+overpowered everything.” The revised implementation is a new listening candidate;
+owner acceptance is pending. Numerical checks and patch round-trips do not establish
+that its sound is useful. The balance of percussion and vocals, mono movement,
+and the feeling of an ensemble listening to its surroundings still need listening.
+
+## Listening revision
+
+The initial mix let the sustained central trio mask the instruments that give
+each configuration its identity. The revision substantially lowers central
+mix weights relative to the surrounding players. This changes their
+balance before the shared output loudness target is applied.
+
+The three tube roles now use distinct starting phases, fundamental/octave drive
+balances, modal gains and decay times. The anchor remains rooted; pulse and upper
+sources explicitly excite octave modes. Resonator losses also vary by voice,
+with wider upper resonances intended to let throat modulation reach the output.
+The pulse's continuous pressure floor is reduced, and the upper source has
+cadence-related pressure gestures. BREATH changes the relative pressure of the
+roles as well as source stiffness and color.
+
+Synthesized vocal gestures now favor their moving tract resonances over a
+plain chest tone. The chest sine contribution is reduced from .20 to .06,
+while the three tract-band weights increase from .50/.27/.11 to .80/.46/.25.
+Seed-derived pitch-bend amounts narrow from .012–.025 to .002–.006, keeping
+the coordination gestures closer to the requested root without removing their
+two-part envelopes, breath onset or deterministic variation.
+
+Each voice now selects a complementary eight-slot pattern for rattle, clapper,
+clay, vocals and tube accents. ANSWER additionally interpolates a cyclic breath
+pressure pattern with smooth transitions and deep reductions between its
+outgoing groups. These gaps follow the playing pattern; they are not dynamically
+aligned to every returning cue. The separate performer-listening paths and
+bounded reply scheduler still determine which returned accents produce gestures.
+
+Default-clip calibration measures the following changes from the rejected
+initial audio to the revised candidate:
+
+- VOICED's surrounding-player/trio RMS ratio changes from −24.53 dB to
+  +12.81 dB, using raw stems at one shared gain.
+- Across the six defaults, measured root-band power changes from
+  98.39–98.77% to 18.69–51.90%; inter-voice spectral cosine similarities
+  range from .630 to .969 for the revised audio.
+- Added ANSWER replies measure −5.08 dB relative to the full mix's body RMS.
+
+These values use 0.15–2.8 seconds of the default clips. Root-band power is the
+Welch spectral power within ±4 Hz of C3, divided by power from 20–10,000 Hz;
+the analysis uses Hann windows up to 16,384 samples. These measurements quantify
+the revised balance and spectral variety in that window. They do not establish
+perceived distinction, whole-matrix quality or owner acceptance.
+
+The [private Circuit audition](https://circuit-snipsnap-audition.bertcalm.chatgpt.site/#comparison)
+includes six before/revised pairs, one for each voice, alongside the full matrix.
+Each pair preserves the same macros and performer energy and uses the same
+matched listening target. The original examples retain the rejected audio;
+the revised examples are candidates for a new owner verdict.
 
 ## Host contract
 
@@ -73,7 +125,8 @@ another player. Replies have refractory intervals, an event budget of at most
 Disabling replies in a diagnostic retains canyon audio.
 
 The tube model is an abstract periodic pressure/lip source feeding stable
-lossy resonators, with different partials and articulation for the three roles.
+lossy resonators, with role-specific phases, fundamental/octave drive, partials
+and articulation, plus voice-specific losses.
 The upper tube has a subordinate band-limited throat modulation source that
 changes excitation pressure; it does not radiate an independent lead voice.
 It is a reduced model rather than a detailed lip-reed waveguide or a claim of
@@ -88,8 +141,10 @@ the shared band-limited decimator. Normal output uses
 ## Held clock approximation
 
 HOLD rounds the two clocks independently onto cycles that fit an approximately
-sixteen-second loop. PACE completes a whole eight-step pattern, preserving
-alternating grunt and uh-huh gestures. ORBIT 0 stays stationary; every requested
+sixteen-second loop. PACE completes whole eight-slot patterns, preserving their
+vocal sequence, upper pressure gestures and ANSWER's smooth breath gaps. An even
+number of root cycles also closes the subordinate half-root throat source.
+ORBIT 0 stays stationary; every requested
 nonzero orbit rounds to at least one whole turn per loop. The current
 .025–.125 Hz request range rounds to one or two turns, approximately .0625 or
 .125 Hz. Slow requested motion therefore speeds up to the nearest compatible
@@ -140,6 +195,14 @@ file conversion. Standard full mixes reject KICK, SNARE, CLAP, either HAT and
 TOM classifications. Source isolates and passive-decay diagnostics omit that
 guard so their individual roles can be heard.
 
+Separately matched source solos help identify instrument character, but they
+cannot establish ensemble balance: matching each branch independently makes a
+buried source sound foregrounded. The source-balance regression therefore sums
+raw trio stems and raw surrounding-player stems at one shared gain and compares
+their active-phrase energy. It also checks upper-tube octave content. These
+checks catch the previous sustained-root masking; they complement listening to
+the full mix and do not certify every voice's musical balance.
+
 The complete pack includes:
 
 - Every voice at defaults, plus C2/C3/C4 at velocities .25/.6/1.
@@ -179,25 +242,27 @@ after the requested pack finishes successfully.
 
 Run the repository's JVM checks with `./gradlew --no-daemon test`; host and
 phone checks remain subject to the repository's build setup. Preserve the
-owner's listening verdict alongside any measured results. No listening verdict
-has been supplied for this port.
+owner's listening verdict alongside any measured results. The initial revision
+was rejected; a verdict on the revised candidate remains pending.
 
 ## Build and runtime evidence
 
-The Circuit-enabled Android debug APK builds with JDK 17, Gradle 8.14.3,
+The initial-revision Circuit Android debug APK built with JDK 17, Gradle 8.14.3,
 AGP 8.7.3, Kotlin 2.0.21, API 35, NDK 27.2.12479018 and CMake 3.22.1.
 All four configured native ABIs are packaged. `apksigner verify --verbose`
 passes; the manifest targets API 35 with minimum API 29. This verifies assembly
 and signing; no emulator or physical phone run has been performed.
 
-Fresh desktop OpenJDK 17 JVMs also rendered default CONFLUENCE one-shots and
-HOLD loops successfully with both 128 MiB and 192 MiB maximum heaps. At 128 MiB,
+Fresh desktop OpenJDK 17 JVMs also rendered initial-revision default CONFLUENCE
+one-shots and HOLD loops successfully with both 128 MiB and 192 MiB maximum heaps. At 128 MiB,
 the 5.585-second phrase took 2.066 seconds and the 16.008-second held buffer took
 10.938 seconds under concurrent test load. Linux peak resident sizes were
 108.79 MiB and 181.03 MiB respectively; resident memory includes JVM native
 memory as well as heap. Every returned sample was finite. These probes cover
 the renderer alone; they do not establish Android ART or whole-app memory use,
 and 128 MiB is the lowest capacity tested, rather than a measured minimum.
+These assembly and runtime benchmarks describe the initial implementation;
+they are not measurements of the revised listening candidate.
 
 Anti-aliasing uses the shared 4× renderer and band-limited decimator within the
 C2–C4 register. A Circuit-specific residual-alias threshold or high-register

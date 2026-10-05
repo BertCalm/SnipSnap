@@ -186,13 +186,25 @@ object Circuit {
             val at = time + if (step == 0) 0.0 else (r.nextDouble() - .5) * .022
             if (at >= 0 && at < cutoff) base.add(Event(source, kind, at, velocity * energy * (.92 + .16 * r.nextDouble())))
         }
+        // Each configuration has a complementary eight-slot performance, rather than
+        // the same four-slot loop with different gains. Bits select playing slots;
+        // movement is still independent, and eight slots close the held phrase.
+        val pattern = when (voice) {
+            CircuitVoice.ROOT -> intArrayOf(0x55, 0x11, 0x44, 0x22, 0x55)
+            CircuitVoice.PROCESSION -> intArrayOf(0xff, 0x4d, 0x22, 0x88, 0x55)
+            CircuitVoice.ANSWER -> intArrayOf(0x33, 0x11, 0x44, 0x88, 0x11)
+            CircuitVoice.VOICED -> intArrayOf(0x55, 0x11, 0x44, 0xaa, 0x55)
+            CircuitVoice.EXPANSE -> intArrayOf(0x11, 0x22, 0x44, 0x88, 0x11)
+            CircuitVoice.CONFLUENCE -> intArrayOf(0xff, 0x55, 0x22, 0x88, 0x55)
+        }
         for (step in 0 until count) {
             val time = .09 + step / p.rates.paceHz
-            add(3, "RATTLE", time, .56, step)
-            if (step % 4 == 0 || step % 4 == 2) add(4, "CLAPPER", time + .035, .72, step)
-            if (step % 4 == 0) add(5, "CLAY", time + .075, .66, step)
-            if (step % 4 == 1) add(6, if ((step / 4) % 2 == 0) "UH_HUH" else "GRUNT", time + .04, .64, step)
-            if (step % 2 == 0) add(1, "TUBE_ACCENT", time, .55 + .25 * m.getValue("BREATH"), step)
+            fun plays(part: Int) = pattern[part] and (1 shl (step % 8)) != 0
+            if (plays(0)) add(3, "RATTLE", time, .56, step)
+            if (plays(1)) add(4, "CLAPPER", time + .035, .72, step)
+            if (plays(2)) add(5, "CLAY", time + .075, .66, step)
+            if (plays(3)) add(6, if ((step / 4) % 2 == 0) "UH_HUH" else "GRUNT", time + .04, .64, step)
+            if (plays(4)) add(1, "TUBE_ACCENT", time, .55 + .25 * m.getValue("BREATH"), step)
         }
         // Even a sparse short gesture contains a coordination voice.
         if (base.none { it.source == 6 }) add(6, "UH_HUH", .39, .55, 0)
@@ -230,20 +242,32 @@ object Circuit {
     }
 
     /** Stable complex resonator: pole radius below one, fixed tuned angle, bounded pressure forcing. */
-    private class Tube(root: Double, role: Int, breath: Double, voice: CircuitVoice) {
+    private class Tube(root: Double, private val role: Int, breath: Double, voice: CircuitVoice) {
         private val ratios = when (role) { 0 -> intArrayOf(1, 3, 5, 7); 1 -> intArrayOf(1, 2, 3, 5); else -> intArrayOf(1, 2, 4, 6) }
-        private val gains = when (role) { 0 -> doubleArrayOf(1.0, .23, .11, .05); 1 -> doubleArrayOf(.66, .34, .17, .06); else -> doubleArrayOf(.55, .30, .14, .06) }
+        private val gains = when (role) { 0 -> doubleArrayOf(1.0, .32, .18, .09); 1 -> doubleArrayOf(.55, .65, .25, .13); else -> doubleArrayOf(.28, .70, .33, .16) }
         private val re = DoubleArray(4)
         private val im = DoubleArray(4)
         private val c = DoubleArray(4) { cos(2 * PI * root * ratios[it] / INTERNAL_RATE) }
         private val s = DoubleArray(4) { sin(2 * PI * root * ratios[it] / INTERNAL_RATE) }
-        private val a = DoubleArray(4) { exp(-1.0 / (INTERNAL_RATE * (.028 + .011 * role) / (1 + it * .65))) }
+        private val loss = when (voice) {
+            CircuitVoice.ROOT -> 1.0
+            CircuitVoice.PROCESSION -> .80
+            CircuitVoice.ANSWER -> .72
+            CircuitVoice.VOICED -> .70
+            CircuitVoice.EXPANSE -> 1.35
+            CircuitVoice.CONFLUENCE -> .65
+        }
+        private val decay = when (role) { 0 -> .022; 1 -> .010; else -> .007 }
+        private val a = DoubleArray(4) { exp(-1.0 / (INTERNAL_RATE * decay * loss / (1 + it * .65))) }
         private val phaseC = cos(2 * PI * root / INTERNAL_RATE)
         private val phaseS = sin(2 * PI * root / INTERNAL_RATE)
-        private var x = 1.0
-        private var y = 0.0
+        private val phase = doubleArrayOf(0.0, .83, 2.09)[role] + .17 * voice.ordinal
+        private var x = cos(phase)
+        private var y = sin(phase)
         private val stiff = 1.0 + 2.6 * breath + if (voice == CircuitVoice.VOICED) .5 else 0.0
         private val colour = .07 + .23 * breath
+        private val fundamentalDrive = when (role) { 0 -> 1.0; 1 -> .55; else -> .24 }
+        private val octaveDrive = when (role) { 0 -> colour; 1 -> .45 + .35 * breath; else -> .55 + .45 * breath }
         private val throatC = cos(PI * root / INTERNAL_RATE)
         private val throatS = sin(PI * root / INTERNAL_RATE)
         private var throatX = 1.0
@@ -263,8 +287,10 @@ object Circuit {
             // controlled growl sidebands. It has no independent radiation or energy after release.
             val boundedLoad = loading.coerceIn(-.08, .08)
             val stiffness = stiff * (1 + 2 * boundedLoad)
-            val lip = tanh(stiffness * (pressure * (y * (1 + growl * throatY) +
-                colour * (1 + 3 * boundedLoad) * 2 * x * y) + boundedLoad * pressure))
+            // Pulse and upper roles actually excite their octave modes. Wider upper
+            // losses let throat sidebands radiate instead of filtering them all away.
+            val drive = fundamentalDrive * y + octaveDrive * (1 + 3 * boundedLoad) * 2 * x * y
+            val lip = tanh(stiffness * (pressure * drive * (1 + growl * throatY) + boundedLoad * pressure))
             var out = 0.0
             for (h in 0..3) {
                 val rr = a[h] * (c[h] * re[h] - s[h] * im[h]) + (1 - a[h]) * lip
@@ -288,6 +314,7 @@ object Circuit {
         val sources = Array(7) { FloatArray(n) }
         val breath = m.getValue("BREATH").toDouble()
         val canyon = m.getValue("CANYON").toDouble()
+        val answerBreath = doubleArrayOf(1.0, .45, .08, .08, .85, .30, .08, .08)
         val tubes = Array(3) { Tube(p.frequency, it, breath, voice) }
         val radiation = DoubleArray(3)
         var convergenceDifference = 0.0
@@ -309,6 +336,15 @@ object Circuit {
                 val pressure = velocity * envelope * (.20 + .60 * breath)
                 val slow = 2 * PI * t / if (p.held) p.rates.loopSeconds else 3.2
                 val cadence = 2 * PI * p.rates.paceHz * (t - .09)
+                // ANSWER makes a smooth breath space after each outgoing pair of
+                // slots. The finite voice stays rooted, but returns can be heard.
+                val breathSpace = if (voice == CircuitVoice.ANSWER) {
+                    val beat = (t - .09) * p.rates.paceHz
+                    val slot = floor(beat).toInt()
+                    val fraction = beat - floor(beat)
+                    val blend = fraction * fraction * (3 - 2 * fraction)
+                    answerBreath[Math.floorMod(slot, 8)] * (1 - blend) + answerBreath[Math.floorMod(slot + 1, 8)] * blend
+                } else 1.0
                 for (role in 0..2) prior[role] = radiation[role]
                 while (accentIndex + 1 < accents.size && accents[accentIndex + 1].timeSeconds <= t) accentIndex++
                 val accent = if (accents.isEmpty()) 0.0 else {
@@ -319,13 +355,13 @@ object Circuit {
                 }
                 for (role in 0..2) {
                     val gesture = when (role) {
-                        0 -> .91 + .09 * sin(slow)
-                        1 -> .30 + .95 * accent
-                        else -> .78 + .12 * sin(slow + 1.8) + .10 * cos(cadence * .5)
+                        0 -> (.91 + .09 * sin(slow)) * (.65 + .40 * breath)
+                        1 -> (.02 + 1.30 * accent) * (.60 + .55 * breath)
+                        else -> (.08 + .92 * max(0.0, sin(cadence * .5 + 1.2)).pow(2)) * (.20 + 1.10 * breath)
                     }
                     val local = probe.coupling * (.30 * prior[(role + 1) % 3] - .12 * prior[(role + 2) % 3])
                     val returning = read(sources[role], i.toDouble() - returnDelay[role], p.held) * canyon * .025
-                    radiation[role] = tubes[role].tick(pressure * gesture, local + returning)
+                    radiation[role] = tubes[role].tick(pressure * gesture * breathSpace, local + returning)
                     val value = radiation[role].toFloat()
                     if (p.held && cycle == cycles - 1) {
                         val difference = value.toDouble() - sources[role][i]
@@ -353,12 +389,12 @@ object Circuit {
         }
 
         val weights = when (voice) {
-            CircuitVoice.ROOT -> doubleArrayOf(1.0, .70, .60, .42, .50, .55, .42)
-            CircuitVoice.PROCESSION -> doubleArrayOf(.95, .85, .65, .85, .95, .80, .65)
-            CircuitVoice.ANSWER -> doubleArrayOf(1.0, .72, .65, .60, .90, .85, .75)
-            CircuitVoice.VOICED -> doubleArrayOf(.92, .65, 1.15, .50, .65, .65, 1.05)
-            CircuitVoice.EXPANSE -> doubleArrayOf(1.0, .72, .85, .55, .65, .70, .55)
-            CircuitVoice.CONFLUENCE -> doubleArrayOf(.98, 1.0, .90, .85, 1.0, .85, .80)
+            CircuitVoice.ROOT -> doubleArrayOf(.050, .045, .022, 1.25, 1.65, 1.75, .95)
+            CircuitVoice.PROCESSION -> doubleArrayOf(.026, .030, .022, 2.10, 2.00, 1.55, 1.25)
+            CircuitVoice.ANSWER -> doubleArrayOf(.027, .030, .020, .90, 2.10, 2.25, 1.30)
+            CircuitVoice.VOICED -> doubleArrayOf(.023, .020, .045, .90, 1.10, 1.30, 2.55)
+            CircuitVoice.EXPANSE -> doubleArrayOf(.037, .023, .027, .85, 1.25, 1.80, 1.00)
+            CircuitVoice.CONFLUENCE -> doubleArrayOf(.025, .040, .030, 1.70, 2.00, 1.75, 1.50)
         }
         // Preroll acoustic filters once, then measure/export two real adjacent cycles.
         val acousticCycles = if (p.held) 3 else 1

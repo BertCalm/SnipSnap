@@ -155,7 +155,9 @@ internal object CircuitInstruments {
         val weights = DoubleArray(harmonics) { k -> 1.0 / (k + 1.0).pow(1.35) }
         val sourceScale = 1.0 / weights.sum()
         val identity = random.nextDouble(.91, 1.08)
-        val bend = random.nextDouble(.012, .025)
+        // These are root-related coordination gestures. A prominent chest carrier
+        // with a wide bend used to pull the whole ensemble off its requested note.
+        val bend = random.nextDouble(.002, .006)
         val phaseOffset = random.nextDouble()
         val formants = Array(3) { TractBand(rate) }
         val airLowCoefficient = 1.0 - exp(-2.0 * PI * min(4_500.0, rate * .30) / rate)
@@ -207,8 +209,8 @@ internal object CircuitInstruments {
             val voicedGate = if (second) smooth((time - start - .009) / .018) else 1.0
             val air = (airLow - airBase) * (.018 + breath * .065)
             val source = if (powered) glottal * voicedGate + air else 0.0
-            val throat = .50 * formants[0].process(source) + .27 * formants[1].process(source) + .11 * formants[2].process(source)
-            val chestInput = if (powered) .20 * s * voicedGate else 0.0
+            val throat = .80 * formants[0].process(source) + .46 * formants[1].process(source) + .25 * formants[2].process(source)
+            val chestInput = if (powered) .06 * s * voicedGate else 0.0
             chest += chestCoefficient * (chestInput - chest)
             output[i] = (.55 * envelope * (throat + chest) * if (two && !second) .84 else 1.0).toFloat()
         }
