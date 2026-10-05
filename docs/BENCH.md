@@ -461,7 +461,7 @@ A pass: tick the plan row and say so here — I will move it in
 `FEATURE_PLAN.md`.
 
 A failure: paste the line you wrote plus, where there is one, the logcat
-line (`PadEngine`, `SurfaceEngine`, `SoundPool`) or the MPC's exact error
+line (`PadEngine`, `SurfaceEngine`, or the screen's own tag) or the MPC's exact error
 text. Those two things are usually enough for a fix without a second
 session.
 

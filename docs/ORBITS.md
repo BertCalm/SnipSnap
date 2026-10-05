@@ -241,12 +241,14 @@ set never reaches the rings' meeting, which is what arranging it did.
   cycle, and a section that plays no rings writes none. It flattens the
   firings of every engaged pattern ring **that section plays** — a ring the
   section leaves out contributes nothing to it —
-  onto the 960-PPQ grid (`OrbitClip.clip`: pad A0N plays note 35+N, the
-  writer's chromatic map; `Mpc3Clip` has no time signature, so the clip
-  counts bars of sixteen 16ths whatever the set's bar — a 3/4 set's
-  four-bar cycle is 48 steps, three of the clip's, and the OUT panel says
-  so — and the 64-bar ceiling is measured in those bars, with the header's
-  cycle line turning warn-coloured past it) and writes it into the kit's `groove.json` as
+onto the 960-PPQ grid (`OrbitClip.clip`: pad A0N plays note 35+N, the
+writer's chromatic map). A project clip declares the set's bar
+(`OrbitClip.declaredBarPulses`: a lap of whole quarters, which is every
+length the screen offers). A lap the format cannot spell, and a track
+file whose clips cannot state a meter, stay on the padded 4/4 container.
+The OUT panel says which export does which, and the 64-bar ceiling is
+measured in the track's 4/4 bars, with the header's cycle line turning
+warn-coloured past it. It writes the clip into the kit's `groove.json` as
   "ORBIT 4:5" — or, with an arrangement, one named clip per playable
   section, APPENDED in the plan's order after the kit's other grooves so
   the base stays the base — replacing EVERY previous ORBIT clip rather
@@ -257,7 +259,6 @@ set never reaches the rings' meeting, which is what arranging it did.
 
 ## Not yet
 
-- **Hardware verification** of the Android screen: the cloud session
-  cannot compile `:app` (see `app/README.md`), so the screen is reviewed
-  Kotlin until CI's `android-build` job or a desktop build has been through
-  it.
+- **Hardware verification** of the Android screen. CI's `android-build`
+  compiles `:app`; what it does not do is play the rings. The phone
+  checks are [`BENCH.md`](BENCH.md).

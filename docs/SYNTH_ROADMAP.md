@@ -291,16 +291,15 @@ queue-jumper: it improves captured kits, which is MVP territory.
 
 ## What comes after S5
 
-S1–S5 shipped this roadmap's original scope — but it built thirty voices
-and no presets, and rule 1 above ("preset-first, knobs-second") is therefore
-only half true. [`docs/SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) picks up there:
-the preset library, a SCRAMBLE that lands, punch, stereo, and MATCH — the
-capture-aware preset pick that no standalone synth can copy. That upgrade's
-own non-goals parked "a second drum engine" as scoped-out, not permanent;
-S6 is that decision revisited and shipped. SKIN itself still has no preset
-roster of its own — `Presets.kt` has no SKIN branch — so it inherits, not
-solves, the "no presets" gap above; a `SkinPresets.kt` is follow-up work,
-same as it was for THUMP before U1.
+S1–S5 shipped this roadmap's original scope with thirty voices and no
+presets, so rule 1 above ("preset-first, knobs-second") was only half
+true when those phases closed. [`docs/SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md)
+is the note that measured the gap: the preset library, a SCRAMBLE that
+lands, punch, stereo, and MATCH. That upgrade's own non-goals parked "a
+second drum engine" as scoped-out; S6 revisited the decision and shipped
+SKIN. `SkinPresets.kt` and the SKIN branch in `Presets.kt` have since
+landed, the same pass THUMP got in U1. The current roster is
+`Presets.forVoice`.
 
 ## S7 — SNAP: the photo engine
 
