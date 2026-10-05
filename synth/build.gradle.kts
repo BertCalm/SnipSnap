@@ -539,3 +539,13 @@ tasks.register<JavaExec>("generateFlotillaAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/flotilla-audition")
 }
+
+tasks.register<JavaExec>("generateFlotillaComparison") {
+    group = "distribution"
+    description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlotillaComparisonGenerator")
+    workingDir = projectDir
+    val version = project.findProperty("flotillaComparisonVersion") as String? ?: "candidate"
+    args("${rootDir}/testkit/flotilla-comparison/$version")
+}
