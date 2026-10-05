@@ -24,6 +24,21 @@ audio off; controls have keyboard focus and accessible names. Stop all
 ends playback, and starting another clip stops the previous one. Native
 audio controls provide a fallback.
 
+HOLD cards repeat by default after Enable audio and Play. The main player
+uses a decoded audio buffer to avoid the browser media player's seek gap
+between cycles. Pause and Stop ramp smoothly to silence. Turn Repeat off
+for a one-cycle preview with a smooth ending; the periodic WAV itself keeps
+its complete boundary and ongoing responses. For gapless HOLD playback,
+use the main controls over HTTP(S); native/local-file playback remains a
+fallback.
+
+After changing the listening page, refresh its existing cards without
+rerendering the WAVs or event records:
+
+```sh
+./gradlew --no-daemon :synth:generateMurkAudition -PmurkRefreshPage=true
+```
+
 MURK's audition files use loudest-200-ms RMS 0.12 with a 0.90 peak ceiling,
 and the page starts at 85% playback volume with audio off. This listening
 gain affects the audition exports only. Raw comparison partners keep their

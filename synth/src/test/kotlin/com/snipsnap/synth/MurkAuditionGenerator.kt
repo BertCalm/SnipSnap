@@ -21,6 +21,20 @@ object MurkAuditionGenerator {
     private const val LISTENING_TARGET = .12f
     private const val LISTENING_CEILING = .90f
     private const val BASELINE_SOURCE_TARGET = .03f
+    private val loopPlayback = linkedMapOf(
+        "repeatByDefault" to true,
+        "mainControls" to "Sample-accurate buffer looping with smooth start, pause and stop.",
+        "singlePass" to "Repeat off previews one cycle with a smooth exit.",
+        "loopWavs" to "Periodic WAV samples remain unchanged; playback ramps do not alter the loop boundary.",
+    )
+    private val holdPlaybackNotes = """
+        HOLD cards repeat by default after you enable audio and press Play. The main controls
+        decode the WAV once and repeat an audio buffer without seeking between cycles. Pause
+        and Stop use a brief gain ramp. Turn Repeat off to preview one cycle with a smooth exit.
+        Ramps apply only when starting or stopping playback; the repeating WAV remains unchanged.
+        Native controls remain available as a fallback. Use the main controls over HTTP(S) for
+        sample-accurate HOLD playback; local-file/native playback uses the browser's media player.
+    """.trimIndent()
     private val steps = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
     private val timbral = listOf("STRIKE", "TRUNK", "FOG", "AGITATION", "GROVE")
     private val voiceDescriptions = mapOf(
@@ -65,13 +79,40 @@ object MurkAuditionGenerator {
         val positional = args.filterNot { it.startsWith("--") }
         require(positional.size <= 1) { "supply one output directory, then --baseline-dir= and --baseline-revision=" }
         require(args.filter { it.startsWith("--") }.all {
-            it.startsWith("--baseline-dir=") || it.startsWith("--baseline-revision=")
+            it.startsWith("--baseline-dir=") || it.startsWith("--baseline-revision=") || it == "--refresh-page"
         }) { "unknown MURK audition option" }
         fun argument(prefix: String): String? = args.filter { it.startsWith(prefix) }.let {
             require(it.size <= 1) { "duplicate $prefix argument" }
             it.singleOrNull()?.removePrefix(prefix)?.also { value -> require(value.isNotBlank()) }
         }
         val root = File(positional.firstOrNull() ?: "../testkit/murk-audition")
+        if ("--refresh-page" in args) {
+            require(args.count { it == "--refresh-page" } == 1) { "duplicate --refresh-page argument" }
+            require(args.none { it.startsWith("--baseline-") }) { "page refresh uses the existing manifest's baseline" }
+            val original = Json.parse(File(root, "manifest.json").readText()).obj()
+            require(original.getValue("engine").str() == "MURK") { "page refresh requires a MURK manifest" }
+            require(kotlin.math.abs((original["listeningTarget"]?.num() ?: 0.0) - LISTENING_TARGET) < 1e-6) { "regenerate the current listening library before refreshing its page" }
+            val clips = original.getValue("clips").arr().map { row ->
+                val evidence = row.obj().mapValues { fromJson(it.value) }
+                for (key in listOf("path", "eventPath")) {
+                    val asset = File(root, evidence.getValue(key) as String).canonicalFile
+                    require(asset.toPath().startsWith(root.canonicalFile.toPath()) && asset.isFile) { "missing or unsafe $key" }
+                }
+                Clip(evidence, evidence.getValue("group") as String)
+            }
+            require(original.getValue("clipCount").int() == clips.size && clips.isNotEmpty()) { "manifest clip count is inconsistent" }
+            val manifest = original.toMutableMap()
+            manifest["loopPlayback"] = json(loopPlayback)
+            val manifestText = Json.write(JsonValue.Obj(manifest)) + "\n"
+            File(root, "manifest.json").writeText(manifestText)
+            writePage(root, clips, manifestText, original["comparison"] != null && original["comparison"] != JsonValue.Null)
+            val notes = File(root, "README.md")
+            val heading = "## HOLD playback"
+            val existing = notes.takeIf { it.isFile }?.readText().orEmpty()
+            notes.writeText(existing.substringBefore("\n$heading").trimEnd() + "\n\n$heading\n\n$holdPlaybackNotes\n")
+            println("refreshed ${clips.size} MURK audition cards and playback controls; WAVs and event records unchanged")
+            return
+        }
         val baselineDir = argument("--baseline-dir=")?.let(::File)
         val baselineRevision = argument("--baseline-revision=")
         require((baselineDir == null) == (baselineRevision == null)) { "baseline directory and full source revision must be supplied together" }
@@ -383,6 +424,7 @@ object MurkAuditionGenerator {
             "loudness" to "Matched full clips use MURK listening level: loudest 200 ms RMS 0.12 with a 0.90 peak ceiling. Source taps inherit their full reference's gain; raw partners retain synthesis amplitude.",
             "listeningTarget" to LISTENING_TARGET, "listeningPeakCeiling" to LISTENING_CEILING,
             "defaultPlaybackVolume" to .85f,
+            "loopPlayback" to loopPlayback,
             "noteRange" to "C3–C5", "velocityContract" to "Existing host velocity scales event energy; STRIKE remains contact character.",
             "renderMilliseconds" to totalRenderNanos / 1_000_000.0,
             "elapsedMilliseconds" to (System.nanoTime() - started) / 1_000_000.0,
@@ -397,15 +439,7 @@ object MurkAuditionGenerator {
         )
         val manifestText = Json.write(json(manifest)) + "\n"
         File(root, "manifest.json").writeText(manifestText)
-        val template = javaClass.getResourceAsStream("/audition/murk-audition.html")
-            ?.use { it.readBytes().toString(Charsets.UTF_8) } ?: error("MURK audition page resource is missing")
-        require(template.contains("<!-- MURK_CARDS -->") && template.contains("<!-- MURK_MANIFEST -->"))
-        File(root, "index.html").writeText(template
-            .replace("<!-- MURK_CARDS -->", sectionsHtml(clips))
-            .replace("<!-- MURK_COMPARISON_NOTE -->", if (baselineDir == null) "" else "<p class=\"comparison-note\"><a href=\"#comparison\">Start with the CLUNK / THWACK before-and-after comparison</a> · Earlier THWACK is the bat reference; revised THWACK aims for a 'thhh — wack' gesture. Listening review is pending.</p>")
-            .replace("<!-- MURK_COMPARISON_FILTER -->", if (baselineDir == null) "" else "<option value=\"comparison\">Before / after contact revision</option>")
-            .replace("<!-- MURK_COMPARISON_NAV -->", if (baselineDir == null) "" else "<li><a href=\"#comparison\">Before / after</a></li>")
-            .replace("<!-- MURK_MANIFEST -->", "<script type=\"application/json\" id=\"murk-manifest\">${manifestText.replace("<", "\\u003c")}</script>"))
+        writePage(root, clips, manifestText, baselineDir != null)
         val comparisonNotes = if (baselineDir == null) "" else """
 
             ## Reproduce the contact comparison
@@ -451,7 +485,7 @@ object MurkAuditionGenerator {
 
             Descriptions express expected behavior. Numerical checks and generated descriptions
             do not replace the owner's listening verdict; sonic acceptance remains pending.
-        """.trimIndent() + "\n" + comparisonNotes + "\n")
+        """.trimIndent() + "\n" + comparisonNotes + "\n\n## HOLD playback\n\n$holdPlaybackNotes\n")
         println("wrote ${clips.size} clips, event records, manifest and accessible index.html under ${root.absolutePath}")
         println("render time ${number(totalRenderNanos / 1_000_000_000.0)} s; observed JVM used heap ${number(peakObservedHeap / 1048576.0)} MiB")
     }
@@ -465,8 +499,20 @@ object MurkAuditionGenerator {
         "grids" to ("Five interaction grids" to "HOOT at neutral companions. Each 3 × 3 grid tests a required pair of controls at 0, 0.5 and 1."),
         "levels" to ("Raw and matched pairs" to "The same dry synthesis appears twice. Raw preserves its original amplitude; matched uses MURK's RMS 0.12 listening target with a 0.90 peak ceiling."),
         "diagnostics" to ("Causal probes and edge cases" to "Engineering switches and separate source taps help explain how a gesture becomes a finite ecosystem response. These switches are absent from the instrument's public controls."),
-        "hold" to ("Recurring groves and HOLD transition" to "Settled loops contain repeated explicit gestures. Repeat is optional and starts off; listen across the seam for double strikes, clipped calls or timing discontinuities."),
+        "hold" to ("Recurring groves and HOLD transition" to "HOLD loops repeat continuously after you enable audio and press Play. Pause and Stop fade out smoothly. Turn Repeat off to preview one cycle with a smooth ending; the downloadable WAV keeps the complete repeating boundary."),
     )
+
+    private fun writePage(root: File, clips: List<Clip>, manifestText: String, hasComparison: Boolean) {
+        val template = javaClass.getResourceAsStream("/audition/murk-audition.html")
+            ?.use { it.readBytes().toString(Charsets.UTF_8) } ?: error("MURK audition page resource is missing")
+        require(template.contains("<!-- MURK_CARDS -->") && template.contains("<!-- MURK_MANIFEST -->"))
+        File(root, "index.html").writeText(template
+            .replace("<!-- MURK_CARDS -->", sectionsHtml(clips))
+            .replace("<!-- MURK_COMPARISON_NOTE -->", if (!hasComparison) "" else "<p class=\"comparison-note\"><a href=\"#comparison\">Start with the CLUNK / THWACK before-and-after comparison</a> · Earlier THWACK is the bat reference; revised THWACK aims for a 'thhh — wack' gesture. Listening review is pending.</p>")
+            .replace("<!-- MURK_COMPARISON_FILTER -->", if (!hasComparison) "" else "<option value=\"comparison\">Before / after contact revision</option>")
+            .replace("<!-- MURK_COMPARISON_NAV -->", if (!hasComparison) "" else "<li><a href=\"#comparison\">Before / after</a></li>")
+            .replace("<!-- MURK_MANIFEST -->", "<script type=\"application/json\" id=\"murk-manifest\">${manifestText.replace("<", "\\u003c")}</script>"))
+    }
 
     private fun sectionsHtml(clips: List<Clip>): String = buildString {
         for ((category, copy) in categories) {
@@ -501,11 +547,11 @@ object MurkAuditionGenerator {
               <h4 id="title-${clip.id}">${h(title)}</h4>
               <p class="description" id="desc-${clip.id}">${h(description)}</p>
               <p class="macro-line">${h(macros)}</p>
-              <p class="clip-meta">$duration s · ${e.getValue("arrivalCount")} arrivals · ${e.getValue("callCount")} calls · $firstCall</p>
-              <div class="clip-actions"><button class="play" type="button" aria-label="Play ${h(title)}" aria-describedby="desc-${clip.id}" aria-pressed="false" disabled>Play</button>${if (loop) "<label class=\"repeat\"><input type=\"checkbox\" class=\"loop-toggle\"> Repeat</label>" else ""}<a class="download" href="${e.getValue("path")}" download>WAV <span class="sr-only">${h(title)}</span></a></div>
+              <p class="clip-meta">$duration s · ${(e.getValue("arrivalCount") as Number).toInt()} arrivals · ${(e.getValue("callCount") as Number).toInt()} calls · $firstCall</p>
+              <div class="clip-actions"><button class="play" type="button" aria-label="Play ${h(title)}" aria-describedby="desc-${clip.id}" aria-pressed="false" disabled>Play</button>${if (loop) "<label class=\"repeat\"><input type=\"checkbox\" class=\"loop-toggle\" checked disabled> Repeat</label>" else ""}<a class="download" href="${e.getValue("path")}" download>WAV <span class="sr-only">${h(title)}</span></a></div>
               <progress value="0" max="$duration" aria-label="Playback progress for ${h(title)}"></progress>
               <details class="evidence"><summary>Measurements and event record</summary><dl><dt>Raw peak</dt><dd>${number((e.getValue("rawPeak") as Number).toDouble())}</dd><dt>Export peak</dt><dd>${number((e.getValue("exportPeak") as Number).toDouble())}</dd><dt>Final passive energy</dt><dd>${String.format(Locale.ROOT, "%.3g", (e.getValue("finalPassiveEnergy") as Number).toDouble())}</dd>$seam$provenance</dl><a href="${e.getValue("eventPath")}">Causal event JSON <span class="sr-only">for ${h(title)}</span></a></details>
-              <details class="native"><summary>Native audio controls</summary><p class="native-hint" hidden>Enable audio playback above to show these controls.</p><audio controls preload="none" src="${e.getValue("path")}" aria-label="${h(title)}" aria-describedby="desc-${clip.id}">Your browser can download the WAV above.</audio></details>
+              <details class="native"><summary>Native audio controls</summary><p class="native-hint" hidden>Enable audio playback above to show these controls.</p><audio controls${if (loop) " loop" else ""} preload="none" src="${e.getValue("path")}" aria-label="${h(title)}" aria-describedby="desc-${clip.id}">Your browser can download the WAV above.</audio></details>
             </article>
         """.trimIndent()
     }

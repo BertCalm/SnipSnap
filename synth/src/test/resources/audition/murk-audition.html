@@ -124,7 +124,7 @@
     </form>
     <div class="browse-meta"><p id="filter-status" role="status" aria-live="polite" aria-atomic="true">All audition clips.</p><a href="manifest.json">Full evidence manifest</a></div>
     <nav aria-label="Audition sections"><ul class="section-nav"><!-- MURK_COMPARISON_NAV --><li><a href="#voices">Voices</a></li><li><a href="#presets">Presets</a></li><li><a href="#energy">Energy</a></li><li><a href="#sweeps">Sweeps</a></li><li><a href="#grids">Interactions</a></li><li><a href="#levels">Raw / matched</a></li><li><a href="#diagnostics">Diagnostics</a></li><li><a href="#hold">HOLD</a></li></ul></nav>
-    <noscript><p>The clip descriptions and native audio controls work without JavaScript. Filters, global volume and Stop all require JavaScript. Use each clip's native pause control when finished.</p></noscript>
+    <noscript><p>The clip descriptions and native audio controls work without JavaScript. HOLD clips repeat; use their native Pause control to stop. Repeat settings, filters, global volume and Stop all require JavaScript.</p></noscript>
     <p class="empty" id="empty-state" hidden>No clips match these filters. Choose another voice or section, or clear the search.</p>
     <!-- MURK_CARDS -->
   </main>
@@ -134,91 +134,326 @@
   (() => {
     'use strict';
     const cards = Array.from(document.querySelectorAll('.clip'));
-    const audioEnabled = document.getElementById('audio-enabled');
+    const enabled = document.getElementById('audio-enabled');
     const volume = document.getElementById('volume');
     const status = document.getElementById('playback-status');
     const voiceFilter = document.getElementById('voice-filter');
     const categoryFilter = document.getElementById('category-filter');
     const searchFilter = document.getElementById('search-filter');
-    // A reload must start silent even when the browser restores checkbox state.
-    audioEnabled.checked = false;
+    const FADE = 0.02;
+    let context = null, master = null, active = null, epoch = 0;
+    let stopBarrier = Promise.resolve();
+    const buffers = new Map(), held = new Map();
+    const title = card => card.querySelector('h4').textContent;
+    const media = card => card.querySelector('audio');
+    const announce = text => { status.textContent = text; };
+    enabled.checked = false;
     volume.value = '85';
     document.getElementById('volume-value').value = '85%';
-    let active = null;
-    const title = card => card.querySelector('h4').textContent;
-    const announce = message => { status.textContent = message; };
-    const resetButton = card => {
+
+    function audioContext() {
+      if (context) return context;
+      const Constructor = window.AudioContext || window.webkitAudioContext;
+      if (!Constructor) throw new Error('Audio buffers unavailable');
+      context = new Constructor({sampleRate:44100});
+      master = context.createGain();
+      master.gain.value = Number(volume.value) / 100;
+      master.connect(context.destination);
+      return context;
+    }
+    function isCurrent(card, ticket) {
+      return ticket === epoch && enabled.checked && !card.hidden;
+    }
+    function update(card) {
+      const player = held.get(card);
+      const loading = active && active.card === card && active.backend === 'loading';
+      const playing = (player && player.state === 'playing') || (!media(card).paused && !media(card).ended);
       const button = card.querySelector('.play');
-      const media = card.querySelector('audio');
-      const playing = !media.paused && !media.ended;
-      button.textContent = playing ? 'Pause' : 'Play';
-      button.setAttribute('aria-label', `${playing ? 'Pause' : 'Play'} ${title(card)}`);
+      button.textContent = loading ? 'Loading…' : playing ? 'Pause' : 'Play';
+      button.setAttribute('aria-label', `${loading ? 'Cancel loading' : playing ? 'Pause' : 'Play'} ${title(card)}`);
       button.setAttribute('aria-pressed', String(playing));
       card.classList.toggle('playing', playing);
-    };
-    const stop = card => {
-      const media = card.querySelector('audio');
-      media.pause();
-      media.currentTime = 0;
-      card.querySelector('progress').value = 0;
-      resetButton(card);
-    };
-    const stopAll = () => {
-      cards.forEach(stop);
+    }
+    function barrier(promise) {
+      stopBarrier = Promise.all([stopBarrier, promise]).then(() => {});
+      return stopBarrier;
+    }
+
+    class HeldPlayer {
+      constructor(card) {
+        this.card = card;
+        this.state = 'stopped';
+        this.offset = 0;
+        this.source = null;
+        this.gain = null;
+        this.pendingStop = null;
+        this.buffer = null;
+        this.ticket = 0;
+        this.endingAt = null;
+        this.automation = [];
+      }
+      async load() {
+        const path = media(this.card).getAttribute('src');
+        if (!buffers.has(path)) {
+          const promise = (async () => {
+            const response = await fetch(path);
+            if (!response.ok) throw new Error('Audio unavailable');
+            const bytes = await response.arrayBuffer();
+            // Decode the original 44.1 kHz frames; hardware resampling remains continuous.
+            const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+            const decoder = Offline ? new Offline(1, 1, 44100) : audioContext();
+            return decoder.decodeAudioData(bytes);
+          })();
+          buffers.set(path, promise);
+          promise.catch(() => { if (buffers.get(path) === promise) buffers.delete(path); });
+        }
+        return buffers.get(path);
+      }
+      phase(time) {
+        if (!this.buffer) return 0;
+        if (this.endingAt !== null && time >= this.endingAt) return this.buffer.length;
+        const frames = this.startOffset + Math.max(0, time - this.startedAt) * this.buffer.sampleRate;
+        return Math.max(0, Math.round(frames)) % this.buffer.length;
+      }
+      envelope(time) {
+        let previous = this.automation[0] || {time, value:0};
+        for (let i = 1; i < this.automation.length; i++) {
+          const point = this.automation[i];
+          if (time < point.time) {
+            if (point.ramp && point.time > previous.time) {
+              const fraction = Math.max(0, (time - previous.time) / (point.time - previous.time));
+              return previous.value + fraction * (point.value - previous.value);
+            }
+            return previous.value;
+          }
+          previous = point;
+        }
+        return previous.value;
+      }
+      scheduleGain(value, time, ramp = false) {
+        this.automation.push({time, value, ramp});
+        if (ramp) this.gain.gain.linearRampToValueAtTime(value, time);
+        else this.gain.gain.setValueAtTime(value, time);
+      }
+      holdGain(time) {
+        const value = this.envelope(time);
+        this.automation = this.automation.filter(point => point.time < time);
+        this.gain.gain.cancelScheduledValues(time);
+        this.scheduleGain(value, time);
+        return value;
+      }
+      setRepeat(repeat) {
+        if (!this.source || this.state !== 'playing') return;
+        const now = context.currentTime;
+        this.holdGain(now);
+        this.source.loop = repeat;
+        if (repeat) {
+          this.endingAt = null;
+          this.scheduleGain(1, now + FADE, true);
+        } else {
+          const total = this.startOffset + Math.max(0, now - this.startedAt) * this.buffer.sampleRate;
+          const cycle = Math.floor(total / this.buffer.length);
+          this.endingAt = this.startedAt + ((cycle + 1) * this.buffer.length - this.startOffset) / this.buffer.sampleRate;
+          const start = Math.max(now, this.endingAt - FADE);
+          if (start > now) {
+            this.scheduleGain(1, Math.min(start, now + FADE), true);
+            this.scheduleGain(1, start);
+          }
+          this.scheduleGain(0, this.endingAt, true);
+        }
+      }
+      async play(ticket) {
+        this.ticket = ticket;
+        this.state = 'loading';
+        const ctx = audioContext();
+        await ctx.resume();
+        const buffer = await this.load();
+        await stopBarrier;
+        if (!isCurrent(this.card, ticket) || this.ticket !== ticket) return;
+        this.buffer = buffer;
+        const source = ctx.createBufferSource(), gain = ctx.createGain();
+        source.buffer = buffer;
+        source.loopStart = 0;
+        source.loopEnd = buffer.length / buffer.sampleRate;
+        source.loop = this.card.querySelector('.loop-toggle').checked;
+        source.connect(gain).connect(master);
+        this.source = source;
+        this.gain = gain;
+        gain.gain.value = 0;
+        this.automation = [{time:ctx.currentTime, value:0, ramp:false}];
+        this.startOffset = Math.max(0, Math.min(buffer.length - 1, this.offset));
+        this.startedAt = Math.ceil((ctx.currentTime + 0.005) * ctx.sampleRate) / ctx.sampleRate;
+        const remaining = (buffer.length - this.startOffset) / buffer.sampleRate;
+        this.fadeIn = source.loop ? FADE : Math.min(FADE, remaining / 2);
+        this.endingAt = source.loop ? null : this.startedAt + remaining;
+        this.scheduleGain(0, this.startedAt);
+        this.scheduleGain(1, this.startedAt + this.fadeIn, true);
+        if (!source.loop) {
+          this.scheduleGain(1, Math.max(this.startedAt + this.fadeIn, this.endingAt - FADE));
+          this.scheduleGain(0, this.endingAt, true);
+        }
+        this.state = 'playing';
+        active = {card:this.card, backend:'buffer', ticket};
+        this.card.dataset.playback = 'buffer';
+        this.card.querySelector('progress').max = buffer.duration;
+        source.onended = () => {
+          source.disconnect(); gain.disconnect();
+          if (this.source === source) {
+            this.source = null; this.gain = null;
+            if (this.state === 'playing') {
+              this.state = 'stopped'; this.offset = 0;
+              this.card.querySelector('progress').value = buffer.duration;
+              if (active && active.card === this.card && active.backend === 'buffer') {
+                active = null; announce(`Finished ${title(this.card)}.`);
+              }
+            }
+            update(this.card);
+          }
+          if (source.finishStop) source.finishStop();
+        };
+        source.start(this.startedAt, this.startOffset / buffer.sampleRate);
+        update(this.card);
+        announce(`Playing ${title(this.card)}${source.loop ? ', repeating' : ', one cycle'}.`);
+      }
+      stop(pause) {
+        this.ticket = 0;
+        this.state = pause ? 'paused' : 'stopped';
+        if (!pause) this.offset = 0;
+        if (this.pendingStop) { update(this.card); return this.pendingStop; }
+        const source = this.source;
+        if (!source) { update(this.card); return Promise.resolve(); }
+        const now = context.currentTime;
+        const end = context.state === 'running' ? Math.max(now, Math.min(now + FADE, this.endingAt === null ? Infinity : this.endingAt)) : now;
+        if (pause) this.offset = this.phase(end) % this.buffer.length;
+        this.holdGain(now);
+        this.scheduleGain(0, end, true);
+        this.pendingStop = new Promise(resolve => { source.finishStop = resolve; });
+        const pending = this.pendingStop;
+        source.stop(end);
+        if (context.state !== 'running') {
+          source.disconnect(); this.gain.disconnect(); this.source = null; this.gain = null; source.finishStop();
+        }
+        pending.then(() => { if (this.pendingStop === pending) this.pendingStop = null; });
+        this.card.querySelector('progress').value = pause ? this.offset / this.buffer.sampleRate : 0;
+        update(this.card);
+        return pending;
+      }
+    }
+
+    function stopActive(reset = true) {
+      const previous = active;
       active = null;
-      announce(audioEnabled.checked ? 'All playback stopped.' : 'Audio off. Descriptions are ready to read.');
-    };
-    const activate = card => {
-      if (active && active !== card) stop(active);
-      active = card;
-    };
-    cards.forEach(card => {
-      const media = card.querySelector('audio');
-      const button = card.querySelector('.play');
-      const repeat = card.querySelector('.loop-toggle');
-      if (repeat) repeat.checked = false;
-      media.loop = false;
-      media.controls = false;
-      card.querySelector('.native-hint').hidden = false;
-      media.volume = Number(volume.value) / 100;
-      media.addEventListener('play', () => {
-        if (!audioEnabled.checked) { media.pause(); return; }
-        activate(card);
-        resetButton(card);
-        announce(`Playing ${title(card)}${media.loop ? ', repeating' : ''}.`);
-      });
-      media.addEventListener('pause', () => {
-        resetButton(card);
-        if (active === card && !media.ended && media.currentTime > 0) announce(`Paused ${title(card)}.`);
-      });
-      media.addEventListener('ended', () => { resetButton(card); if (active === card) { active = null; announce(`Finished ${title(card)}.`); } });
-      media.addEventListener('error', () => announce(`Cannot load ${title(card)}. Check that its WAV is beside this page, or use the download link.`));
-      media.addEventListener('timeupdate', () => { card.querySelector('progress').value = media.currentTime; });
-      button.addEventListener('click', async () => {
-        if (!audioEnabled.checked) return;
-        if (!media.paused) { media.pause(); return; }
-        activate(card);
-        try { await media.play(); }
-        catch (_) { resetButton(card); announce(`Playback did not start for ${title(card)}. Try its native audio controls or WAV download.`); }
-      });
-      if (repeat) repeat.addEventListener('change', () => { media.loop = repeat.checked; if (active === card && !media.paused) announce(`${title(card)}: repeat ${repeat.checked ? 'on' : 'off'}.`); });
-    });
-    audioEnabled.addEventListener('change', () => {
-      if (!audioEnabled.checked) stopAll();
+      if (!previous) return stopBarrier;
+      const player = held.get(previous.card);
+      let pending = Promise.resolve();
+      if (player && previous.backend !== 'native') pending = player.stop(!reset);
+      else {
+        media(previous.card).pause();
+        if (reset) { media(previous.card).currentTime = 0; previous.card.querySelector('progress').value = 0; }
+      }
+      update(previous.card);
+      return barrier(pending);
+    }
+    function stopAll() {
+      ++epoch;
+      active = null;
       cards.forEach(card => {
-        card.querySelector('.play').disabled = !audioEnabled.checked;
-        card.querySelector('audio').controls = audioEnabled.checked;
-        card.querySelector('.native-hint').hidden = audioEnabled.checked;
+        const player = held.get(card);
+        if (player) barrier(player.stop(false));
+        media(card).pause(); media(card).currentTime = 0;
+        card.querySelector('progress').value = 0;
+        update(card);
       });
-      announce(audioEnabled.checked ? 'Audio enabled. Choose a clip to play.' : 'Audio off. Descriptions are ready to read.');
+      announce(enabled.checked ? 'All playback stopped.' : 'Audio off. Descriptions are ready to read.');
+    }
+    async function nativePlay(card, ticket) {
+      await stopBarrier;
+      if (!isCurrent(card, ticket)) return;
+      active = {card, backend:'native', ticket};
+      card.dataset.playback = 'native';
+      try { await media(card).play(); }
+      catch (_) {
+        if (isCurrent(card, ticket)) { active = null; update(card); announce(`Playback did not start for ${title(card)}. Try its native audio controls or WAV download.`); }
+      }
+    }
+    async function requestPlay(card, native = false) {
+      const ticket = ++epoch;
+      stopActive(true);
+      active = {card, backend:'loading', ticket};
+      update(card);
+      const player = held.get(card);
+      if (!player || native) { await nativePlay(card, ticket); return; }
+      try { await player.play(ticket); }
+      catch (_) {
+        if (!isCurrent(card, ticket)) return;
+        player.state = 'stopped';
+        await nativePlay(card, ticket);
+        if (isCurrent(card, ticket) && !media(card).paused) announce(`Playing ${title(card)} with native audio controls.`);
+      }
+    }
+
+    cards.forEach(card => {
+      const audio = media(card), button = card.querySelector('.play'), repeat = card.querySelector('.loop-toggle');
+      if (repeat) { repeat.checked = true; repeat.disabled = false; held.set(card, new HeldPlayer(card)); }
+      audio.loop = !!repeat;
+      audio.controls = false;
+      audio.volume = Number(volume.value) / 100;
+      card.querySelector('.native-hint').hidden = false;
+      audio.addEventListener('play', () => {
+        if (!enabled.checked) { audio.pause(); return; }
+        if (!active || active.card !== card || active.backend !== 'native') {
+          audio.pause(); requestPlay(card, true); return;
+        }
+        update(card); announce(`Playing ${title(card)}${audio.loop ? ', repeating' : ''}.`);
+      });
+      audio.addEventListener('pause', () => {
+        update(card);
+        if (active && active.card === card && active.backend === 'native' && !audio.ended && audio.currentTime > 0) announce(`Paused ${title(card)}.`);
+      });
+      audio.addEventListener('ended', () => {
+        update(card);
+        if (active && active.card === card && active.backend === 'native') { active = null; announce(`Finished ${title(card)}.`); }
+      });
+      audio.addEventListener('error', () => { if (active && active.card === card && active.backend === 'native') announce(`Cannot load ${title(card)}. Try its WAV download.`); });
+      audio.addEventListener('timeupdate', () => { if (!held.has(card) || (active && active.card === card && active.backend === 'native')) card.querySelector('progress').value = audio.currentTime; });
+      button.addEventListener('click', () => {
+        if (!enabled.checked) return;
+        if (active && active.card === card) {
+          if (active.backend === 'loading') { ++epoch; stopActive(true); announce(`Loading cancelled for ${title(card)}.`); }
+          else if (active.backend === 'buffer') { ++epoch; stopActive(false); announce(`Paused ${title(card)}.`); }
+          else if (!audio.paused) { audio.pause(); }
+          else { const ticket = ++epoch; nativePlay(card, ticket); }
+        } else requestPlay(card);
+      });
+      if (repeat) repeat.addEventListener('change', () => {
+        audio.loop = repeat.checked;
+        const player = held.get(card);
+        player.setRepeat(repeat.checked);
+        if (active && active.card === card) announce(`${title(card)}: ${repeat.checked ? 'repeat on' : 'finishing this cycle'}.`);
+      });
+    });
+    function progress() {
+      if (active && active.backend === 'buffer') {
+        const player = held.get(active.card);
+        active.card.querySelector('progress').value = player.phase(context.currentTime) / player.buffer.sampleRate;
+      }
+      requestAnimationFrame(progress);
+    }
+    requestAnimationFrame(progress);
+    enabled.addEventListener('change', () => {
+      if (!enabled.checked) stopAll();
+      cards.forEach(card => { card.querySelector('.play').disabled = !enabled.checked; media(card).controls = enabled.checked; card.querySelector('.native-hint').hidden = enabled.checked; });
+      announce(enabled.checked ? 'Audio enabled. Choose a clip to play.' : 'Audio off. Descriptions are ready to read.');
     });
     volume.addEventListener('input', () => {
+      const value = Number(volume.value) / 100;
       document.getElementById('volume-value').value = `${volume.value}%`;
-      cards.forEach(card => { card.querySelector('audio').volume = Number(volume.value) / 100; });
+      cards.forEach(card => { media(card).volume = value; });
+      if (master) { master.gain.cancelScheduledValues(context.currentTime); master.gain.setTargetAtTime(value, context.currentTime, 0.01); }
     });
     document.getElementById('stop-all').addEventListener('click', stopAll);
     document.addEventListener('keydown', event => { if (event.key === 'Escape') stopAll(); });
-    const filter = () => {
+    function filter() {
       const query = searchFilter.value.trim().toLocaleLowerCase();
       let visible = 0;
       cards.forEach(card => {
@@ -226,22 +461,18 @@
           || (categoryFilter.value !== 'all' && card.dataset.category !== categoryFilter.value)
           || !card.textContent.toLocaleLowerCase().includes(query);
         if (!card.hidden) visible++;
-        else if (active === card) { stop(card); active = null; announce('Playback stopped because the clip is outside the current filters.'); }
+        else if (active && active.card === card) { ++epoch; stopActive(true); announce('Playback stopped because the clip is outside the current filters.'); }
       });
       document.querySelectorAll('.clip-group').forEach(group => { group.hidden = !Array.from(group.querySelectorAll('.clip')).some(card => !card.hidden); });
       document.querySelectorAll('.audition-section').forEach(section => { section.hidden = !Array.from(section.querySelectorAll('.clip')).some(card => !card.hidden); });
       document.getElementById('filter-status').textContent = `${visible} of ${cards.length} clips shown.`;
       document.getElementById('empty-state').hidden = visible !== 0;
-    };
+    }
     voiceFilter.addEventListener('change', filter);
     categoryFilter.addEventListener('change', filter);
     searchFilter.addEventListener('input', filter);
     document.querySelectorAll('.section-nav a, .comparison-note a').forEach(link => link.addEventListener('click', () => {
-      // Section navigation also reveals a target hidden by the current filters.
-      voiceFilter.value = 'all';
-      categoryFilter.value = link.hash.slice(1);
-      searchFilter.value = '';
-      filter();
+      voiceFilter.value = 'all'; categoryFilter.value = link.hash.slice(1); searchFilter.value = ''; filter();
     }));
     filter();
   })();
