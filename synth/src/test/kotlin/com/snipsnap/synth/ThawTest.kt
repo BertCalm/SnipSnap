@@ -43,6 +43,27 @@ class ThawTest {
 
     private data class Root(val hz: Double, val powerShare: Double)
 
+    /** Phase and overall gain cannot make a nearly sinusoidal voice pass this check. */
+    private fun upperPowerShare(samples: FloatArray, wanted: Float, from: Float, to: Float): Double {
+        val n = 32768
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        val first = (from * Dsp.RATE).toInt()
+        val count = minOf((to * Dsp.RATE).toInt() - first, samples.size - first, n)
+        assertTrue(count > 1000, "material spectrum window is missing")
+        for (i in 0 until count) {
+            re[i] = samples[first + i] * (0.5 - 0.5 * cos(2 * PI * i / (count - 1))).toFloat()
+        }
+        Fft.forward(re, im)
+        val power = DoubleArray(n / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        val binHz = Dsp.RATE.toDouble() / n
+        val bottom = (40 / binHz).toInt()
+        val top = (15000 / binHz).toInt().coerceAtMost(power.lastIndex)
+        val upper = (wanted * 1.5 / binHz).toInt().coerceIn(bottom, top)
+        val total = (bottom..top).sumOf { power[it] }
+        return (upper..top).sumOf { power[it] } / total.coerceAtLeast(1e-30)
+    }
+
     /** A Hann-windowed spectrum of raw audio; no leveling, octave folding, or pitched-source substitution. */
     private fun rootSpectrum(raw: FloatArray, wanted: Float, rate: Int = rawRate): Root {
         val n = 32768
@@ -147,6 +168,43 @@ class ThawTest {
             assertTrue(abs(cents) <= 10.0, "$voice MIDI $midi root ${measured.hz}Hz, $cents cents")
             assertTrue(measured.powerShare > 0.03, "$voice MIDI $midi lacks root identity (${measured.powerShare} spectral share)")
         }
+    }
+
+    @Test
+    fun `neutral material voices retain audible upper modes instead of collapsing to one sine`() {
+        // The original collapse put only 0.009-0.031% of sounding energy above 1.5x
+        // the root. A 2% floor (about -17 dB relative to total power) leaves headroom
+        // below the revised gestures, while rejecting a near-monochromatic roster.
+        // Smooth MELT and heavy SHEET are deliberately not required to be bright.
+        val windows = listOf(
+            Triple(ThawVoice.BRITTLE, 0f, 0.12f),
+            Triple(ThawVoice.RUNNER, 0.18f, 0.65f),
+            Triple(ThawVoice.CHANNEL, 0.35f, 1.05f),
+        )
+        for ((voice, from, to) in windows) {
+            val neutral = Thaw.macrosFor(voice).associate { it.name to it.neutral }
+            val played = Thaw.play(voice, neutral, Thaw.Probe(durationSeconds = 1.15f))
+            val audible = Thaw.finish(played.raw, normalize = false)
+            val upper = upperPowerShare(audible, Thaw.frequencyFor(voice, 0.5f), from, to)
+            assertTrue(upper >= 0.02,
+                "$voice lost its audible upper plate/contact spectrum: ${upper * 100}% above 1.5x root")
+        }
+    }
+
+    @Test
+    fun `neutral short brittle gesture withdraws before runner and heavy sheet at any overall gain`() {
+        val lateToEarly = listOf(ThawVoice.BRITTLE, ThawVoice.RUNNER, ThawVoice.SHEET).associateWith { voice ->
+            val neutral = Thaw.macrosFor(voice).associate { it.name to it.neutral }
+            val played = Thaw.play(voice, neutral, Thaw.Probe(durationSeconds = 2.15f))
+            // Each ratio cancels that voice's overall gain, including audition matching.
+            rms(played.raw, from = 1.15f, to = 1.4f) /
+                rms(played.raw, from = 0.18f, to = 0.45f).coerceAtLeast(1e-10)
+        }
+        val brittle = lateToEarly.getValue(ThawVoice.BRITTLE)
+        assertTrue(lateToEarly.getValue(ThawVoice.RUNNER) > brittle * 3,
+            "RUNNER no longer carries a longer contact gesture than BRITTLE: $lateToEarly")
+        assertTrue(lateToEarly.getValue(ThawVoice.SHEET) > brittle * 5,
+            "SHEET lost its slower heavy-plate gesture relative to BRITTLE: $lateToEarly")
     }
 
     @Test

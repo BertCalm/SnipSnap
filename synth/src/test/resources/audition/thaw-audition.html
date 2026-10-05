@@ -52,6 +52,7 @@
 <main>
   <div class="intro">
     <h1>THAW</h1>
+    <p class="muted">Revised material voices</p>
     <p>Cold engagement → warming friction → cooling resonance. Listen for the same plate changing as its material state evolves, with a clear root beneath scrape and fine stress releases.</p>
     <p class="muted">RAW preserves the engine's amplitude before melodic loudness targeting. MATCHED brings the same render to the shared audition level. Compare both: a quieter wet region must remain audible as a change in material. No rack effects are applied.</p>
     <p id="counts" class="muted"></p>
@@ -83,7 +84,7 @@
   const now = document.querySelector('#now');
   const repeat = document.querySelector('#repeat');
   const storageKey = 'snipsnap-thaw-listening-v1';
-  let selected = null, request = 0, notes = {};
+  let selected = null, request = 0, notes = {}, cancelPending = null;
   try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) {}
   function el(tag, text, cls) {
     const node = document.createElement(tag);
@@ -97,34 +98,63 @@
   function metricLine(label, m) {
     return `${label}: peak ${number(m.peak)} · RMS ${number(m.rms)} · DC ${Number(m.dc).toExponential(2)} · window RMS ${number(m.loudness)}`;
   }
-  async function play(c, variant, button) {
+  function play(c, variant, button) {
     const token = ++request;
-    const position = selected && selected.id === c.id && !player.ended ? player.currentTime : 0;
+    const position = selected && selected.id === c.id && !player.ended
+      ? (selected.waiting ? selected.position : player.currentTime) : 0;
+    if (cancelPending) cancelPending();
     player.pause();
     document.querySelectorAll('.buttons button.active').forEach(b => b.classList.remove('active'));
     button.classList.add('active');
-    selected = { id:c.id, variant };
-    now.textContent = `${c.voice} · ${c.label} · ${variant.toUpperCase()}`;
+    selected = { id:c.id, variant, position, waiting:true };
+    const label = `${c.voice} · ${c.label} · ${variant.toUpperCase()}`;
+    now.textContent = label;
     player.loop = repeat.checked;
     player.preload = 'auto';
-    const ready = new Promise((resolve, reject) => {
-      // Seeking a WAV immediately at loadedmetadata can be clamped to zero
-      // before its seekable range exists. Wait until audio data is available.
-      player.addEventListener('canplay', resolve, { once:true });
-      player.addEventListener('error', reject, { once:true });
-    });
+    function ready() {
+      if (token !== request) return;
+      // Wait for a seekable WAV before restoring the A/B listening position.
+      player.currentTime = position < player.duration ? position : 0;
+      selected.waiting = false;
+    }
+    function mediaError() {
+      if (token !== request) return;
+      const messages = {
+        1:'Audio loading was interrupted; choose the clip again.',
+        2:'The audio file could not load; check your connection and try again.',
+        3:'The browser could not decode this audio file; try another browser.',
+        4:'This browser cannot play this audio file; try another browser.'
+      };
+      now.textContent = `${label} · ${messages[player.error && player.error.code] || 'The audio file could not load.'}`;
+    }
+    function playError(error) {
+      if (token !== request || error.name === 'AbortError') return;
+      if (player.error) { mediaError(); return; }
+      now.textContent = `${label} · ${error.name === 'NotAllowedError'
+        ? 'Tap the audio player’s Play button to start.'
+        : 'Audio could not start; try the audio player’s Play button.'}`;
+    }
+    player.addEventListener('canplay', ready, { once:true });
+    player.addEventListener('error', mediaError);
+    cancelPending = () => {
+      player.removeEventListener('canplay', ready);
+      player.removeEventListener('error', mediaError);
+      cancelPending = null;
+    };
     player.src = c[variant];
     player.load();
     try {
-      await ready;
-      if (token !== request) return;
-      player.currentTime = position < player.duration ? position : 0;
-      await player.play();
-    } catch (_) { if (token === request) now.textContent += ' · use the player control to start'; }
+      // Start inside the click gesture, before any await, for mobile Safari.
+      const playing = player.play();
+      if (playing) playing.catch(playError);
+    } catch (error) { playError(error); }
   }
   repeat.addEventListener('change', () => { player.loop = repeat.checked; });
   document.querySelector('#stop').addEventListener('click', () => {
-    ++request; player.pause(); player.currentTime = 0;
+    ++request;
+    if (cancelPending) cancelPending();
+    player.pause(); player.currentTime = 0;
+    if (selected) { selected.position = 0; selected.waiting = false; }
   });
   document.querySelector('#counts').textContent = `${data.renderCount} renders · ${data.caseCount} listening cases · ${data.wavCount} paired PCM-${data.bitDepth} WAVs · ${data.sampleRate.toLocaleString()} Hz`;
 

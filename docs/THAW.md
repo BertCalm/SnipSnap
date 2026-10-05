@@ -38,18 +38,27 @@ separate from HOLD's sustained, repeating buffer.
 
 ## Reduced material model
 
-Each plate carries four modal coordinates, with responding fundamentals at
-2, 3 and 4 times the requested root. Three enclosure modes receive mounting
-reaction. Exact damped rotations and reciprocal exchanges keep the passive
-network's energy from growing when the runners stop. Frozen channels add
-reactive coupling; liquid weakens that bridge and increases dissipative
-exchange and modal loading.
+Each plate carries four modal coordinates. Voice shapes select bending-mode
+ratios, contact sites, engagement impulses, runner profiles, losses, surface
+roughness, channel capacity and constraint strength. Responding fundamentals
+are usually 2, 3 and 4 times the requested root; SHEET uses 3/2, 2 and 3.
+Three enclosure modes receive mounting reaction. Exact damped rotations and
+reciprocal exchanges keep the passive network's energy from growing when the
+runners stop. Frozen channels add reactive coupling; liquid weakens that bridge
+and increases dissipative exchange and modal loading. Near-frequency links
+carry bending-mode energy into answering plates, while weaker off-resonant
+mounting links allow the cold upper-mode ring to survive.
 
 The implicit contact law uses runner speed relative to the plate surface.
 Temperature and local liquid alter its grip and surface texture continuously;
-excess liquid reduces traction. A short engagement pulse and subsequent
-friction drive the same modes. There is no separate oscillator supplying the
-sustain, and the seeded surface remains the same across macro comparisons.
+excess liquid reduces traction. Band-limited microscopic surface slopes change
+relative contact velocity while the runner is powered. A short engagement
+pulse has a broader modal projection than sustained friction; both drive the
+same plate states. The quieter linked runner changes loading independently
+of cruise speed, retaining the contact law's singing region. CHANNEL includes
+a small register-dependent root compensation for strong contact loading.
+There is no separate oscillator supplying the sustain, and the seeded surface
+remains the same across macro comparisons.
 
 Enthalpy is bounded from 0 to 1.35 normalized units. The latent interval runs
 from 0.35 to 1.05; liquid fraction and temperature are separate derived states.
@@ -58,7 +67,9 @@ a nonzero baseline even at FREEZE zero. Transport queues delay liquid transfer,
 accounting for source subtraction and destination capacity; the diagnostic
 ledger tracks explicit melting, freezing and drainage. Departing hot liquid
 carries sensible heat as well as latent quantity. Only actual phase loss
-accumulates stress, and releases spend it with a refractory interval.
+accumulates stress, and releases spend it with a refractory interval. Fine
+releases favor bending modes. Their acoustic energy increment, including
+existing modal velocity, is capped by the stress removed for the release.
 
 Finite renders update material state near 1 kHz while smoothing acoustic
 coefficients on the 4× path. The output is band-limited, decimated to 44.1 kHz
@@ -71,10 +82,12 @@ material cycle. Its slow clock follows plate phase, and preroll compares modal,
 contact, thermal, liquid, channel, stress, transport and coefficient states in
 separate groups. Export requires both compatible state and
 `Keys.seamError < 1e-3`; a small seam alone cannot certify a loop.
-Modal coordinates are interpolated to the same root crossing for the state
-comparison, removing sub-sample timing differences. The exported seam is still
-measured on the actual audio samples. A loop must also contain nonzero raw
-audio; rendering rejects a loop that fails certification.
+The responding held contact stays below independent pitch capture, letting
+upper modes settle into the dominant plate's forced response. Modal coordinates
+are interpolated to the same root crossing for the state comparison, removing
+sub-sample timing differences. Candidate cuts also match actual sample phase;
+the exported seam is measured on the actual audio samples. A loop must contain
+nonzero raw audio; rendering rejects a loop that fails certification.
 
 ## Audition and verification
 
@@ -96,7 +109,9 @@ The optional first-listen task writes `testkit/thaw-first-listen/index.html`
 with six neutral C4 voices and the twelve factory presets.
 
 The numerical checks establish repeatable, bounded, pitched behavior and
-material causality. They cannot establish whether the proposed instrument
+material causality. Phase-independent upper-band and gesture-envelope checks
+also reject a voice roster that collapses into the same fundamental after
+leveling. They cannot establish whether the proposed instrument
 sounds convincing. The owner must judge the cold attack, dry-to-singing
 transition, answering plates, refreezing tail and loop behavior. All voice
 shapes, preset settings and names remain provisional until that listen.

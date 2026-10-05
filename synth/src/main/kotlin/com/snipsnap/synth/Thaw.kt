@@ -50,15 +50,34 @@ object Thaw {
     private data class Shape(
         val controls: FloatArray, val gesture: Double, val loss: Double, val texture: Double,
         val upper: Double, val constraint: Double, val body: Double,
+        val ratios: DoubleArray, val footprint: DoubleArray, val strike: DoubleArray,
+        val attack: Double, val rise: Double, val second: Double, val capacity: Double,
+        val roots: DoubleArray = doubleArrayOf(1.0, 2.0, 3.0, 4.0),
+        val upperDecay: Double = .78, val surfaceHz: Double = 4000.0,
+        val fracture: Double = .008,
     )
 
     private fun shape(voice: ThawVoice): Shape = when (voice) {
-        ThawVoice.BRITTLE -> Shape(floatArrayOf(.40f, .20f, .70f, .25f, .35f), .65, .75, .55, 1.15, .75, .12)
-        ThawVoice.RUNNER -> Shape(floatArrayOf(.60f, .50f, .40f, .30f, .50f), 1.45, 1.05, .80, 1.00, .75, .14)
-        ThawVoice.MELT -> Shape(floatArrayOf(.40f, .75f, .25f, .45f, .45f), 1.75, 1.15, .35, .75, .65, .13)
-        ThawVoice.CHANNEL -> Shape(floatArrayOf(.45f, .55f, .45f, .80f, .55f), 1.65, 1.25, .50, .90, 1.00, .15)
-        ThawVoice.FROST -> Shape(floatArrayOf(.50f, .55f, .85f, .70f, .40f), 1.10, .90, .65, 1.05, 1.70, .12)
-        ThawVoice.SHEET -> Shape(floatArrayOf(.55f, .45f, .35f, .55f, .85f), 1.90, 1.30, .40, .60, .90, .22)
+        ThawVoice.BRITTLE -> Shape(floatArrayOf(.40f, .20f, .70f, .25f, .35f), .65, .90, 2.4, 1.25, .75, .12,
+            doubleArrayOf(1.0, 2.32, 4.15, 6.27), doubleArrayOf(1.0, .52, -.38, .24),
+            doubleArrayOf(1.0, 1.10, -.95, .72), .00028, .009, .18, .70, upperDecay = .84, surfaceHz = 6400.0)
+        ThawVoice.RUNNER -> Shape(floatArrayOf(.60f, .50f, .40f, .30f, .50f), 1.45, 1.05, 3.2, 1.05, .75, .14,
+            doubleArrayOf(1.0, 2.0, 3.0, 5.03), doubleArrayOf(1.0, .58, -.60, .18),
+            doubleArrayOf(1.0, .75, -.55, .36), .00065, .022, .55, .85, surfaceHz = 5200.0)
+        ThawVoice.MELT -> Shape(floatArrayOf(.40f, .75f, .25f, .45f, .45f), 1.75, 1.15, .75, .58, .65, .13,
+            doubleArrayOf(1.0, 2.12, 3.97, 6.04), doubleArrayOf(1.0, .20, -.10, .04),
+            doubleArrayOf(1.0, .35, -.18, .08), .0025, .075, .16, 1.15, upperDecay = .68, surfaceHz = 1800.0)
+        ThawVoice.CHANNEL -> Shape(floatArrayOf(.45f, .55f, .45f, .80f, .55f), 1.65, 1.55, 1.7, 1.15, 1.00, .15,
+            doubleArrayOf(1.0, 2.0, 4.0, 6.0), doubleArrayOf(1.0, .44, -.28, .16),
+            doubleArrayOf(1.0, .72, -.56, .36), .0008, .032, .68, 1.65, upperDecay = .88)
+        ThawVoice.FROST -> Shape(floatArrayOf(.50f, .55f, .85f, .70f, .40f), 1.10, 1.10, 2.0, 1.30, 1.70, .12,
+            doubleArrayOf(1.0, 2.55, 4.43, 6.82), doubleArrayOf(1.0, .40, -.34, .25),
+            doubleArrayOf(1.0, .86, -.82, .65), .0004, .015, .26, .65, upperDecay = .84,
+            surfaceHz = 7500.0, fracture = .040)
+        ThawVoice.SHEET -> Shape(floatArrayOf(.55f, .45f, .35f, .55f, .85f), 1.90, 1.70, .55, .48, .90, .28,
+            doubleArrayOf(1.0, 1.52, 2.81, 4.18), doubleArrayOf(1.0, .30, -.14, .06),
+            doubleArrayOf(1.0, .50, -.25, .10), .0032, .110, .65, 1.30,
+            roots = doubleArrayOf(1.0, 1.5, 2.0, 3.0), surfaceHz = 1200.0)
     }
 
     fun macrosFor(voice: ThawVoice): List<MacroSpec> {
@@ -176,7 +195,7 @@ object Thaw {
         var controlDt = CTRL * dt
         val endDrive = probe.stopSeconds?.toDouble() ?: gestureSeconds(voice, m)
         val mass = .65 + .90 * thick
-        val capacity = .08 + .52 * channels
+        val capacity = configuration.capacity * (.08 + .52 * channels)
         val re = DoubleArray(SIZE)
         val im = DoubleArray(SIZE)
         val crossingAcoustic = DoubleArray(SIZE * 2)
@@ -184,9 +203,23 @@ object Thaw {
         val sr = DoubleArray(SIZE)
         val targetCr = DoubleArray(SIZE)
         val targetSr = DoubleArray(SIZE)
-        val ratios = doubleArrayOf(1.0, 2.3, 4.0, 6.1)
-        val roots = doubleArrayOf(1.0, 2.0, 3.0, 4.0)
+        val ratios = configuration.ratios
+        val roots = configuration.roots
+        val sharedPartial = (1 until MODES).minBy { abs(ratios[it] / roots[3] - 1) }
+            .takeIf { abs(ratios[it] / roots[3] - 1) < .12 }
+        // Connect bending modes to responding plates near the same frequency.
+        // Same-index links alone mostly damp a mode against an off-resonant plate.
+        val partialLinks = (1 until MODES).mapNotNull { mode ->
+            val frequency = ratios[mode]
+            val other = (MODES until PLATES * MODES).minBy { k ->
+                abs(roots[k / MODES] * ratios[k % MODES] / frequency - 1)
+            }
+            if (!(mode == sharedPartial && other == 12) &&
+                abs(roots[other / MODES] * ratios[other % MODES] / frequency - 1) < .045)
+                mode to other else null
+        }
         val b = Array(2) { DoubleArray(SIZE) }
+        val strike = Array(2) { DoubleArray(MODES) }
         val pickup = DoubleArray(SIZE)
         val friction = Array(2) { Contact() }
         val h = DoubleArray(PLATES)
@@ -195,6 +228,8 @@ object Thaw {
         val stress = DoubleArray(PLATES)
         val refractory = DoubleArray(PLATES)
         val pulses = DoubleArray(PLATES)
+        val pulseBudget = DoubleArray(PLATES)
+        val releaseDirection = doubleArrayOf(.12, .65, -.52, .38)
         val transit = Array(PLATES) { DoubleArray(64) }
         val transitTotal = DoubleArray(PLATES)
         var transitIndex = 0
@@ -210,6 +245,7 @@ object Thaw {
         var sharedBridgeSr = 0.0
         val enclosureExchange = .5 * (1 - exp(-2 * (5 + 6 * thick) * configuration.body * dt))
         var sharedExchange = 0.0
+        var partialExchange = 0.0
         val compliance = DoubleArray(2)
         // Common microscopic surface for a voice/note: macro comparisons change mechanics,
         // rather than obtaining an unrelated random realization on every knob movement.
@@ -236,17 +272,17 @@ object Thaw {
         init {
             for (runner in 0..1) for (j in 0 until MODES) {
                 val k = runner * MODES + j
-                b[runner][k] = when (j) {
-                    0 -> 1.0
-                    1 -> .33 * configuration.upper * (1 - .5 * thick)
-                    2 -> -.20 * configuration.upper * (1 - .6 * thick)
-                    else -> .10 * configuration.upper * (1 - .6 * thick)
-                }
+                // A contact site's footprint differs from its short engagement impulse.
+                // Broad cold engagement excites bending modes; the narrower sustained
+                // footprint leaves their response beneath the dominant pitch capture.
+                b[runner][k] = configuration.footprint[j] * if (j == 0) 1.0 else
+                    (1 - .35 * thick)
+                strike[runner][j] = configuration.strike[j] * if (j == 0) 1.0 else (1 - .30 * thick)
             }
             for (p in 0 until PLATES) for (j in 0 until MODES) {
                 val k = p * MODES + j
-                val upper = if (j == 0) 1.0 else configuration.upper * .65.pow(j) * (1 - .55 * thick)
-                pickup[k] = upper * if (p == 0) 1.0 else .45 + .45 * channels
+                val upper = if (j == 0) 1.0 else configuration.upper * .85.pow(j) * (1 - .35 * thick)
+                pickup[k] = upper * if (p == 0) 1.0 else .28 + .42 * channels
             }
             for (runner in 0..1) compliance[runner] = b[runner].sumOf { it * it } * dt
             updateCoefficients(true)
@@ -260,9 +296,9 @@ object Thaw {
             if (tt < 0) return 0.0
             val travel = if (probe.stopSeconds != null) time else tt
             if (!held && travel >= endDrive + .06) return 0.0
-            val rise = min(1.0, tt / (.020 + .045 * thick))
+            val rise = min(1.0, tt / (configuration.rise * (.75 + .65 * thick)))
             val release = if (!held && travel > endDrive) (1 - (travel - endDrive) / .06).coerceIn(0.0, 1.0) else 1.0
-            return rise * release * if (runner == 0) 1.0 else .28
+            return rise * release * if (runner == 0) 1.0 else configuration.second
         }
 
         private fun thermalStep() {
@@ -306,7 +342,8 @@ object Thaw {
                 val threshold = .055 + .035 * thick
                 if (stress[p] >= threshold && refractory[p] == 0.0) {
                     // The norm of this velocity impulse is limited by the stored stress energy.
-                    pulses[p] += .0025 * sqrt(stress[p]) * (.3 + .7 * freeze)
+                    pulses[p] += configuration.fracture * sqrt(stress[p]) * (.3 + .7 * freeze)
+                    pulseBudget[p] += .80 * stress[p]
                     stress[p] *= .20
                     refractory[p] = .060
                     lastEvents++
@@ -352,8 +389,13 @@ object Thaw {
                     // The root has only a few cents of transient load; upper plate spacing carries thickness.
                     val spacing = if (j == 0) 1.0 else 1 + (.045 - .085 * thick) * j
                     val detune = if (j == 0) 1 - .0011 * wet - .0010 * channels * wetChannel else 1 - .018 * wet - .025 * channels * wetChannel
-                    val frequency = (hz * roots[p] * ratios[j] * spacing * detune).coerceAtMost(17_000.0)
-                    val t60 = configuration.loss * (1.25 + .65 * thick) * .63.pow(j) /
+                    // The strongly linked CHANNEL contact pulls its lowest-register
+                    // root slightly sharp. Compensate that reduced-model loading at
+                    // the plate, with a diminishing correction toward higher notes.
+                    val capture = if (p == 0 && j == 0 && voice == ThawVoice.CHANNEL)
+                        1 - .0020 * (Keys.midiHz(ROOT_MIDI) / hz).pow(2) else 1.0
+                    val frequency = (hz * roots[p] * ratios[j] * spacing * detune * capture).coerceAtMost(17_000.0)
+                    val t60 = configuration.loss * (1.25 + .65 * thick) * configuration.upperDecay.pow(j) /
                         (1 + .90 * wet + .90 * channels * wetChannel + .18 * contact + .22 * freeze)
                     loss[k] = 6.90775527898 / t60
                     val radius = exp(-loss[k] * dt)
@@ -379,18 +421,30 @@ object Thaw {
                 val driver = .03 * (.60 + .40 * velocity)
                 val slope = sqrt(2 * a[runner]) * exp(-a[runner] * driver * driver + .5) *
                     (1 - 2 * a[runner] * driver * driver)
-                val couplingLoss = couplingRate(runner)
+                val couplingLoss = couplingRate(runner) + .5 * partialRate() *
+                    partialLinks.count { it.second == runner * MODES }
                 val grow = 1 / (.045 + .055 * thick)
                 // Passive loss compensation is independent of gesture energy. Velocity changes
                 // growth, carriage speed and engagement; a quiet runner must still capture pitch.
-                pressure[runner] = (2 * loss[runner * MODES] + 2 * couplingLoss +
+                val engagement = if (runner == 0) 1.0 else configuration.second
+                pressure[runner] = ((2 * loss[runner * MODES] + 2 * couplingLoss) / engagement +
                     grow * (.30 + 1.50 * contact) * (.65 + .35 * velocity)) / abs(slope) *
                     (1 - .78 * excess)
+                if (held && runner == 1) {
+                    // A held network has one captured fundamental. Keep the responding
+                    // contact below its own capture threshold, so its inharmonic/free
+                    // phase cannot prevent complete state closure at the loop cut.
+                    pressure[runner] = (2 * loss[runner * MODES] + 2 * couplingLoss) * .55 /
+                        abs(slope) * (1 - .78 * excess)
+                }
                 rough[runner] = configuration.texture * (.05 + .45 * contact) *
                     (1 - .92 * wet) * (1 - .30 * warming) * (.80 + .20 * freeze)
             }
             for (p in 0 until PLATES) for (j in 0 until MODES) {
-                acousticExchange[p * MODES + j] = .5 * (1 - exp(-2 * couplingRate(p) * (1 + .22 * j) * dt))
+                // Off-resonant mounting links should not extinguish every bending mode
+                // before its cold ring is heard. Near-frequency links carry those answers.
+                val footprint = if (j == 0) 1.0 else .12 + .04 * j
+                acousticExchange[p * MODES + j] = .5 * (1 - exp(-2 * couplingRate(p) * footprint * dt))
             }
             for (p in 0 until PLATES) {
                 val wet = (channel[p] / capacity).coerceIn(0.0, 1.0)
@@ -399,6 +453,7 @@ object Thaw {
                 bridgeSr[p] = sin(angle)
             }
             sharedExchange = .5 * (1 - exp(-2 * couplingRate(3) * 1.4 * dt))
+            partialExchange = .5 * (1 - exp(-2 * partialRate() * dt))
             val sharedAngle = (2 + 21 * channels) * (1 - .85 * channel[3] / capacity) * dt
             sharedBridgeCr = cos(sharedAngle)
             sharedBridgeSr = sin(sharedAngle)
@@ -408,6 +463,8 @@ object Thaw {
             val wet = .5 * (channel[p] + channel[(p + 3) % PLATES]) / capacity
             return (2.0 + 34.0 * channels) * (1 + .65 * wet)
         }
+
+        private fun partialRate(): Double = couplingRate(0) * (.5 + channels)
 
         private fun exchange(i: Int, j: Int, amount: Double) {
             // Equal and opposite exchange leaves common velocity unchanged and contracts its difference.
@@ -468,39 +525,69 @@ object Thaw {
                 exchange(p * MODES + j, next * MODES + j, acousticExchange[p * MODES + j])
                 bridge(p * MODES + j, next * MODES + j, bridgeCr[p], bridgeSr[p])
             }
-            // A shared fourth partial/fourth plate path makes delayed channel answers audible.
-            exchange(2, 12, sharedExchange)
-            bridge(2, 12, sharedBridgeCr, sharedBridgeSr)
+            // A near-frequency bending/fourth-plate path carries delayed channel
+            // answers. A voice without that bending frequency uses its other links.
+            sharedPartial?.let {
+                exchange(it, 12, sharedExchange)
+                bridge(it, 12, sharedBridgeCr, sharedBridgeSr)
+            }
+            for ((i, j) in partialLinks) {
+                exchange(i, j, partialExchange)
+                bridge(i, j, bridgeCr[0], bridgeSr[0])
+            }
             for (j in 0 until BOX_MODES) exchange(j, PLATES * MODES + j, enclosureExchange)
 
             val time = sample * dt
             // Seeded microscopic texture modulates contact, never an independently mixed noise layer.
-            texture = if (held) 0.0 else roughLow.lp(noise.next(), (900 + 2200 * contact).toFloat()).toDouble()
+            texture = if (held) 0.0 else roughLow.lp(noise.next(),
+                (configuration.surfaceHz * (.65 + .70 * contact)).toFloat()).toDouble()
             lastForce = 0.0
             lastSpeed = 0.0
             for (runner in 0..1) {
                 val env = driveEnvelope(time, runner)
-                val speed = .03 * (.60 + .40 * velocity) * min(1.0, max(0.0, (time - if (runner == 0) 0.0 else .12 + .10 * thick) / .040)) * env
+                val engagement = if (runner == 0) 1.0 else configuration.second
+                // Engagement controls pressure, not the linked runner's cruise speed.
+                // Scaling speed by its quiet load puts it on the positive friction slope
+                // and prevents the responding plate from ever singing.
+                val speed = .03 * (.60 + .40 * velocity) * env / engagement
                 val p = if (probe.friction) pressure[runner] * env * (1 + rough[runner] * texture).coerceAtLeast(.25) else 0.0
-                val force = friction[runner].force(speed, surface(runner), p,
+                // Microscopic surface slopes perturb relative contact velocity while the
+                // carriage is powered. Wetness smooths the same contact law; no noise is
+                // mixed into the output and an idle or withdrawn runner supplies no work.
+                val contactSpeed = speed * (1 + (2 * rough[runner] * texture).coerceIn(-.6, .6))
+                val force = friction[runner].force(contactSpeed, surface(runner), p,
                     compliance[runner], a[runner])
                 var impulse = 0.0
                 val delay = if (runner == 0) 0.0 else .12 + .10 * thick
                 val tt = time - delay
-                val strikeTime = .0007 + .0032 * (1 - contact) + .0010 * thick
+                val strikeTime = configuration.attack * (1.55 - .65 * contact + .45 * thick)
                 if (probe.drive && tt >= 0.0 && tt < strikeTime) {
                     impulse = (.015 + .040 * contact) * velocity / mass *
                         PI / (2 * strikeTime) * sin(PI * tt / strikeTime) * if (runner == 0) 1.0 else .18
                 }
-                for (j in 0 until MODES) im[runner * MODES + j] += b[runner][runner * MODES + j] * dt * (force + impulse)
+                for (j in 0 until MODES) im[runner * MODES + j] += dt *
+                    (b[runner][runner * MODES + j] * force + strike[runner][j] * impulse)
                 work[runner] += max(0.0, force * friction[runner].slip)
                 lastForce += force
                 lastSpeed = max(lastSpeed, speed)
             }
             for (p in 0 until PLATES) if (pulses[p] > 0.0) {
-                for (j in 0 until MODES) im[p * MODES + j] += pulses[p] * .5.pow(j)
-                im[PLATES * MODES] += pulses[p] * .20
+                // Fine constraint release bends the plate's upper modes rather than
+                // feeding another root-only click. Its norm spends a finite stress budget.
+                var projection = .20 * im[PLATES * MODES]
+                var norm = .20 * .20
+                for (j in 0 until MODES) {
+                    projection += im[p * MODES + j] * releaseDirection[j]
+                    norm += releaseDirection[j] * releaseDirection[j]
+                }
+                // Include existing modal velocity in the exact energy increment, not
+                // only the impulse's norm. Releases cannot add more than spent stress.
+                val bound = (sqrt(projection * projection + 2 * norm * pulseBudget[p]) - projection) / norm
+                val amount = min(pulses[p], bound.coerceAtLeast(0.0))
+                for (j in 0 until MODES) im[p * MODES + j] += amount * releaseDirection[j]
+                im[PLATES * MODES] += amount * .20
                 pulses[p] = 0.0
+                pulseBudget[p] = 0.0
             }
             workCount++
             if (oldRoot < 0.0 && re[0] >= 0.0 && im[0] < 0.0) {
@@ -538,7 +625,7 @@ object Thaw {
 
         fun state(): DoubleArray {
             val out = ArrayList<Double>()
-            for (arr in listOf(re, im, h, water, channel, stress, refractory, pulses, cr, sr, targetCr, targetSr, work)) for (x in arr) out.add(x)
+            for (arr in listOf(re, im, h, water, channel, stress, refractory, pulses, pulseBudget, cr, sr, targetCr, targetSr, work)) for (x in arr) out.add(x)
             for (r in friction) out.add(r.slip)
             out.add(texture)
             for (p in 0 until PLATES) for (i in transit[p].indices) out.add(transit[p][(transitIndex + i) % transit[p].size])
@@ -554,7 +641,7 @@ object Thaw {
             h.copyOf(),
             water.copyOf(),
             channel.copyOf(),
-            stress.copyOf() + refractory + pulses,
+            stress.copyOf() + refractory + pulses + pulseBudget,
             DoubleArray(2) { friction[it].slip } + doubleArrayOf(texture),
             cr + sr + targetCr + targetSr,
             DoubleArray(PLATES * 64) { k -> transit[k / 64][(transitIndex + k % 64) % 64] } + transitTotal,
@@ -563,13 +650,13 @@ object Thaw {
 
         /** Retain a candidate cut without retaining or resetting the subsequently discarded future. */
         fun checkpoint(): () -> Unit {
-            val arrays = listOf(re, im, crossingAcoustic, cr, sr, targetCr, targetSr, h, water, channel, stress,
+            val arrays = listOf(re, im, crossingAcoustic, cr, sr, targetCr, targetSr, h, water, channel, stress, pulseBudget,
                 refractory, pulses, transitTotal, lagH, loss, a, pressure, rough, acousticExchange,
                 bridgeCr, bridgeSr, work) + transit.toList()
             val copies = arrays.map { it.copyOf() }
             val slips = DoubleArray(2) { friction[it].slip }
             val scalar = doubleArrayOf(controlDt, texture, lastWork, lastForce, lastSpeed,
-                liquidBalance, maxEnergy, sharedExchange, sharedBridgeCr, sharedBridgeSr,
+                liquidBalance, maxEnergy, sharedExchange, sharedBridgeCr, sharedBridgeSr, partialExchange,
                 direct, neighbors, enclosure)
             val times = longArrayOf(sample, lastControlSample, rootCrossings)
             val counters = intArrayOf(quarter, workCount, transitIndex, lastEvents, recovered)
@@ -580,7 +667,8 @@ object Thaw {
                 lastForce = scalar[3]; lastSpeed = scalar[4]; liquidBalance = scalar[5]
                 maxEnergy = scalar[6]; sharedExchange = scalar[7]
                 sharedBridgeCr = scalar[8]; sharedBridgeSr = scalar[9]
-                direct = scalar[10]; neighbors = scalar[11]; enclosure = scalar[12]
+                partialExchange = scalar[10]
+                direct = scalar[11]; neighbors = scalar[12]; enclosure = scalar[13]
                 sample = times[0]; lastControlSample = times[1]; rootCrossings = times[2]
                 quarter = counters[0]; workCount = counters[1]; transitIndex = counters[2]
                 lastEvents = counters[3]; recovered = counters[4]
@@ -692,6 +780,7 @@ object Thaw {
         val engine = Engine(voice, m, Probe(velocity = velocity), held = true)
         val periods = max(16, (engine.hz * 1.8).toInt())
         var previousState: List<DoubleArray>? = null
+        var previousPhase: Double? = null
         var previousRaw = FloatArray(0)
         var best = FloatArray(0)
         var err = Double.POSITIVE_INFINITY
@@ -718,12 +807,18 @@ object Thaw {
                     val previous = previousState
                     if (previous == null) break
                     val error = stateError(previous, candidate)
-                    if (error < bestError) {
-                        bestError = error
+                    // Interpolated crossings certify the physical state. Also match
+                    // the actual sample phase, so high notes don't wrap a fraction of
+                    // an output frame away despite an excellent interpolated return.
+                    val phase = atan2(engine.im[0], engine.re[0])
+                    val phaseError = previousPhase?.let { 2 * abs(sin(.5 * (phase - it))) } ?: 0.0
+                    val score = max(error, .05 * phaseError)
+                    if (score < bestError) {
+                        bestError = score
                         bestLength = length
                         restoreBest = engine.checkpoint()
                     }
-                    if (error < .0008 || candidates >= 64) break
+                    if (error < .0008 && phaseError < .010 || candidates >= 64) break
                 }
             }
             if (bestLength > 0 && bestLength < length) {
@@ -744,6 +839,7 @@ object Thaw {
                 best = finished.copyOfRange(prefix, finished.size)
             } else best = finish(raw, normalize = false, loop = true)
             previousState = state
+            previousPhase = atan2(engine.im[0], engine.re[0])
             previousRaw = raw
             cycles = cycle
             if (cycle >= 4 && err < 1e-3 && seam < 1e-3) break
