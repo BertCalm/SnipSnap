@@ -722,4 +722,46 @@ class MutateSheetTest {
         assertEquals(Copy.UNDO_NOT_BINNED, MutateSheet.undoRefusal(applied, binned = false))
         assertNull(MutateSheet.undoRefusal(applied, binned = true))
     }
+
+    // ---------- the length seam (the redesign's round M1) ----------
+
+    /**
+     * The KEEP and DRIFT doors read the pad's length before and after the
+     * write, and HEAR reads the render's, to say when a move changed the
+     * pad's length. Whole milliseconds at the audio's own rate: a phone on
+     * a 48 kHz interface hands the kit 48 kHz audio, never assumed 44.1.
+     */
+    @Test
+    fun `lengthMs reads a pad and a render in milliseconds at their own rate`() {
+        assertEquals(500, MutateSheet.lengthMs(Snip(FloatArray(22_050), 1, 44_100)))
+        assertEquals(1_250, MutateSheet.lengthMs(Snip(FloatArray(55_125), 1, 44_100)))
+        assertEquals(750, MutateSheet.lengthMs(Snip(FloatArray(36_000), 1, 48_000)))
+        assertEquals(750, MutateSheet.lengthMs(Snip(FloatArray(72_000), 2, 48_000)), "frames, not samples")
+        assertEquals(22, MutateSheet.lengthMs(Snip(FloatArray(1_000), 1, 44_100)), "whole milliseconds, rounded down")
+
+        // A known WAV at 48 kHz, written and read back: a pad's own files are 44.1 kHz (WavWriter refuses
+        // another rate unless told), but a file off the phone or a render need not be.
+        val at48 = File(temp, "at48.wav")
+        com.snipsnap.audio.WavWriter.write(at48, Snip(FloatArray(36_000), 1, 48_000), allowNonMpcRate = true)
+        assertEquals(750, MutateSheet.lengthMs(WavReader.read(at48)))
+
+        // A pad's file at 44.1 kHz, read through the model.
+        val m = model("Lengths")
+        assertEquals(500, MutateSheet.lengthMs(m, 1))
+        assertEquals(800, MutateSheet.lengthMs(m, 2))
+        assertEquals(MutateSheet.lengthMs(WavReader.read(File(m.kitDir, m.pad(5)!!.sampleFile))), MutateSheet.lengthMs(m, 5))
+        assertFailsWith<IllegalArgumentException> { MutateSheet.lengthMs(m, 9) }
+        // The pad's own file gone under the app: a real failure for the door, never a refusal.
+        val gone = model("LengthsGone")
+        File(gone.kitDir, gone.pad(1)!!.sampleFile).delete()
+        val e = assertFailsWith<Exception> { MutateSheet.lengthMs(gone, 1) }
+        assertNull(MutateSheet.refusalOf(e), "the pad's own file gone read as ${MutateSheet.refusalOf(e)}")
+
+        // What the KEEP door reads around its write: SPLICE runs as long as the partner's body.
+        val before = MutateSheet.lengthMs(m, 1)
+        MutateSheet.apply(m, 1, MutateSheet.Partner.Pad(2), Mutate.Mode.SPLICE, 0.5f)
+        val after = MutateSheet.lengthMs(m, 1)
+        assertEquals(MutateSheet.lengthMs(WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))), after)
+        assertTrue(Copy.lengthNote(before, after).isNotEmpty(), "a 0.5 s pad spliced into a 0.8 s body is a change worth saying: $before -> $after")
+    }
 }

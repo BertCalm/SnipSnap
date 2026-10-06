@@ -1500,8 +1500,34 @@ object Copy {
     fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
     fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
-    /** MUTATE's KEEP: the move, the pad and its partner, then where the take before it went. */
-    fun mutated(move: String, pad: String, partner: String): String = "$move: $pad × $partner. THE TAKE BEFORE IT SLEEPS IN THE BIN."
+    /**
+     * MUTATE's KEEP: the move, the pad and its partner, then where the take
+     * before it went; then each partner STACK flipped because it was
+     * cancelling the pad, as the CLI reports it; then [lengthNote] when the
+     * move changed the pad's length enough to say.
+     */
+    fun mutated(move: String, pad: String, partner: String, flipped: List<String> = emptyList(), lengthNote: String = ""): String =
+        buildString {
+            append("$move: $pad × $partner. THE TAKE BEFORE IT SLEEPS IN THE BIN.")
+            for (f in flipped) append(" $f WAS FLIPPED: IT WAS CANCELLING THE PAD.")
+            if (lengthNote.isNotEmpty()) append(" $lengthNote")
+        }
+
+    /**
+     * MUTATE's length line, or "" when the length did not change enough to
+     * say: at least 10 % of [beforeMs] and at least 50 ms (the redesign's
+     * Decision 11). Seconds, at the first precision where the two lengths
+     * read differently, so a change worth saying never reads as the same
+     * number twice (0.25 S and 0.30 S are both 0.3 at one decimal).
+     */
+    fun lengthNote(beforeMs: Int, afterMs: Int): String {
+        val change = kotlin.math.abs(afterMs - beforeMs)
+        if (change < 50 || change * 10 < beforeMs) return ""
+        val (now, was) = (1..3).map { seconds(afterMs, it) to seconds(beforeMs, it) }.first { it.first != it.second }
+        return "IT RUNS $now S NOW, NOT $was S."
+    }
+
+    private fun seconds(ms: Int, decimals: Int): String = "%.${decimals}f".format(java.util.Locale.ROOT, ms / 1000.0)
     /**
      * DE-SAMPLE: the pad is a patch now; [engine] and [voice] the two
      * words that identify it, [distance] the honest number.

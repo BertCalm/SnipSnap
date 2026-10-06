@@ -294,4 +294,49 @@ class MutateWordsTest {
         assertNoRetiredWord("Copy.UNDO_NOTHING", Copy.UNDO_NOTHING)
         assertNoRetiredWord("Copy.UNDO_NOT_BINNED", Copy.UNDO_NOT_BINNED)
     }
+
+    /**
+     * The keep toast reports a STACK flip, as the CLI reports it, and a
+     * length change worth saying: at least 10 % and at least 50 ms
+     * (Decision 11). It keeps its opening, `<MOVE>: <PAD> × <PARTNER>.`,
+     * which PersonalityTest pins with three arguments.
+     */
+    @Test
+    fun `the keep toast says what was flipped and how the length changed, and only when it did`() {
+        assertEquals(
+            "STACK: A02 × B07. THE TAKE BEFORE IT SLEEPS IN THE BIN. B07 WAS FLIPPED: IT WAS CANCELLING THE PAD.",
+            Copy.mutated("STACK", "A02", "B07", flipped = listOf("B07")),
+        )
+        assertEquals(
+            "SPLICE: A02 × B07. THE TAKE BEFORE IT SLEEPS IN THE BIN. IT RUNS 1.4 S NOW, NOT 0.3 S.",
+            Copy.mutated("SPLICE", "A02", "B07", lengthNote = Copy.lengthNote(300, 1400)),
+        )
+        assertTrue(Copy.mutated("SPLICE", "A01", "A03", listOf("A03"), Copy.lengthNote(300, 1400)).startsWith("SPLICE: A01 × A03."))
+
+        assertEquals("IT RUNS 1.4 S NOW, NOT 0.3 S.", Copy.lengthNote(300, 1400))
+        assertEquals("IT RUNS 0.3 S NOW, NOT 1.4 S.", Copy.lengthNote(1400, 300), "shorter is said too")
+        // The bounds: 10 % and 50 ms, both needed, both inclusive.
+        assertEquals("", Copy.lengthNote(500, 549), "49 ms is under 50 ms")
+        assertTrue(Copy.lengthNote(500, 550).isNotEmpty(), "50 ms and 10 % exactly is a change")
+        assertEquals("", Copy.lengthNote(1000, 1099), "99 ms is under 10 % of a second")
+        assertEquals("IT RUNS 1.1 S NOW, NOT 1.0 S.", Copy.lengthNote(1000, 1100))
+        assertEquals("", Copy.lengthNote(300, 300))
+        // A zero-length pad: the 10 % bound is a product, never a division, so only the 50 ms bound holds.
+        assertEquals("", Copy.lengthNote(0, 0))
+        assertEquals("", Copy.lengthNote(0, 49))
+        assertEquals("IT RUNS 0.4 S NOW, NOT 0.0 S.", Copy.lengthNote(0, 400))
+        assertEquals("IT RUNS 0.0 S NOW, NOT 0.4 S.", Copy.lengthNote(400, 0))
+        // A change worth saying never reads as the same number twice: 0.25 s and 0.30 s both round to
+        // 0.3 at one decimal, so the line reads them at the first precision where they differ.
+        assertEquals("IT RUNS 0.30 S NOW, NOT 0.25 S.", Copy.lengthNote(250, 300))
+        for (before in listOf(0, 50, 300, 499, 1000, 2047)) {
+            for (after in 0..4000 step 7) {
+                val note = Copy.lengthNote(before, after)
+                if (note.isEmpty()) continue
+                val (now, was) = Regex("""IT RUNS (\S+) S NOW, NOT (\S+) S\.""").matchEntire(note)!!.destructured
+                assertTrue(now != was, "'$note' says the same length twice ($before ms to $after ms)")
+                assertEquals(note.uppercase(), note)
+            }
+        }
+    }
 }

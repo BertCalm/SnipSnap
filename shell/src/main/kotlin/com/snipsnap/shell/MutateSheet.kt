@@ -383,6 +383,21 @@ object MutateSheet {
     /** The parents back apart: the pre-mutation audio out of the bin, recipe and parent stamp cleared. */
     fun undo(model: KitBuilderModel, slot: Int): KitPad = Mutate.undo(model, slot)
 
+    // ---------- the length seam (the redesign's round M1) ----------
+
+    /** A render's length in whole milliseconds, at its own rate: `frameCount * 1000 / sampleRate`, rounded down. */
+    fun lengthMs(snip: Snip): Int = (snip.frameCount.toLong() * 1000 / snip.sampleRate).toInt()
+
+    /**
+     * The pad's file length in whole milliseconds, read off the file at its
+     * own rate. The KEEP and DRIFT doors call it inside their write, before
+     * and after [apply] or [drift], whose signatures stay as they are.
+     */
+    fun lengthMs(model: KitBuilderModel, slot: Int): Int {
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on ${padTag(slot)}")
+        return lengthMs(WavReader.read(File(model.kitDir, pad.sampleFile)))
+    }
+
     // ---------- honest refusals (the redesign's round M1) ----------
 
     /** Why a MUTATE door will not run, and the line the card toasts for it. */
