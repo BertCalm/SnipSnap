@@ -90,6 +90,13 @@ tasks.test {
             .withPropertyName("${owner}ReadmeScannedByConventionTest")
             .withPathSensitivity(PathSensitivity.RELATIVE)
     }
+
+    // MutateWordsTest reads the house's MUTATE copy board as text and holds
+    // the card's move lines and knob meanings to it character for character.
+    // Undeclared, an edit to the board would leave this task UP-TO-DATE.
+    inputs.file(layout.projectDirectory.file("../design/mutate-v2/Moves.dc.html"))
+        .withPropertyName("mutateMovesBoardScannedByMutateWordsTest")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 /** Render the BECOME A1 gate's clips, manifest and listening page under testkit/become-audition/. See BecomeAuditionGenerator. */
