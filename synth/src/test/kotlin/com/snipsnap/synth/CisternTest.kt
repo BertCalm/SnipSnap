@@ -79,6 +79,25 @@ class CisternTest {
     }
 
     @Test
+    fun `quiet notes retain real liquid answers across the supported registers`() {
+        for (voice in CisternVoice.entries) {
+            for (midi in listOf(36, 60, 84)) {
+                val quiet = Cistern.renderInternal(voice, midi = midi, velocity = 0.25f, seconds = 2f)
+                assertTrue(quiet.diagnostics.events.any { it.kind.name == "LANDING" },
+                    "$voice MIDI $midi quiet note has no delayed liquid answer")
+                assertMaterial(quiet)
+            }
+        }
+        for (midi in listOf(36, 60, 84)) {
+            val soft = Cistern.renderInternal(CisternVoice.DRIP, mapOf("STRIKE" to 0f),
+                midi = midi, velocity = 0.25f, seconds = 2f)
+            assertTrue(soft.diagnostics.events.any { it.kind.name == "LANDING" },
+                "DRIP MIDI $midi loses its liquid answer at minimum STRIKE")
+            assertMaterial(soft)
+        }
+    }
+
+    @Test
     fun `liquid remains nonnegative and conserved with retained and fast-draining extremes`() {
         for (drain in listOf(0f, 1f)) {
             val rendered = Cistern.renderInternal(
@@ -246,6 +265,32 @@ class CisternTest {
             assertRoot(rendered.snip, Cistern.DEFAULT_MIDI, 30.0, "$voice held circulation")
             assertMaterial(rendered)
             assertEquals(0, rendered.diagnostics.nonFiniteRecoveries)
+        }
+    }
+
+    @Test
+    fun `sparse and rounded held circulation closes across the supported registers`() {
+        val sparse = mapOf("STRIKE" to 0f, "SUSPENSION" to 0f, "DROP" to 0f,
+            "SKIN" to 0.65f, "DRAIN" to 1f, "HOLD" to 1f)
+        val heavy = mapOf("STRIKE" to 0f, "SUSPENSION" to 0f, "DROP" to 1f,
+            "DRAIN" to 0f, "HOLD" to 1f)
+        val cases = listOf(36, 60, 84).map { Triple(CisternVoice.FIRST, it, 0.25f) } +
+            listOf(36, 84).flatMap { midi -> listOf(0.25f, 1f).map { Triple(CisternVoice.DRIP, midi, it) } }
+        for ((voice, midi, velocity) in cases) {
+            val rendered = Cistern.renderInternal(voice, if (voice == CisternVoice.FIRST) sparse else heavy,
+                midi = midi, velocity = velocity)
+            val loop = requireNotNull(rendered.loop)
+            assertTrue(loop.converged && loop.iterations <= Cistern.MAX_HOLD_CYCLES,
+                "$voice MIDI $midi velocity $velocity did not settle")
+            assertTrue(loop.stateDiff < 2e-5 && loop.materialDiff < 2e-5 && loop.eventDiff < 2e-5)
+            assertTrue(loop.relativePeriodDiff < 1e-4)
+            assertTrue(loop.seam < Keys.MAX_SEAM_ERROR)
+            assertTrue(loop.boundaryStepError < 1e-3 && loop.boundarySlopeError < 1e-3)
+            assertTrue(loop.eventsPerPeriod > 0)
+            assertEquals(0, loop.crossfadeSamples)
+            assertTrue(rendered.raw.all { it.isFinite() && abs(it) < 1f })
+            assertEquals(0, rendered.diagnostics.nonFiniteRecoveries)
+            assertMaterial(rendered)
         }
     }
 

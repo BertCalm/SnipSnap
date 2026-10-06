@@ -454,30 +454,26 @@ object SynthKits {
     }
 
     /**
-     * FIRST walks C minor pentatonic on A01–A08. The other pads explore
-     * delayed drops, cascades, retained liquid, drainage and the held circle.
-     * Every recipe is dry so the changing membrane supplies its own tail.
+     * A01–A08 walk C minor pentatonic from C4 with all six surface profiles:
+     * clear strike, delayed rain, spreading cascade, wet basin, thin ripple,
+     * draining return, soft skin and an isolated heavy answer. A09–A16 add
+     * low-register landings and sustained liquid, high-register articulation,
+     * and a settled held circle. All twelve presets appear, with deliberate
+     * register repeats; every recipe is dry and stores its exact MIDI pitch.
      */
     fun cistern(): List<ArrangedPad?> {
-        val walk = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17)
-        fun note(n: Int, semitone: Int) = CisternPatch(
-            "Surface $n", CisternVoice.FIRST, Cistern.defaults(CisternVoice.FIRST),
-            midi = Cistern.DEFAULT_MIDI + semitone,
-        ).let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
-        fun preset(voice: CisternVoice, name: String) =
-            CisternPresets.forVoice(voice).first { it.name == name }
+        fun preset(name: String, midi: Int) =
+            CisternPresets.all().first { it.name == name }.copy(midi = midi)
                 .let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
         return listOf(
-            note(1, walk[0]), note(2, walk[1]), note(3, walk[2]), note(4, walk[3]),
-            note(5, walk[4]), note(6, walk[5]), note(7, walk[6]), note(8, walk[7]),
-            preset(CisternVoice.DRIP, "Hanging Rain"),
-            preset(CisternVoice.CASCADE, "Wide Cascade"),
-            preset(CisternVoice.CASCADE, "Heavy Landing"),
-            preset(CisternVoice.POOL, "Wet Basin"),
-            preset(CisternVoice.RIPPLE, "Thin Ripple"),
-            preset(CisternVoice.POOL, "Slow Drain"),
-            preset(CisternVoice.RECOVERY, "Clear Return"),
-            preset(CisternVoice.RECOVERY, "Replenished Circle"),
+            preset("First Drop", 60), preset("Hanging Rain", 63),
+            preset("Wide Cascade", 65), preset("Wet Basin", 67),
+            preset("Thin Ripple", 70), preset("Clear Return", 72),
+            preset("Soft Skin", 75), preset("Quiet Reservoir", 77),
+            preset("Heavy Landing", 48), preset("Slow Drain", 55),
+            preset("Dense Surface", 63), preset("Hanging Rain", 67),
+            preset("Wet Basin", 48), preset("Thin Ripple", 75),
+            preset("Clear Return", 70), preset("Replenished Circle", 60),
         )
     }
 
@@ -504,6 +500,26 @@ object SynthKits {
             note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
             preset("FOUR HANDS"), preset("SETTLING BED"), preset("DRY CAGE"), preset("CHARGED TAIL"),
             preset("LATE STRAND"), preset("BROKEN RETURN"), preset("HELD DRUM"), preset("HELD BLOOM"),
+        )
+    }
+
+    /**
+     * The MURK audition kit: CLUNK climbs the C minor pentatonic on A01–A08, then six sounds
+     * explore sharp wood, heavy fog and owl answers. A15–A16 carry settled recurring groves.
+     * Every pad is dry, carries its regenerable recipe, and is filed by [Murk.drumClassFor].
+     */
+    fun murk(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = MurkPatch(
+            "Wood $n", MurkVoice.CLUNK,
+            Murk.defaults(MurkVoice.CLUNK) + ("TUNE" to semitone / Murk.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = MurkPresets.all().first { it.name == name }
+            .let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("TONAL AXE"), preset("FIRST PULSE"), preset("DISTANT CALL"), preset("HEAVY AIR"),
+            preset("ANSWERING WOOD"), preset("SOFT BARK"), preset("HELD TREES"), preset("HELD OWLS"),
         )
     }
 

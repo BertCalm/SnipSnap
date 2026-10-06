@@ -71,9 +71,9 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has sixteen engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has seventeen engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-THAW and CISTERN. Both material engines also provide FRESH TAPE starters.
+THAW, CISTERN and MURK. THAW and CISTERN also provide FRESH TAPE starters.
 GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here

@@ -62,7 +62,85 @@ object Cistern {
     private const val CONTROL_DT = CONTROL_SAMPLES.toDouble() / UP_RATE
     private const val HOLD_SECONDS = 2.4
     private val NAMES = listOf("STRIKE", "SUSPENSION", "DROP", "SKIN", "DRAIN", "HOLD")
-    private val RATIOS = doubleArrayOf(1.0, 1.60, 2.20, 2.90, 3.80, 4.85, 5.95, 7.05, 8.25, 9.45)
+    /**
+     * Voices describe different surfaces, contacts, and suspended fields. The
+     * requested root is common; the audible upper structure is deliberately
+     * different. These are imagined instrument properties, not measured skins.
+     * Radiation weights are separate from force projections: neither is a
+     * post-render EQ, and wet modal mass/loss acts before either reaches audio.
+     */
+    private class Profile(
+        val ratios: DoubleArray, val radiation: DoubleArray, val excitation: DoubleArray,
+        val rootLoss: Double, val upperLoss: Double, val upperSlope: Double,
+        val wetLoss: Double, val wetMass: Double, val initialWet: Double,
+        val strikeScale: Double, val liquidScale: Double,
+        val contactWidth: Double, val contactBreadth: Double, val strikePosition: Double,
+        val massScale: Double, val heightMin: Double, val heightRange: Double,
+        val travel: Double, val threshold: Double, val reach: Double, val releaseGap: Double,
+        val frameRatios: DoubleArray, val frameRadiation: DoubleArray, val coupling: Double,
+    )
+    private fun profile(voice: CisternVoice): Profile = when (voice) {
+        // A clear elastic note leads; the restrained field gives a few answers.
+        CisternVoice.FIRST -> Profile(
+            doubleArrayOf(1.0, 1.58, 2.34, 3.08, 4.18, 5.40, 6.68, 7.96, 9.30, 10.60),
+            doubleArrayOf(.94, .80, .90, .82, .77, .66, .61, .54, .45, .40),
+            doubleArrayOf(1.0, .98, 1.02, .90, .86, .80, .72, .64, .58, .52),
+            1.12, 1.48, .21, 1.20, 2.3, 0.0,
+            1.12, .78, .82, .65, .075,
+            .70, .07, .32, .025, 3.0, .68, .025,
+            doubleArrayOf(.57, .94, 1.46), doubleArrayOf(.17, .12, .08), 12.0,
+        )
+        // Rounded, nearly harmonic drop notes outweigh the soft initiating hit.
+        CisternVoice.DRIP -> Profile(
+            doubleArrayOf(1.0, 2.02, 3.01, 4.12, 5.07, 6.16, 7.20, 8.28, 9.36, 10.45),
+            doubleArrayOf(.98, .78, .56, .47, .38, .31, .26, .21, .17, .14),
+            doubleArrayOf(1.0, 1.12, .98, .86, .74, .64, .56, .48, .42, .35),
+            2.10, 2.40, .38, 1.10, 2.7, 0.0,
+            .43, 1.22, 1.03, 1.15, .18,
+            1.25, .48, .48, .12, 2.15, .61, .055,
+            doubleArrayOf(.68, 1.07, 1.62), doubleArrayOf(.20, .14, .09), 15.0,
+        )
+        // A coarse surface exposes unequal partials as the chain spreads.
+        CisternVoice.CASCADE -> Profile(
+            doubleArrayOf(1.0, 1.43, 2.07, 2.71, 3.46, 4.33, 5.36, 6.48, 7.76, 9.10),
+            doubleArrayOf(.92, .86, .74, .98, .83, .78, .69, .58, .51, .44),
+            doubleArrayOf(1.0, 1.12, .91, 1.15, .94, .85, .78, .66, .60, .52),
+            1.45, 1.75, .24, 1.45, 3.0, 0.0,
+            .91, 1.02, .80, .82, .11,
+            1.0, .18, .72, .0, .95, 1.0, .012,
+            doubleArrayOf(.48, .82, 1.31), doubleArrayOf(.23, .17, .12), 20.0,
+        )
+        // Nearby low modes and a broad wet contact give a heavy yielding skin.
+        CisternVoice.POOL -> Profile(
+            doubleArrayOf(1.0, 1.29, 1.84, 2.46, 3.14, 3.91, 4.77, 5.72, 6.78, 7.92),
+            doubleArrayOf(1.02, 1.22, .82, .58, .47, .37, .29, .24, .18, .14),
+            doubleArrayOf(1.0, 1.30, 1.10, .88, .74, .62, .52, .44, .36, .30),
+            1.80, 2.10, .44, 2.35, 4.2, .20,
+            .83, 1.15, 1.28, 1.40, .20,
+            1.42, .35, .60, .055, 1.65, .58, .032,
+            doubleArrayOf(.43, .76, 1.18), doubleArrayOf(.34, .23, .15), 19.0,
+        )
+        // Light narrow impacts keep widely spaced high modes articulated.
+        CisternVoice.RIPPLE -> Profile(
+            doubleArrayOf(1.0, 1.88, 2.76, 3.99, 5.27, 6.65, 8.14, 9.73, 11.44, 13.25),
+            doubleArrayOf(.90, 1.02, .88, 1.10, .93, .85, .77, .66, .57, .48),
+            doubleArrayOf(1.0, 1.24, 1.08, 1.20, 1.10, .98, .87, .78, .68, .60),
+            1.72, 2.30, .18, .90, 1.7, 0.0,
+            .93, .86, .56, .44, .055,
+            .48, .035, .38, -.038, .85, .94, .006,
+            doubleArrayOf(.72, 1.12, 1.73), doubleArrayOf(.12, .10, .07), 10.0,
+        )
+        // A loaded, dull onset gives way to clearer contacts as outlets empty.
+        CisternVoice.RECOVERY -> Profile(
+            doubleArrayOf(1.0, 1.70, 2.54, 3.41, 4.43, 5.61, 6.92, 8.34, 9.92, 11.65),
+            doubleArrayOf(.96, .86, .98, .87, .76, .68, .59, .52, .44, .37),
+            doubleArrayOf(1.0, 1.08, 1.12, 1.0, .90, .81, .72, .64, .55, .48),
+            1.52, 1.72, .23, 1.70, 3.8, .13,
+            .94, 1.10, .91, .88, .14,
+            1.12, .16, .72, .025, 1.18, .78, .018,
+            doubleArrayOf(.52, .88, 1.39), doubleArrayOf(.26, .18, .12), 17.0,
+        )
+    }
     private val DEFAULTS = mapOf(
         CisternVoice.FIRST to values(.55f, .25f, .30f, .65f, .65f),
         CisternVoice.DRIP to values(.35f, .40f, .45f, .55f, .50f),
@@ -193,7 +271,7 @@ object Cistern {
     }
     private data class Front(val at: Double, val region: Int, val strength: Double, val cause: Int)
     private data class Return(val at: Double, val mass: Double)
-    private class Pulse(val at: Double, val length: Int, val amplitude: Double, val projection: DoubleArray, val noise: Dsp.Noise, val textureId: Int) {
+    private class Pulse(val at: Double, val length: Int, val amplitude: Double, val projection: DoubleArray, val noise: Dsp.Noise, val textureId: Int, val textureGain: Double) {
         var index = 0
         var splash = 0.0
     }
@@ -205,6 +283,7 @@ object Cistern {
         val maintenance: Boolean, val held: Boolean, val frozenLoad: Boolean,
         val replay: List<Event>?,
     ) {
+        val profile = profile(voice)
         val strike = m.getValue("STRIKE").toDouble()
         val suspension = m.getValue("SUSPENSION").toDouble()
         val drop = m.getValue("DROP").toDouble()
@@ -229,6 +308,7 @@ object Cistern {
         val fs = DoubleArray(FRAME_MODES)
         val fr = DoubleArray(FRAME_MODES)
         val modeMass = DoubleArray(MODES) { 1.0 }
+        val readout = DoubleArray(MODES)
         val loads = DoubleArray(REGIONS)
         val initialLoads = DoubleArray(REGIONS)
         val smoothedLoad = DoubleArray(REGIONS)
@@ -259,14 +339,22 @@ object Cistern {
         var dcY = 0.0
         var nextTrace = 0.0
         val shape = Array(REGIONS) { region -> DoubleArray(MODES) { mode -> spatial(mode, (region + .4) / REGIONS) } }
-        val coupleC = DoubleArray(FRAME_MODES) { cos((13.0 + 12.0 * (1.0 - skin)) / (UP_RATE * (1.0 + .8 * it))) }
-        val coupleS = DoubleArray(FRAME_MODES) { sin((13.0 + 12.0 * (1.0 - skin)) / (UP_RATE * (1.0 + .8 * it))) }
+        // HOLD guards stay shorter than their opportunity spacing. DRIP keeps
+        // rounded contacts apart with a 60 ms clock; other surfaces use 12 ms.
+        // A longer guard makes slots compete across cycles instead of settling.
+        // The one-shot field retains its characteristic event spacing.
+        val opportunitySpacing = if (voice == CisternVoice.DRIP) .060 else .012
+        val regionalRefractory = if (held && voice == CisternVoice.DRIP) .055 else if (held) min(.008, profile.releaseGap) else
+            profile.releaseGap * (.75 + .50 * (1.0 - suspension))
+        val globalRefractory = if (held) .0015 else max(.0015, regionalRefractory * .15)
+        val coupleC = DoubleArray(FRAME_MODES) { cos((profile.coupling + 7.0 * (1.0 - skin)) / (UP_RATE * (1.0 + .8 * it))) }
+        val coupleS = DoubleArray(FRAME_MODES) { sin((profile.coupling + 7.0 * (1.0 - skin)) / (UP_RATE * (1.0 + .8 * it))) }
 
         init {
             // Placement and roughness remain fixed through macro sweeps.
             val random = Random(Dsp.seedFor("CISTERN", MODEL_VERSION, voice.name, "FIELD"))
             val count = when (voice) { CisternVoice.FIRST -> 28; CisternVoice.RIPPLE -> 44; else -> 36 }
-            val wet = when (voice) { CisternVoice.POOL -> .10; CisternVoice.RECOVERY -> .045; else -> 0.0 }
+            val wet = profile.initialWet
             for (j in loads.indices) {
                 loads[j] = if (noDrops) 0.0 else wet * (1.0 - .08 * j)
                 initialLoads[j] = loads[j]
@@ -274,13 +362,20 @@ object Cistern {
             }
             slots = if (noDrops) emptyList() else List(count) { i ->
                 val region = i % REGIONS
-                val position = ((region + .22 + random.nextDouble() * .56) / REGIONS).coerceAtMost(.98)
-                val small = .017 + .090 * drop.pow(1.25)
+                val position = ((region + .12 + random.nextDouble() * .76) / REGIONS).coerceAtMost(.98)
+                val small = profile.massScale * (.012 + .15 * drop.pow(1.35))
                 val mass = small * (.70 + random.nextDouble() * .60)
-                val h = .20 + random.nextDouble() * .75
-                val thresholdBias = if (i == 0) .18 else .55 + random.nextDouble() * 2.65
+                val h = (profile.heightMin + random.nextDouble() * profile.heightRange) * (.45 + .85 * drop)
+                // One nearby low-threshold slot keeps restrained gestures alive
+                // without turning their full reservoir into an automatic chain.
+                val thresholdBias = if (i == 0) {
+                    // The rounded DRIP contact is much gentler. Its nearest
+                    // loose attachment still answers a quiet or broad strike;
+                    // every release continues to require real surface motion.
+                    if (voice == CisternVoice.DRIP) .00035 else .014
+                } else .65 + random.nextDouble() * 2.65
                 Slot(region, position, mass, h, thresholdBias,
-                    region * period / REGIONS + .055 + (i / REGIONS) * .012, mass)
+                    region * period / REGIONS + .055 + (i / REGIONS) * opportunitySpacing, mass)
             }
             // The powered version includes a finite priming tank, explicitly
             // counted in inventory. It supplies the liquid still in transit
@@ -302,9 +397,9 @@ object Cistern {
             started = true
             if (replay != null) return
             if (initialStrike && velocity > 0f) {
-                val amplitude = (.70 + .70 * strike) * velocity
+                val amplitude = profile.strikeScale * (.36 + 1.02 * strike) * velocity
                 val e = event(EventKind.STRIKE, 0.0, -1, 0, -1, impulse = amplitude)
-                impact(0.0, 0, .07 + .20 * (1.0 - strike), amplitude, false, e.id)
+                impact(0.0, 0, strikePosition(), amplitude, false, e.id)
             }
         }
 
@@ -333,7 +428,7 @@ object Cistern {
                         val e = replay[replayIndex++]
                         events.add(e)
                         when (e.kind) {
-                            EventKind.STRIKE -> if (initialStrike) impact(e.time, e.region, .07 + .20 * (1.0 - strike), e.impulse, false, e.id)
+                            EventKind.STRIKE -> if (initialStrike) impact(e.time, e.region, strikePosition(), e.impulse, false, e.id)
                             EventKind.LANDING -> {
                                 val slot = slots.getOrNull(e.slot)
                                 if (slot != null) {
@@ -362,7 +457,7 @@ object Cistern {
                         val force = pulse.amplitude * w
                         for (k in 0 until MODES) p[k] += force * pulse.projection[k]
                         pulse.splash += .12 * (pulse.noise.next() - pulse.splash)
-                        splash += pulse.splash * w * pulse.amplitude * .20
+                        splash += pulse.splash * w * pulse.amplitude * pulse.textureGain
                     }
                     pulseIndex--
                 }
@@ -391,10 +486,10 @@ object Cistern {
                 val after = energy()
                 dissipated += max(0.0, afterInput - after)
                 maxEnergy = max(maxEnergy, after)
-                var y = q[0] * 1.12 / sqrt(modeMass[0])
-                for (k in 1 until MODES) y += q[k] * (.34 / (1.0 + .26 * k)) / sqrt(modeMass[k])
+                var y = 0.0
+                for (k in 0 until MODES) y += q[k] * readout[k]
                 var body = 0.0
-                for (k in 0 until FRAME_MODES) body += fq[k] * (.13 / (1.0 + k))
+                for (k in 0 until FRAME_MODES) body += fq[k] * profile.frameRadiation[k]
                 frame[i] = (body * OUTPUT_GAIN).toFloat()
                 y += body + splash
                 val blocked = y - dcX + .99960 * dcY
@@ -424,7 +519,7 @@ object Cistern {
                 var norm = 0.0
                 for (j in 0 until REGIONS) { val w = shape[j][k] * shape[j][k]; wet += smoothedLoad[j] * w; norm += w }
                 wet /= max(.1, norm)
-                val nextMass = 1.0 + wet * (2.0 + 2.8 * (1.0 - skin))
+                val nextMass = 1.0 + wet * (profile.wetMass + 3.2 * (1.0 - skin))
                 // Accreting liquid is inelastic: preserve no more than the old
                 // energy. Draining keeps energy coordinates unchanged.
                 if (nextMass > modeMass[k]) {
@@ -435,60 +530,64 @@ object Cistern {
                 }
                 modeMass[k] = nextMass
                 val sagCents = -min(26.0, wet * (12.0 + 7.0 * (1.0 - skin)))
-                val ratio = if (k == 0) 1.0 else RATIOS[k] * (1.0 + (skin - .5) * .032 * k / MODES) * voiceRatio(k)
-                val loadingPitch = if (k == 0) 2.0.pow(sagCents / 1200.0) else 1.0 / sqrt(1.0 + wet * .10 * k)
+                val ratio = if (k == 0) 1.0 else profile.ratios[k] * (1.0 + (skin - .5) * (.20 + .015 * k))
+                val loadingPitch = if (k == 0) 2.0.pow(sagCents / 1200.0) else 1.0 / sqrt(1.0 + wet * (.15 + .055 * k))
                 val frequency = min(15_000.0, hz * ratio * loadingPitch)
                 val angle = 2.0 * PI * frequency / UP_RATE
                 c[k] = cos(angle); s[k] = sin(angle)
-                val dryLoss = if (k == 0) .95 + .32 * (1.0 - skin) else 1.60 + k * (.33 + .64 * (1.0 - skin))
-                val wetLoss = wet * (1.6 + .80 * k * (1.3 - .5 * skin))
+                val dryLoss = if (k == 0) profile.rootLoss + .48 * (1.0 - skin) else
+                    profile.upperLoss + k * (profile.upperSlope + .95 * (1.0 - skin))
+                val wetLoss = wet * profile.wetLoss * (1.5 + 1.25 * k * (1.35 - .65 * skin))
                 r[k] = exp(-(dryLoss + wetLoss) / UP_RATE)
+                val radiation = profile.radiation[k] * if (k == 0) 1.0 else (.40 + .95 * skin)
+                readout[k] = radiation / sqrt(nextMass)
             }
-            val ratios = doubleArrayOf(.53, .91, 1.37)
             for (k in 0 until FRAME_MODES) {
-                val w = 2.0 * PI * hz * ratios[k] / UP_RATE
+                val w = 2.0 * PI * hz * profile.frameRatios[k] / UP_RATE
                 fc[k] = cos(w); fs[k] = sin(w)
-                fr[k] = exp(-(2.7 + k * 1.7 + if (voice == CisternVoice.POOL) .8 else 0.0) / UP_RATE)
+                fr[k] = exp(-(3.2 + k * 1.7 + .25 * profile.upperLoss) / UP_RATE)
             }
             for (k in q.indices) if (!q[k].isFinite() || !p[k].isFinite()) { q[k] = 0.0; p[k] = 0.0; nonFinite++ }
             for (k in fq.indices) if (!fq[k].isFinite() || !fp[k].isFinite()) { fq[k] = 0.0; fp[k] = 0.0; nonFinite++ }
         }
 
-        private fun voiceRatio(k: Int): Double = when (voice) {
-            CisternVoice.FIRST -> 1.0 + .004 * sin(k * 1.7)
-            CisternVoice.DRIP -> 1.0 - .008 * k / MODES
-            CisternVoice.CASCADE -> 1.0 + .006 * sin(k * .8)
-            CisternVoice.POOL -> 1.0 - .025 * k / MODES
-            CisternVoice.RIPPLE -> 1.0 + .017 * k / MODES
-            CisternVoice.RECOVERY -> 1.0 - .006 * sin(k.toDouble())
-        }
+        private fun strikePosition(): Double =
+            (profile.strikePosition + .38 * (1.0 - strike).pow(1.4)).coerceIn(.025, .72)
 
         private fun impact(t: Double, region: Int, position: Double, amplitude: Double, liquid: Boolean, id: Int) {
             val wet = if (frozenLoad) initialLoads[region] else loads[region]
-            val softness = if (liquid) .58 + .70 * drop + .5 * wet + .28 * (1.0 - skin) else 1.0 - .64 * strike
-            val duration = if (liquid) .00065 + .00145 * softness else .00045 + .0018 * softness
+            val softness = if (liquid) .16 + .94 * drop + .65 * wet + .44 * (1.0 - skin) else
+                (1.0 - strike).pow(1.6) * (.64 + .60 * (1.0 - skin))
+            // A contact occupies the same fraction of a root period in each
+            // register. Fixed millisecond pulses previously erased the upper
+            // surface at high notes and could stop even the first release.
+            val registerScale = (frequencyFor(DEFAULT_MIDI) / hz).coerceIn(.25, 4.0)
+            val duration = profile.contactWidth * registerScale *
+                if (liquid) (.00025 + .00120 * softness) else (.00020 + .0038 * softness)
             val length = max(24, (duration * UP_RATE).roundToInt())
             val projection = DoubleArray(MODES) { k ->
-                val footprint = exp(-k * (.11 + softness * .22))
-                val level = if (k == 0) 1.0 else .55 * footprint
-                level * spatial(k, position) * if (k == 0) 1.0 else (1.0 + .24 * skin)
+                val footprint = exp(-k * profile.contactBreadth * (.025 + softness * .30))
+                val level = profile.excitation[k] * footprint
+                level * spatial(k, position) * if (k == 0) 1.0 else (.48 + .84 * skin)
             }
-            val compliance = 1.0 / (1.0 + wet * (1.2 + .8 * drop))
+            val compliance = 1.0 / (1.0 + wet * (1.4 + profile.wetMass * .42 + 1.2 * drop))
             val textureId = if (held) Math.floorMod((t * UP_RATE).roundToLong(), cycleSamples.toLong()).toInt() else id
             pulses.add(Pulse(t, length, amplitude * compliance, projection,
-                Dsp.Noise(Dsp.seedFor("CISTERN", MODEL_VERSION, voice.name, "CONTACT", liquid, region, textureId)), textureId))
+                Dsp.Noise(Dsp.seedFor("CISTERN", MODEL_VERSION, voice.name, "CONTACT", liquid, region, textureId)), textureId,
+                if (liquid) .035 + .045 * skin else .008 + .022 * strike))
             stimulate(t, region, amplitude * compliance, id, liquid)
         }
 
         private fun stimulate(t: Double, region: Int, strength: Double, id: Int, liquid: Boolean) {
-            val local = strength * (if (liquid) 2.4 + 1.2 * drop else 1.9 + 1.7 * strike)
+            val local = strength * (if (liquid) (1.20 + 2.0 * drop) * profile.reach else 1.6 + 2.3 * strike)
             field[region] = min(8.0, field[region] + local)
             cause[region] = id
             // The upward contact chiefly disturbs the inner field. Falling
             // impacts carry their own stored energy and reach farther, so the
             // outer response has a real secondary cause instead of every slot
             // already being spent by the first strike's delayed front.
-            val reach = if (liquid) .18 + .72 * suspension else .12 + .32 * suspension
+            val reach = if (liquid) (.14 + .81 * suspension) * profile.reach else
+                (.08 + .51 * suspension * (.45 + .55 * strike)) * sqrt(profile.reach)
             for (j in 0 until REGIONS) {
                 val distance = abs(j - region)
                 if (distance == 0) continue
@@ -508,7 +607,7 @@ object Cistern {
             }
             for (j in loads.indices) {
                 loads[j] = max(0.0, loads[j] + exchange[j])
-                val rate = if (held) 2.8 + 5.2 * drain else .16 + 4.8 * drain.pow(1.5)
+                val rate = if (held) 2.8 + 5.2 * drain else .08 + 7.4 * drain.pow(1.6)
                 val outlet = rate * (.85 + .06 * j)
                 val out = loads[j] * (1.0 - exp(-outlet * CONTROL_DT))
                 loads[j] -= out; drained += out; flow += out / CONTROL_DT
@@ -541,7 +640,7 @@ object Cistern {
                 if (beat != maintenanceBeat) {
                     maintenanceBeat = beat
                     val region = beat % REGIONS
-                    val amplitude = (.27 + .23 * strike) * (.80 + .40 * suspension) * velocity
+                    val amplitude = profile.strikeScale * (.19 + .33 * strike) * (.80 + .40 * suspension) * velocity
                     val e = event(EventKind.MAINTENANCE, t, -1, region, -1, impulse = amplitude)
                     impact(t, region, (region + .4) / REGIONS, amplitude, false, e.id)
                 }
@@ -557,7 +656,7 @@ object Cistern {
                 val slot = slots[j]
                 if (slot.state != 0) continue
                 val region = slot.region
-                val releaseThreshold = (.76 - .44 * suspension) * slot.thresholdBias * (1.0 + .24 * region) *
+                val releaseThreshold = (.96 - .70 * suspension) * profile.threshold * slot.thresholdBias * (1.0 + .24 * region) *
                     if (held) .003 * velocity * velocity else 1.0
                 val motion = envelope[region] * field[region]
                 slot.accumulator = max(0.0, slot.accumulator * exp(-CONTROL_DT / .085) + motion * CONTROL_DT * (15.0 + 20.0 * suspension))
@@ -568,9 +667,8 @@ object Cistern {
                     opportunity = cycle > slot.lastOpportunity && phase >= slot.phase && phase < slot.phase + CONTROL_DT * 1.01
                 }
                 if (!opportunity || slot.accumulator < releaseThreshold || cause[region] < 0) continue
-                if (t - refractory[region] < .008 || t - lastRelease < .0015) continue
-                val voiceTravel = when (voice) { CisternVoice.DRIP -> .12; CisternVoice.FIRST -> .07; CisternVoice.RIPPLE -> -.035; else -> 0.0 }
-                val travel = (MIN_TRAVEL + .20 * sqrt(slot.height) + .14 * drop * slot.height + voiceTravel).coerceIn(MIN_TRAVEL, MAX_TRAVEL)
+                if (t - refractory[region] < regionalRefractory || t - lastRelease < globalRefractory) continue
+                val travel = (MIN_TRAVEL + .21 * sqrt(slot.height) + .12 * drop * slot.height + profile.travel).coerceIn(MIN_TRAVEL, MAX_TRAVEL)
                 val e = event(EventKind.RELEASE, t, j, region, cause[region], slot.mass, travel)
                 slot.releaseId = e.id; slot.releasedAt = t; slot.arrival = t + travel
                 slot.state = 1; slot.available = 0.0; slot.accumulator = 0.0
@@ -582,7 +680,7 @@ object Cistern {
         private fun land(j: Int, at: Double) {
             val slot = slots[j]
             val arrivalVelocity = .60 + .70 * sqrt(slot.height)
-            val amplitude = (.26 + 2.2 * sqrt(slot.mass)) * arrivalVelocity * (.76 + .40 * skin) * velocity
+            val amplitude = profile.liquidScale * (.22 + 2.4 * sqrt(slot.mass)) * arrivalVelocity * (.76 + .40 * skin) * velocity
             val e = event(EventKind.LANDING, at, j, slot.region, slot.releaseId,
                 slot.mass, at - slot.releasedAt, amplitude)
             slot.state = 2; slot.landingId = e.id
@@ -637,14 +735,14 @@ object Cistern {
             values.addAll(modeMass.toList())
             values.add(dcX); values.add(dcY)
             for (j in 0 until REGIONS) {
-                values.add(min(.008, t - refractory[j]))
+                values.add(min(regionalRefractory, t - refractory[j]))
                 appendCause(values, if (field[j] < 1e-10) -1 else cause[j], t)
             }
-            values.add(min(.0015, t - lastRelease))
+            values.add(min(globalRefractory, t - lastRelease))
             values.add(pulses.size.toDouble())
             for (pulse in pulses.sortedBy { it.at }) {
                 values.add(pulse.at - t); values.add(pulse.length.toDouble())
-                values.add(pulse.amplitude); values.add(pulse.textureId.toDouble()); values.add(pulse.splash)
+                values.add(pulse.amplitude); values.add(pulse.textureId.toDouble()); values.add(pulse.splash); values.add(pulse.textureGain)
                 values.addAll(pulse.projection.toList())
             }
             return values.toDoubleArray()

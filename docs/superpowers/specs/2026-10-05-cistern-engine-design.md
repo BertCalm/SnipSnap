@@ -288,6 +288,34 @@ with 36. POOL and RECOVERY also start with a small wet load. Placement and
 contact roughness derive from the project seed mechanism, and the field's
 random placement remains fixed across a macro sweep.
 
+The provisional voicing uses six distinct surface profiles rather than tiny
+offsets of one modal balance. Each profile declares upper-mode spacing,
+force projection, radiation, loss, frame coupling, contact compliance and
+suspended-field geometry. FIRST leads with a clear elastic strike; DRIP
+emphasizes rounded delayed answers; CASCADE exposes spreading upper modes;
+POOL retains close low resonances under wet damping; RIPPLE has narrow,
+light contacts; RECOVERY starts loaded and clears as liquid drains. The
+root remains the requested note. Contact duration scales with the root
+period across C2–C6 so higher notes retain audible surface character.
+
+STRIKE changes position, footprint and force duration as well as input
+energy. SKIN changes upper spacing, radiation, contact projection and
+loss. DROP changes mass, height and contact compliance; SUSPENSION changes
+release thresholds and reach; DRAIN changes wet retention during the
+gesture. The dry sixteen-pad kit uses all six profiles and all twelve
+starting presets at explicit C-minor-pentatonic notes. Its first eight
+pads alternate surface characters instead of transposing a single FIRST
+patch.
+
+Audition revision `voice-contrast-2` addresses the owner's reported
+sameness. The old clips had roughly 99% of their C4 spectral energy in
+the fundamental band. New regression checks require audible non-root
+body, distinct normalized spectra at the same note and velocity, and
+FIRST/DRIP STRIKE and SKIN endpoint contrast. These numerical checks do
+not establish musical acceptance. The hosted audition preserves original
+clips for direct before/after listening and identifies the revision in
+exported notes; patch model 1 remains the provisional causal architecture.
+
 The material/release clock advances every 176 internal samples, approximately
 1002.27 Hz. A smoothed local modal-energy envelope acts on a decaying release
 field. Threshold crossings spend a slot once, bounded propagation reaches
@@ -330,7 +358,9 @@ Periodic opportunities constrain the release field to a nominal 2.4 second
 material cycle. The period is snapped to a whole number of material-clock
 ticks and output samples; its actual duration is recorded in each report.
 Opportunities favor each region after its maintenance contact while retaining
-the slot's local threshold requirement. HOLD uses a faster drain
+the slot's local threshold requirement. Held release guards fit their
+opportunity spacing so eligible slots do not suppress the following cycle;
+one-shot guards retain their profile's characteristic spacing. HOLD uses a faster drain
 baseline than a one-shot so retained corners can circulate; DRAIN still
 changes that removal rate. This circulation supplies material and excitation
 explicitly rather than assigning perpetual energy to the passive surface.
@@ -356,10 +386,12 @@ independent cycle and full state reports are required separately.
 
 ### Kit and audition
 
-The sixteen-pad kit uses FIRST at MIDI 60, 63, 65, 67, 70, 72, 75 and 77 on
-A01–A08: C4, E♭4, F4, G4, B♭4, C5, E♭5 and F5. A09–A16 hold Hanging Rain,
-Wide Cascade, Heavy Landing, Wet Basin, Thin Ripple, Slow Drain, Clear Return
-and the held Replenished Circle. Every pad has a dry regeneration recipe.
+The sixteen-pad kit uses FIRST, DRIP, CASCADE, POOL, RIPPLE, RECOVERY,
+FIRST and DRIP on A01–A08, at MIDI 60, 63, 65, 67, 70, 72, 75 and 77:
+C4, E♭4, F4, G4, B♭4, C5, E♭5 and F5. A09–A16 hold Heavy Landing, Slow
+Drain, Dense Surface, Hanging Rain, Wet Basin, Thin Ripple, Clear Return
+and the held Replenished Circle, at MIDI 48, 55, 63, 67, 48, 75, 70 and 60,
+respectively. Every pad has a dry regeneration recipe.
 
 Run:
 

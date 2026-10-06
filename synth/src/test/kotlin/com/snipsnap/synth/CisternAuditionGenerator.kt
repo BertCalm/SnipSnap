@@ -66,6 +66,7 @@ object CisternAuditionGenerator {
             require(!old.exists() || old.delete()) { "cannot replace old CISTERN audition $old" }
         }
         val sections = mutableListOf<Section>()
+        val generatedFiles = mutableSetOf<String>()
         var gestures = 0
         var renderNanos = 0L
         var maxBufferBytes = 0L
@@ -122,6 +123,8 @@ object CisternAuditionGenerator {
             }
             WavWriter.write(File(dir, "${id}_raw.wav"), raw, WavWriter.BitDepth.PCM_24)
             WavWriter.write(File(dir, "${id}_matched.wav"), matched, WavWriter.BitDepth.PCM_24)
+            generatedFiles += "$section/${id}_raw.wav"
+            generatedFiles += "$section/${id}_matched.wav"
             val releases = d.events.count { it.kind.name == "RELEASE" }
             val landings = d.events.count { it.kind.name == "LANDING" }
             val secondary = d.events.count { event ->
@@ -288,11 +291,23 @@ object CisternAuditionGenerator {
         ))
         sections += Section("DIAGNOSTICS", "Causality, loading and circulation", "These probes expose the model's state outside the six product controls. Listen to raw and matched versions; inspect event and liquid traces where provided.", diagnostics)
 
+        // Changed kit/preset names must not leave obsolete generated clips in
+        // a successful matrix. Preserve unrelated files and clean only this
+        // generator's audio filename patterns within its declared sections.
+        val sectionNames = sections.map { it.id }.toSet()
+        for (file in root.walkTopDown().filter { it.isFile }) {
+            val relative = file.relativeTo(root).invariantSeparatorsPath
+            if (relative.substringBefore('/') in sectionNames &&
+                (file.name.endsWith("_raw.wav") || file.name.endsWith("_matched.wav")) &&
+                relative !in generatedFiles) {
+                require(file.delete()) { "cannot remove obsolete CISTERN clip $file" }
+            }
+        }
         val sectionJson = sections.joinToString(",\n") { s ->
             val groups = s.groups.joinToString(",") { g -> "{\"label\":${q(g.label)},\"clips\":[${g.clips.joinToString(",") { it.json }}]}" }
             "{\"id\":${q(s.id)},\"display\":${q(s.display)},\"body\":${q(s.body)},\"groups\":[$groups]}"
         }
-        val manifest = "{\"engine\":\"CISTERN\",\"provisional\":true,\"listening\":\"pending\",\"gestures\":$gestures," +
+        val manifest = "{\"engine\":\"CISTERN\",\"auditionRevision\":\"voice-contrast-2\",\"provisional\":true,\"listening\":\"pending\",\"gestures\":$gestures," +
             "\"wavFiles\":${gestures * 2},\"renderMillis\":${renderNanos / 1e6},\"maxBufferBytes\":$maxBufferBytes," +
             "\"holdValidation\":{\"sourceSeamLimit\":${Keys.MAX_SEAM_ERROR},\"cycleDifferenceLimit\":$MAX_CYCLE_DIFFERENCE," +
             "\"relativeCycleDifferenceLimit\":$MAX_RELATIVE_CYCLE_DIFFERENCE,\"carriedBoundaryErrorLimit\":$MAX_CARRIED_BOUNDARY_ERROR," +

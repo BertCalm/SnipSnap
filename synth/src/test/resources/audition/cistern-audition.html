@@ -187,7 +187,7 @@
   search.addEventListener('input', filter);
   repeat.addEventListener('change', () => { audio.loop = repeat.checked; });
   document.getElementById('export').addEventListener('click', () => {
-    const body = JSON.stringify({engine: 'CISTERN', model: 1, savedAt: new Date().toISOString(), notes}, null, 2);
+    const body = JSON.stringify({engine: 'CISTERN', model: 1, auditionRevision: manifest.auditionRevision, savedAt: new Date().toISOString(), notes}, null, 2);
     const url = URL.createObjectURL(new Blob([body], {type: 'application/json'}));
     const link = element('a');
     link.href = url;

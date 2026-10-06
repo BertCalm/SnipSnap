@@ -157,6 +157,9 @@ import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.Murk
+import com.snipsnap.synth.MurkPatch
+import com.snipsnap.synth.MurkVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
@@ -1044,6 +1047,7 @@ fun SynthScreen(
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
@@ -1876,7 +1880,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, THAW;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, THAW, MURK;
 
     /** Advance through the registered engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1897,6 +1901,7 @@ private enum class Engine {
         FORK -> ForkVoice.entries
         FLOTILLA -> FlotillaVoice.entries
         CISTERN -> CisternVoice.entries
+        MURK -> MurkVoice.entries
         THAW -> ThawVoice.entries
     }
 
@@ -1916,6 +1921,7 @@ private enum class Engine {
         FORK -> Fork.macrosFor(voice as ForkVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         CISTERN -> Cistern.macrosFor(voice as CisternVoice)
+        MURK -> Murk.macrosFor(voice as MurkVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
     }
 
@@ -1935,6 +1941,7 @@ private enum class Engine {
         FORK -> Fork.defaults(voice as ForkVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         CISTERN -> Cistern.defaults(voice as CisternVoice)
+        MURK -> Murk.defaults(voice as MurkVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
     }
 
@@ -1954,6 +1961,7 @@ private enum class Engine {
         FORK -> Fork.scramble(voice as ForkVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         CISTERN -> Cistern.scramble(voice as CisternVoice, random)
+        MURK -> Murk.scramble(voice as MurkVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
     }
 
@@ -1978,6 +1986,7 @@ private enum class Engine {
         FORK -> Fork.render(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.render(voice as CisternVoice, macros)
+        MURK -> Murk.render(voice as MurkVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
     }
 
@@ -2003,6 +2012,7 @@ private enum class Engine {
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.drumClassFor(voice as CisternVoice, macros)
+        MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
     }
 
@@ -2022,6 +2032,7 @@ private enum class Engine {
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         CISTERN -> CisternPatch(name, voice as CisternVoice, macros)
+        MURK -> MurkPatch(name, voice as MurkVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
     }
 
@@ -2253,7 +2264,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
  * null` case has no placeholder either).
  *
  * A horizontally-scrolling strip of chips inside one [sunkenField], not a
- * vertical list: sixteen names have to fit next to a voice picker and five
+ * vertical list: seventeen names have to fit next to a voice picker and five
  * sliders on one phone screen, and a horizontal strip is what "tap it, hear
  * it, tap the next one" (the roadmap's own browsing-speed framing) wants
  * anyway — no per-row height cost as the roster grows. [current] is `null`

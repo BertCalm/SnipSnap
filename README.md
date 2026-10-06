@@ -378,6 +378,18 @@ pads. Run `./gradlew :synth:generateCisternAudition` and open
 macro sweeps, interaction grids and causal diagnostics. Listening and
 release naming checks are pending. Design and implementation notes:
 [`docs/superpowers/specs/2026-10-05-cistern-engine-design.md`](docs/superpowers/specs/2026-10-05-cistern-engine-design.md).
+The [published audition](https://cistern-snipsnap-audition.bertcalm.chatgpt.site)
+includes the full matrix and before/after comparisons for the revised voices.
+
+MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
+travels between four trees, and synthesized owls answer the disturbances
+that reach them. CLUNK, THWACK, FRONT, HOOT, GROVE and ALARM share STRIKE,
+TRUNK, FOG, AGITATION and GROVE, with TUNE and HOLD. Fog loads the original
+tree as well as carrying returning sound. Calls have refractory times and
+finite budgets; HOLD supplies repeated strikes. Fourteen dry presets and a
+sixteen-pad pitched kit. The accessible listening page starts silent and
+is regenerated with `./gradlew :synth:generateMurkAudition`; see
+[`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
@@ -386,9 +398,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, THAW, CISTERN and GRAINS round out the lineup — sixteen engines
-in the `Engine` picker counting SKIN, RESIN, TIDE, GLINT, SIREN, FORK,
-FLOTILLA, THAW and CISTERN; GRAINS is a separate processor, out of the picker's scope
+VOX, FORK, FLOTILLA, THAW, CISTERN, MURK and GRAINS round out the lineup — seventeen
+engines in the `Engine` picker; GRAINS is a separate processor, out of the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -570,7 +581,7 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, THAW, CISTERN, plus GRAINS, SNAP and DRAW, which sit beside the
+GLINT, SIREN, FORK, FLOTILLA, THAW, CISTERN, MURK, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 CISTERN is also in the picker, preset roster and starter kits; the CLI's
