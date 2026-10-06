@@ -63,13 +63,12 @@ class GlintPresetsTest {
 
     @Test
     fun `no preset name is an engine's name, a voice's or a rack section's`() {
-        val taken = listOf(
-            ThumpPatch.ENGINE, SkinPatch.ENGINE, TinesPatch.ENGINE, PluckPatch.ENGINE, TonewheelPatch.ENGINE, VelvetPatch.ENGINE,
-            FathomPatch.ENGINE, ResinPatch.ENGINE, TidePatch.ENGINE, VoxPatch.ENGINE, SnapPatch.ENGINE, GlintPatch.ENGINE,
-            SirenPatch.ENGINE, ForkPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, BorePatch.ENGINE, ArcoPatch.ENGINE,
-            MercuryPatch.ENGINE, GyrePatch.ENGINE,
-        ) + FxChain.SECTION_NAMES.map { it.uppercase() } + GlintVoice.entries.map { it.name }
-        assertTrue(taken.size > 30, "the list of taken names lost its rack sections")
+        // Every engine with a roster comes from the registry itself, so a roster added later cannot be forgotten
+        // here; the engines that have none yet are listed.
+        val engines = Presets.all().map { it.engine }.toSet() +
+            listOf(SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
+        val taken = engines + FxChain.SECTION_NAMES.map { it.uppercase() } + GlintVoice.entries.map { it.name }
+        assertTrue(taken.size > 30, "the list of taken names lost its engines or its rack sections")
         for (preset in GlintPresets.all()) {
             val words = preset.name.split(Regex("[^A-Z0-9]+")).filter { it.isNotEmpty() }
             val clash = words.filter { it in taken }
