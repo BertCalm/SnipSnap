@@ -429,7 +429,7 @@ class MutateSheetTest {
         assertEquals("BECOME × SOUL A03", PadSheetBoxes.mutate(applied))
         assertEquals("MUTATED: BECOME", KitDiff.recipeName(ramped))
         assertEquals(
-            RecipeReplay.Plan.Refused("MUTATE (BECOME WITH SOUL A03) NEEDS ITS PARENT - NOT CARRIED."),
+            RecipeReplay.Plan.Refused("MUTATE (BECOME WITH SOUL A03) NEEDS ITS PARTNER - NOT CARRIED."),
             RecipeReplay.plan(ramped),
         )
 

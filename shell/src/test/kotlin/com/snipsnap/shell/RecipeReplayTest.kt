@@ -43,7 +43,7 @@ class RecipeReplayTest {
         val mutate = RecipeReplay.plan(
             obj("mutate" to obj("mode" to JsonValue.Str("splice"), "with" to JsonValue.Arr(listOf(JsonValue.Str("Kit:A02"))))),
         )
-        assertEquals(RecipeReplay.Plan.Refused("MUTATE (SPLICE WITH KIT A02) NEEDS ITS PARENT - NOT CARRIED."), mutate)
+        assertEquals(RecipeReplay.Plan.Refused("MUTATE (SPLICE WITH KIT A02) NEEDS ITS PARTNER - NOT CARRIED."), mutate)
         assertEquals(RecipeReplay.Plan.Refused(Copy.REPLAY_SPLICE), RecipeReplay.plan(obj("splice" to obj("crossfaded" to JsonValue.Bool(true)))))
         assertEquals(RecipeReplay.Plan.Refused(Copy.REPLAY_OUTSIDE), RecipeReplay.plan(obj("outside" to obj("move" to JsonValue.Str("reamp")))))
         assertEquals(RecipeReplay.Plan.Refused(Copy.replayMeasured("THE DOCTOR")), RecipeReplay.plan(obj("doctor" to JsonValue.Str("sub-carve"))))

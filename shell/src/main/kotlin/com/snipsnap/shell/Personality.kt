@@ -1500,7 +1500,8 @@ object Copy {
     fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
     fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
-    fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
+    /** MUTATE's KEEP: the move, the pad and its partner, then where the take before it went. */
+    fun mutated(move: String, pad: String, partner: String): String = "$move: $pad × $partner. THE TAKE BEFORE IT SLEEPS IN THE BIN."
     /**
      * DE-SAMPLE: the pad is a patch now; [engine] and [voice] the two
      * words that identify it, [distance] the honest number.
@@ -1516,13 +1517,19 @@ object Copy {
     /** DE-SAMPLE's refusal: no patch near enough, and which one was nearest. */
     fun desampleFar(engine: String, voice: String, distance: Float): String =
         "NO PATCH IS NEAR. THE CLOSEST IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
-    /** DRIFT: the pad drifted toward what the crate dealt. */
+    /** DRIFT: the pad drifted toward the partner the shelf picked. */
     fun drifted(pad: String, toward: String): String = "$pad DRIFTED TOWARD $toward. ORIGINAL SLEEPS IN THE BIN."
-    const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
+    /**
+     * MUTATE's UNDO. It restores the newest take of the pad's file from the
+     * bin, which after two mutates is the first mutate's result, not the
+     * original; so the line says exactly what came back.
+     */
+    const val UNMUTATED = "UNDONE. THE TAKE BEFORE THE LAST MUTATE IS BACK FROM THE BIN."
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
-    const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."
-    /** A FILE: the picked file cannot be a parent; [reason] the decoder's or the holder's own words. */
-    fun fileRefused(reason: String): String = "NOT A PARENT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    /** ROULETTE or DRIFT on a shelf with no other pad. The name stays (PersonalityTest lists it); the words say PARTNER's way. */
+    const val CRATE_EMPTY = "THE SHELF HOLDS NO OTHER PAD. ROULETTE HAS NOTHING TO PICK."
+    /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
+    fun fileRefused(reason: String): String = "NOT A PARTNER: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
     // ---- TAPE SPLICE: two takes of one pad, joined at one chosen frame ----
     const val SPLICE_NEEDS_HISTORY =
@@ -1539,9 +1546,9 @@ object Copy {
     const val REPLAY_CLIPBOARD_EMPTY = "NOTHING COPIED YET. COPY LAST TREATMENT OFF A PAD FIRST."
     /** The honest limit, under the buttons: the recipe is the last step, never the stack. */
     const val REPLAY_LAST_ONLY = "COPIES THE LAST TREATMENT ONLY. A CRUSHED-THEN-WASHED PAD COPIES AS WASHED."
-    /** MUTATE's recipe names its parents by label; the bytes never rode along. */
-    fun replayNeedsParent(move: String, parents: List<String>): String =
-        "MUTATE ($move WITH ${parents.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARENT - NOT CARRIED."
+    /** MUTATE's recipe names its partners by label; the bytes never rode along. The CLI's `recipe` prints it lower-cased. */
+    fun replayNeedsPartner(move: String, partners: List<String>): String =
+        "MUTATE ($move WITH ${partners.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARTNER - NOT CARRIED."
     const val REPLAY_SPLICE = "SPLICE NAMES NO TAKES - NOT REPLAYABLE."
     const val REPLAY_OUTSIDE = "OUTSIDE WAS A ROOM, NOT A SETTING - NOT REPLAYABLE."
     /** CLEAN, THE DOCTOR and SCULPT are readings of that exact sound, not settings for another. */
