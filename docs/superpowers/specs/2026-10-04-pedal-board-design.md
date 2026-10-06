@@ -31,13 +31,13 @@ The fixed rack order is already the guitar-pedal convention: wah, compressor, fu
 ## Decisions taken
 
 1. **Staged hybrid** (of three approaches offered; presets-only and one-section-with-a-type-switch were declined). Recipes first, then three new sections, each at its own gate.
-2. **A pedal is a recipe or a section.** A recipe is a named chip over existing sections (the way PUNCH is VALVE at 0.6): no new DSP. A section is new DSP with three macros, a fixed slot, and a gate. The pad sheet's AMT stepper fades either toward its neutral; nothing new to learn.
+2. **A pedal is a recipe or a section.** A recipe is a named chip over existing sections (the way `amped`, VALVE at DRIVE 0.6, is a recipe that has no chip of its own today): no new DSP. A section is new DSP with three macros, a fixed slot, and a gate. The pad sheet's AMT stepper fades either toward its neutral; nothing new to learn.
 3. **Placement on the pad sheet: a new seventh row, PEDALS**, six chips: FUZZ, DRIVE, COMP, WAH, TREM, FLANGE. Nothing moves: PHASE, ENSEMBLE and SECTION keep their places. This bends the rule that rows group by what an effect does rather than what it is, on purpose: a guitarist looks for pedals by pedal name. (Declined: regrouping by function with a MOD row, which would have moved three existing chips.)
 4. **The process for every stage** is the MAGNET and VALVE process: ledger, per-task review, a final review, an owner listening gate; a section that fails its gate ships without a chip.
 
 ## Stage 0: the PEDALS row and three recipes (no new DSP)
 
-The row (`Treatments.PEDAL_SEGMENTS`, appended to `Treatments.ROWS`; the pad sheet draws from `ROWS`, so a row is one list entry plus the two shell tests that pin the layout, `PadSheetTest` and `UatSimTest`). It starts with three chips, and gains FUZZ, TREM and FLANGE as their sections pass.
+The row is `PadSheet.PEDAL_SEGMENTS` in the `shell` module, appended to `PadSheet.ROWS`; the recipes are named characters in `Treatments.EXTRA` (`synth`), reached from a chip through `PadSheet.CHARACTER_FOR`. The app's `TreatmentCard` draws every row of `PadSheet.ROWS` generically, so the app needs no change; a row is one list entry, one `CHARACTER_FOR` entry per chip, and the inventory that `PadSheetTest` pins (31 chips today, a row at most 6 wide, a word on one row only). It starts with three chips, and gains FUZZ, TREM and FLANGE as their sections pass.
 
 New characters are appended to `Treatments.EXTRA`, never to `Shuffle.TREATMENTS` (a seeded bank indexes it; the names list is pinned in order). A chain must not set a macro exactly at its neutral (AMT could never move it; the AMT-scaling test false-fails on it): `amped` leaves TONE out for this reason.
 
@@ -47,7 +47,9 @@ New characters are appended to `Treatments.EXTRA`, never to `Shuffle.TREATMENTS`
 | COMP | SQUASH alone, tuned to sustain (the remix bank's `punched` is SQUASH plus CRUNCH; COMP must not be a copy of it) |
 | WAH | CONTOUR with CREAM up and a fast, deep SWEEP (CUTOFF's neutral is 1, fully open) |
 
-**Gate (short):** for each chip, on a guitar pad (JANGLE and CHUG), a drum and a choir: right, not enough, too much, or not usable. The WAH answer also decides whether WAH stays a recipe or becomes its own section (Stage 3, not scheduled).
+**A finding from planning: a chip acts on the pad's baked audio.** `KitBuilder.characterPad` rewrites every file the pad references (`rewriteEveryFile`), so a chip tapped on a MAGNET pad processes audio that has already gone through its landing amp. On a guitar pad COMP and WAH therefore land after the amp, and DRIVE (VALVE) stacks a second amp on the first; it is not a pedal in front of an amp. FUZZ will have the same problem for guitar pads. Stage 0 does not fix this (it would need guitar pads to re-render from their recipe with the board in front of the amp, which is its own design); the Stage 0 gate hears both versions so the owner can say whether the order matters.
+
+**Gate (short):** for each chip, on a guitar pad (JANGLE and CHUG, heard two ways: as the pad sheet does it, after the baked amp, and as a rig would, the chip's section in front of the landing amp), a drum and a choir: right, not enough, too much, or not usable. The WAH answer also decides whether WAH stays a recipe or becomes its own section (Stage 3, not scheduled).
 
 ## Stage 1: FUZZ
 
