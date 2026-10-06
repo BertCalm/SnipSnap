@@ -31,6 +31,7 @@ object Circuit {
     private const val SPEED_OF_SOUND = 343.0
     private const val CONTROL_BLOCK = 64
     private const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
+    private const val PHRASE_ORIGIN = .16
 
     private val starting = arrayOf(
         floatArrayOf(.55f, .30f, .15f, .20f, .35f),
@@ -129,6 +130,11 @@ object Circuit {
     /** Per-player refractory interval. Replies may never become cues for more replies. */
     internal fun refractorySeconds(paceHz: Double) = .35 + .45 / paceHz
 
+    private fun smooth(value: Double): Double {
+        val v = value.coerceIn(0.0, 1.0)
+        return v * v * (3 - 2 * v)
+    }
+
     private class Geometry(m: Map<String, Float>, private val voice: CircuitVoice, private val rates: Rates) {
         val radius = 1.2 + 2.8 * m.getValue("DIAMETER").toDouble().pow(.8)
         private val canyon = m.getValue("CANYON").toDouble()
@@ -186,36 +192,72 @@ object Circuit {
             val at = time + if (step == 0) 0.0 else (r.nextDouble() - .5) * .022
             if (at >= 0 && at < cutoff) base.add(Event(source, kind, at, velocity * energy * (.92 + .16 * r.nextDouble())))
         }
-        // Each configuration has a complementary eight-slot performance, rather than
-        // the same four-slot loop with different gains. Bits select playing slots;
-        // movement is still independent, and eight slots close the held phrase.
+        // Wood, clay and vocals take different turns, with selected answer spaces.
+        // Rattle can support an outgoing accent quietly, rather than adding
+        // another foreground strike to every slot. Eight slots close the held phrase.
         val pattern = when (voice) {
-            CircuitVoice.ROOT -> intArrayOf(0x55, 0x11, 0x44, 0x22, 0x55)
-            CircuitVoice.PROCESSION -> intArrayOf(0xff, 0x4d, 0x22, 0x88, 0x55)
-            CircuitVoice.ANSWER -> intArrayOf(0x33, 0x11, 0x44, 0x88, 0x11)
-            CircuitVoice.VOICED -> intArrayOf(0x55, 0x11, 0x44, 0xaa, 0x55)
-            CircuitVoice.EXPANSE -> intArrayOf(0x11, 0x22, 0x44, 0x88, 0x11)
-            CircuitVoice.CONFLUENCE -> intArrayOf(0xff, 0x55, 0x22, 0x88, 0x55)
+            CircuitVoice.ROOT -> intArrayOf(0x09, 0x11, 0x44, 0x22, 0x11)
+            CircuitVoice.PROCESSION -> intArrayOf(0x2b, 0x11, 0x22, 0x44, 0x55)
+            CircuitVoice.ANSWER -> intArrayOf(0x21, 0x11, 0x88, 0x40, 0x11)
+            CircuitVoice.VOICED -> intArrayOf(0x15, 0x11, 0x88, 0x22, 0x11)
+            CircuitVoice.EXPANSE -> intArrayOf(0x11, 0x11, 0x44, 0x88, 0x11)
+            CircuitVoice.CONFLUENCE -> intArrayOf(0x2b, 0x11, 0x44, 0x20, 0x55)
         }
         for (step in 0 until count) {
-            val time = .09 + step / p.rates.paceHz
+            val time = PHRASE_ORIGIN + step / p.rates.paceHz
             fun plays(part: Int) = pattern[part] and (1 shl (step % 8)) != 0
-            if (plays(0)) add(3, "RATTLE", time, .56, step)
-            if (plays(1)) add(4, "CLAPPER", time + .035, .72, step)
-            if (plays(2)) add(5, "CLAY", time + .075, .66, step)
-            if (plays(3)) add(6, if ((step / 4) % 2 == 0) "UH_HUH" else "GRUNT", time + .04, .64, step)
+            if (plays(0)) add(3, "RATTLE", time, if (plays(1) || plays(2)) .32 else .43, step)
+            if (plays(1)) add(4, "CLAPPER", time + min(.075, .28 / p.rates.paceHz), .66, step)
+            if (plays(2)) add(5, "CLAY", time + min(.045, .18 / p.rates.paceHz), .60, step)
+            if (plays(3)) add(6, if ((step / 4) % 2 == 0) "UH_HUH" else "GRUNT",
+                time + min(.11, .35 / p.rates.paceHz), .52, step)
             if (plays(4)) add(1, "TUBE_ACCENT", time, .55 + .25 * m.getValue("BREATH"), step)
         }
-        // Even a sparse short gesture contains a coordination voice.
-        if (base.none { it.source == 6 }) add(6, "UH_HUH", .39, .55, 0)
+        // A short sparse phrase still contains a later coordination gesture, with
+        // room for the opening breath/wood to establish the requested note first.
+        if (base.none { it.source == 6 }) add(6, "GRUNT",
+            PHRASE_ORIGIN + min(.85, .95 / p.rates.paceHz), .38, 0)
         base.sortWith(compareBy<Event> { it.timeSeconds }.thenBy { it.source })
+
+        fun duration(event: Event) = when (event.kind) {
+            "RATTLE" -> .25; "CLAPPER" -> .26; "CLAY" -> .48
+            "GRUNT" -> .28; "UH_HUH" -> .58; else -> .42
+        }
+        // Cross-player turns protect the active foreground, while quiet modal tails
+        // may overlap. The vocal reservation covers its entire buffer plus a breath.
+        fun foreground(event: Event) = when (event.kind) {
+            "RATTLE" -> .13; "CLAPPER" -> .14; "CLAY" -> .22
+            else -> duration(event)
+        }
+        fun overlaps(a: Event, b: Event, aSpan: Double, bSpan: Double, gap: Double): Boolean {
+            for (cycle in if (p.held) -1..1 else 0..0) {
+                val start = b.timeSeconds + cycle * p.rates.loopSeconds
+                if (a.timeSeconds < start + bSpan + gap && start < a.timeSeconds + aSpan + gap) return true
+            }
+            return false
+        }
+        val arranged = ArrayList<Event>()
+        for (vocal in base.filter { it.source == 6 }) {
+            if (arranged.none { overlaps(vocal, it, duration(vocal), duration(it), .08) }) arranged.add(vocal)
+        }
+        val vocals = arranged.toList()
+        for (event in base) {
+            if (event.source == 6) continue
+            if (event.source < 3) { arranged.add(event); continue }
+            if (vocals.any { overlaps(event, it, foreground(event), duration(it), .04) }) continue
+            if (arranged.any { it.source == event.source && overlaps(event, it, duration(event), duration(it), .03) }) continue
+            if (event.source != 3 && arranged.any { it.source in 4..5 &&
+                    overlaps(event, it, foreground(event), foreground(it), .045) }) continue
+            arranged.add(event)
+        }
+        base.clear()
+        base.addAll(arranged.sortedWith(compareBy<Event> { it.timeSeconds }.thenBy { it.source }))
         if (!probe.responses || velocity == 0.0) return base
         val canyon = m.getValue("CANYON").toDouble()
         if (canyon < .015) return base
         val replies = ArrayList<Event>()
-        val refractory = DoubleArray(4) { -10.0 }
         var energy = 0.0
-        val cap = min(MAX_REPLIES, 4 + (8 * canyon).roundToInt())
+        val cap = min(MAX_REPLIES, 2 + (4 * canyon).roundToInt())
         val cues = base.filter { it.source == 1 || it.source == 4 }
         for ((index, cue) in cues.withIndex()) {
             if (replies.size >= cap) break
@@ -223,20 +265,38 @@ object Circuit {
             if (cue.source == player) continue
             val wall = index % 2
             val arrived = g.cueArrival(cue.source, player, cue.timeSeconds, wall)
-            val time = arrived + .08 + .10 * canyon
+            val earliest = arrived + .10 + .10 * canyon
             val travel = (arrived - cue.timeSeconds) * SPEED_OF_SOUND
             val strength = cue.energy * (.035 + .43 * canyon) / (1 + .035 * travel)
             if (strength < (if (voice == CircuitVoice.ANSWER) .018 else .025) * velocity) continue
-            val e = velocity * (.45 + .30 * canyon) * (if (voice == CircuitVoice.ANSWER) 1.2 else 1.0) * (.60 + strength)
-            if (time >= cutoff || time - refractory[player - 3] < refractorySeconds(p.rates.paceHz)) continue
-            if (base.any { it.source == player && abs(it.timeSeconds - time) < .18 }) continue
+            val e = velocity * (.30 + .16 * canyon) * (if (voice == CircuitVoice.ANSWER) 1.1 else 1.0) * (.55 + strength)
             if (energy + e > MAX_REPLY_ENERGY * velocity) continue
             val kind = when (player) { 3 -> "RATTLE"; 4 -> "CLAPPER"; 5 -> "CLAY"; else -> if (index % 2 == 0) "UH_HUH" else "GRUNT" }
             val observer = cue.timeSeconds + g.paths(cue.source, cue.timeSeconds)[wall + 1] / SPEED_OF_SOUND
-            replies.add(Event(player, kind, time, e, true, arrived, cue.source, wall, 1,
-                cue.timeSeconds, observer, if (cue.source == 1) "reflected-tube-accent" else "reflected-clapper"))
-            energy += e
-            refractory[player - 3] = time
+            // Arrivals open an opportunity; performers wait for a free quarter-slot
+            // rather than competing with whoever is already speaking or striking.
+            val quantum = .25 / p.rates.paceHz
+            var time = PHRASE_ORIGIN + ceil((earliest - PHRASE_ORIGIN) / quantum) * quantum
+            val deadline = min(cutoff, earliest + max(.40, min(1.0, 1.5 / p.rates.paceHz)))
+            while (time < deadline) {
+                val reply = Event(player, kind, time, e, true, arrived, cue.source, wall, 1,
+                    cue.timeSeconds, observer, if (cue.source == 1) "reflected-tube-accent" else "reflected-clapper")
+                val ownBusy = (base + replies).any { it.source == player &&
+                    overlaps(reply, it, duration(reply), duration(it), if (player == 6) .08 else .035) }
+                val foregroundBusy = (base + replies).any { it.source >= 3 && it.source != player &&
+                    overlaps(reply, it, foreground(reply), foreground(it), .045) }
+                val tooSoon = replies.any { previous ->
+                    val distance = abs(time - previous.timeSeconds)
+                    previous.source == player && min(distance, if (p.held) p.rates.loopSeconds - distance else distance) <
+                        refractorySeconds(p.rates.paceHz)
+                }
+                if (!ownBusy && !foregroundBusy && !tooSoon) {
+                    replies.add(reply)
+                    energy += e
+                    break
+                }
+                time += quantum
+            }
         }
         return (base + replies).sortedWith(compareBy<Event> { it.timeSeconds }.thenBy { it.source }.thenBy { it.reply })
     }
@@ -329,17 +389,17 @@ object Circuit {
                 val t = i.toDouble() / INTERNAL_RATE
                 val release = min(p.phraseSeconds, probe.inputOffSeconds ?: Double.POSITIVE_INFINITY)
                 val envelope = if (p.held && probe.inputOffSeconds == null) 1.0 else {
-                    val attack = (t / .055).coerceIn(0.0, 1.0)
-                    val end = ((release - t) / .26).coerceIn(0.0, 1.0)
+                    val attack = smooth(t / .12)
+                    val end = smooth((release - t) / .44)
                     attack * end
                 }
                 val pressure = velocity * envelope * (.20 + .60 * breath)
                 val slow = 2 * PI * t / if (p.held) p.rates.loopSeconds else 3.2
-                val cadence = 2 * PI * p.rates.paceHz * (t - .09)
+                val cadence = 2 * PI * p.rates.paceHz * (t - PHRASE_ORIGIN)
                 // ANSWER makes a smooth breath space after each outgoing pair of
                 // slots. The finite voice stays rooted, but returns can be heard.
                 val breathSpace = if (voice == CircuitVoice.ANSWER) {
-                    val beat = (t - .09) * p.rates.paceHz
+                    val beat = (t - PHRASE_ORIGIN) * p.rates.paceHz
                     val slot = floor(beat).toInt()
                     val fraction = beat - floor(beat)
                     val blend = fraction * fraction * (3 - 2 * fraction)
@@ -347,11 +407,23 @@ object Circuit {
                 } else 1.0
                 for (role in 0..2) prior[role] = radiation[role]
                 while (accentIndex + 1 < accents.size && accents[accentIndex + 1].timeSeconds <= t) accentIndex++
-                val accent = if (accents.isEmpty()) 0.0 else {
-                    val event = if (t < accents.first().timeSeconds && p.held) accents.last() else accents[accentIndex]
-                    val age = t - event.timeSeconds + if (t < event.timeSeconds && p.held) p.rates.loopSeconds else 0.0
-                    if (age < 0 || age > .28 || velocity == 0f) 0.0
-                    else event.energy / velocity * (1 - exp(-age / .005)) * exp(-age / .080)
+                // Add overlapping smooth pressure gestures. A new accent must not
+                // reset a still-decaying predecessor, including at the held seam.
+                var accent = 0.0
+                if (accents.isNotEmpty() && velocity > 0f) {
+                    var at = if (t < accents.first().timeSeconds) -1 else accentIndex
+                    var visited = 0
+                    // At the bounded 6 Hz grid, at most three accents fit this
+                    // finite window; do not scan the whole held event schedule.
+                    while (visited < min(3, accents.size)) {
+                        if (at < 0) { if (p.held) at = accents.lastIndex else break }
+                        val event = accents[at]
+                        val age = t - event.timeSeconds + if (t < event.timeSeconds && p.held) p.rates.loopSeconds else 0.0
+                        if (age < 0 || age >= .42) break
+                        accent += event.energy / velocity * smooth(age / .035) * exp(-age / .14) * smooth((.42 - age) / .12)
+                        at--
+                        visited++
+                    }
                 }
                 for (role in 0..2) {
                     val gesture = when (role) {
@@ -390,7 +462,7 @@ object Circuit {
 
         val weights = when (voice) {
             CircuitVoice.ROOT -> doubleArrayOf(.050, .045, .022, 1.25, 1.65, 1.75, .95)
-            CircuitVoice.PROCESSION -> doubleArrayOf(.026, .030, .022, 2.10, 2.00, 1.55, 1.25)
+            CircuitVoice.PROCESSION -> doubleArrayOf(.065, .030, .022, 2.10, 2.00, 1.55, 1.25)
             CircuitVoice.ANSWER -> doubleArrayOf(.027, .030, .020, .90, 2.10, 2.25, 1.30)
             CircuitVoice.VOICED -> doubleArrayOf(.023, .020, .045, .90, 1.10, 1.30, 2.55)
             CircuitVoice.EXPANSE -> doubleArrayOf(.037, .023, .027, .85, 1.25, 1.80, 1.00)

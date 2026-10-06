@@ -78,6 +78,7 @@ class CircuitTest {
         val voice = CircuitVoice.ANSWER
         val m = Circuit.defaults(voice) + mapOf("CANYON" to 1f, "PACE" to 0.15f)
         val r = Circuit.inspect(voice, m)
+        assertVocalSpacing(r, "ANSWER reflected replies")
         val replies = r.events.filter { it.reply }
         val base = r.events.filterNot { it.reply }
         assertTrue(replies.isNotEmpty(), "ANSWER never answers its canyon")
@@ -145,7 +146,8 @@ class CircuitTest {
         val until = 3 * Dsp.RATE
         val foreground = rms(players, from, until)
         val backing = rms(trio, from, until)
-        assertTrue(foreground > 2 * backing, "VOICED breath bed masks its players: $backing vs $foreground RMS")
+        assertTrue(foreground > backing,
+            "VOICED players lost audible balance with the tube bed: players=$foreground RMS, bed=$backing RMS")
         val root = Circuit.frequencyFor(m.getValue("TUNE")).toDouble()
         assertTrue(tonePower(sources[2], 2 * root, from, until) > 4 * tonePower(sources[2], root, from, until),
             "upper tube collapsed back to the anchor's root tone")
@@ -199,7 +201,9 @@ class CircuitTest {
         val hz = Keys.midiHz(Circuit.ROOT_MIDI + Circuit.TUNE_SEMITONES / 2)
         val evidence = mutableListOf<String>()
         for (voice in CircuitVoice.entries) {
-            val snip = Circuit.render(voice, Circuit.defaults(voice))
+            val report = Circuit.inspect(voice, Circuit.defaults(voice))
+            assertVocalSpacing(report, "$voice defaults")
+            val snip = report.snip
             val cents = FineTuning.cents(FineTuning.measuredHz(snip, hz, 0.4f, 0.7f), hz.toDouble())
             evidence.add("$voice=${decimal(cents)}")
             assertTrue(abs(cents) < 10.0, "$voice full mix moved the root $cents cents")
@@ -248,6 +252,10 @@ class CircuitTest {
                 val high = Circuit.inspect(voice, m + (name to 1f))
                 assertHealthy(low, "$voice $name 0")
                 assertHealthy(high, "$voice $name 1")
+                if (name == "PACE") {
+                    assertVocalSpacing(low, "$voice PACE 0")
+                    assertVocalSpacing(high, "$voice PACE 1")
+                }
                 val difference = relativeDifference(low.snip.samples, high.snip.samples)
                 if (difference < minimumDifference) {
                     minimumDifference = difference
@@ -306,6 +314,7 @@ class CircuitTest {
             val r = Circuit.inspect(voice, Circuit.defaults(voice) + changes + ("HOLD" to 1f))
             if (voice == CircuitVoice.EXPANSE) expanseMotion.add(r)
             assertHealthy(r, "$voice held")
+            assertVocalSpacing(r, "$voice held PACE ${changes.getValue("PACE")}")
             val loop = assertNotNull(r.loop)
             println("CIRCUIT HOLD $voice ORBIT ${changes.getValue("ORBIT")}: seam=${scientific(loop.seamError)}, convergence=${scientific(loop.convergenceError)}, preroll=${loop.prerollCycles}, seconds=${decimal(r.rates.loopSeconds)}, orbit=${decimal(r.rates.orbitHz)}Hz (requested ${decimal(r.rates.requestedOrbitHz)}), pace=${decimal(r.rates.paceHz)}Hz (requested ${decimal(r.rates.requestedPaceHz)}), raw peak=${scientific(r.rawPeak)}")
             assertTrue(loop.seamError.isFinite() && loop.seamError < Keys.MAX_SEAM_ERROR, "$voice seam ${loop.seamError}")
@@ -330,6 +339,34 @@ class CircuitTest {
         }
         assertTrue(expanseMotion[1].rates.orbitHz > expanseMotion[0].rates.orbitHz, "HOLD flattened the ORBIT control")
         assertTrue(relativeDifference(expanseMotion[0].snip.samples, expanseMotion[1].snip.samples) > 1e-4, "HOLD motion rates have the same audio")
+    }
+
+    private fun assertVocalSpacing(report: Circuit.Report, label: String) {
+        val voice = report.events.filter { it.source == 6 && it.energy > 0.0 }.sortedBy { it.timeSeconds }
+        assertTrue(voice.isNotEmpty(), "$label lost its coordination voice")
+        var minimumGap = Double.POSITIVE_INFINITY
+        fun check(previous: Circuit.Event, next: Circuit.Event, wrapSeconds: Double = 0.0) {
+            // The listening contract reserves the complete dry gesture and 80 ms
+            // of breathing space. These durations are independent of scheduler
+            // predicates; filtering by source includes every base/reply pairing.
+            val duration = when (previous.kind) {
+                "GRUNT" -> 0.28
+                "UH_HUH" -> 0.58
+                else -> error("$label unexpected vocal gesture ${previous.kind}")
+            }
+            val gap = next.timeSeconds + wrapSeconds - previous.timeSeconds - duration
+            minimumGap = minOf(minimumGap, gap)
+            assertTrue(gap + 1.0 / Dsp.RATE >= 0.08,
+                "$label overlaps vocal gestures: ${previous.kind} (reply=${previous.reply}) at ${previous.timeSeconds} " +
+                    "to ${next.kind} (reply=${next.reply}) at ${next.timeSeconds}, wrap=$wrapSeconds, breath gap=$gap")
+        }
+        for ((previous, next) in voice.zipWithNext()) check(previous, next)
+        if (report.loop != null) {
+            assertTrue(report.rates.loopSeconds > 0.0)
+            check(voice.last(), voice.first(), report.rates.loopSeconds)
+        }
+        val measured = if (minimumGap.isFinite()) decimal(minimumGap) else "single gesture"
+        println("CIRCUIT VOCAL SPACE $label: events=${voice.size}, minimum breath gap=$measured")
     }
 
     private fun assertHealthy(r: Circuit.Report, label: String) {

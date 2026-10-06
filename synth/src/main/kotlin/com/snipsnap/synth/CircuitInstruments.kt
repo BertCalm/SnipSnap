@@ -10,6 +10,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -109,7 +110,7 @@ internal object CircuitInstruments {
             val position = i.toDouble() / (collisions - 1)
             val at = .003 + .085 * position.pow(.8) + random.nextDouble(0.0, .004)
             val strength = random.nextDouble(.45, .95) * sin(PI * (.15 + .70 * position))
-            contact(force, rate, at, random.nextDouble(.00018, .00048), strength, poweredFrames)
+            contact(force, rate, at, random.nextDouble(.00036, .00096), strength, poweredFrames)
         }
         modes(output, force, root, rate, arrayOf(
             Mode(1.5, .027, .035), // hollow cavity; pitched below the granular mineral surface
@@ -124,22 +125,31 @@ internal object CircuitInstruments {
     private fun clapper(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int) {
         val first = FloatArray(output.size)
         val second = FloatArray(output.size)
-        contact(first, rate, .003, .00065, random.nextDouble(.85, 1.0), poweredFrames)
-        contact(second, rate, random.nextDouble(.046, .057), .00085, random.nextDouble(.82, 1.0), poweredFrames)
+        // Wider force contacts soften each edge. Their own main arm modes set
+        // the upper-register limit, preserving a pitched second knock as well.
+        val firstWidth = min(.0024, 1.25 / (2.0 * root))
+        val secondWidth = min(.0028, 1.25 / (3.0 * root))
+        contact(first, rate, .003, firstWidth, random.nextDouble(.85, 1.0), poweredFrames)
+        contact(second, rate, random.nextDouble(.046, .057), secondWidth, random.nextDouble(.82, 1.0), poweredFrames)
         modes(output, first, root, rate, arrayOf(
-            Mode(2.0, .019, .15), Mode(3.0, .012, .085), Mode(5.08, .006, .045),
+            Mode(2.0, .030, .080), Mode(3.0, .020, .044), Mode(5.08, .008, .016),
         ))
         modes(output, second, root, rate, arrayOf(
-            Mode(3.0, .022, .145), Mode(4.5, .013, .08), Mode(7.63, .006, .04),
+            // Its higher main mode loses more energy through the wider contact;
+            // this weight keeps the pair balanced without restoring the bright spikes.
+            Mode(3.0, .034, .200), Mode(4.5, .023, .044), Mode(7.63, .008, .013),
         ))
         // Both arms transfer force to the same mounting cavity, rather than two unrelated hits.
         for (i in first.indices) first[i] += second[i]
-        modes(output, first, root, rate, arrayOf(Mode(1.0, .035, .042), Mode(1.5, .025, .022)))
+        modes(output, first, root, rate, arrayOf(Mode(1.0, .060, .018), Mode(1.5, .045, .008)))
     }
 
     private fun clay(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int) {
         val force = FloatArray(output.size)
-        contact(force, rate, .002, random.nextDouble(.0025, .0045), random.nextDouble(.90, 1.0), poweredFrames)
+        // Keep rounded force below the membrane's second contact-spectrum null
+        // at upper roots, where a fixed long contact would cancel the pitched mode.
+        val contactWidth = min(random.nextDouble(.005, .008), 1.25 / root)
+        contact(force, rate, .002, contactWidth, random.nextDouble(.90, 1.0), poweredFrames)
         // A membrane and vessel, with no kick-style descending oscillator or sub-bass boost.
         modes(output, force, root, rate, arrayOf(
             Mode(1.0, .073, .145), Mode(1.5, .060, .095),
@@ -152,9 +162,8 @@ internal object CircuitInstruments {
         var fundamental = root * if (root < 75.0) 2.0 else 1.0
         while (fundamental * 1.04 > ceiling) fundamental *= .5
         val harmonics = floor(ceiling / (fundamental * 1.04)).toInt().coerceIn(1, 32)
-        val weights = DoubleArray(harmonics) { k -> 1.0 / (k + 1.0).pow(1.35) }
-        val sourceScale = 1.0 / weights.sum()
         val identity = random.nextDouble(.91, 1.08)
+        val glottalWeights = glottalWeights(harmonics, random.nextDouble(.57, .64), random.nextDouble(.14, .17))
         // These are root-related coordination gestures. A prominent chest carrier
         // with a wide bend used to pull the whole ensemble off its requested note.
         val bend = random.nextDouble(.002, .006)
@@ -174,12 +183,16 @@ internal object CircuitInstruments {
             val start = if (second) .235 else .004
             val duration = if (two) { if (second) .225 else .155 } else .218
             val progress = ((time - start) / duration).coerceIn(0.0, 1.0)
-            val envelope = syllable(time - start, duration, if (two) .020 else .023, .045)
-            val vowel = if (two) { if (second) 1.12 - .14 * progress else .83 + .13 * progress } else .86 + .10 * progress
+            val localTime = time - start
+            val envelope = syllable(localTime, duration, if (second) .042 else .036, if (second) .075 else .065)
+            val mouth = smooth(progress)
             if (i % update == 0) {
-                formants[0].set(min(ceiling, max(340.0 * identity * vowel, fundamental * 1.22)), 100.0)
-                formants[1].set(min(ceiling, max(980.0 * identity / vowel, fundamental * 2.15)), 175.0)
-                formants[2].set(min(ceiling, max(2_230.0 * identity, fundamental * 3.10)), 270.0)
+                // Broad, moving vowel regions avoid locking a tight low cavity onto one partial.
+                val f1 = if (two) { if (second) 540.0 - 75.0 * mouth else 455.0 + 60.0 * mouth } else 405.0 + 70.0 * mouth
+                val f2 = if (two) { if (second) 1_590.0 - 140.0 * mouth else 1_350.0 + 100.0 * mouth } else 1_180.0 + 160.0 * mouth
+                formants[0].set(min(ceiling, max(f1 * identity, fundamental * 1.20)), 190.0 + 30.0 * mouth)
+                formants[1].set(min(ceiling, max(f2 * identity, fundamental * 2.15)), 260.0)
+                formants[2].set(min(ceiling, max((2_420.0 + 100.0 * mouth) * identity, fundamental * 3.10)), 390.0)
             }
             val pitch = fundamental * (1.0 + bend * (if (second) progress - .4 else .5 - progress))
             phase += pitch / rate
@@ -191,29 +204,62 @@ internal object CircuitInstruments {
             var hc = c
             var glottal = 0.0
             val powered = i < poweredFrames && envelope > 0.0
-            // A tilted glottal flow derivative synthesized from a bounded harmonic series.
+            // An asymmetric glottal flow derivative synthesized from a bounded harmonic series.
             // Recurrence avoids a separate transcendental oscillator for every partial.
             if (powered) {
-                for (k in weights.indices) {
-                    glottal += weights[k] * hs
+                for (k in glottalWeights[0].indices) {
+                    glottal += glottalWeights[0][k] * hs + glottalWeights[1][k] * hc
                     val next = hs * c + hc * s
                     hc = hc * c - hs * s
                     hs = next
                 }
             }
-            glottal *= sourceScale
             val noise = if (powered) random.nextDouble(-1.0, 1.0) else 0.0
             airLow += airLowCoefficient * (noise - airLow)
             airBase += airHighCoefficient * (airLow - airBase)
-            // A short unvoiced onset separates the second syllable's "h" from its vowel.
-            val voicedGate = if (second) smooth((time - start - .009) / .018) else 1.0
-            val air = (airLow - airBase) * (.018 + breath * .065)
-            val source = if (powered) glottal * voicedGate + air else 0.0
-            val throat = .80 * formants[0].process(source) + .46 * formants[1].process(source) + .25 * formants[2].process(source)
-            val chestInput = if (powered) .06 * s * voicedGate else 0.0
+            // Air precedes voicing, especially at the second "h"; both soften before closure.
+            val voicedGate = smooth((localTime - if (second) .016 else .006) / .036) * smooth((duration - localTime) / .070)
+            val air = (airLow - airBase) * (.060 + breath * .110)
+            val source = if (powered) .82 * glottal * voicedGate + air else 0.0
+            val throat = .48 * formants[0].process(source) + .42 * formants[1].process(source) + .20 * formants[2].process(source)
+            val chestInput = if (powered) .025 * s * voicedGate else 0.0
             chest += chestCoefficient * (chestInput - chest)
-            output[i] = (.55 * envelope * (throat + chest) * if (two && !second) .84 else 1.0).toFloat()
+            output[i] = (.55 * envelope * (throat + chest + .25 * air) * if (two && !second) .84 else 1.0).toFloat()
         }
+    }
+
+    /**
+     * Fourier coefficients of a rounded opening and shorter rounded closure,
+     * followed by a closed rest. Keeping both phase components preserves that
+     * asymmetry instead of turning every harmonic into the same-phase buzz.
+     * Only the permitted harmonics are synthesized; the amplitude bound is one.
+     */
+    private fun glottalWeights(harmonics: Int, open: Double, close: Double): Array<DoubleArray> {
+        val points = 256
+        val pulse = DoubleArray(points) { i ->
+            val phase = (i + .5) / points
+            when {
+                phase < open -> .5 * PI / open * sin(PI * phase / open)
+                phase < open + close -> -.5 * PI / close * sin(PI * (phase - open) / close)
+                else -> 0.0
+            }
+        }
+        val sine = DoubleArray(harmonics)
+        val cosine = DoubleArray(harmonics)
+        var bound = 0.0
+        for (k in 0 until harmonics) {
+            for (i in pulse.indices) {
+                val angle = 2.0 * PI * (k + 1) * (i + .5) / points
+                sine[k] += pulse[i] * sin(angle) * 2.0 / points
+                cosine[k] += pulse[i] * cos(angle) * 2.0 / points
+            }
+            bound += sqrt(sine[k] * sine[k] + cosine[k] * cosine[k])
+        }
+        for (k in 0 until harmonics) {
+            sine[k] /= bound
+            cosine[k] /= bound
+        }
+        return arrayOf(sine, cosine)
     }
 
     /** Double-precision constant-peak bandpass; coefficients only change at the tract control rate. */

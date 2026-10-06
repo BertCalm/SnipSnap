@@ -7,12 +7,14 @@ grunt/uh-huh gestures surround them. The instruments and performance rules are
 invented. The engine makes no claim to reproduce a real tradition.
 
 The owner rejected the initial audio: “It all sounds the same. The brrrr sound
-overpowered everything.” The revised implementation is a new listening candidate;
-owner acceptance is pending. Numerical checks and patch round-trips do not establish
-that its sound is useful. The balance of percussion and vocals, mono movement,
+overpowered everything.” After the balance revision, the owner could distinguish
+the parts, but described the vocal as honking and the ensemble as chaotic and
+abrupt. The current tone and phrasing revision is a new listening candidate;
+owner acceptance is pending. Numerical checks and patch round-trips do not
+establish that its sound is useful. Vocal integration, phrasing, mono movement,
 and the feeling of an ensemble listening to its surroundings still need listening.
 
-## Listening revision
+## Listening revisions
 
 The initial mix let the sustained central trio mask the instruments that give
 each configuration its identity. The revision substantially lowers central
@@ -27,10 +29,11 @@ The pulse's continuous pressure floor is reduced, and the upper source has
 cadence-related pressure gestures. BREATH changes the relative pressure of the
 roles as well as source stiffness and color.
 
-Synthesized vocal gestures now favor their moving tract resonances over a
-plain chest tone. The chest sine contribution is reduced from .20 to .06,
-while the three tract-band weights increase from .50/.27/.11 to .80/.46/.25.
-Seed-derived pitch-bend amounts narrow from .012–.025 to .002–.006, keeping
+In the second, balance-focused revision, synthesized vocal gestures favored
+their moving tract resonances over a plain chest tone. The chest sine
+contribution changed from .20 to .06, and the three tract-band weights from
+.50/.27/.11 to .80/.46/.25. Seed-derived pitch-bend amounts narrowed from
+.012–.025 to .002–.006, keeping
 the coordination gestures closer to the requested root without removing their
 two-part envelopes, breath onset or deterministic variation.
 
@@ -41,8 +44,8 @@ outgoing groups. These gaps follow the playing pattern; they are not dynamically
 aligned to every returning cue. The separate performer-listening paths and
 bounded reply scheduler still determine which returned accents produce gestures.
 
-Default-clip calibration measures the following changes from the rejected
-initial audio to the revised candidate:
+Default-clip calibration measured the following changes from the rejected
+initial audio to the second, balance-focused revision:
 
 - VOICED's surrounding-player/trio RMS ratio changes from −24.53 dB to
   +12.81 dB, using raw stems at one shared gain.
@@ -54,14 +57,61 @@ initial audio to the revised candidate:
 These values use 0.15–2.8 seconds of the default clips. Root-band power is the
 Welch spectral power within ±4 Hz of C3, divided by power from 20–10,000 Hz;
 the analysis uses Hann windows up to 16,384 samples. These measurements quantify
-the revised balance and spectral variety in that window. They do not establish
+that revision's balance and spectral variety in that window. They do not establish
 perceived distinction, whole-matrix quality or owner acceptance.
 
+The current revision retains the quieter tube balance, with a stronger stationary
+anchor in PROCESSION to keep its requested root present beneath moving pitched
+players. It replaces the vocal's
+same-phase harmonic source with a bounded, band-limited asymmetric glottal-flow
+derivative. Wider moving vowel regions, tract weights .48/.42/.20 and direct
+chest gain .025,
+more filtered aspiration, and longer voiced attack/release aim to soften the
+previous low-partial concentration. The grunt and two-syllable uh-huh retain their
+.28/.58-second buffers, deterministic identities, root-related pitch and passive
+tract response after excitation stops. Stone and wooden contacts are rounded
+over a wider fixed-area interval. The wooden pair has a warmer modal body and
+more restrained upper modes; its contact widths are capped against each arm's
+pitched mode. Clay contact width is capped by pitch so the
+requested membrane mode is still excited in the upper register.
+
+Foreground wood, clay and vocal gestures now take complementary turns. Rattle
+supports some outgoing accents at lower energy. A vocal reserves its complete
+buffer plus .08 seconds of breathing space, including across the held seam;
+primary contact attacks avoid its occupied turn while quiet modal tails may
+overlap. A sparse short phrase uses a later quiet grunt instead of adding a
+two-syllable vocal to the opening group. Replies still follow a real reflected
+performer arrival, but wait for a free quarter-slot, carry less energy, and are
+deferred or omitted if no suitable space exists within the bounded response
+window. Reply count and energy budgets, refractory intervals and depth-one cues
+remain enforced. This coordination changes playing; ORBIT still controls movement
+independently.
+
+Finite tube pressure now starts and releases through smooth .12/.44-second
+transitions. Tube accents have overlapping smooth .42-second pressure gestures;
+a new accent no longer discards its predecessor's remaining pressure. The
+bounded active-accent scan also includes the periodic predecessor at a held
+seam. These are source and performer changes, before propagation and shared
+output leveling; no rack effect or playback limiter supplies the refinement.
+
+Quick-pack calibration against the second revision, at the same settings and
+matched level, measures:
+
+- VOICED vocal power in the first three root harmonics, within ±10 Hz, changes
+  from 92.44% to 54.30% of its 20–10,000 Hz power.
+- All six default matched peaks fall by 1.56–3.21 dB.
+- VOICED vocal/percussion activity overlap changes from 31.06% to zero.
+
+These measurements use the same .15–2.8-second body window above. Activity
+uses 10 ms RMS envelopes above 10% of each source's own peak. They describe the
+25-variant development pack, not a listening verdict or the full matrix.
+
 The [private Circuit audition](https://circuit-snipsnap-audition.bertcalm.chatgpt.site/#comparison)
-includes six before/revised pairs, one for each voice, alongside the full matrix.
+includes six previous/revised pairs, one for each voice, alongside the full matrix.
 Each pair preserves the same macros and performer energy and uses the same
-matched listening target. The original examples retain the rejected audio;
-the revised examples are candidates for a new owner verdict.
+matched listening target. The previous examples preserve the balance revision
+the owner just heard; the rejected original examples remain linked separately.
+The revised examples are candidates for a new owner verdict.
 
 ## Host contract
 
@@ -120,8 +170,9 @@ angular offsets. The observer is off-center. Direct and reflected observer
 paths use fractional delays, smoothed motion and path-dependent low-pass loss.
 Performer-listening arrivals are calculated separately from observer arrivals.
 Tagged tube or clapper accents may cue one extra gesture after a return reaches
-another player. Replies have refractory intervals, an event budget of at most
-12, a cumulative energy budget and depth 1; replies never become new cues.
+another player. Replies have refractory intervals, a canyon-dependent event
+budget of at most six (also bounded by the global limit of 12), a cumulative
+energy budget and depth 1; replies never become new cues.
 Disabling replies in a diagnostic retains canyon audio.
 
 The tube model is an abstract periodic pressure/lip source feeding stable
@@ -199,7 +250,9 @@ Separately matched source solos help identify instrument character, but they
 cannot establish ensemble balance: matching each branch independently makes a
 buried source sound foregrounded. The source-balance regression therefore sums
 raw trio stems and raw surrounding-player stems at one shared gain and compares
-their active-phrase energy. It also checks upper-tube octave content. These
+their active-phrase energy. The VOICED regression requires combined player RMS
+above trio RMS to support the current calmer balance. It also checks upper-tube
+octave content. These
 checks catch the previous sustained-root masking; they complement listening to
 the full mix and do not certify every voice's musical balance.
 
