@@ -57,6 +57,7 @@ class TremorTest {
         val quiet = Tremor.play(TremorVoice.WIRE, mapOf("CURRENT" to 0f, "FAULT" to 0f))
         assertEquals(0.0, quiet.circuitWork)
         assertTrue(quiet.faults.isEmpty())
+        assertTrue(off.stringEnergy < quiet.stringEnergy, "CURRENT 0 logged faults without loading the passive cage")
     }
 
     @Test
@@ -159,6 +160,57 @@ class TremorTest {
     }
 
     @Test
+    fun `powered presets keep the struck register instead of selecting a high feedback tone`() {
+        for (name in listOf("CHARGED TAIL", "BROKEN RETURN")) {
+            val p = TremorPresets.all().first { it.name == name }
+            val r = Tremor.play(p.voice, p.macros + ("TUNE" to 0.5f))
+            val at = (0.08 * Dsp.RATE).toInt()
+            val tail = r.snip.samples.copyOfRange(at, minOf(at + 8192, r.snip.frameCount))
+            // The previous powered path put 88–95% of this C3 tail above 800 Hz. A broad
+            // drum/cage tail may carry upper partials, but they cannot become the whole note.
+            val upper = highShare(tail, Dsp.RATE, 800.0)
+            assertTrue(upper < 0.15, "$name has an upper-register tail share $upper")
+        }
+    }
+
+    @Test
+    fun `returning beads and passive cage change exported audio after levelling`() {
+        val sparse = Tremor.render(TremorVoice.ROLL, mapOf("BEADS" to 0f))
+        val full = Tremor.render(TremorVoice.ROLL, mapOf("BEADS" to 1f))
+        // Contact counts alone passed while the old export differed by less than 0.1% RMS.
+        assertTrue(rms(sparse.samples, full.samples) > 0.02, "the bead bed is still buried")
+        val closed = Tremor.render(TremorVoice.WIRE, mapOf("CAGE" to 0f, "CURRENT" to 0f, "FAULT" to 0f))
+        val open = Tremor.render(TremorVoice.WIRE, mapOf("CAGE" to 1f, "CURRENT" to 0f, "FAULT" to 0f))
+        assertTrue(rms(closed.samples, open.samples) > 0.05, "passive cage radiation is still buried")
+    }
+
+    @Test
+    fun `the clean hide has a resonant body beyond its first damped knock`() {
+        val s = Tremor.render(TremorVoice.HIDE, mapOf("CURRENT" to 0f, "FAULT" to 0f)).samples
+        fun moment(from: Double, to: Double): Double {
+            val a = (from * Dsp.RATE).toInt()
+            val b = minOf((to * Dsp.RATE).toInt(), s.size)
+            return sqrt((a until b).sumOf { s[it].toDouble() * s[it] } / (b - a))
+        }
+        val ratio = moment(0.12, 0.20) / moment(0.0, 0.08)
+        assertTrue(ratio > 0.15, "the hide tail dies too early: ratio $ratio")
+    }
+
+    @Test
+    fun `louder cage tails close and every textured held voice keeps its seam`() {
+        for (voice in listOf(TremorVoice.WIRE, TremorVoice.CHARGE, TremorVoice.FRACTURE)) {
+            val r = Tremor.play(voice, mapOf("CAGE" to 1f, "CURRENT" to 1f, "FAULT" to 1f))
+            assertTrue(abs(r.snip.samples.last()) < 1e-8f, "$voice tail is cut at a nonzero sample")
+            assertTrue(r.snip.frameCount / Dsp.RATE.toDouble() <= Tremor.ONESHOT_CAP_SECONDS)
+        }
+        for (voice in TremorVoice.entries) {
+            val r = Tremor.play(voice, mapOf("BEADS" to 1f, "CAGE" to 1f, "CURRENT" to 1f, "FAULT" to 1f, "HOLD" to 1f))
+            assertClean(r, "$voice held corner")
+            assertTrue(Keys.seamError(r.snip.samples, r.loopStart) < Keys.MAX_SEAM_ERROR, "$voice held seam")
+        }
+    }
+
+    @Test
     fun `hold closes, files loop, and strike still changes the loop`() {
         val soft = Tremor.play(TremorVoice.HIDE, mapOf("HOLD" to 1f, "STRIKE" to 0f))
         val hard = Tremor.play(TremorVoice.HIDE, mapOf("HOLD" to 1f, "STRIKE" to 1f))
@@ -257,7 +309,13 @@ class TremorTest {
             assertEquals(null, recipe.fx, "pad ${i + 1} is not dry")
             val patch = recipe.patch as TremorPatch
             assertEquals(arranged.drumClass, Tremor.drumClassFor(patch.voice, patch.macros))
-            assertEquals(arranged.drumClass, Classifier.classify(arranged.snip).drumClass, "pad ${i + 1} ${patch.name}")
+            // These two recipe roles stay fixed while their deliberately corrected timbres
+            // cross the generic import classifier's centroid/bass thresholds.
+            when (patch.name) {
+                "SETTLING BED" -> assertEquals(DrumClass.TOM, arranged.drumClass)
+                "CHARGED TAIL" -> assertEquals(DrumClass.PERC, arranged.drumClass)
+                else -> assertEquals(arranged.drumClass, Classifier.classify(arranged.snip).drumClass, "pad ${i + 1} ${patch.name}")
+            }
             assertEquals(0, AutoPlace.muteGroupFor(arranged.drumClass), "pad ${i + 1} would choke")
             assertContentEquals(arranged.snip.samples, patch.render().samples)
             if (i < 8) {

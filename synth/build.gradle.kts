@@ -511,6 +511,15 @@ tasks.register<JavaExec>("generateTremorAudition") {
     args("${rootDir}/testkit/tremor-audition")
 }
 
+tasks.register<JavaExec>("generateTremorComparison") {
+    group = "distribution"
+    description = "Render the 16 matched Tremor listening-repair clips and metadata."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TremorComparisonGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tremor-comparison/${project.findProperty("comparisonVersion") ?: "candidate"}")
+}
+
 /** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */
 tasks.register<JavaExec>("generateValveAudition") {
     group = "distribution"

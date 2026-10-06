@@ -150,6 +150,7 @@ object Tremor {
 
     /** Six cage strings, root-related. A small per-voice cents table detunes them; see [DETUNE_CENTS]. */
     private val STRING_RATIOS = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 6.0, 8.0)
+    private val STRING_RADIATION = doubleArrayOf(1.0, 0.58, 0.34, 0.22, 0.12, 0.07)
 
     /**
      * Cents, per voice, per string. Fixed, not drawn per render. The upper strings sit a little
@@ -235,10 +236,9 @@ object Tremor {
         if (m.getValue("HOLD") >= HOLD_LOOP) return DrumClass.LOOP
         val hz = frequencyFor(voice, m.getValue("TUNE"))
         val fault = m.getValue("FAULT")
-        // CHARGED TAIL's bloom (CURRENT 0.78, CAGE 0.68 at C3) measures lowRatio 0.53, just
-        // under the bass gate, so the bright path files it PERC. The CHARGE default sits above
-        // that gate and stays TOM. A low, dense fault (BROKEN RETURN) is the other way: the
-        // centroid leaves the kick rule and the note files TOM.
+        // Preserve the factory powered-tail pad's PERC role after removing its high feedback
+        // tone. A saved engine recipe uses this explicit filing contract; the generic import
+        // classifier may hear its calmer C3 tail as TOM. A low, dense fault remains TOM.
         if (m.getValue("CURRENT") >= 0.76f && m.getValue("CAGE") >= 0.66f && hz >= 120f) return DrumClass.PERC
         if (hz < 123f && fault < 0.5f) return DrumClass.KICK
         if (hz < 240f) return DrumClass.TOM
@@ -303,6 +303,7 @@ object Tremor {
         val drummers = Stream(Dsp.seedFor("TREMOR", MODEL, voice.name, midi, "drummers"))
         val faults = Stream(Dsp.seedFor("TREMOR", MODEL, voice.name, midi, "faults"))
         val beadSeed = Stream(Dsp.seedFor("TREMOR", MODEL, voice.name, midi, "beads"))
+        val contactSeed = Stream(Dsp.seedFor("TREMOR", MODEL, voice.name, midi, "contacts"))
 
         val weights = ensembleWeights(ensemble)
         val strikeTraces = ArrayList<TremorStrike>(4)
@@ -330,7 +331,7 @@ object Tremor {
         val loops = Array(STRINGS) { i ->
             val partial = hz * STRING_RATIOS[i] * (1.0 + 0.00015 * (i + 1) * (i + 1)) *
                 2.0.pow(DETUNE_CENTS.getValue(voice)[i] / 1200.0)
-            val gain = bandGain(partial)
+            val gain = bandGain(partial) * STRING_RADIATION[i]
             // The cage is wire, not a snare. A 5 kHz loop corner put more than half the powered
             // note above 2 kHz and the classifier filed it SNARE. 1.6 kHz keeps the partials.
             val bright = min(partial * (1.3 + 1.8 * cage), 1_600.0)
@@ -378,6 +379,9 @@ object Tremor {
         var fuzzLp = 0.0
         var wireLp = 0.0
         var wireLp2 = 0.0
+        var contactEnv = 0.0
+        var contactLp = 0.0
+        var contactBass = 0.0
         var maxTray = 0.0
         val out = FloatArray(maxN)
         val energyStride = 2048
@@ -392,9 +396,23 @@ object Tremor {
         val outA = 1.0 - exp(-2.0 * PI * 14_000.0 / rate)
         val fuzzA = 1.0 - exp(-2.0 * PI * 1_800.0 / rate)
         val wireA = 1.0 - exp(-2.0 * PI * 1_400.0 / rate)
+        val contactA = 1.0 - exp(-2.0 * PI * 4_500.0 / rate)
+        val contactBassA = 1.0 - exp(-2.0 * PI * 400.0 / rate)
+        val contactDecay = exp(-1.0 / (0.0018 * rate))
+        val contactGain = if (voice == TremorVoice.ROLL) 2.0 else 0.5
+        val wireGain = when (voice) {
+            TremorVoice.HIDE -> 8.0
+            TremorVoice.UNISON -> 12.0
+            TremorVoice.ROLL -> 14.0
+            TremorVoice.WIRE -> 65.0
+            TremorVoice.CHARGE -> 55.0
+            TremorVoice.FRACTURE -> 45.0
+        }
         val powerEnd = ((0.15 + 0.28 * current) * rate).toInt()
         val minN = (0.42 * rate).toInt()
         var peakEnergy = 1e-12
+        var outputEnergy = 0.0
+        var peakOutputEnergy = 1e-12
         var quiet = 0
         var nStop = maxN
 
@@ -452,14 +470,18 @@ object Tremor {
 
             var actuator = 0.0
             var fuzz = 0.0
+            // A load fault damps passive strings too. Its state cannot live only inside the
+            // powered branch, or CURRENT 0 records fault events without changing the sound.
+            load += loadA * (faultTarget(faultPhase, faultDepth) - load)
             if (probe.circuit && current > 1e-6) {
                 hp += hpA * (stringVel - hp)
                 val high = stringVel - hp
                 pre += preA * (high - pre)
                 env += envA * (abs(pre) - env)
-                val targetLoad = faultTarget(faultPhase, faultDepth)
-                load += loadA * (targetLoad - load)
-                val pickup = pre * load
+                // The pickup is velocity. Convert to displacement scale before the nonlinear
+                // amplifier: using raw velocity drove tanh to its rails even at CURRENT 0.1,
+                // then the delayed actuator selected a fixed high-frequency limit-cycle.
+                val pickup = pre * load / (2.0 * PI * hz)
                 val sag = 1.0 - 0.45 * (env / (env + 0.08))
                 val powered = if (!hold && n > powerEnd) 0.0 else current
                 supply += supA * (powered * sag - supply)
@@ -475,7 +497,9 @@ object Tremor {
                 // HOLD does not: that feedback limit-cycle sits on the detuned string pitches
                 // and is not the strike period, so the seam stayed near 0.4 with it closed
                 // and under 1e-7 with it open. The fuzz below is still the powered path.
-                val share = if (hold) 0.0 else actuator * 0.04
+                // A small return stays below the passive loop's losses; the audible bloom is
+                // the amplified pickup, not an oscillator independent of the struck note.
+                val share = if (hold) 0.0 else actuator * 0.0004
                 for (i in 0 until STRINGS) actuatorInto[i] = share * loops[i].gain
                 fuzzLp += fuzzA * (driven * (0.03 + 0.06 * current) - fuzzLp)
                 fuzz = fuzzLp
@@ -536,19 +560,30 @@ object Tremor {
                 contactCount += hit.count
                 contactImpulse += hit.impulse
                 if (hit.count > 0) lastContact = n
+                // Finite contact texture follows actual tray impacts. A modal tray by itself
+                // made BEADS 0 and 1 nearly the same sound despite four times the contacts.
+                contactEnv = min(0.10, contactEnv + hit.impulse * 10.0)
             }
 
+            contactEnv *= contactDecay
+            val contactNoise = (contactSeed.unit() * 2.0 - 1.0) * contactEnv
+            contactLp += contactA * (contactNoise - contactLp)
+            contactBass += contactBassA * (contactLp - contactBass)
+            val contacts = (contactLp - contactBass) * contactGain * (0.20 + 0.80 * beads)
+
             // Two poles on the cage and the fuzz, under the classifier's 2 kHz bright line.
-            var wire = stringSum * 0.42 + fuzz
+            val wire = (stringSum * 0.42 + fuzz) * wireGain
             wireLp += wireA * (wire - wireLp)
             wireLp2 += wireA * (wireLp - wireLp2)
-            var sample = headQ * 920.0 + bodyQ * 380.0 + trayQ * 640.0 + wireLp2
+            var sample = headQ * 920.0 + bodyQ * 380.0 + trayQ * 120.0 + wireLp2 + contacts
             dc += dcA * (sample - dc)
             sample -= dc
             outLp += outA * (sample - outLp)
             val clipped = outLp.coerceIn(-RAIL.toDouble(), RAIL.toDouble())
             if (clipped != outLp) railHits++
             out[n] = clipped.toFloat()
+            outputEnergy += envA * (clipped * clipped - outputEnergy)
+            peakOutputEnergy = max(peakOutputEnergy, outputEnergy)
 
             if (n % energyStride == 0) {
                 val modal = head.energy() + body.energy() + tray.energy()
@@ -557,7 +592,9 @@ object Tremor {
                 energy.add(modal + beadE)
                 if (modal + beadE > peakEnergy) peakEnergy = modal + beadE
                 val sourcesDone = !hold && n > powerEnd + (0.08 * rate).toInt() && n > minN
-                if (sourcesDone && modal + beadE < peakEnergy * 1e-4) quiet += energyStride else quiet = 0
+                // The louder passive cage can outlive the head and beads. Keep its audible
+                // return until the mixed output settles as well, rather than cutting it off.
+                if (sourcesDone && modal + beadE < peakEnergy * 1e-4 && outputEnergy < peakOutputEnergy * 1e-6) quiet += energyStride else quiet = 0
                 if (sourcesDone && quiet > (0.04 * rate).toInt()) {
                     nStop = n + 1
                     break
@@ -576,7 +613,7 @@ object Tremor {
         }
         val decimated = Dsp.decimate(mixed, RATE)
         val kept = if (hold) decimated.copyOf(min(holdOutFrames, decimated.size)) else decimated
-        if (hold) wrapCrossfade(kept, min(loopStart, kept.size - 1))
+        if (hold) wrapCrossfade(kept, min(loopStart, kept.size - 1)) else Dsp.fadeTail(kept, ms = 6f, rate = RATE)
         Dsp.levelTo(kept, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         val endModal = head.energy() + body.energy() + tray.energy()
         return TremorRender(
@@ -717,7 +754,7 @@ object Tremor {
     }
 
     private fun tuneHead(bank: Modes.Bank, hz: Double, strike: Double, rate: Int) {
-        val t60 = 0.26 + 0.22 * (1.0 - strike)
+        val t60 = 0.48 + 0.25 * (1.0 - strike)
         for (i in HEAD.indices) {
             val ratio = HEAD[i].second
             val freq = min(hz * ratio, rate * 0.45)
