@@ -118,6 +118,12 @@ object StarterKits {
             seeded = false,
         ) { SkinKits.classic() },
         Starter(
+            "cistern", "CISTERN",
+            "Drops answer a struck skin. Wet melodic surfaces in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.cistern() },
+        Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",
             seeded = false,

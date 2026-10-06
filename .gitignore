@@ -131,6 +131,10 @@ testkit/flotilla-audition/
 # and published as the listening artifact; never committed.
 testkit/tremor-audition/
 
+# The CISTERN raw/matched clips, diagnostics, manifest and local listening page,
+# rendered by :synth:generateCisternAudition; never committed.
+testkit/cistern-audition/
+
 # CIRCUIT's generated raw/matched listening matrix, manifests and diagnostic sidecars.
 testkit/circuit-audition/
 

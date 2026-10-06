@@ -454,6 +454,30 @@ object SynthKits {
     }
 
     /**
+     * A01–A08 walk C minor pentatonic from C4 with all six surface profiles:
+     * clear strike, delayed rain, spreading cascade, wet basin, thin ripple,
+     * draining return, soft skin and an isolated heavy answer. A09–A16 add
+     * low-register landings and sustained liquid, high-register articulation,
+     * and a settled held circle. All twelve presets appear, with deliberate
+     * register repeats; every recipe is dry and stores its exact MIDI pitch.
+     */
+    fun cistern(): List<ArrangedPad?> {
+        fun preset(name: String, midi: Int) =
+            CisternPresets.all().first { it.name == name }.copy(midi = midi)
+                .let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            preset("First Drop", 60), preset("Hanging Rain", 63),
+            preset("Wide Cascade", 65), preset("Wet Basin", 67),
+            preset("Thin Ripple", 70), preset("Clear Return", 72),
+            preset("Soft Skin", 75), preset("Quiet Reservoir", 77),
+            preset("Heavy Landing", 48), preset("Slow Drain", 55),
+            preset("Dense Surface", 63), preset("Hanging Rain", 67),
+            preset("Wet Basin", 48), preset("Thin Ripple", 75),
+            preset("Clear Return", 70), preset("Replenished Circle", 60),
+        )
+    }
+
+    /**
      * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
      * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
      * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).
