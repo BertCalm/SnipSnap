@@ -521,4 +521,24 @@ object SynthKits {
             preset("SLOW SHEET"), preset("RETURNING FROST"), preset("COLD CHOIR"), preset("THERMAL CYCLE"),
         )
     }
+
+    /**
+     * A01–A08 walk C minor pentatonic on KNOCK. The upper eight pads explore every aperture
+     * character and end with settled powered suction. All pads land dry with recipes that
+     * regenerate the same coupled shell; the held pad contains its loop without the first catch.
+     */
+    fun undertow(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = UndertowPatch(
+            "Inlet $n", UndertowVoice.KNOCK,
+            Undertow.defaults(UndertowVoice.KNOCK) + ("TUNE" to semitone / Undertow.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Undertow.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = UndertowPresets.all().first { it.name == name }
+            .let { pad(it, Undertow.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("SOFT INLET"), preset("FLUTTER CHAMBER"), preset("ALTERNATING SEAL"), preset("DEEP SPIRAL"),
+            preset("HEAVY CATCH"), preset("RETURNING AIR"), preset("GENTLE BYPASS"), preset("HELD SUCTION"),
+        )
+    }
 }

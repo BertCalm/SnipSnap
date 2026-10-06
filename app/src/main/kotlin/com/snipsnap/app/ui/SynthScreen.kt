@@ -160,6 +160,9 @@ import com.snipsnap.synth.MurkVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
+import com.snipsnap.synth.Undertow
+import com.snipsnap.synth.UndertowPatch
+import com.snipsnap.synth.UndertowVoice
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
@@ -178,6 +181,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
@@ -471,7 +475,7 @@ fun SynthScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) {
+            val rendered = runInterruptible(Dispatchers.Default) {
                 val dry = if (loadedPatch != null) buildCurrentPatch(engine.patchDisplayName(voice)).render()
                     else engine.render(voice, macros)
                 // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
@@ -1045,6 +1049,7 @@ fun SynthScreen(
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
@@ -1876,7 +1881,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, THAW, MURK;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, THAW, MURK, UNDERTOW;
 
     /** Advance through the registered engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1898,6 +1903,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaVoice.entries
         MURK -> MurkVoice.entries
         THAW -> ThawVoice.entries
+        UNDERTOW -> UndertowVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1917,6 +1923,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         MURK -> Murk.macrosFor(voice as MurkVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
+        UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1936,6 +1943,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         MURK -> Murk.defaults(voice as MurkVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
+        UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1955,6 +1963,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         MURK -> Murk.scramble(voice as MurkVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
+        UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1979,6 +1988,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         MURK -> Murk.render(voice as MurkVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
+        UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
     }
 
     /**
@@ -2004,6 +2014,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
+        UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2023,6 +2034,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
+        UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

@@ -226,6 +226,7 @@ object Velocity {
         is TremorPatch -> Tremor.macrosFor(patch.voice)
         is MurkPatch -> Murk.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is UndertowPatch -> Undertow.macrosFor(patch.voice)
     }
 
     /**
@@ -283,10 +284,11 @@ object Velocity {
      * touch; AEROSTAT uses it as strike energy; TREMOR uses it as the blow;
      * MURK uses it as event energy and response reach, preserving the STRIKE contact character.
      * THAW uses it as runner gesture energy while retaining the selected contact character.
+     * UNDERTOW uses it as piston work while preserving the weighted-flap recipe.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
-            patch is AerostatPatch || patch is TremorPatch || patch is ThawPatch || patch is MurkPatch
+            patch is AerostatPatch || patch is TremorPatch || patch is ThawPatch || patch is MurkPatch || patch is UndertowPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -314,6 +316,7 @@ object Velocity {
                 is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
                 is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
+                is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
             }
         }

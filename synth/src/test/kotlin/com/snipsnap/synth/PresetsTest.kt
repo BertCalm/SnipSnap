@@ -36,6 +36,7 @@ class PresetsTest {
         for (voice in TremorVoice.entries) assertEquals(TremorPresets.forVoice(voice), Presets.forVoice("TREMOR", voice.name))
         for (voice in MurkVoice.entries) assertEquals(MurkPresets.forVoice(voice), Presets.forVoice("MURK", voice.name))
         for (voice in ThawVoice.entries) assertEquals(ThawPresets.forVoice(voice), Presets.forVoice("THAW", voice.name))
+        for (voice in UndertowVoice.entries) assertEquals(UndertowPresets.forVoice(voice), Presets.forVoice("UNDERTOW", voice.name))
     }
 
     @Test
@@ -56,7 +57,8 @@ class PresetsTest {
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
-            FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() + ThawPresets.all() + MurkPresets.all()
+            FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() + ThawPresets.all() + MurkPresets.all() +
+            UndertowPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

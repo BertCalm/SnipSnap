@@ -555,3 +555,16 @@ tasks.register<JavaExec>("generateMurkAudition") {
         providers.gradleProperty("murkBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
     }
 }
+
+/** Render Undertow's raw/matched section-18 roster and offline evidence page. */
+tasks.register<JavaExec>("generateUndertowAudition") {
+    group = "distribution"
+    description = "Render UNDERTOW audition WAVs, mechanics CSVs, manifest and accessible listening page under testkit/undertow-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UndertowAuditionGenerator")
+    // Keep sequential full-roster rendering within a bounded JVM heap.
+    maxHeapSize = "512m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/undertow-audition")
+    if (providers.gradleProperty("undertowQuick").orNull == "true") args("--quick")
+}
