@@ -28,7 +28,7 @@ data class BallastPatch(
         const val VERSION = Patches.VERSION
 
         fun fromJsonValue(value: JsonValue): Patch =
-            Patches.decode(value, ENGINE, { n -> BallastVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+            Patches.decode(value, ENGINE, BallastVoice::fromName) { name, voice, macros ->
                 BallastPatch(name, voice, macros)
             }
 

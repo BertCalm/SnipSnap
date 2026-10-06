@@ -11,7 +11,7 @@ import kotlin.math.roundToInt
  * - the sixteen-pad kit as it lands on the MPC;
  * - for each voice: its default, C1, C2, C3 and C4, a bass line, three velocities, each knob at both ends, the held
  *   loop, and its own eight presets;
- * - the structure taken apart on ROOT, WIRE and GLINT: the bass alone, the structure alone, both, everything, and the
+ * - the structure taken apart on ROOT, WIRE and PRISM: the bass alone, the structure alone, both, everything, and the
  *   bass stopped dead so the wires, the frame and the glass settle by themselves;
  * - three interactions the design claims, each a 3x3 grid.
  *
@@ -62,12 +62,12 @@ object BallastAuditionGenerator {
             val id = tag.lowercase() + "_" + patch.name.lowercase().replace(' ', '_')
             WavWriter.write(File(kitDir, "$id.wav"), AuditionLevel.level(arranged.snip), WavWriter.BitDepth.PCM_16)
             count++
-            Clip(id, "$tag ${patch.name.uppercase()}", patch.voice.name + " " + DOT + " " + noteName(Ballast.midiFor(patch.voice, patch.macros.getValue("TUNE"))) + " " + DOT + " " + macroLine(patch.voice, patch.macros))
+            Clip(id, "$tag ${patch.name.uppercase()}", patch.voice.displayName + " " + DOT + " " + noteName(Ballast.midiFor(patch.voice, patch.macros.getValue("TUNE"))) + " " + DOT + " " + macroLine(patch.voice, patch.macros))
         }
         sections.append(
             sectionJson(
                 id = "KIT", display = "THE BALLAST KIT", body = "sixteen pads as the MPC gets them",
-                readout = listOf("A01-A04 ROOT UP THE MINOR PENTATONIC FROM C2", "A05-A14 TWO PRESETS EACH OF WIRE, DEEP, GLINT, BLOOM, SWARM", "A15-A16 TWO LONG GATES"),
+                readout = listOf("A01-A04 ROOT UP THE MINOR PENTATONIC FROM C2", "A05-A14 TWO PRESETS EACH OF WIRE, DEEP, PRISM, BLOOM, SWARM", "A15-A16 TWO LONG GATES"),
                 groups = listOf(
                     Group("ROOT, THE PENTATONIC", key = true, clips = kitClips.subList(0, 4)),
                     Group("PRESETS", key = true, clips = kitClips.subList(4, 14)),
@@ -104,9 +104,13 @@ object BallastAuditionGenerator {
             groups += Group("A BASS LINE", key = true, clips = listOf(Clip("phrase", "LINE", "eight notes 0.5 s apart from C2, HOLD .05, each ringing into the next")))
 
             val patch = BallastPatch("Velocity", voice, defaults)
+            val hardReference = patch.render()
+            val velocityGain = AuditionLevel.level(hardReference).peak() / hardReference.peak()
             val vel = listOf(0.3f to "SOFT", 0.65f to "MEDIUM", 1f to "HARD").map { (v, label) ->
                 val id = "velocity_" + fmt(v).trimStart('.')
-                writeSnip(id, Velocity.atVelocity(patch, v))
+                val touched = Velocity.atVelocity(patch, v)
+                WavWriter.write(File(dir, "$id.wav"), Snip(touched.samples.map { it * velocityGain }.toFloatArray(), channels = 1, sampleRate = Dsp.RATE), WavWriter.BitDepth.PCM_16)
+                count++
                 Clip(id, label, "velocity ${fmt(v)}: a slower attack, a darker filter and less force into the structure when soft")
             }
             groups += Group("VELOCITY", key = false, clips = vel)
@@ -127,12 +131,12 @@ object BallastAuditionGenerator {
                 writeSnip(id, preset.render())
                 Clip(id, preset.name, noteName(Ballast.midiFor(voice, preset.macros.getValue("TUNE"))) + " " + DOT + " " + macroLine(voice, preset.macros))
             }
-            groups += Group("${voice.name}'S OWN PRESETS", key = true, clips = presets)
+            groups += Group("${voice.displayName}'S OWN PRESETS", key = true, clips = presets)
 
             sections.append(",\n")
             sections.append(
                 sectionJson(
-                    id = voice.name, display = voice.name, body = BODIES.getValue(voice),
+                    id = voice.name, display = voice.displayName, body = BODIES.getValue(voice),
                     readout = listOf(
                         "ROOT " + noteName(Ballast.rootMidi(voice)) + " " + DOT + " 36 SEMITONES OF TRAVEL",
                         "DRIVE " + fmt(defaults.getValue("DRIVE")) + " " + DOT + " SYMPATHY " + fmt(defaults.getValue("SYMPATHY")) + " " + DOT + " GLASS " + fmt(defaults.getValue("GLASS")),
@@ -147,10 +151,12 @@ object BallastAuditionGenerator {
             val macros = Ballast.defaults(voice) + mapOf("TUNE" to 12 / Ballast.TUNE_SEMITONES.toFloat(), "HOLD" to 0.6f)
             val parts = Ballast.renderParts(voice, macros)
             val off = Ballast.renderParts(voice, macros, sourceOffAt = 1.0)
+            val whole = Snip(parts.getValue("all"), channels = 1, sampleRate = Dsp.RATE)
+            val partGain = AuditionLevel.level(whole).peak() / whole.peak()
             val tag = voice.name.lowercase()
             val clips = mutableListOf<Clip>()
             fun emit(id: String, name: String, desc: String, samples: FloatArray) {
-                WavWriter.write(File(partsDir, "$id.wav"), AuditionLevel.level(Snip(samples, channels = 1, sampleRate = Dsp.RATE)), WavWriter.BitDepth.PCM_16)
+                WavWriter.write(File(partsDir, "$id.wav"), Snip(samples.map { it * partGain }.toFloatArray(), channels = 1, sampleRate = Dsp.RATE), WavWriter.BitDepth.PCM_16)
                 count++
                 clips += Clip(id, name, desc)
             }
@@ -159,7 +165,7 @@ object BallastAuditionGenerator {
             emit("${tag}_both", "BASS + STRUCTURE", "the bass and what it shakes, without the glass", parts.getValue("bass+structure"))
             emit("${tag}_all", "EVERYTHING", "the whole voice at its default, C2, a 0.6 s gate", parts.getValue("all"))
             emit("${tag}_off", "BASS STOPPED AT 1 S", "the oscillators and the force stop dead at one second; the wires, the frame and the tiles settle on their own", off.getValue("all"))
-            Group("${voice.name} " + DOT + " C2 " + DOT + " DEFAULT", key = true, clips = clips)
+            Group("${voice.displayName} " + DOT + " C2 " + DOT + " DEFAULT", key = true, clips = clips)
         }
         sections.append(",\n")
         sections.append(
@@ -184,10 +190,10 @@ object BallastAuditionGenerator {
                     val snip = Ballast.render(voice, Ballast.defaults(voice) + mapOf("TUNE" to 12 / Ballast.TUNE_SEMITONES.toFloat(), a to va, b to vb))
                     WavWriter.write(File(gridDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
                     count++
-                    Clip(id, "$a ${fmt(va)} $b ${fmt(vb)}", voice.name)
+                    Clip(id, "$a ${fmt(va)} $b ${fmt(vb)}", voice.displayName)
                 }
             }
-            Group("${voice.name}: $a x $b, $what", key = true, clips = clips)
+            Group("${voice.displayName}: $a x $b, $what", key = true, clips = clips)
         }
         sections.append(",\n")
         sections.append(
