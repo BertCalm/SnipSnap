@@ -131,3 +131,8 @@ testkit/tremor-audition/
 # The CISTERN raw/matched clips, diagnostics, manifest and local listening page,
 # rendered by :synth:generateCisternAudition; never committed.
 testkit/cistern-audition/
+
+# The THAW raw/matched audition and diagnostic traces, generated locally.
+testkit/thaw-audition/
+testkit/thaw-first-listen/
+testkit/SnipSnap Thaw Kit/

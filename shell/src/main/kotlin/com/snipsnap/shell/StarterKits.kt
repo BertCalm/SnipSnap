@@ -101,6 +101,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.cloud() },
         Starter(
+            "thaw", "THAW",
+            "Ice plates and copper runners in C minor pentatonic. Cold contact warms into song.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.thaw() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

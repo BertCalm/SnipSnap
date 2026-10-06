@@ -89,7 +89,7 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine != "RESIN") throw CliError("only RESIN can make a held instrument yet - $engine renders pads; try snipsnap synth RESIN BRASS --instrument")
+            if (engine != "RESIN") throw CliError("only RESIN exports a keys instrument here - try snipsnap synth RESIN BRASS --instrument")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
         }
         val droneFlags = listOf("--root", "--motion", "--rate", "--bpm", "--bars", "--loop").filter { opts[it] != null }

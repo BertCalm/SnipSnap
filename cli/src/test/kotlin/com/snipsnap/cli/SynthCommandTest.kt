@@ -20,6 +20,28 @@ import kotlin.test.assertTrue
 class SynthCommandTest {
 
     @Test
+    fun `Thaw factory presets render through the command line as mono material gestures`() {
+        val dir = kotlin.io.path.createTempDirectory("thaw-cli").toFile()
+        try {
+            val bytes = ByteArrayOutputStream()
+            assertEquals(0, SynthCommand.run(listOf("THAW", "BRITTLE", "--all", "--out", dir.path), PrintStream(bytes)))
+            val wavs = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
+            assertEquals(2, wavs.size)
+            assertTrue(wavs.map { it.name }.any { "FIRST_CONTACT" in it })
+            assertTrue(wavs.map { it.name }.any { "THIN_ICE" in it })
+            for (wav in wavs) {
+                val snip = com.snipsnap.audio.WavReader.read(wav)
+                assertEquals(1, snip.channels)
+                assertEquals(44_100, snip.sampleRate)
+                assertTrue(snip.samples.any { it != 0f })
+            }
+            assertTrue("2 rendered" in bytes.toString())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `cistern auditions preserve preset defaults and accept note and velocity overrides`() {
         val dir = java.nio.file.Files.createTempDirectory("synthcistern").toFile()
         try {

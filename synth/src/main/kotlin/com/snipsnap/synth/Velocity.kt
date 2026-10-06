@@ -225,6 +225,7 @@ object Velocity {
         is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
         is CisternPatch -> Cistern.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
+        is ThawPatch -> Thaw.macrosFor(patch.voice)
     }
 
     /**
@@ -279,11 +280,12 @@ object Velocity {
     /**
      * Voices that take velocity as a number on their own render, with no
      * macro moved and no [soften]. MERCURY SING and BLADE use velocity as
-     * touch; AEROSTAT and CISTERN use it as strike energy; TREMOR uses it as the blow.
+     * touch; AEROSTAT and CISTERN use it as strike energy; TREMOR uses it as the blow;
+     * THAW uses it as runner gesture energy while retaining the selected contact character.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
-            patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch
+            patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch || patch is ThawPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -310,6 +312,7 @@ object Velocity {
                 is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
                 is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
                 is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
+                is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
             }
         }

@@ -88,9 +88,9 @@ class StarterKitsTest {
     }
 
     @Test
-    fun `starter IDs are stable, blank leads and cistern declares its key`() {
+    fun `starter IDs are stable, blank leads and both new engines are reachable`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "thaw", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!

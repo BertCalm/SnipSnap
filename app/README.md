@@ -11,6 +11,11 @@ There is no `app/src/test`. The on-device Compose suites live in
 `app/`. The native engines and the JNI bridge have host tests in
 `src/main/cpp/test`, which need no SDK. `versionName` is `0.1`.
 
+`:app:assembleDebug` passed in the cloud during the THAW integration on
+2026-10-05 with a full JDK 17 and Android SDK. This verifies compilation and
+packaging; THAW's on-device and listening checks still require a phone or
+emulator.
+
 ## Building (desktop session or any machine with an Android SDK)
 
 1. Point the build at an SDK — any one of:
@@ -60,10 +65,16 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (`StarterKits`, rendered by
+(`docs/BENCH.md` A1). The FRESH TAPE menu (eleven starters including THAW and CISTERN,
+from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
+
+The SYNTH source picker has sixteen engines: THUMP, SKIN, TINES, VELVET,
+VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
+THAW and CISTERN. Both material engines also provide FRESH TAPE starters.
+GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here
 
