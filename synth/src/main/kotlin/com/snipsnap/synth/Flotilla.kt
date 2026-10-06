@@ -161,6 +161,11 @@ object Flotilla {
         val hold = m.getValue("HOLD")
         if (isLoop(hold) && seconds == null) {
             val loop = renderLoop(voice, m, midi, v, driveSurface, collisionSound)
+            require(loop.seam < Keys.MAX_SEAM_ERROR) {
+                "FLOTILLA $voice MIDI $midi: the loop does not close (seam %.2e, bar %.0e)".format(
+                    Locale.ROOT, loop.seam, Keys.MAX_SEAM_ERROR,
+                )
+            }
             val twice = FloatArray(loop.period.size * 2)
             for (i in loop.period.indices) {
                 twice[i] = loop.period[i]
@@ -680,16 +685,16 @@ object Flotilla {
         }
         val banks = ArrayList<Bank>()
         for (i in 0 until scene.count) {
-            val decayWood = (16f - vessel * 7f - 2f) / scene.detune[i]
-            val decayCav = (8f - vessel * 3.5f) / scene.detune[i]
+            val decayWood = woodDecaySeconds(vessel, scene.detune[i])
+            val decayCav = cavityDecaySeconds(vessel, scene.detune[i])
             for (k in 0 until 3) {
                 val slot = lists[i * 4 + k]
                 if (slot.first.isEmpty()) continue
-                banks.add(Bank(scene.woodHz[i][k], decayWood.coerceIn(3.5f, 28f), slot.first.toIntArray(), slot.second.toFloatArray()))
+                banks.add(Bank(scene.woodHz[i][k], decayWood, slot.first.toIntArray(), slot.second.toFloatArray()))
             }
             val cav = lists[i * 4 + 3]
             if (cav.first.isNotEmpty()) {
-                banks.add(Bank(scene.cavityHz[i], decayCav.coerceIn(2.8f, 18f), cav.first.toIntArray(), cav.second.toFloatArray()))
+                banks.add(Bank(scene.cavityHz[i], decayCav, cav.first.toIntArray(), cav.second.toFloatArray()))
             }
         }
         return banks
@@ -872,7 +877,7 @@ object Flotilla {
         val weights = routeWeights(m.getValue("CROSSING"))
         val scene = stationaryScene(voice, m, midi, velocity, hulls, weights, played.toFloat(), frames, surface, pulse, body, driveSurface)
         val src = periodicSource(frames, played, cycles, pulse, velocity, body.partialBias)
-        val banks = if (collisionSound && driveSurface) stationaryBanks(scene, body, pulse, velocity, vessel) else emptyList()
+        val banks = if (collisionSound && driveSurface) stationaryBanks(scene, vessel) else emptyList()
         val aqua = FloatArray(frames)
         if (driveSurface) {
             val noise = Dsp.Noise(seed("AQUATIC-HOLD", voice, midi, milli(surface)))
@@ -1114,7 +1119,7 @@ object Flotilla {
         return s
     }
 
-    private fun stationaryBanks(scene: Scene, body: Body, pulse: Float, velocity: Float, vessel: Float): List<Bank> {
+    private fun stationaryBanks(scene: Scene, vessel: Float): List<Bank> {
         val lists = Array(scene.count * 4) { ArrayList<Int>() to ArrayList<Float>() }
         for (c in scene.contacts) {
             val loc = atan2(c.y.toDouble(), c.x.toDouble())
@@ -1128,8 +1133,8 @@ object Flotilla {
         }
         val banks = ArrayList<Bank>()
         for (i in 0 until scene.count) {
-            val decayWood = ((16f - vessel * 7f) / scene.detune[i]).coerceIn(3.5f, 28f)
-            val decayCav = ((8f - vessel * 3.5f) / scene.detune[i]).coerceIn(2.8f, 18f)
+            val decayWood = woodDecaySeconds(vessel, scene.detune[i])
+            val decayCav = cavityDecaySeconds(vessel, scene.detune[i])
             for (k in 0 until 3) {
                 val slot = lists[i * 4 + k]
                 if (slot.first.isEmpty()) continue
@@ -1140,6 +1145,18 @@ object Flotilla {
         }
         return banks
     }
+
+    /**
+     * Wood resonator t60. The extra `- 2` sheds ring so a one-shot hit dies
+     * with the note; HOLD reuses the same law because its contacts re-excite
+     * every period and a longer held decay was a leftover from the stationary
+     * path, not a second instrument.
+     */
+    internal fun woodDecaySeconds(vessel: Float, detune: Float): Float =
+        ((16f - vessel * 7f - 2f) / detune).coerceIn(3.5f, 28f)
+
+    internal fun cavityDecaySeconds(vessel: Float, detune: Float): Float =
+        ((8f - vessel * 3.5f) / detune).coerceIn(2.8f, 18f)
 
     private fun addBurstWrap(buf: FloatArray, at: Int, amp: Float, noise: Dsp.Noise) {
         val len = 420

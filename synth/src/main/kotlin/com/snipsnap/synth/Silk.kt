@@ -295,7 +295,7 @@ object Silk {
                 // carrier, rather than re-processed through the body's own
                 // resonators.
                 val seed = Dsp.seedFor("SILK", SilkVoice.SHAMISEN, "SLAP", freq)
-                trimToDecay(withSlap(withBody, m.getValue("SLAP"), rate, seed), rate)
+                trimToDecay(withSlap(withBody, m.getValue("SLAP") * velocityDrive(velocity), rate, seed), rate)
             }
         }
     }
@@ -316,6 +316,7 @@ object Silk {
             .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
 
         val detunes = Strings.courseDetuneCents(Dsp.seedFor("SILK", SilkVoice.OUD, freq), count = 2, spread = course)
+        val rishaDrive = velocityDrive(velocity)
         val loops = detunes.mapIndexed { k, cents ->
             val detunedTarget = freq * 2f.pow(cents / 1200f)
             val detunedStart = slideFrom * 2f.pow(cents / 1200f)
@@ -330,7 +331,7 @@ object Silk {
             // direct probe of `Strings.course` itself did not reproduce
             // it - the smaller step costs nothing either way).
             val fbK = (damping.fb * (1f - Strings.COURSE_FB_STEP * k)).coerceIn(0f, 0.999f)
-            oudCourseLoop(detunedStart, detunedTarget, seconds, Strings.Damping(damping.loopHz, fbK), pickHz, position, slide, rate, seed)
+            oudCourseLoop(detunedStart, detunedTarget, seconds, Strings.Damping(damping.loopHz, fbK), pickHz, position, slide, rate, seed, rishaDrive)
         }
         val out = FloatArray(loops.maxOf { it.size })
         for (loop in loops) for (i in loop.indices) out[i] += loop[i]
@@ -346,12 +347,12 @@ object Silk {
      * [startFreq] and [targetFreq] are the same value and no retuning
      * happens at all.
      */
-    private fun oudCourseLoop(startFreq: Float, targetFreq: Float, seconds: Float, damping: Strings.Damping, pickHz: Float, position: Float, slideAmount: Float, rate: Int, seed: Int): FloatArray {
+    private fun oudCourseLoop(startFreq: Float, targetFreq: Float, seconds: Float, damping: Strings.Damping, pickHz: Float, position: Float, slideAmount: Float, rate: Int, seed: Int, rishaDrive: Float = 1f): FloatArray {
         val t0 = Strings.tune(startFreq, damping.loopHz, rate)
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t0.n + 2))
         val exc = Strings.pluckExciter(t0.n, startFreq, pickHz, position, seed, rate, out.size)
         val risha = rishaTick(Dsp.seedFor(seed, "RISHA"), rate)
-        for (i in risha.indices) if (i < exc.size) exc[i] += risha[i]
+        for (i in risha.indices) if (i < exc.size) exc[i] += risha[i] * rishaDrive
         val loop = Strings.Loop(t0.n, t0.a, damping.fb, damping.loopHz, rate)
 
         val gliding = slideAmount > 0.01f && startFreq != targetFreq
@@ -608,7 +609,7 @@ object Silk {
             .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
         val dispersion = Strings.Dispersion.forB(SHAMISEN_B, STIFF_SECTIONS)
         val seed = Dsp.seedFor("SILK", SilkVoice.SHAMISEN, freq)
-        return shamisenLoop(freq, pick, seconds, damping, pickHz, position, sawari, dispersion, rate, seed)
+        return shamisenLoop(freq, pick, seconds, damping, pickHz, position, sawari * velocityDrive(velocity), dispersion, rate, seed)
     }
 
     // Decoupled from the level range below - a deliberate departure from
@@ -853,6 +854,16 @@ object Silk {
     private fun trimToDecay(buf: FloatArray, rate: Int): FloatArray =
         Strings.trimToDecay(buf, rate, RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
 
+    /** Soft playing is 0.3 of a full strike — PLUCK's own map, reused so a Silk/Pluck pair struck together stay on one curve. */
+    private fun velocityDrive(velocity: Float): Float = Dsp.lin(velocity.coerceIn(0f, 1f), 0.3f, 1f)
+
+    /**
+     * [velocity] is a render parameter, not a macro — no knob, no preset,
+     * no recipe carries it. SHAMISEN's sawari and slap, and OUD's risha, read
+     * it the way PLUCK's jawari does. GUZHENG and SANTUR take velocity through
+     * PICK via [Velocity.atVelocity]; the number is unused on those two voices
+     * today, the same way PLUCK's jawari is unused on NYLON.
+     */
     fun render(voice: SilkVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
         renderWith(voice, macros, velocity)
 

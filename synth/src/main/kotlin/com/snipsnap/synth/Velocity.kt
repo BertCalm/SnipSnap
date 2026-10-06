@@ -325,9 +325,12 @@ object Velocity {
         val scaled = asked * Dsp.lin(v, VELOCITY_FLOOR_RATIO, 1f)
         val moved = patch.macros + (spec.name to scaled)
         // PLUCK also takes the velocity as a number: the sitar's bridge
-        // limiter reads it (Pluck.render's KDoc). validateMacros rejects any
-        // key macrosFor does not list, so it cannot travel in the map.
+        // limiter reads it (Pluck.render's KDoc). SILK reads it the same
+        // way (sawari, slap, risha — Silk.render's KDoc). validateMacros
+        // rejects any key macrosFor does not list, so it cannot travel in
+        // the map.
         if (patch is PluckPatch) return Pluck.render(patch.voice, moved, velocity = v)
+        if (patch is SilkPatch) return Silk.render(patch.voice, moved, velocity = v)
         return patch.withMacros(moved).render()
     }
 
