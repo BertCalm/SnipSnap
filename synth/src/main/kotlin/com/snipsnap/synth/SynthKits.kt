@@ -480,6 +480,26 @@ object SynthKits {
     }
 
     /**
+     * The MURK audition kit: CLUNK climbs the C minor pentatonic on A01–A08, then six sounds
+     * explore sharp wood, heavy fog and owl answers. A15–A16 carry settled recurring groves.
+     * Every pad is dry, carries its regenerable recipe, and is filed by [Murk.drumClassFor].
+     */
+    fun murk(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = MurkPatch(
+            "Wood $n", MurkVoice.CLUNK,
+            Murk.defaults(MurkVoice.CLUNK) + ("TUNE" to semitone / Murk.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = MurkPresets.all().first { it.name == name }
+            .let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("TONAL AXE"), preset("FIRST PULSE"), preset("DISTANT CALL"), preset("HEAVY AIR"),
+            preset("ANSWERING WOOD"), preset("SOFT BARK"), preset("HELD TREES"), preset("HELD OWLS"),
+        )
+    }
+
+    /**
      * The THAW kit. A01–A08 walk C minor pentatonic from C3 on BRITTLE. A09–A14 explore the
      * warming runner, melt, channels, frozen bridges, heavy sheet and returning frost; A15–A16
      * are settled held material. Each dry pad carries its full recipe and uses THAW's pitched

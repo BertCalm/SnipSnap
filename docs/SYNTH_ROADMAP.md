@@ -120,6 +120,28 @@ Presets ship, knobs refine — MVP is preset + 3-5 macros per voice, never a
 modular patchbay. A "SYNTH KIT" action renders a whole 16-pad kit from one
 style preset (the demo kit becomes THUMP's factory default).
 
+### MURK — tuned wood, traveling pressure, and answering owls
+
+MURK ports the [engineering spec](superpowers/specs/2026-10-03-murk-engine-engineering-spec.md)
+into the offline melodic engine pipeline. Six voices — CLUNK, THWACK,
+FRONT, HOOT, GROVE, ALARM — share four tuned trees, a damped bidirectional
+grove, and finite synthesized owl responses. STRIKE changes contact,
+TRUNK changes wood and cavity, FOG loads the source and transports sound,
+AGITATION changes response behavior, and GROVE changes spacing and transfer.
+TUNE follows the existing note grid; HOLD supplies repeated strikes for a
+settled recurring loop. Velocity enters through the existing physical-strike
+adapter, separately from contact character.
+
+The listening gate is `./gradlew :synth:generateMurkAudition`, which writes
+`testkit/murk-audition/index.html`, its manifest, and WAVs. Playback starts
+only on request. Every clip has a readable description, and the page supports
+keyboard controls and stopping all sound. Raw/matched comparisons and isolated
+wood, atmosphere, and owl clips expose the dry engine before effects. See
+[MURK](MURK.md) for contracts, diagnostics, and the review procedure.
+
+The port remains subject to the owner's listening verdict and phone/MPC checks.
+Numerical stability and deterministic rendering do not establish sonic acceptance.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,
@@ -295,7 +317,7 @@ and verification notes are in `docs/THAW.md`. **Awaiting the owner's sonic
 verdict.** The normalized material constants and preset names remain
 provisional.
 
-SUTURE follows as S28, ported from [the supplied engineering specification](SUTURE_SPEC.md).
+SUTURE follows as S29, ported from [the supplied engineering specification](SUTURE_SPEC.md).
 BLOOM, THREAD, CLOSE, MURMUR, STRAIN and SHELL share a pitched bronze vessel,
 elastic cords, wooden eyelets, bounded stitch closure, aperture-dependent
 cavity loading and dissipative seam contacts. Its controls are TUNE (C3–C5),
