@@ -255,6 +255,8 @@ class CircuitTest {
                 if (name == "PACE") {
                     assertVocalSpacing(low, "$voice PACE 0")
                     assertVocalSpacing(high, "$voice PACE 1")
+                    assertEnsembleRoles(low, "$voice PACE 0")
+                    assertEnsembleRoles(high, "$voice PACE 1")
                 }
                 val difference = relativeDifference(low.snip.samples, high.snip.samples)
                 if (difference < minimumDifference) {
@@ -305,6 +307,7 @@ class CircuitTest {
     fun `held loops sound and close while slow nonzero movement survives`() {
         val cases = listOf(
             CircuitVoice.ROOT to mapOf("ORBIT" to 0f, "PACE" to 0.3f),
+            CircuitVoice.ROOT to mapOf("ORBIT" to 0f, "PACE" to 0.6f, "CANYON" to 0.5f),
             CircuitVoice.EXPANSE to mapOf("ORBIT" to 0.02f, "PACE" to 0.07f),
             CircuitVoice.EXPANSE to mapOf("ORBIT" to 1f, "PACE" to 0.07f),
             CircuitVoice.CONFLUENCE to mapOf("ORBIT" to 1f, "PACE" to 1f, "CANYON" to 1f),
@@ -315,6 +318,9 @@ class CircuitTest {
             if (voice == CircuitVoice.EXPANSE) expanseMotion.add(r)
             assertHealthy(r, "$voice held")
             assertVocalSpacing(r, "$voice held PACE ${changes.getValue("PACE")}")
+            if (voice == CircuitVoice.ROOT && changes.getValue("PACE") == 0.6f) {
+                assertHeldRepliesContinue(r, "$voice held PACE 0.6")
+            }
             val loop = assertNotNull(r.loop)
             println("CIRCUIT HOLD $voice ORBIT ${changes.getValue("ORBIT")}: seam=${scientific(loop.seamError)}, convergence=${scientific(loop.convergenceError)}, preroll=${loop.prerollCycles}, seconds=${decimal(r.rates.loopSeconds)}, orbit=${decimal(r.rates.orbitHz)}Hz (requested ${decimal(r.rates.requestedOrbitHz)}), pace=${decimal(r.rates.paceHz)}Hz (requested ${decimal(r.rates.requestedPaceHz)}), raw peak=${scientific(r.rawPeak)}")
             assertTrue(loop.seamError.isFinite() && loop.seamError < Keys.MAX_SEAM_ERROR, "$voice seam ${loop.seamError}")
@@ -367,6 +373,39 @@ class CircuitTest {
         }
         val measured = if (minimumGap.isFinite()) decimal(minimumGap) else "single gesture"
         println("CIRCUIT VOCAL SPACE $label: events=${voice.size}, minimum breath gap=$measured")
+    }
+
+    private fun assertEnsembleRoles(report: Circuit.Report, label: String) {
+        val kinds = mapOf(3 to setOf("RATTLE"), 4 to setOf("CLAPPER"),
+            5 to setOf("CLAY"), 6 to setOf("GRUNT", "UH_HUH"))
+        val duration = report.raw.size.toDouble() / Dsp.RATE
+        val counts = kinds.map { (source, expected) ->
+            val base = report.events.filter { !it.reply && it.source == source &&
+                it.energy.isFinite() && it.energy > 0.0 && it.timeSeconds >= 0.0 && it.timeSeconds < duration }
+            assertTrue(base.isNotEmpty(), "$label lost base ensemble role $source; reflected replies cannot replace it")
+            assertTrue(base.all { it.kind in expected }, "$label changed the identity of ensemble role $source")
+            "$source=${base.size}"
+        }
+        println("CIRCUIT BASE ROLES $label: ${counts.joinToString(", ")}")
+    }
+
+    private fun assertHeldRepliesContinue(report: Circuit.Report, label: String) {
+        assertNotNull(report.loop)
+        val replies = report.events.filter { it.reply && it.energy > 0.0 }.sortedBy { it.timeSeconds }
+        assertTrue(replies.size >= 3, "$label has no recurring canyon conversation")
+        assertTrue(replies.size <= Circuit.MAX_REPLIES, "$label exceeds its bounded reply count")
+        assertTrue(replies.sumOf { it.energy } <= Circuit.MAX_REPLY_ENERGY + 1e-9,
+            "$label exceeds its bounded reply energy")
+        val gaps = replies.zipWithNext { a, b -> b.timeSeconds - a.timeSeconds } +
+            (report.rates.loopSeconds + replies.first().timeSeconds - replies.last().timeSeconds)
+        val median = gaps.sorted()[gaps.size / 2]
+        val longest = gaps.max()
+        // A count/energy budget must not prune the closing cells of a held
+        // conversation. Circular spacing tests its continuation without fixing
+        // exact score times or disallowing an authored skipped opportunity.
+        assertTrue(median > 0.0 && longest <= 2 * median + 1.0 / Dsp.RATE,
+            "$label concentrates replies in a prefix: median gap=$median, circular maximum=$longest")
+        println("CIRCUIT HOLD REPLIES $label: events=${replies.size}, median gap=${decimal(median)}, maximum circular gap=${decimal(longest)}")
     }
 
     private fun assertHealthy(r: Circuit.Report, label: String) {

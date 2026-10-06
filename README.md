@@ -368,12 +368,29 @@ hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
 
 CIRCUIT is an invented moving ensemble: three rooted breath resonators,
 stone rattle, paired wood, clay vessel and synthesized coordination voice.
+The current listening candidate gives them one authored four-pulse figure,
+with shared breath, a slow rise and settle across the phrase, stable player
+identity and quiet overlapping support. ROOT adds a firmer pitched foundation
+only at faster playing rates.
 DIAMETER, ORBIT and PACE independently set formation, movement and playing;
-CANYON supplies asymmetric mono paths and bounded echo-cued replies.
+CANYON supplies asymmetric mono paths and bounded replies at authored answer
+opportunities. A common energy scale keeps accepted replies in the phrase.
 Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
 clips. HOLD at .99 returns its settled procession without an opening gesture.
-The owner's listening verdict is pending. Contract and audition commands:
+The full R4 audition pack is complete: 370 variants, 740 raw/matched WAVs and
+39 unique checks passed. The owner's listening verdict remains pending.
+Contract and audition commands:
 [`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+
+MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
+travels between four trees, and synthesized owls answer the disturbances
+that reach them. CLUNK, THWACK, FRONT, HOOT, GROVE and ALARM share STRIKE,
+TRUNK, FOG, AGITATION and GROVE, with TUNE and HOLD. Fog loads the original
+tree as well as carrying returning sound. Calls have refractory times and
+finite budgets; HOLD supplies repeated strikes. Fourteen dry presets and a
+sixteen-pad pitched kit. The accessible listening page starts silent and
+is regenerated with `./gradlew :synth:generateMurkAudition`; see
+[`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
@@ -382,8 +399,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, CIRCUIT, THAW and GRAINS round out the lineup — sixteen
-engines in the `Engine` picker, with GRAINS a separate processor outside its scope
+VOX, FORK, FLOTILLA, CIRCUIT, THAW, MURK and GRAINS round out the lineup.
+GRAINS is a separate processor outside the `Engine` picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -565,7 +582,7 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, THAW, plus GRAINS, SNAP and DRAW, which sit beside the
+GLINT, SIREN, FORK, FLOTILLA, CIRCUIT, THAW, MURK, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and

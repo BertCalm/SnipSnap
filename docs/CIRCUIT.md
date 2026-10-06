@@ -9,12 +9,17 @@ invented. The engine makes no claim to reproduce a real tradition.
 The owner rejected the initial audio: “It all sounds the same. The brrrr sound
 overpowered everything.” After the balance revision, the owner could distinguish
 the parts, but described the vocal as honking and the ensemble as chaotic and
-abrupt. The current tone and phrasing revision is a new listening candidate;
-owner acceptance is pending. Numerical checks and patch round-trips do not
+abrupt. The owner then described R3 as stilted and driven by forced randomness.
+The current R4 candidate uses a shared breath and an authored four-pulse figure,
+aiming for one imagined desert-night ensemble around a fire. Its full 370-variant
+audition pack is complete; owner listening acceptance remains pending.
+Numerical checks and patch round-trips do not
 establish that its sound is useful. Vocal integration, phrasing, mono movement,
 and the feeling of an ensemble listening to its surroundings still need listening.
 
 ## Listening revisions
+
+### R2: balance
 
 The initial mix let the sustained central trio mask the instruments that give
 each configuration its identity. The revision substantially lowers central
@@ -37,12 +42,9 @@ contribution changed from .20 to .06, and the three tract-band weights from
 the coordination gestures closer to the requested root without removing their
 two-part envelopes, breath onset or deterministic variation.
 
-Each voice now selects a complementary eight-slot pattern for rattle, clapper,
-clay, vocals and tube accents. ANSWER additionally interpolates a cyclic breath
-pressure pattern with smooth transitions and deep reductions between its
-outgoing groups. These gaps follow the playing pattern; they are not dynamically
-aligned to every returning cue. The separate performer-listening paths and
-bounded reply scheduler still determine which returned accents produce gestures.
+R2 assigned complementary eight-slot patterns to rattle, clapper, clay, vocals
+and tube accents, with additional smooth breath gaps for ANSWER. That pattern
+selection is historical; the current shared figure is described below.
 
 Default-clip calibration measured the following changes from the rejected
 initial audio to the second, balance-focused revision:
@@ -60,9 +62,11 @@ the analysis uses Hann windows up to 16,384 samples. These measurements quantify
 that revision's balance and spectral variety in that window. They do not establish
 perceived distinction, whole-matrix quality or owner acceptance.
 
-The current revision retains the quieter tube balance, with a stronger stationary
+### R3: tone and separate turns
+
+R3 retained the quieter tube balance, with a stronger stationary
 anchor in PROCESSION to keep its requested root present beneath moving pitched
-players. It replaces the vocal's
+players. It replaced the vocal's
 same-phase harmonic source with a bounded, band-limited asymmetric glottal-flow
 derivative. Wider moving vowel regions, tract weights .48/.42/.20 and direct
 chest gain .025,
@@ -75,17 +79,16 @@ more restrained upper modes; its contact widths are capped against each arm's
 pitched mode. Clay contact width is capped by pitch so the
 requested membrane mode is still excited in the upper register.
 
-Foreground wood, clay and vocal gestures now take complementary turns. Rattle
-supports some outgoing accents at lower energy. A vocal reserves its complete
+R3 assigned complementary turns to foreground wood, clay and vocal gestures.
+Rattle supported some outgoing accents at lower energy. A vocal reserved its complete
 buffer plus .08 seconds of breathing space, including across the held seam;
-primary contact attacks avoid its occupied turn while quiet modal tails may
-overlap. A sparse short phrase uses a later quiet grunt instead of adding a
-two-syllable vocal to the opening group. Replies still follow a real reflected
-performer arrival, but wait for a free quarter-slot, carry less energy, and are
-deferred or omitted if no suitable space exists within the bounded response
+primary contact attacks avoided its occupied turn while quiet modal tails could
+overlap. A sparse short phrase used a later quiet grunt instead of adding a
+two-syllable vocal to the opening group. Replies followed a real reflected
+performer arrival, but waited for a free quarter-slot, carried less energy, and were
+deferred or omitted if no suitable space existed within the bounded response
 window. Reply count and energy budgets, refractory intervals and depth-one cues
-remain enforced. This coordination changes playing; ORBIT still controls movement
-independently.
+remained enforced; ORBIT controlled movement independently.
 
 Finite tube pressure now starts and releases through smooth .12/.44-second
 transitions. Tube accents have overlapping smooth .42-second pressure gestures;
@@ -106,12 +109,55 @@ These measurements use the same .15–2.8-second body window above. Activity
 uses 10 ms RMS envelopes above 10% of each source's own peak. They describe the
 25-variant development pack, not a listening verdict or the full matrix.
 
+### R4: one shared figure
+
+`CircuitPhrase` supplies one repeating four-pulse figure to the entire ensemble.
+An opening wood/pulse accent, weaker support, a vocal affirmation and a clay
+settling gesture share the same smooth effort profile. Quiet rattle and wood
+support can overlap the vocal. The source's own occupied interval protects a
+returned answer, while accompaniment keeps its authored place in the figure.
+Higher PACE adds quieter subdivisions; each voice changes the lead's position
+and whether its answer is vocal or clay.
+
+The cell count fits complete figures into the finite breath or held loop. Tube
+pressure, upper articulation and event energy follow the same cell phase.
+A shared slow arch, `.80 + .20 * sin²(π * phase)`, spans the entire finite
+breath or held loop. It shapes pressure continuously and event energy at each
+onset, so recurring figures gradually rise and settle instead of repeating at
+identical amplitudes. ROOT's central tube weight stays at `.050` for actual
+playing rates up to 2 steps/s, then rises linearly to `.170` at 5.5 steps/s.
+This gives fast playing a firmer pitched foundation while retaining the quiet
+sparse and default balance.
+A small deterministic phase warp affects both breath and onset timing, rather
+than choosing unrelated timing offsets for each event. Player seeds are stable
+across event timestamps: grunt and uh-huh share a vocal identity, and material
+gestures retain consistent source identities as tempo and geometry change.
+
+Each cell offers one authored answer opportunity. It requires the matching
+invitation's reflected arrival at the performer, sufficient cue strength,
+reaction time and a free interval on that responding source. An unavailable
+opportunity remains silent. Accepted replies retain their times and relative
+dynamics; a common scale enforces the cumulative energy budget. Count limits
+spread opportunities across a long held cycle. ORBIT continues to control
+movement independently of the playing figure.
+
+The numerical pacing reference is the official public preview of
+[“Dance Ceremony and Celebration” by Mysterious World Music](https://music.apple.com/us/album/dance-ceremony-and-celebration/1478559143?i=1478559145),
+identified from the supplied screenshot after the uploaded AAC decoded to
+silence. Its exact excerpt position is unknown. Analysis of the 29.929-second
+preview suggests a roughly .75-second pulse, a
+.1875-second subdivision and a recurrent three-second, sixteen-subdivision
+figure. The 80/160 BPM metrical interpretation and downbeat remain ambiguous.
+These observations inform pacing only, without a listening assessment.
+Circuit's figure, instruments and gestures are original synthesis; the reference
+media stays outside the repository and Site, without authenticity or cloning claims.
+
 The [private Circuit audition](https://circuit-snipsnap-audition.bertcalm.chatgpt.site/#comparison)
-includes six previous/revised pairs, one for each voice, alongside the full matrix.
-Each pair preserves the same macros and performer energy and uses the same
-matched listening target. The previous examples preserve the balance revision
-the owner just heard; the rejected original examples remain linked separately.
-The revised examples are candidates for a new owner verdict.
+is prepared with six R3/R4 pairs alongside all 370 current variations. Each pair
+retains identical macros and performer energy at a matched listening target.
+R3 defaults are preserved separately, with R1/R2 audio, diagnostics and metadata
+linked from the footer. All six revised defaults come from the completed R4
+pack; numerical analysis cannot establish shared intention or humanity.
 
 ## Host contract
 
@@ -158,9 +204,13 @@ CANYON .40, HOLD 0 and TUNE .5. Neutral is distinct from each voice's defaults.
 - ORBIT 0 is stationary. Nonzero ORBIT requests approximately .025–.125
   revolutions per second. Movement changes direct and reflected delay,
   distance loss, radiation facing and spectral loss in mono.
-- PACE requests approximately .5–6 playing slots per second. Complementary
-  patterns assign subsets of those slots to each surrounding instrument and
-  to tube accents. PACE does not change the requested root or motion clock.
+- PACE requests approximately .5–6 pulse steps per second. Finite phrases fit
+  whole four-pulse cells into `phraseSeconds - .12 - .16`; the reported actual
+  rate is `4 * cellCount / (phraseSeconds - .12 - .16)`. This rate is stepped,
+  and low requests can round upward. ROOT defaults request about 1.297 steps/s
+  and perform about 1.370 steps/s, approximately 82.2 BPM. Quiet subdivisions
+  follow the requested finite rate or the actual held rate. PACE does not change
+  the requested root or motion clock.
 - CANYON changes the two unequal wall paths, reflection loss, later returns,
   returning tube influence and the opportunities for behavioral answers.
 - HOLD lengthens a finite phrase until .99, then delivers its settled loop.
@@ -169,10 +219,11 @@ The first three sources form the central trio; the other four move with fixed
 angular offsets. The observer is off-center. Direct and reflected observer
 paths use fractional delays, smoothed motion and path-dependent low-pass loss.
 Performer-listening arrivals are calculated separately from observer arrivals.
-Tagged tube or clapper accents may cue one extra gesture after a return reaches
-another player. Replies have refractory intervals, a canyon-dependent event
-budget of at most six (also bounded by the global limit of 12), a cumulative
-energy budget and depth 1; replies never become new cues.
+Authored tube or clapper invitations may enable their cell's answer after a
+return reaches another player. Replies have same-source occupied intervals,
+refractory intervals, a global count limit of 12, a cumulative energy bound of
+2.4 times render velocity and depth 1. A common gain enforces that energy bound
+without dropping later accepted answers. Replies never become new cues.
 Disabling replies in a diagnostic retains canyon audio.
 
 The tube model is an abstract periodic pressure/lip source feeding stable
@@ -192,8 +243,8 @@ the shared band-limited decimator. Normal output uses
 ## Held clock approximation
 
 HOLD rounds the two clocks independently onto cycles that fit an approximately
-sixteen-second loop. PACE completes whole eight-slot patterns, preserving their
-vocal sequence, upper pressure gestures and ANSWER's smooth breath gaps. An even
+sixteen-second loop. PACE completes whole eight-step units, preserving pairs of
+four-pulse figures, their shared breath, vocal sequence and answer opportunities. An even
 number of root cycles also closes the subordinate half-root throat source.
 ORBIT 0 stays stationary; every requested
 nonzero orbit rounds to at least one whole turn per loop. The current
@@ -202,8 +253,8 @@ nonzero orbit rounds to at least one whole turn per loop. The current
 nonzero rate. Requested ORBIT also changes source-facing/spectral modulation
 depth, so nearby values retain a tonal distinction after clock rounding. This
 delivery approximation needs listening, particularly for EXPANSE and the
-slow-orbit HOLD diagnostic. One-shot clocks retain their requested independent
-rates.
+slow-orbit HOLD diagnostic. Finite ORBIT retains its requested rate; finite
+PACE reports its fitted actual rate separately from the requested nominal rate.
 
 The engine settles tube states and acoustic buffers through bounded preroll,
 measures two adjacent real cycles and refuses a held render if its seam or
@@ -299,6 +350,23 @@ owner's listening verdict alongside any measured results. The initial revision
 was rejected; a verdict on the revised candidate remains pending.
 
 ## Build and runtime evidence
+
+The completed R4 pack contains 370 variants and 740 raw/matched PCM24 WAVs.
+All 360 full-mix classifier guards pass, with zero numerical recoveries. Eleven
+held variants have zero seam error; the largest measured state-convergence
+error is `1.3075383642207593e-17`. Across the output-rate floating-point buffers,
+the raw peak maximum is `.07965720444917679` and the audition-matched peak
+maximum is `.18155063688755035`, before PCM quantization. These measurements
+come from the delivered full matrix, not additional renders.
+
+R4 validation comprises 28 focused checks plus 11 additional checks: 39 unique
+checks in total. That scope is 22 core DSP checks on unchanged source hashes
+and 17 integrated checks against the exact upstream MURK/THAW implementation,
+with zero failures, errors or skips. The R4 Android debug APK is built and
+verified against 534 byte-identical build inputs, including signing, the
+CircuitPhrase/MURK/THAW classes and all four native ABIs. Device validation and
+owner listening acceptance remain pending. The earlier runtime evidence below
+describes the initial revision.
 
 The initial-revision Circuit Android debug APK built with JDK 17, Gradle 8.14.3,
 AGP 8.7.3, Kotlin 2.0.21, API 35, NDK 27.2.12479018 and CMake 3.22.1.
