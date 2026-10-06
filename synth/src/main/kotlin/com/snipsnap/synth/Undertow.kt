@@ -191,6 +191,9 @@ object Undertow {
         var ceramicSample = 0.0
         var airflowSample = 0.0
         var shellSample = 0.0
+        val dcInput = DoubleArray(3)
+        val dcOutput = DoubleArray(3)
+        val dcPole = exp(-2 * PI * 8 / INTERNAL_RATE)
         val snapshots = ArrayList<StateSnapshot>()
         val contacts = ArrayList<ContactEvent>()
         var recordFrom = 0
@@ -320,8 +323,21 @@ object Undertow {
                 body[j].step()
                 shellSample += body[j].re * (1.0 + 1.5 * spiral) * sh.body / (j + 1)
             }
+            // Flow-derived texture may acquire a small finite-record bias. A linear 8 Hz
+            // blocker on each pickup preserves the sum of raw stems and the pitched root.
+            // Its memory is part of HOLD convergence, and never enters acoustic feedback.
+            ceramicSample = removeDc(0, ceramicSample)
+            airflowSample = removeDc(1, airflowSample)
+            shellSample = removeDc(2, shellSample)
             frame++
             return ((ceramicSample + airflowSample + shellSample) * TRIM).toFloat()
+        }
+
+        private fun removeDc(pickup: Int, input: Double): Double {
+            val output = input - dcInput[pickup] + dcPole * dcOutput[pickup]
+            dcInput[pickup] = input
+            dcOutput[pickup] = output
+            return output
         }
 
         fun energy(): Double {
@@ -338,6 +354,7 @@ object Undertow {
             x + v + area + flows + audibleFlow + sealMix + refractory + sealed.map { if (it) 1.0 else 0.0 }.toDoubleArray(),
             (tone + rim + body).flatMap { listOf(it.re, it.im) }.toDoubleArray() + contactPulse + pulseTarget,
             doubleArrayOf(noiseLow),
+            dcInput + dcOutput,
         )
     }
 
@@ -351,7 +368,7 @@ object Undertow {
             difference += delta * delta
             norm += .5 * (a[group][i] * a[group][i] + b[group][i] * b[group][i])
         }
-        sqrt(difference / max(if (group == 2) 1e-12 else .0001, norm))
+        sqrt(difference / max(if (group == 2 || group == 4) 1e-12 else .0001, norm))
     }
 
     internal fun probe(
