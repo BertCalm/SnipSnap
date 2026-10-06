@@ -38,6 +38,17 @@ tasks.test {
     }
 }
 
+/** CIRCUIT's complete listener pack; -Pquick renders its smaller development pack. */
+tasks.register<JavaExec>("generateCircuitAudition") {
+    group = "distribution"
+    description = "Render CIRCUIT raw/matched WAVs, diagnostics, manifest and listening page under testkit/circuit-audition/. -Pquick selects the smoke pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CircuitAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/circuit-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
 /** Render the THUMP acceptance kit into testkit/. See ThumpKitGenerator. */
 tasks.register<JavaExec>("generateThumpKit") {
     group = "distribution"
@@ -511,6 +522,15 @@ tasks.register<JavaExec>("generateTremorAudition") {
     args("${rootDir}/testkit/tremor-audition")
 }
 
+tasks.register<JavaExec>("generateTremorComparison") {
+    group = "distribution"
+    description = "Render the 16 matched Tremor listening-repair clips and metadata."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TremorComparisonGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tremor-comparison/${project.findProperty("comparisonVersion") ?: "candidate"}")
+}
+
 /** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */
 tasks.register<JavaExec>("generateValveAudition") {
     group = "distribution"
@@ -540,6 +560,26 @@ tasks.register<JavaExec>("generateFlotillaAudition") {
     args("${rootDir}/testkit/flotilla-audition")
 }
 
+/** Render CISTERN's raw/matched listening matrix and diagnostics under testkit/cistern-audition/. */
+tasks.register<JavaExec>("generateCisternAudition") {
+    group = "distribution"
+    description = "Render the CISTERN raw/matched clips, causal diagnostics, manifest and local listening page under testkit/cistern-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CisternAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/cistern-audition")
+}
+
+tasks.register<JavaExec>("generateFlotillaComparison") {
+    group = "distribution"
+    description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlotillaComparisonGenerator")
+    workingDir = projectDir
+    val version = project.findProperty("flotillaComparisonVersion") as String? ?: "candidate"
+    args("${rootDir}/testkit/flotilla-comparison/$version")
+}
+
 /** Render MURK's dry voices, causal probes and accessible offline listening page. */
 tasks.register<JavaExec>("generateMurkAudition") {
     group = "distribution"
@@ -567,4 +607,15 @@ tasks.register<JavaExec>("generateUndertowAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/undertow-audition")
     if (providers.gradleProperty("undertowQuick").orNull == "true") args("--quick")
+}
+
+/** Render Corolla's pitch/velocity, macro, interaction and loop listening matrix. */
+tasks.register<JavaExec>("generateCorollaAudition") {
+    group = "distribution"
+    description = "Render COROLLA native/matched clips, metrics and an offline listening page under testkit/corolla-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CorollaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/corolla-audition")
+    if (project.hasProperty("corollaQuick")) args("--quick")
 }

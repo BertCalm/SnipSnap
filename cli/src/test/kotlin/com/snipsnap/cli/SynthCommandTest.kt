@@ -1,10 +1,20 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.synth.Cistern
+import com.snipsnap.synth.CisternPresets
+import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.Flotilla
+import com.snipsnap.synth.FlotillaPresets
+import com.snipsnap.synth.FlotillaVoice
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SynthCommandTest {
@@ -51,6 +61,101 @@ class SynthCommandTest {
             assertTrue("2 rendered" in bytes.toString())
         } finally {
             dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `cistern auditions preserve preset defaults and accept note and velocity overrides`() {
+        val dir = java.nio.file.Files.createTempDirectory("synthcistern").toFile()
+        try {
+            val bytes = ByteArrayOutputStream()
+            val presets = CisternPresets.forVoice(CisternVoice.FIRST)
+            assertEquals(0, SynthCommand.run(listOf("CISTERN", "FIRST", "--preset", "2", "--out", dir.path), PrintStream(bytes)))
+            val default = dir.listFiles { f -> f.extension == "wav" }!!.single()
+            val expectedDefault = ByteArrayOutputStream().also { WavWriter.write(it, presets[1].render()) }
+            assertContentEquals(expectedDefault.toByteArray(), default.readBytes(), "omitting note flags keeps the factory patch intact")
+            default.delete()
+
+            assertEquals(0, SynthCommand.run(
+                listOf("CISTERN", "FIRST", "--all", "--midi", "72", "--velocity", "0.35", "--out", dir.path),
+                PrintStream(bytes),
+            ))
+            val wavs = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
+            assertEquals(presets.size, wavs.size, "--all still auditions each selected preset")
+            val expected = ByteArrayOutputStream().also { WavWriter.write(it, presets.first().copy(midi = 72, velocity = 0.35f).render()) }
+            assertContentEquals(expected.toByteArray(), wavs.first().readBytes(), "the CLI uses explicit pitch and strike energy")
+            for (wav in wavs) {
+                val snip = WavReader.read(wav)
+                assertEquals(1, snip.channels, "CISTERN lands dry")
+                assertEquals(WavWriter.MPC_SAMPLE_RATE, snip.sampleRate)
+                assertTrue(snip.samples.any { kotlin.math.abs(it) > 1e-4f }, "${wav.name} contains audible audio")
+            }
+            assertFalse("lands with" in bytes.toString(), "CISTERN's wet sound comes from its surface")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `flotilla auditions accept the same explicit note and velocity flags`() {
+        val dir = java.nio.file.Files.createTempDirectory("synthflotilla").toFile()
+        try {
+            assertEquals(0, SynthCommand.run(
+                listOf("FLOTILLA", "RIPPLE", "--midi", "48", "--velocity", "0.4", "--out", dir.path),
+                PrintStream(ByteArrayOutputStream()),
+            ))
+            val preset = FlotillaPresets.forVoice(FlotillaVoice.RIPPLE).first().copy(midi = 48, velocity = 0.4f)
+            val expected = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }
+            assertContentEquals(expected.toByteArray(), dir.listFiles { f -> f.extension == "wav" }!!.single().readBytes())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `bad note and velocity flags are refused before making an output folder`() {
+        val temp = java.nio.file.Files.createTempDirectory("synthbadnotes").toFile()
+        val dir = File(temp, "not-created")
+        try {
+            for ((engine, voice, range) in listOf(
+                Triple("CISTERN", "FIRST", Cistern.MIDI_MIN..Cistern.MIDI_MAX),
+                Triple("FLOTILLA", "RIPPLE", Flotilla.MIDI_MIN..Flotilla.MIDI_MAX),
+            )) {
+                val cases = listOf(
+                    "--midi" to listOf("", "NaN", "60.5", "C4", (range.first - 1).toString(), (range.last + 1).toString(), "2147483648"),
+                    "--velocity" to listOf("", "NaN", "Infinity", "-Infinity", "-0.01", "1.001", "1e40", "soft"),
+                )
+                for ((flag, values) in cases) for (value in values) {
+                    val err = ByteArrayOutputStream()
+                    val code = Cli.run(
+                        arrayOf("synth", engine, voice, flag, value, "--out", dir.path),
+                        PrintStream(ByteArrayOutputStream()), PrintStream(err),
+                    )
+                    assertEquals(2, code, "$engine $flag '$value': $err")
+                    assertTrue(flag in err.toString(), "the refusal names $flag: $err")
+                    assertFalse("Exception" in err.toString(), "$err")
+                }
+            }
+            assertFalse(dir.exists(), "invalid note flags have no output side effects")
+        } finally {
+            temp.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `explicit note flags are refused for incompatible engines and render modes`() {
+        val out = PrintStream(ByteArrayOutputStream())
+        val cases = listOf(
+            listOf("TINES", "BELL", "--midi", "60"),
+            listOf("RESIN", "BRASS", "--velocity", "0.5"),
+            listOf("CISTERN", "FIRST", "--midi", "60", "--instrument"),
+            listOf("CISTERN", "FIRST", "--velocity", "0.5", "--drone"),
+            listOf("FLOTILLA", "RIPPLE", "--midi", "60", "--drone"),
+        )
+        for (args in cases) {
+            val e = runCatching { SynthCommand.run(args + listOf("--out", "/tmp"), out) }.exceptionOrNull()
+            assertTrue(e is CliError, "$args: expected a flag refusal, got $e")
+            assertTrue(e.message?.contains(args[2]) == true, "$args: the refusal names ${args[2]}: ${e.message}")
         }
     }
 

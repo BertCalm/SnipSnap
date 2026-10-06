@@ -101,6 +101,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.cloud() },
         Starter(
+            "circuit", "CIRCUIT",
+            "Three breaths, moving accents, and canyon answers in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.circuit() },
+        Starter(
             "thaw", "THAW",
             "Ice plates and copper runners in C minor pentatonic. Cold contact warms into song.",
             seeded = false,
@@ -117,6 +123,12 @@ object StarterKits {
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,
         ) { SkinKits.classic() },
+        Starter(
+            "cistern", "CISTERN",
+            "Drops answer a struck skin. Wet melodic surfaces in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.cistern() },
         Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",

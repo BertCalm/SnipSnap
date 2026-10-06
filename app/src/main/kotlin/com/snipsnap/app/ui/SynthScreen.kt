@@ -153,7 +153,13 @@ import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.Corolla
+import com.snipsnap.synth.CorollaVoice
+import com.snipsnap.synth.CorollaPatch
 import com.snipsnap.synth.FlotillaVoice
+import com.snipsnap.synth.Cistern
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.Murk
 import com.snipsnap.synth.MurkPatch
 import com.snipsnap.synth.MurkVoice
@@ -166,6 +172,9 @@ import com.snipsnap.synth.UndertowVoice
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
+import com.snipsnap.synth.Circuit
+import com.snipsnap.synth.CircuitPatch
+import com.snipsnap.synth.CircuitVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -212,7 +221,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines join it here.
+ * registered engines, including CIRCUIT, THAW and MURK, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -262,7 +271,7 @@ fun SynthScreen(
     // prototype's `state.macros` map — not a fresh set of defaults every
     // time. Populated eagerly for every (engine, voice) pair up front, same
     // idiom the THUMP-only screen used for its own eight voices — cheap
-    // macro maps, which mean no read site
+    // (one entry per engine and voice) and means no read site
     // ever has to defend against a missing key.
     val macrosByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
@@ -272,8 +281,8 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // Some patches carry state outside the macro map (FLOTILLA's note and
-    // velocity). Keep that state through preview, editing, saving and placing.
+    // FLOTILLA and CISTERN carry note and velocity outside the macro map.
+    // Keep that state through preview, editing, saving and placing.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1047,7 +1056,10 @@ fun SynthScreen(
                             readout = when {
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
@@ -1868,10 +1880,10 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). The registered engines converge on one shape (an
+ * change"). The registered engines already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of near-
+ * this gives the screen one dispatch point instead of several near-
  * identical call sites, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
@@ -1881,9 +1893,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, THAW, MURK, UNDERTOW;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW;
 
-    /** Advance through the registered engines, wrapping back to THUMP. */
+    /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1901,9 +1913,12 @@ private enum class Engine {
         SIREN -> SirenVoice.entries
         FORK -> ForkVoice.entries
         FLOTILLA -> FlotillaVoice.entries
+        CISTERN -> CisternVoice.entries
+        CIRCUIT -> CircuitVoice.entries
         MURK -> MurkVoice.entries
         THAW -> ThawVoice.entries
         UNDERTOW -> UndertowVoice.entries
+        COROLLA -> CorollaVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1921,9 +1936,12 @@ private enum class Engine {
         SIREN -> Siren.macrosFor(voice as SirenVoice)
         FORK -> Fork.macrosFor(voice as ForkVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
+        CISTERN -> Cistern.macrosFor(voice as CisternVoice)
+        CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
         MURK -> Murk.macrosFor(voice as MurkVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
         UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
+        COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1941,9 +1959,12 @@ private enum class Engine {
         SIREN -> Siren.defaults(voice as SirenVoice)
         FORK -> Fork.defaults(voice as ForkVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
+        CISTERN -> Cistern.defaults(voice as CisternVoice)
+        CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
         MURK -> Murk.defaults(voice as MurkVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
         UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
+        COROLLA -> Corolla.defaults(voice as CorollaVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1961,9 +1982,12 @@ private enum class Engine {
         SIREN -> Siren.scramble(voice as SirenVoice, random)
         FORK -> Fork.scramble(voice as ForkVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
+        CISTERN -> Cistern.scramble(voice as CisternVoice, random)
+        CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
         MURK -> Murk.scramble(voice as MurkVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
         UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
+        COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1986,9 +2010,12 @@ private enum class Engine {
         SIREN -> Siren.render(voice as SirenVoice, macros)
         FORK -> Fork.render(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
+        CISTERN -> Cistern.render(voice as CisternVoice, macros)
+        CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
         MURK -> Murk.render(voice as MurkVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
         UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
+        COROLLA -> Corolla.render(voice as CorollaVoice, macros)
     }
 
     /**
@@ -2012,9 +2039,12 @@ private enum class Engine {
         // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
+        CISTERN -> Cistern.drumClassFor(voice as CisternVoice, macros)
+        CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
         UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
+        COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2032,9 +2062,12 @@ private enum class Engine {
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
+        CISTERN -> CisternPatch(name, voice as CisternVoice, macros)
+        CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
         UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
+        COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -2265,7 +2298,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
  * null` case has no placeholder either).
  *
  * A horizontally-scrolling strip of chips inside one [sunkenField], not a
- * vertical list: sixteen names have to fit next to a voice picker and five
+ * vertical list: seventeen names have to fit next to a voice picker and five
  * sliders on one phone screen, and a horizontal strip is what "tap it, hear
  * it, tap the next one" (the roadmap's own browsing-speed framing) wants
  * anyway — no per-row height cost as the roster grows. [current] is `null`

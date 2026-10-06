@@ -223,10 +223,13 @@ object Velocity {
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
         is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
+        is CisternPatch -> Cistern.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
+        is CircuitPatch -> Circuit.macrosFor(patch.voice)
         is MurkPatch -> Murk.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
         is UndertowPatch -> Undertow.macrosFor(patch.voice)
+        is CorollaPatch -> Corolla.macrosFor(patch.voice)
     }
 
     /**
@@ -281,14 +284,17 @@ object Velocity {
     /**
      * Voices that take velocity as a number on their own render, with no
      * macro moved and no [soften]. MERCURY SING and BLADE use velocity as
-     * touch; AEROSTAT uses it as strike energy; TREMOR uses it as the blow;
-     * MURK uses it as event energy and response reach, preserving the STRIKE contact character.
-     * THAW uses it as runner gesture energy while retaining the selected contact character.
+     * touch; AEROSTAT and CISTERN use it as strike energy, CIRCUIT as event
+     * energy, and TREMOR as the blow. MURK uses it as event energy and response
+     * reach, preserving the STRIKE contact character. THAW uses it as runner
+     * gesture energy while retaining the selected contact character.
      * UNDERTOW uses it as piston work while preserving the weighted-flap recipe.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
-            patch is AerostatPatch || patch is TremorPatch || patch is ThawPatch || patch is MurkPatch || patch is UndertowPatch
+            patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
+            patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch ||
+            patch is CorollaPatch || patch is UndertowPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -314,7 +320,11 @@ object Velocity {
                 is MercuryPatch -> Mercury.render(patch.voice, patch.macros, velocity = v)
                 is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
                 is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+                is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
+                is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
                 is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
+                // COROLLA scales the pull and contact energy; PULL keeps the playing character.
+                is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
