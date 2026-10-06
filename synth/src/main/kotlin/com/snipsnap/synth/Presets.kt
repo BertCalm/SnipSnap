@@ -86,6 +86,10 @@ object Presets {
             val v = TremorVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TremorPresets.forVoice(v)
         }
+        CircuitPatch.ENGINE -> {
+            val v = CircuitVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CircuitPresets.forVoice(v)
+        }
         MurkPatch.ENGINE -> {
             val v = MurkVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MurkPresets.forVoice(v)
@@ -124,5 +128,5 @@ object Presets {
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() +
             AerostatPresets.all() +
-            TremorPresets.all() + ThawPresets.all() + MurkPresets.all()
+            TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all()
 }

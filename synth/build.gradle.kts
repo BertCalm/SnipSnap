@@ -38,6 +38,17 @@ tasks.test {
     }
 }
 
+/** CIRCUIT's complete listener pack; -Pquick renders its smaller development pack. */
+tasks.register<JavaExec>("generateCircuitAudition") {
+    group = "distribution"
+    description = "Render CIRCUIT raw/matched WAVs, diagnostics, manifest and listening page under testkit/circuit-audition/. -Pquick selects the smoke pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CircuitAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/circuit-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
 /** Render the THUMP acceptance kit into testkit/. See ThumpKitGenerator. */
 tasks.register<JavaExec>("generateThumpKit") {
     group = "distribution"

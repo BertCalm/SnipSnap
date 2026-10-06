@@ -480,6 +480,27 @@ object SynthKits {
     }
 
     /**
+     * CIRCUIT's pitched ensemble kit. The first two rows walk C minor
+     * pentatonic from C2; the remaining pads explore every voice and end
+     * with the recurring ensemble. Every pad carries its editable recipe
+     * and lands dry so the circle and canyon remain the engine's own paths.
+     */
+    fun circuit(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = CircuitPatch(
+            "Circuit $n", CircuitVoice.ROOT,
+            Circuit.defaults(CircuitVoice.ROOT) + ("TUNE" to semitone / Circuit.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Circuit.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = CircuitPresets.all().first { it.name == name }
+            .let { pad(it, Circuit.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("SLOW PARADE"), preset("MOVING ACCENTS"), preset("PAIRED WOOD"), preset("CLAY REPLY"),
+            preset("CHEST GESTURE"), preset("WIDE CIRCLE"), preset("FAST GATHER"), preset("HELD CIRCLE"),
+        )
+    }
+
+    /**
      * The MURK audition kit: CLUNK climbs the C minor pentatonic on A01–A08, then six sounds
      * explore sharp wood, heavy fog and owl answers. A15–A16 carry settled recurring groves.
      * Every pad is dry, carries its regenerable recipe, and is filed by [Murk.drumClassFor].
