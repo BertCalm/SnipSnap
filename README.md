@@ -366,6 +366,22 @@ the top is a stationary loop (the slider reads LOOP), not a claim the
 hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
 `docs/superpowers/specs/2026-10-04-flotilla-engine-design.md`.
 
+CIRCUIT is an invented moving ensemble: three rooted breath resonators,
+stone rattle, paired wood, clay vessel and synthesized coordination voice.
+The current listening candidate gives them one authored four-pulse figure,
+with shared breath, a slow rise and settle across the phrase, stable player
+identity and quiet overlapping support. ROOT adds a firmer pitched foundation
+only at faster playing rates.
+DIAMETER, ORBIT and PACE independently set formation, movement and playing;
+CANYON supplies asymmetric mono paths and bounded replies at authored answer
+opportunities. A common energy scale keeps accepted replies in the phrase.
+Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
+clips. HOLD at .99 returns its settled procession without an opening gesture.
+The full R4 audition pack is complete: 370 variants, 740 raw/matched WAVs and
+39 unique checks passed. The owner's listening verdict remains pending.
+Contract and audition commands:
+[`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+
 MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
 travels between four trees, and synthesized owls answer the disturbances
 that reach them. CLUNK, THWACK, FRONT, HOOT, GROVE and ALARM share STRIKE,
@@ -393,8 +409,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, THAW, MURK, COROLLA and GRAINS round out the lineup —
-seventeen engines in the `Engine` picker; GRAINS is a separate processor, out of the picker's scope
+VOX, FORK, FLOTILLA, CIRCUIT, THAW, MURK, COROLLA and GRAINS round out the lineup.
+GRAINS is a separate processor outside the `Engine` picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -576,7 +592,7 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, THAW, MURK, plus GRAINS, SNAP and DRAW, which sit beside the
+GLINT, SIREN, FORK, FLOTILLA, CIRCUIT, THAW, MURK, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and

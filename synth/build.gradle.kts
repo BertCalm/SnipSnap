@@ -38,6 +38,17 @@ tasks.test {
     }
 }
 
+/** CIRCUIT's complete listener pack; -Pquick renders its smaller development pack. */
+tasks.register<JavaExec>("generateCircuitAudition") {
+    group = "distribution"
+    description = "Render CIRCUIT raw/matched WAVs, diagnostics, manifest and listening page under testkit/circuit-audition/. -Pquick selects the smoke pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CircuitAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/circuit-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
 /** Render the THUMP acceptance kit into testkit/. See ThumpKitGenerator. */
 tasks.register<JavaExec>("generateThumpKit") {
     group = "distribution"
@@ -547,6 +558,16 @@ tasks.register<JavaExec>("generateFlotillaAudition") {
     mainClass.set("com.snipsnap.synth.FlotillaAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/flotilla-audition")
+}
+
+tasks.register<JavaExec>("generateFlotillaComparison") {
+    group = "distribution"
+    description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlotillaComparisonGenerator")
+    workingDir = projectDir
+    val version = project.findProperty("flotillaComparisonVersion") as String? ?: "candidate"
+    args("${rootDir}/testkit/flotilla-comparison/$version")
 }
 
 /** Render MURK's dry voices, causal probes and accessible offline listening page. */
