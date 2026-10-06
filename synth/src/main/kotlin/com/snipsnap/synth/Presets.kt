@@ -98,6 +98,10 @@ object Presets {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
         }
+        CorollaPatch.ENGINE -> {
+            val v = CorollaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CorollaPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -128,5 +132,5 @@ object Presets {
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() +
             AerostatPresets.all() +
-            TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all()
+            TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + CorollaPresets.all()
 }

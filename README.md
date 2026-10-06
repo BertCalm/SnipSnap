@@ -392,6 +392,16 @@ sixteen-pad pitched kit. The accessible listening page starts silent and
 is regenerated with `./gradlew :synth:generateMurkAudition`; see
 [`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
 
+COROLLA is a mechanical flower of coupled metal petals around a powered
+magnetic core and a shared chamber. TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT
+and HUSK share TUNE, PULL, BLOOM, FIELD, CONTACT, CHAMBER and HOLD. It
+renders dry; finite notes route as TONAL for IN KEY, and HOLD's top step
+returns settled LOOP material. Twelve
+presets and `SynthKits.corolla()` expose the first implementation, awaiting
+the owner's listening review. Audition: `./gradlew :synth:generateCorollaAudition`.
+Individual presets can also be rendered with
+`./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -399,7 +409,7 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, CIRCUIT, THAW, MURK and GRAINS round out the lineup.
+VOX, FORK, FLOTILLA, CIRCUIT, THAW, MURK, COROLLA and GRAINS round out the lineup.
 GRAINS is a separate processor outside the `Engine` picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,

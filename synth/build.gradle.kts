@@ -585,3 +585,14 @@ tasks.register<JavaExec>("generateMurkAudition") {
         providers.gradleProperty("murkBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
     }
 }
+
+/** Render Corolla's pitch/velocity, macro, interaction and loop listening matrix. */
+tasks.register<JavaExec>("generateCorollaAudition") {
+    group = "distribution"
+    description = "Render COROLLA native/matched clips, metrics and an offline listening page under testkit/corolla-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CorollaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/corolla-audition")
+    if (project.hasProperty("corollaQuick")) args("--quick")
+}

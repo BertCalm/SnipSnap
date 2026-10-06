@@ -521,6 +521,28 @@ object SynthKits {
     }
 
     /**
+     * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
+     * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
+     * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
+     * material suitable for repeated playback. The engine's pitched identity takes precedence
+     * over the generic classifier's length-based LOOP bucket.
+     */
+    fun corolla(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = CorollaPatch(
+            "Petal $n", CorollaVoice.TONGUE,
+            Corolla.defaults(CorollaVoice.TONGUE) + ("TUNE" to semitone / Corolla.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = CorollaPresets.all().first { it.name == name }
+            .let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("OPENING BELL"), preset("FOLDED CHAMBER"), preset("MAGNETIC CHOIR"), preset("QUIET CHATTER"),
+            preset("FAST ORBIT"), preset("HOLLOW HUSK"), preset("PETAL CLOUD"), preset("CLOSED CIRCUIT"),
+        )
+    }
+
+    /**
      * The THAW kit. A01–A08 walk C minor pentatonic from C3 on BRITTLE. A09–A14 explore the
      * warming runner, melt, channels, frozen bridges, heavy sheet and returning frost; A15–A16
      * are settled held material. Each dry pad carries its full recipe and uses THAW's pitched
