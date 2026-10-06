@@ -162,16 +162,16 @@ object CorollaAuditionGenerator {
 
     private fun quickCases(): List<Case> = CorollaVoice.entries.flatMap { voice ->
         listOf(
-            comparisonCase(voice),
             case("Defaults", voice, "default", "${voice.name} default", "Every macro at its voice default."),
+            comparisonCase(voice),
             case("Held loops", voice, "held", "${voice.name} held", "Settled loop at the voice defaults.", mapOf("HOLD" to 1f)),
         )
     }
 
     private fun acceptanceCases(): List<Case> = buildList {
         for (voice in CorollaVoice.entries) {
-            add(comparisonCase(voice))
             add(case("Defaults", voice, "default", "${voice.name} default", "Every macro at its voice default."))
+            add(comparisonCase(voice))
             // Both pitch and event strength vary: low/high registration can change collision thresholds.
             for ((tune, note) in NOTES) for (velocity in VELOCITIES) {
                 add(case("Pitch and velocity", voice, "${note.lowercase()}_v${tag(velocity)}",
