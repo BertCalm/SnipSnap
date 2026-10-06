@@ -1528,6 +1528,30 @@ object Copy {
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     /** ROULETTE or DRIFT on a shelf with no other pad. The name stays (PersonalityTest lists it); the words say PARTNER's way. */
     const val CRATE_EMPTY = "THE SHELF HOLDS NO OTHER PAD. ROULETTE HAS NOTHING TO PICK."
+    /** MUTATE's HEAR, KEEP or the like with no partner picked yet. */
+    const val MUTATE_PICK_PARTNER = "PICK A PARTNER FIRST."
+    /**
+     * MUTATE on a velocity-layered pad, naming the chip the pad sheet
+     * prints. Turning SOFT HITS off clears every layer, GHOSTS' rendered
+     * ones and STACK THE TAKES' copies alike, so the line points at a safe
+     * act for both. [MUTATE_NEEDS_ONE] stays, for DE-SAMPLE.
+     */
+    const val MUTATE_LAYERED = "SOFT HITS IS ON: THIS PAD HAS LAYERS. MUTATE WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST."
+    /**
+     * MUTATE on a pad that plays a chain of slices in turn. No phone
+     * control unchains a pad, so the line names the phone's way to pads of
+     * one sample instead (the redesign's Decision 3).
+     */
+    const val MUTATE_CHAINED =
+        "THIS PAD PLAYS ITS SLICES IN TURN. MUTATE WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE."
+    /** ROULETTE or DRIFT when every other sound on the shelf is a near-double of this pad. */
+    const val ROULETTE_ONLY_COPIES = "EVERY OTHER SOUND ON THE SHELF IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF."
+    /** The picked partner is no longer there: a pad deleted, a kit removed, a room or a file gone. */
+    const val MUTATE_PARTNER_GONE = "THAT PARTNER IS GONE. PICK ANOTHER."
+    /** MUTATE's UNDO on a pad that carries no mutate. */
+    const val UNDO_NOTHING = "THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE."
+    /** MUTATE's UNDO when the bin holds no earlier take of the pad. */
+    const val UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS."
     /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
     fun fileRefused(reason: String): String = "NOT A PARTNER: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 

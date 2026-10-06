@@ -232,24 +232,43 @@ object MutateSheet {
         return Partner.Deal(pick.label, pick.file, seed)
     }
 
-    /** The parent as [Mutate] wants it; a pad's label is the CLI's own `Kit:A03` form, so the lineage reads the same either way. */
+    /**
+     * The picked partner is no longer there: a pad deleted, another kit or
+     * its `kit.json` removed, a ROULETTE pick's, a room's or a held file
+     * gone. Thrown by [source] before anything is read, so the card can say
+     * so instead of a generic failure. An [IllegalArgumentException], so
+     * every existing catch and test still holds.
+     */
+    class PartnerGone(message: String) : IllegalArgumentException(message)
+
+    /**
+     * The parent as [Mutate] wants it; a pad's label is the CLI's own
+     * `Kit:A03` form, so the lineage reads the same either way. Each kind
+     * is checked before it is read and throws [PartnerGone] when it is not
+     * there; a file that is there but does not decode is a real failure.
+     */
     fun source(model: KitBuilderModel, partner: Partner): Mutate.Source = when (partner) {
         is Partner.Pad -> {
-            val pad = model.pad(partner.slot) ?: throw IllegalArgumentException("no pad on ${padTag(partner.slot)}")
+            val pad = model.pad(partner.slot) ?: throw PartnerGone("no pad on ${padTag(partner.slot)}")
             Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", WavReader.read(File(model.kitDir, pad.sampleFile)))
         }
-        is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(partner.file))
-        is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(partner.file))
+        is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(present(partner.file)))
+        is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(present(partner.file)))
         is Partner.Other -> {
+            // Checked here, because KitStore.load would throw a plain IOException.
+            if (!File(partner.kitDir, KitStore.FILE_NAME).isFile) throw PartnerGone("${partner.kitName} is not on the shelf")
             val kit = KitStore.load(partner.kitDir)
             val pad = kit.pads.firstOrNull { it.slot == partner.slot }
-                ?: throw IllegalArgumentException("no pad on ${partner.kitName} ${padTag(partner.slot)}")
+                ?: throw PartnerGone("no pad on ${partner.kitName} ${padTag(partner.slot)}")
             // The CLI's own Kit:Pad label, so the lineage reads the same as a roulette deal's.
             Mutate.Source("${kit.name}:${padTag(partner.slot)}", WavReader.read(File(partner.kitDir, pad.sampleFile)))
         }
         // The file's own name, as `--with hit.wav` labels it.
-        is Partner.Wav -> Mutate.Source(partner.label, WavReader.read(partner.file))
+        is Partner.Wav -> Mutate.Source(partner.label, WavReader.read(present(partner.file)))
     }
+
+    /** [file] itself, or [PartnerGone] when it is not there; WavReader.read would throw a plain IOException. */
+    private fun present(file: File): File = if (file.isFile) file else throw PartnerGone("${file.name} is gone")
 
     /**
      * The card's two steppers as the six knob slots [Mutate.render] and
@@ -363,6 +382,71 @@ object MutateSheet {
 
     /** The parents back apart: the pre-mutation audio out of the bin, recipe and parent stamp cleared. */
     fun undo(model: KitBuilderModel, slot: Int): KitPad = Mutate.undo(model, slot)
+
+    // ---------- honest refusals (the redesign's round M1) ----------
+
+    /** Why a MUTATE door will not run, and the line the card toasts for it. */
+    sealed interface Refusal {
+        val line: String
+
+        /** HEAR or KEEP with no partner picked. */
+        data object NoPartner : Refusal { override val line: String = Copy.MUTATE_PICK_PARTNER }
+
+        /** The pad has velocity layers (SOFT HITS, or STACK THE TAKES). */
+        data object Layered : Refusal { override val line: String = Copy.MUTATE_LAYERED }
+
+        /** The pad plays a chain of slices in turn (CHOP's FOLD, the CLI's `robin` or `--break-pad`). */
+        data object Chained : Refusal { override val line: String = Copy.MUTATE_CHAINED }
+
+        /** ROULETTE or DRIFT found no other pad on the shelf. */
+        data object ShelfEmpty : Refusal { override val line: String = Copy.CRATE_EMPTY }
+
+        /** ROULETTE or DRIFT found only near-doubles of this pad. */
+        data object OnlyCopies : Refusal { override val line: String = Copy.ROULETTE_ONLY_COPIES }
+
+        /** The picked partner is no longer there. */
+        data object PartnerGone : Refusal { override val line: String = Copy.MUTATE_PARTNER_GONE }
+    }
+
+    /**
+     * The check every MUTATE door runs before it launches anything: a
+     * layered pad, then a chained one, then (when the door needs one) no
+     * partner, so a pad that can never mutate says so before the card asks
+     * for a partner. DRIFT and ROULETTE pick their own partner and pass
+     * [needsPartner] false. Null when the door may go ahead.
+     */
+    fun refusalBefore(pad: KitPad, partner: Partner?, needsPartner: Boolean): Refusal? = when {
+        pad.velocityLayers.isNotEmpty() -> Refusal.Layered
+        pad.chain != null -> Refusal.Chained
+        needsPartner && partner == null -> Refusal.NoPartner
+        else -> null
+    }
+
+    /**
+     * The refusal a door's exception stands for: ROULETTE's two typed kinds
+     * and a gone partner. Every other exception is a real failure, null
+     * here, and the card says `<ACTION> FAILED. TRY AGAIN.`
+     */
+    fun refusalOf(e: Throwable): Refusal? = when (e) {
+        is Mutate.RouletteRefused -> when (e.kind) {
+            Mutate.RouletteRefused.Kind.EMPTY -> Refusal.ShelfEmpty
+            Mutate.RouletteRefused.Kind.ONLY_COPIES -> Refusal.OnlyCopies
+        }
+        is PartnerGone -> Refusal.PartnerGone
+        else -> null
+    }
+
+    /**
+     * Why UNDO has nothing to do, or null when it can undo: no mutate on the
+     * pad ([mutated] is [read]'s answer), or no earlier take of the pad in
+     * the bin ([binned]). The card draws UNDO dimmed while this is not null,
+     * and a tap toasts it instead of undoing.
+     */
+    fun undoRefusal(mutated: Applied?, binned: Boolean): String? = when {
+        mutated == null -> Copy.UNDO_NOTHING
+        !binned -> Copy.UNDO_NOT_BINNED
+        else -> null
+    }
 
     // ---------- the card's words (the redesign's round M1) ----------
     //

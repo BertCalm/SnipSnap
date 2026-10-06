@@ -27,6 +27,15 @@ class MutateWordsTest {
      */
     private val retired = Regex("""\b(PARENTS?|NEIGHBOU?RS?|CRATES?|DEALS?)\b""")
 
+    /** A take is a bin file in MUTATE's copy: TAKES as a noun (`THE TAKES`, `ITS TAKES`, `2 TAKES`) is a round-robin's word. */
+    private val takesNoun = Regex("""\b(THE|ITS|OF|\d+)\s+TAKES\b""")
+
+    /** Asserts [text] uses neither TAKES as a noun nor GHOSTS, CHOP's word (the pad sheet's chip is SOFT HITS). */
+    private fun assertOneMeaning(where: String, text: String) {
+        assertTrue(takesNoun.find(text) == null, "$where says TAKES as a noun, a round-robin's word: '$text'")
+        assertTrue("GHOSTS" !in text, "$where says GHOSTS, CHOP's word: '$text'")
+    }
+
     private fun assertNoRetiredWord(where: String, text: String) {
         val hit = retired.find(text.uppercase())
         assertTrue(hit == null, "$where says '${hit?.value}', a word MUTATE retired for PARTNER: '$text'")
@@ -257,10 +266,32 @@ class MutateWordsTest {
         ) + Mutate.Mode.values().flatMap { listOfNotNull(MutateSheet.outcomeLine(it, 1f), MutateSheet.knobMeaning(it), MutateSheet.becomeMeaning(it)) }
         for (text in labels + MutateSheet.KEEP_LABEL) {
             assertTrue("KEEP ROOM" !in text, "'$text' says KEEP ROOM, OUTSIDE's button, on the card whose commit verb is KEEP")
-            assertTrue(Regex("""\b(THE|ITS|OF|\d+)\s+TAKES\b""").find(text) == null, "'$text' says TAKES as a noun, a round-robin's word")
-            assertTrue("GHOSTS" !in text, "'$text' says GHOSTS, CHOP's word")
+            assertOneMeaning("'$text'", text)
         }
         val keepers = labels.filter { Regex("""\bKEEP\b""").containsMatchIn(it) }
         assertEquals(listOf(MutateSheet.NOTE_LINE), keepers, "KEEP appears on the card outside the commit button and the note line")
+    }
+
+    @Test
+    fun `the refusals and UNDO's lines say what to do next, in PARTNER's words`() {
+        assertEquals("PICK A PARTNER FIRST.", Copy.MUTATE_PICK_PARTNER)
+        assertEquals("SOFT HITS IS ON: THIS PAD HAS LAYERS. MUTATE WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST.", Copy.MUTATE_LAYERED)
+        assertEquals(
+            "THIS PAD PLAYS ITS SLICES IN TURN. MUTATE WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE.",
+            Copy.MUTATE_CHAINED,
+        )
+        assertEquals("EVERY OTHER SOUND ON THE SHELF IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF.", Copy.ROULETTE_ONLY_COPIES)
+        assertEquals("THAT PARTNER IS GONE. PICK ANOTHER.", Copy.MUTATE_PARTNER_GONE)
+        assertEquals("THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE.", Copy.UNDO_NOTHING)
+        assertEquals("THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS.", Copy.UNDO_NOT_BINNED)
+        for (r in listOf(
+            MutateSheet.Refusal.NoPartner, MutateSheet.Refusal.Layered, MutateSheet.Refusal.Chained,
+            MutateSheet.Refusal.ShelfEmpty, MutateSheet.Refusal.OnlyCopies, MutateSheet.Refusal.PartnerGone,
+        )) {
+            assertNoRetiredWord("$r", r.line)
+            assertOneMeaning("$r", r.line)
+        }
+        assertNoRetiredWord("Copy.UNDO_NOTHING", Copy.UNDO_NOTHING)
+        assertNoRetiredWord("Copy.UNDO_NOT_BINNED", Copy.UNDO_NOT_BINNED)
     }
 }
