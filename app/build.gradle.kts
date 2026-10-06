@@ -1,11 +1,10 @@
-// The Android shell — M0 walking skeleton. Pre-written in the cloud
-// session (which cannot build it: no Android SDK reachable); the desktop
-// session owns compiling, running, and fixing what the compiler finds.
-// See app/README.md for the build steps and the verification status.
+// The Android shell. settings.gradle.kts includes :app only when an SDK
+// is located, so a session with none does not configure it at all. CI's
+// android-build job assembles it. See app/README.md.
 plugins {
-    id("com.android.application") version "8.7.3"
-    kotlin("android") version "2.0.21"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+    id("com.android.application")
+    kotlin("android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 repositories {
@@ -16,9 +15,12 @@ repositories {
 android {
     namespace = "com.snipsnap.app"
     compileSdk = 35
-    // The one native library (the SURFACE engine, app/src/main/cpp). Pinned
-    // so every machine - CI's runner included - compiles the same toolchain;
-    // AGP fetches this NDK through the SDK manager when it is not installed.
+    // The native library (app/src/main/cpp): SurfaceEngine, PadEngine,
+    // LiveSnapEngine, and the JNI bridge. The host harness names those
+    // sources again; scripts/check_native_sources.py checks the lists agree.
+    // The NDK is pinned so every machine, CI's runner included, compiles
+    // the same toolchain; AGP fetches it through the SDK manager when it
+    // is not installed.
     ndkVersion = "27.2.12479018"
 
     defaultConfig {
@@ -26,7 +28,7 @@ android {
         minSdk = 29
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1-m0"
+        versionName = "0.1"
         // The on-device suite (src/androidTest): Compose UI tests that run
         // on an emulator or a plugged-in phone, `:app:connectedDebugAndroidTest`.
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

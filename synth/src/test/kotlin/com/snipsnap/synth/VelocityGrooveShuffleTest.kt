@@ -138,6 +138,8 @@ class VelocityGrooveShuffleTest {
             "TONEWHEEL FULL (PERC)" to TonewheelPresets.forVoice(TonewheelVoice.FULL).first(),
             "GLINT SWEEP (PEAK)" to GlintPatch("Vel Canary", GlintVoice.SWEEP, Glint.defaults(GlintVoice.SWEEP)),
             "SILK OUD (PICK)" to SilkPatch("Vel Canary", SilkVoice.OUD, Silk.defaults(SilkVoice.OUD)),
+            "MAGNET JANGLE (PICK)" to MagnetPatch("Vel Canary", MagnetVoice.JANGLE, Magnet.defaults(MagnetVoice.JANGLE)),
+            "MAGNET CHUG (PICK)" to MagnetPatch("Vel Canary", MagnetVoice.CHUG, Magnet.defaults(MagnetVoice.CHUG)),
         )
         for ((label, patch) in cases) {
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz

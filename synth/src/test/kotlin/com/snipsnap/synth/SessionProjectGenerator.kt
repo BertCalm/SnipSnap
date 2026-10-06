@@ -11,7 +11,7 @@ import java.io.File
 /**
  * Renders the whole session as one MPC 3 project under testkit/ —
  * `SnipSnap Session.xpj` beside its flat `SnipSnap Session_[ProjectData]/`:
- * the factory kit, all six suite instruments, and the demo groove on the
+ * the factory kit, the six classic suite instruments, and the demo groove on the
  * sequence timeline. Open the `.xpj` on the Live III and the entire
  * SnipSnap session is standing there — kit red-to-teal on the pads, EP,
  * organ, harp, music box, RESIN pad and FORK on their own tracks, "SnipSnap Groove" ready

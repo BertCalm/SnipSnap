@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Snip
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.ln
@@ -505,10 +506,12 @@ class BoreTest {
     @Test
     fun `a LOOP closes on itself in whole periods, at exactly TUNE, across the range`() {
         // The measure that means something: the kept stretch against itself one loop later
-        // (Keys.seamError, the Organ's bar of 1e-3). R1 saw these 18 corners at worst 1.2e-4 and held
-        // them to a quarter of the bar. The reed's bite bell lifts the top partials, where any drift
-        // of a loose, hard reed shows first, and the worst corner (LIP 0, BREATH 1) now reads 2.8e-4,
-        // so the bound is half the bar, which is still twice the worst seen. The pitch is exact by
+        // (Keys.seamError, the Organ's bar of 1e-3). R1 saw these 18 corners at worst 1.2e-4; the reed's
+        // bite bell took the worst (LIP 0, BREATH 1 at C3) to 2.8e-4 and the rasp and the voicing, which
+        // the loop carries since Round 1.5, to 4.7e-3 at first - the loosest, hardest reed is still
+        // creeping in amplitude and shape at 400 periods, and the voicing weights the high harmonics
+        // that move most. Settled twice as long (the retry in Bore.renderLoopMeasured) that corner reads
+        // 1.7e-5 and the bound is a twentieth of the bar. The pitch is exact by
         // construction - K periods in a whole number of frames - so it is checked as arithmetic, and
         // by ear of the autocorrelation as well.
         for (voice in BoreVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) for ((lip, breath) in listOf(0.5f to 0.6f, 0f to 1f, 1f to 0f)) {
@@ -516,7 +519,7 @@ class BoreTest {
             val hz = Bore.frequencyFor(voice, tune)
             val r = Bore.renderLoopMeasured(voice, m)
             val label = "$voice TUNE $tune LIP $lip BREATH $breath"
-            assertTrue(r.seam < Keys.MAX_SEAM_ERROR / 2, "$label: the loop does not close (seam ${r.seam})")
+            assertTrue(r.seam < Keys.MAX_SEAM_ERROR / 20, "$label: the loop does not close with room to spare (seam ${r.seam})")
             val plan = Bore.planLoop(hz)
             assertEquals(plan.frames, r.loop.size, "$label: the loop is not the planned length")
             val cents = 1200 * ln(plan.periods * Dsp.RATE.toDouble() / (plan.frames * hz)) / ln(2.0)
@@ -538,6 +541,131 @@ class BoreTest {
             val ratio = rms(0) / rms(loop.size - q)
             assertTrue(ratio in 0.98..1.02, "$voice: the loop's first quarter is $ratio of its last")
         }
+    }
+
+    @Test
+    fun `a LOOP carries the rasp and the voicing, so it is not a darker copy of its one-shot`() {
+        // The first rounds left both out of a LOOP, and the held SOLO LOOP was heard as "a cheap keyboard": a
+        // steady tone with its fundamental on top and nothing over 2 kHz. Measured as the one-shot's bite is (the
+        // 1-4 kHz band against the fundamental, from 0.5 s), the loop is over the one-shot's own floors, no darker
+        // than the one-shot at the same knobs, and well over the loop of the first rounds (the bell alone:
+        // carry = false), which read -17.2 -13.4 -9.7 dB at C3 C4 C5 against the loop's 13.8 6.5 2.5, 31 20 and 12
+        // dB more. It is not the same as the one-shot (6.2 3.9 1.8): the one-shot's voicing follows its loudness
+        // and its ceiling is the attack's accent, so its plateau reaches about two-thirds of the shelves at C3,
+        // and the loop, steady from the start, takes them whole ([Bore.LOOP_VOICE_SHARE]). The margins over the
+        // bell-only loop are set under those, where a loop without the rasp (about 7 dB at C5) or without the
+        // voicing (about 4 dB there) falls below them.
+        val floors = listOf(0f to 3.0, 0.5f to 1.0, 1f to -1.0)
+        val over = listOf(25.0, 15.0, 10.0)
+        val rows = floors.map { (tune, floor) ->
+            val hz = Bore.frequencyFor(BoreVoice.SAX, tune)
+            val m = Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to tune)
+            val loop = BoreMeasure.biteDb(Bore.render(BoreVoice.SAX, m + mapOf("HOLD" to 1f)), hz, fromSec = 0.5f)
+            val shot = BoreMeasure.biteDb(Bore.render(BoreVoice.SAX, m + mapOf("HOLD" to 0.3f)), hz, fromSec = 0.5f)
+            val bare = BoreMeasure.biteDb(Snip(Bore.renderLoopMeasured(BoreVoice.SAX, Bore.settled(m + mapOf("HOLD" to 1f), BoreVoice.SAX), carry = false).loop, channels = 1, sampleRate = Dsp.RATE), hz, fromSec = 0.5f)
+            println("BORE loop bite at TUNE $tune: loop %.1f dB, one-shot %.1f dB, bell-only loop %.1f dB".format(java.util.Locale.ROOT, loop, shot, bare))
+            listOf(tune.toDouble(), floor, loop, shot, bare)
+        }
+        for ((i, row) in rows.withIndex()) {
+            val (tune, floor, loop, shot, bare) = row
+            assertTrue(loop >= floor, "the SAX loop at TUNE $tune has bite $loop dB, under the one-shot's floor $floor")
+            assertTrue(loop >= shot - 1.0, "the SAX loop at TUNE $tune is darker than its one-shot: $loop dB against $shot")
+            assertTrue(loop - bare >= over[i], "the loop at TUNE $tune is only ${loop - bare} dB brighter than the bell-only loop ($loop against $bare), under ${over[i]}")
+        }
+    }
+
+    @Test
+    fun `a LOOP's voicing is at full strength from the first sample, where the one-shot's opens with the note`() {
+        // The one-shot's voicing follows the note's loudness (the test above this one's neighbour), because the
+        // classifier's first 93 ms must not read as a snare. A LOOP is filed by length and its wrap cannot repeat
+        // a gain that ripples out of step with its length, so it takes the plateau as a plain filter: the
+        // same 0.4 s ramp, and in its first 30 ms the 130 Hz is already 20 dB down and the 4 kHz lifted.
+        val rate = Dsp.RATE
+        val x = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            val env = (t / 0.4).coerceIn(0.0, 1.0)
+            (env * (0.4 * kotlin.math.sin(2 * Math.PI * 130 * t) + 0.4 * kotlin.math.sin(2 * Math.PI * 4000 * t))).toFloat()
+        }
+        val y = x.copyOf()
+        Bore.voice(y, Bore.voicingFor(BoreVoice.SAX), follow = false)
+        fun amplitude(b: FloatArray, a: Double, z: Double, hz: Double): Double {
+            var c = 0.0
+            var s = 0.0
+            for (i in (a * rate).toInt() until (z * rate).toInt()) { c += b[i] * kotlin.math.cos(2 * Math.PI * hz * i / rate); s += b[i] * kotlin.math.sin(2 * Math.PI * hz * i / rate) }
+            return 2 * kotlin.math.sqrt(c * c + s * s) / ((z - a) * rate)
+        }
+        fun gainDb(hz: Double, a: Double, z: Double) = 20 * kotlin.math.log10(amplitude(y, a, z, hz) / amplitude(x, a, z, hz))
+        assertTrue(gainDb(130.0, 0.0, 0.03) <= -9.0, "the loop's fundamental region is cut only ${gainDb(130.0, 0.0, 0.03)} dB in the first 30 ms")
+        assertTrue(gainDb(4000.0, 0.0, 0.03) >= 6.0, "the loop's highs are lifted only ${gainDb(4000.0, 0.0, 0.03)} dB in the first 30 ms")
+        // Within 2 dB (the filter's own start-up and the ramp's windowing read about 1), against the one-shot's 11.
+        assertTrue(abs(gainDb(130.0, 0.0, 0.03) - gainDb(130.0, 0.6, 0.9)) < 2.0, "the loop's cut moves with the note: ${gainDb(130.0, 0.0, 0.03)} then ${gainDb(130.0, 0.6, 0.9)} dB")
+    }
+
+    @Test
+    fun `a loop that does not close with room to spare is settled twice as long, and the hardest reed then closes`() {
+        // The loosest, hardest reed at C3 (LIP 0, BREATH 1) was still creeping 0.14% in amplitude across its loop
+        // at 400 periods of settle: a seam of 9.6e-5 with the bell alone and 4.7e-3 with the rasp and the voicing.
+        // The Organ's habit - one retry with twice the settle - closes it at 1.7e-5. An ordinary corner needs none.
+        val hard = Bore.renderLoopMeasured(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to 0f, "LIP" to 0f, "BREATH" to 1f, "HOLD" to 1f))
+        assertEquals(2, hard.attempts, "the loosest, hardest C3 closed on the first settle (seam ${hard.seam}), so this test no longer shows the retry")
+        assertTrue(hard.seam < Keys.MAX_SEAM_ERROR / 10, "the retry left the hardest reed at ${hard.seam}")
+        val easy = Bore.renderLoopMeasured(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to 0.5f, "HOLD" to 1f))
+        assertEquals(1, easy.attempts, "an ordinary corner was settled twice")
+    }
+
+    // ---- the loop's pitch match -----------------------------------------------
+
+    /** A band-limited periodic wave with a fractional period and fixed phases: eight harmonics at 1/k. */
+    private fun harmonicWave(n: Int, period: Double, drift: (Double) -> Double = { it }): FloatArray =
+        FloatArray(n) { i ->
+            val phase = 2 * Math.PI * drift(i / period)
+            var v = 0.0
+            for (k in 1..8) v += kotlin.math.sin(k * phase + 0.7 * k) / k
+            v.toFloat()
+        }
+
+    @Test
+    fun `the loop's pitch match finds a fractional lag to a hundredth of a raw sample, whatever the window holds`() {
+        // The estimator is a golden-section search over the correlation read between samples, weighted by a Hann
+        // window. It replaced a parabola through three correlations, off by up to a quarter sample at a sharp
+        // peak, and a plain sum whose window held no whole number of periods, which the two ends of the window tilt
+        // (0.2 frames on a window of 2.15 periods). The periods below make 2048 and four periods fall at every
+        // fraction between.
+        for (period in listOf(337.77, 701.31, 953.37, 1347.82)) {
+            val periods = 24
+            val x = harmonicWave((periods * period).toInt() + 30_000, period)
+            val lag = Bore.measureLoopSamples(x, 4000, periods * period, periods)
+            assertEquals(periods * period, lag, 0.01, "a period of $period samples: the lag over $periods periods is off by ${lag - periods * period}")
+        }
+    }
+
+    @Test
+    fun `the loop's pitch match is read at the join, not averaged over a quarter second`() {
+        // A note that is still settling has a period that creeps, and the click depends on the few milliseconds
+        // after the join alone. The wave's phase is 2 pi (t/p)(1 + e t/D), so its period shortens slowly: the lag
+        // that makes K periods match at the join differs from the one that matches the quarter second after it.
+        // measureLoopSamples' last rung reads the first, and this test knows both exactly.
+        val period = 1000.0
+        val periods = 20
+        val e = 2e-5
+        val d = 50_000.0
+        val from = 4000
+        fun lagAt(start: Double): Double {
+            // L + e (2 start L + L^2) / D = K p, by Newton
+            var l = periods * period
+            repeat(30) { l -= (l + e * (2 * start * l + l * l) / d - periods * period) / (1 + e * (2 * start + 2 * l) / d) }
+            return l
+        }
+        val x = harmonicWave((periods * period).toInt() + 40_000, period) { u -> u * (1 + e * u * period / d) }
+        val atJoin = lagAt(from.toDouble())
+        val averaged = lagAt(from + 0.125 * Dsp.RATE * Dsp.OVERSAMPLE)
+        assertTrue(abs(atJoin - averaged) > 0.2, "the test no longer separates the join's lag from the average: $atJoin and $averaged")
+        val lag = Bore.measureLoopSamples(x, from, periods * period, periods)
+        // The last rung's Hann window is centred half its length (about 2000 samples) after the join, where this
+        // test's drift, a thousand times the reed's, has moved the lag by 0.03: so it is close to the join's, within
+        // 0.06, and far from the average's, by over 0.2 (it measured 0.032 and 0.32).
+        assertTrue(abs(lag - atJoin) < 0.06, "the lag at the join is $atJoin, the quarter-second average $averaged, and it measured $lag")
+        assertTrue(abs(lag - averaged) > 0.2, "the lag measured $lag is the quarter-second average $averaged, not the join's $atJoin")
     }
 
     // ---- the pad ------------------------------------------------------------

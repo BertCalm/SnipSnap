@@ -12,7 +12,8 @@ java -jar snipsnap.jar chop break.wav --balance --export xtd
 
 It exists for three reasons:
 
-1. **Kits can be made from a desktop today**, before the Android app ships.
+1. **Kits can be made on a desktop**, through the same pipeline the app
+   uses, with no phone in the way.
 2. It is the first place the classifier meets **real audio** rather than
    synthetic test material — the calibration pass `CONCEPT.md` asks for.
    `snipsnap classify` prints the features next to every verdict for
@@ -151,6 +152,24 @@ One line per file: class, confidence, duration, spectral centroid, decay,
 and the low/mid/high band split. When the classifier is wrong about a real
 capture, this is where the wrongness becomes a number you can move a
 threshold by.
+
+### `synth <ENGINE> <VOICE>` — hear a factory preset
+
+```
+snipsnap synth TINES BELL --all --out <dir>
+snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
+snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
+```
+
+Renders the voice's factory presets to WAV (`Presets.forVoice`). `--all`
+writes every preset; `--preset N` writes one, counting from 1; with
+neither, the first preset. A string-machine preset that lands with
+ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
+`--instrument` and `--drone` are RESIN only: a held nine-zone instrument
+(`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
+hold on the phone's MAKE INSTRUMENT; this command refuses them. An
+engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR)
+still renders here.
 
 ### `crate <root>` — the library as a collection
 
@@ -379,6 +398,13 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
 of them changes every file the pad references, velocity layers included.
 
+### `recipe <kit-dir> <pad> --from <kit-dir>:<pad>` — do it again
+
+Replays the source pad's last treatment on the destination, through the
+same doors the model uses. A recipe that only names something the replay
+would need (a MUTATE parent, SPLICE's takes, a room) is refused by name.
+A pad with no recipe is refused the same way.
+
 ### `era <kit-dir> <machine>` — the Time Machine
 
 The whole kit rendered through the specific math of a specific machine —
@@ -507,6 +533,18 @@ voices in one hit; length and level interpolate too). Amount 0 is the
 pad, 1 is the parent, and the amount rides the recipe like every
 mutate parameter.
 
+**`--become <ms>`** rides on `--morph` and nothing else (a `--become`
+without `--morph` is refused, `--become 0` included): the hit starts as
+the pad and turns into the `--amount` blend over that many milliseconds
+from the aligned onset, 0..2000, where 0 is today's morph byte for
+byte. The ramp is linear in amount, one step per spectral hop (5.8 ms
+at 44.1 kHz), each step read through a 23 ms window, so a ramp shorter
+than about 23 ms reads as a step. The result is as long as the end
+blend and brought to its level: a kick that becomes a bell rings as
+long as the bell, at the bell's level. The recipe records `become`
+beside `amount`, and the report adds `becomes it over 400 ms - the
+first beat is the pad`. `drift` never takes it.
+
 Sound design by **recombination** — where `treat` and `era` transform a
 single sound, mutate breeds a new one. Parents are pad refs (`A03`),
 another kit's pads (`path/to/kit:B02`), or bare `.wav` files; mono
@@ -538,10 +576,11 @@ the output, the spin recorded in the recipe beside the parent it
 dealt. Deterministic per (crate, seed); combines with `--splice` and
 `--split` like any parent.
 
-On the phone the same verb is the PAD SHEET's MUTATE card: the four
+On the phone the same verb is the PAD SHEET's MUTATE card: the six
 moves, a partner tapped off the kit's own grid or dealt by ROULETTE
-from the shelf, the move's one knob (AT · HZ · MIX), MUTATE and UNDO —
-the same recipe, provenance and bin as the terminal.
+from the shelf, the move's one knob (AT · HZ · MIX · WET · BANDS), MORPH's second
+knob BECOME (how long the hit takes to turn into the blend), MUTATE and
+UNDO — the same recipe, provenance and bin as the terminal.
 
 ### `retime <wav> --to BPM` — the other tempo move
 
@@ -1105,7 +1144,7 @@ card or USB drive as-is.
 
 | Format | What lands | Notes |
 |---|---|---|
-| `folder` | `<Kit>/<Kit>.xpm` + WAVs | MPC 2-era program folder — loads on every generation |
+| `folder` | `<Kit>/<Kit>.xpm` + WAVs | MPC 2-era program folder. The Live III loaded it. An MPC One or a 2.x Live II has not been in hand |
 | `expansion` | `Expansions/<Kit>/` | browsable in the Expansion tab, tile + manifest |
 | `xpn` | `<Kit>.xpn` | one-file archive for sharing |
 | `xtd` | `<Kit>.xtd` + `<Kit>_[TrackData]/` | MPC 3 native drum track — the hardware-verified primary format |

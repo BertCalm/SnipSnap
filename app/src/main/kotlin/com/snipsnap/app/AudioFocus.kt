@@ -126,6 +126,9 @@ object AudioFocus {
     private val lock = Any()
     private val voices = CopyOnWriteArraySet<AudioVoice>()
     private var focusRequest: AudioFocusRequest? = null
+    // A retained request can be temporarily interrupted. Its presence
+    // alone must not allow a foregrounded LOOP to resume during a call.
+    private var hasFocus = false
     private var noisyReceiver: BroadcastReceiver? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -157,14 +160,21 @@ object AudioFocus {
      * PLAY re-claiming on `ON_START` while a call is still active must not
      * re-silence LOOP, which was already correctly silenced and is still
      * legitimately waiting for the `AUDIOFOCUS_GAIN` that ends the call.
+     *
+     * With [resume], also un-pause this voice if focus is currently held.
+     * LOOP opts in when returning from its own background pause; a retained
+     * request interrupted by a call does not count as held focus.
      */
-    fun acquire(voice: AudioVoice) {
+    fun acquire(voice: AudioVoice, resume: Boolean = false) {
         var denied = false
+        var resumeGranted = false
         synchronized(lock) {
             voices.add(voice)
             if (focusRequest == null) denied = !claimLocked()
+            resumeGranted = resume && hasFocus
         }
         if (denied) voice.silence()
+        else if (resumeGranted) voice.resume()
     }
 
     /**
@@ -200,6 +210,7 @@ object AudioFocus {
         val granted = am.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
         if (!granted) return false
         focusRequest = request
+        hasFocus = true
         registerNoisyReceiverLocked()
         return true
     }
@@ -209,6 +220,7 @@ object AudioFocus {
         val am = audioManager()
         focusRequest?.let { am?.abandonAudioFocusRequest(it) }
         focusRequest = null
+        hasFocus = false
         unregisterNoisyReceiverLocked()
     }
 
@@ -248,8 +260,17 @@ object AudioFocus {
                 synchronized(lock) { abandonLocked() }
                 silenceAll()
             }
-            AudioFocusAction.PAUSE -> silenceAll()
-            AudioFocusAction.RESUME -> resumeAll()
+            AudioFocusAction.PAUSE -> {
+                synchronized(lock) { hasFocus = false }
+                silenceAll()
+            }
+            AudioFocusAction.RESUME -> {
+                val granted = synchronized(lock) {
+                    // Ignore a late gain from a request already abandoned.
+                    (focusRequest != null).also { hasFocus = it }
+                }
+                if (granted) resumeAll()
+            }
             AudioFocusAction.IGNORE -> {}
         }
     }

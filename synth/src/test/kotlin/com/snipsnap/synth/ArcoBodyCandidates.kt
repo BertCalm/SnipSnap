@@ -7,8 +7,8 @@ internal typealias BodyBox = (FloatArray, ArcoVoice, Int) -> FloatArray
 
 /**
  * The candidates of R1d's BODY listening page ([ArcoBodyGenerator]), each one a function from the raw bowed string to a boxed raw string: the same shape as
- * [Arco.withBody]'s result, cut to the string's length (BODY never makes a note longer), ready for [Arco.finish]. They are test code on top of the engine's own
- * pieces ([Arco.bodyFor], [Strings.bodyRing], [Modes], [Dsp.Biquad], [Arco.finish]); nothing in `src/main` is touched and nothing here is in the engine.
+ * [Arco.withBody]'s result, cut to the string's length (BODY never makes a note longer), ready for [Arco.finished] at BODY 0. They are test code on top of the engine's own
+ * pieces ([Arco.bodyFor], [Strings.bodyRing], [Modes], [Dsp.Biquad], [Arco.finished]); nothing in `src/main` is touched and nothing here is in the engine.
  *
  * **Why they exist.** The owner heard R1c's BODY 1 (the narrow box ringing 1.75 times the string) and wrote "Body doesn't seem to do anything" and "Body
  * still seems a little light". R1d's ruler ([ArcoBodyMeasure], D, the 1/k-weighted colour distance in dB of BODY 1 against the default, loudness equalised) read R1c at a
@@ -25,7 +25,7 @@ internal typealias BodyBox = (FloatArray, ArcoVoice, Int) -> FloatArray
  *  - [louder] is the control: R1c's narrow box alone, at 12 times the string. The judges' numpy run of R1c with only its top raised to 12 reached the same D as the designs (7.92) with the top
  *    two octave bands 14 dB down at equal energy, so a high D can mean a louder narrow box and a duller note: the page plays it unlabelled to find out which the owner hears.
  *  - [plain] and [last] are R1c's own box at BODY 0.5 (the default) and BODY 1 ("what you heard last time"), written out from R1c's curve so the page does not move when the engine does.
- *    The generator checks both are [Arco.render]'s own on this tree, so it fails the day the engine is no longer R1c.
+ *    The generator checks [plain] is [Arco.render]'s own at BODY 0.5. It checked [last] against [Arco.render] at BODY 1 too, until R1g made BODY 1 the lift (that check is retired: [last] is R1c's BODY 1 and no longer the engine's).
  */
 internal object ArcoBodyCandidates {
 
@@ -34,7 +34,7 @@ internal object ArcoBodyCandidates {
     /** R1c's knee: the knob is the string's own box (R1b's) up to here. [Arco.BODY_KNEE]; the generator checks it still is. */
     const val R1C_BODY_KNEE = 0.5f
 
-    /** R1c's box at BODY 1, in times the string: the owner's last page. [Arco.BODY_TOP]; the generator checks it still is. */
+    /** R1c's box at BODY 1, in times the string: the owner's last page. R1g retired the engine's own BODY_TOP (the box stays at the knee's size above the knee), so this copy is the only one and nothing checks it against the engine. */
     const val R1C_BODY_TOP = 1.75f
 
     /** R1c's `boxAmountFor`, verbatim with its top as a parameter (design A's probe seam): identity at or under the knee, straight to [top] at BODY 1. */
@@ -189,15 +189,15 @@ internal object ArcoBodyCandidates {
     // ---- the render ---------------------------------------------------------
 
     /**
-     * [Arco.render]'s own path for a one-shot (the settled macros, the bow, the box, [Arco.finish]) with [box] as the box. With [plain] or [last] it is
-     * [Arco.render] at BODY 0.5 or 1 to the sample (the generator checks it), so a candidate is rendered exactly as the engine renders a note and then
-     * is as loud as every other render ([Arco.finish] levels it); the page's own gain is the audition level, the same as the re-listen page's.
+     * [Arco.render]'s own path for a one-shot (the settled macros, the bow, the box, [Arco.finished]) with [box] as the box. With [plain] it is
+     * [Arco.render] at BODY 0.5 to the sample (the generator checks it); [last] was [Arco.render] at BODY 1 to the sample on R1c's engine and no longer is (R1g: BODY 1 is the lift now). A candidate is rendered exactly
+     * as the engine renders a note and then is as loud as every other render ([Arco.finished] levels it at BODY 0, where it hands the boxed string back untouched and finishes it as R1c did); the page's own gain is the audition level, the same as the re-listen page's.
      */
     fun renderThrough(voice: ArcoVoice, macros: Map<String, Float>, box: BodyBox): Snip {
         val m = Arco.settled(macros, voice)
         require(!Arco.isLoop(m.getValue("HOLD"))) { "the page plays one-shots" }
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val raw = Arco.bow(voice, Arco.frequencyFor(voice, m.getValue("TUNE")), m, rate)
-        return Snip(Arco.finish(box(raw, voice, rate), rate), channels = 1, sampleRate = Dsp.RATE)
+        return Snip(Arco.finished(box(raw, voice, rate), voice, 0f, rate), channels = 1, sampleRate = Dsp.RATE)
     }
 }

@@ -52,7 +52,12 @@ object InstrumentSidecar {
             "fork-tine",
             listOf("soft = strike 0.3 (vel 1-63)", "main = strike 0.8 (vel 64-127); FORK TINE preset DINNER JAZZ"),
         ),
-    )
+    ) + MercuryVoice.entries.associate { voice ->
+        InstrumentSuite.mercuryName(voice) to Recipe(
+            "mercury-held-" + voice.name.lowercase(),
+            listOf("single layer; ${voice.name} at its defaults, HOLD's top step (the seamless loop), doubled with the marker at the second copy"),
+        )
+    }
 
     fun describe(programs: List<KeygroupProgram>): JsonValue.Obj {
         val instruments = programs.map { program ->

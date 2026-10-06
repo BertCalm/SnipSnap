@@ -12,7 +12,9 @@ import kotlin.math.roundToInt
  * - for each voice: its default, the bottom, middle and top of TUNE, a short phrase whose notes ring
  *   into each other, three velocities, each knob at both ends, the spec's dead-zone probes (BEND
  *   .40/.50/.60, WATER 0/.05/.10/.20), and its own eight presets;
- * - the five interactions the design claims, each a 3×3 grid.
+ * - the five interactions the design claims, each a 3×3 grid;
+ * - for each voice, the held keys as the MPC plays them (R2b): a scale up the nine zones, a diminished seventh
+ *   held together, and one key held through four wraps.
  *
  * Clips share one loudness ([AuditionLevel]). It writes `manifest.json`, which the page builds itself
  * from, so the clip list lives here and nowhere else, then copies the listening page from the test
@@ -30,7 +32,7 @@ object MercuryAuditionGenerator {
         Knob("WATER", "still: no mass moving, the object exactly as struck", "a lot of water: the mass sloshes slow and deep, every mode drifts, swells and damps in its own phase"),
         Knob("GLASS", "a damped, flexible, rough surface: short highs, a gritty rub", "clear glass: long, selective ringing, a pure rub"),
         Knob("COUPLE", "the modes independent: the vessel never answers", "strong springs: the vessel blooms after the hit, energy sloshes and beats"),
-        Knob("HOLD", "the shortest contact: 0.3 s, then the ring", "the longest: 4 s of contact, then the ring"),
+        Knob("HOLD", "the shortest contact: 0.3 s, then the ring", "the longest one-shot (HOLD .98): 3.8 s of contact, then the ring; the top step is the LOOP"),
     )
 
     private val BODIES = mapOf(
@@ -114,10 +116,12 @@ object MercuryAuditionGenerator {
                 val lo = knob.name.lowercase() + "_0"
                 val hi = knob.name.lowercase() + "_1"
                 write(lo, mapOf(knob.name to 0f))
-                write(hi, mapOf(knob.name to 1f))
+                // HOLD's top step is the LOOP (its own group below), so HOLD's high end is the longest one-shot.
+                val top = if (knob.name == "HOLD") 0.98f else 1f
+                write(hi, mapOf(knob.name to top))
                 groups += Group(
                     knob.name + " " + DOT + " DEFAULT " + fmt(defaults.getValue(knob.name)), key = false,
-                    clips = listOf(Clip(lo, "${knob.name} 0", knob.low), Clip(hi, "${knob.name} 1", knob.high)),
+                    clips = listOf(Clip(lo, "${knob.name} 0", knob.low), Clip(hi, "${knob.name} ${fmt(top)}", knob.high)),
                 )
             }
 
@@ -133,6 +137,49 @@ object MercuryAuditionGenerator {
                 Clip(id, "WATER ${fmt(w)}", if (w == 0f) "still" else "a little water: round 2 should be heard drifting and swelling")
             }
             groups += Group("A LITTLE WATER (NO DEAD ZONE?)", key = false, clips = waterProbe)
+
+            // The LOOP (HOLD's top step), each played eight times end to end: the spec's eight-wrap listen.
+            val loops = listOf(
+                Triple("loop_default", "DEFAULT", emptyMap<String, Float>()),
+                Triple("loop_still", "WATER 0", mapOf("WATER" to 0f)),
+                Triple("loop_water", "WATER 1", mapOf("WATER" to 1f)),
+                Triple("loop_low", "LOW NOTE, HARD CORNER", mapOf("TUNE" to 0f, "GLASS" to 0.1f, "COUPLE" to 1f, "WATER" to 1f)),
+            ).map { (id, label, c) ->
+                val r = Mercury.renderLoopNudged(voice, defaults + c + ("HOLD" to 1f))
+                val eight = FloatArray(r.loop.size * 8) { r.loop[it % r.loop.size] }
+                writeSnip(id, Snip(eight, channels = 1, sampleRate = Dsp.RATE))
+                val nudged = if (r.nudge > 0f) "; it did not close as asked, so it was nudged ${(r.nudge * 100).roundToInt()}% toward GLASS .6 and COUPLE .5" else ""
+                Clip(id, label, "%.2f s loop, eight wraps, seam %.0e".format(java.util.Locale.ROOT, r.loop.size / Dsp.RATE.toDouble(), r.seam) + nudged)
+            }
+            groups += Group("LOOP (HOLD AT THE TOP)", key = false, clips = loops)
+
+            // HELD KEYS (R2b): the instrument as the MPC plays it. Each zone is the pad's own file, played the way a
+            // keygroup does: the first pass, then the second copy from the marker for as long as the key is down, and
+            // the release fade after it lifts (the MAKE INSTRUMENT default, 0.6 s).
+            val pads = Keys.mercuryPadMidis(voice).associateWith { MercuryPadZones.note(voice, it) }
+            val release = InstrumentSuite.MERCURY_PAD_RELEASE_SECONDS
+            val keys = listOf(
+                Triple("keys_scale", "THE NINE ZONES, UP", "every zone held 1.4 s and let go, each key lifting as the next goes down"),
+                Triple("keys_chord", "A DIMINISHED SEVENTH", "four zones held together for 5 s: the loops beating against each other"),
+                Triple("keys_hold", "ONE KEY, 14 S", "the middle zone held through four wraps, then released"),
+            ).map { (id, label, what) ->
+                val midis = Keys.mercuryPadMidis(voice)
+                val events = when (id) {
+                    "keys_scale" -> midis.mapIndexed { i, m -> Triple(m, 1.4 * i, 1.4) }
+                    "keys_chord" -> midis.take(4).map { m -> Triple(m, 0.0, 5.0) }
+                    else -> listOf(Triple(midis[4], 0.0, 14.0))
+                }
+                val total = events.maxOf { (it.second + it.third) } + release + 0.2
+                val mix = FloatArray((total * Dsp.RATE).toInt())
+                for ((m, at, hold) in events) {
+                    val played = heldKey(pads.getValue(m), hold, release.toDouble())
+                    val from = (at * Dsp.RATE).toInt()
+                    for (i in played.indices) mix[from + i] += played[i] * (if (id == "keys_chord") 0.5f else 1f)
+                }
+                writeSnip(id, Snip(mix, channels = 1, sampleRate = Dsp.RATE))
+                Clip(id, label, what)
+            }
+            groups += Group("HELD KEYS (R2B)", key = true, clips = keys)
 
             val presets = MercuryPresets.forVoice(voice).map { preset ->
                 val id = "preset_" + preset.name.lowercase().replace(' ', '_')
@@ -190,6 +237,23 @@ object MercuryAuditionGenerator {
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
         File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
         println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
+    }
+
+    /**
+     * A keygroup's own playback of a held key: [note]'s first pass, then its second copy from the loop marker for as
+     * long as the key is down ([holdSeconds]), then a linear fade over [releaseSeconds] while the loop plays on, as
+     * the MPC's volume release does.
+     */
+    private fun heldKey(note: KeyNote, holdSeconds: Double, releaseSeconds: Double): FloatArray {
+        val s = note.snip.samples
+        val start = note.loopStartFrame.toInt()
+        val loop = s.size - start
+        val hold = (holdSeconds * Dsp.RATE).toInt()
+        val fade = (releaseSeconds * Dsp.RATE).toInt()
+        return FloatArray(hold + fade) { i ->
+            val v = if (i < start) s[i] else s[start + (i - start) % loop]
+            if (i < hold) v else v * (1f - (i - hold).toFloat() / fade)
+        }
     }
 
     private const val DOT = "·"

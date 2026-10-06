@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THAW material audition</title>
+<style>
+  :root { color-scheme: dark; --bg:#0c0618; --panel:#1a1424; --line:#40306a; --ink:#e0d4f8; --muted:#a798c4; --cyan:#40e0e8; --purple:#c395ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(ellipse at 20% 0,#2a1050,transparent 60%),var(--bg); color:var(--ink); font:15px/1.5 system-ui,sans-serif; }
+  main { max-width:1100px; padding:24px 16px 60px; margin:auto; }
+  h1 { color:white; margin:0; font-size:32px; letter-spacing:3px; }
+  h2 { margin:0; font-size:17px; }
+  p { max-width:850px; }
+  .muted { color:var(--muted); }
+  .intro { margin-bottom:20px; }
+  .transport { position:sticky; top:0; z-index:2; padding:12px 16px; margin:0 -16px 20px; border:1px solid var(--line); background:#120e1af5; backdrop-filter:blur(12px); }
+  .transport-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  #now { flex:1; min-width:200px; color:var(--cyan); font-weight:600; }
+  audio { display:block; width:100%; margin-top:8px; height:36px; }
+  button, input, select, textarea { color:var(--ink); background:#161020; border:1px solid var(--line); border-radius:5px; font:inherit; }
+  button { padding:7px 12px; cursor:pointer; }
+  button:hover, button:focus-visible { border-color:var(--cyan); }
+  button.active { color:#06151a; background:var(--cyan); border-color:var(--cyan); }
+  input[type=search] { padding:9px 12px; width:min(100%,430px); }
+  input[type=checkbox] { accent-color:var(--cyan); }
+  .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0 20px; }
+  details.section { border:1px solid var(--line); border-radius:7px; margin:12px 0; background:var(--panel); }
+  details.section>summary { padding:14px 16px; cursor:pointer; font-weight:700; letter-spacing:1px; }
+  .section-body { padding:0 16px 16px; }
+  .group { margin:20px 0; }
+  .group>h2 { color:var(--purple); margin:0 0 10px; }
+  .cards { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr)); }
+  .card { padding:14px; border:1px solid #34285a; border-radius:5px; background:#120e1a; }
+  .card h3 { font-size:15px; margin:0 0 6px; color:#fff; }
+  .card p { font-size:13px; margin:8px 0; color:var(--muted); }
+  .card .buttons { display:flex; gap:8px; margin:12px 0; }
+  .card details { margin-top:10px; font-size:12px; }
+  .card details>summary { cursor:pointer; color:var(--muted); }
+  .readout { white-space:pre-wrap; font:12px/1.5 ui-monospace,monospace; color:var(--muted); overflow-wrap:anywhere; }
+  a { color:var(--cyan); }
+  canvas { display:block; width:100%; height:110px; background:#0a0714; margin-top:10px; border-radius:3px; }
+  .legend { display:flex; gap:12px; font-size:11px; color:var(--muted); }
+  .liquid { color:var(--cyan); } .channel { color:var(--purple); }
+  textarea { width:100%; min-height:70px; padding:8px; margin:8px 0; resize:vertical; }
+  select { padding:6px; width:100%; margin:8px 0 0; }
+  [hidden] { display:none !important; }
+  @media (max-width:500px) { h1 { font-size:26px; } main { padding-top:16px; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="intro">
+    <h1>THAW</h1>
+    <p class="muted">Revised material voices</p>
+    <p>Cold engagement → warming friction → cooling resonance. Listen for the same plate changing as its material state evolves, with a clear root beneath scrape and fine stress releases.</p>
+    <p class="muted">RAW preserves the engine's amplitude before melodic loudness targeting. MATCHED brings the same render to the shared audition level. Compare both: a quieter wet region must remain audible as a change in material. No rack effects are applied.</p>
+    <p id="counts" class="muted"></p>
+  </div>
+  <div class="transport">
+    <div class="transport-row">
+      <span id="now" role="status" aria-live="polite">Choose a clip</span>
+      <label><input id="repeat" type="checkbox"> Repeat</label>
+      <button id="stop" type="button">Stop</button>
+    </div>
+    <audio id="player" controls preload="none"></audio>
+  </div>
+  <div class="toolbar">
+    <input id="search" type="search" aria-label="Filter listening cases" placeholder="Filter by voice, control or case…">
+    <button id="expand" type="button">Open all</button>
+    <button id="export" type="button">Save listening notes</button>
+    <a href="manifest.json" download>Manifest</a>
+  </div>
+  <div id="sections"></div>
+  <p class="muted">HOLD files contain settled material, with the initial cold attack absent from the loop-only host format. A small seam error and a converged state comparison support the loop check; the owner's sonic verdict is still required. Notes stay in this browser until you save them.</p>
+</main>
+<script>
+/* THAW_MANIFEST */
+
+(() => {
+  'use strict';
+  const data = window.THAW_MANIFEST;
+  const player = document.querySelector('#player');
+  const now = document.querySelector('#now');
+  const repeat = document.querySelector('#repeat');
+  const storageKey = 'snipsnap-thaw-listening-v1';
+  let selected = null, request = 0, notes = {}, cancelPending = null;
+  try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) {}
+  function el(tag, text, cls) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (cls) node.className = cls;
+    return node;
+  }
+  function persist() { try { localStorage.setItem(storageKey, JSON.stringify(notes)); } catch (_) {} }
+  function number(v, places=4) { return Number(v).toFixed(places); }
+  function scientific(v) { return v === null || v === undefined ? 'undefined' : Number(v).toExponential(3); }
+  function metricLine(label, m) {
+    return `${label}: peak ${number(m.peak)} · RMS ${number(m.rms)} · DC ${Number(m.dc).toExponential(2)} · window RMS ${number(m.loudness)}`;
+  }
+  function play(c, variant, button) {
+    const token = ++request;
+    const position = selected && selected.id === c.id && !player.ended
+      ? (selected.waiting ? selected.position : player.currentTime) : 0;
+    if (cancelPending) cancelPending();
+    player.pause();
+    document.querySelectorAll('.buttons button.active').forEach(b => b.classList.remove('active'));
+    button.classList.add('active');
+    selected = { id:c.id, variant, position, waiting:true };
+    const label = `${c.voice} · ${c.label} · ${variant.toUpperCase()}`;
+    now.textContent = label;
+    player.loop = repeat.checked;
+    player.preload = 'auto';
+    function ready() {
+      if (token !== request) return;
+      // Wait for a seekable WAV before restoring the A/B listening position.
+      player.currentTime = position < player.duration ? position : 0;
+      selected.waiting = false;
+    }
+    function mediaError() {
+      if (token !== request) return;
+      const messages = {
+        1:'Audio loading was interrupted; choose the clip again.',
+        2:'The audio file could not load; check your connection and try again.',
+        3:'The browser could not decode this audio file; try another browser.',
+        4:'This browser cannot play this audio file; try another browser.'
+      };
+      now.textContent = `${label} · ${messages[player.error && player.error.code] || 'The audio file could not load.'}`;
+    }
+    function playError(error) {
+      if (token !== request || error.name === 'AbortError') return;
+      if (player.error) { mediaError(); return; }
+      now.textContent = `${label} · ${error.name === 'NotAllowedError'
+        ? 'Tap the audio player’s Play button to start.'
+        : 'Audio could not start; try the audio player’s Play button.'}`;
+    }
+    player.addEventListener('canplay', ready, { once:true });
+    player.addEventListener('error', mediaError);
+    cancelPending = () => {
+      player.removeEventListener('canplay', ready);
+      player.removeEventListener('error', mediaError);
+      cancelPending = null;
+    };
+    player.src = c[variant];
+    player.load();
+    try {
+      // Start inside the click gesture, before any await, for mobile Safari.
+      const playing = player.play();
+      if (playing) playing.catch(playError);
+    } catch (error) { playError(error); }
+  }
+  repeat.addEventListener('change', () => { player.loop = repeat.checked; });
+  document.querySelector('#stop').addEventListener('click', () => {
+    ++request;
+    if (cancelPending) cancelPending();
+    player.pause(); player.currentTime = 0;
+    if (selected) { selected.position = 0; selected.waiting = false; }
+  });
+  document.querySelector('#counts').textContent = `${data.renderCount} renders · ${data.caseCount} listening cases · ${data.wavCount} paired PCM-${data.bitDepth} WAVs · ${data.sampleRate.toLocaleString()} Hz`;
+
+  function drawCurve(canvas, curves) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width = 600, height = canvas.height = 180;
+    const left = 38, right = width-10, top = 12, bottom = height-28;
+    ctx.strokeStyle = '#34285a'; ctx.fillStyle = '#a798c4'; ctx.font = '18px system-ui';
+    for (const level of [0,.5,1]) {
+      const y = bottom-level*(bottom-top);
+      ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(right,y); ctx.stroke();
+      ctx.fillText(String(level),4,y+5);
+    }
+    for (const [key,color] of [['liquid','#40e0e8'],['channel','#c395ff']]) {
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.beginPath();
+      curves[key].forEach((v,i) => {
+        const x = left+i*(right-left)/Math.max(1,curves[key].length-1);
+        const y = bottom-Math.max(0,Math.min(1,v))*(bottom-top);
+        if (i) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+      });
+      ctx.stroke();
+    }
+    ctx.fillText('0 s',left,height-5);
+    const end = curves.seconds[curves.seconds.length-1] || 0;
+    ctx.fillText(`${number(end,1)} s`,right-70,height-5);
+  }
+
+  const allCards = [], allGroups = [], allSections = [];
+  for (const section of data.sections) {
+    const wrap = el('details',undefined,'section'); wrap.open = section.id === 'MATERIAL' || data.firstListen === true;
+    wrap.append(el('summary',`${section.id} · ${section.cases.length} cases`));
+    const body = el('div',undefined,'section-body');
+    body.append(el('p',section.description,'muted'));
+    const groups = new Map();
+    for (const c of section.cases) {
+      if (!groups.has(c.group)) {
+        const group = el('div',undefined,'group'); group.append(el('h2',c.group));
+        const cards = el('div',undefined,'cards'); group.append(cards); body.append(group);
+        groups.set(c.group,{group,cards}); allGroups.push(group);
+      }
+      const card = el('article',undefined,'card');
+      card.dataset.search = `${section.id} ${c.group} ${c.label} ${c.description} ${c.voice}`.toLowerCase();
+      card.append(el('h3',c.label),el('p',c.description));
+      if (c.loopEvidence && !c.loopEvidence.converged) {
+        card.append(el('p','HOLD diagnostic: the complete material state did not converge within the render budget.'));
+      }
+      const buttons = el('div',undefined,'buttons');
+      for (const variant of ['raw','matched']) {
+        const button = el('button',variant.toUpperCase()); button.type='button';
+        button.setAttribute('aria-label',`${c.voice} ${c.label}, ${variant}`);
+        button.addEventListener('click',() => play(c,variant,button)); buttons.append(button);
+      }
+      card.append(buttons);
+      if (c.material) {
+        const canvas = el('canvas'); canvas.setAttribute('role','img');
+        canvas.setAttribute('aria-label','Local liquid fraction and mean channel content over time, normalized units');
+        card.append(canvas); drawCurve(canvas,c.material.curves);
+        const legend = el('div',undefined,'legend');
+        legend.append(el('span','Local liquid','liquid'),el('span','Mean channel content','channel'));
+        card.append(legend);
+      }
+      const evidence = el('details'); evidence.append(el('summary','Inputs and measurements'));
+      const macros = Object.entries(c.macros).map(([k,v]) => `${k} ${number(v,2)}`).join(' · ');
+      let text = `${macros}\nGesture ${number(c.velocity,2)} · ${number(c.rawMetrics.seconds,2)} s · render ${number(c.renderMs,1)} ms\n${metricLine('RAW',c.rawMetrics)}\n${metricLine('MATCHED',c.matchedMetrics)}`;
+      if (c.material) text += `\nPeak local liquid ${number(c.material.maxLiquid,3)} · peak channel ${number(c.material.maxChannel,3)}\nStress event samples ${c.material.stressEventSamples} · normalized contact work ${number(c.material.totalContactWork,4)}\nLiquid ledger error ${Number(c.material.liquidLedgerError).toExponential(3)}`;
+      if (c.loopEvidence) {
+        text += `\nCycle seam ${scientific(c.loopEvidence.seam)} · state error ${scientific(c.loopEvidence.stateError)}\n${c.loopEvidence.cycles} cycles · converged ${c.loopEvidence.converged} · raw RMS ${scientific(c.loopEvidence.rawRms)}`;
+        if (!c.loopEvidence.audibleRaw) text += '\nRaw held material is below the audible capture threshold.';
+        text += '\nState groups: ' + Object.entries(c.loopEvidence.groupErrors || {}).map(([name,error]) => `${name} ${scientific(error)}`).join(' · ');
+      }
+      if (c.recoveredStates !== undefined) text += `\nRecovered non-finite states ${c.recoveredStates}`;
+      evidence.append(el('div',text,'readout'));
+      if (c.traceCsv) { const link=el('a','Download state trace (CSV)'); link.href=c.traceCsv; link.download=''; evidence.append(link); }
+      card.append(evidence);
+      const verdict = el('details'); verdict.append(el('summary','Listening notes'));
+      const rating = el('select'); rating.setAttribute('aria-label',`Verdict for ${c.label}`);
+      for (const name of ['Unreviewed','Material changes audibly','Needs work']) {
+        const option=el('option',name); option.value=name; rating.append(option);
+      }
+      const note = el('textarea'); note.placeholder='Attack, pitched capture, transformation, tail or loop…';
+      note.setAttribute('aria-label',`Listening notes for ${c.label}`);
+      rating.value=(notes[c.id] || {}).verdict || 'Unreviewed'; note.value=(notes[c.id] || {}).note || '';
+      function save() { notes[c.id]={voice:c.voice,label:c.label,verdict:rating.value,note:note.value}; persist(); }
+      rating.addEventListener('change',save); note.addEventListener('input',save);
+      verdict.append(rating,note); card.append(verdict);
+      groups.get(c.group).cards.append(card); allCards.push(card);
+    }
+    wrap.append(body); document.querySelector('#sections').append(wrap); allSections.push(wrap);
+  }
+  document.querySelector('#search').addEventListener('input',event => {
+    const query=event.target.value.trim().toLowerCase();
+    for (const card of allCards) card.hidden=!card.dataset.search.includes(query);
+    for (const group of allGroups) group.hidden=!Array.from(group.querySelectorAll('.card')).some(c => !c.hidden);
+    for (const section of allSections) {
+      section.hidden=!Array.from(section.querySelectorAll('.group')).some(g => !g.hidden);
+      if (query && !section.hidden) section.open=true;
+    }
+  });
+  document.querySelector('#expand').addEventListener('click',event => {
+    const open=event.target.textContent==='Open all'; allSections.forEach(s => { s.open=open; });
+    event.target.textContent=open?'Close all':'Open all';
+  });
+  document.querySelector('#export').addEventListener('click',() => {
+    const blob=new Blob([JSON.stringify({engine:'THAW',savedAt:new Date().toISOString(),notes},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob), link=el('a'); link.href=url; link.download='thaw-listening-notes.json';
+    link.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
+  });
+})();
+</script>
+</body>
+</html>

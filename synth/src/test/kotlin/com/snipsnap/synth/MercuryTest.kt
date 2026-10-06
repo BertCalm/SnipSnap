@@ -90,13 +90,13 @@ class MercuryTest {
 
     /**
      * BEND is a gesture into the note: it starts up to [Mercury.BEND_EXCURSION_SEMITONES] away (up for BEND 1, down for 0)
-     * and settles onto the note. Read on a long rubbed BLADE (HOLD 1, four seconds of contact) in the first tenth of a second
+     * and settles onto the note. Read on a long rubbed BLADE (HOLD .98, the longest one-shot: 3.8 s of contact) in the first tenth of a second
      * and after 2.5 s. R1 measured about +160 and -160 cents early and under 1 cent late.
      */
     @Test
     fun `the bend gesture glides into the note and settles on it`() {
         for ((bend, sign) in listOf(1f to 1.0, 0f to -1.0)) {
-            val snip = render(MercuryVoice.BLADE, "TUNE" to 0.5f, "BEND" to bend, "WATER" to 0f, "HOLD" to 1f)
+            val snip = render(MercuryVoice.BLADE, "TUNE" to 0.5f, "BEND" to bend, "WATER" to 0f, "HOLD" to 0.98f)
             // FineTuning searches one semitone either side of the frequency it is given, and the gesture is about 1.6 semitones
             // out in this window, so the early read is centred 1.5 semitones out, where the gesture is, and reported against the note.
             val hz = Mercury.frequencyFor(MercuryVoice.BLADE, 0.5f)
@@ -270,14 +270,19 @@ class MercuryTest {
         }
     }
 
-    /** HOLD is the contact's length: the render grows by exactly HOLD's seconds and nothing else moves its length. */
+    /**
+     * HOLD is the contact's length: the render grows by exactly HOLD's seconds and nothing else moves its length. Its
+     * top step is the LOOP (`MercuryLoopTest`), so the longest one-shot is HOLD .98. The expectation is R1's own mapping
+     * (0.3 s to 4 s, exponential), written out here rather than read back through [Mercury.holdSeconds], so a rescaled
+     * one-shot fails this test instead of moving with it.
+     */
     @Test
     fun `HOLD sets the contact's length and GLASS the tail's`() {
         for (voice in MercuryVoice.entries) {
             val short = render(voice, "HOLD" to 0f).frameCount
-            val long = render(voice, "HOLD" to 1f).frameCount
-            val expected = (Mercury.HOLD_MAX_SECONDS - Mercury.HOLD_MIN_SECONDS) * rate
-            assertTrue(abs((long - short) - expected) <= 2, "$voice: HOLD 0 to 1 added ${long - short} frames, expected $expected")
+            val long = render(voice, "HOLD" to 0.98f).frameCount
+            val expected = (0.3 * Math.pow(4.0 / 0.3, 0.98) - 0.3) * rate
+            assertTrue(abs((long - short) - expected) <= 2, "$voice: HOLD 0 to .98 added ${long - short} frames, expected $expected")
             assertEquals(render(voice, "COUPLE" to 0f).frameCount, render(voice, "COUPLE" to 1f).frameCount, "$voice: COUPLE moved the length")
             assertTrue(render(voice, "GLASS" to 1f).frameCount > render(voice, "GLASS" to 0f).frameCount, "$voice: GLASS should lengthen the ring")
         }
@@ -333,16 +338,6 @@ class MercuryTest {
         return levels.indexOfFirst { it >= 0.5 * levels.max() } * 0.01
     }
 
-    /** Spectral flatness (geometric over arithmetic mean power) between [lo] and [hi] Hz of [n] samples from [from]: 1 is noise, 0 is pure tones. */
-    private fun flatness(x: FloatArray, sampleRate: Int, from: Int, n: Int, lo: Double, hi: Double): Double {
-        val re = FloatArray(n)
-        val im = FloatArray(n)
-        for (i in 0 until n) re[i] = (if (from + i < x.size) x[from + i] else 0f) * (0.5f - 0.5f * kotlin.math.cos(2 * Math.PI * i / (n - 1)).toFloat())
-        com.snipsnap.audio.Fft.forward(re, im)
-        val p = (0 until n / 2).filter { it.toDouble() * sampleRate / n in lo..hi }.map { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] + 1e-30 }
-        return kotlin.math.exp(p.sumOf { kotlin.math.ln(it) } / p.size) / p.average()
-    }
-
     /**
      * Velocity (decision 8), as the owner heard it (2026-10-02).
      *
@@ -354,10 +349,15 @@ class MercuryTest {
      * pure tone, so a harder touch is heard in how the note starts, not in brightness:
      * - the swell: the time to half level falls at every step from soft to hard, and the softest is at least three
      *   times the hardest (measured 0.35-0.38 s against 0.07-0.08 s);
-     * - the bite: at full velocity, the first 46 ms carry the scrape, noise under the classifier's 2 kHz SNARE line,
-     *   with a 0.4-1.5 kHz spectral flatness of at least 0.1 where the same note without it has none (measured
-     *   0.20 against 0.0001; the note's own partials share the band, so it is not 1), and from 0.3 s on the scraped
-     *   and unscraped notes are the same to the bit, so the held tone is untouched;
+     * - the bite: a hard touch catches with a scrape that rides the note's own swell. Round 3 levelled it against
+     *   the held tone, so in the first tens of milliseconds, while the note was still coming in, it was 2-7.6 dB
+     *   louder than the note, and the owner heard "a little snare or clap" (2026-10-03). So the claim is the gap
+     *   itself: in every 5 ms of the first 80 ms, at velocity 1 and .65, the scrape is at least 14 dB under the note
+     *   (measured: 15.9-16.1 dB at worst on the defaults, 14.8 dB on BLADE TAPPED STEEL, the closest), on the voice's
+     *   defaults and on every one of its presets (the kit's A09-A16 among them).
+     *   It is there: at full velocity its loudest 5 ms in the first 40 ms is within 22 dB of the note (measured 16).
+     *   It is noise: the scrape alone is flat across its 0.4-1.5 kHz band. From 0.3 s on the scraped and unscraped
+     *   notes are the same to the bit;
      * - and Velocity renders exactly that, with no macro moved and no soften.
      */
     @Test
@@ -383,16 +383,52 @@ class MercuryTest {
             for (k in 1 until rises.size) assertTrue(rises[k] < rises[k - 1], "$voice: a harder touch does not come in faster ($rises)")
             assertTrue(rises.first() >= 3 * rises.last(), "$voice: the softest swell (${rises.first()} s) is not three times the hardest (${rises.last()} s)")
 
-            val m = Mercury.settled(macros, voice)
-            val hz = Mercury.frequencyFor(voice, m.getValue("TUNE")).toDouble()
-            val scraped = Mercury.sound(voice, hz, m, 1.0, scrape = true)
-            val clean = Mercury.sound(voice, hz, m, 1.0, scrape = false)
-            val on = flatness(scraped, raw, 0, 8192, 400.0, 1500.0)
-            val off = flatness(clean, raw, 0, 8192, 400.0, 1500.0)
-            println("MERCURY velocity $voice scrape: 0.4-1.5 kHz flatness in the first 46 ms ${f(on, 3)}, without it ${f(off, 4)}")
-            assertTrue(on >= 0.1 && off < 0.01, "$voice: the hard touch's first 46 ms are not a scrape (flatness ${f(on, 3)} against ${f(off, 4)})")
+            val block = (0.005 * raw).toInt()
+            fun blockRms(x: FloatArray, k: Int) = sqrt((k * block until (k + 1) * block).sumOf { x[it].toDouble() * x[it] } / block)
+            val m0 = Mercury.settled(macros, voice)
+            val hz0 = Mercury.frequencyFor(voice, m0.getValue("TUNE")).toDouble()
+
+            // The held tone, to the bit, at the voice's own defaults and full length.
+            val scrapedFull = Mercury.sound(voice, hz0, m0, 1.0, scrape = true)
+            val cleanFull = Mercury.sound(voice, hz0, m0, 1.0, scrape = false)
             val after = (0.3 * raw).toInt()
-            assertContentEquals(clean.copyOfRange(after, clean.size), scraped.copyOfRange(after, scraped.size), "$voice: the scrape reaches the held tone")
+            assertContentEquals(cleanFull.copyOfRange(after, cleanFull.size), scrapedFull.copyOfRange(after, scrapedFull.size), "$voice: the scrape reaches the held tone")
+            // It is noise: the scrape alone, over its first 46 ms, is flat across its 0.4-1.5 kHz band.
+            val alone = FloatArray(scrapedFull.size) { scrapedFull[it] - cleanFull[it] }
+            val flat = flatness(alone, raw, 0, 8192, 400.0, 1500.0)
+            println("MERCURY velocity $voice scrape alone: 0.4-1.5 kHz flatness ${f(flat, 3)}")
+            assertTrue(flat >= 0.3, "$voice: the scrape is not noise (flatness ${f(flat, 3)})")
+            // The gap is read with HOLD 0: the contact lasts at least 0.3 s whatever HOLD is, so the first 80 ms do
+            // not depend on it, and a short render keeps 18 cases quick. Shown once here, to the bit.
+            val shortHold = Mercury.sound(voice, hz0, Mercury.settled(macros + ("HOLD" to 0f), voice), 1.0, scrape = true)
+            val window = (0.08 * raw).toInt()
+            assertContentEquals(scrapedFull.copyOfRange(0, window), shortHold.copyOfRange(0, window), "$voice: HOLD moves the first 80 ms")
+
+            // The gap, on the defaults and on every preset of the voice (the kit's A09-A16 are four of each).
+            val cases = listOf("defaults" to macros) + MercuryPresets.forVoice(voice).map { it.name to it.macros }
+            for ((name, preset) in cases) {
+                val m = Mercury.settled(preset + ("HOLD" to 0f), voice)
+                val hz = Mercury.frequencyFor(voice, m.getValue("TUNE")).toDouble()
+                for (touch in listOf(1.0, 0.65)) {
+                    val scraped = Mercury.sound(voice, hz, m, touch, scrape = true)
+                    val clean = Mercury.sound(voice, hz, m, touch, scrape = false)
+                    val scrape = FloatArray(scraped.size) { scraped[it] - clean[it] }
+                    val gaps = (0 until 16).map { k -> 20 * kotlin.math.log10(blockRms(scrape, k) / blockRms(clean, k)) }
+                    println("MERCURY velocity $voice $name $touch: scrape under the note, worst ${f(gaps.max(), 1)} dB")
+                    assertTrue(gaps.all { it <= -14.0 }, "$voice $name: at velocity $touch the scrape comes within 14 dB of the note (${gaps.map { f(it, 1) }})")
+                    if (touch == 1.0) assertTrue(gaps.take(8).max() >= -22.0, "$voice $name: the scrape is not there (${gaps.map { f(it, 1) }})")
+                }
+            }
         }
+    }
+
+    /** Spectral flatness (geometric over arithmetic mean power) between [lo] and [hi] Hz of [n] samples from [from]: 1 is noise, 0 is pure tones. */
+    private fun flatness(x: FloatArray, sampleRate: Int, from: Int, n: Int, lo: Double, hi: Double): Double {
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until n) re[i] = (if (from + i < x.size) x[from + i] else 0f) * (0.5f - 0.5f * kotlin.math.cos(2 * Math.PI * i / (n - 1)).toFloat())
+        com.snipsnap.audio.Fft.forward(re, im)
+        val p = (0 until n / 2).filter { it.toDouble() * sampleRate / n in lo..hi }.map { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] + 1e-30 }
+        return kotlin.math.exp(p.sumOf { kotlin.math.ln(it) } / p.size) / p.average()
     }
 }

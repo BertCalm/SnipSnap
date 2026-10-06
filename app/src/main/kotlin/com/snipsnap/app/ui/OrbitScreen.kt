@@ -1554,10 +1554,9 @@ private fun OutPanel(
     val bounceWhy = OrbitClip.refusal(current)
     val clipWhy = OrbitClip.clipRefusal(current)
     if (OrbitClip.countsDifferently(current)) {
-        // The MPC clip has no time signature: its bar is
-        // sixteen 16ths whatever the set's is, and this
-        // line is what tells the player what that will
-        // make of their bars.
+        // The track export still counts 4/4 bars of sixteen
+        // 16ths. The line below says what a project keeps
+        // and what a track will make of the same bars.
         //
         // So it counts what is WRITTEN. With an
         // arrangement that is one clip per section, each

@@ -36,10 +36,10 @@ already done and hardware-verified for drums.
 
 | # | Work | Size | Exit test |
 |---|---|---|---|
-| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadPlayer`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
+| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadEngine`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
 | F1.2 | ✓ done: M1 capture — the always-listening ring (`MicSessionService`, a foreground session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip) now reads either source: ARM TAPE (the mic) or ARM INSIDE (another app's audio via MediaProjection consent + `AudioPlaybackCapture`, stereo folded to the mono ring). Dead-air detection (`SilenceWatch`, :audio): three seconds of digital zeros while the phone reports music playing means the app on top opts out, and the TAPE JAM box says so. The platform ending a projection (lock screen, the stop chip) is a routine end with its own toast. The quick-settings tile (`SnipTileService`): SNIP while armed, opens the app to arm otherwise — arming needs a visible Activity (background FGS starts and the consent dialog both), so the tile hands over rather than pretending. Bench: the emulator can't do playback capture; a real phone proves the INSIDE path | L | snip YouTube from inside YouTube (bench); snip the room (✓); share a video in (F3.2) |
 | F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
-| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (✓ bench 2026-09-08, 8–11 ms exclusive) |
+| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator` and `PadEngine` (Oboe). The SoundPool interim (`PadPlayer`) was removed in EEE10. The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (✓ bench 2026-09-08, 8–11 ms exclusive) |
 | F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
 
 M3 is feature F2 below. Risks and their standing: APP_PLAN's table.
@@ -77,7 +77,7 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 
 ## F4 — Synth starter kits
 
-**Done:** the most finished feature. Eight engines + FX, `SynthKits` /
+**Done:** the most finished feature. The synth engines and the FX rack, `SynthKits` /
 `ThumpKits` / `Shuffle` are **main-source** (the app can call them
 directly), recipes rebuild kits bit-for-bit from `kit.json`, SCRAMBLE is
 bounded macro rolls, and two generated kits are hardware-verified.
@@ -1170,6 +1170,8 @@ coherent phases for the sound between them.
 | QQ1 | ✓ done: `Pghi` — phase from the magnitude spectrogram's own gradients, heap-integrated loudest-first, random phase below tolerance, disjoint islands restarting coherently; geometry shared with `Spectral` so `forEachFrame` magnitudes invert straight back. Two calibration findings earned on a numpy known-phase rig rather than guessed: the gradient coefficients are each direction's *reciprocal* (time γ/(aM), frequency −aM/γ — the first draft had them swapped, a 5% error reading as slow drift), and our start-referenced frames need a −π-per-bin center term. `stretch --clear` rides it | CORE | M–L | inverting unmodified magnitudes rebuilds a tone at 95%+ coherence and a beat with every onset in place; the clear stretch keeps a sine a >20× narrow line and provably narrower than the paulstretch wash; seeded determinism |
 | QQ2 | ✓ done — with the wave's headline finding: the planned Driedger hybrid was **built and then retired by measurement**. The hybrid's unaligned OLA+vocoder sum smeared a kick's attack rise from 33 ms to 51 ms while plain PGHI matched the original's 33 ms — the hybrid exists to fix the classic vocoder's transient smear, and PGHI doesn't have the disease. `Retime` ships as the PGHI vocoder with TempoFit's double/half refusal; `retime <wav> --to BPM [--from]` + `chop --fit-tempo BPM --keep-pitch`. (Dig doesn't forward --fit-tempo today, so nothing new to forward) | CORE | M | duration is the ratio's; the 440 bed stays 440 (no repitch); hits land at their new times; attack rise within 12 ms of the original; out-of-range refused; CLI round trip + riding rule |
 | QQ3 | ✓ done: `mutate --morph [--amount 0..1]` — both parents' magnitude spectrograms transient-aligned, interpolated bin-wise, PGHI phases; length and level interpolate; amount in the recipe, undo through the same bin | CORE | M | amount 0 stays the pad, 1 becomes the parent (probe ratios); halfway both parents sing in ONE hit — a single onset, the not-a-crossfade proof; --amount without --morph refused |
+| QQ4 | A1 landed; A1b built, CI compile and the owner's phone check pending: the MUTATE card's BECOME row (`docs/superpowers/plans/2026-10-02-a1b-become-card.md`). The A1 gate (2026-10-02) heard a different sound from MORPH and SPLICE at every BECOME, kept the full range and added none of the spike's extras: BECOME — `mutate --morph --become <ms>`: MORPH's amount ramps per STFT frame from 0 at the aligned onset to MIX over BECOME ms (0..2000, linear in amount, 0 = today's MORPH byte for byte, held to a frozen copy); length and level follow the end amount; `become` in the `mutate` recipe for MORPH above 0, an extra field of that name refused; the MUTATE sheet's BECOME knob (linear, 50 ms steps, OFF at 0) through the same HEAR = KEEP mapping; a ramped pad reads BECOME on the strip, the takes diff and the replay refusal | CORE | S | a frozen copy of today's MORPH equals BECOME 0 over 12 cases; early frames are the pad and late frames the parent (5× lines), from the hit of a pad with leading room too; length and peak equal MORPH's at the same MIX; HEAR = KEEP at three BECOME fractions; hostile recipes read as no ramp; --become without --morph refused; drift unchanged; the card's laws: BECOME's row drawn on every move and enabled by its own label, read by HEAR and KEEP before their launch, put back to OFF by DRIFT |
+| QQ5 | plan written; not built (`docs/superpowers/plans/2026-10-04-mutate-m1.md`): the MUTATE card's round M1, words and honesty (`docs/superpowers/specs/2026-10-04-mutate-card-redesign-design.md`) — each move's line from the house's copy board, the knob's meaning after its value and the knob under the moves, the dead rows as words; PARTNER as the one word, the CLI's `recipe` refusal included; HEAR and KEEP dimmed, not disabled, with typed refusals (layered, chained, no partner, empty shelf, only doubles, partner gone); the commit verb KEEP beside `DRIFT · BLEND & SAVE`; the result playing after KEEP and DRIFT; ROULETTE and A FILE undimmed; the STACK flip and a length change in the toasts; UNDO dimmed with a true toast; the pairing line as the status line; BECOME's A1b phone check folded into M1's | CORE | M | the board's lines character for character; every card label shouts, fits 44 characters and says no retired word; partner names and the pairing line never lose a tag; the move line turns with BECOME exactly when the render does; each refusal typed and pre-checked, a gone partner for every kind; ROULETTE's messages byte-identical; lengthMs at 44.1 and 48 kHz and the length line never the same number twice; HEAR = KEEP and DRIFT's tests unedited; ConventionTest laws for the doors, the card's words and the knob rows; the owner's three-question phone check |
 
 **Below the line for QQ:** real-time PGHI (app-session territory);
 formant-preserving pitch shift (needs envelope/cepstral lifting —
@@ -1522,7 +1524,7 @@ later. The arithmetic (axes, pinch depth, corner weights, the one-pole
 smoother) is pure JVM and tested; the engine is the repo's one native
 library — Oboe under a C++ callback, because a finger wants its sound
 under 10 ms and AudioTrack's blocking-write clock is the opposite trade.
-The Android side is written blind for CI's compiler, as :app always is.
+The Android side is Compose over those models. CI's `android-build` compiles it.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
@@ -1545,8 +1547,8 @@ which slice a chain steps to, level and pan as the MPC means them, tune
 as a ratio — and the native voice only ever hears "this sample, these
 frames, these gains, this speed". The engine reports each voice's end,
 so the allocator learns of an ending when it happens instead of from a
-timer. KIT's grid keeps the SoundPool player until the native voice has
-been heard on a phone; then it follows in one small PR.
+timer. KIT's grid kept the SoundPool player until the native voice had
+been heard on a phone. EEE4 moved the grid, and EEE10 deleted `PadPlayer`.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
@@ -1900,7 +1902,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
     instruments it makes) · ✓ W4.3 EVIL TWINS button · ✓ X4.4 consent row
     · ✓ F2.2 INSTANT KIT
-  ✓ M4 (F1.4, SoundPool not Oboe)
+  ✓ M4 (F1.4, PadEngine)
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · ✓ F6.3 share flow · ✓ X3.3
     share/backup action
   ✓ W12 pad waveforms on the KIT grid

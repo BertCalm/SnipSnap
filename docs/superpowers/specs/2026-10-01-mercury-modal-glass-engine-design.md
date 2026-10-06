@@ -10,7 +10,8 @@ BLADE, 24 presets, a kit and an audition page, roadmap row **S22**.
 **The first audition is in** (2026-10-02; "The audition, round 1" below):
 144 of 166 clips kept, none cut. Round 2 fixed WATER (heard, kept) and
 PING's velocity (kept); SING's and BLADE's velocity became the touch (a
-soft rub swells in, a hard one bites), for round 3. This document reads the external *Mercury Engine — Engineering
+soft rub swells in, a hard one bites). Round 3's bite was heard as "a little
+snare or clap", and now rides under the note (round 4). This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -749,8 +750,9 @@ chose **attack and bite** (decision 8, final).
     to hard: SING 0.38 / 0.27 / 0.17 / 0.08 s, BLADE 0.35 / 0.28 / 0.19 /
     0.09 s at velocity 0 / .3 / .65 / 1.
   - **The bite.** A hard touch catches with a scrape: seeded contact noise,
-    0.4–1.5 kHz, 12 dB under the held tone at full velocity and dying over
-    40 ms. Its amplitude goes with velocity (about 10 dB quieter at 0.3).
+    0.4–1.5 kHz, dying over 40 ms, its amplitude going with velocity. As
+    built for round 3 it was levelled 12 dB under the *held* tone; see
+    round 3 below for why that was a clap, and what replaced it.
   - **Two findings on the way.** Friction roughness fed through the
     contact cannot make a scrape: the high-Q modes filter it into tone (a
     3x rougher catch left the 1–6 kHz flatness at zero). So the scrape is
@@ -762,13 +764,297 @@ chose **attack and bite** (decision 8, final).
 - **1, the default, is a full touch.** So the SING and BLADE kit pads and
   presets now carry the scrape; nothing else in them changed.
 - `MercuryTest` holds all of it: PING's sweep; the swell at every step and
-  at least 3x; the scrape's flatness (0.20 and 0.16 against 0.0001) and
-  the held tone to the bit. With the touch switched off, that test fails
-  by name.
+  at least 3x; the scrape (as round 3 below now states it) and the held
+  tone to the bit. With the touch switched off, that test fails by name.
 
 **Next.** Round 3 of the audition: SING's and BLADE's velocity, and the
-kit's SING and BLADE pads with the scrape. The WATER ends and the
-defaults' wetness were not rated in round 2 and are still open. Then R1.1
-(the phone's picker, which needs an SDK) and R2 (LOOP, `Keys.mercuryPad`,
-EDDY, VESSEL and SHARD).
+kit's SING and BLADE pads with the scrape.
+
+## The audition, round 3 — 2026-10-03
+
+Before rating, the owner asked: *"Is it supposed to sound like a hit like a
+little snare or clap"*. No: the scrape is meant to be texture on the
+attack, felt more than heard.
+
+### Why it was a clap
+
+The scrape was levelled against the *held* tone (12 dB under its RMS over
+0.3–0.6 s). But it plays in the first tens of milliseconds, while the note
+is still swelling, and nothing measured it against the note *there*. Per
+5 ms against the note itself:
+- **Velocity 1:** 2.4 and 3.4 dB *over* the note in the first 10 ms (SING;
+  BLADE 3.8 and 4.2), and within 12 dB of it until 35 ms.
+- **Velocity .65:** worse, 3–7.6 dB over the note for the whole first
+  75 ms on SING. A softer touch swells in slower, so the note is quieter,
+  while the scrape only fell with velocity.
+
+A burst of band noise over a near-silent start, rising in 1 ms, is a clap.
+The round-3 tests checked that it *was* noise (flatness) and that it stayed
+off the held tone, not how loud it was against the note at the moment it
+played.
+
+### Round 4's scrape
+
+The owner chose "make it subtle":
+- It **rides the note's own envelope**: the RMS of the note (before the
+  scrape) in each 2.5 ms block, interpolated, times `SCRAPE_DB` (−12) and
+  velocity. So it can never lead the note; it swells in with it.
+- It **rises over 8 ms** (a raised cosine), not 1 ms: no click.
+- Band, decay and the 0.3 s cut are unchanged, so the classifier still
+  hears every short note PERC, and the held tone is the same to the bit.
+
+Per 5 ms in the first 80 ms, the scrape is now 16–30 dB under the note at
+velocity 1 (SING; BLADE 16–32) and 20–34 dB under at .65, at the
+defaults. Over every SING and BLADE preset (the kit's A09–A16 among them)
+the closest it comes is 14.8 dB under (BLADE TAPPED STEEL, velocity 1).
+`MercuryTest` holds that gap on the defaults and on all 16 presets: at
+least 14 dB under the note in every 5 ms, at velocity 1 and .65, and still
+there (within 22 dB of the note at its loudest, at full velocity). The
+scrape alone is noise (0.4–1.5 kHz flatness 0.63 on SING, 0.65 on BLADE).
+Round 3's scrape fails the gap by name, at +2.4 dB. The gap is read with
+HOLD 0 for speed; the test shows, to the bit, that HOLD does not move the
+first 80 ms.
+
+Only the SING and BLADE kit pads (A09–A16) change.
+
+## The audition, round 4 — 2026-10-04: R1's gate passes
+
+The owner, on round 4: *"I think they're sounding fine. Velocity at one has
+a little scrape which is purposeful."* WATER, including its ends and the
+defaults' wetness, was checked too: *"I checked water and it's good."*
+
+The kit stays one full-touch sample per pad. A09–A16 all carry the
+scrape, because a kit pad is a velocity-1 render and its other three layer
+slots are empty; on the MPC a softer hit plays the same sample quieter.
+Velocity layers (soft swell, no scrape) were offered and declined: *"It's
+fine as is."* Velocity's touch still reaches every layer the app builds
+itself (Robin's zones, KitBuilder's ghost layers, the VELOCITY starter).
+
+**R1 is done.** Next: R1.1 on a desktop session (below), and R2 here.
+
+## R1.1, for a desktop session — the phone's picker
+
+R1.1 needs `:app` to compile, so it needs a machine with the Android SDK
+(`settings.gradle.kts` only adds `:app` when it finds one; a cloud session
+has none). The owner asked for it to be done there (2026-10-04).
+
+**What to add.** Items 1–3, 5 and 6 are in `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt`; item 4 is in
+`README.md`:
+1. `MERCURY` in `private enum class Engine` (`:1855`), with the KDoc's
+   cycle line (`… → FORK → …`) updated to match.
+2. A `MERCURY ->` arm in each of the enum's `when` blocks, the same shape
+   as FORK's (`:1861-1990`):
+   - `voices()`: `MercuryVoice.entries`
+   - `macrosFor()`: `Mercury.macrosFor(voice as MercuryVoice)`
+   - `defaults()`: `Mercury.defaults(voice as MercuryVoice)`
+   - `scramble()`: `Mercury.scramble(voice as MercuryVoice, random)`
+   - `render()`: `Mercury.render(voice as MercuryVoice, macros)`
+   - `drumClass()`: `Mercury.drumClassFor(voice as MercuryVoice, macros)`
+   - `buildPatch()`: `MercuryPatch(name, voice as MercuryVoice, macros)`
+   - and whatever arms the enum has grown by then (read the whole enum).
+3. The imports: `Mercury`, `MercuryVoice`, `MercuryPatch`.
+4. The README's roster at `README.md:348-350`: the count ("thirteen engines
+   in the `Engine` picker") *and* the sentence around it, which names the
+   lineup ("VOX, FORK and GRAINS round out the lineup", "counting SKIN, RESIN,
+   TIDE, GLINT, SIREN and FORK"). Add MERCURY to that sentence too, or the
+   README contradicts itself.
+5. **HOLD's LOOP readout,** now that R2's LOOP is in (below): show "LOOP" when
+   `Mercury.isLoop(macros.getValue("HOLD"))`, the way SIREN's is shown
+   (`SynthScreen.kt:1026`, `:1080`).
+
+6. **The held path** (R2b built `Keys.mercuryPad` and `MercuryPadMaker`, so it
+   is no longer waiting): the same shape as SIREN's, in `SynthScreen.kt`.
+   - `heldSpec()` (`:635`): `Engine.MERCURY -> HeldSpec.Mercury(MercuryPadMaker.spec(voice as MercuryVoice, macros, holdRelease))`.
+   - `HeldSpec` (`:1535`): a `class Mercury(private val spec: MercuryPadMaker.Spec) : HeldSpec`, `HeldSpec.Siren`'s
+     body (`:1556-1563`) with `MercuryPadMaker` in place of `SirenPadMaker`.
+   - The two gates that show MAKE INSTRUMENT and its sheet (`:1098` and `:1209`, `engine == Engine.RESIN ||
+     Engine.SIREN || Engine.GLINT`): add `Engine.MERCURY`. Not `:1111`, which is DRONE TO LOOP (R2 has none).
+   - The import: `com.snipsnap.shell.MercuryPadMaker`.
+   - A zone is the slowest render of any held engine (seconds of audio, rendered several times over), so the
+     sheet's progress line matters more here than for SIREN; `renderZone`'s `cancelled` reaches the render.
+
+**How to check it:** `./gradlew :app:assembleDebug` on the SDK machine,
+then the `android-build` and `emulator-tests` jobs on the PR. A cloud
+session's `./gradlew test` does not compile `:app`.
+
+**Worth knowing:** the picker stops at FORK. TERRA, SILK, BORE, ARCO,
+GYRE and MAGNET are not in it either, so the same desktop session may want
+to add them together. Each engine's own spec says what its entry needs.
+
+## R2a, as built — 2026-10-04: the LOOP
+
+HOLD's top step (`LOOP_THRESHOLD` .99, BORE's and SIREN's) renders the held
+rub as one seamless loop (`Mercury.renderLoopNudged`). Below the step HOLD
+is R1's contact length, unchanged, so no one-shot, kit pad or preset moved.
+SCRAMBLE stays under .95.
+
+**The steady stretch** (`Mercury.Steady`, the spec's §13 recipe):
+- no strike and no scrape; the BEND settled from the first sample;
+- the contact never released, with RUB at least `LOOP_RUB_FLOOR` (.6), so
+  PING rubs too (decision 10). At .4, PING at GLASS 0 died inside the
+  warm-up at every TUNE;
+- the WATER mass on its exact steady orbit (x = .6 sin ωt, y = −.6 cos ωt,
+  what the forced mass settles to), with whole orbits per loop;
+- **no roughness.** Even as a sequence repeating every loop, the jittered
+  pressure made the stick-slip settle into motion that did not repeat: 16
+  of 90 probe corners missed the bar with it, 5 without (all PING at the old
+  floor);
+- a warm-up of at least 2 s or 0.6 of the fundamental's t60, discarded.
+
+**The plan** (`Mercury.planLoop`): whole periods of the note, at least 2 s,
+lengthened to whole orbits of the mass when WATER moves (up to 4 s); the
+frames they fill, rounded to an even count so the 8-sample control grid lands
+on the same samples every loop; then the orbit snapped to whole orbits of
+those frames (within 5% of its rate). The note stays within 0.1 cent; fixing
+the loop's length first and snapping the note to it had moved a low C by
+2.6 cents.
+
+**The retune** (`Mercury.loopLag`): the stretch is rendered, its lag one loop
+later is read directly (the best correlation over 0.5 s within half a period
+of the planned loop), and the note is retuned by that ratio, up to 8 times.
+Two findings:
+- BORE's ladder (`Bore.measureLoopSamples`) climbs from one period, which
+  WATER's pitch movement makes unequal along the loop. Reading the whole
+  loop's lag fixed most WATER corners.
+- The window must be half a period, not one. A rubbed note is near a sine,
+  so the neighbouring periods' peaks are as tall as the right one; with a
+  full period either side the retune chased a period's slip forever (the
+  ratio stuck at 1 ± 1/periods).
+
+Then the house chain (band limit, decimate, DC twice), the seam read on the
+conditioned stretch against itself one loop later (`Keys.seamError`, bar
+1e-3), the cut where the neighbours are smallest (`Siren.bestCut`), and the
+melodic level.
+
+**What closes.** Every preset at every other TUNE step (312 of 312) and every
+voice's defaults at all 25 steps close as asked; seams are typically 1e-7 to
+1e-9. Of 315 loops in a fuzz (every default TUNE step plus 240 random
+corners), 31 did not close as asked. They sit in one corner: the bottom of
+the range, low GLASS (under about .45) with COUPLE .75–1 and/or WATER near 1,
+where the rub sustains two neighbouring resonances at once. Two unrelated
+frequencies never close, whatever the retune.
+
+**The nudge (the owner's choice, 2026-10-04).** Offered refusing the loop,
+nudging it, or crossfading the wrap, the owner chose the nudge: a loop that
+does not close as asked is re-rendered with GLASS raised toward .6 and COUPLE
+lowered toward .5 in four equal steps, and the first that closes is kept.
+WATER is never nudged (§13.4). One-shots are never nudged. Everything at
+GLASS .6 and COUPLE .5 closed in the probe; a loop that still would not close
+throws rather than ship a click.
+
+**Measured** (`MercuryLoopTest`):
+
+| Claim | Measured |
+|---|---|
+| Seam, every voice at TUNE 0, .5, 1: defaults, WATER 1, GLASS 0, COUPLE 1, and the hard corner | 1e-9 to 3e-5; the defaults never nudged; the hard corner nudged in 6 of 9 places (25–100%), always at the bottom of the range |
+| In tune, WATER 0, every voice at TUNE 0, .5, 1 | within 0.29 cents |
+| WATER still moves in the loop | about 40 cents of drift at WATER .5, 0.0 at WATER 0 |
+| Plan | even frames, whole orbits, the note within 0.1 cent, the orbit within 5% |
+| HOLD 1 | renders the loop, filed LOOP; SCRAMBLE never reaches it; byte-identical across renders |
+
+**The audition (round 5)** adds a LOOP group to each voice: the default, WATER
+0, WATER 1 and the hard corner, each loop played eight times end to end (the
+spec's eight-wrap listen), with its seam and any nudge printed beside it.
+
+**Heard (2026-10-04): the loops passed round 5.** The owner listened to the
+LOOP groups and approved them. R2a is closed.
+
+## R2b, as built — 2026-10-04: the held keys
+
+A MERCURY patch is now a keys instrument that sounds while a key is down
+(`Keys.mercuryPad`, `MercuryPadMaker`, three instruments in
+`testkit/Instruments`). The pad is HOLD's top step: the loop of R2a, doubled.
+
+**`Keys.mercuryPadMidis(voice)`**: nine zones, every minor third across the
+two-octave TUNE range from the voice's own root (PING C4 to C6; SING and BLADE
+G3 to G5), as GLINT's are per voice.
+
+**`Keys.mercuryPad(voice, macros, midi, cancelled)`** renders `Mercury.renderLoop`
+with TUNE fixed by the key and **HOLD forced to its top step**, so a patch's own
+HOLD plays no part (the way SIREN's SWEEP and HOLD play none in its loop). RUB
+plays at least `LOOP_RUB_FLOOR`; BEND is the upper modes' fixed deformation,
+without the gesture into the note, since a loop has no onset. The loop is
+rendered once and **doubled, the marker at the second copy**, SIREN's idiom
+(`loopStartFrame` 0 means no loop in the keygroup format). The first pass
+plays copy one and then repeats copy two, which is exactly the audio the loop
+alone makes. A zone that does not close as asked is nudged as in the one loop,
+so on a hard patch the lowest zones can ring a little longer, and couple a
+little less, than the rest.
+
+**Pitch under WATER.** The loop's whole periods are fitted to the note (`planLoop`,
+within 0.1 cent), so with WATER still a zone is on its pitch. Under WATER the
+pitch moves by design (about 8 cents of swing at the defaults), and the retune
+(`loopLag`) then locks the loop to the whole cycles nearest the model's own mean
+pitch, which sits a few cents from the plan where the mean load is not 0.5
+(`anchorNominal` assumes it is; BLADE's beam load is not). Kept, not changed: it
+is what the owner approved by ear in rounds 1 to 5, and the one-shot has the
+same offset. The review of R2b found the KDoc overstating this ("exactly"); it
+now says so and a test guards the mean at the defaults.
+
+**Cancellation.** A zone is seconds of audio rendered several times over (the
+retune's passes, the nudge ladder), the slowest of any held engine, so
+`Mercury.sound`, `renderLoopMeasured`, `renderLoopNudged` and `renderLoop` take
+a `cancelled` and throw `CancellationException` (checked every
+`CANCEL_CHECK_FRAMES`, 2^15 raw samples).
+
+**`MercuryPadMaker`** (shell) is `SirenPadMaker`'s shape: RELEASE alone (0.1 to
+1.5 s, default 0.6 s), nine zones per voice, edge zones reaching nine semitones
+past the ends, `assemble` / `export` never rendering, `preview` the middle zone.
+
+**The instruments** (`InstrumentSuite.renderMercury`): SnipSnap Mercury Ping,
+Sing and Blade, each the voice at its defaults (the macros the round-5 listen
+approved), one layer, the 0.6 s release. They are the three MERCURY entries in
+`InstrumentSidecar`'s `RECIPES`, in `instruments.json` and in
+`SnipSnap_Instruments.zip`. `renderAll` stays the six classic instruments, which
+`SessionProjectGenerator` puts on the session's tracks; `renderMercuryAll` is the
+three. Each zone is about 6 s doubled (a 3 s loop: whole sways of WATER's slow
+orbit), 0.6 to 0.8 MB, so an instrument is 6 to 7 MB.
+
+**Measured** (`MercuryHeldTest`, all 27 zones at the voice's defaults):
+
+| Claim | Measured |
+|---|---|
+| Pitch, WATER 0, read over the loop: the ends and middle of each voice's keyboard | worst 0.29 cents (bar 3) |
+| Pitch at the voice's defaults (WATER moving), the mean over the whole loop, all 27 zones | worst 3.10 cents (bar 6); BLADE's top zone is the sharpest, as the one-shot's mean is |
+| Level, loudness of each zone against the melodic target | worst 0.00 dB (bar 1) |
+| The played wrap (copy two's last sample into its first): the step across it against the loop's steepest step | worst 0.92 (bar 1) |
+| The same wrap's change of step against the loop's largest change of step (a kink) | worst 0.32 (bar 1) |
+| Copy two is `Mercury.renderLoop`'s own output; a patch's HOLD changes nothing | byte-identical |
+| Cancelled | `CancellationException` |
+
+`Keys.seamError` cannot see the wrap of a doubled file (copy one's tail and copy
+two's are the same samples by construction, as `SirenHeldTest` explains), so the
+pad's own claim is the played wrap above, and the loop's closure stays
+`MercuryLoopTest`'s. The step across the wrap sits near 0.9 of the steepest
+step because the cut is where the neighbours are smallest, a zero crossing,
+where a sine's step is at its steepest: it is a step the loop makes everywhere
+else, not a click.
+
+**The audition (round 6)** adds a HELD KEYS group to each voice: the nine zones
+up the keyboard (each held 1.4 s, the key lifting as the next goes down), four
+zones held together as a diminished seventh for 5 s, and the middle zone held
+through four wraps, all played the way the keygroup plays the file (the first
+pass, the loop from its marker, the 0.6 s release).
+
+**Known, house-wide, not changed here: the phone's players wrap one frame early.**
+Copilot's review of the PR found that `InstrumentEngine.render` (the Kotlin
+reference) wraps when `pos >= end - 1`, subtracting `end - 1 - loopStart`: the loop's
+period is one frame short of the file's `[loopStart, end)`, and the last frame is
+never played. The native engine (`PadEngine.cpp`, `last = end - 1`) does the same,
+and `engine_tests.cpp`'s "looping voice … wraps to its loop start" pins it (frame 9
+of a ten-frame ramp is skipped). So on the phone every looped instrument (RESIN,
+SIREN, GLINT, the organ, and now MERCURY) slips one frame per wrap, and a file that
+closes exactly (as `Keys.seamError` and `MercuryHeldTest` hold) plays a step the
+loop does not make. Measured on the 27 committed MERCURY zones at the root pitch:
+the step across the phone's wrap is 1.06 to 1.86 of the loop's steepest step at
+the top zones, and the dropped frame's extra step is 16 to 24 dB under the loop's
+RMS: a faint tick every 3 s, most audible on the highest keys. The MPC hardware's
+own loop is `[loopStart, end)` and is not affected. Fixing it means changing both
+playback engines and their tests for every held instrument, so it is not part of
+R2b; it is the owner's call (raised in the PR).
+
+**Not done in R2b, for the desktop session:** the app's own MAKE INSTRUMENT
+path (R1.1 item 6 above).
+
+**Next.** R2c: EDDY, VESSEL and SHARD.
 

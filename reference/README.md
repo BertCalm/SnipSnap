@@ -4,11 +4,13 @@
 [Backlog](#backlog-mpc-2) — not deleted, not broken, just off the critical path
 until there is hardware to verify it on.
 
-One clarification before the backlog reads as bigger than it is: the `:xpm`
-module is still the **only thing that produces loadable output today**, and MPC
-3 loads MPC 2 content — that is Akai's own documented interop route. So `:xpm`
-stays live as the shipping path. What is deprioritised is *verifying it against
-MPC 2 hardware*, which nobody here owns.
+One clarification before the backlog reads as bigger than it is: both
+writers produce output the Live III has loaded. `:mpc3` writes the native
+container; `:xpm` writes the MPC 2-era programs, which MPC 3 also reads —
+Akai's own documented interop route. `:xpm` stays live because that route
+is how a 2.x machine would load a kit, and because the Live III accepted
+it. What is deprioritised is *verifying it against MPC 2 hardware*, which
+nobody here owns.
 
 ## Harvesting is done
 

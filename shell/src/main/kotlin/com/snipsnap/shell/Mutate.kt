@@ -24,6 +24,9 @@ import java.io.File
  * - **transplant** — the pad's attack wearing the parent's long-term
  *   spectral envelope (a one-knob vocoder, BANDS its resolution): the
  *   pad's time, the parent's tone;
+ * - **morph** — the sound *between* the pad and the parent, MIX of the
+ *   way, and with BECOME the hit starts as the pad and turns into that
+ *   blend over the milliseconds given ([becomeAmount]);
  * - **drift** — one knob: the crate's roulette finds the neighbour and
  *   morph blends toward it ([drift]).
  *
@@ -56,6 +59,9 @@ object Mutate {
 
     /** Guided roulette spins among this many nearest compatible sounds. */
     const val ROULETTE_WINDOW = 8
+
+    /** BECOME's longest ramp, in milliseconds: the card's knob and the CLI's `--become` both stop here. */
+    const val MAX_BECOME_MS = 2000
 
     /** What the roulette dealt: the parent's name, its file, how alike it is. */
     data class Pick(val label: String, val file: File, val distance: Float)
@@ -129,6 +135,7 @@ object Mutate {
         morphAmount: Float,
         roomMix: Float,
         bands: Int,
+        becomeMs: Int,
     ) {
         require(sources.isNotEmpty()) { "mutate wants at least one --with parent" }
         if (mode != Mode.STACK) {
@@ -141,6 +148,8 @@ object Mutate {
         require(bands in com.snipsnap.audio.Transplant.MIN_BANDS..com.snipsnap.audio.Transplant.MAX_BANDS) {
             "--bands wants ${com.snipsnap.audio.Transplant.MIN_BANDS}..${com.snipsnap.audio.Transplant.MAX_BANDS}, got $bands"
         }
+        require(becomeMs in 0..MAX_BECOME_MS) { "--become wants 0..$MAX_BECOME_MS ms, got $becomeMs" }
+        require(becomeMs == 0 || mode == Mode.MORPH) { "--become rides on --morph - add it" }
     }
 
     /**
@@ -172,8 +181,10 @@ object Mutate {
         roomMix: Float = 0.5f,
         /** TRANSPLANT only: how finely the parent's tone is read. */
         bands: Int = com.snipsnap.audio.Transplant.DEFAULT_BANDS,
+        /** MORPH only: the milliseconds over which the hit turns from the pad into the blend; 0 is off, today's MORPH. */
+        becomeMs: Int = 0,
     ): Rendered {
-        requireParams(sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands)
+        requireParams(sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands, becomeMs)
         val rate = base.sampleRate
         val baseAligned = alignToOnset(toStereo(base))
         val parents = sources.map { it.copy(snip = alignToOnset(resampled(toStereo(it.snip), rate))) }
@@ -183,7 +194,7 @@ object Mutate {
             Mode.STACK -> stack(baseAligned, parents, flipped)
             Mode.SPLICE -> splice(baseAligned, parents.single().snip, spliceAtMs, rate)
             Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
-            Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
+            Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, becomeMs, rate)
             Mode.ROOM -> room(baseAligned, parents.single().snip, roomMix, rate)
             Mode.TRANSPLANT -> com.snipsnap.audio.Transplant.apply(baseAligned, parents.single().snip, bands)
         }
@@ -203,15 +214,22 @@ object Mutate {
         roomMix: Float = 0.5f,
         /** TRANSPLANT only: how finely the parent's tone is read. */
         bands: Int = com.snipsnap.audio.Transplant.DEFAULT_BANDS,
+        /** MORPH only: the milliseconds over which the hit turns from the pad into the blend; 0 is off. */
+        becomeMs: Int = 0,
         /** Extra recipe fields — how the roulette records its spin. */
         extraRecipe: Map<String, JsonValue> = emptyMap(),
     ): Outcome {
-        requireParams(sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands)
+        requireParams(sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands, becomeMs)
+        // The extras are written last, with putAll, so one named `become`
+        // would silently overwrite the ramp. None carries it today
+        // (roulette, drift, room, otherKit, outside); this makes the next one
+        // loud instead of quiet.
+        require("become" !in extraRecipe) { "an extra recipe field named 'become' would overwrite the BECOME ramp - rename it" }
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
 
         val base = com.snipsnap.audio.WavReader.read(File(model.kitDir, pad.sampleFile))
         val (result, flipped) = render(
-            base, sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands,
+            base, sources, mode, spliceAtMs, crossoverHz, morphAmount, roomMix, bands, becomeMs,
         )
 
         val recipe = JsonValue.Obj(
@@ -224,6 +242,7 @@ object Mutate {
                         if (mode == Mode.SPLICE) r["at"] = JsonValue.Num(spliceAtMs.toDouble())
                         if (mode == Mode.SPLIT) r["hz"] = JsonValue.Num(crossoverHz.toDouble())
                         if (mode == Mode.MORPH) r["amount"] = JsonValue.Num(morphAmount.toDouble())
+                        if (mode == Mode.MORPH && becomeMs > 0) r["become"] = JsonValue.Num(becomeMs.toDouble())
                         if (mode == Mode.ROOM) r["mix"] = JsonValue.Num(roomMix.toDouble())
                         if (mode == Mode.TRANSPLANT) r["bands"] = JsonValue.Num(bands.toDouble())
                         if (flipped.isNotEmpty()) {
@@ -333,13 +352,33 @@ object Mutate {
     }
 
     /**
+     * MORPH's amount at STFT frame [frame], the BECOME ramp: 0 for every
+     * frame centred at or before the aligned onset, rising linearly in
+     * amount (not in dB) to [amount] at [becomeMs], and exactly [amount] from
+     * there on. [com.snipsnap.audio.Spectral] pads one frame ahead of the
+     * sound, so frame f reads samples f·HOP − FRAME up to f·HOP and is
+     * centred on f·HOP − FRAME/2. [rate] is the base pad's, so a 96 kHz pad
+     * ramps in its own time. [becomeMs] 0 is [amount] at every frame, which
+     * is today's MORPH.
+     */
+    internal fun becomeAmount(frame: Int, amount: Float, becomeMs: Int, rate: Int): Float {
+        if (becomeMs == 0) return amount
+        val centre = frame.toLong() * com.snipsnap.audio.Spectral.HOP - com.snipsnap.audio.Spectral.FRAME / 2
+        val r = (centre * 1000.0 / (rate.toDouble() * becomeMs)).coerceIn(0.0, 1.0)
+        return if (r >= 1.0) amount else (amount * r).toFloat()
+    }
+
+    /**
      * The Séance's move, done properly on the spectral door: both
      * parents' magnitude spectrograms (transient-aligned by the caller)
      * interpolated bin by bin at [amount], phases re-invented by
      * [com.snipsnap.audio.Pghi] — a sound *between* the parents, not a
-     * crossfade of them. Length and level interpolate too.
+     * crossfade of them. Length and level interpolate too. With [becomeMs]
+     * above 0 each frame mixes at its own [becomeAmount], so the hit starts
+     * as the pad and turns into the blend; length and level still follow
+     * [amount], the end of the blend.
      */
-    private fun morph(base: Snip, parent: Snip, amount: Float, rate: Int): Snip {
+    private fun morph(base: Snip, parent: Snip, amount: Float, becomeMs: Int, rate: Int): Snip {
         fun monoMags(s: Snip): Pair<List<FloatArray>, Int> {
             val mono = Snip(
                 FloatArray(s.frameCount) { f -> (s.samples[f * 2] + s.samples[f * 2 + 1]) / 2f },
@@ -357,7 +396,10 @@ object Mutate {
         for (f in 0 until frames) {
             val a = ma.getOrElse(f) { silence }
             val b = mb.getOrElse(f) { silence }
-            mixed.add(FloatArray(a.size) { i -> a[i] * (1f - amount) + b[i] * amount })
+            // This frame's share of the parent. At BECOME 0 it is `amount`
+            // itself, so the expression below is today's, operand for operand.
+            val k = becomeAmount(f, amount, becomeMs, rate)
+            mixed.add(FloatArray(a.size) { i -> a[i] * (1f - k) + b[i] * k })
         }
         val outFrames = Math.round(la * (1f - amount) + lb * amount)
         val morphed = com.snipsnap.audio.Pghi.invert(mixed, outFrames, rate)

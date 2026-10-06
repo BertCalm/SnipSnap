@@ -4,7 +4,9 @@
 need no new engine: a MORPH that moves in time (BECOME), the clap's
 sympathetic strings as a pad-sheet chip (a tappable treatment button, STRUNG),
 and a vowel filter that makes any pad speak one of VOX SPEAK's eight words
-(SAY). Not implemented.
+(SAY). A1, BECOME's logic, is implemented, and its gate was answered on
+2026-10-02 ("The A1 gate: BECOME"): A1b, BECOME's card row, follows under its
+own plan. STRUNG and SAY are not implemented.
 The brainstorm began with two outside documents proposing a meta-engine that
 renders two engines and joins them; the six-lens review found that engine
 does not compile and that five of its seven voices duplicate MUTATE or the
@@ -16,15 +18,17 @@ cross-correlation (NCC, 1.0 = the same wave) 0.589 for BECOME against its
 nearest MUTATE render (bold-talk §3), 0.487 for STRUNG (bold-ring clip 3) and
 0.568 for SAY (bold-talk §2). All three are below the 0.9 bar the round set,
 and all three carry an honest caveat, set out in "The sounds, measured". No
-code is committed. This document lands as a docs-only PR (zero check runs by
-design, `.github/workflows/tests.yml`; ARCO, BORE, FORK and MAGNET landed the
-same way) beside its sibling, the Group B spec (the TERRA hook: HIT, BEND,
-TALK), and the Phase-0 record.
+code was committed when this document was written. It landed as a docs-only PR
+(zero check runs by design, `.github/workflows/tests.yml`; ARCO, BORE, FORK and
+MAGNET landed the same way) beside its sibling, the Group B spec (the TERRA
+hook: HIT, BEND, TALK), and the Phase-0 record; A1 has since committed code.
 
 **Date:** 2026-09-30
 **Plan:** to be written per phase and named for it:
 `docs/superpowers/plans/2026-09-30-a1-become.md`, `…-a3-strung.md` and
-`…-a2-say.md`; the order is A1 BECOME, A3 STRUNG, A2 SAY ("Phasing and gates")
+`…-a2-say.md`; the order is A1 BECOME, A3 STRUNG, A2 SAY ("Phasing and gates").
+A1b, written after the A1 gate, is
+`docs/superpowers/plans/2026-10-02-a1b-become-card.md`
 **Related:** [`2026-09-29-magnet-valve-design.md`](2026-09-29-magnet-valve-design.md)
 is the model for SAY: a rack section (the rack is the fixed-order chain of effect
 sections any pad can carry) with a Phase 0, claims tests and a gate.
@@ -623,7 +627,11 @@ between moves a smell (`design/mutate-v2/README.md:26`) while keeping the move
   with `enabled = !busy && knobLabel != null` (`PadSheetScreen.kt:3723-3732`); no law
   enforces that for a `StepperSlider` (ConventionTest's `enabled` laws, `:44-140`, read only
   `ChopScreen.kt` and `TapeScreen.kt`, for four other components), so the plan's review
-  checks it by eye. Six-letter labels already fit the
+  checks it by eye. *Recorded deviation (the A1 plan's closing note, carried by the A1b
+  plan):* the row keys `enabled` on its own label, `becomeLabel != null`, not on
+  `knobLabel`, because `knobLabel` is non-null for SPLICE, SPLIT, ROOM and TRANSPLANT,
+  which ignore BECOME; and the A1b plan pins it with a ConventionTest law rather than
+  by eye. Six-letter labels already fit the
   44 dp label column (the SHAPE card's `ATTACK` and `CUTOFF`, `ShapeKnob` labels
   drawn by the same `StepperSlider`: `PadSheetScreen.kt:2501`, `:2515`, `:3457`).
 - **The knob is linear, 0 to 2000 ms.** `MutateSheet` gains
@@ -656,7 +664,8 @@ between moves a smell (`design/mutate-v2/README.md:26`) while keeping the move
   takes BECOME; `DriftCommand` is unchanged). If the card went on showing a
   remembered `BECOME 400` after a DRIFT tap, it would show a value the drift did
   not use: J24's own bug, value shown against value used. So `onDrift` sets
-  `pendingBecome = 0f` on its own line after the `if (!onMorph) { … }` block
+  `pendingBecome = 0f` (the code writes `MutateSheet.BECOME.defaultFraction`, which
+  equals 0; the A1b plan's Global Constraints record the spelling) on its own line after the `if (!onMorph) { … }` block
   (not inside it, so the pinned block stays as the law reads it, and for every tap,
   because DRIFT from MORPH has the same divergence), and a **sibling law** in
   `ConventionTest` pins it by the same source-text method ("Testing").
@@ -1609,7 +1618,7 @@ Nothing approved is dropped without the owner saying so.
 |---|---|---|
 | **0** (done) | the bold-round spikes (clips 1 to 3), recorded in the evidence; the tree check at `75b550c1` | none: the sounds are measured, the owner kept the families |
 | **A1** | BECOME's logic: `Mutate` (ramp, validation, recipe key, the `extraRecipe` guard), `MutateSheet` (knob, readout, read, HEAR = KEEP), the CLI flag, `LegacyMorph`, tests, docs | the A1 gate, below |
-| **A1b** | BECOME's card row (`MutateCard`, `pendingBecome`, the DRIFT line, the sibling law): the only `:app` edit in the group | after the A1 gate, unless its stop answer is given (Decision 14) |
+| **A1b** | BECOME's card row (`MutateCard`, `pendingBecome`, the DRIFT line, the sibling law): the only `:app` edit in the group | after the A1 gate, unless its stop answer is given (Decision 14). **The A1 gate was answered 2026-10-02 without the stop answer; A1b is planned in `2026-10-02-a1b-become-card.md`, and the owner's phone check is its gate** |
 | **A3-R0** | S1 (the sympathetic loop lifted, `LegacySympathetic`) and BODY's guard (`LegacyBody`): no audio change | both guards green; `PluckTest`, `TuningAccuracyTest` and `ExportRegressionTest` pass unedited |
 | **A3** | STRUNG's logic: `Strung`, the keyed door (`Keyed.NAMES`), the CLI command, tests, docs | the A3 gate |
 | **A3b** | STRUNG's chip: `KEYED_SEGMENTS`, `KEYED_FOR`, the `PadSheetTest` counts | after the A3 gate, unless its stop answer is given (Decision 14) |
@@ -1663,6 +1672,20 @@ Questions (three, one decision each):
 **Stop answer.** Question 2 answered "the same sound with a longer seam": A1b, the
 card row, is not built, BECOME stays a CLI move, and the owner is asked whether the card
 row stays anyway (Decision 14).
+
+**Answered 2026-10-02.** The owner listened on the ten-clip BECOME page and answered:
+
+1. "They all do." Every one of clips 5 to 9 is a kick turning into a bell, so BECOME's
+   full range stands: linear, 0 to 2000 ms, 50 ms steps on the phone (Decision 2's
+   default). `MutateSheet.BECOME` does not change.
+2. "A different sound." This is not the stop answer, so A1b, the card row, is built
+   (`docs/superpowers/plans/2026-10-02-a1b-become-card.md`).
+3. "6 is as good or better." The question was asked again in plain words, with clips 6
+   (BECOME 250 ms at MIX 1) and 10 (the spike's own clip) sent as files. None of the
+   spike's five extras is added (Decision 1's default).
+
+There is no listening gate after A1b. The sound is approved, and the owner's phone check
+of the card row is A1b's gate.
 
 ### The A3 gate: STRUNG
 
@@ -1784,6 +1807,9 @@ table does not date them more finely than the brief does.
 
 | Question | Decision | By |
 |---|---|---|
+| BECOME: the A1 gate's question 1 (which of clips 5 to 9 turns a kick into a bell) | "They all do": the full range stands, linear 0 to 2000 ms in 50 ms steps (Decision 2's default); `MutateSheet.BECOME` is unchanged | owner, 2026-10-02 |
+| BECOME: the A1 gate's question 2 (the same sound as clips 3 and 4 with a longer seam, or a different one) | "A different sound": not the stop answer, so A1b, the card row, is built | owner, 2026-10-02 |
+| BECOME: the A1 gate's question 3 (is clip 10 better than the pick), asked again in plain words with clips 6 and 10 sent as files | "6 is as good or better": no extras; the linear ramp alone (Decision 1's default) | owner, 2026-10-02 |
 | SAY's word on the phone | A second tap on the lit SAY chip steps the word when AMT has not moved since the last SAY tap; the word is stored as a `word` recipe key ("Reach") | owner, 2026-10-01 |
 | Is CHIMERA built as an engine? | No. Group A reuses MUTATE, the keyed family and the rack; the Group B spec lists CHIMERA as an engine out of scope, with the measurement (post-render hybrids equal MUTATE or TERRA alone after 20 ms, NCC 0.9993 to 1.0000, `hybrid-r2-spec`) | the owner's approval of the grouping, 2026-09-29–30 |
 | How far should a hybrid go | "I think we could go further/bolder"; the bold round ran | owner, 2026-09-29–30 |
@@ -1821,8 +1847,8 @@ paraphrases the clip the owner kept, where the clip wins.
 
 | # | Decision | Default | Alternatives | What it costs |
 |---|---|---|---|---|
-| 1 | BECOME's curve and the spike's extras | **Linear in amount per STFT frame, none of the spike's five extras** | The smoothstep over 10 to 150 ms, the 45 ms bell delay, the 2× level match, the 15 ms head crossfade and the 12 Hz DC blocker, any of them, each added behind BECOME only once the gate's question 3 says it earns its place | No byte of today's MORPH moves either way; each extra is code that runs only when `becomeMs` > 0 |
-| 2 | BECOME's knob | **Linear, 0 to 2000 ms, 50 ms steps on the phone** | An exponential knob with an explicit OFF at the bottom detent and 10 ms at the first step above it | Finer where a hand-over lives, and a little more code in `Knob` (a `lo` of 0 cannot be exponential) |
+| 1 | BECOME's curve and the spike's extras | **Linear in amount per STFT frame, none of the spike's five extras** | The smoothstep over 10 to 150 ms, the 45 ms bell delay, the 2× level match, the 15 ms head crossfade and the 12 Hz DC blocker, any of them, each added behind BECOME only once the gate's question 3 says it earns its place | No byte of today's MORPH moves either way; each extra is code that runs only when `becomeMs` > 0 **Taken 2026-10-02: the default. At the A1 gate the owner heard clip 6 (BECOME 250 ms, MIX 1) as "as good or better" than clip 10, the spike's clip with all five extras, so none is added (see "The A1 gate: BECOME" and "Decisions already taken").** |
+| 2 | BECOME's knob | **Linear, 0 to 2000 ms, 50 ms steps on the phone** | An exponential knob with an explicit OFF at the bottom detent and 10 ms at the first step above it | Finer where a hand-over lives, and a little more code in `Knob` (a `lo` of 0 cannot be exponential) **Taken 2026-10-02: the default. At the A1 gate the owner heard every one of clips 5 to 9 as a kick turning into a bell ("They all do"), so the full linear range stands (see "The A1 gate: BECOME" and "Decisions already taken").** |
 | 3 | What a BECOME pad is called | **BECOME on the status line, the strip, the takes diff and the replay refusal; the keep toast still names MORPH** | MORPH everywhere, the ramp visible only on the knob | One fewer word on the card, and the ramp is invisible once the pad leaves the card |
 | 4 | STRUNG with no key | **The open voicing: the low fifth (root − 5), the root, the fifth, the octave; no third** (`Body.modes`'s chromatic rule, `BodyTest.kt:76-77`) | A major third; or a refusal that asks for a key | A third makes a keyless kit sound major; a refusal leaves the chip dead until a key is set |
 | 5 | STRUNG's AMT | **The strings added to the untouched hit at AMT × 2.5** (AMT 1 is the clip the owner heard) | BODY's law: a crossfade from the dry hit to the ring, peak-matched, which replaces the hit at AMT 1 | The crossfade is what BODY already is; the added-strings law is what makes STRUNG a different thing |
@@ -1834,7 +1860,7 @@ paraphrases the clip the owner kept, where the clip wins.
 | 11 | SPEED's direction | **SPEED 1 is natural speed, 0 the slowest, resting at 0.5 (×2.24)** | SPEED 0 natural and 1 slowest, the direction VOX SPEAK's DECAY runs | An owner who knows SPEAK's presets reads it the other way round |
 | 12 | The version | **`FxChain.VERSION` stays 1 and an older build silently drops `say` on a re-render** (the owner's standing pre-launch call; the cost is traced in "Data flow and compatibility") | Bump it so older builds refuse | An older build then refuses every recipe the new build writes |
 | 13 | Roadmap rows | **None for A** | An S row each when implementation starts | Check for competing claims first; the Group B spec claims S20 |
-| 14 | The gates' stop answers | **A stop answer holds back the phone-visible step and asks the owner:** A1b, BECOME's card row, if gate question 2 hears a longer splice; A3b, STRUNG's chip, if question 1 hears BODY or a chord under the clap; A2b, `said` and the chip, if SAY does not say the word as well as the spike did | Every phase ships whatever the gate says, and the gate only moves constants | Taking an approved item out is the owner's call, asked after the answer |
+| 14 | The gates' stop answers | **A stop answer holds back the phone-visible step and asks the owner:** A1b, BECOME's card row, if gate question 2 hears a longer splice; A3b, STRUNG's chip, if question 1 hears BODY or a chord under the clap; A2b, `said` and the chip, if SAY does not say the word as well as the spike did | Every phase ships whatever the gate says, and the gate only moves constants | Taking an approved item out is the owner's call, asked after the answer. **A1: the stop answer was not given (2026-10-02); question 2 heard "a different sound", so A1b is built** |
 | 15 | STRUNG on short hits | **The feed starts at `min(40 ms, half the hit)`** (the brief's "about 40 ms" is silent on a hit shorter than 80 ms) | A literal 40 ms: a hit under 40 ms rings nothing and STRUNG returns it unchanged, and a hit between 40 and 80 ms is fed only for its last part | The literal rule makes the chip a no-op on clicks and hats |
 | 16 | STRUNG's level hold | **Scale only the wet, by one constant g, so the sum never passes the hit's peak; the dry is never touched** | Scale the sum (dry and wet together by one constant, as the keyed family's peak match does): smoother, but the dry hit is scaled whenever the bloom out-peaks it | The exact wet rule can lose strings to one unlucky sample, and returns the input when g reaches 0; the sum rule gives up the unconditional "attack untouched" |
 | 17 | SAY's chip row | **The anatomy row (row two), making six on it: the one row with room whose grouping fits** (the brief's TIME row filled at `129bc48e` when SECTION landed, commit `8fd72ae3`; the character row is full) | No chip: SAY is reached through `treat` and recipes only, as VALVE shipped | Check the rows again at A2b, because the pad sheet changes often |

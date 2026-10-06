@@ -688,6 +688,31 @@ internal object Strings {
         fun gain(scale: Float) {
             fb = baseFb * scale
         }
+
+        /**
+         * The wave written [age] samples ago and not yet read back: a point partway round the ring. 0
+         * before anything was written there. [age] is at least 1 and under the loop's length, so the
+         * sample is still in flight and the read at [reflected] has not reached it.
+         */
+        fun inFlight(age: Int): Float {
+            require(age in 1 until n) { "an in-flight sample is 1 to ${n - 1} samples old, got $age" }
+            return if (i - age < 0) 0f else history[(i - age) % size]
+        }
+
+        /**
+         * Replaces the in-flight sample [age] samples old (see [inFlight]); the loop reads the new value
+         * when it comes round. Refused until the loop has run [age] samples: before then nothing has
+         * reached that point, and the loop reads its first `n` samples as silence whatever is stored, so
+         * a write there would be lost without a word. Run the loop [age] samples first ([primed]).
+         */
+        fun setInFlight(age: Int, value: Float) {
+            require(age in 1 until n) { "an in-flight sample is 1 to ${n - 1} samples old, got $age" }
+            require(primed(age)) { "nothing has reached $age samples round the loop yet: run it $age samples first (it has run $i)" }
+            history[(i - age) % size] = value
+        }
+
+        /** Whether the loop has run at least [age] samples, so [setInFlight] at [age] lands. */
+        fun primed(age: Int): Boolean = i >= age
     }
 
     /**
@@ -756,6 +781,20 @@ internal object Strings {
      *  - About 19 to 28 ms per rendered second at this rate on the JVM, through the tests' harness (the
      *    spike's own two-segment loop was 9.9).
      *
+     * Three hooks for an engine that puts the bow among other strings (GYRE R2; none changes a bow that
+     * does not use it, sample for sample against the bow and loop as they were, `StringsBowPortTest`):
+     *  - The bridge port: [atBridge] reads the wave arriving at the bridge, half the bridge segment's
+     *    built length from the bow ([bridgeAge]), before the bridge's loss and corner (applied when the
+     *    wave comes back to the bow); [toBridge] replaces it. A bridge that writes back what it read is
+     *    this class exactly, retunes included. A write is refused until [ready] ([bridgeAge] samples
+     *    in): before then nothing is in flight there and the write would be lost.
+     *  - The excitation: [next] with `excite` adds it under the bow, into both waves leaving it, as a
+     *    pluck at the bow's place. A lifted bow struck so rings at its note (-0.0 cents at C3 and -0.1
+     *    at A4 at the full share) and twice the excitation is twice every sample.
+     *  - The contact: [next] with `contact` scales the bow's push, 0 to 1. Contact 0 is a lifted bow,
+     *    sample for sample; a bow lowered onto a string by contact rather than switched on by [lift]
+     *    is what lets an engine morph from a pluck to a bow without a step.
+     *
      * Not here, on purpose: the bow's stroke and its overshoot, how hard it presses (the caller passes
      * [slope] and [vBow] each sample), the body, the output chain, vibrato, and the LOOP plan. [lift]
      * and [gain] are the two hooks a release needs.
@@ -775,6 +814,13 @@ internal object Strings {
         private val nutCapacity: Int
         private var bowDown = true
 
+        /**
+         * The bridge port: how old a wave is when it reaches the bridge, in samples. Half the bridge
+         * segment's built length (the segment is a round trip, bow to bridge and back), so a wave read
+         * here with [atBridge] left the bow that long ago and has that long again to come back.
+         */
+        val bridgeAge: Int
+
         /** The string's velocity under the bow after the last [next]: the sum of the two arriving waves plus the bow's push. */
         var bowPoint = 0f
             private set
@@ -788,7 +834,26 @@ internal object Strings {
             nut = Loop(tn.n, tn.a, -1f, nutHz, rate, roundTrip = 1.0 - beta)
             bridgeCapacity = tb.n
             nutCapacity = tn.n
+            bridgeAge = tb.n / 2
         }
+
+        /**
+         * The wave arriving at the bridge now, before the bridge's reflection (its loss and corner are
+         * applied when the wave comes back to the bow). Read it, and write it back with [toBridge], to
+         * put something at the bridge between this string and others: a bridge that leaves every wave as
+         * it found it is this class exactly, sample for sample. Call between [next]s.
+         */
+        fun atBridge(): Float = bridge.inFlight(bridgeAge)
+
+        /** Replaces the wave at the bridge (see [atBridge]). Refused for the first [bridgeAge] samples, until [ready]. */
+        fun toBridge(value: Float) = bridge.setInFlight(bridgeAge, value)
+
+        /**
+         * Whether the bow has run [bridgeAge] samples, so [toBridge] lands. A caller that writes at the
+         * bridge from a note's first sample runs the bow that many silent samples first (lifted, or at
+         * contact 0) and starts the note after them.
+         */
+        val ready: Boolean get() = bridge.primed(bridgeAge)
 
         /**
          * The pitch the bridge segment is tuned at for a string of [f]: lowered so the segment is
@@ -826,6 +891,26 @@ internal object Strings {
         }
 
         /**
+         * One sample with [excite] added under the bow, into both waves leaving it (a pluck or a strike at
+         * the bow's place on the string), and the bow's push scaled by [contact], in [0, 1]: 0 is a lifted
+         * bow, 1 is full contact. With nothing added and full contact this is [next] without them, taken
+         * as its own path, so a bow that uses neither runs the same operations as before.
+         */
+        fun next(vBow: Float, slope: Float, excite: Float, contact: Float = 1f): Float {
+            if (excite == 0f && contact == 1f) return next(vBow, slope)
+            require(contact in 0f..1f) { "the bow's contact is a share of full contact, in [0, 1], got $contact" }
+            val fromBridge = bridge.reflected()
+            val fromNut = nut.reflected()
+            val v = fromBridge + fromNut
+            val dv = vBow - v
+            val push = (if (bowDown) contact * dv * rho(dv, slope, rhoMax) else 0f) + excite
+            nut.inject(fromBridge + push)
+            bridge.inject(fromNut + push)
+            bowPoint = v + push
+            return fromNut + push
+        }
+
+        /**
          * Both segments re-solved for a new [f], the filters' and allpasses' state carried (no click).
          * Build the [Bow] at the lowest pitch it will be asked for: a [Loop]'s ring never grows, and a
          * [f] that needs a longer ring in either segment is refused before either segment is touched,
@@ -838,6 +923,7 @@ internal object Strings {
                 "retune($f) needs segments of $bridgeNeeds (bridge) and $nutNeeds (nut) samples, past the $bridgeCapacity and " +
                     "$nutCapacity this Bow was built for - construct it at the lowest note it will play, not the one it is moving toward"
             }
+            require(bridgeNeeds > bridgeAge) { "retune($f) shortens the bridge segment to $bridgeNeeds samples, under its bridge port at $bridgeAge" }
             bridge.retune(bridgeFreq(f))
             nut.retune(f)
         }

@@ -24,6 +24,10 @@ import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Terra
+import com.snipsnap.synth.TerraPatch
+import com.snipsnap.synth.TerraVoice
+import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
 import com.snipsnap.xpm.Keygroup
@@ -344,7 +348,7 @@ class SidecarFuzzTest {
         val valid = Json.parse(
             """
             {"recipe":1,"era":"1993","amount":0.5,"treatment":"crushed","keyed":"in key",
-             "mutate":{"mode":"morph","with":["Kit:A03","Other:B02"],"drift":true,
+             "mutate":{"mode":"morph","with":["Kit:A03","Other:B02"],"drift":true,"become":400,
                        "outside":{"move":"hop","lagMs":23,"confidence":0.87,"inverted":true}},
              "outside":{"move":"lean","lagMs":12,"confidence":0.4,"inverted":false}}
             """.trimIndent(),
@@ -539,6 +543,116 @@ class SidecarFuzzTest {
                     // named refusal
                 }
             }
+        }
+    }
+
+    // ---- a struck TERRA recipe (docs/superpowers/specs/2026-09-30-terra-hit-bend-talk-design.md, "Testing", the rest) ----
+
+    /** 882 head numbers that mutation can shorten, stringify or nest, a HIT, and a display label. */
+    private fun struckTerraJson(): String = PadRecipe(
+        patch = TerraPatch(
+            "Seed", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3f),
+            TerraPatch.Striker(requireNotNull(Terra.captureStriker(Thump.render(ThumpVoice.SNARE))), 0.5f, "A02"),
+        ),
+    ).toJsonText()
+
+    /** The struck recipe's tree, its patch and its striker, parsed once and only ever copied, never edited. */
+    private val struckTree: Map<String, JsonValue> by lazy { Json.parse(struckTerraJson()).obj() }
+    private val struckPatch: Map<String, JsonValue> get() = struckTree.getValue("patch").obj()
+    private val struckStriker: Map<String, JsonValue> get() = struckPatch.getValue("striker").obj()
+
+    /** A copy of the struck recipe whose patch has been through `edit`. */
+    private fun withPatch(edit: (LinkedHashMap<String, JsonValue>) -> Unit): JsonValue.Obj = JsonValue.Obj(
+        LinkedHashMap(struckTree).also { r -> r["patch"] = JsonValue.Obj(LinkedHashMap(struckPatch).also(edit)) },
+    )
+
+    /** A copy of the struck recipe whose striker has been through `edit`. */
+    private fun withStriker(edit: (LinkedHashMap<String, JsonValue>) -> Unit): JsonValue.Obj =
+        withPatch { p -> p["striker"] = JsonValue.Obj(LinkedHashMap(struckStriker).also(edit)) }
+
+    /**
+     * The struck recipe under random mutation, through every reader the spec
+     * names except R4's `TerraSheet.read`: `PadRecipe` (a parse or a typed
+     * refusal), and `Breed.recipeOf`, `RecipeReplay.plan` and `KitDiff`
+     * (never a throwable at all). The `KitDiff` calls are the ones
+     * `the replay planner and the diff read any recipe without throwing`
+     * makes. They run here rather than as a seventh seed in that test's
+     * list, because a seventh seed would cut the existing six seeds' rounds
+     * from 250 each to 214.
+     */
+    @Test
+    fun `a struck TERRA recipe survives mutation, and every reader reads it or refuses it`() {
+        val valid = struckTerraJson()
+        fuzz("PadRecipe.fromJsonText (struck TERRA)", valid, seed = 39) { PadRecipe.fromJsonText(it) }
+        val tree = Json.parse(valid)
+        val rnd = Random(40)
+        val untouched = KitPad(slot = 1, sampleFile = "a.wav")
+        for (i in 0 until ROUNDS) {
+            val mutant = mutateTree(tree, rnd) as? JsonValue.Obj
+            try {
+                Breed.recipeOf(mutant)
+                RecipeReplay.plan(mutant)
+                if (mutant != null) {
+                    KitDiff.recipeName(mutant)
+                    RecipeReplay.clip(mutant, "K", 1)
+                    val changed = KitPad(slot = 1, sampleFile = "a.wav", recipe = mutant)
+                    KitDiff.headline(KitDiff.changes(Kit("A", listOf(untouched)), Kit("A", listOf(changed))))
+                    KitDiff.headline(KitDiff.changes(Kit("A", listOf(changed)), Kit("A", listOf(untouched))))
+                }
+            } catch (t: Throwable) {
+                fail("struck TERRA round $i: threw ${t::class.simpleName}: ${t.message}\n${Json.write(mutant ?: JsonValue.Null)}")
+            }
+        }
+    }
+
+    /**
+     * The spec's named hostile seeds for a driven recipe ("Testing", the
+     * rest, Fuzz), built deterministically rather than left to random
+     * mutation: a head one sample short, a head one sample long, NaN and
+     * Infinity as strings in the head, an object where the head's array
+     * belongs, and a version-1 patch carrying a striker. `PadRecipe` refuses
+     * each with a `JsonException`, DO IT AGAIN refuses it, BREED reads
+     * nothing, and the takes diff still names the pad without throwing.
+     */
+    @Test
+    fun `the spec's hostile struck TERRA seeds are refused by every reader`() {
+        val head = struckStriker.getValue("head").arr()
+        val seeds = linkedMapOf(
+            "a head one sample short" to withStriker { it["head"] = JsonValue.Arr(head.dropLast(1)) },
+            "a head one sample long" to withStriker { it["head"] = JsonValue.Arr(head + JsonValue.Num(0.0)) },
+            "NaN as a string in the head" to withStriker { it["head"] = JsonValue.Arr(head.toMutableList().also { l -> l[7] = JsonValue.Str("NaN") }) },
+            "Infinity as a string in the head" to withStriker { it["head"] = JsonValue.Arr(head.toMutableList().also { l -> l[7] = JsonValue.Str("Infinity") }) },
+            "an object where the head belongs" to withStriker { it["head"] = JsonValue.Obj(mapOf("0" to JsonValue.Num(0.5))) },
+            "a version-1 patch carrying a striker" to withPatch { it["version"] = JsonValue.Num(1.0) },
+        )
+        for ((label, bad) in seeds) {
+            try {
+                PadRecipe.fromJsonText(Json.write(bad))
+                fail("$label was read")
+            } catch (e: JsonException) {
+                // the typed refusal this test asks for
+            }
+            assertEquals(null, Breed.recipeOf(bad), "BREED read $label")
+            assertTrue(RecipeReplay.plan(bad) is RecipeReplay.Plan.Refused, "DO IT AGAIN planned $label")
+            assertTrue(KitDiff.recipeName(bad).isNotEmpty(), "the takes diff could not name $label")
+        }
+        assertEquals(6, seeds.size)
+    }
+
+    /** The four hostile labels the spec names: a number, an object, 25 characters, a control character. Each is refused typed, everywhere. */
+    @Test
+    fun `a struck TERRA recipe with a hostile label is refused by every reader`() {
+        val labels = listOf(JsonValue.Num(3.0), JsonValue.Obj(emptyMap()), JsonValue.Str("A".repeat(25)), JsonValue.Str("A\u0001"))
+        for (label in labels) {
+            val bad = withStriker { it["from"] = label }
+            try {
+                PadRecipe.fromJsonText(Json.write(bad))
+                fail("a struck recipe with from = ${Json.write(label)} was read")
+            } catch (e: JsonException) {
+                // the typed refusal this test asks for
+            }
+            assertEquals(null, Breed.recipeOf(bad), "BREED read from = ${Json.write(label)}")
+            assertTrue(RecipeReplay.plan(bad) is RecipeReplay.Plan.Refused, "DO IT AGAIN planned from = ${Json.write(label)}")
         }
     }
 }

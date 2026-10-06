@@ -1003,7 +1003,6 @@ fun App(shelf: KitShelf) {
                         return@LaunchedEffect
                     }
                     val (entries, skipped, presets) = withContext(Dispatchers.IO) { shelf.land(local, name) }
-                    ShareInbox.consume()
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     // A clean landing keeps its toast; one with skips opens the
                     // box, which names each skipped kit and the door's reason.
@@ -1019,6 +1018,9 @@ fun App(shelf: KitShelf) {
                         orbitOpen = false
                         screen = AppScreen.KIT
                     }
+                    // Clearing a key of this effect cancels it on the next
+                    // recomposition. Finish the shelf and navigation first.
+                    ShareInbox.consume()
                     return@LaunchedEffect
                 } finally {
                     local.delete()
@@ -1028,7 +1030,6 @@ fun App(shelf: KitShelf) {
                 val snip = MediaDecode.decode(context, uri)
                 SnipStore.import(snip, context.filesDir, System.currentTimeMillis())
             }
-            ShareInbox.consume()
             if (open == null) {
                 open = withContext(Dispatchers.IO) { shelf.list(shelfSort) }.firstOrNull()
             }
@@ -1041,6 +1042,7 @@ fun App(shelf: KitShelf) {
             arrangeOpen = false
             orbitOpen = false
             screen = AppScreen.TAPE
+            ShareInbox.consume()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

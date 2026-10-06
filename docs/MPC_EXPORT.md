@@ -14,18 +14,17 @@
 
 MPC 3 is a different file format, not a revision of the old one — gzip-compressed
 JSON behind an ACVS header, with programs embedded in the project's `tracks[]`
-array rather than living in standalone XML. See
-[`MPC3_FORMAT.md`](MPC3_FORMAT.md) for the schema and for the open question that
-currently blocks a native writer.
+array rather than living in standalone XML. The native writers are
+`Mpc3TrackWriter` (a standalone `.xtd`) and `Mpc3ProjectWriter` (a session
+`.xpj`). The drum kit loaded and played on a Live III on 2026-08-23. The
+schema is [`MPC3_FORMAT.md`](MPC3_FORMAT.md).
 
-**Compatibility path: the MPC 2-era XPM**, already implemented in `:xpm`. It
-stays for three reasons: MPC 3 loads MPC 2 content (exporting `.xpm` is Akai's
-own documented route across the 2/3 split), the MPC One and a 2.x Live II can't
-load anything else, and it's the fallback if the MPC 3 program container proves
-impractical to write from a phone.
-
-So: two writers, one target each. The MPC One remains the acceptance device for
-the MPC 2 path — if it loads there, it loads on every 2.x machine.
+**Compatibility path: the MPC 2-era XPM**, in `:xpm`. It stays because MPC 3
+loads MPC 2 content (Akai's documented route across the 2/3 split) and
+because an MPC One or a 2.x Live II cannot load the native container. The
+diag kit's `.xpm` also loaded on the Live III (A01, one beep). Nobody here
+owns an MPC One or a 2.x Live II, so that hardware check stays
+[backlogged](../reference/README.md#backlog-mpc-2).
 
 ## `.xpn` — implemented, and two of our three layout choices are wrong
 

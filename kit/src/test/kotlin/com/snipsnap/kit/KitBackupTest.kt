@@ -89,6 +89,20 @@ class KitBackupTest {
     }
 
     @Test
+    fun `unreadable kit metadata is skipped without losing healthy kits`() {
+        val root = File(temp, "metadata")
+        makeKit(root, "Healthy")
+        makeKit(root, "Unreadable")
+        File(root, "Unreadable/kit.json").writeText("{ incomplete")
+
+        val backup = KitBackup.backup(root, File(temp, "metadata-backup.zip"))
+        assertEquals(listOf("Healthy"), backup.packed)
+        assertTrue(backup.skipped.getValue("Unreadable").isNotBlank())
+        val restored = KitBackup.restore(backup.file, File(temp, "metadata-restored"))
+        assertEquals(listOf("Healthy"), restored.kits.map { it.kit.name })
+    }
+
+    @Test
     fun `restore shares one write budget across every kit in the backup`() {
         val root = File(temp, "kits2")
         for (name in listOf("Alpha", "Beta", "Gamma")) makeKit(root, name)
