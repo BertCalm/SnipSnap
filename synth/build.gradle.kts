@@ -549,3 +549,19 @@ tasks.register<JavaExec>("generateFlotillaComparison") {
     val version = project.findProperty("flotillaComparisonVersion") as String? ?: "candidate"
     args("${rootDir}/testkit/flotilla-comparison/$version")
 }
+
+/** Render MURK's dry voices, causal probes and accessible offline listening page. */
+tasks.register<JavaExec>("generateMurkAudition") {
+    group = "distribution"
+    description = "Render the MURK audition WAVs, evidence manifest and accessible page under testkit/murk-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurkAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/murk-audition")
+    if (providers.gradleProperty("murkRefreshPage").orNull == "true") {
+        args("--refresh-page")
+    } else {
+        providers.gradleProperty("murkBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+        providers.gradleProperty("murkBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
+    }
+}
