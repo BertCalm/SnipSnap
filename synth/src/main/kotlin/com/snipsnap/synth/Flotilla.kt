@@ -153,6 +153,7 @@ object Flotilla {
         seconds: Float? = null,
         driveSurface: Boolean = true,
         collisionSound: Boolean = true,
+        aquaticSound: Boolean = true,
     ): Rendered {
         val m = settled(voice, macros)
         val v = velocity.coerceIn(0f, 1f)
@@ -160,7 +161,7 @@ object Flotilla {
         require(v.isFinite()) { "FLOTILLA velocity is not finite" }
         val hold = m.getValue("HOLD")
         if (isLoop(hold) && seconds == null) {
-            val loop = renderLoop(voice, m, midi, v, driveSurface, collisionSound)
+            val loop = renderLoop(voice, m, midi, v, driveSurface, collisionSound, aquaticSound)
             val twice = FloatArray(loop.period.size * 2)
             for (i in loop.period.indices) {
                 twice[i] = loop.period[i]
@@ -172,8 +173,8 @@ object Flotilla {
         }
         val length = (seconds ?: lengthSeconds(m)).coerceIn(0.4f, 8f)
         val scene = simulate(voice, m, midi, v, length, driveSurface)
-        val audio = renderAudio(voice, m, midi, v, scene, collisionSound)
-        val bytes = scene.bytes + audio.samples.size * 4L * 6
+        val audio = renderAudio(voice, m, midi, v, scene, collisionSound, aquaticSound)
+        val bytes = scene.bytes + audio.samples.size * 4L * 7
         return Rendered(audio, scene, null, bytes)
     }
 
@@ -612,7 +613,7 @@ object Flotilla {
 
     private class Bank(val freq: Float, val decay: Float, val at: IntArray, val amp: FloatArray)
 
-    private fun renderAudio(voice: FlotillaVoice, m: Map<String, Float>, midi: Int, velocity: Float, scene: Scene, collisionSound: Boolean): Snip {
+    private fun renderAudio(voice: FlotillaVoice, m: Map<String, Float>, midi: Int, velocity: Float, scene: Scene, collisionSound: Boolean, aquaticSound: Boolean): Snip {
         val n = scene.steps * SAMPLES_PER_STEP
         val pulse = m.getValue("PULSE")
         val skin = m.getValue("SKIN")
@@ -628,21 +629,20 @@ object Flotilla {
             val wet = FloatArray(n)
             val scratch = FloatArray(n)
             for (bank in banks) addBank(scratch, wet, bank, 1f)
-            // The resonators are near the unit circle, so an unscaled bank
-            // swamps the source and the pitch detector follows the wood.
-            // Hold them to a share of the source's energy: audible, under the note.
-            val srcRms = rms(src)
-            val wetRms = rms(wet)
-            val share = (0.16f + 0.20f * (body.contact / 1.4f)).coerceIn(0.16f, 0.40f)
-            if (wetRms > 1e-8f && srcRms > 1e-8f) {
-                val g = (share * srcRms / wetRms).coerceAtMost(8f)
-                for (i in wet.indices) out[i] += wet[i] * g
-            }
+            // Preserve the pitched emitter while letting SURFACE, population
+            // and the voice's material set the amount of heard hull response.
+            mixBed(out, wet, src, contactShare(body, m), maximumGain = 8f)
         }
-        val noise = Dsp.Noise(seed("AQUATIC", voice, midi, milli(surface), milli(velocity), scene.splashes.size))
-        for (s in scene.splashes) {
-            val amp = s.impulse * (0.15f + 0.85f * surface) * 0.55f
-            addBurst(out, s.step * SAMPLES_PER_STEP, amp, noise, n)
+        if (aquaticSound) {
+            val aqua = FloatArray(n)
+            val noise = Dsp.Noise(seed("AQUATIC", voice, midi, milli(surface), milli(velocity), scene.splashes.size))
+            for (s in scene.splashes) {
+                val amp = s.impulse * (0.15f + 0.85f * surface) * 0.55f
+                addBurst(aqua, s.step * SAMPLES_PER_STEP, amp, noise, surface)
+            }
+            // Splash counts and impulses can grow much faster than the note.
+            // Keep that texture beneath the emitter instead of masking hulls.
+            mixBed(out, aqua, src, aquaticShare(m), maximumGain = 1f)
         }
         val dry = out.copyOf()
         reflect(out, dry, skin)
@@ -780,17 +780,34 @@ object Flotilla {
         return sqrt(e / buf.size.coerceAtLeast(1)).toFloat()
     }
 
-    private fun addBurst(buf: FloatArray, at: Int, amp: Float, noise: Dsp.Noise, n: Int) {
-        val len = 420
-        val a = exp(-2.0 * PI * 3500.0 / RATE).toFloat()
-        var lp = 0f
+    private fun contactShare(body: Body, m: Map<String, Float>): Float =
+        (0.16f + 0.55f * body.contact / 1.4f) *
+            (0.55f + 0.45f * m.getValue("SURFACE")) * (0.75f + 0.25f * m.getValue("FLOTILLA"))
+
+    private fun aquaticShare(m: Map<String, Float>): Float =
+        (0.02f + 0.10f * m.getValue("SURFACE")) * (0.65f + 0.35f * m.getValue("FLOTILLA"))
+
+    private fun mixBed(out: FloatArray, bed: FloatArray, src: FloatArray, share: Float, maximumGain: Float) {
+        val level = rms(bed)
+        if (level <= 1e-8f) return
+        val gain = (share * rms(src) / level).coerceAtMost(maximumGain)
+        for (i in out.indices) out[i] += bed[i] * gain
+    }
+
+    /** A short, smooth lap; two poles remove the broad hiss of the old 3.5 kHz burst. */
+    private fun addBurst(buf: FloatArray, at: Int, amp: Float, noise: Dsp.Noise, surface: Float, wrap: Boolean = false) {
+        val len = 840
+        val a = exp(-2.0 * PI * (650.0 + 550.0 * surface) / RATE).toFloat()
+        var lp1 = 0f
+        var lp2 = 0f
         for (i in 0 until len) {
-            val j = at + i
-            if (j >= n) break
+            val j = if (wrap) Math.floorMod(at + i, buf.size) else at + i
+            if (j >= buf.size) break
             val white = noise.next()
-            lp += (1f - a) * (white - lp)
-            val env = sin(PI * i / len).toFloat()
-            buf[j] += amp * env * lp
+            lp1 += (1f - a) * (white - lp1)
+            lp2 += (1f - a) * (lp1 - lp2)
+            val env = sin(PI * i / len).pow(2.0).toFloat()
+            buf[j] += amp * env * lp2
         }
     }
 
@@ -857,7 +874,7 @@ object Flotilla {
 
     // ---------- HOLD ----------
 
-    private fun renderLoop(voice: FlotillaVoice, m: Map<String, Float>, midi: Int, velocity: Float, driveSurface: Boolean, collisionSound: Boolean): LoopReport {
+    private fun renderLoop(voice: FlotillaVoice, m: Map<String, Float>, midi: Int, velocity: Float, driveSurface: Boolean, collisionSound: Boolean, aquaticSound: Boolean): LoopReport {
         val hz = frequencyFor(midi).toDouble()
         val cycles = max(6, (0.92 * hz).roundToInt())
         val frames = max(4096, (cycles * RATE / hz).roundToInt())
@@ -874,10 +891,12 @@ object Flotilla {
         val src = periodicSource(frames, played, cycles, pulse, velocity, body.partialBias)
         val banks = if (collisionSound && driveSurface) stationaryBanks(scene, body, pulse, velocity, vessel) else emptyList()
         val aqua = FloatArray(frames)
-        if (driveSurface) {
+        if (driveSurface && aquaticSound) {
             val noise = Dsp.Noise(seed("AQUATIC-HOLD", voice, midi, milli(surface)))
-            for (s in scene.splashes) addBurstWrap(aqua, s.step, s.impulse * (0.15f + 0.85f * surface) * 0.45f, noise)
+            for (s in scene.splashes) addBurst(aqua, s.step, s.impulse * (0.15f + 0.85f * surface) * 0.45f, noise, surface, wrap = true)
         }
+        val boundedAqua = FloatArray(frames)
+        mixBed(boundedAqua, aqua, src, aquaticShare(m), maximumGain = 1f)
         val state = LoopState(banks)
         var prev = FloatArray(frames)
         var curr = FloatArray(frames)
@@ -887,7 +906,7 @@ object Flotilla {
         val diffs = FloatArray(cap)
         while (iters < cap) {
             iters++
-            curr = mixPeriod(src, aqua, banks, state, skin, body.dome, played.toFloat(), collisionSound && driveSurface)
+            curr = mixPeriod(src, boundedAqua, banks, state, skin, body.dome, played.toFloat(), collisionSound && driveSurface, contactShare(body, m))
             diff = maxDiff(prev, curr)
             diffs[iters - 1] = diff
             val snapshot = curr.copyOf()
@@ -898,7 +917,7 @@ object Flotilla {
         val seamBuf = FloatArray(256 + period.size)
         val earlier = if (iters >= 2) prev else period
         // previous period was overwritten; re-run one extra carried step so the seam compares two real periods.
-        val next = mixPeriod(src, aqua, banks, state, skin, body.dome, played.toFloat(), collisionSound && driveSurface)
+        val next = mixPeriod(src, boundedAqua, banks, state, skin, body.dome, played.toFloat(), collisionSound && driveSurface, contactShare(body, m))
         for (i in 0 until 256) seamBuf[i] = period[period.size - 256 + i]
         for (i in period.indices) seamBuf[256 + i] = next[i]
         // That compares the tail of `period` with... wait, seamError compares preroll to the end of `next` only
@@ -932,11 +951,13 @@ object Flotilla {
         domeMix: Float,
         noteHz: Float,
         collision: Boolean,
+        contactShare: Float,
     ): FloatArray {
         val n = src.size
         val out = FloatArray(n)
         for (i in 0 until n) out[i] = src[i] + aqua[i]
         if (collision) {
+            val wet = FloatArray(n)
             for ((b, bank) in banks.withIndex()) {
                 val scratch = FloatArray(n)
                 for (e in bank.at.indices) addKernelWrap(scratch, bank.at[e], bank.amp[e])
@@ -950,11 +971,14 @@ object Flotilla {
                     val y = coeff * a - r2 * c + scratch[i]
                     c = a
                     a = y
-                    out[i] += y * 0.42f
+                    wet[i] += y
                 }
                 state.y1[b] = a
                 state.y2[b] = c
             }
+            // Use the one-shot balance here too: the previous fixed 0.42
+            // bank gain could bury the pitched source in a dense held scene.
+            mixBed(out, wet, src, contactShare, maximumGain = 8f)
         }
         val dry = out.copyOf()
         val taps = intArrayOf(293, 521, 877, 1201)
@@ -1139,19 +1163,6 @@ object Flotilla {
             if (cav.first.isNotEmpty()) banks.add(Bank(scene.cavityHz[i], decayCav, cav.first.toIntArray(), cav.second.toFloatArray()))
         }
         return banks
-    }
-
-    private fun addBurstWrap(buf: FloatArray, at: Int, amp: Float, noise: Dsp.Noise) {
-        val len = 420
-        val n = buf.size
-        val a = exp(-2.0 * PI * 3500.0 / RATE).toFloat()
-        var lp = 0f
-        for (i in 0 until len) {
-            val white = noise.next()
-            lp += (1f - a) * (white - lp)
-            val env = sin(PI * i / len).toFloat()
-            buf[Math.floorMod(at + i, n)] += amp * env * lp
-        }
     }
 
     private fun maxDiff(a: FloatArray, b: FloatArray): Float {

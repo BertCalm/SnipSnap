@@ -381,6 +381,22 @@ release naming checks are pending. Design and implementation notes:
 The [published audition](https://cistern-snipsnap-audition.bertcalm.chatgpt.site)
 includes the full matrix and before/after comparisons for the revised voices.
 
+CIRCUIT is an invented moving ensemble: three rooted breath resonators,
+stone rattle, paired wood, clay vessel and synthesized coordination voice.
+The current listening candidate gives them one authored four-pulse figure,
+with shared breath, a slow rise and settle across the phrase, stable player
+identity and quiet overlapping support. ROOT adds a firmer pitched foundation
+only at faster playing rates.
+DIAMETER, ORBIT and PACE independently set formation, movement and playing;
+CANYON supplies asymmetric mono paths and bounded replies at authored answer
+opportunities. A common energy scale keeps accepted replies in the phrase.
+Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
+clips. HOLD at .99 returns its settled procession without an opening gesture.
+The full R4 audition pack is complete: 370 variants, 740 raw/matched WAVs and
+39 unique checks passed. The owner's listening verdict remains pending.
+Contract and audition commands:
+[`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+
 MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
 travels between four trees, and synthesized owls answer the disturbances
 that reach them. CLUNK, THWACK, FRONT, HOOT, GROVE and ALARM share STRIKE,
@@ -391,6 +407,16 @@ sixteen-pad pitched kit. The accessible listening page starts silent and
 is regenerated with `./gradlew :synth:generateMurkAudition`; see
 [`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
 
+COROLLA is a mechanical flower of coupled metal petals around a powered
+magnetic core and a shared chamber. TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT
+and HUSK share TUNE, PULL, BLOOM, FIELD, CONTACT, CHAMBER and HOLD. It
+renders dry; finite notes route as TONAL for IN KEY, and HOLD's top step
+returns settled LOOP material. Twelve
+presets and `SynthKits.corolla()` expose the first implementation, awaiting
+the owner's listening review. Audition: `./gradlew :synth:generateCorollaAudition`.
+Individual presets can also be rendered with
+`./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -398,8 +424,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, THAW, CISTERN, MURK and GRAINS round out the lineup — seventeen
-engines in the `Engine` picker; GRAINS is a separate processor, out of the picker's scope
+VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA and GRAINS round out the lineup —
+nineteen engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -581,7 +607,7 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, THAW, CISTERN, MURK, plus GRAINS, SNAP and DRAW, which sit beside the
+GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 CISTERN is also in the picker, preset roster and starter kits; the CLI's

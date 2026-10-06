@@ -68,8 +68,10 @@ object Patches {
             FlotillaPatch.ENGINE -> FlotillaPatch.fromJsonValue(value)
             CisternPatch.ENGINE -> CisternPatch.fromJsonValue(value)
             TremorPatch.ENGINE -> TremorPatch.fromJsonValue(value)
+            CircuitPatch.ENGINE -> CircuitPatch.fromJsonValue(value)
             MurkPatch.ENGINE -> MurkPatch.fromJsonValue(value)
             ThawPatch.ENGINE -> ThawPatch.fromJsonValue(value)
+            CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
