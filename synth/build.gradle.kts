@@ -390,6 +390,15 @@ tasks.register<JavaExec>("generateBallastAudition") {
     args("${rootDir}/testkit/ballast-audition")
 }
 
+tasks.register<JavaExec>("generateBallastComparison") {
+    group = "distribution"
+    description = "Render the focused BALLAST bass, glass, structure and velocity comparison."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastComparisonGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-comparison/${project.findProperty("ballastComparisonVersion") ?: "candidate"}")
+}
+
 /** Render the GYRE round-one audition clips, manifest and page under testkit/gyre-audition/. See GyreAuditionGenerator. */
 tasks.register<JavaExec>("generateGyreAudition") {
     group = "distribution"

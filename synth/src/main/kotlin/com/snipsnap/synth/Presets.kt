@@ -76,7 +76,7 @@ object Presets {
             MercuryPresets.forVoice(v)
         }
         BallastPatch.ENGINE -> {
-            val v = BallastVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            val v = BallastVoice.fromName(voice) ?: return emptyList()
             BallastPresets.forVoice(v)
         }
         else -> emptyList()

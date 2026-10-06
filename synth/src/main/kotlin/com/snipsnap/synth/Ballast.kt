@@ -62,7 +62,16 @@ import kotlin.random.Random
  *
  * Every constant marked "listening" is a first value for the audition gate, not a sourced one.
  */
-enum class BallastVoice { ROOT, WIRE, GLINT, DEEP, BLOOM, SWARM }
+enum class BallastVoice {
+    ROOT, WIRE, GLINT, DEEP, BLOOM, SWARM;
+
+    /** GLINT remains the saved identity and seed; PRISM avoids the separate GLINT engine's name. */
+    val displayName: String get() = if (this == GLINT) "PRISM" else name
+
+    companion object {
+        fun fromName(name: String): BallastVoice? = if (name == "PRISM") GLINT else entries.firstOrNull { it.name == name }
+    }
+}
 
 object Ballast {
 
@@ -237,9 +246,12 @@ object Ballast {
     // ---- the pickup ------------------------------------------------------------------------
 
     const val DIRECT_GAIN = 1.0
-    const val STRING_PICK = 8.0e-3
-    const val FRAME_PICK_GAIN = 2.0e-3
+    const val STRING_PICK = 1.2e-2
+    const val FRAME_PICK_GAIN = 1.6e-2
     const val GLASS_PICK = 10.0
+
+    /** Smooth pickup headroom for the combined frame and wires; the direct bass never passes through it. */
+    const val STRUCTURE_KNEE = .8
 
     /** The pickup saturates the glass at about this level (a tanh knee), so a dense rattle is loud and not a wall. */
     const val GLASS_KNEE = 0.2
@@ -247,10 +259,10 @@ object Ballast {
     // ---- velocity ---------------------------------------------------------------------------
 
     /** Velocity (a render parameter, no knob): attack milliseconds, filter brightness and force at velocity 0, against 1. Listening values. */
-    const val VELOCITY_ATTACK_SLOW_MS = 16.0
-    const val VELOCITY_CUTOFF_SOFT = 0.55
-    const val VELOCITY_FORCE_SOFT = 0.35
-    const val VELOCITY_FILTER_ENV_SOFT = 0.5
+    const val VELOCITY_ATTACK_SLOW_MS = 30.0
+    const val VELOCITY_CUTOFF_SOFT = 0.18
+    const val VELOCITY_FORCE_SOFT = 0.08
+    const val VELOCITY_FILTER_ENV_SOFT = 0.15
 
     private const val CTRL = Dsp.OVERSAMPLE
     private const val T60_LN = 6.907755278982137
@@ -363,7 +375,7 @@ object Ballast {
     internal fun contactHz(glass: Float): Double = lerp(glass.toDouble(), CONTACT_HZ_SOFT, CONTACT_HZ_SHARP)
 
     internal fun gapFor(glass: Float, voice: BallastVoice): Double =
-        lerp(glass.toDouble().pow(0.7), GAP_WIDE, GAP_NARROW) * shapeOf(voice).gapScale
+        GAP_WIDE * (GAP_NARROW / GAP_WIDE).pow(glass.toDouble()) * shapeOf(voice).gapScale
 
     /** How free tile [i] is to move, 0 (follows the frame) to 1 (stays behind it): GLASS releases the tiles one by one in [TILE_RELEASE_ORDER]. */
     internal fun freeness(voice: BallastVoice, glass: Float, i: Int): Double {
@@ -535,6 +547,9 @@ object Ballast {
         val sympathy = m.getValue("SYMPATHY")
         val span = m.getValue("SPAN")
         val glass = m.getValue("GLASS")
+        // Collision density and the audible pickup both follow GLASS. Previously its first audible collision
+        // already hit the limiter, so intermediate settings were either silent or almost as loud as maximum.
+        val glassLevel = glass.toDouble().pow(1.2)
         val frame = m.getValue("FRAME")
         val hz = plan.hzA
         val midi = midiOf(hz)
@@ -602,10 +617,18 @@ object Ballast {
         val kickVec = DoubleArray(size)
         for (s in 0 until strings) if (freq[s] < hz * KICK_BELOW) kickVec[3 + s] = weights[modeString[s]] * modeFade[s] * modeHarmonic[s].toDouble().pow(-0.5)
         val framePick = DoubleArray(size)
-        for (k in 0 until 3) framePick[k] = FRAME_PICKUP[k] * FRAME_PICK_GAIN
+        for (k in 0 until 3) framePick[k] = FRAME_PICKUP[k] * FRAME_PICK_GAIN * lerp(frame.toDouble(), .25, 1.0)
         val stringPick = DoubleArray(size)
         val sympathyGain = 0.25 + 1.5 * sympathy
-        for (s in 0 until strings) stringPick[3 + s] = STRING_PICK * sympathyGain * weights[modeString[s]] * modeFade[s] * modeHarmonic[s].toDouble().pow(-0.6)
+        for (s in 0 until strings) {
+            // A wide span must reach the audible upper octaves, not only redistribute almost-coincident
+            // fundamentals and sub-bass. Read those existing modes more clearly as the span opens.
+            val ratio = freq[s] / hz
+            val upper = smoothstep((ratio - 1.0) / 2.0)
+            val radiation = ratio.coerceIn(.25, 8.0).pow(.7) * lerp(span.toDouble() * upper, 1.0, 4.0)
+            stringPick[3 + s] = STRING_PICK * sympathyGain * weights[modeString[s]] * modeFade[s] *
+                modeHarmonic[s].toDouble().pow(-0.6) * radiation
+        }
         val bothPick = DoubleArray(size) { framePick[it] + stringPick[it] }
 
         // ---- the glass: six tiles, three uncoupled modes each ----
@@ -786,13 +809,19 @@ object Ballast {
 
             // ---- the pickup ----
             val d = src * DIRECT_GAIN
-            val fs = bank.velocityAlong(bothPick)
-            val g = if (probe.glass) GLASS_KNEE * tanh(glassBank.velocityAlong(glassPick) / GLASS_KNEE) else 0.0
+            val linearStructure = bank.velocityAlong(bothPick)
+            val scaled = linearStructure / STRUCTURE_KNEE
+            // A quartic knee leaves ordinary motion almost untouched, and keeps extreme modal coincidences
+            // bounded without a hard clip. Use one gain on both recorded stems so their sum stays exact.
+            val square = scaled * scaled
+            val pickupGain = 1.0 / sqrt(sqrt(1.0 + square * square))
+            val fs = linearStructure * pickupGain
+            val g = if (probe.glass) glassLevel * GLASS_KNEE * tanh(glassBank.velocityAlong(glassPick) / GLASS_KNEE) else 0.0
             out[t] = (d + fs + g).toFloat()
             if (probe.record) {
                 direct!![t] = d.toFloat()
-                frameOut!![t] = bank.velocityAlong(framePick).toFloat()
-                stringOut!![t] = bank.velocityAlong(stringPick).toFloat()
+                frameOut!![t] = (bank.velocityAlong(framePick) * pickupGain).toFloat()
+                stringOut!![t] = (bank.velocityAlong(stringPick) * pickupGain).toFloat()
                 glassOut!![t] = g.toFloat()
             }
             if (probe.record && t % energyEvery == 0) {
@@ -925,6 +954,11 @@ object Ballast {
     internal fun finish(raw: FloatArray, tail: Double): FloatArray {
         val out = condition(raw)
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        return fadeOneShot(out, tail)
+    }
+
+    /** The production cap/release fade, also used by shared-gain auditions without independently levelling them. */
+    internal fun fadeOneShot(out: FloatArray, tail: Double): FloatArray {
         val n = (TAIL_FADE_SHARE * tail * RATE).toInt().coerceIn(1, out.size)
         val from = out.size - n
         for (k in 0 until n) out[from + k] *= (0.5 + 0.5 * cos(PI * k / n)).toFloat()
