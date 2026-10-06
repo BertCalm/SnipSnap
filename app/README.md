@@ -490,23 +490,23 @@ logcat tag to grab when something is wrong.
 - **ANOTHER KIT (MUTATE)**: with two kits on the shelf, open a pad on
   one and the MUTATE card grows an ANOTHER KIT · PICK ITS PAD row under
   ROOMS: one chip per other kit, none for this one. Tap a kit and its
-  pads appear as A01…-style chips, four to a row; tap one and the partner
-  line reads "SOUL A03". MUTATE ▸ MORPH: the child's lineage names the
+  pads appear as A01…-style chips, four to a row; tap one and the card's
+  top line ends "× SOUL A03". MORPH, then KEEP: the child's lineage names the
   other kit's pad the way a deal would ("Soul:A03") and the recipe carries
   the other kit's name. A kit whose folder no longer loads is simply not
-  offered. UNDO puts the parent back byte for byte.
+  offered. UNDO puts the pad back byte for byte.
 - **A FILE (MUTATE)**: on the MUTATE card, under ANOTHER KIT, A FILE ▸
   PICK ONE OFF THE PHONE opens the system picker on audio. Pick a WAV or
   an MP3: the button reads "A FILE ▸ CLAP.WAV" and it is the partner;
-  MUTATE ▸ STACK and the child's lineage names "clap.wav", as the CLI's
+  STACK, then KEEP, and the child's lineage names "clap.wav", as the CLI's
   `--with clap.wav` would. Cancel the picker and nothing changes. Pick a
   silent file or one too big for the tape and the toast reads NOT A
-  PARENT with the reason. UNDO puts the parent back byte for byte.
+  PARTNER with the reason. UNDO puts the pad back byte for byte.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside
   the kits, and the MUTATE card grows a ROOMS row with that room already
-  the partner. Open another kit's pad, pick the room, MUTATE ▸ ROOM: the
+  the partner. Open another kit's pad, pick the room, ROOM, then KEEP: the
   pad plays inside it with no trip. A REAMP trip leaves KEEP ROOM dim.
 
 - **WORKSHOP / SEND TO BENCH** (`docs/WORKSHOP.md`): on SETUP, tap the
