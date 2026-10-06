@@ -3249,6 +3249,65 @@ internal fun StepperSlider(
     }
 }
 
+// ---------- knob row (MUTATE) ----------
+
+/**
+ * One knob row of the MUTATE card, drawn on every move so the card never
+ * changes height.
+ *
+ * Live ([deadText] null): the shared [StepperSlider], unchanged, at its
+ * full width, with the knob's [meaning] on a caption line under the bar
+ * (the owner's CAPTION, Decision 16). Dead: the label column ([label]:
+ * blank for STACK's knob, `BECOME` for BECOME) and [deadText] where the
+ * bar would be, at the bar's own height, over a blank caption line, so
+ * every row is one height. A dead row is not a control: TalkBack reads
+ * its words once and offers no adjustment, where a bare `—` used to be
+ * read out twice.
+ */
+@Composable
+private fun KnobRow(
+    label: String,
+    meaning: String?,
+    fraction: Float,
+    valueText: String,
+    deadText: String?,
+    enabled: Boolean,
+    fillColor: Color,
+    scheme: Scheme,
+    onChange: (Float) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        if (deadText != null) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .clearAndSetSemantics { contentDescription = if (label.isEmpty()) deadText else "$label, $deadText" },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // The same 44 dp label column StepperSlider draws, so the words start where the bar would.
+                TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(44.dp))
+                TapeText(deadText, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            }
+        } else {
+            StepperSlider(
+                label = label,
+                fraction = fraction,
+                valueText = valueText,
+                fillColor = fillColor,
+                scheme = scheme,
+                enabled = enabled,
+                onFractionChange = onChange,
+                onFractionCommit = {},
+            )
+        }
+        // The caption line, from the label column's right edge (44 dp and its 8 dp gap), on every row
+        // alike (blank on a dead row), so every row is one height.
+        TapeText(if (deadText == null) meaning ?: "" else "", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(start = 52.dp), maxLines = 1)
+    }
+}
+
 // ---------- toggles ----------
 
 @Composable
@@ -3564,11 +3623,12 @@ private fun ShapeCard(
  * pairing line names the pad and the pending partner
  * (`A02 SNARE × B07 KICK`, or `× ?  — PICK A PARTNER`); what the pad
  * already carries stays on the box's strip. Then a move (STACK · SPLICE ·
- * SPLIT · MORPH · ROOM · TRANSPLANT) and the line saying what it does.
- * Then the partner: a pad on this kit, a room, another kit's pad, a file,
- * or ROULETTE's pick off the shelf. Then the move's one knob when it has
- * one, and under it MORPH's second, BECOME (a disabled `—` row on every
- * other move, so the card never jumps). Then ▶ HEAR THE RESULT, the line
+ * SPLIT · MORPH · ROOM · TRANSPLANT) and the line saying what it does;
+ * under it the move's knob, its meaning on a caption line under the bar, and
+ * MORPH's second, BECOME. Both knob rows are drawn on every move, in words
+ * where there is nothing to dial, so the card never jumps ([KnobRow]). Then
+ * the partner: a pad on this kit, a room, another kit's pad, a file, or
+ * ROULETTE's pick off the shelf. Then ▶ HEAR THE RESULT, the line
  * saying nothing changes until KEEP, and KEEP beside DRIFT · BLEND & SAVE.
  * UNDO pulls the take before the last mutate back out of the bin.
  * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
@@ -3666,6 +3726,36 @@ private fun MutateCard(
         // Moves board), and on MORPH with BECOME above OFF, that the hit
         // turns: the line always describes what HEAR would play.
         TapeText(MutateSheet.outcomeLine(move, becomeFraction), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        // The move's knob, under its line, its meaning on a caption line under the bar.
+        // STACK has no knob, so its row says so in words. Both rows are drawn on
+        // every move, at one height, so the card never jumps.
+        KnobRow(
+            label = knobLabel ?: "",
+            meaning = MutateSheet.knobMeaning(move),
+            fraction = if (knobLabel == null) 0f else knobFraction,
+            valueText = knobText,
+            deadText = if (knobLabel == null) MutateSheet.deadKnobLine else null,
+            enabled = !busy && knobLabel != null,
+            fillColor = padColor,
+            scheme = scheme,
+            onChange = onKnobChange,
+        )
+        // MORPH's second knob, BECOME: how long the hit takes to turn from
+        // the pad into the MIX blend, OFF at 0. On every other move the row
+        // reads BECOME and ONLY MORPH TURNS OVER TIME. It is enabled on
+        // BECOME's own label, not on `knobLabel`: SPLICE, SPLIT, ROOM and
+        // TRANSPLANT have a first knob and no BECOME.
+        KnobRow(
+            label = MutateSheet.BECOME.label,
+            meaning = if (becomeLabel == null) null else MutateSheet.becomeMeaning(move),
+            fraction = if (becomeLabel == null) 0f else becomeFraction,
+            valueText = becomeText,
+            deadText = if (becomeLabel == null) MutateSheet.becomeMeaning(move) else null,
+            enabled = !busy && becomeLabel != null,
+            fillColor = padColor,
+            scheme = scheme,
+            onChange = onBecomeChange,
+        )
 
         // The partner: this kit's other pads, four to a row, then the crate.
         val chosenSlot = (partner as? MutateSheet.Partner.Pad)?.slot
@@ -3812,34 +3902,6 @@ private fun MutateCard(
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
             onClick = onRoulette,
-        )
-
-        // The move's knob, when it has one; STACK's row stays so the card never jumps.
-        StepperSlider(
-            label = knobLabel ?: "—",
-            fraction = if (knobLabel == null) 0f else knobFraction,
-            valueText = knobText,
-            fillColor = padColor,
-            scheme = scheme,
-            enabled = !busy && knobLabel != null,
-            onFractionChange = onKnobChange,
-            onFractionCommit = {},
-        )
-
-        // MORPH's second knob, BECOME: how long the hit takes to turn from
-        // the pad into the MIX blend, OFF at 0. Every other move draws the
-        // same disabled "—" row STACK's knob shows above, so the card never
-        // jumps. It is enabled on BECOME's own label, not on `knobLabel`:
-        // SPLICE, SPLIT, ROOM and TRANSPLANT have a first knob and no BECOME.
-        StepperSlider(
-            label = becomeLabel ?: "—",
-            fraction = if (becomeLabel == null) 0f else becomeFraction,
-            valueText = becomeText,
-            fillColor = padColor,
-            scheme = scheme,
-            enabled = !busy && becomeLabel != null,
-            onFractionChange = onBecomeChange,
-            onFractionCommit = {},
         )
 
         // What KEEP would write, played without writing it — the whole

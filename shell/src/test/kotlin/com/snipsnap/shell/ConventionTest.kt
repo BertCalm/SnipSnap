@@ -2033,71 +2033,127 @@ class ConventionTest {
     }
 
     /**
-     * BECOME's row on the MUTATE card: drawn for every move, enabled by
-     * BECOME's own label, fed from the one holder, snapped like the knob.
+     * The MUTATE card's two knob rows: the move's knob and BECOME, drawn
+     * under the move line on every move, at one height, in words where
+     * there is nothing to dial. Round M1 of the MUTATE redesign
+     * (`docs/superpowers/specs/2026-10-04-mutate-card-redesign-design.md`,
+     * "The empty rows become words"); this law replaces A1b's
+     * two-`StepperSlider` law, whose dash literals the words retire.
      *
-     * - Every move draws it: MORPH as BECOME, every other move as the same
-     *   disabled `—` row STACK's knob shows, so the card never jumps.
-     * - It is enabled on `becomeLabel != null`, not on `knobLabel` as the
-     *   spec words it (the A1 plan's recorded deviation): `knobLabel` is
-     *   non-null on SPLICE, SPLIT, ROOM and TRANSPLANT, which ignore
-     *   BECOME, so a row copied from the knob's would be live on four moves
-     *   where it does nothing. That copy is the likely slip, so it is
-     *   refused here rather than left to review by eye.
-     * - It is drawn unconditionally: its `StepperSlider(` stands alone on
-     *   its line, directly after the knob row's closing `)`, so no inline
-     *   or braceless guard (`if (…) StepperSlider(`) can hide it on some
-     *   moves.
-     * - Its fraction and its readout both read `pendingBecome`, and it
-     *   snaps with exactly `(f * 40f).roundToInt() / 40f`, the knob row's
-     *   own expression: `MutateSheetTest` sweeps that exact text and proves
-     *   it lands only on whole 50 ms steps, so the literal is pinned here,
-     *   on the screen, and not only as the two rows' equality.
+     * - Every move draws both rows through `KnobRow`: exactly two calls in
+     *   `MutateCard`, each alone on its line, the first directly under the
+     *   move line and the second directly after the first's closing `)`,
+     *   so no guard, inline or on the line before, hides a row on some
+     *   moves and makes the card jump. `MutateCard` draws no
+     *   `StepperSlider` of its own.
+     * - The knob sits under the moves and above the partner rows: the move
+     *   line and the knob's meaning are read together.
+     * - A dead row's words come from `MutateSheet` (STACK: `NO KNOB — THEY
+     *   LINE UP ON THE HIT`; BECOME off MORPH: `ONLY MORPH TURNS OVER
+     *   TIME`), never a literal dash, which TalkBack read out bare, twice.
+     * - BECOME's row is enabled on `becomeLabel != null`, never on
+     *   `knobLabel` (A1b's recorded deviation): `knobLabel` is set on four
+     *   moves that ignore BECOME.
+     * - `KnobRow` draws a dead row at the live row's height (the 48 dp hit
+     *   floor, one line) with its words as its only spoken content, and
+     *   every row a caption line under the bar: the live row's meaning,
+     *   blank on a dead row (the owner's CAPTION, Decision 16).
+     * - The call site's half is A1b's, kept: `becomeKnob`, the readout and
+     *   the fraction from `pendingBecome`, and both snaps exactly
+     *   `(f * 40f).roundToInt() / 40f`, the expression `MutateSheetTest`
+     *   sweeps and proves lands on whole 50 ms steps.
      */
     @Test
-    fun `law - MUTATE draws BECOME's row on every move, enabled by BECOME's own label`() {
+    fun `law - MUTATE draws both knob rows on every move, under the move line, in words where nothing turns`() {
         val card = codeOnly(topLevelFun(padSheetScreen, "MutateCard"))
-        val first = card.indexOf("StepperSlider(")
-        val second = card.indexOf("StepperSlider(", first + 1)
-        assertTrue(
-            first >= 0 && second > first && card.indexOf("StepperSlider(", second + 1) < 0,
-            "expected MutateCard to draw exactly two StepperSliders: the move's knob, then BECOME under it",
+        assertFalse(
+            "StepperSlider(" in card,
+            "MutateCard draws a StepperSlider of its own. Both knob rows go through KnobRow, which draws the live " +
+                "bar and the dead row's words at one height.",
         )
-        val knobRow = normalizeSpan(blockAfterList(card, "StepperSlider("))
+        val first = card.indexOf("KnobRow(")
+        val second = card.indexOf("KnobRow(", first + 1)
         assertTrue(
-            "label = knobLabel ?: \"—\"" in knobRow,
-            "the move's knob row is no longer MutateCard's first StepperSlider:\n  $knobRow",
+            first >= 0 && second > first && card.indexOf("KnobRow(", second + 1) < 0,
+            "expected MutateCard to draw exactly two KnobRows: the move's knob, then BECOME under it",
         )
-        val becomeRow = normalizeSpan(blockAfterList(card.substring(second), "StepperSlider("))
+        fun lineAt(i: Int) = card.substring(card.lastIndexOf('\n', i) + 1, card.indexOf('\n', i).let { if (it < 0) card.length else it }).trim()
+        fun previousLine(i: Int) = card.substring(0, card.lastIndexOf('\n', i) + 1).lines().lastOrNull { it.isNotBlank() }?.trim()
+        assertTrue(
+            lineAt(first) == "KnobRow(" && previousLine(first)?.startsWith("TapeText(MutateSheet.outcomeLine(move, becomeFraction)") == true,
+            "the knob's row is guarded or has left the move line: its `KnobRow(` must stand alone on its line, " +
+                "directly under `TapeText(MutateSheet.outcomeLine(move, becomeFraction), …)`; found " +
+                "`${lineAt(first)}` after `${previousLine(first)}`.",
+        )
+        assertTrue(
+            lineAt(second) == "KnobRow(" && previousLine(second) == ")",
+            "BECOME's row is guarded, so it is drawn only for some moves and the card jumps when the move " +
+                "changes. Its `KnobRow(` must stand alone on its line, directly after the knob row's closing " +
+                "`)`; found `${lineAt(second)}` after `${previousLine(second)}`.",
+        )
+        val moves = card.indexOf("modes.chunked(3)")
+        val partners = card.indexOf("partners.chunked(4)")
+        assertTrue(
+            moves in 0 until first && partners > second,
+            "the knob rows are not between the move chips and the partner rows: the move line and the knob's " +
+                "meaning are read together, under the moves.",
+        )
+
+        val knobRow = normalizeSpan(blockAfterList(card, "KnobRow("))
         for (want in listOf(
-            "label = becomeLabel ?: \"—\"",
+            "label = knobLabel ?: \"\"",
+            "meaning = MutateSheet.knobMeaning(move)",
+            "deadText = if (knobLabel == null) MutateSheet.deadKnobLine else null",
+            "enabled = !busy && knobLabel != null",
+            "onChange = onKnobChange",
+        )) {
+            assertTrue(want in knobRow, "the knob's row lacks `$want`:\n  $knobRow")
+        }
+        val becomeRow = normalizeSpan(blockAfterList(card.substring(second), "KnobRow("))
+        for (want in listOf(
+            "label = MutateSheet.BECOME.label",
+            "meaning = if (becomeLabel == null) null else MutateSheet.becomeMeaning(move)",
             "fraction = if (becomeLabel == null) 0f else becomeFraction",
             "valueText = becomeText",
+            "deadText = if (becomeLabel == null) MutateSheet.becomeMeaning(move) else null",
             "enabled = !busy && becomeLabel != null",
-            "onFractionChange = onBecomeChange",
+            "onChange = onBecomeChange",
         )) {
             assertTrue(want in becomeRow, "BECOME's row lacks `$want`:\n  $becomeRow")
         }
         assertFalse(
             "knobLabel" in becomeRow,
             "BECOME's row reads `knobLabel`, which is non-null on SPLICE, SPLIT, ROOM and TRANSPLANT: the row " +
-                "would be live on four moves that ignore BECOME. Key it on `becomeLabel` (the recorded " +
-                "deviation from the spec's wording).",
-        )
-        val lineStart = card.lastIndexOf('\n', second) + 1
-        val lineEnd = card.indexOf('\n', second).let { if (it < 0) card.length else it }
-        val previous = card.substring(0, lineStart).lines().lastOrNull { it.isNotBlank() }?.trim()
-        assertTrue(
-            card.substring(lineStart, lineEnd).trim() == "StepperSlider(" && previous == ")",
-            "BECOME's row is guarded, so it is drawn only for some moves and the card jumps when the move " +
-                "changes. Its `StepperSlider(` must stand alone on its line, directly after the knob row's " +
-                "closing `)`; found `${card.substring(lineStart, lineEnd).trim()}` after `$previous`. Draw it " +
-                "for every move and let `becomeLabel ?: \"—\"` show the disabled row.",
+                "would be live on four moves that ignore BECOME. Key it on `becomeLabel` (A1b's recorded deviation).",
         )
         assertFalse(
-            Regex("""becomeLabel\s*!=\s*null\s*\)\s*\{|becomeLabel\?\.let""").containsMatchIn(card),
-            "BECOME's row is drawn only for some moves, so the card jumps when the move changes. Draw it for " +
-                "every move and let `becomeLabel ?: \"—\"` show the disabled row.",
+            "\"—\"" in card,
+            "MutateCard draws a literal dash. A row with nothing to dial says so in words read from MutateSheet " +
+                "(deadKnobLine, becomeMeaning); a bare dash reads as broken and TalkBack reads it out twice.",
+        )
+
+        val row = codeOnly(topLevelFun(padSheetScreen, "KnobRow"))
+        val bar = row.indexOf("StepperSlider(")
+        assertTrue(bar >= 0 && row.indexOf("StepperSlider(", bar + 1) < 0, "expected KnobRow to draw exactly one StepperSlider, the live bar")
+        val dead = normalizeSpan(row)
+        for (want in listOf(
+            "heightIn(min = Layout.MIN_HIT_TARGET.dp)",
+            "clearAndSetSemantics { contentDescription = if (label.isEmpty()) deadText else \"\$label, \$deadText\" }",
+            "TapeText(deadText, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)",
+        )) {
+            assertTrue(
+                want in dead,
+                "KnobRow's dead row lacks `$want`: a dead row stands at the live row's height, on one line, and " +
+                    "TalkBack reads its words once, not a slider it cannot move.",
+            )
+        }
+        // CAPTION (the owner's answer to Decision 16): the meaning on a caption line under the bar, on every
+        // row alike, so the bar keeps its full width and every row is one height.
+        val caption = row.indexOf("TapeText(if (deadText == null) meaning ?: \"\" else \"\", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(start = 52.dp), maxLines = 1)")
+        assertTrue(
+            caption > bar && "\"· \$meaning\"" !in row,
+            "KnobRow does not draw the knob's meaning as a caption line under the bar on every row (blank on a " +
+                "dead row), so the bar keeps its full width and every row is one height.",
         )
 
         val src = padSheetScreen.readText(Charsets.UTF_8)
