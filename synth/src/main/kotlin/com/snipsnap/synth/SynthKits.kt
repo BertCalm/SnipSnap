@@ -480,6 +480,26 @@ object SynthKits {
     }
 
     /**
+     * The MURK audition kit: CLUNK climbs the C minor pentatonic on A01–A08, then six sounds
+     * explore sharp wood, heavy fog and owl answers. A15–A16 carry settled recurring groves.
+     * Every pad is dry, carries its regenerable recipe, and is filed by [Murk.drumClassFor].
+     */
+    fun murk(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = MurkPatch(
+            "Wood $n", MurkVoice.CLUNK,
+            Murk.defaults(MurkVoice.CLUNK) + ("TUNE" to semitone / Murk.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = MurkPresets.all().first { it.name == name }
+            .let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("TONAL AXE"), preset("FIRST PULSE"), preset("DISTANT CALL"), preset("HEAVY AIR"),
+            preset("ANSWERING WOOD"), preset("SOFT BARK"), preset("HELD TREES"), preset("HELD OWLS"),
+        )
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

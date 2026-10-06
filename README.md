@@ -366,6 +366,16 @@ the top is a stationary loop (the slider reads LOOP), not a claim the
 hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
 `docs/superpowers/specs/2026-10-04-flotilla-engine-design.md`.
 
+MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
+travels between four trees, and synthesized owls answer the disturbances
+that reach them. CLUNK, THWACK, FRONT, HOOT, GROVE and ALARM share STRIKE,
+TRUNK, FOG, AGITATION and GROVE, with TUNE and HOLD. Fog loads the original
+tree as well as carrying returning sound. Calls have refractory times and
+finite budgets; HOLD supplies repeated strikes. Fourteen dry presets and a
+sixteen-pad pitched kit. The accessible listening page starts silent and
+is regenerated with `./gradlew :synth:generateMurkAudition`; see
+[`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
+
 COROLLA is a mechanical flower of coupled metal petals around a powered
 magnetic core and a shared chamber. TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT
 and HUSK share TUNE, PULL, BLOOM, FIELD, CONTACT, CHAMBER and HOLD. It
@@ -383,8 +393,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, THAW and COROLLA round out the sixteen-engine lineup in
-the `Engine` picker. GRAINS is a separate processor, out of the picker's scope
+VOX, FORK, FLOTILLA, THAW, MURK, COROLLA and GRAINS round out the lineup —
+seventeen engines in the `Engine` picker; GRAINS is a separate processor, out of the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -566,7 +576,7 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, THAW, plus GRAINS, SNAP and DRAW, which sit beside the
+GLINT, SIREN, FORK, FLOTILLA, THAW, MURK, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
