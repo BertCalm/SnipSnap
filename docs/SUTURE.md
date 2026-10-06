@@ -104,6 +104,16 @@ The following measurements come from the dry renderer before loudness
 matching. They establish numerical behavior; the listening and device
 checks described below still require the owner's verdict.
 
+The integrated branch's plain JVM gate, `./gradlew --no-daemon test`, exits
+zero on Java 17 with `ANDROID_HOME` and `ANDROID_SDK_ROOT` unset and no test
+filters or exclusions. Reports cover 4,039 tests across 404 classes, with
+zero failures, errors or skips. The synthesis suite reruns 1,690 tests;
+Gradle reuses the other up-to-date tasks.
+
+The integrated Android debug build passes `:app:assembleDebug` with Java 17
+and packages native libraries for arm64-v8a, armeabi-v7a, x86 and x86_64.
+Compilation does not establish on-device UI behavior, render cost or sound.
+
 | Check | Measured result |
 | --- | --- |
 | Requested one-shot roots, six voices at C3/C4/C5 | Worst error 9.34 cents; minimum root power 92.67% |
