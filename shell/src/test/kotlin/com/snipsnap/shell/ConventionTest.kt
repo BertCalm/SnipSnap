@@ -2137,6 +2137,114 @@ class ConventionTest {
         )
     }
 
+    /**
+     * The MUTATE card's words and buttons, round M1 of the redesign: the
+     * card says what each control will do, in MutateSheet's words, and
+     * nothing is greyed without a reason.
+     *
+     * - Only `busy` disables HEAR, KEEP and UNDO. With no partner, HEAR and
+     *   KEEP are dimmed (their doors toast PICK A PARTNER FIRST); with
+     *   nothing to undo, UNDO is dimmed by `MutateSheet.undoRefusal`, the
+     *   same answer its door toasts.
+     * - ROULETTE and A FILE are actions, not states, so they are never
+     *   dimmed at rest, exactly when a new player needs them.
+     * - The words are MutateSheet's, where MutateWordsTest holds them:
+     *   HEAR THE RESULT, the note line, KEEP, DRIFT · BLEND & SAVE,
+     *   ROULETTE · PICK A PARTNER OFF THE SHELF. `MUTATE ▸` is gone, and no
+     *   string the card draws says PARENT, CRATE, DEAL, NEIGHBOUR, GHOSTS
+     *   or KEEP ROOM.
+     * - The order is the round's: the partner rows, ROULETTE on its own
+     *   row, HEAR, the note, then KEEP and DRIFT side by side.
+     * - Each move says what it does, on the line under the six chips
+     *   (`MutateSheet.outcomeLine`).
+     * - The status line is the pairing line, read uncut by TalkBack, and
+     *   a selected move says so (`, SELECTED`).
+     */
+    @Test
+    fun `law - the MUTATE card says what each control does, and greys nothing without a reason`() {
+        val card = codeOnly(topLevelFun(padSheetScreen, "MutateCard"))
+        fun button(marker: String): String {
+            val at = card.indexOf(marker)
+            assertTrue(at >= 0, "expected MutateCard to draw `$marker`")
+            return normalizeSpan(blockAfterList(card.substring(card.lastIndexOf("ActionButton(", at)), "ActionButton("))
+        }
+        for ((marker, dimmed) in listOf(
+            "MutateSheet.HEAR_LABEL" to "dimmed = partner == null",
+            "MutateSheet.KEEP_LABEL" to "dimmed = partner == null",
+            "\"UNDO\"" to "dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null",
+        )) {
+            val b = button(marker)
+            assertTrue(
+                Regex("""enabled = !busy\s*[,)]""").containsMatchIn(b) && dimmed in b,
+                "`$marker` is greyed for a reason it does not say. Only `busy` disables it (`enabled = !busy`); " +
+                    "when it cannot act it is `$dimmed` and its door's toast explains:\n  $b",
+            )
+        }
+        for (marker in listOf("onClick = onRoulette", "onClick = onPickFile")) {
+            assertFalse(
+                "dimmed" in button(marker),
+                "the button with `$marker` is dimmed at rest. ROULETTE and A FILE are actions, not states: draw " +
+                    "them at full ink so a new player sees they can be tapped.",
+            )
+        }
+        val drift = button("MutateSheet.DRIFT_LABEL")
+        assertTrue("onClick = onDrift" in drift, "DRIFT's button does not read MutateSheet.DRIFT_LABEL")
+        assertTrue("MutateSheet.ROULETTE_LABEL" in button("onClick = onRoulette"), "ROULETTE's resting label is not MutateSheet.ROULETTE_LABEL")
+        assertTrue("Modifier.fillMaxWidth()" in button("onClick = onRoulette"), "ROULETTE does not have its own full row")
+
+        val order = listOf(
+            "onClick = onPickFile", "onClick = onRoulette", "MutateSheet.HEAR_LABEL",
+            "MutateSheet.NOTE_LINE", "MutateSheet.KEEP_LABEL", "MutateSheet.DRIFT_LABEL",
+        ).map { it to card.indexOf(it) }
+        assertTrue(
+            order.all { it.second >= 0 } && order.zipWithNext().all { (a, b) -> a.second < b.second },
+            "MutateCard's bottom rows are out of the round's order (A FILE, ROULETTE, HEAR, the note, KEEP, " +
+                "DRIFT): ${order.sortedBy { it.second }.map { it.first }}",
+        )
+        val keepRowAt = card.lastIndexOf("Row(", card.indexOf("MutateSheet.KEEP_LABEL"))
+        val keepRow = blockAfter(card.substring(keepRowAt), "Row(")
+        assertTrue(
+            keepRowAt > card.indexOf("MutateSheet.NOTE_LINE") && "MutateSheet.KEEP_LABEL" in keepRow && "MutateSheet.DRIFT_LABEL" in keepRow,
+            "KEEP and DRIFT do not share one row under the note line, as the round draws them side by side.",
+        )
+
+        val chips = card.indexOf("modes.chunked(3)")
+        val moveLine = card.indexOf("TapeText(MutateSheet.outcomeLine(move, becomeFraction)")
+        assertTrue(
+            chips >= 0 && moveLine > chips && moveLine < card.indexOf("partners.chunked(4)"),
+            "the move line is not under the six move chips: each move says what it does, right under them.",
+        )
+
+        assertFalse("MUTATE ▸" in card, "the commit button still reads `MUTATE ▸`; it is KEEP, and it writes in place")
+        val literals = Regex(""""(?:[^"\\]|\\.)*"""").findAll(card).map { it.value }.toList()
+        for (lit in literals) {
+            assertFalse(
+                Regex("""\b(PARENTS?|NEIGHBOU?RS?|CRATES?|DEALS?|GHOSTS)\b|KEEP ROOM""").containsMatchIn(lit.uppercase()),
+                "MutateCard draws $lit. MUTATE's one word for its input is PARTNER, GHOSTS is CHOP's word, and " +
+                    "KEEP is the card's commit verb, not OUTSIDE's KEEP ROOM.",
+            )
+        }
+
+        val pairAt = card.indexOf("pairLine,")
+        assertTrue(pairAt >= 0, "MutateCard does not draw `pairLine` as its status line")
+        val status = normalizeSpan(blockAfterList(card.substring(card.lastIndexOf("TapeText(", pairAt)), "TapeText("))
+        assertTrue(
+            status.startsWith("( pairLine,") && "Modifier.clearAndSetSemantics { contentDescription = pairSpoken }" in status,
+            "the card's status line is not the pairing line read uncut by TalkBack:\n  $status",
+        )
+        assertTrue(
+            "tapeClick(label = if (selected) \"\$m, SELECTED\" else m" in card,
+            "a move chip does not say it is selected; its bevel's fill is invisible to TalkBack",
+        )
+        val call = normalizeSpan(blockAfterList(padSheetScreen.readText(Charsets.UTF_8), "MutateCard("))
+        for (want in listOf(
+            "pairLine = MutateSheet.pairLine(MutateSheet.padTag(slot), pad.displayName, partnerName)",
+            "pairSpoken = MutateSheet.pairSpoken(MutateSheet.padTag(slot), pad.displayName, partnerName)",
+        )) {
+            assertTrue(want in call, "the MutateCard call lacks `$want`:\n  $call")
+        }
+    }
+
     // ---- Law: the MUTATE card's honest doors (the redesign's round M1) ----
 
     /**

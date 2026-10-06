@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -2625,12 +2626,16 @@ fun PadSheetScreen(
                 onToggle = { tapBox(PadSheetBoxes.Box.MUTATE) },
                 scheme = scheme,
             ) {
+            // The partner as the pairing line names it: a pad on this kit by its tag and name.
+            val partnerName = partner?.let { p -> MutateSheet.partnerName(p) { s -> kit.pad(s)?.displayName } }
             MutateCard(
                 modes = MutateSheet.MODES,
                 mode = mutateMode,
                 onMode = { mutateMode = it },
                 partners = MutateSheet.partners(kit, slot).map { it.slot },
                 partner = partner,
+                pairLine = MutateSheet.pairLine(MutateSheet.padTag(slot), pad.displayName, partnerName),
+                pairSpoken = MutateSheet.pairSpoken(MutateSheet.padTag(slot), pad.displayName, partnerName),
                 onPartner = { partner = MutateSheet.Partner.Pad(it) },
                 rooms = rooms.map { it.name },
                 onRoom = { name -> rooms.firstOrNull { it.name == name }?.let { partner = Rooms.partner(it) } },
@@ -3555,19 +3560,25 @@ private fun ShapeCard(
 // ---------- mutate card ----------
 
 /**
- * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
- * MORPH · ROOM · TRANSPLANT), a partner — a pad on this kit from the
- * mini grid, or the deal ROULETTE spins off the shelf — the move's one
- * knob when it has one, and under it MORPH's second, BECOME (how long
- * the hit takes to turn from the pad into the blend; a disabled `—`
- * row on every other move, so the card never jumps), then HEAR or
- * MUTATE. The line under the title says what the pad already is
- * ("SPLICE: Kit:A02") so a mutated pad never reads as an original;
- * UNDO pulls the pre-mutation sound back out of the bin.
+ * MUTATE: one hit from the pad and a partner. Under the title, the
+ * pairing line names the pad and the pending partner
+ * (`A02 SNARE × B07 KICK`, or `× ?  — PICK A PARTNER`); what the pad
+ * already carries stays on the box's strip. Then a move (STACK · SPLICE ·
+ * SPLIT · MORPH · ROOM · TRANSPLANT) and the line saying what it does.
+ * Then the partner: a pad on this kit, a room, another kit's pad, a file,
+ * or ROULETTE's pick off the shelf. Then the move's one knob when it has
+ * one, and under it MORPH's second, BECOME (a disabled `—` row on every
+ * other move, so the card never jumps). Then ▶ HEAR THE RESULT, the line
+ * saying nothing changes until KEEP, and KEEP beside DRIFT · BLEND & SAVE.
+ * UNDO pulls the take before the last mutate back out of the bin.
  * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
- * same recipe, same provenance, same bin.
+ * same recipe, same provenance, same bin — and every word is
+ * MutateSheet's or Copy's, where MutateWordsTest holds it.
  *
- * HEAR plays [MutateSheet.preview] — exactly what MUTATE would write,
+ * Nothing is greyed without a reason: only `busy` disables a control.
+ * HEAR, KEEP and UNDO are dimmed when they cannot act, and a tap says why.
+ *
+ * HEAR plays [MutateSheet.preview] — exactly what KEEP would write,
  * heard without writing it. Before it existed, using this card was pick
  * a move, pick a partner, commit a file write, listen, undo: every
  * iteration cost a rewrite (design/mutate-v2 has the argument in full).
@@ -3579,6 +3590,8 @@ private fun MutateCard(
     onMode: (String) -> Unit,
     partners: List<Int>,
     partner: MutateSheet.Partner?,
+    pairLine: String,
+    pairSpoken: String,
     onPartner: (Int) -> Unit,
     rooms: List<String>,
     onRoom: (String) -> Unit,
@@ -3607,15 +3620,21 @@ private fun MutateCard(
     scheme: Scheme,
     busy: Boolean,
 ) {
+    // The move as the verb knows it: the card's words are MutateSheet's, keyed on it.
+    val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
-            ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
+            // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
+            ActionButton("UNDO", scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
+        // The pending pair, so the card names the partner before anything is
+        // kept. TalkBack reads it uncut.
         TapeText(
-            mutated?.let { "${it.word}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
+            pairLine,
             TapeType.pixelSmall,
             scheme.ink2.tape,
+            Modifier.clearAndSetSemantics { contentDescription = pairSpoken },
             maxLines = 1,
         )
 
@@ -3631,7 +3650,8 @@ private fun MutateCard(
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
                             // Always clickable, `!busy` forwarded rather
                             // than dropped (accessibility audit finding 12).
-                            .tapeClick(label = m, enabled = !busy) { onMode(m) }
+                            // The selected move says so: the bevel's fill alone was invisible to TalkBack.
+                            .tapeClick(label = if (selected) "$m, SELECTED" else m, enabled = !busy) { onMode(m) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -3641,6 +3661,11 @@ private fun MutateCard(
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+
+        // What the move does, in the house's own copy (design/mutate-v2's
+        // Moves board), and on MORPH with BECOME above OFF, that the hit
+        // turns: the line always describes what HEAR would play.
+        TapeText(MutateSheet.outcomeLine(move, becomeFraction), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         // The partner: this kit's other pads, four to a row, then the crate.
         val chosenSlot = (partner as? MutateSheet.Partner.Pad)?.slot
@@ -3772,43 +3797,22 @@ private fun MutateCard(
             held?.let { "A FILE ▸ ${it.label.uppercase(java.util.Locale.ROOT)}" } ?: "A FILE ▸ PICK ONE OFF THE PHONE",
             scheme,
             enabled = !busy,
-            dimmed = held == null,
             modifier = Modifier.fillMaxWidth(),
             onClick = onPickFile,
         )
         val deal = partner as? MutateSheet.Partner.Deal
-        // Both labels were 29 characters at rest ("ROULETTE ▸ LET THE CRATE
-        // DEAL" / "DRIFT ▸ DEALS & SAVES A BLEND"), so ROULETTE's old
-        // weight(2f) against DRIFT's weight(1f) gave the wider share to no
-        // more text — backwards, not proportional (truncation pass).
-        // Equalizing the weight wasn't enough on its own — confirmed by
-        // screenshot inside this MUTATE box's own 10dp side padding
-        // (`GroupBox`'s content `Column`), both halves still ellipsized —
-        // so both are shortened too: "LET THE" and the article "A" were
-        // pure filler around the words that carry meaning (CRATE DEAL,
-        // DEALS & SAVES). Neither keeps its ▸: `onRoulette` deals a
-        // partner and `onDrift` deals AND mutates, both right here on this
-        // card with a toast, never navigating or opening a panel — the
-        // same "no ▸" rule RESET/UNDO on this same screen already follow.
-        // "·" replaces it, same neutral separator "REMIX BANK B · REROLL"
-        // (`KitScreen.kt`) uses for the same reason.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            ActionButton(
-                deal?.let { "ROULETTE · ${it.label}" } ?: "ROULETTE · CRATE DEAL",
-                scheme,
-                enabled = !busy,
-                dimmed = deal == null,
-                modifier = Modifier.weight(1f),
-                onClick = onRoulette,
-            )
-            // DRIFT: the deal and the morph in one tap, MIX how far.
-            // "SAVES" stays — it's the one word that says DRIFT commits
-            // the blend, unlike ROULETTE's preview-only deal — but the
-            // article "A" and "BLEND" (already this GroupBox's own legend,
-            // "MUTATE · ONE HIT FROM TWO", right above) don't need to be
-            // said again in a label that must also fit half this row.
-            ActionButton("DRIFT · DEALS & SAVES", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
-        }
+        // ROULETTE only picks a partner and writes nothing, so it stays with
+        // the partner sources, on a full row, its resting label saying what
+        // it does and, once it has picked, naming the pick. DRIFT, which
+        // writes, moved down beside KEEP. Neither carries a ▸: both act
+        // right here with a toast, never navigating or opening a panel.
+        ActionButton(
+            deal?.let { "ROULETTE · ${MutateSheet.partnerName(it)}" } ?: MutateSheet.ROULETTE_LABEL,
+            scheme,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onRoulette,
+        )
 
         // The move's knob, when it has one; STACK's row stays so the card never jumps.
         StepperSlider(
@@ -3838,25 +3842,33 @@ private fun MutateCard(
             onFractionCommit = {},
         )
 
-        // What MUTATE would write, played without writing it — the
-        // whole reason the card kept feeling like a gamble (design/
-        // mutate-v2): every move used to be pick, commit, listen, undo.
-        // Same enablement as MUTATE, since nothing to preview is nothing
-        // to keep either.
+        // What KEEP would write, played without writing it — the whole
+        // reason the card kept feeling like a gamble (design/mutate-v2):
+        // every move used to be pick, commit, listen, undo. With no partner
+        // it is dimmed, not disabled, and a tap says PICK A PARTNER FIRST.
         ActionButton(
-            "▶ HEAR",
+            MutateSheet.HEAR_LABEL,
             scheme,
-            enabled = !busy && partner != null,
+            enabled = !busy,
+            dimmed = partner == null,
             modifier = Modifier.fillMaxWidth(),
             onClick = onHear,
         )
-        ActionButton(
-            "MUTATE ▸",
-            scheme,
-            enabled = !busy && partner != null,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onMutate,
-        )
+        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        // KEEP writes the move in place (no ▸, which means "goes
+        // somewhere"); DRIFT beside it is the card's one-tap blend and save,
+        // and says it saves. Each half row holds DRIFT's 20 characters.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ActionButton(
+                MutateSheet.KEEP_LABEL,
+                scheme,
+                enabled = !busy,
+                dimmed = partner == null,
+                modifier = Modifier.weight(1f),
+                onClick = onMutate,
+            )
+            ActionButton(MutateSheet.DRIFT_LABEL, scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
+        }
     }
 }
 
