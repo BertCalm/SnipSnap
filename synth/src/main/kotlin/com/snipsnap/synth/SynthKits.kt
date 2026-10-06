@@ -477,6 +477,30 @@ object SynthKits {
     }
 
     /**
+     * A01–A08 walk C minor pentatonic from C4 with all six surface profiles:
+     * clear strike, delayed rain, spreading cascade, wet basin, thin ripple,
+     * draining return, soft skin and an isolated heavy answer. A09–A16 add
+     * low-register landings and sustained liquid, high-register articulation,
+     * and a settled held circle. All twelve presets appear, with deliberate
+     * register repeats; every recipe is dry and stores its exact MIDI pitch.
+     */
+    fun cistern(): List<ArrangedPad?> {
+        fun preset(name: String, midi: Int) =
+            CisternPresets.all().first { it.name == name }.copy(midi = midi)
+                .let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            preset("First Drop", 60), preset("Hanging Rain", 63),
+            preset("Wide Cascade", 65), preset("Wet Basin", 67),
+            preset("Thin Ripple", 70), preset("Clear Return", 72),
+            preset("Soft Skin", 75), preset("Quiet Reservoir", 77),
+            preset("Heavy Landing", 48), preset("Slow Drain", 55),
+            preset("Dense Surface", 63), preset("Hanging Rain", 67),
+            preset("Wet Basin", 48), preset("Thin Ripple", 75),
+            preset("Clear Return", 70), preset("Replenished Circle", 60),
+        )
+    }
+
+    /**
      * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
      * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
      * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).
@@ -540,6 +564,28 @@ object SynthKits {
             note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
             preset("TONAL AXE"), preset("FIRST PULSE"), preset("DISTANT CALL"), preset("HEAVY AIR"),
             preset("ANSWERING WOOD"), preset("SOFT BARK"), preset("HELD TREES"), preset("HELD OWLS"),
+        )
+    }
+
+    /**
+     * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
+     * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
+     * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
+     * material suitable for repeated playback. The engine's pitched identity takes precedence
+     * over the generic classifier's length-based LOOP bucket.
+     */
+    fun corolla(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = CorollaPatch(
+            "Petal $n", CorollaVoice.TONGUE,
+            Corolla.defaults(CorollaVoice.TONGUE) + ("TUNE" to semitone / Corolla.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = CorollaPresets.all().first { it.name == name }
+            .let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("OPENING BELL"), preset("FOLDED CHAMBER"), preset("MAGNETIC CHOIR"), preset("QUIET CHATTER"),
+            preset("FAST ORBIT"), preset("HOLLOW HUSK"), preset("PETAL CLOUD"), preset("CLOSED CIRCUIT"),
         )
     }
 

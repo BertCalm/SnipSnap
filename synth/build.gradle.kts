@@ -560,6 +560,16 @@ tasks.register<JavaExec>("generateFlotillaAudition") {
     args("${rootDir}/testkit/flotilla-audition")
 }
 
+/** Render CISTERN's raw/matched listening matrix and diagnostics under testkit/cistern-audition/. */
+tasks.register<JavaExec>("generateCisternAudition") {
+    group = "distribution"
+    description = "Render the CISTERN raw/matched clips, causal diagnostics, manifest and local listening page under testkit/cistern-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CisternAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/cistern-audition")
+}
+
 tasks.register<JavaExec>("generateFlotillaComparison") {
     group = "distribution"
     description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
@@ -584,4 +594,15 @@ tasks.register<JavaExec>("generateMurkAudition") {
         providers.gradleProperty("murkBaselineDir").orNull?.let { args("--baseline-dir=$it") }
         providers.gradleProperty("murkBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
     }
+}
+
+/** Render Corolla's pitch/velocity, macro, interaction and loop listening matrix. */
+tasks.register<JavaExec>("generateCorollaAudition") {
+    group = "distribution"
+    description = "Render COROLLA native/matched clips, metrics and an offline listening page under testkit/corolla-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CorollaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/corolla-audition")
+    if (project.hasProperty("corollaQuick")) args("--quick")
 }
