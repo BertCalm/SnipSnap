@@ -1111,7 +1111,7 @@ line patch's ratio⁻⁰·⁵), its pickup an accelerometer on the right edge (a
 strike pulse is shorter (0.10 to 0.50 ms against 0.4 to 1.2) and the excursion is four semitones, not two (the external
 spec allows a stronger SHARD excursion if separately capped; documented here). **Known:** the third vessel (hung on the
 sixth primary, and so sharing its BEND) closes on the seventh from about BEND .75 (4.0% apart, 2.9% at .8) and crosses it at
-BEND .94, a BEND × COUPLE capture. SHARD's presets keep BEND at .75 and under; the other voices' BEND laws have no such
+BEND .94, a BEND × COUPLE capture. SHARD's presets keep BEND at .78 and under (SKITTER and SHARP GLASS are the highest, at .78, where the gap is still about 3.3%); the other voices' BEND laws have no such
 crossing (their smallest gaps are in the table below), so EDDY RIM WAVER (.82) and VESSEL TAUT TANK (.9) are not affected.
 
 **Decisions taken (the owner can overrule any, by ear):**
