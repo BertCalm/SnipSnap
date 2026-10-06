@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
  *   .40/.50/.60, WATER 0/.05/.10/.20), and its own eight presets;
  * - the five interactions the design claims, each a 3×3 grid;
  * - for each voice, the held keys as the MPC plays them (R2b): a scale up the nine zones, a diminished seventh
- *   held together, and one key held through four wraps.
+ *   held together, and one key held through several wraps.
  *
  * Clips share one loudness ([AuditionLevel]). It writes `manifest.json`, which the page builds itself
  * from, so the clip list lives here and nowhere else, then copies the listening page from the test
@@ -39,8 +39,8 @@ object MercuryAuditionGenerator {
         MercuryVoice.PING to "struck glass: a rim tapped once, its modes Rayleigh's thin ring, the vessel answering through the springs",
         MercuryVoice.SING to "rubbed glass: a wet finger on the rim, friction locking the fundamental, the glass harmonica's sustain",
         MercuryVoice.BLADE to "bowed steel: a free-free blade, a gesture bending it into the note, the musical saw's glide",
-        MercuryVoice.EDDY to "a rubbed singing bowl: six families of doublets, measured on a real bowl, that drift, swell and beat as the water loads their two halves in opposite phases",
-        MercuryVoice.VESSEL to "a hollow steel shell, a pipe or a tank: ring modes, a breathing mode and the tube's flexure, each with a quadrature partner that COUPLE feeds",
+        MercuryVoice.EDDY to "a rubbed singing bowl: six families of doublets, measured on a real bowl, that drift and swell as the water loads their two halves in opposite phases, and beat in a struck tail as COUPLE opens them",
+        MercuryVoice.VESSEL to "a hollow steel shell, a pipe or a tank: ring modes, a breathing mode and the tube's flexure, the lowest four modes each with a quadrature partner that COUPLE feeds",
         MercuryVoice.SHARD to "a free plate, cut a little off square: dense, irregular modes, a hard strike and a bend that moves some modes up and others down",
     )
 
@@ -189,7 +189,7 @@ object MercuryAuditionGenerator {
             val keys = listOf(
                 Triple("keys_scale", "THE NINE ZONES, UP", "every zone held 1.4 s and let go, each key lifting as the next goes down"),
                 Triple("keys_chord", "A DIMINISHED SEVENTH", "four zones held together for 5 s: the loops beating against each other"),
-                Triple("keys_hold", "ONE KEY, 14 S", "the middle zone held through four wraps, then released"),
+                Triple("keys_hold", "ONE KEY, 14 S", "the middle zone held through several wraps, then released"),
             ).map { (id, label, what) ->
                 val midis = Keys.mercuryPadMidis(voice)
                 val events = when (id) {

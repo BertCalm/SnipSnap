@@ -255,11 +255,12 @@ object Velocity {
         // exactly what this function exists to find. Proven monotonic by
         // ForkTest's `STRIKE moves the onset centroid at every step`.
         patch is ForkPatch -> "STRIKE"
-        // MERCURY PING's GLASS shortens the strike (a harder mallet) and tilts
+        // MERCURY's struck voices (PING, VESSEL, SHARD: Mercury.velocityKind)
+        // register GLASS, which shortens the strike (a harder mallet) and tilts
         // the pickup bright. Proven monotonic by MercuryTest's `velocity
-        // brightens PING at every step`; the owner heard it and kept it
-        // (2026-10-02). SING and BLADE take velocity as a number instead
-        // ([touchedVelocity]).
+        // brightens the struck voices, and swells or bites the rubbed ones`;
+        // the owner heard PING's and kept it (2026-10-02). The rubbed voices
+        // take velocity as a number instead ([touchedVelocity]).
         patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.GLASS -> "GLASS"
         // MAGNET's PICK is a thumb to a wire: the string exciter's low-pass
         // corner (150 to 16000 Hz, pinned at the voice's default) with a
@@ -275,8 +276,8 @@ object Velocity {
 
     /**
      * Voices that take velocity as a number on their own render, with no
-     * macro moved and no [soften]: MERCURY SING and BLADE, where velocity is
-     * the touch (`Mercury.VELOCITY_RAMP`, `Mercury.SCRAPE_DB`): a soft rub
+     * macro moved and no [soften]: MERCURY's rubbed voices (SING, BLADE, EDDY),
+     * where velocity is the touch (`Mercury.VELOCITY_RAMP`, `Mercury.SCRAPE_DB`): a soft rub
      * swells in, a hard one catches at once with a short scrape.
      *
      * A rubbed glass or a bowed blade is close to a pure tone: the rub

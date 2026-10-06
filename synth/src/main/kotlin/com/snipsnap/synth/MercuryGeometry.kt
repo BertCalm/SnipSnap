@@ -15,8 +15,9 @@ import kotlin.math.sin
  * new geometry and not a new code path.
  *
  * Every default here is the R1 object's, so [RingGeometry] (PING, SING) and [BeamGeometry] (BLADE) say only what
- * they differ in, and they render exactly as they did before the hooks existed (`MercuryTest` and the committed
- * kit and instrument renders hold it to the bit). The new geometries override what their object needs.
+ * they differ in, and they render exactly as they did before the hooks existed (R2c's refactor onto Geometry was held
+ * to the bit by a hash of 39 renders, before and after; `MercuryTest`'s golden values keep the three voices' defaults and
+ * loops from drifting since). The new geometries override what their object needs.
  *
  * Every table in here is **designed**, in the design doc's sense (decision 9): seeded from a source where one opened,
  * frozen as numbers, and labelled with where they came from. `Modes.Material` stays sourced-only.
@@ -255,8 +256,8 @@ internal object ShellGeometry : Geometry() {
      * Every vessel above its partner, the physical sign (a seam or the water lowers the struck cos mode), ascending so
      * the beat rates climb: 5.25, 6.75, 8.25 and 9.75%, wider than the other voices' 3.5 to 7%. At A2 the object is low
      * and rings long, and with the vessels at 3.5 to 6.5% the rub sustained the fundamental and the hybrid together at
-     * the four lowest keys, two unrelated lines that no loop closes (seams of 3 to 5). At 1.4 times the gaps the lowest
-     * key closes at 3e-4 and every other at 2e-5 or better.
+     * the four lowest keys, two unrelated lines that no loop closes (seams of 3 to 5). At 1.5 times the gaps every one
+     * of the 25 keys closes un-nudged (worst seam 1e-5 at the defaults; `MercuryLoopTest` sweeps them).
      */
     override val vesselDetune = doubleArrayOf(0.0525, 0.0675, 0.0825, 0.0975)
 
@@ -307,11 +308,12 @@ internal object ShellGeometry : Geometry() {
  * SHARD's object: a free rectangular plate (a Chladni plate), a/b 1.13, Poisson 0.33, all four edges free, cut a little
  * off square so the square plate's degenerate pairs split into irregular, unequal partners. Dense (the 12th ratio is
  * 8, against 62 for the ring and 69 for the beam), irregular, and with a loose skeleton of near-harmonics (the (0,2)
- * mode 49 cents under an octave) that carries the pitch.
+ * mode 43 cents under an octave) that carries the pitch.
  *
  * The ratios are a converged Rayleigh-Ritz on Legendre polynomials, which reproduces the published free-square-plate
- * values (13.468, 19.596, 24.270, 34.801 at nu 0.3; 13.169, 19.224, 24.423, 34.233 at 0.333: Leissa 1969, NASA SP-160;
- * Narita 2023, EPI Int. J. Eng. 5(1) 26-36, Table 2). The mode labels are the (nodal lines in x, in y) of each. The
+ * values (13.468, 19.596, 24.270, 34.801 at nu 0.3: Narita 2022, EPI Int. J. Eng. 5(1) 26-36, Tables 1 and 17; 13.169,
+ * 19.224, 24.423, 34.233 at 0.333: its Table 2, after Gorman; Leissa's NASA SP-160 tabulates slightly higher upper-bound
+ * values, 0.2 to 0.6% above). The mode labels are the (nodal lines in x, in y) of each. The
  * 12-mode truncation cuts through the near-degenerate (4,0) and (2,3), 2% apart, which cross near a/b 1.11.
  *
  * The contact, pickup and load tables below are **designed**: a product of free-free beam functions at a contact

@@ -50,8 +50,8 @@ class MercuryGeometryTest {
     }
 
     /**
-     * What a vessel is: 3.5% or more from every primary at BEND centred (R1's rule, which the vessels' own partner doublets
-     * are the one exception to by name: they sit 3.5 to 10% from their partner), and strictly between neighbours otherwise.
+     * What a vessel is: 3.5% or more from every primary, its own host included, at BEND centred (R1's rule, with no
+     * exception for the vessels' partner doublets: they sit 3.5 to 10% from their partner).
      * EDDY's first vessel is 4.05% above its host and not 3.5 because the host's upper member is 0.455% above it.
      */
     @Test
@@ -67,8 +67,10 @@ class MercuryGeometryTest {
     }
 
     /**
-     * BEND must reorder nothing: scanned over the whole knob, no two primaries cross and none comes within 3% of its
-     * neighbour (R1's smallest was 3.7%, the ring's at c = -1). Each geometry's own smallest is printed.
+     * BEND must reorder nothing: scanned over the whole knob, no two primaries cross and none comes close to its
+     * neighbour (R1's smallest was 3.7%, the ring's at c = -1). Each geometry has its own bar, about 0.8 of what it
+     * measures: EDDY's families 16.5% apart (bar 13%), VESSEL's 6.3% (5%), SHARD's 3.0% (2.5%, at c = -1 between its
+     * 11th and 12th modes). Each geometry's own smallest is printed.
      */
     @Test
     fun `BEND never crosses two primaries over the whole knob`() {
@@ -88,7 +90,12 @@ class MercuryGeometryTest {
                 c += 0.01
             }
             println("MERCURY geometry $voice: smallest primary gap over BEND ${f(smallest * 100, 2)}%")
-            assertTrue(smallest > 0.0 && smallest >= 0.015, "$voice: two primaries come within ${f(smallest * 100, 2)}% of each other")
+            val bar = when (geo) {
+                BowlGeometry -> 0.13
+                ShellGeometry -> 0.05
+                else -> 0.025
+            }
+            assertTrue(smallest >= bar, "$voice: two primaries come within ${f(smallest * 100, 2)}% of each other (bar ${f(bar * 100, 1)}%)")
         }
     }
 
@@ -222,5 +229,18 @@ class MercuryGeometryTest {
         assertTrue(abs(r.last() - 8.0) < 0.05, "SHARD's 12th ratio is ${r.last()}")
         // Dense next to the others: the ring's and the beam's 12th are 62 and 69.
         assertTrue(r.last() < RingGeometry.ratios.last() / 5)
+    }
+
+    /**
+     * SHARD's table is a free-plate Rayleigh-Ritz, and a free-plate eigenproblem is not something a test should redo, so
+     * its twelve ratios are held against an independent run: a Legendre-polynomial Ritz (12 by 12 terms, Gauss-Legendre
+     * quadrature, generalised symmetric eigenproblem, numpy and scipy) at a/b 1.13 and Poisson 0.33, written down here
+     * to three places. The table in the engine is the same plate converged further, so they agree to better than 1e-3.
+     * A hand edit to one ratio, or a table for another plate, does not.
+     */
+    @Test
+    fun `SHARD's ratios are the free plate's, from an independent Ritz run`() {
+        val independent = doubleArrayOf(1.0, 1.3849, 1.9510, 2.4916, 2.7251, 4.1032, 4.7801, 4.9697, 5.2128, 6.1156, 7.6833, 7.9964)
+        for (i in independent.indices) assertEquals(independent[i], PlateGeometry.ratios[i], 1e-3, "SHARD ratio $i against the independent Ritz run")
     }
 }

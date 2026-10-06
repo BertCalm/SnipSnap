@@ -46,10 +46,10 @@ import kotlin.random.Random
  * **The mapping is Phase 0's iteration 3**, measured and not heard:
  * - pressure is set by a target e-fold of `max(20 ms, 12 periods)`, scaled by
  *   RUB²;
- * - a contact-patch taper, `b_i = ratio^−0.5`, keeps mode 1 from capturing a
- *   low note;
+ * - a contact-patch taper, by default `b_i = ratio^−0.5` ([Geometry.contact]), keeps mode 1 from
+ *   capturing a low note;
  * - the tap weight has a 0.2 floor, so even RUB 1 has a finger landing;
- * - WATER's depth goes with WATER^0.25 (round 2: √WATER was not heard below 0.2);
+ * - WATER's depth goes with WATER^0.25 by default ([Geometry.waterCurve]; round 2: √WATER was not heard below 0.2);
  * - the coupled anchor is put back on the note once per note
  *   ([Modes.Bank.anchorScale]).
  *
@@ -139,8 +139,8 @@ object Mercury {
     const val CONTACT_TAPER = 0.5
 
     /**
-     * Velocity, a render parameter (not a knob) that only the rubbed voices read; PING's velocity is GLASS
-     * (`Velocity.brightnessOverride`). A rubbed body is close to a pure tone, so a harder touch cannot be heard as
+     * Velocity, a render parameter (not a knob) that only the rubbed (TOUCH) voices read, SING, BLADE and EDDY; the
+     * struck ones' velocity (PING, VESSEL, SHARD) is GLASS ([velocityKind], `Velocity.brightnessOverride`). A rubbed body is close to a pure tone, so a harder touch cannot be heard as
      * brighter (a steeper contact taper moved the held body 4–13%); it is heard in how the note starts. The owner
      * chose "attack and bite" (2026-10-02). A soft touch: the finger or bow comes up to speed up to this many times
      * slower than [DRIVER_RAMP_SECONDS], so the note swells in. Listening value.
@@ -437,8 +437,8 @@ object Mercury {
     // ---- the render ---------------------------------------------------------
 
     /**
-     * [velocity] is a render parameter, as on PLUCK: no knob, no preset. SING and BLADE read it as the touch
-     * ([VELOCITY_RAMP], [SCRAPE_DB]); PING ignores it, since its velocity is GLASS. 1, the default, is a full
+     * [velocity] is a render parameter, as on PLUCK: no knob, no preset. the TOUCH voices (SING, BLADE, EDDY) read it as the
+     * touch ([VELOCITY_RAMP], [SCRAPE_DB]); the GLASS voices (PING, VESSEL, SHARD) ignore it, since theirs is GLASS. 1, the default, is a full
      * touch, so a kit pad or a preset renders the hard version.
      */
     fun render(voice: MercuryVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {

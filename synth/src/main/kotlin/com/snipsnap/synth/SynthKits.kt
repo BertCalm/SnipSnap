@@ -359,7 +359,7 @@ object SynthKits {
 
     /**
      * The second MERCURY kit (R2c): the three voices the first kit does not carry, as their own presets, none of them
-     * at the defaults. EDDY five (A01-A05), VESSEL five (A06-A10), SHARD six (A11-A16), each a one-shot pad, dry, filed
+     * at the default TUNE. EDDY five (A01-A05), VESSEL five (A06-A10), SHARD six (A11-A16), each a one-shot pad, dry, filed
      * by [Mercury.drumClassFor] (LOOP by length, like the first). The first kit stays as the owner heard it, the pentatonic
      * row included; this one is the audition's way to hear the three on the MPC. Provisional until their audition.
      */

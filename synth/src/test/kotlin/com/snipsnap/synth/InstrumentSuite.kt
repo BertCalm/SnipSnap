@@ -114,7 +114,7 @@ object InstrumentSuite {
         listOf(renderEp(dir), renderOrgan(dir), renderHarp(dir), renderMusicBox(dir), renderResinPad(dir), renderFork(dir))
 
     /**
-     * The voices that ship as instruments: the three the owner has heard held (round 5's loops, round 6's keys). EDDY,
+     * The voices that ship as instruments: the three whose loops the owner heard and approved (round 5; their keys await round 6). EDDY,
      * VESSEL and SHARD render as pads through [Keys.mercuryPad] like any voice (`MercuryHeldTest` reads all six), but each
      * instrument is 6 to 9 MB of WAV and a zip entry, so theirs are made once their sound has been approved.
      */

@@ -118,7 +118,7 @@ class MercuryHeldTest {
 
     /**
      * The loop sets the level, as the RESIN held pad's decision 10 has it (`Keys.resinPad`): every zone is levelled
-     * where it is held, so a keyboard run is even. All 27 zones land within 1 dB of the melodic target.
+     * where it is held, so a keyboard run is even. All 54 zones land within 1 dB of the melodic target.
      */
     @Test
     fun `every zone is levelled where it is held`() {

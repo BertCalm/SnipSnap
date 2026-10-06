@@ -90,8 +90,9 @@ object MercuryPresets {
         p(MercuryVoice.VESSEL, "TAUT TANK", "TUNE" to 9 / 24f, "BEND" to 0.9f, "RUB" to 0.25f, "WATER" to 0.35f, "GLASS" to 0.65f, "COUPLE" to 0.45f, "HOLD" to 0.4f), // F#3
     )
 
-    // SHARD shares PING's root, C4. BEND stays under .8: from about .8 the plate's third vessel crosses its sixth mode
-    // (the design doc's R2c, the critique), which is a BEND x COUPLE capture worth hearing once, not in six presets.
+    // SHARD shares PING's root, C4. BEND stays under .8: from about .8 the plate's third vessel (hung on the sixth
+    // primary) closes on the seventh, and crosses it at BEND .94 (the design doc's R2c, "Known"), which is a BEND x COUPLE
+    // capture worth hearing once, not in six presets.
     private val shardPresets: List<MercuryPatch> = listOf(
         p(MercuryVoice.SHARD, "BROKEN PANE", "TUNE" to 7 / 24f, "BEND" to 0.75f, "RUB" to 0.45f, "WATER" to 0.75f, "GLASS" to 0.8f, "COUPLE" to 0.75f, "HOLD" to 0.55f), // G4
         p(MercuryVoice.SHARD, "SPLINTER", "TUNE" to 19 / 24f, "BEND" to 0.6f, "RUB" to 0.08f, "WATER" to 0.15f, "GLASS" to 0.6f, "COUPLE" to 0.5f, "HOLD" to 0.1f), // G5
