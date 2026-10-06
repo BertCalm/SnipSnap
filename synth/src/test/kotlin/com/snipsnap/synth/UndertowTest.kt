@@ -13,6 +13,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /** Causal and numerical checks on the dry shell; the audition supplies its sonic verdict. */
@@ -125,6 +126,31 @@ class UndertowTest {
             "shared and independent reservoirs have the same trajectory")
         assertTrue(matchedDifference(shared.samples, independent.samples) > 0.01,
             "pressure competition never reached dry audio")
+    }
+
+    @Test
+    fun `inactive chambers have no aperture and independent probes report their own network work`() {
+        val options = Undertow.ProbeOptions(durationSeconds = 0.9f, activeChambers = 1)
+        val shared = Undertow.probe(UndertowVoice.BREATH, options = options)
+        val independent = Undertow.probe(
+            UndertowVoice.BREATH,
+            options = options.copy(independentReservoirs = true),
+        )
+        for (probe in listOf(shared, independent)) {
+            assertTrue(probe.snapshots.all { snapshot ->
+                snapshot.apertures.drop(1).all { it == 0f }
+            }, "inactive chamber apertures appeared open")
+        }
+        assertNotEquals(
+            shared.snapshots.last().pistonWork,
+            independent.snapshots.last().pistonWork,
+            "independent reservoir work used the shared reservoir",
+        )
+        assertNotEquals(
+            shared.finalEnergy,
+            independent.finalEnergy,
+            "independent network energy used the shared reservoir",
+        )
     }
 
     @Test
@@ -312,6 +338,26 @@ class UndertowTest {
             assertTrue(held.cycleStateError.isFinite() && held.cycleStateError < 1e-3,
                 "$voice pressure/flap/resonator state did not close: ${held.cycleStateError}")
             assertTrue(abs(held.samples.average()) < 0.01, "$voice held material contains DC")
+        }
+    }
+
+    @Test
+    fun `held cycles converge when control rates do not divide the default cycle`() {
+        for (controlRateHz in listOf(500, 1500)) {
+            val held = Undertow.probe(
+                UndertowVoice.BREATH,
+                mapOf("HOLD" to 1f),
+                options = Undertow.ProbeOptions(controlRateHz = controlRateHz, recordDiagnostics = false),
+            )
+            assertTrue(held.previousCycle.isNotEmpty(), "$controlRateHz Hz HOLD lacked a preceding cycle")
+            assertTrue(
+                held.cycleStateError.isFinite() && held.cycleStateError < 1e-3,
+                "$controlRateHz Hz HOLD state did not close: ${held.cycleStateError}",
+            )
+            assertTrue(
+                held.seamError.isFinite() && held.seamError < Keys.MAX_SEAM_ERROR,
+                "$controlRateHz Hz HOLD audio did not close: ${held.seamError}",
+            )
         }
     }
 

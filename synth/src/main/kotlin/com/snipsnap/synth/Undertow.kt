@@ -156,7 +156,7 @@ object Undertow {
         val hold = m.getValue("HOLD").toDouble()
         val held = cycleFrames > 0
         val active = options.activeChambers.coerceIn(1, CHAMBERS)
-        val controlFrames = (INTERNAL_RATE.toDouble() / options.controlRateHz.coerceIn(500, 4000)).roundToInt()
+        val controlFrames = controlFramesFor(options.controlRateHz)
         val requestedHz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         // Fit complete pitch periods into the host loop (at most about 4.2 cents at C3).
         val hz = if (held) (requestedHz * cycleFrames / Dsp.RATE).roundToInt() * Dsp.RATE.toDouble() / cycleFrames else requestedHz
@@ -169,7 +169,7 @@ object Undertow {
         val isolated = DoubleArray(CHAMBERS)
         val x = DoubleArray(CHAMBERS)
         val v = DoubleArray(CHAMBERS)
-        val area = DoubleArray(CHAMBERS) { .16 }
+        val area = DoubleArray(CHAMBERS) { if (it < active) .16 else 0.0 }
         val flows = DoubleArray(CHAMBERS)
         val audibleFlow = DoubleArray(CHAMBERS)
         val sealed = BooleanArray(CHAMBERS)
@@ -218,7 +218,6 @@ object Undertow {
             val totalFlow = (0 until active).sumOf { flows[it] }
             // Baseline relaxation works even when every flap seals; inflow lowers deficit.
             suction = (suction + dt * (extraction - totalFlow - bypass * sqrt(max(0.0, suction))) / compliance).coerceIn(0.0, 2.0)
-            pistonWork += dt * extraction * suction
             for (j in 0 until active) {
                 if (options.independentReservoirs) {
                     // Same per-inlet baseline; removing another inlet cannot alter this pressure.
@@ -271,6 +270,11 @@ object Undertow {
                 // .018 is a documented imperfect-rim leak, in addition to reservoir bypass.
                 flows[j] = (.18 - .035 * spiral) * (area[j] + .018 + .04 * leak) * sqrt(local[j])
                 if (!x[j].isFinite() || !v[j].isFinite() || !local[j].isFinite()) { x[j] = 0.0; v[j] = 0.0; local[j] = 0.0; flows[j] = 0.0; sealed[j] = false }
+            }
+            if (options.independentReservoirs) {
+                pistonWork += dt * (0 until active).sumOf { extraction / CHAMBERS * isolated[it] }
+            } else {
+                pistonWork += dt * extraction * suction
             }
             if (options.recordDiagnostics && frame >= recordFrom && frame % (controlFrames * 10) == 0) {
                 snapshots += StateSnapshot(time.toFloat(), (if (options.independentReservoirs) isolated[0] else suction).toFloat(), local.map { it.toFloat() }.toFloatArray(), flows.map { it.toFloat() }.toFloatArray(), area.map { it.toFloat() }.toFloatArray(), x.map { it.toFloat() }.toFloatArray(), v.map { it.toFloat() }.toFloatArray(), sealed.copyOf(), pistonWork, energy())
@@ -341,7 +345,11 @@ object Undertow {
         }
 
         fun energy(): Double {
-            var e = .5 * compliance * suction * suction
+            var e = if (options.independentReservoirs) {
+                isolated.sumOf { .5 * (compliance / CHAMBERS) * it * it }
+            } else {
+                .5 * compliance * suction * suction
+            }
             for (j in 0 until active) e += .00005 * (.5 * mass * v[j] * v[j] + .5 * stiffness * x[j] * x[j]) + .01 * local[j] * local[j]
             for (mode in tone) e += mode.energy()
             for (mode in rim) e += mode.energy()
@@ -356,6 +364,20 @@ object Undertow {
             doubleArrayOf(noiseLow),
             dcInput + dcOutput,
         )
+    }
+
+    private fun controlFramesFor(controlRateHz: Int): Int =
+        (INTERNAL_RATE.toDouble() / controlRateHz.coerceIn(500, 4000)).roundToInt()
+
+    private fun greatestCommonDivisor(a: Int, b: Int): Int {
+        var x = a
+        var y = b
+        while (y != 0) {
+            val remainder = x % y
+            x = y
+            y = remainder
+        }
+        return x
     }
 
     private fun smooth(x: Double): Double = x * x * (3 - 2 * x)
@@ -379,7 +401,9 @@ object Undertow {
         val held = isLoop(m.getValue("HOLD")) && options.driveStopSeconds == null
         // Align the slow clock, periodic roughness and integer pitch periods to one cycle.
         val baseFrames = (Dsp.RATE * 1.6).roundToInt()
-        val cycleFrames = if (held) (baseFrames / (CONTROL / Dsp.OVERSAMPLE)) * (CONTROL / Dsp.OVERSAMPLE) else 0
+        val controlFrames = controlFramesFor(options.controlRateHz)
+        val cycleQuantum = controlFrames / greatestCommonDivisor(controlFrames, Dsp.OVERSAMPLE)
+        val cycleFrames = if (held) (baseFrames.toDouble() / cycleQuantum).roundToInt() * cycleQuantum else 0
         val simulation = Simulation(voice, m, finite(energy, 1f).toDouble(), options, cycleFrames, cancelled)
         var convergence = 0.0
         if (held) {
