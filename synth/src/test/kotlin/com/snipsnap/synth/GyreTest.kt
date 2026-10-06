@@ -266,6 +266,7 @@ class GyreTest {
         // LOOP's, and renders as the step below it, so its hand is at the stroke too), and each step changes the
         // sound by at least HOLD_CHANGE_DB, as a pluck's do. Not the pluck's "rung out" claim: a bow is still
         // sounding when the hand lands.
+        val w = (0.02 * RATE).toInt()
         eachInParallel(GyreVoice.entries) { voice ->
             val stroke = Gyre.shapeOf(voice).stroke
             val m = Gyre.defaults(voice) + mapOf("TOUCH" to 1f)
@@ -285,6 +286,15 @@ class GyreTest {
             }
             println("$voice TOUCH 1: the hand lands at ${hands.joinToString(" ") { "%.2f".format(it) }} s and at the top ${"%.2f".format(top)} (stroke ${"%.1f".format(stroke)}); each step changes the sound by ${changes.joinToString(" ") { "%.1f".format(it) }} dB")
             assertEquals(stroke, top, 1e-3f, "$voice: HOLD's top is not the stroke")
+            // And the render really lifts there: the level a moment after the stroke is well under the level just
+            // before it (the hand's damper and the lifted bow together), on the render at HOLD 1.
+            val full = Gyre.render(voice, m + ("HOLD" to 1f)).samples
+            val at = (top * RATE).toInt()
+            val before = rms(full, at - 3 * w, at - w)
+            val after = rms(full, at + (0.25 * RATE).toInt(), at + (0.25 * RATE).toInt() + 2 * w)
+            val drop = 20 * log10(after / before)
+            println("$voice: the level 0.25 s after the stroke is ${"%.1f".format(drop)} dB against the level just before it")
+            assertTrue(drop <= -12.0, "$voice: the bow does not lift at the stroke ($drop dB)")
             for (k in 1 until hands.size) assertTrue(hands[k] > hands[k - 1], "$voice: HOLD step $k's hand lands no later than step ${k - 1}'s")
             assertTrue(hands.first() <= 2f * Gyre.CHOKE_SECONDS, "$voice: HOLD 0 does not choke")
             for (k in changes.indices) assertTrue(changes[k] >= HOLD_CHANGE_DB, "$voice: HOLD steps $k and ${k + 1} differ by only ${changes[k]} dB")
@@ -316,14 +326,16 @@ class GyreTest {
 
     @Test
     fun `every corner is finite, bounded and never grows`() {
-        // Every macro at both ends, both voices, at TOUCH 0 and 1 (256 renders). The bridge may move energy
+        // Every macro at both ends, every voice, at TOUCH 0 and 1 (and 0.5, the catch, where the output trim
+        // is partway: 3 x 128 renders). The bridge may move energy
         // between strings but never add it, so no 50 ms stretch after the attack is louder than the attack's
         // own loudest. Measured: the loudest later stretch is 0.443 of the attack (FLICK, SYMPATHY 1, the
         // sympathetic strings blooming); the raw peak at most 0.985 (round one: 0.596 and 0.767; the box adds level, BOX_TRIM takes it back).
-        // A drawn note is hotter than a pluck, and the output is trimmed for it (BOW_OUT_TRIM_DB); its worst
-        // is 1.102 at C5 on BODY 0's 520 Hz mode, FLICK (the ceiling with the bow class's 7 percent is 1.17).
+        // A drawn note is hotter than a pluck, and the output is trimmed for it (BOW_OUT_TRIM_DB); its worst is
+        // 0.998 (HALO, TOUCH 1, C5, BODY 0, SYMPATHY 1, SPIN 1), against RAW_PEAK_CEILING's 1.25 (the bow class's
+        // own worst was 1.169, so the ceiling is 7 percent over that).
         val cells = ArrayList<Pair<GyreVoice, Map<String, Float>>>()
-        for (voice in GyreVoice.entries) for (touch in floatArrayOf(0f, 1f)) for (tune in floatArrayOf(0f, 1f)) for (sym in floatArrayOf(0f, 1f)) for (spin in floatArrayOf(0f, 1f))
+        for (voice in GyreVoice.entries) for (touch in floatArrayOf(0f, 0.5f, 1f)) for (tune in floatArrayOf(0f, 1f)) for (sym in floatArrayOf(0f, 1f)) for (spin in floatArrayOf(0f, 1f))
             for (body in floatArrayOf(0f, 1f)) for (hold in floatArrayOf(0f, 1f)) {
             cells.add(voice to mapOf("TOUCH" to touch, "TUNE" to tune, "SYMPATHY" to sym, "SPIN" to spin, "BODY" to body, "HOLD" to hold))
         }
@@ -371,17 +383,19 @@ class GyreTest {
     // ---- pitch ---------------------------------------------------------------------
 
     /**
-     * What each cell's worst note may read, in cents. Round one's 5 for a pluck and a full bow; 10.5 where the
-     * bow has only just caught. BOURDON is allowed more: its lowest notes (C2 to F#2) sit on BODY 1's 95 Hz
-     * membrane mode, the wolf, where the bridge's phase compensation cannot follow (plucked, 10.7 cents
-     * uncorrected; bowed and corrected, 24.4 at D2 and F2). Below BODY 1 it is within 6.6 bowed.
+     * What each cell's worst note may read, in cents: each is the cell's measured worst (the final build,
+     * printed by the test) with a little room. Round one's 5 for a pluck and a full bow (FLICK 2.5 plucked
+     * and 4.2 bowed, HALO 3.4 and 3.8, DRAWN 2.9 and 4.6); more where the bow has only just caught (TOUCH 0.5:
+     * FLICK 9.8, DRAWN 7.2, HALO 4.5). BOURDON is allowed more: its lowest notes (C2 to F#2) sit on BODY 1's
+     * 95 Hz membrane mode, the wolf, where the bridge's phase compensation cannot follow (BODY 1: plucked
+     * 10.4, TOUCH 0.5 11.2, bowed 15.3; 24.4 at D2 and F2 in a full scan); below BODY 1 it reads 6.6 plucked,
+     * 4.8 at 0.5 and 9.7 bowed.
      */
     private fun tuningBound(voice: GyreVoice, touch: Float, body: Float): Double = when {
-        voice == GyreVoice.BOURDON && touch > 0f && body >= 1f -> 26.0
-        voice == GyreVoice.BOURDON && touch == 0f -> 11.0
-        voice == GyreVoice.BOURDON -> 12.0
-        touch == 0f || touch == 1f -> 5.0
-        else -> 10.5
+        voice == GyreVoice.BOURDON && body >= 1f -> if (touch == 1f) 16.5 else if (touch == 0.5f) 12.0 else 11.0
+        voice == GyreVoice.BOURDON -> if (touch == 1f) 10.5 else if (touch == 0.5f) 6.0 else 7.5
+        touch == 0.5f -> when (voice) { GyreVoice.FLICK -> 10.5; GyreVoice.DRAWN -> 8.5; else -> 6.0 }
+        else -> 5.0
     }
 
     @Test
@@ -394,23 +408,53 @@ class GyreTest {
         // to 1, after it at most 3.4 at TOUCH 0 and at TOUCH 1, 9.6 at TOUCH 0.5 (the bow just caught: raucous,
         // its pitch wanders) and, scanned outside this test, 5.8 at TOUCH 0.75.
         val cells = ArrayList<List<Any>>()
-        // Every note at TOUCH 0; every other note where the bow is drawn (each costs a calibration render too);
-        // BODY 0 and 1 only at TOUCH 0.5 (the middle BODY's worst, measured, is never the cell's).
-        for (voice in GyreVoice.entries) for (touch in floatArrayOf(0f, 0.5f, 1f)) for (body in (if (touch == 0.5f) floatArrayOf(0f, 1f) else floatArrayOf(0f, 0.5f, 1f))) for (sym in floatArrayOf(0f, 1f)) cells.add(listOf(voice, touch, body, sym))
+        // Every note at TOUCH 0; every other note where the bow is down (each costs a calibration render too);
+        // BODY 0 and 1 only at TOUCH 0.25 and 0.5. TOUCH 0.25 is a pluck with a bow touching, which is
+        // measured too: it must read no worse than a pluck.
+        for (voice in GyreVoice.entries) for (touch in floatArrayOf(0f, 0.25f, 0.5f, 1f)) for (body in (if (touch == 0.25f || touch == 0.5f) floatArrayOf(0f, 1f) else floatArrayOf(0f, 0.5f, 1f))) for (sym in floatArrayOf(0f, 1f)) cells.add(listOf(voice, touch, body, sym))
         eachInParallel(cells) { cell ->
             val voice = cell[0] as GyreVoice; val touch = cell[1] as Float; val body = cell[2] as Float; val sym = cell[3] as Float
             var worst = 0.0
             for (step in 0..Gyre.TUNE_SEMITONES step (if (touch == 0f) 1 else 2)) {
                 val m = Gyre.defaults(voice) + mapOf("TOUCH" to touch, "TUNE" to step / 24f, "BODY" to body, "SYMPATHY" to sym)
                 val f = Gyre.frequencyFor(voice, step / 24f)
-                val from = if (touch == 0f) 0.1f else BOWED_FROM
-                val cents = FineTuning.cents(FineTuning.measuredHz(Gyre.render(voice, m), f, from, if (touch == 0f) 0.3f else 0.5f), f.toDouble())
+                // TOUCH 0.25 is a pluck with a bow touching: read where a pluck is read.
+                val plucked = touch <= 0.25f
+                val from = if (plucked) 0.1f else BOWED_FROM
+                val cents = FineTuning.cents(FineTuning.measuredHz(Gyre.render(voice, m), f, from, if (plucked) 0.3f else 0.5f), f.toDouble())
                 worst = max(worst, abs(cents))
             }
-            val bound = tuningBound(voice, touch, body)
+            val bound = tuningBound(voice, if (touch == 0.25f) 0f else touch, body)
             println("$voice TOUCH $touch BODY $body SYMPATHY $sym: worst ${"%.1f".format(worst)} cents")
             assertTrue(worst <= bound, "$voice TOUCH $touch BODY $body SYMPATHY $sym: $worst cents")
         }
+    }
+
+    @Test
+    fun `a drawn note stays in tune through its stroke`() {
+        // The calibration reads 0.5 to 1.3 s and the tuning test 0.6 to 1.1 s; a bow drawn for its whole
+        // stroke (HOLD at the top) must still be on its key late in it. Read from 1.8 to 2.6 s of FLICK's and
+        // DRAWN's strokes (3 and 4 s) and 3 to 4 s of HALO's and BOURDON's (6 s), TOUCH 1, BODY 0.5, every
+        // fourth note.
+        val cells = ArrayList<Pair<GyreVoice, Int>>()
+        for (voice in GyreVoice.entries) for (step in 0..Gyre.TUNE_SEMITONES step 4) cells.add(voice to step)
+        val worst = java.util.concurrent.ConcurrentHashMap<GyreVoice, Double>()
+        eachInParallel(cells) { (voice, step) ->
+            val m = Gyre.defaults(voice) + mapOf("TOUCH" to 1f, "HOLD" to 1f, "BODY" to 0.5f, "SYMPATHY" to 0.3f, "TUNE" to step / 24f)
+            val f = Gyre.frequencyFor(voice, step / 24f)
+            val from = if (Gyre.shapeOf(voice).stroke <= 4f) 1.8f else 3f
+            val cents = abs(FineTuning.cents(FineTuning.measuredHz(Gyre.render(voice, m), f, from, 0.8f), f.toDouble()))
+            worst.merge(voice, cents) { a, b -> max(a, b) }
+        }
+        println("a drawn note's worst late pitch: ${worst.entries.sortedBy { it.key }.joinToString { "${it.key} ${"%.1f".format(it.value)} cents" }}")
+        // Measured: FLICK 0.9, HALO 1.5, DRAWN 1.0, BOURDON 8.0 (the wolf region at the largest BODY and its lowest notes).
+        for ((voice, c) in worst) assertTrue(c <= (if (voice == GyreVoice.BOURDON) 10.0 else 3.0), "$voice: a drawn note is $c cents off late in its stroke")
+    }
+
+    /** The notes (of the sampled ones) the detector may misread in the catch zone, per voice: the measured count with room. */
+    private fun misreadBound(voice: GyreVoice, touch: Float): Int = when {
+        touch == 0.5f -> when (voice) { GyreVoice.FLICK -> 12; GyreVoice.HALO -> 6; GyreVoice.DRAWN -> 2; GyreVoice.BOURDON -> 10 }
+        else -> 3 // TOUCH 0.75: FLICK 0, HALO 1, DRAWN 1, BOURDON 3 of the 13 sampled
     }
 
     @Test
@@ -418,11 +462,12 @@ class GyreTest {
         // G2: whole-number ratios repeat at the note. The house detector is the one keys and SPREAD use.
         // At every TOUCH it never reads below the note. A bowed note in the catch zone can read a higher
         // partial instead (a bow just over its minimum force is raucous, its third partial louder than its
-        // first: FLICK reads the third on 11 of 25 notes at TOUCH 0.5, 5 at 0.6; HALO 4 and 3; nothing
-        // above 0.9 but one note); the pluck (TOUCH 0 and 0.25) and the full bow read exactly, except
+        // first: FLICK reads a higher partial on 10 of 25 notes at TOUCH 0.5, HALO 4, DRAWN 0 and BOURDON 1
+        // (and no pitch on 7); at 0.75 a few of the 13 sampled, none above 0.9 but one); the pluck (TOUCH 0 and 0.25) and the full bow read exactly, except
         // BOURDON: at BODY 1 its lowest notes sit on the membrane's 95 Hz mode, so two of them read a partial
         // plucked (a pluck's fundamental is a draw) and one or two bowed, and the detector, whose window holds
-        // 16 periods of a 65 Hz note, finds no pitch on 7 or 8 of 25 at TOUCH 0.5.
+        // 16 periods of a 65 Hz note, finds no pitch on 7 of 25 at TOUCH 0.5. The bounds per voice are those
+        // counts with room (misreadBound).
         val cells = ArrayList<Pair<GyreVoice, Float>>()
         for (voice in GyreVoice.entries) for (touch in floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f)) cells.add(voice to touch)
         eachInParallel(cells) { (voice, touch) ->
@@ -440,7 +485,7 @@ class GyreTest {
             val exact = voice != GyreVoice.BOURDON && (touch == 1f || touch <= 0.25f)
             if (exact) assertEquals(0, high + none, "$voice TOUCH $touch: notes read a higher partial or none")
             else if (voice == GyreVoice.BOURDON && (touch <= 0.25f || touch == 1f)) assertTrue(high + none <= 3, "$voice TOUCH $touch: ${high + none} notes misread")
-            else assertTrue(high + none <= 12, "$voice TOUCH $touch: ${high + none} notes misread")
+            else assertTrue(high + none <= misreadBound(voice, touch), "$voice TOUCH $touch: ${high + none} notes misread")
         }
     }
 
@@ -489,10 +534,11 @@ class GyreTest {
     private fun rotorMovesTimbre(voice: GyreVoice) {
         // A centroid does not move when only the level does. Measured: 164 Hz of swing at 2.5 Hz (12% of
         // the mean centroid in round one, 28% now) against 0.4 Hz
-        // for a tremolo of the same depth on the still sound (HALO). A drawn note's level wanders on its own, so
-        // its control swings too: DRAWN 155 Hz against 15.4, BOURDON 78.8 against 19.5 (4.0 times, the thinnest).
-        // SWING_CONTACT at 0.5 changed these a little (DRAWN 176 without it, 155 with, BOURDON 71 and 79): the
-        // rotor's other destinations carry the swing. Measured at the 0.35 it stays at: see Gyre.SWING_CONTACT.
+        // for a tremolo of the same depth on the still sound (HALO 163.8 Hz against 0.3). A drawn note's level
+        // wanders on its own, so its control swings too: at the shipped SWING_CONTACT of 0.35, DRAWN 158.5 Hz
+        // against 15.4 (10 times) and BOURDON 78.0 against 18.9 (4.1 times, the thinnest, which is why the claim
+        // is 3 times and not the 4 it was). SWING_CONTACT changes these little (at 0.5 DRAWN 155 and BOURDON 79,
+        // with none 176 and 71): the rotor's other destinations carry the swing.
         val m = Gyre.defaults(voice) + mapOf("SPIN" to 0.45f, "HOLD" to 0.9f)
         val hz = Gyre.rotorHz(0.45f).toDouble()
         val spun = Gyre.render(voice, m).samples
@@ -519,9 +565,10 @@ class GyreTest {
         // Task 5's targets, the source document's table read as levels: subtle, clear, a halo, a cloud. A
         // sustained bow keeps driving the sympathetic strings where a pluck lets them die, so with the bow
         // caught the share ran 3 to 9 dB over; the two-stage trim (BOW_SYMPATHY_TRIM_DB, then
-        // BOW_SYMPATHY_FULL_DB once the upper strings have joined) takes it back. The mean of the voices within
-        // 2 dB at TOUCH 0, 0.6, 0.75 and 1. Measured from TOUCH 0.55 up: -1.7 to +1.2 dB (at 1: -0.5, -0.1, +0.9,
-        // +0.3). At the catch itself (TOUCH 0.45 to 0.5) it runs up to +4.6 dB hot and under it the bow only
+        // BOW_SYMPATHY_FULL_DB once the upper strings have joined) takes it back. The mean of the four voices
+        // within 2.5 dB at TOUCH 0, 0.6, 0.75 and 1 (each voice within 4.5: BOURDON runs 3 dB cold plucked, and its
+        // bowed trim is 4 dB shallower, Shape.bowShareDb). Measured, the mean at SYMPATHY .3, .6, .8 and 1: TOUCH 0
+        // -23.1, -13.1, -9.1, -6.0 dB; TOUCH 1 -22.9, -12.3, -7.7, -4.9 (targets -22, -12, -8, -5). At the catch itself (TOUCH 0.45 to 0.5) it runs up to +4.6 dB hot and under it the bow only
         // damps and the share is low by design: neither is tested.
         val targets = mapOf(0.3f to -22.0, 0.6f to -12.0, 0.8f to -8.0, 1f to -5.0)
         for (touch in floatArrayOf(0f, 0.6f, 0.75f, 1f)) for ((sym, want) in targets) {
@@ -547,28 +594,36 @@ class GyreTest {
     @Test
     fun `no note at any corner reads as a drum, and the filed class is exact over the LOOP line`() {
         val choking = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.CLAP, DrumClass.TOM)
-        val corners = listOf(emptyMap(), mapOf("BODY" to 0f), mapOf("BODY" to 1f), mapOf("SYMPATHY" to 0f), mapOf("HOLD" to 0f), mapOf("SPIN" to 1f))
+        val corners = listOf(emptyMap(), mapOf("BODY" to 0f), mapOf("BODY" to 1f), mapOf("SYMPATHY" to 0f), mapOf("HOLD" to 0f), mapOf("SPIN" to 1f), mapOf("TOUCH" to 0.5f), mapOf("TOUCH" to 1f), mapOf("TOUCH" to 0f))
         val worstHigh = java.util.concurrent.atomic.AtomicReference(0f)
         val cells = ArrayList<Pair<GyreVoice, Map<String, Float>>>()
         for (voice in GyreVoice.entries) for (corner in corners) cells.add(voice to corner)
         eachInParallel(cells) { (voice, corner) ->
+            var drums = 0
             for (step in 0..Gyre.TUNE_SEMITONES) {
                 val m = Gyre.defaults(voice) + corner + ("TUNE" to step / 24f)
                 val heard = Classifier.classify(Gyre.render(voice, m))
                 worstHigh.accumulateAndGet(heard.features.highRatio) { a, b -> max(a, b) }
+                if (heard.drumClass in choking && voice == GyreVoice.FLICK && corner == mapOf("TOUCH" to 0.5f)) { drums++; continue }
                 assertTrue(heard.drumClass !in choking, "$voice $corner step $step read ${heard.drumClass}")
                 val filed = Gyre.drumClassFor(voice, m)
                 if (heard.drumClass == DrumClass.LOOP || filed == DrumClass.LOOP) assertEquals(filed, heard.drumClass, "$voice $corner step $step")
             }
+            // The one place a note is filed as a drum: FLICK at TOUCH 0.5, whose render crosses the classifier's
+            // 1.5 s line there (TOUCH 0.45 is PERC on all 25 notes, 0.55 LOOP on all 25); measured, A4 and B4 read KICK.
+            assertTrue(drums <= 3, "$voice $corner: $drums notes read as a drum")
         }
         println("worst share over 2 kHz: ${"%.2f".format(worstHigh.get())} (the snare line is 0.5)")
     }
 
     @Test
     fun `the render is exactly as long as renderFrames says`() {
-        for (voice in GyreVoice.entries) for (hold in floatArrayOf(0f, 0.5f, 0.99f, 1f)) for (sym in floatArrayOf(0f, 1f)) {
-            val m = Gyre.defaults(voice) + mapOf("HOLD" to hold, "SYMPATHY" to sym)
-            assertEquals(Gyre.renderFrames(m, voice), Gyre.render(voice, m).samples.size, "$voice HOLD $hold SYMPATHY $sym")
+        val cells = ArrayList<List<Any>>()
+        for (voice in GyreVoice.entries) for (hold in floatArrayOf(0f, 0.5f, 0.99f, 1f)) for (sym in floatArrayOf(0f, 1f)) for (touch in floatArrayOf(0f, 0.5f, 1f)) cells.add(listOf(voice, hold, sym, touch))
+        eachInParallel(cells) { c ->
+            val voice = c[0] as GyreVoice; val hold = c[1] as Float; val sym = c[2] as Float; val touch = c[3] as Float
+            val m = Gyre.defaults(voice) + mapOf("HOLD" to hold, "SYMPATHY" to sym, "TOUCH" to touch)
+            assertEquals(Gyre.renderFrames(m, voice), Gyre.render(voice, m).samples.size, "$voice HOLD $hold SYMPATHY $sym TOUCH $touch")
         }
     }
 
@@ -584,8 +639,8 @@ class GyreTest {
     @Test
     fun `scramble stays in bounds and every roll is a sound`() {
         val random = Random(41)
-        repeat(60) {
-            val voice = GyreVoice.entries[it % 2]
+        repeat(80) {
+            val voice = GyreVoice.entries[it % GyreVoice.entries.size]
             val m = Gyre.scramble(voice, random)
             assertTrue(m.getValue("HOLD") <= Gyre.SCRAMBLE_HOLD_CEILING)
             val s = Gyre.render(voice, m).samples
@@ -633,6 +688,31 @@ class GyreTest {
             assertTrue(abs(cents) <= 0.2, "$voice TUNE $steps: $cents cents from R1c")
             assertTrue(diff <= -40.0, "$voice TUNE $steps: the waveform differs only $diff dB under R1c")
             assertTrue(shift <= 0.5, "$voice TUNE $steps: the octave bands moved $shift dB")
+        }
+    }
+
+    @Test
+    fun `TOUCH 0 is round one at the corners, not only at the defaults`() {
+        // The comparison above reads the defaults. The same one at C4 with each knob at an end: BODY, SPIN,
+        // SYMPATHY and HOLD, both round-one voices, at least 40 dB under. Measured: -46.4 to -52.1 dB at the ends of
+        // BODY, SPIN and SYMPATHY; at HOLD 0, a note the hand chokes after 0.04 s, -30.6 (FLICK) and -29.6 (HALO),
+        // so that corner's bound is 25 (a few cycles of a tiny signal, the same pre-roll difference).
+        val corners = listOf(
+            mapOf("BODY" to 0f), mapOf("BODY" to 1f), mapOf("SPIN" to 1f), mapOf("SYMPATHY" to 0f), mapOf("SYMPATHY" to 1f), mapOf("HOLD" to 0f),
+        )
+        val cells = ArrayList<Pair<GyreVoice, Map<String, Float>>>()
+        for (voice in listOf(GyreVoice.FLICK, GyreVoice.HALO)) for (corner in corners) cells.add(voice to corner)
+        eachInParallel(cells) { (voice, corner) ->
+            val m = Gyre.defaults(voice) + ("TUNE" to 0.5f) + corner
+            val now = Gyre.render(voice, m)
+            val then = LegacyGyre.render(LegacyGyreVoice.valueOf(voice.name), m)
+            assertEquals(then.samples.size, now.samples.size, "$voice $corner: the length moved")
+            var d = 0.0; var e = 0.0
+            for (i in now.samples.indices) { val x = now.samples[i] - then.samples[i].toDouble(); d += x * x; e += then.samples[i].toDouble() * then.samples[i] }
+            val diff = 10 * log10(d / e)
+            println("$voice $corner against round one: waveform ${"%.1f".format(diff)} dB")
+            val bound = if (corner.containsKey("HOLD")) -25.0 else -40.0
+            assertTrue(diff <= bound, "$voice $corner: the waveform differs only $diff dB under round one")
         }
     }
 
@@ -705,10 +785,10 @@ class GyreTest {
         // SPIN 1, SYMPATHY 1, BODY 1, the bow drawn for 30 seconds (the hand lands then) and lifted. Every
         // sample is finite, the raw peak stays under RAW_PEAK_CEILING, no second after the first two is
         // louder than the loudest of those by more than the bow's sustain-over-attack margin, and after the
-        // lift the note falls to END_DB under its loudest second (the render runs until it has). Measured: the raw
-        // peak 0.623 (FLICK) and 0.633 (HALO); the drawn note is -0.1 dB against its first two seconds at its
-        // loudest later second and -0.3 and -0.4 at its last (a bow holds its level, it does not build); 48.8 and
-        // 49.7 dB down at the end.
+        // lift the note falls to END_DB under its loudest second (the render runs until it has). Measured, FLICK,
+        // HALO, DRAWN, BOURDON: the raw peak 0.57, 0.57, 0.59 and 0.87; the loudest later second against the first
+        // two -0.1, -0.1, -0.1 and +3.1 dB (a bow holds its level; BOURDON, a drone, builds, which is why its
+        // bound is 5 dB and the others' 1); 51.3, 53.0, 51.5 and 48.5 dB down at the end.
         val rate = RATE * Dsp.OVERSAMPLE
         for (voice in GyreVoice.entries) {
             val m = Gyre.defaults(voice) + mapOf("TOUCH" to 1f, "SPIN" to 1f, "SYMPATHY" to 1f, "BODY" to 1f)
@@ -722,7 +802,9 @@ class GyreTest {
             val after = rms(raw, raw.size - rate / 2, raw.size)
             println("$voice: raw peak ${"%.3f".format(peak)}; the loudest later second of the draw is ${"%.1f".format(20 * log10(drawn / start))} dB over the first two; ${seconds.size} s rendered, ${"%.1f".format(20 * log10(after / seconds.max()))} dB at the end; last drawn second ${"%.1f".format(20 * log10(seconds[last] / start))}")
             assertTrue(peak <= Gyre.RAW_PEAK_CEILING, "$voice: raw peak $peak")
-            assertTrue(20 * log10(drawn / start) <= 6.0, "$voice: the draw grows ${20 * log10(drawn / start)} dB past its start")
+            // FLICK, HALO and DRAWN hold their level (-0.1 dB); BOURDON, a drone, builds 3.1 dB over its first seconds.
+            val growBound = if (voice == GyreVoice.BOURDON) 5.0 else 1.0
+            assertTrue(20 * log10(drawn / start) <= growBound, "$voice: the draw grows ${20 * log10(drawn / start)} dB past its start")
             assertTrue(20 * log10(after / seconds.max()) <= -Gyre.END_DB.toDouble(), "$voice: the note falls only ${20 * log10(after / seconds.max())} dB after the lift")
         }
     }

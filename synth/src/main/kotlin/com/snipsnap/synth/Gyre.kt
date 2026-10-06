@@ -239,11 +239,14 @@ object Gyre {
 
     /**
      * TOUCH: the bow lowered onto the strings. `bow = sin(TOUCH pi/2)` and the pluck is `cos(TOUCH
-     * pi/2)` of its burst (the document's section 6). The bow's contact is `bow^CONTACT_CURVE`:
-     * contact, not speed, carries the morph, and the cube keeps every 0.1 step of TOUCH within
-     * 0.34 of the end-to-end colour distance (Phase 0, finding 3: a linear contact jumped at its
-     * first steps because the bow's push is nonlinear in it). The bow draws at its full speed at
-     * any TOUCH above 0, up to a ramp of [BOW_ATTACK_SECONDS]. Shape.
+     * pi/2)` of its burst (the document's section 6). The bow's contact is `bow^CONTACT_CURVE`
+     * (the fourth power): contact, not speed, carries the morph (Phase 0, finding 3: a linear contact
+     * jumped at its first steps because the bow's push is nonlinear in it). The plan's cube, with its
+     * bow speed of 0.13, left a bow under its catch loading the string without sustaining it (the
+     * pluck's fundamental 30 to 36 dB down before the catch); the fourth power at speed 0.3 catches at
+     * TOUCH 0.30 to 0.45 and keeps the worst 0.1 step of colour at 0.33 to 0.38 of the ends' distance
+     * on FLICK and HALO (DRAWN 0.47, BOURDON 0.61 at its catch: see `GyreTest`). The bow draws at its
+     * full speed at any TOUCH above 0, up to a ramp of [BOW_ATTACK_SECONDS]. Shape.
      */
     const val CONTACT_CURVE = 4f
     const val BOW_ATTACK_SECONDS = 0.08f
@@ -254,21 +257,23 @@ object Gyre {
      * SPIN 1) reaches the mode's whole gain: a raw peak of 3.45, where the pluck's worst is 0.985 (and
      * 4.9 once [calibratedTrim] has tuned that note exactly onto the mode). The
      * output is trimmed by this much along a smoothstep of the contact from [BOW_OUT_FROM] to
-     * [BOW_OUT_TO], so a drawn note's headroom is a pluck's. Slowing the bow for it
-     * instead moved the catch to TOUCH 0.7 and still left the corners over: the speed is the bow's
-     * physics. Inaudible: `finish` scales every render to the same loudness (linearly, and only then
-     * limits the peak). Shape.
+     * [BOW_OUT_TO] (TOUCH 0.25 to 0.53), so a drawn note's headroom is a pluck's: the worst raw
+     * peak over every corner is 0.998 (HALO, TOUCH 1) against [RAW_PEAK_CEILING]'s 1.25. Slowing the
+     * bow for it instead moved the catch to TOUCH 0.7 and still left the corners over: the speed is
+     * the bow's physics. Inaudible: `finish` scales every render to the same loudness (linearly, and
+     * only then limits the peak). Shape.
      */
     const val BOW_OUT_TRIM_DB = -15f
 
-    /** The trim starts well before the bow catches (it is only a scale, and `finish` levels every render alike): measured, the peak at the catch itself was the worst, 1.37 untrimmed-in-time. */
+    /** The trim starts before the bow catches (it is only a scale, and `finish` levels every render alike): measured, with it starting at the catch the peak there was the worst, 1.37. */
     const val BOW_OUT_FROM = 0.02f
     const val BOW_OUT_TO = 0.3f
 
     /**
-     * The contact over which the bow takes hold, for both trims: nothing under [BOW_CATCH_FROM], all of
-     * it from [BOW_CATCH_TO] (the bow catches at TOUCH 0.55 at speed 0.13, contact 0.44, and from there
-     * the note is a drawn one). Shape.
+     * The contact over which the bow has taken hold, for the sympathy trim and HOLD's stroke: nothing
+     * under [BOW_CATCH_FROM], all of it from [BOW_CATCH_TO], a smoothstep between (TOUCH 0.43 to
+     * 0.585). The bow itself catches a little earlier (TOUCH 0.30 to 0.45 at speed 0.3), so by the time
+     * a note is a drawn one this has begun to count it as one. Shape.
      */
     const val BOW_CATCH_FROM = 0.15f
     const val BOW_CATCH_TO = 0.4f
@@ -276,14 +281,18 @@ object Gyre {
     /**
      * A bowed string is a nonlinear oscillator that its neighbours pull on through the bridge, and
      * the bridge's phase compensation ([bridgeTuned]) is for a string ringing free: a drawn note came
-     * out 7 to 16 cents off at BODY 0.5 to 1 (worst over the notes), where a pluck is within 2.5. No
+     * out 7 to 18 cents off at BODY 0.5 to 1 (worst over the notes), where a pluck is within 2.5. No
      * smooth correction fits it (the scatter runs note to note with the membrane's modes), so a
      * bowed note is measured and corrected: one calibration render with the bow drawn, its sustained
      * pitch read against its key between [CALIBRATE_FROM_SECONDS] and [CALIBRATE_TO_SECONDS], and
-     * every string retuned by the ratio for the render itself. Measured, over every note, voice,
-     * BODY and SYMPATHY: the worst cell fell from 7 to 18 cents to at most 3.4 at TOUCH 1, 5.8 at TOUCH 0.75
-     * and 9.6 at TOUCH 0.5 (the bow only just caught: raucous, its pitch wanders). A second pass gained little
-     * (mean worst 2.7 cents against 2.9, max 7.2) for twice the cost. Offline-only, as everything here is.
+     * every string retuned by the ratio for the render itself. Measured, the worst cell fell from 7 to
+     * 18 cents to, at TOUCH 1, 4.2 (FLICK), 3.8 (HALO) and 4.6 (DRAWN), and at TOUCH 0.5 (the bow only just
+     * caught: raucous, its pitch wanders) 9.8, 4.5 and 7.2; BOURDON's lowest notes at BODY 1 sit on a
+     * membrane mode and read 15.3 (24.4 at D2 and F2 in a full scan). A second pass gained little (mean
+     * worst 2.7 cents against 2.9, max 7.2) for twice the cost. It runs at any TOUCH over 0, so a
+     * note below the catch is measured too (a decaying pluck, which made DRAWN's plucked cells worse:
+     * see [Shape.measured]; `GyreTest` holds TOUCH 0.25 within the same bound as a pluck). Offline-only,
+     * as everything here is.
      */
     const val CALIBRATE_FROM_SECONDS = 0.5f
     const val CALIBRATE_TO_SECONDS = 1.3f
@@ -317,8 +326,9 @@ object Gyre {
      * A bow keeps driving the sympathetic strings where a pluck lets them die, so with the bow caught
      * their share runs over the targets round one fitted to a pluck (measured at TOUCH 0.75 to 1: +3 to
      * +9 dB, FLICK and HALO, at SYMPATHY 0.3 to 1). The bank's gain is trimmed by this much as the bow
-     * takes hold ([bowHold]). Below the catch the bow only damps and the share is already low (TOUCH
-     * 0.5: 12 to 20 dB under), so there it is left alone. Shape.
+     * takes hold ([bowHold]). Where the bow has not caught the trim is not applied, and the share there
+     * is low (FLICK at TOUCH 0.3: 7 to 10 dB under its targets); at the catch itself, TOUCH 0.45 to 0.5,
+     * it still runs up to 4.6 dB hot. Shape.
      */
     const val BOW_SYMPATHY_TRIM_DB = -3.5f
 
@@ -326,9 +336,10 @@ object Gyre {
      * The sympathy trim's second stage: the strings catch one after another (each string's bow speed is its
      * level's share of the voice's, so the upper strings need more contact), and the share is cold just
      * after the first catch and hot once they have all joined. A further step of this much, along a
-     * smoothstep of the contact from [BOW_FULL_FROM] to [BOW_FULL_TO] (TOUCH 0.64 to 0.7), brings the
-     * share within 2 dB of its target from TOUCH 0.7 up (measured over both voices at SYMPATHY 0.3 to 1:
-     * -1.7 to +0.9 dB), and within 1.1 dB at 0.55 to 0.65. Shape.
+     * smoothstep of the contact from [BOW_FULL_FROM] to [BOW_FULL_TO] (TOUCH 0.64 to 0.71), brings the
+     * share within 2 dB of its target from TOUCH 0.7 up (measured over FLICK and HALO at SYMPATHY 0.3
+     * to 1: -1.7 to +0.9 dB), and within 1.1 dB at 0.55 to 0.65 (the four-voice figures are in `GyreTest`:
+     * each voice within 4.5 dB, the mean within 2.5). Shape.
      */
     const val BOW_SYMPATHY_FULL_DB = -5f
     const val BOW_FULL_FROM = 0.5f
@@ -396,14 +407,17 @@ object Gyre {
 
     /**
      * A voice: its range, how long and bright its strings ring, how hard they are plucked, how
-     * long its sympathetic strings ring after the damper, and its macro defaults (HOLD's sit near
-     * the open end, where the voices were approved: the hand lands about 38 dB down). Tension is
+     * long its sympathetic strings ring after the damper, and its macro defaults (FLICK's and HALO's
+     * HOLD sit near the open end, where the voices were approved: the hand lands about 38 dB down;
+     * DRAWN's and BOURDON's .95 is near the top of the stroke, where a bow is still sounding when the
+     * hand lands, so no such landing level was measured for them). Tension is
      * part of the voice (decision 2): brighter, faster strings are a tighter instrument. The bow is
      * part of it too: [Shape.touch] is where TOUCH starts (0 for the two plucked voices, so a
      * round-one recipe stays a pluck), [Shape.bowSpeed] is how fast it is drawn and [Shape.stroke] how
      * long it is drawn at HOLD's top. [Shape.measured] is whether the note is measured onto its key at
-     * every TOUCH ([calibratedTrim]) and not only when bowed: false for the two round-one voices, whose
-     * TOUCH 0 is round one's bit for bit, and for DRAWN (plucked, it is within 2.9 cents on its own and the
+     * every TOUCH ([calibratedTrim]) and not only when bowed: false for the two round-one voices, which
+     * are never measured at TOUCH 0 so that it stays within the bounds `GyreTest` holds against round
+     * one (they are not bit for bit: the strings are bows now), and for DRAWN (plucked, it is within 2.9 cents on its own and the
      * measurement of a decaying pluck made some cells worse, 5.9), true for BOURDON (plucked, 10.7 cents at
      * BODY 1 uncorrected, 7.8 to 10.4 corrected: its lowest notes sit on a membrane mode). [Shape.bowShareDb] moves the sympathetic
      * trim for a bowed voice whose strings are not FLICK's and HALO's (0 for them).
@@ -485,7 +499,7 @@ object Gyre {
     /** How far the bow is lowered: 0 at TOUCH 0 (lifted), 1 at TOUCH 1. */
     internal fun bowAmount(touch: Float): Float = sin(touch.coerceIn(0f, 1f) * PI / 2).toFloat()
 
-    /** The bow's contact on the string, as the Bow takes it: [bowAmount] cubed ([CONTACT_CURVE]). */
+    /** The bow's contact on the string, as the Bow takes it: [bowAmount] raised to [CONTACT_CURVE]. */
     internal fun contactFor(touch: Float): Float = bowAmount(touch).pow(CONTACT_CURVE)
 
     /** How far the bow has taken hold at [touch]: 0 below [BOW_CATCH_FROM] of contact, 1 from [BOW_CATCH_TO], a smoothstep between. */
