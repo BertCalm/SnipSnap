@@ -107,6 +107,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.thaw() },
         Starter(
+            "suture", "SUTURE",
+            "Bronze vessels and sliding cords in C minor pentatonic. Open bloom closes into a seam murmur.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.suture() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

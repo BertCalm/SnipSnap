@@ -157,6 +157,9 @@ import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
+import com.snipsnap.synth.Suture
+import com.snipsnap.synth.SuturePatch
+import com.snipsnap.synth.SutureVoice
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
@@ -1041,6 +1044,7 @@ fun SynthScreen(
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
@@ -1872,7 +1876,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, THAW;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, THAW, SUTURE;
 
     /** Advance through the registered engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1893,6 +1897,7 @@ private enum class Engine {
         FORK -> ForkVoice.entries
         FLOTILLA -> FlotillaVoice.entries
         THAW -> ThawVoice.entries
+        SUTURE -> SutureVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1911,6 +1916,7 @@ private enum class Engine {
         FORK -> Fork.macrosFor(voice as ForkVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
+        SUTURE -> Suture.macrosFor(voice as SutureVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1929,6 +1935,7 @@ private enum class Engine {
         FORK -> Fork.defaults(voice as ForkVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
+        SUTURE -> Suture.defaults(voice as SutureVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1947,6 +1954,7 @@ private enum class Engine {
         FORK -> Fork.scramble(voice as ForkVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
+        SUTURE -> Suture.scramble(voice as SutureVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1970,6 +1978,7 @@ private enum class Engine {
         FORK -> Fork.render(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
+        SUTURE -> Suture.render(voice as SutureVoice, macros)
     }
 
     /**
@@ -1994,6 +2003,7 @@ private enum class Engine {
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
+        SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2012,6 +2022,7 @@ private enum class Engine {
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
+        SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

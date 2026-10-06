@@ -132,3 +132,7 @@ testkit/tremor-audition/
 testkit/thaw-audition/
 testkit/thaw-first-listen/
 testkit/SnipSnap Thaw Kit/
+
+# SUTURE listening clips, mechanical traces and local listening page.
+testkit/suture-audition/
+testkit/suture-first-listen/

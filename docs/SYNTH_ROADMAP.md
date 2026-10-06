@@ -295,6 +295,18 @@ and verification notes are in `docs/THAW.md`. **Awaiting the owner's sonic
 verdict.** The normalized material constants and preset names remain
 provisional.
 
+SUTURE follows as S28, ported from [the supplied engineering specification](SUTURE_SPEC.md).
+BLOOM, THREAD, CLOSE, MURMUR, STRAIN and SHELL share a pitched bronze vessel,
+elastic cords, wooden eyelets, bounded stitch closure, aperture-dependent
+cavity loading and dissipative seam contacts. Its controls are TUNE (C3–C5),
+GAP, STITCH, CORD, SEAM, CAVITY and HOLD. The port includes patch/velocity
+dispatch, twelve presets, `SynthKits.suture()`, a FRESH TAPE starter, the
+phone picker and `generateSutureAudition`. HOLD exports settled powered
+material because the pad API has no attack-plus-loop-region field.
+Implementation and validation notes are in [SUTURE.md](SUTURE.md).
+**Awaiting the owner's sonic verdict.** The reduced mechanical constants,
+voice shapes and release names remain provisional.
+
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
 

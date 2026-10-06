@@ -90,6 +90,10 @@ object Presets {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
         }
+        SuturePatch.ENGINE -> {
+            val v = SutureVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            SuturePresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -120,5 +124,5 @@ object Presets {
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() +
             AerostatPresets.all() +
-            TremorPresets.all() + ThawPresets.all()
+            TremorPresets.all() + ThawPresets.all() + SuturePresets.all()
 }

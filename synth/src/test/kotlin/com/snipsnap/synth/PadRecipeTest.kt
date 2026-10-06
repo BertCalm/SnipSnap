@@ -42,6 +42,7 @@ class PadRecipeTest {
         FlotillaPatch("Wake Test", FlotillaVoice.RIPPLE, mapOf("SURFACE" to 0.4f), midi = 64),
         TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
         ThawPatch("Ice Test", ThawVoice.BRITTLE, mapOf("HEAT" to 0.4f)),
+        SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
     )
 
     @Test
