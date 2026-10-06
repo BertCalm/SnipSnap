@@ -2136,6 +2136,168 @@ class ConventionTest {
                 "differently under the same thumb.",
         )
     }
+
+    // ---- Law: the MUTATE card's honest doors (the redesign's round M1) ----
+
+    /**
+     * Round M1 of the MUTATE redesign
+     * (`docs/superpowers/specs/2026-10-04-mutate-card-redesign-design.md`,
+     * "Honest refusals" and "What changes in MutateCard"): no silent middle.
+     *
+     * HEAR and MUTATE used to return silently with no partner
+     * (`val who = partner ?: return`), behind buttons greyed with no reason
+     * given; the house rule is "dimmed, not disabled; the toast explains".
+     * Every door now asks `MutateSheet.refusalBefore` before it launches
+     * anything and toasts the refusal: HEAR and KEEP need a partner, DRIFT
+     * and ROULETTE pick their own. A pad's layers are no longer the door's
+     * own check with GHOSTS' words (`Copy.MUTATE_NEEDS_ONE`, which stays
+     * for DE-SAMPLE); the typed refusal names SOFT HITS. UNDO asks
+     * `MutateSheet.undoRefusal` before it commits, so a dimmed UNDO says
+     * why instead of doing nothing.
+     */
+    @Test
+    fun `law - MUTATE's doors refuse in words before they launch, never with a silent return`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        val doors = listOf(
+            Triple("fun onHear() {", "scope.launch", true),
+            Triple("fun onMutate() {", "appScope.launch", true),
+            Triple("fun onRoulette() {", "scope.launch", false),
+            Triple("fun onDrift() {", "appScope.launch", false),
+        )
+        for ((door, launcher, needsPartner) in doors) {
+            val body = codeOnly(blockAfter(src, door))
+            assertFalse(
+                Regex("""partner\s*\?:\s*return""").containsMatchIn(body),
+                "`$door` returns silently with no partner (`partner ?: return`). Ask MutateSheet.refusalBefore and " +
+                    "toast its line: PICK A PARTNER FIRST.",
+            )
+            assertFalse(
+                "Copy.MUTATE_NEEDS_ONE" in body,
+                "`$door` still says GHOSTS for a layered pad. MutateSheet.refusalBefore names SOFT HITS, the chip " +
+                    "the pad sheet prints; MUTATE_NEEDS_ONE stays for DE-SAMPLE alone.",
+            )
+            val check = Regex("""MutateSheet\.refusalBefore\([^)]*needsPartner\s*=\s*$needsPartner\s*\)""").find(body)
+            val launch = body.indexOf(launcher)
+            assertTrue(launch >= 0, "expected `$door` to start its work with `$launcher`")
+            assertTrue(
+                check != null && check.range.first < launch,
+                "`$door` does not ask `MutateSheet.refusalBefore(…, needsPartner = $needsPartner)` before `$launcher`, " +
+                    "so a layered or chained pad (or a missing partner) reaches the work and fails in the wrong words.",
+            )
+        }
+        val undo = codeOnly(blockAfter(src, "fun onUnmutate() {"))
+        val ask = undo.indexOf("MutateSheet.undoRefusal(")
+        val commit = undo.indexOf("commitPadEditNow(")
+        assertTrue(
+            ask >= 0 && commit > ask && "onToast(nothing)" in undo,
+            "UNDO commits without asking `MutateSheet.undoRefusal` first and toasting it, so a dimmed UNDO with " +
+                "nothing to undo either does nothing or says the original is back when it is not.",
+        )
+    }
+
+    /**
+     * ROULETTE and DRIFT used to turn every IllegalArgumentException into
+     * "the crate is empty": a chained pad, a shelf of doubles and a real
+     * failure all read the same, wrong line. They, and HEAR and KEEP, now
+     * read `MutateSheet.refusalOf`, which knows ROULETTE's two typed kinds
+     * and a gone partner, and every other exception is a real failure that
+     * says `<ACTION> FAILED. TRY AGAIN.` with the screen's word for the
+     * action: KEEP, not the old MUTATE.
+     */
+    @Test
+    fun `law - MUTATE's doors read the refusal's type, and the empty-shelf guess is gone`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        assertFalse(
+            Regex("""IllegalArgumentException\)\s*onToast\(Copy\.CRATE_EMPTY\)""").containsMatchIn(codeOnly(src)),
+            "a door still maps every IllegalArgumentException to CRATE_EMPTY, so a chained pad or a shelf of " +
+                "doubles reads as an empty shelf. Map the exception with MutateSheet.refusalOf.",
+        )
+        for ((door, word) in listOf(
+            "fun onHear() {" to "HEAR",
+            "fun onMutate() {" to "KEEP",
+            "fun onRoulette() {" to "ROULETTE",
+            "fun onDrift() {" to "DRIFT",
+        )) {
+            val body = codeOnly(blockAfter(src, door))
+            val catchAt = body.indexOf("catch (e: Exception)")
+            assertTrue(catchAt >= 0, "expected `$door` to catch its failure")
+            val handler = body.substring(catchAt)
+            assertTrue(
+                "MutateSheet.refusalOf(e)" in handler,
+                "`$door` does not read MutateSheet.refusalOf in its catch, so a gone partner or ROULETTE's typed " +
+                    "refusal says TRY AGAIN, which never helps.",
+            )
+            assertTrue(
+                "failure(\"$word\", e)" in handler,
+                "`$door`'s real failure does not say `$word`, the word its button prints.",
+            )
+        }
+    }
+
+    /**
+     * After KEEP and DRIFT write, the result plays, through the house's
+     * own idiom for a write that swaps the model: the write sets
+     * `auditionOnRefresh` and the effect plays the new file once the fresh
+     * model has decoded it, as SMEAR does (`if (applied)
+     * auditionOnRefresh = true`). Before the redesign both wrote and then
+     * left the player in silence, hunting for HIT.
+     */
+    @Test
+    fun `law - KEEP and DRIFT play what they wrote`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for ((door, flag) in listOf("fun onMutate() {" to """applied""", "fun onDrift() {" to """drifted\s*!=\s*null""")) {
+            val body = codeOnly(blockAfter(src, door))
+            val set = Regex("""if\s*\(\s*$flag\s*\)\s*auditionOnRefresh\s*=\s*true""").find(body)
+            val swap = body.indexOf("model = fresh")
+            assertTrue(swap >= 0, "expected `$door` to swap `model = fresh` after its write")
+            assertTrue(
+                set != null && set.range.first < swap,
+                "`$door` writes the pad and plays nothing: set `auditionOnRefresh = true` when it wrote, before " +
+                    "`model = fresh`, as applySmear does.",
+            )
+        }
+    }
+
+    /**
+     * The toasts say what the write did: a STACK flip, as the CLI reports
+     * it, and a length change worth saying. The length is measured where
+     * the write happens, under the writers' lock, before and after the
+     * call (`MutateSheet.lengthMs`), so `apply`'s and `drift`'s signatures
+     * stay as the BECOME laws above read them. HEAR measures the render
+     * against the pad.
+     */
+    @Test
+    fun `law - the keep and DRIFT toasts carry the flip and the length the write measured`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for ((door, call) in listOf("fun onMutate() {" to "MutateSheet.apply(", "fun onDrift() {" to "MutateSheet.drift(")) {
+            val body = codeOnly(blockAfter(src, door))
+            val write = body.indexOf(call)
+            val first = body.indexOf("MutateSheet.lengthMs(f, slot)")
+            val second = body.indexOf("MutateSheet.lengthMs(f, slot)", first + 1)
+            assertTrue(
+                write >= 0 && first in 0 until write && second > write,
+                "`$door` does not read the pad's length inside its write, before and after `$call`, so its toast " +
+                    "cannot say how the length changed.",
+            )
+            assertTrue(
+                "Copy.lengthNote(beforeMs, afterMs)" in body,
+                "`$door`'s toast does not carry Copy.lengthNote(beforeMs, afterMs).",
+            )
+        }
+        val keep = normalizeSpan(codeOnly(blockAfter(src, "fun onMutate() {")))
+        assertTrue(
+            "flipped = MutateSheet.apply(f, slot, who, move, fraction, becomeFraction).flipped.isNotEmpty()" in keep &&
+                "flipped = if (flipped) listOf(name) else emptyList()" in keep,
+            "KEEP's toast does not report the flip the write made (Mutate.Outcome.flipped), which the CLI reports.",
+        )
+        val hear = codeOnly(blockAfter(src, "fun onHear() {"))
+        assertTrue(
+            Regex("""Copy\.lengthNote\(\s*padMs\s*,\s*MutateSheet\.lengthMs\(\s*rendered\s*\)\s*\)""").containsMatchIn(hear),
+            "HEAR does not compare the render's length with the pad's, so a move that changes the length plays " +
+                "without saying so.",
+        )
+    }
+
     /**
      * J22. `TapeDeckViewTest` proves the carrier carries; this proves TAPE
      * still uses it.

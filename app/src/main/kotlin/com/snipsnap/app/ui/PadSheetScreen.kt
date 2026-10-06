@@ -1251,19 +1251,23 @@ fun PadSheetScreen(
     var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }
 
     /**
-     * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
-     * case gets its own line first because it's the one a thumb causes.
+     * KEEP, the card's commit (it read `MUTATE ▸` before the redesign). The
+     * card checks the pad before anything launches
+     * ([MutateSheet.refusalBefore]): a layered pad, a chained one, then no
+     * partner, each said in its own words, never a silent return. After the
+     * write the result plays ([auditionOnRefresh], as SMEAR's does), and
+     * the toast names a STACK flip and a length change worth saying.
      *
-     * Runs against a FRESH model via [withFreshKit] — the pre-lock GHOSTS
-     * refusal above is a cheap read (no DSP), so it's simply re-checked
-     * against the fresh pad inside the lock too, alongside the sampleFile
-     * identity check every converted sibling uses. [MutateSheet.apply]
-     * itself is the DSP; there's nothing to hoist ahead of the lock the way
-     * [onOutside]'s mic capture is — the transform needs the model it's
-     * writing into. [model] is swapped to the fresh instance on success, so
-     * (like [applySmear]/[applyTreatment]) this does not audition the
-     * result immediately — see [applySmear]'s KDoc for why that write would
-     * target an already-orphaned `remember(model)` state slot.
+     * Runs against a FRESH model via [withFreshKit] — the pre-check above is
+     * a cheap read (no DSP), and its layers half is re-checked against the
+     * fresh pad inside the lock too, alongside the sampleFile identity check
+     * every converted sibling uses. [MutateSheet.apply] itself is the DSP;
+     * there's nothing to hoist ahead of the lock the way [onOutside]'s mic
+     * capture is — the transform needs the model it's writing into. [model]
+     * is swapped to the fresh instance on success, and the play rides
+     * [auditionOnRefresh], which plays the new file once the fresh model has
+     * decoded it: never an immediate audition, which would target an
+     * already-orphaned `remember(model)` state slot (see [applySmear]'s KDoc).
      *
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc. `MutateSheet.apply` is a
@@ -1273,10 +1277,11 @@ fun PadSheetScreen(
     fun onMutate() {
         if (busy) return
         val m = model ?: return
-        val who = partner ?: return
         val p = m.kit.pad(slot) ?: return
-        if (p.velocityLayers.isNotEmpty()) {
-            onToast(Copy.MUTATE_NEEDS_ONE)
+        val who = partner
+        val refused = MutateSheet.refusalBefore(p, who, needsPartner = true)
+        if (refused != null || who == null) {
+            onToast((refused ?: MutateSheet.Refusal.NoPartner).line)
             return
         }
         val padName = p.displayName
@@ -1290,25 +1295,42 @@ fun PadSheetScreen(
             busy = true
             try {
                 var applied = false
+                var flipped = false
+                var beforeMs = 0
+                var afterMs = 0
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
-                        MutateSheet.apply(f, slot, who, move, fraction, becomeFraction)
+                        beforeMs = MutateSheet.lengthMs(f, slot)
+                        flipped = MutateSheet.apply(f, slot, who, move, fraction, becomeFraction).flipped.isNotEmpty()
+                        afterMs = MutateSheet.lengthMs(f, slot)
                         applied = true
                     }
                 }
+                if (applied) auditionOnRefresh = true
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
                 if (applied) {
-                    onToast(Copy.mutated(mutateMode, padName, MutateSheet.name(who)))
+                    // The partner as the card spells it (SOUL A03, CLAP.WAV), not its raw label.
+                    val name = MutateSheet.partnerShort(who)
+                    onToast(
+                        Copy.mutated(
+                            mutateMode,
+                            padName,
+                            name,
+                            flipped = if (flipped) listOf(name) else emptyList(),
+                            lengthNote = Copy.lengthNote(beforeMs, afterMs),
+                        ),
+                    )
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("MUTATE", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("KEEP", e)
             } finally {
                 busy = false
             }
@@ -1324,11 +1346,12 @@ fun PadSheetScreen(
      *
      * Runs against the live [model], not a fresh one under [withFreshKit]:
      * nothing is written, so there is nothing to serialise against a
-     * concurrent save — the same posture [onRoulette] takes. The GHOSTS
-     * pre-check is copied from [onMutate] rather than left to
-     * [MutateSheet.preview]'s own refusal, so a thumb sees the same
-     * friendly line before AND after committing, not a generic failure
-     * toast on the way there.
+     * concurrent save — the same posture [onRoulette] takes. It runs the
+     * same pre-check as [onMutate] ([MutateSheet.refusalBefore]) rather
+     * than leaving it to [MutateSheet.preview]'s own refusal, so a thumb
+     * sees the same line before AND after committing, not a generic
+     * failure toast on the way there. When the move changes the pad's
+     * length, it says so after the play.
      *
      * Auditioned through [audition]'s own `shape` parameter, like every
      * other play on this screen — a mutate replaces the pad's AUDIO, not
@@ -1338,10 +1361,11 @@ fun PadSheetScreen(
     fun onHear() {
         if (busy) return
         val m = model ?: return
-        val who = partner ?: return
         val p = m.kit.pad(slot) ?: return
-        if (p.velocityLayers.isNotEmpty()) {
-            onToast(Copy.MUTATE_NEEDS_ONE)
+        val who = partner
+        val refused = MutateSheet.refusalBefore(p, who, needsPartner = true)
+        if (refused != null || who == null) {
+            onToast((refused ?: MutateSheet.Refusal.NoPartner).line)
             return
         }
         val move = MutateSheet.modeFor(mutateMode)
@@ -1350,20 +1374,40 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) }
+                val (rendered, padMs) = withContext(Dispatchers.IO) {
+                    MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) to MutateSheet.lengthMs(m, slot)
+                }
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                     audition(rendered, p.level, p)
                 }
+                // A move can change the pad's length (STACK, SPLIT or SPLICE onto a longer
+                // partner, ROOM's tail); the play says so only when it does.
+                val note = Copy.lengthNote(padMs, MutateSheet.lengthMs(rendered))
+                if (note.isNotEmpty()) onToast(note)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("HEAR", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("HEAR", e)
             } finally {
                 busy = false
             }
         }
     }
 
+    /**
+     * UNDO. With nothing to undo (no mutate on the pad, or no earlier take
+     * of it in the bin) the button is dimmed, not disabled, and a tap says
+     * which ([MutateSheet.undoRefusal]): the house's "the toast explains",
+     * where a grey button used to say nothing.
+     */
     fun onUnmutate() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = MutateSheet.undoRefusal(MutateSheet.read(p.recipe), binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
         commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
     }
 
@@ -1371,6 +1415,12 @@ fun PadSheetScreen(
     fun onRoulette() {
         if (busy) return
         val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val refused = MutateSheet.refusalBefore(p, partner, needsPartner = false)
+        if (refused != null) {
+            onToast(refused.line)
+            return
+        }
         val root = entry.dir.parentFile ?: entry.dir
         val seed = spins
         scope.launch {
@@ -1381,7 +1431,8 @@ fun PadSheetScreen(
                 partner = deal
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("ROULETTE", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("ROULETTE", e)
             } finally {
                 busy = false
             }
@@ -1389,19 +1440,21 @@ fun PadSheetScreen(
     }
 
     /**
-     * DRIFT: one tap — the shelf deals the neighbour and MORPH blends toward
+     * DRIFT: one tap — the shelf picks the partner and MORPH blends toward
      * it, MIX how far. The card flips to MORPH so the knob it read is the
      * knob on screen; each tap is a new seed, like ROULETTE.
      *
      * Runs against a FRESH model via [withFreshKit] — same shape as
-     * [onMutate] above, GHOSTS refusal re-checked on the fresh pad, sample
-     * identity re-checked before [MutateSheet.drift] (which deals AND
-     * mutates — both need the model this lock actually opened) ever runs.
-     * A crate-empty [IllegalArgumentException] from the roulette still
-     * escapes [withFreshKit] undirtied and untouched by the identity check
-     * — nothing was applied, nothing to save, same refusal as before. On
-     * success [model] swaps to the fresh instance; no immediate audition,
-     * same trade as [applySmear]/[onMutate] for the same reason.
+     * [onMutate] above: the pre-check ([MutateSheet.refusalBefore]) runs
+     * before anything launches, its layers half re-checked on the fresh
+     * pad, and sample identity re-checked before [MutateSheet.drift] (which
+     * picks AND mutates — both need the model this lock actually opened)
+     * ever runs. A [Mutate.RouletteRefused] from the roulette (an empty
+     * shelf, or only doubles of this pad) still escapes [withFreshKit]
+     * undirtied and untouched by the identity check — nothing was applied,
+     * nothing to save — and [MutateSheet.refusalOf] says which. On success
+     * [model] swaps to the fresh instance and the result plays once the
+     * fresh model has decoded it ([auditionOnRefresh]), as [onMutate]'s does.
      *
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc. `MutateSheet.drift`'s write
@@ -1412,8 +1465,10 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (p.velocityLayers.isNotEmpty()) {
-            onToast(Copy.MUTATE_NEEDS_ONE)
+        // A chained pad used to reach the shelf's empty-crate line; the pre-check says what is true.
+        val refused = MutateSheet.refusalBefore(p, partner, needsPartner = false)
+        if (refused != null) {
+            onToast(refused.line)
             return
         }
         val root = entry.dir.parentFile ?: entry.dir
@@ -1466,13 +1521,18 @@ fun PadSheetScreen(
             busy = true
             try {
                 var drifted: Mutate.Drifted? = null
+                var beforeMs = 0
+                var afterMs = 0
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        beforeMs = MutateSheet.lengthMs(f, slot)
                         drifted = MutateSheet.drift(f, slot, root, seed, fraction)
+                        afterMs = MutateSheet.lengthMs(f, slot)
                     }
                 }
+                if (drifted != null) auditionOnRefresh = true
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
@@ -1480,13 +1540,16 @@ fun PadSheetScreen(
                 if (d != null) {
                     spins = seed + 1
                     partner = MutateSheet.Partner.Deal(d.pick.label, d.pick.file, seed)
-                    onToast(Copy.drifted(padName, d.pick.label))
+                    // Copy.drifted is unchanged; the length line is a second sentence after it.
+                    val note = Copy.lengthNote(beforeMs, afterMs)
+                    onToast(Copy.drifted(padName, d.pick.label) + if (note.isEmpty()) "" else " $note")
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("DRIFT", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("DRIFT", e)
             } finally {
                 busy = false
             }
