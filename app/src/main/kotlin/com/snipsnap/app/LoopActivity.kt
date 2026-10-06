@@ -409,7 +409,7 @@ class LoopActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        sink?.let { AudioFocus.acquire(it) }
+        sink?.let { AudioFocus.acquire(it, resume = true) }
     }
 
     override fun onDestroy() {

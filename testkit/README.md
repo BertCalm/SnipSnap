@@ -13,8 +13,9 @@ match (`--check` only reports, and exits 1 if any are stale).
 1. Download `SnipSnap_Diag_Kit.zip` (and optionally `SnipSnap_Test_Kit.zip`).
 2. Unzip and copy the kit **folder** anywhere onto the MPC's SD card / USB
    drive (not inside `Expansions` — anywhere browsable is fine).
-3. On the MPC (**MPC One first** — it's the acceptance device): Browser →
-   navigate to the folder → load `SnipSnap Diag Kit.xpm`.
+3. On the MPC (the **Live III** — the only machine in hand, and the
+   acceptance device): Browser → navigate to the folder → load
+   `SnipSnap Diag Kit.xpm`.
 
 ## What each kit answers
 
@@ -280,6 +281,18 @@ names, previews under `[Previews]/`. Regenerate with
 `./gradlew :synth:generateXpnFile`. The check: does the MPC's expansion
 import accept the file? A yes means one-file kit sharing; a no costs
 nothing — the folder exports stay the path.
+
+### SnipSnap Flotilla Kit — does a pool of vessels stay in tune?
+
+FLOTILLA: pitched emitters on a circular pool, floating vessels, a warm dome.
+A01–A08 walk a minor pentatonic from C4 on RIPPLE. A09–A16 are Open Wood,
+Deep Cavity, Crossing Paths, Warm Canopy, Gentle Current, Gathered Vessels,
+and two held notes (Held Sparse, Held Dense). Regenerate with
+`./gradlew :synth:generateFlotillaKit`. Things to confirm: the row plays in
+tune and ascending, a wood pad and a hollow pad are not drums, the two held
+pads wrap without a click, and no pad is filed as a kick, snare, clap, hat
+or tom. The listening page is `./gradlew :synth:generateFlotillaAudition`,
+then `testkit/flotilla-audition/index.html`.
 
 ### One check that applies to every kit: pad colours
 

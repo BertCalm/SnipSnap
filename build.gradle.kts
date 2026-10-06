@@ -1,5 +1,7 @@
 /**
- * The one thing that lives at the root: a dependency-vulnerability scan
+ * Two things live at the root. Plugin versions are declared once in the
+ * block below (`apply false`) so a module applies the plugin without
+ * loading a second copy. The other is a dependency-vulnerability scan
  * over every module's resolved dependencies (transitive included), not
  * just the direct ones a build.gradle.kts happens to name.
  *
@@ -19,6 +21,17 @@
  */
 plugins {
     id("org.owasp.dependencycheck") version "13.0.0"
+    // Versions live once, in this block. A subproject that repeats
+    // `version "..."` loads a second copy of that plugin; the warning
+    // that used to name :app and :audio is the Kotlin plugin doing that.
+    // The Android plugin has to be in the same block, and ahead of the
+    // Kotlin Android plugin: applying the latter from here without it
+    // fails looking for com.android.build.gradle.api.BaseVariant.
+    // Subprojects apply these with no version of their own.
+    id("com.android.application") version "8.7.3" apply false
+    kotlin("android") version "2.0.21" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21" apply false
+    kotlin("jvm") version "2.0.21" apply false
 }
 
 repositories {
