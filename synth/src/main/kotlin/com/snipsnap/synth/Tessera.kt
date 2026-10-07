@@ -48,7 +48,7 @@ object Tessera {
     private const val COUNT = 43
     private const val CONTROL = 64
     private const val LOOP_SECONDS = 2.0
-    private const val LOOP_PREROLL = 6
+    private const val LOOP_PREROLL = 12
     private const val RADIATION = 27.0
     private const val OUTPUT_GAIN = .62
 
@@ -591,22 +591,57 @@ object Tessera {
             paths.map { it.state() }
     }
 
-    private fun stateErrors(a: List<DoubleArray>, b: List<DoubleArray>): Map<String, Double> {
+    /** Every complete-state group, each path's four parts included, must change by less than this per cycle. */
+    internal const val STATE_TOLERANCE = .003
+
+    /** True when every measured group is finite and inside [STATE_TOLERANCE]. */
+    internal fun withinTolerance(errors: Map<String, Double>) =
+        errors.isNotEmpty() && errors.values.all { it.isFinite() && it < STATE_TOLERANCE }
+
+    internal fun stateErrors(a: List<DoubleArray>, b: List<DoubleArray>): Map<String, Double> {
         val result = linkedMapOf<String, Double>()
         val names = listOf("modal", "geometry", "wallVelocity", "wallCredit", "pressureStores",
-            "pressureEnvelopes", "collectorBudget", "eventGates", "refractory", "sourcePhase", "pendingPulses") + (0..5).map { "path$it" }
+            "pressureEnvelopes", "collectorBudget", "eventGates", "refractory", "sourcePhase", "pendingPulses")
         for (g in a.indices) {
+            if (g >= names.size) {
+                pathErrors("path${g - names.size}", a[g], b[g], result); continue
+            }
             if (a[g].size != b[g].size || (g == 7 || g == 9) && !a[g].contentEquals(b[g])) {
                 result[names[g]] = Double.POSITIVE_INFINITY; continue
             }
-            var diff = 0.0; var norm = 0.0
-            for (i in a[g].indices) {
-                val delta = a[g][i] - b[g][i]; diff += delta * delta
-                norm += .5 * (a[g][i] * a[g][i] + b[g][i] * b[g][i])
-            }
-            result[names[g]] = sqrt(diff / max(1e-14, norm))
+            result[names[g]] = relative(a[g], b[g], 0, a[g].size)
         }
         return result
+    }
+
+    /** Root-mean-square difference over [from, until) relative to the two sides' own level. */
+    private fun relative(a: DoubleArray, b: DoubleArray, from: Int, until: Int): Double {
+        var diff = 0.0; var norm = 0.0
+        for (i in from until until) {
+            val delta = a[i] - b[i]; diff += delta * delta
+            norm += .5 * (a[i] * a[i] + b[i] * b[i])
+        }
+        return sqrt(diff / max(1e-14, norm))
+    }
+
+    /**
+     * A path's state is its pressure history, the low-passed pressure, its delay in seconds and its stored
+     * energy ([Path.state]). One norm over all four lets the half-second delay outweigh a quiet history:
+     * a history flipped in sign at 1e-6 read 0.16% against the 0.3% gate. Each part is compared on its own
+     * scale instead, and the filter state on the history's, since it is that history smoothed.
+     */
+    private fun pathErrors(name: String, a: DoubleArray, b: DoubleArray, result: MutableMap<String, Double>) {
+        if (a.size != b.size || a.size < 4) {
+            for (part in listOf("pressure", "filter", "delay", "energy")) result["$name.$part"] = Double.POSITIVE_INFINITY
+            return
+        }
+        val history = a.size - 3
+        result["$name.pressure"] = relative(a, b, 0, history)
+        var level = 0.0
+        for (i in 0 until history) level += .5 * (a[i] * a[i] + b[i] * b[i])
+        result["$name.filter"] = abs(a[history] - b[history]) / max(1e-7, sqrt(level / history))
+        result["$name.delay"] = relative(a, b, history + 1, history + 2)
+        result["$name.energy"] = relative(a, b, history + 2, history + 3)
     }
 
     /** Source taps stay raw. Only samples/previousCycle receive shared melodic loudness. */
@@ -685,7 +720,7 @@ object Tessera {
             engine.snapshots.filter { it.timeSeconds >= offset && it.timeSeconds < end }.map { it.copy(timeSeconds = (it.timeSeconds - offset).toFloat()) },
             rawPeak, engine.passiveEnergy(), engine.maxEnergy, engine.wallWork, engine.initialCollectorBudget,
             engine.collectorBudget, engine.recoveredStates, previous, seam, if (held) 0 else 0,
-            error, !held || error < .003 && seam < Keys.MAX_SEAM_ERROR, primaryWork = engine.sourceEnergy,
+            error, !held || withinTolerance(errors) && seam < Keys.MAX_SEAM_ERROR, primaryWork = engine.sourceEnergy,
             wallWorkBudget = engine.wallBudget * (if (held) LOOP_PREROLL + 2 else 1), loopStateErrors = errors,
             primaryWorkBudget = engine.primaryWorkBudget,
             hammerContacts = engine.hammerContacts.filter { it.timeSeconds >= offset && it.timeSeconds < end }

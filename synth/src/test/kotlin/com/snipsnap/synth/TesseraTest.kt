@@ -286,7 +286,7 @@ class TesseraTest {
         val held = Tessera.probe(patch.voice, patch.macros)
         println("TESSERA Held Chamber: complete state ${held.loopStateError}, groups ${held.loopStateErrors}, genuine seam ${held.seamError}")
         assertTrue(held.loopConverged, "Held Chamber did not converge: ${held.loopStateError}; groups ${held.loopStateErrors}")
-        assertTrue(held.loopStateError < 0.003)
+        assertTrue(Tessera.withinTolerance(held.loopStateErrors), "groups outside tolerance: ${held.loopStateErrors}")
         assertEquals(held.samples.size, held.previousCycle.size)
         assertTrue(Keys.seamError(held.previousCycle + held.samples, held.previousCycle.size) < Keys.MAX_SEAM_ERROR)
         assertTrue(held.collectorEvents.isNotEmpty())
@@ -295,13 +295,37 @@ class TesseraTest {
     }
 
     @Test
+    fun `a quiet path whose pressure history diverges cannot hide behind its delay`() {
+        // Copilot's case on #475: 158,764 history samples flip sign while the half-second delay stays put.
+        // Scored as one norm with the delay, that read 0.16% and passed the 0.3% gate at any quietness.
+        val samples = 158_764
+        fun path(level: Double, sign: Double) = DoubleArray(samples + 3).also { p ->
+            for (i in 0 until samples) p[i] = sign * level
+            p[samples] = sign * level // the low-passed pressure follows the history
+            p[samples + 1] = .5 // delay, seconds
+            p[samples + 2] = .5 * level * level * samples // stored energy is sign-blind
+        }
+        val shared = List(11) { doubleArrayOf(1.0, 2.0) }
+        for (level in listOf(1e-2, 1e-4, 1e-6)) {
+            val steady = shared + List(6) { path(level, 1.0) }
+            val flipped = shared + listOf(path(level, -1.0)) + List(5) { path(level, 1.0) }
+            val errors = Tessera.stateErrors(steady, flipped)
+            assertTrue(errors.getValue("path0.pressure") > Tessera.STATE_TOLERANCE, "a pressure history flipped at $level hid: $errors")
+            assertTrue(errors.getValue("path0.filter") > Tessera.STATE_TOLERANCE, "a filter state flipped at $level hid: $errors")
+            assertEquals(0.0, errors.getValue("path0.delay"))
+            assertEquals(0.0, errors.getValue("path0.energy"))
+            assertEquals(0.0, errors.getValue("path1.pressure"))
+            assertTrue(Tessera.stateErrors(steady, steady).values.all { it == 0.0 }, "identical states must score zero")
+        }
+    }
+
+    @Test
     fun `held neutral ANSWER transition converges across its complete state`() {
         val neutral = Tessera.macrosFor(TesseraVoice.ANSWER).associate { it.name to it.neutral }
         val held = Tessera.probe(TesseraVoice.ANSWER, neutral + ("HOLD" to 1f))
         println("TESSERA neutral ANSWER HOLD: complete state ${held.loopStateError}, groups ${held.loopStateErrors}, genuine seam ${held.seamError}")
         assertTrue(held.loopConverged, "neutral ANSWER HOLD did not converge: ${held.loopStateError}; groups ${held.loopStateErrors}")
-        assertTrue(held.loopStateError < 0.003)
-        assertTrue(held.loopStateErrors.values.all { it.isFinite() && it < 0.003 })
+        assertTrue(Tessera.withinTolerance(held.loopStateErrors), "groups outside tolerance: ${held.loopStateErrors}")
         assertEquals(0.0, held.loopStateErrors.getValue("sourcePhase"))
         assertEquals(0.0, held.loopStateErrors.getValue("eventGates"))
         assertEquals(0, held.samples.size * Dsp.OVERSAMPLE % 256)
@@ -335,9 +359,8 @@ class TesseraTest {
             assertTrue(held.primaryWork <= held.primaryWorkBudget + 1e-9, "$label hammer/rebound contacts exceeded their powered source budget")
             assertEquals(0, held.recoveredStates)
             assertTrue(held.loopConverged, "$label complete held object did not converge: ${held.loopStateError}; groups ${held.loopStateErrors}")
-            assertTrue(held.loopStateError < 0.003, "$label held modal, wall, collector, pulse or delay state remained different")
             assertTrue(held.loopStateErrors.isNotEmpty(), "$label did not measure complete object convergence")
-            assertTrue(held.loopStateErrors.values.all { it.isFinite() && it < 0.003 }, "$label a held state group did not converge: ${held.loopStateErrors}")
+            assertTrue(Tessera.withinTolerance(held.loopStateErrors), "$label a held state group did not converge: ${held.loopStateErrors}")
             assertEquals(0.0, held.loopStateErrors.getValue("sourcePhase"), "$label source and CONTROL clock phase changed at the wrap")
             assertEquals(0.0, held.loopStateErrors.getValue("eventGates"), "$label collector count or hysteresis gate changed at the wrap")
             val seam = Keys.seamError(held.previousCycle + held.samples, held.previousCycle.size)

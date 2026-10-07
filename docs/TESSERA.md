@@ -130,9 +130,15 @@ stayed below its 0.126-unit credit. Default middle-register full mixes stayed
 within four cents by the existing pitch detector; C3 WOOD measured about
 22.6 cents low in that full-mix detector despite accurate isolated tuning.
 Fifteen held recipes cover all six defaults, their all-high settings, low WOOD,
-Held Chamber and neutral ANSWER. Their largest complete-state error was
-0.002352 against the 0.003 gate, and their largest preceding-cycle audio
-difference was 0.001384. Source/control clock and event-gate errors were exactly
+Held Chamber and neutral ANSWER. Each path's pressure history, filtered
+pressure, delay and stored energy are scored as separate groups: one norm across
+all four let the half-second delay hide a quiet history, and with the earlier
+six-cycle preroll the default CHAMBER hold's path pressure still differed by
+1.8% per cycle (all-high ANSWER 1.9%, all-high TUBE's path filter 1.8%) while
+the combined score read under 0.3%. Held material now prerolls twelve cycles.
+The largest group error across the thirteen probed holds is 0.000590 (all-high
+CHAMBER, a path's pressure) against the 0.003 gate, and every preceding-cycle
+audio check stays inside its 0.05 bound. Source/control clock and event-gate errors were exactly
 zero, as were their exported seam errors after the wrap blend. The hard-contact
 case reserved 0.0455 of its original 0.7-unit budget for rebound; measured total
 primary work was 0.549. These are measured cases, not guarantees for every macro

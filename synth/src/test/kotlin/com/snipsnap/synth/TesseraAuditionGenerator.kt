@@ -114,7 +114,7 @@ object TesseraAuditionGenerator {
             }
             require(probe.primaryWork <= probe.primaryWorkBudget + 1e-9) { "$id exceeded primary work budget" }
             require(probe.wallWork <= probe.wallWorkBudget + 1e-9) { "$id exceeded wall work budget" }
-            if (loop) require(probe.loopConverged && probe.loopStateError < .003 && probe.seamError < Keys.MAX_SEAM_ERROR) {
+            if (loop) require(probe.loopConverged && Tessera.withinTolerance(probe.loopStateErrors) && probe.seamError < Keys.MAX_SEAM_ERROR) {
                 "$id has an unsettled or discontinuous loop: state=${probe.loopStateError}, seam=${probe.seamError}, converged=${probe.loopConverged}"
             }
             val samples = when (branch) {
