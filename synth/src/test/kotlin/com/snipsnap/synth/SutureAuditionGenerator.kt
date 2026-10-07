@@ -168,9 +168,15 @@ object SutureAuditionGenerator {
         val sectionDescriptions = if (firstListen) descriptions + ("VOICES" to
             "Six voices at C4 and strong gesture energy with all timbral controls at their declared neutral values.") else descriptions
         require(sourceHash(source) == dspSourceHash) { "Suture.kt changed during rendering; regenerate from a stable DSP snapshot" }
+        val caseInputs = sections.values.flatten().map { c -> c.filterKeys { it in setOf("id", "voice", "macros", "velocity", "probe", "loop", "tapOf") } }
+        // Saved listening notes are keyed on everything that decides what is heard: the model,
+        // the DSP source and every case's recipe. A preset or case edit alone changes the audio
+        // under the same clip ids, so it must open a fresh round rather than inherit old verdicts.
+        val listeningRound = sha256("${Suture.MODEL_VERSION}\n$dspSourceHash\n${Json.write(value(caseInputs))}".toByteArray())
         val manifestData = linkedMapOf<String, Any?>(
             "engine" to "SUTURE", "modelVersion" to Suture.MODEL_VERSION,
             "dspSource" to "synth/src/main/kotlin/com/snipsnap/synth/Suture.kt", "dspSourceSha256" to dspSourceHash,
+            "listeningRound" to listeningRound,
             "firstListen" to firstListen, "renderCount" to rendered,
             "caseCount" to sections.values.sumOf { it.size }, "wavCount" to wavs,
             "sampleRate" to Dsp.RATE, "internalSampleRate" to Dsp.RATE * Dsp.OVERSAMPLE, "bitDepth" to 24,
@@ -195,9 +201,9 @@ object SutureAuditionGenerator {
         File(root, "manifest.json").writeText(manifest)
         File(root, "index.html").writeText(page(manifest))
         val key = mapOf("engine" to "SUTURE", "modelVersion" to Suture.MODEL_VERSION,
-            "dspSourceSha256" to dspSourceHash, "firstListen" to firstListen,
+            "dspSourceSha256" to dspSourceHash, "listeningRound" to listeningRound, "firstListen" to firstListen,
             "reviewStatus" to "Owner listening required",
-            "cases" to sections.values.flatten().map { c -> c.filterKeys { it in setOf("id", "voice", "macros", "velocity", "probe", "loop", "tapOf") } })
+            "cases" to caseInputs)
         File(root, "key.json").writeText(Json.write(value(key)) + "\n")
         File(root, "README.txt").writeText(
             "SUTURE audition\nRegenerate: ./gradlew :synth:generateSutureAudition" +
@@ -388,7 +394,8 @@ object SutureAuditionGenerator {
     }
 
     private fun tag(voice: SutureVoice) = voice.name.lowercase(Locale.ROOT)
-    private fun sourceHash(source: File) = MessageDigest.getInstance("SHA-256").digest(source.readBytes())
+    private fun sourceHash(source: File) = sha256(source.readBytes())
+    private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
         .joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
     private fun finite(v: Double): Double? = if (v.isFinite()) v else null
     private fun code(v: Float) = (v * 100).roundToInt().toString().padStart(3, '0')
@@ -433,7 +440,7 @@ button{padding:7px 12px;cursor:pointer}button:hover,button:focus-visible{border-
 (() => {
 'use strict';
 const data=window.SUTURE_MANIFEST, player=document.querySelector('#player'), now=document.querySelector('#now'), repeat=document.querySelector('#repeat');
-const storageKey='snipsnap-suture-listening-v'+data.modelVersion+'-'+data.dspSourceSha256;let notes={},selected=null,request=0,cancelPending=null;
+const storageKey='snipsnap-suture-listening-'+data.listeningRound;let notes={},selected=null,request=0,cancelPending=null;
 try{notes=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch(_){}
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
 function n(v,p=4){return v===null||v===undefined?'undefined':Number(v).toFixed(p)}
