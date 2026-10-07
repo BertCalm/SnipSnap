@@ -144,3 +144,7 @@ testkit/corolla-audition/
 testkit/thaw-audition/
 testkit/thaw-first-listen/
 testkit/SnipSnap Thaw Kit/
+
+# Tessera's generated listening matrix, diagnostic traces and kit audio.
+testkit/tessera-audition/
+testkit/SnipSnap Tessera Kit/

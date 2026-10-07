@@ -220,6 +220,15 @@ and a listening page under `testkit/thaw-audition/`. The sound still awaits
 the owner's listening verdict; [implementation notes](docs/THAW.md) describe
 the model and its limits.
 
+TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
+and tubes share a frame inside a chamber whose returning paths change with
+the gesture. Six voices, eight presets and a dry sixteen-pad kit use MATERIAL,
+HAMMER, SCALE, FOLD and MOTION, with C3–C5 TUNE and settled HOLD loops. Run
+`./gradlew :synth:generateTesseraAudition` for its raw/matched listening page
+and causal probes under `testkit/tessera-audition/`. The sound awaits the
+owner's listening verdict; [implementation notes](docs/TESSERA.md) describe
+the render, saving and export contracts.
+
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
 decaying sine partials at inharmonic ratios, the textbook recipe for a

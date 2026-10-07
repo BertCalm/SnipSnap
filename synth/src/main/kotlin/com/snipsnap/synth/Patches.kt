@@ -72,6 +72,7 @@ object Patches {
             MurkPatch.ENGINE -> MurkPatch.fromJsonValue(value)
             ThawPatch.ENGINE -> ThawPatch.fromJsonValue(value)
             CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
+            TesseraPatch.ENGINE -> TesseraPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

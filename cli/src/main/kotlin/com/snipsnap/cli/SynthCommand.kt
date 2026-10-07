@@ -19,6 +19,9 @@ import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Tessera
+import com.snipsnap.synth.TesseraPatch
+import com.snipsnap.synth.Velocity
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
@@ -46,7 +49,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN and FLOTILLA only) override
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA and TESSERA) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -74,7 +77,8 @@ object SynthCommand {
             when (engine) {
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN and FLOTILLA, got $engine")
+                TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA and TESSERA, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -119,6 +123,9 @@ object SynthCommand {
             if (noteFlags.isEmpty()) patch else when (patch) {
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
+                    macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
+                )
                 else -> patch
             }
         }
@@ -129,7 +136,10 @@ object SynthCommand {
         for ((i, patch) in chosen.withIndex()) {
             // What SEND TO PAD would make: the string machines take their ENSEMBLE, so the file you audition is the pad you would get.
             val landing = Presets.landingFor(engine, voice, patch.macros)
-            val snip = if (landing == null) patch.render() else PadRecipe(patch, landing).render()
+            val snip = if (patch is TesseraPatch && velocityOverride != null) {
+                val dry = Velocity.atVelocity(patch, velocityOverride)
+                landing?.process(dry) ?: dry
+            } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
             FileOutputStream(file).use { WavWriter.write(it, snip) }
