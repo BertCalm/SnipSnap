@@ -797,6 +797,131 @@ kept on the first listen, BODY and SPIN passed on the second and HOLD on the thi
 knob on FLICK and HALO has passed the audition gate. Still open from R1b: the pluck's random
 fundamental (R2's TOUCH replaces the exciter).
 
+## R2, as built (2026-10-04)
+
+Round two puts a bow on the strings. PR 1 (#449, R2a) gave `Strings.Bow` a bridge port, an excitation
+and a contact amount and changed no audio (a frozen copy of the bow and its loop prove it, sample for
+sample, across six cells); PR 2 (R2b) is GYRE's part. The owner answered the plan's four decisions
+"yes to all": TOUCH defaults to 0 on FLICK and HALO, DRAWN and BOURDON start from the document's table,
+HOLD on a bowed note is the stroke, and the bow plays all four strings weighted by the string levels.
+
+### What was built
+
+- **Every string is a `Strings.Bow`**, two segments either side of the bow at `BOW_POSITION` (ARCO's
+  0.133), with its bridge port at half the bridge segment's length. The pluck goes in at the port with what
+  the bridge sends back, and the string's sound is taken there too: round one's `inject(x + back)` and what
+  it returned. The note starts after a silent pre-roll of the longest `bridgeAge`, so every port has
+  something in flight and the render's length is the note's.
+- **TOUCH 0 is round one.** Against `LegacyGyre` (round 1c frozen at `0ba9b05`, with `LegacyLoop` and its
+  own voice enum, so no later edit can move both sides of the comparison), at G3, C4 and G4 on FLICK and
+  HALO: the pitch is within 0.00 cents, the waveform −50.4 to −57.6 dB under, the octave bands move 0.01
+  to 0.12 dB, the length is identical. All 17 round-one claims held on the bowed engine at TOUCH 0, unedited
+  (the one that asserted GYRE has no TOUCH aside).
+- **TOUCH** `= sin(TOUCH·π/2)` of bow, `cos(TOUCH·π/2)` of the pluck's burst (the document's §6). The bow's
+  contact is the bow amount to the fourth power, `CONTACT_CURVE`; its speed is the voice's `bowSpeed` times
+  the string's level, full at any TOUCH over 0 after an 80 ms ramp, pressure 0.9, so the contact carries the
+  morph. Its tuning share falls from 1 to `Strings.Bow.SHARE` as the bow comes down.
+- **HOLD on a bowed note is the stroke.** The open time runs from the pluck's `0.55 + 2.75·SYMPATHY²` s to
+  the voice's stroke as the bow takes hold (`bowHold`, a smoothstep of the contact from 0.15 to 0.4, where
+  the plan said `bow`: a bow that has not caught is a damped pluck, and its HOLD is the pluck's), and the bow
+  lifts when the hand lands. At the top it lifts exactly at the stroke (DRAWN 4 s, BOURDON 6 s, FLICK 3 s and
+  HALO 6 s, round one's old fixed rings).
+- **DRAWN and BOURDON**, the document's table as first shapes (decision 2): DRAWN is C3, a 4 s string,
+  brightness 10, a 2.5 kHz pick, levels 1/.45/.3/.2, TOUCH .85, SYMPATHY .45, SPIN .12, BODY .45; BOURDON is
+  C2, 6 s, brightness 6, a 1.2 kHz pick, levels 1/.6/.45/.35, TOUCH .9, SYMPATHY .65, SPIN .3, BODY .75. HOLD
+  defaults near open (.95) on both. The sweep claims (corners, endings, tuning, the octave guard, HOLD, shares, the 30 second extreme, determinism, the classifier and length checks, SCRAMBLE) run on all four voices; the comparison with round one runs on FLICK and HALO, the only voices round one had.
+- **SPIN's contact weight**: with a bow on the strings the rotor also eases how hard each upper string is
+  bowed (the string it faces keeps the whole TOUCH contact, those behind it ease off by up to
+  `depth·SWING_CONTACT`; the first string holds its contact). It moves the timbre very little (DRAWN's centroid
+  swing 176 Hz without it, 155 at the plan's 0.5), and at 0.5 it modulated the drawn note's pitch (one FLICK
+  cell read 7.0 cents against 1.8), so `SWING_CONTACT` is 0.35, the largest value measured clean.
+
+### Where the build differs from the plan, each measured
+
+- **Contact curve 4 and bow speed 0.3, not 3 and 0.13.** At 0.13 a bow under its catch (TOUCH 0.1 to 0.55)
+  loaded the string without sustaining it: the pluck's fundamental was 30 to 36 dB under the pluck's before
+  the bow caught, so the middle of TOUCH was a thud and a pitch detector found no pitch. At 0.3 it is about
+  1 dB under (the pluck rings on and the bow takes over) and the catch is TOUCH 0.30 to 0.45. The plan's
+  Phase-0 prototype's numbers (worst colour step 0.34, FLICK's bowed raw peak 0.78) did not reproduce; they
+  were taken on settings that were not kept.
+- **The raw ceiling is met by an output trim, not a slower bow.** A drawn note on a box mode reaches the mode's
+  whole gain (FLICK C5 on BODY 0's 520 Hz mode, SYMPATHY 1, SPIN 1: a raw peak of 3.45, and 4.9 once the note
+  is tuned exactly onto it), where a pluck's peak is a transient (worst 0.985). A slower bow moved the catch to
+  TOUCH 0.7 and still left the corners over. `BOW_OUT_TRIM_DB` (−15 dB along a smoothstep of the contact from
+  0.02 to 0.3) takes it back, and is inaudible: `finish` scales every render to one loudness, linearly, and only
+  then limits the peak. Worst raw peak over the corners: 0.998 (HALO, TOUCH 1), a pluck's 0.985.
+- **The sympathetic bank is trimmed twice** (`BOW_SYMPATHY_TRIM_DB` −3.5 as the bow takes hold, `BOW_SYMPATHY_FULL_DB`
+  −5 more once the upper strings have joined, and a per-voice `bowShareDb`, BOURDON +4). A sustained bow keeps
+  driving resonators a pluck lets die, and SYMPATHY's share ran 3 to 9 dB over the targets round one fitted.
+  Measured at TOUCH 1, the mean of the four voices at SYMPATHY .3, .6, .8 and 1: −22.9, −12.3, −7.7 and −4.9 dB
+  (targets −22, −12, −8, −5), each voice within 4.5. BOURDON's share runs 3 dB cold plucked.
+- **A bowed note is measured and corrected** (`calibratedTrim`). The bridge's phase compensation is for a
+  string ringing free; a bowed string is a nonlinear oscillator its neighbours pull on, and came out 7 to 18
+  cents off at BODY 0.5 to 1 where a pluck is within 2.5. One string-only render with the bow drawn, the first
+  string's own wave read in a padded Hann spectrum against its key (the mix is not read: the sympathetic
+  strings ring at the key and pulled the reading toward it, one cell to 41 cents), and every string retuned by
+  the ratio. A second pass gained little (mean worst 2.7 cents against 2.9) for twice the cost. DRAWN does not
+  measure when plucked (it is within 2.9 on its own and the measurement made some cells worse, 5.9); BOURDON
+  does; FLICK and HALO never do at TOUCH 0, which therefore stays within the bounds above of round one (the strings are bows now, so it is not bit for bit).
+
+### What the tests hold (all in `GyreTest`, 26 claims, about 9 minutes on four cores)
+
+- **TOUCH is a continuum**: the worst 0.1 step of colour (`ArcoBodyMeasure`, level removed) as a share of the
+  ends' distance, FLICK 0.38, HALO 0.33, DRAWN 0.47, BOURDON 0.61 (the catch, and the widest spread of string
+  levels). **The middle is not a crossfade**: TOUCH 0.5 is 8.4, 11.5, 9.5 and 25.7 units from a 50/50 mix of the
+  ends. **The bow sustains**: 0.5 s in, the bow holds the note 45.8, 47.3, 34.4 and 39.2 dB better than the pluck.
+- **Tuning**, every note plucked and every other note where a bow is down, BODY 0 and 1 (and 0.5 at TOUCH 0 and 1), SYMPATHY 0 and 1, TOUCH 0, 0.25, 0.5 and 1, a bowed note read from 0.6 s once it is speaking (and a late-stroke check, 1.8 to 4 s):
+  FLICK 2.5 plucked, 4.2 at TOUCH 1 and 9.8 at 0.5; HALO 3.4, 3.8, 4.5; DRAWN 2.9, 4.6, 7.2. BOURDON's C2 to F#2
+  sit on BODY 1's 95 Hz membrane mode, the wolf: 10.4 plucked, 15.3 bowed (24.4 at D2 and F2 in the scan),
+  within 6.6 below BODY 1. The octave guard (TOUCH 0, .25, .5, .75 and 1, every note plucked and every other note bowed): no voice ever reads below its note.
+- **The 30 second extreme** (coupling 1, every string's feedback at its ceiling, TOUCH, SPIN, SYMPATHY and BODY
+  at 1, the bow drawn for 30 s then lifted): finite, raw peak 0.57 to 0.87, the drawn note within −0.1 dB of its
+  first two seconds on FLICK, HALO and DRAWN and +3.1 dB on BOURDON (a drone that builds), 48.5 to 53 dB down
+  at the end. Every corner (both ends of every macro, TOUCH 0 and 1) is finite and bounded; a pluck never grows
+  past its attack; every note ends at least 46.4 dB under its loudest stretch.
+- **HOLD**: on a pluck it runs choked to open on all four voices; on a bow the hand lands later at every step
+  and exactly at the stroke at the top, and every step changes the sound by at least −36 dB.
+
+### Written down, not fixed
+
+- **The catch zone is a texture.** Just over its minimum force a bow is raucous (string 1's third partial
+  louder than its first). Between TOUCH 0.4 and 0.75 the house detector (`Pitch.detect`, 0.05 to 0.30 s) reads
+  a higher partial on some notes (FLICK 10 of 25 at TOUCH 0.5, HALO 4, DRAWN 0, BOURDON 1 and no pitch on 7),
+  never an octave low (since `Pitch` refines to the spectral peak within a semitone, BOURDON's lowest bowed note, E2 at BODY 1, reads 60 cents flat); the pluck, TOUCH .25 and the full bow read exactly except BOURDON's lowest notes.
+  The sympathetic share at the catch itself runs up to 4.6 dB hot.
+- **The classifier files FLICK at TOUCH 0.5 as a drum on 2 of 25 notes** (A4 and B4 read KICK, one reads TONAL, 22
+  PERC), where its render crosses the classifier's 1.5 s line: every other voice and TOUCH files as PERC or LOOP on
+  every note. A sampler that files by class would put those two on the kick pad.
+- **The strings catch one after another** (a string's bow speed is its level's share, so the upper strings need
+  more contact), so BOURDON's colour steps 61% of the way in one 0.1 of TOUCH around its catch.
+- **The pluck is quiet against a caught bow.** In one render, the loudest 20 ms between 0.5 and 1.5 s against
+  the pluck's own attack, at TOUCH 0.5: FLICK +17.3 dB, HALO +17.7, DRAWN +16.0, BOURDON +3.9; at 0.6 to 0.75,
+  +14 to +26 on all four (at TOUCH .25 the bow has not caught and the note is 27 to 34 dB under its attack).
+  So in the middle of TOUCH the pluck is a small tick on a bowed note, and that is the first thing to listen
+  for in THE PLUCK THE BOW CATCHES. If it is wrong the lever is the pluck's burst, raised as the bow comes
+  down (it would move the catch and the shares, so it is a round of its own, not a tweak).
+- BOURDON's lowest notes at BODY 1 (the wolf). The wolf guard is round one's and moving it would move FLICK
+  and HALO.
+- **The pluck's random fundamental (round 1b's open finding) is not fixed.** At TOUCH 0 FLICK and HALO render the
+  same seeded random pluck as round one (parity requires it), so a note whose draw has a weak fundamental still
+  has one (HALO's F4 string reads an octave high at BODY 0.5, SYMPATHY 0). A bow at TOUCH above the catch
+  makes it moot; the draw is only touched at TOUCH 0 by a change to the exciter, and that moves the approved sound.
+
+### Cost
+
+Warmed, on a desktop JVM, defaults: FLICK 78 ms (0.88 s), HALO 338 ms (3.34 s), DRAWN 592 ms (4.30 s), BOURDON
+794 ms (6.56 s); FLICK at TOUCH 1 393 ms (2.35 s), HALO 773 ms (5.82 s). A bowed render includes its
+calibration pass.
+
+### The audition
+
+`generateGyreAudition` renders 86 clips and saves under `verdicts/gyre_r2_*`: all four voices at three notes;
+TOUCH at the document's five points on FLICK and DRAWN; **the pluck the bow catches**, TOUCH .5 beside the two
+ends and a plain 50/50 mix of them (so the question "is the middle one string changing, or two sounds at once?"
+can be heard); TOUCH 0 from the frozen round-one engine against the new one, keyed for an A/B; HOLD on DRAWN
+and BOURDON; SPIN on DRAWN, with the rotor against a tremolo; the knobs together; the edges. Its questions are
+the spec's §32 items 1 and 5, and whether FLICK and HALO still sound as approved.
+
 ## Decisions taken (2026-10-01)
 
 The owner took every recommendation:

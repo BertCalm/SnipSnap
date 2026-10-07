@@ -8,6 +8,7 @@ import java.io.File
 import kotlin.math.roundToInt
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -429,7 +430,7 @@ class MutateSheetTest {
         assertEquals("BECOME × SOUL A03", PadSheetBoxes.mutate(applied))
         assertEquals("MUTATED: BECOME", KitDiff.recipeName(ramped))
         assertEquals(
-            RecipeReplay.Plan.Refused("MUTATE (BECOME WITH SOUL A03) NEEDS ITS PARENT - NOT CARRIED."),
+            RecipeReplay.Plan.Refused("MUTATE (BECOME WITH SOUL A03) NEEDS ITS PARTNER - NOT CARRIED."),
             RecipeReplay.plan(ramped),
         )
 
@@ -516,5 +517,266 @@ class MutateSheetTest {
         val applied = MutateSheet.read(d.outcome.pad.recipe)!!
         assertEquals(0, applied.becomeMs, "the drifted pad reads back a ramp, so the card's OFF would be a lie")
         assertEquals("DRIFT", applied.word, "the drifted pad reads back as ${applied.word}, not DRIFT")
+    }
+
+    // ---------- honest refusals (the redesign's round M1) ----------
+
+    /**
+     * The pre-check every MUTATE door runs before it launches: a pad that
+     * can never mutate says so before the card asks for a partner. A pad
+     * cannot be layered and chained at once (`KitPad` refuses a chain with
+     * velocity layers), so the order between those two is the code's own
+     * and not testable here; each is pinned alone.
+     */
+    @Test
+    fun `a door refuses a layered or chained pad first, and asks for a partner only when it needs one`() {
+        val m = model("Pre")
+        val plain = m.pad(1)!!
+        assertEquals(MutateSheet.Refusal.NoPartner, MutateSheet.refusalBefore(plain, null, needsPartner = true))
+        assertNull(MutateSheet.refusalBefore(plain, MutateSheet.Partner.Pad(2), needsPartner = true))
+        assertNull(MutateSheet.refusalBefore(plain, null, needsPartner = false), "DRIFT and ROULETTE pick their own partner")
+
+        m.addGhostLayers(2)
+        val layered = m.pad(2)!!
+        assertEquals(MutateSheet.Refusal.Layered, MutateSheet.refusalBefore(layered, null, needsPartner = true))
+        assertEquals(MutateSheet.Refusal.Layered, MutateSheet.refusalBefore(layered, null, needsPartner = false))
+
+        val chainedKit = model("PreChain")
+        Robin.apply(chainedKit, 2, takes = 2)
+        val chained = chainedKit.pad(2)!!
+        assertEquals(MutateSheet.Refusal.Chained, MutateSheet.refusalBefore(chained, null, needsPartner = true))
+        assertEquals(
+            MutateSheet.Refusal.Chained,
+            MutateSheet.refusalBefore(chained, null, needsPartner = false),
+            "a DRIFT on a chained pad says it is chained, never that the shelf is empty",
+        )
+
+        assertEquals(Copy.MUTATE_PICK_PARTNER, MutateSheet.Refusal.NoPartner.line)
+        assertEquals(Copy.MUTATE_LAYERED, MutateSheet.Refusal.Layered.line)
+        assertEquals(Copy.MUTATE_CHAINED, MutateSheet.Refusal.Chained.line)
+        assertEquals(Copy.CRATE_EMPTY, MutateSheet.Refusal.ShelfEmpty.line)
+        assertEquals(Copy.ROULETTE_ONLY_COPIES, MutateSheet.Refusal.OnlyCopies.line)
+        assertEquals(Copy.MUTATE_PARTNER_GONE, MutateSheet.Refusal.PartnerGone.line)
+    }
+
+    /**
+     * ROULETTE and DRIFT used to turn every IllegalArgumentException into
+     * "the shelf is empty". The typed refusal says which of the two things
+     * the crate actually found, and anything else is a real failure.
+     */
+    @Test
+    fun `ROULETTE says whether the shelf was empty or held only doubles, and nothing else reads as either`() {
+        val alone = File(temp, "alone").apply { mkdirs() }
+        val solo = KitBuilderModel.create("Solo", File(alone, "Solo"))
+        solo.assign(1, tone(100.0, 0.5f), DrumClass.KICK)
+        solo.save()
+        val empty = assertFailsWith<Mutate.RouletteRefused> { MutateSheet.deal(solo, 1, root = alone, seed = 0) }
+        assertEquals(Mutate.RouletteRefused.Kind.EMPTY, empty.kind)
+        assertEquals("the crate under $alone has nothing to spin for", empty.message, "the CLI prints this message; it must not change")
+        assertEquals(MutateSheet.Refusal.ShelfEmpty, MutateSheet.refusalOf(empty))
+
+        val twins = File(temp, "twins").apply { mkdirs() }
+        val one = KitBuilderModel.create("One", File(twins, "One"))
+        one.assign(1, tone(100.0, 0.5f), DrumClass.KICK)
+        one.save()
+        val two = KitBuilderModel.create("Two", File(twins, "Two"))
+        two.assign(1, tone(100.0, 0.5f), DrumClass.KICK)
+        two.save()
+        val doubles = assertFailsWith<Mutate.RouletteRefused> { MutateSheet.deal(one, 1, root = twins, seed = 0) }
+        assertEquals(Mutate.RouletteRefused.Kind.ONLY_COPIES, doubles.kind)
+        assertEquals("every sound in the crate is this pad's double - spin --wild instead", doubles.message)
+        assertEquals(MutateSheet.Refusal.OnlyCopies, MutateSheet.refusalOf(doubles))
+        val drift = assertFailsWith<Mutate.RouletteRefused> { MutateSheet.drift(one, 1, root = twins, seed = 0, fraction = 0.5f) }
+        assertEquals(MutateSheet.Refusal.OnlyCopies, MutateSheet.refusalOf(drift))
+
+        assertNull(MutateSheet.refusalOf(IllegalArgumentException("pad 2 is a round-robin chain - `robin --undo` before rewriting it")))
+        assertNull(MutateSheet.refusalOf(java.io.IOException("disk full")))
+        // The bug itself: a chained pad that slipped past the pre-check reaches the rewrite's own gate, and
+        // that refusal is a real failure, never "the shelf is empty".
+        val chained = model("DriftChain")
+        model("DriftChain2")
+        Robin.apply(chained, 2, takes = 2)
+        val gate = assertFailsWith<IllegalArgumentException> { MutateSheet.drift(chained, 2, root = temp, seed = 0, fraction = 0.5f) }
+        assertNull(MutateSheet.refusalOf(gate), "a chained pad's DRIFT read as ${MutateSheet.refusalOf(gate)}: ${gate.message}")
+        assertContains(gate.message!!, "round-robin")
+    }
+
+    /**
+     * A partner that is no longer there says so, for every kind, checked
+     * before anything is read: otherwise the read throws an IOException
+     * and the card can only say "TRY AGAIN", which never helps. One test
+     * per kind, so a failure names the kind that broke; they share this
+     * shelf and [assertGone].
+     */
+    private fun goneShelf(): Pair<File, KitBuilderModel> {
+        val shelf = File(temp, "gone").apply { mkdirs() }
+        val mine = KitBuilderModel.create("Mine", File(shelf, "Mine"))
+        mine.assign(1, tone(100.0, 0.5f), DrumClass.KICK)
+        mine.assign(2, tone(3000.0, 0.4f), DrumClass.SNARE)
+        mine.save()
+        return shelf to mine
+    }
+
+    private fun otherKit(shelf: File, name: String): KitBuilderModel = KitBuilderModel.create(name, File(shelf, name)).also {
+        it.assign(3, tone(2000.0, 0.4f), DrumClass.SNARE)
+        it.save()
+    }
+
+    /** A WAV that was written to [shelf] and then deleted: a partner file that is gone. */
+    private fun goneWav(shelf: File, name: String): File = File(shelf, name).also { f ->
+        f.outputStream().use { com.snipsnap.audio.WavWriter.write(it, tone(700.0, 0.3f)) }
+        f.delete()
+    }
+
+    /** [partner] is gone: both `preview` and `apply` throw [MutateSheet.PartnerGone], which reads as its refusal. */
+    private fun assertGone(mine: KitBuilderModel, partner: MutateSheet.Partner) {
+        val e = assertFailsWith<MutateSheet.PartnerGone> { MutateSheet.preview(mine, 1, partner, Mutate.Mode.STACK, 0f) }
+        assertEquals(MutateSheet.Refusal.PartnerGone, MutateSheet.refusalOf(e))
+        assertFailsWith<MutateSheet.PartnerGone> { MutateSheet.apply(mine, 1, partner, Mutate.Mode.STACK, 0f) }
+    }
+
+    @Test
+    fun `a gone partner says so - a deleted pad on this kit`() {
+        val (_, mine) = goneShelf()
+        mine.clear(2)
+        assertGone(mine, MutateSheet.Partner.Pad(2))
+    }
+
+    @Test
+    fun `a gone partner says so - a deleted pad on another kit`() {
+        val (shelf, mine) = goneShelf()
+        val soul = otherKit(shelf, "Soul")
+        soul.clear(3)
+        soul.save()
+        assertGone(mine, MutateSheet.Partner.Other("Soul", soul.kitDir, 3))
+    }
+
+    @Test
+    fun `a gone partner says so - a pad on this kit whose WAV was deleted`() {
+        val (_, mine) = goneShelf()
+        assertTrue(File(mine.kitDir, mine.pad(2)!!.sampleFile).delete(), "the partner pad's WAV was there to delete")
+        assertGone(mine, MutateSheet.Partner.Pad(2))
+    }
+
+    @Test
+    fun `a gone partner says so - a pad on another kit whose WAV was deleted`() {
+        val (shelf, mine) = goneShelf()
+        val soul = otherKit(shelf, "Soul")
+        assertTrue(File(soul.kitDir, soul.pad(3)!!.sampleFile).delete(), "the partner pad's WAV was there to delete")
+        assertGone(mine, MutateSheet.Partner.Other("Soul", soul.kitDir, 3))
+    }
+
+    @Test
+    fun `a gone partner says so - another kit's folder deleted`() {
+        val (shelf, mine) = goneShelf()
+        val funk = otherKit(shelf, "Funk")
+        funk.kitDir.deleteRecursively()
+        assertGone(mine, MutateSheet.Partner.Other("Funk", funk.kitDir, 3))
+    }
+
+    @Test
+    fun `a gone partner says so - another kit's kit json deleted`() {
+        val (shelf, mine) = goneShelf()
+        val jazz = otherKit(shelf, "Jazz")
+        File(jazz.kitDir, com.snipsnap.kit.KitStore.FILE_NAME).delete()
+        assertGone(mine, MutateSheet.Partner.Other("Jazz", jazz.kitDir, 3))
+    }
+
+    @Test
+    fun `a gone partner says so - a ROULETTE pick's file deleted`() {
+        val (shelf, mine) = goneShelf()
+        assertGone(mine, MutateSheet.Partner.Deal("Soul:A03", goneWav(shelf, "pick.wav"), 1))
+    }
+
+    @Test
+    fun `a gone partner says so - a kept room's file deleted`() {
+        val (shelf, mine) = goneShelf()
+        assertGone(mine, MutateSheet.Partner.Room("FUNK ROOM", goneWav(shelf, "room.wav")))
+    }
+
+    @Test
+    fun `a gone partner says so - a held file deleted`() {
+        val (shelf, mine) = goneShelf()
+        assertGone(mine, MutateSheet.Partner.Wav("clap.wav", goneWav(shelf, "clap.wav")))
+    }
+
+    @Test
+    fun `a partner file that is there but will not decode is a real failure, not a gone partner`() {
+        val (shelf, mine) = goneShelf()
+        val broken = File(shelf, "broken.wav").apply { writeText("not a wav") }
+        val e = assertFailsWith<Exception> { MutateSheet.preview(mine, 1, MutateSheet.Partner.Wav("broken.wav", broken), Mutate.Mode.STACK, 0f) }
+        assertTrue(e !is MutateSheet.PartnerGone, "a file that is there but will not decode is a real failure, not a gone partner")
+        assertNull(MutateSheet.refusalOf(e))
+    }
+
+    /**
+     * The pad's own file gone (a file manager, a sync) is not a gone
+     * partner: telling the player to pick another partner would fail the
+     * same way. The read's failure is a real one, null here, so the card
+     * says `HEAR FAILED. TRY AGAIN.` (or KEEP's).
+     */
+    @Test
+    fun `the pad's own file gone is a real failure, never a gone partner`() {
+        val (_, mine) = goneShelf()
+        File(mine.kitDir, mine.pad(1)!!.sampleFile).delete()
+        for ((what, read) in listOf<Pair<String, () -> Unit>>(
+            "preview" to { MutateSheet.preview(mine, 1, MutateSheet.Partner.Pad(2), Mutate.Mode.STACK, 0f) },
+            "apply" to { MutateSheet.apply(mine, 1, MutateSheet.Partner.Pad(2), Mutate.Mode.STACK, 0f) },
+        )) {
+            val e = assertFailsWith<Exception>(what) { read() }
+            assertTrue(e !is MutateSheet.PartnerGone, "$what: the pad's own file gone read as a gone partner")
+            assertNull(MutateSheet.refusalOf(e), "$what: the pad's own file gone read as ${MutateSheet.refusalOf(e)}")
+        }
+    }
+
+    @Test
+    fun `UNDO says why it has nothing to do, and is quiet only when it can undo`() {
+        val applied = MutateSheet.Applied("SPLICE", listOf("Kit:A02"))
+        assertEquals(Copy.UNDO_NOTHING, MutateSheet.undoRefusal(null, binned = true))
+        assertEquals(Copy.UNDO_NOTHING, MutateSheet.undoRefusal(null, binned = false))
+        assertEquals(Copy.UNDO_NOT_BINNED, MutateSheet.undoRefusal(applied, binned = false))
+        assertNull(MutateSheet.undoRefusal(applied, binned = true))
+    }
+
+    // ---------- the length seam (the redesign's round M1) ----------
+
+    /**
+     * The KEEP and DRIFT doors read the pad's length before and after the
+     * write, and HEAR reads the render's, to say when a move changed the
+     * pad's length. Whole milliseconds at the audio's own rate: a phone on
+     * a 48 kHz interface hands the kit 48 kHz audio, never assumed 44.1.
+     */
+    @Test
+    fun `lengthMs reads a pad and a render in milliseconds at their own rate`() {
+        assertEquals(500, MutateSheet.lengthMs(Snip(FloatArray(22_050), 1, 44_100)))
+        assertEquals(1_250, MutateSheet.lengthMs(Snip(FloatArray(55_125), 1, 44_100)))
+        assertEquals(750, MutateSheet.lengthMs(Snip(FloatArray(36_000), 1, 48_000)))
+        assertEquals(750, MutateSheet.lengthMs(Snip(FloatArray(72_000), 2, 48_000)), "frames, not samples")
+        assertEquals(22, MutateSheet.lengthMs(Snip(FloatArray(1_000), 1, 44_100)), "whole milliseconds, rounded down")
+
+        // A known WAV at 48 kHz, written and read back: a pad's own files are 44.1 kHz (WavWriter refuses
+        // another rate unless told), but a file off the phone or a render need not be.
+        val at48 = File(temp, "at48.wav")
+        com.snipsnap.audio.WavWriter.write(at48, Snip(FloatArray(36_000), 1, 48_000), allowNonMpcRate = true)
+        assertEquals(750, MutateSheet.lengthMs(WavReader.read(at48)))
+
+        // A pad's file at 44.1 kHz, read through the model.
+        val m = model("Lengths")
+        assertEquals(500, MutateSheet.lengthMs(m, 1))
+        assertEquals(800, MutateSheet.lengthMs(m, 2))
+        assertEquals(MutateSheet.lengthMs(WavReader.read(File(m.kitDir, m.pad(5)!!.sampleFile))), MutateSheet.lengthMs(m, 5))
+        assertFailsWith<IllegalArgumentException> { MutateSheet.lengthMs(m, 9) }
+        // The pad's own file gone under the app: a real failure for the door, never a refusal.
+        val gone = model("LengthsGone")
+        File(gone.kitDir, gone.pad(1)!!.sampleFile).delete()
+        val e = assertFailsWith<Exception> { MutateSheet.lengthMs(gone, 1) }
+        assertNull(MutateSheet.refusalOf(e), "the pad's own file gone read as ${MutateSheet.refusalOf(e)}")
+
+        // What the KEEP door reads around its write: SPLICE runs as long as the partner's body.
+        val before = MutateSheet.lengthMs(m, 1)
+        MutateSheet.apply(m, 1, MutateSheet.Partner.Pad(2), Mutate.Mode.SPLICE, 0.5f)
+        val after = MutateSheet.lengthMs(m, 1)
+        assertEquals(MutateSheet.lengthMs(WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))), after)
+        assertTrue(Copy.lengthNote(before, after).isNotEmpty(), "a 0.5 s pad spliced into a 0.8 s body is a change worth saying: $before -> $after")
     }
 }
