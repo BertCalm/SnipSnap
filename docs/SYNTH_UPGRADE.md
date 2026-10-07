@@ -1,5 +1,12 @@
 # Synth upgrade — from lab to instrument
 
+> **Written against a tree with no preset library.** `Presets` and the
+> per-engine tables have since shipped, and SYNTH loads them. The counts
+> in this note — thirty voices, zero presets, eight engines — measure
+> the gap it was written against. The current roster is `SynthScreen`'s
+> `Engine` picker plus the engines outside it. What remains useful here
+> is the argument for preset-first play.
+
 `docs/SYNTH_ROADMAP.md` is done: S1–S5 all shipped, eight engines, thirty
 voices, the FX rack, keygroup export, the instrument suite. This document is
 what comes after, and it starts from a different question than the roadmap

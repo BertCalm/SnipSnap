@@ -52,7 +52,7 @@ object StarterKits {
     }
 
     val ALL: List<Starter> = listOf(
-        // displayName is "EMPTY GRID", not "BLANK" — the other eight
+        // displayName is "EMPTY GRID", not "BLANK" — the other
         // entries are all pre-composed kits, and a plain "BLANK" reads as
         // just one more label in that list rather than the one option
         // that's actually empty. This has to work as both a menu entry
@@ -101,10 +101,40 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.cloud() },
         Starter(
+            "circuit", "CIRCUIT",
+            "Three breaths, moving accents, and canyon answers in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.circuit() },
+        Starter(
+            "thaw", "THAW",
+            "Ice plates and copper runners in C minor pentatonic. Cold contact warms into song.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.thaw() },
+        Starter(
+            "undertow", "UNDERTOW",
+            "Weighted ceramic flaps and hollow breath in C minor pentatonic. One draw wakes the shell.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.undertow() },
+        Starter(
+            "suture", "SUTURE",
+            "Bronze vessels and sliding cords in C minor pentatonic. Open bloom closes into a seam murmur.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.suture() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,
         ) { SkinKits.classic() },
+        Starter(
+            "cistern", "CISTERN",
+            "Drops answer a struck skin. Wet melodic surfaces in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.cistern() },
         Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",

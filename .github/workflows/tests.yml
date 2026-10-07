@@ -51,10 +51,12 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      # The Android SDK is required from the moment :app exists: AGP resolves it
-      # at configuration time, so without it every module fails to configure and
-      # all the pure-JVM tests go red for a reason that has nothing to do with
-      # them.
+      # :app is included only when an SDK is located (settings.gradle.kts).
+      # This job installs one so :app is in the graph and `-x :app:test`
+      # has something to exclude. A machine with no SDK leaves :app out
+      # and the nine JVM modules configure on their own; copying the
+      # `-x :app:test` line into that session fails because there is no
+      # :app to exclude.
       #
       # packages: '' skips this action's own default install (`tools
       # platform-tools`) — Google removed the legacy `tools` package from
@@ -114,6 +116,10 @@ jobs:
       # The native engines on the host: no NDK, no device. The audio callbacks
       # are driven by hand and the DSP and handshakes asserted; Oboe is headers
       # only here (fetched from the pinned release by the test's CMake).
+      # The production CMake and the harness name the engine sources
+      # separately. This fails the job when a new .cpp lands in only one.
+      - name: Engine sources are named in both CMake files
+        run: python3 scripts/check_native_sources.py
       - name: Configure
         run: cmake -S app/src/main/cpp/test -B build/native-tests
       - name: Build

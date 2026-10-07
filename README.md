@@ -6,10 +6,13 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, ten
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, the
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
-play). No Android layer yet.
+play) — and the Android app over it (`:app`: capture, the tape, the kit,
+PLAY / KEYS / SURFACE on the native engine, synth, and export). What still
+needs a phone or the Live III is [`docs/BENCH.md`](docs/BENCH.md). Where
+the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
 ## The loop
 
@@ -29,11 +32,15 @@ capture (rolling buffer)  →  trim  →  assign to 4×4 grid  →  export .xpm 
 
 ## Modules
 
-All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
-on a normal JVM and the Android layer stays a thin shell over proven code.
+Nine of the modules are plain Kotlin/JVM with no Android APIs, so the fiddly
+parts are unit tested on a normal JVM. `:app` is the Android shell over them
+and joins the Gradle build only when an SDK is present (`settings.gradle.kts`).
+It has no host unit-test source set; its Compose suites live in
+`app/src/androidTest`, and the native engines have host tests under
+`app/src/main/cpp/test`.
 
 ```
-./gradlew test    # 2403 tests across nine modules
+./gradlew test    # the nine JVM modules
 ```
 
 ### `:audio`
@@ -200,6 +207,42 @@ engine and sits before the filter — saturation makes harmonics and the filter
 has to be downstream to shape them, which is why bass through an FX rack
 distortion sounds like a blanket.
 
+THAW is a pitched ice-plate engine: powered copper runners warm the contact
+layer, changing brittle friction into a smoother sustain; delayed liquid
+channels load and couple four plates, and cooling can release small stored
+stress events. BRITTLE, RUNNER, MELT, CHANNEL, FROST and SHEET share that
+material model. TUNE spans C3–C5; CONTACT, HEAT, FREEZE, CHANNELS and THICKNESS
+shape it, and HOLD extends the gesture before its top step becomes a settled
+sustain loop. Twelve presets, a dry sixteen-pad kit and the phone synth picker
+use the same deterministic engine. Run
+`./gradlew :synth:generateThawAudition` for raw and matched clips, diagnostics
+and a listening page under `testkit/thaw-audition/`. The sound still awaits
+the owner's listening verdict; [implementation notes](docs/THAW.md) describe
+the model and its limits.
+
+UNDERTOW is a pitched suction-shell engine: four weighted leather flaps
+share one piston-driven reservoir, so an opening or seal changes the air
+available to its neighbors. Ceramic rim catches excite the same hollow
+object as the tuned breath. KNOCK, BREATH, FLUTTER, SEAL, HOLLOW and SURGE
+share TUNE (C3–C5), DRAW, FLAP, WEIGHT, SPIRAL, LEAK and HOLD. Twelve presets
+and `SynthKits.undertow()` use the deterministic dry engine; HOLD's top step
+returns settled powered suction material. Run
+`./gradlew :synth:generateUndertowAudition` for raw and matched clips,
+pressure/contact diagnostics and a listening page under
+`testkit/undertow-audition/`. The owner's sonic verdict remains pending;
+[implementation notes](docs/UNDERTOW.md) describe the model, probes and limits.
+
+SUTURE is a pitched bronze vessel whose opening ring stretches elastic cords
+through wooden eyelets. Bounded stitchers close the gaps against vibration,
+changing the cavity loading and bringing the seams into contact. BLOOM,
+THREAD, CLOSE, MURMUR, STRAIN and SHELL share TUNE (C3–C5), GAP, STITCH, CORD,
+SEAM, CAVITY and HOLD. Twelve presets, a dry sixteen-pad kit, FRESH TAPE and
+the synth picker use the same deterministic renderer. Run
+`./gradlew :synth:generateSutureAudition -PsutureFirstListen` for the smaller
+listening set, or omit the property for the full raw/matched and diagnostic
+gate. [Implementation notes](docs/SUTURE.md) explain the model and HOLD's
+settled-loop format. The sound awaits the owner's listening verdict.
+
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
 decaying sine partials at inharmonic ratios, the textbook recipe for a
@@ -338,6 +381,65 @@ the hammer (kept in the recipe, so a struck kit still regenerates from
 `kit.json`). Design:
 `docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md`.
 
+FLOTILLA is pitched emitters on a circular pool: RIPPLE, KNOCK, HOLLOW,
+CROSSWAVE, DRIFT and GATHER, with PULSE, CROSSING, FLOTILLA, VESSEL,
+SURFACE, SKIN and HOLD. The note is the source. The pool is a few damped
+modes, the vessels float on it, and a warm dome sits over the top. HOLD at
+the top is a stationary loop (the slider reads LOOP), not a claim the
+hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
+`docs/superpowers/specs/2026-10-04-flotilla-engine-design.md`.
+
+CISTERN is a pitched membrane below a finite suspended droplet field:
+FIRST, DRIP, CASCADE, POOL, RIPPLE and RECOVERY. The strike releases
+droplets; their delayed landings excite that same surface, add local wet
+load, and can release further droplets. STRIKE, SUSPENSION, DROP, SKIN
+and DRAIN shape the gesture; HOLD supplies explicit powered circulation.
+MIDI 36–84 is a separate note parameter, and velocity is strike energy.
+Twelve provisional presets and `SynthKits.cistern()` provide sixteen dry
+pads. Run `./gradlew :synth:generateCisternAudition` and open
+`testkit/cistern-audition/index.html` for raw and matched listening clips,
+macro sweeps, interaction grids and causal diagnostics. Listening and
+release naming checks are pending. Design and implementation notes:
+[`docs/superpowers/specs/2026-10-05-cistern-engine-design.md`](docs/superpowers/specs/2026-10-05-cistern-engine-design.md).
+The [published audition](https://cistern-snipsnap-audition.bertcalm.chatgpt.site)
+includes the full matrix and before/after comparisons for the revised voices.
+
+CIRCUIT is an invented moving ensemble: three rooted breath resonators,
+stone rattle, paired wood, clay vessel and synthesized coordination voice.
+The current listening candidate gives them one authored four-pulse figure,
+with shared breath, a slow rise and settle across the phrase, stable player
+identity and quiet overlapping support. ROOT adds a firmer pitched foundation
+only at faster playing rates.
+DIAMETER, ORBIT and PACE independently set formation, movement and playing;
+CANYON supplies asymmetric mono paths and bounded replies at authored answer
+opportunities. A common energy scale keeps accepted replies in the phrase.
+Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
+clips. HOLD at .99 returns its settled procession without an opening gesture.
+The full R4 audition pack is complete: 370 variants, 740 raw/matched WAVs and
+39 unique checks passed. The owner's listening verdict remains pending.
+Contract and audition commands:
+[`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+
+MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
+travels between four trees, and synthesized owls answer the disturbances
+that reach them. CLUNK, THWACK, FRONT, HOOT, GROVE and ALARM share STRIKE,
+TRUNK, FOG, AGITATION and GROVE, with TUNE and HOLD. Fog loads the original
+tree as well as carrying returning sound. Calls have refractory times and
+finite budgets; HOLD supplies repeated strikes. Fourteen dry presets and a
+sixteen-pad pitched kit. The accessible listening page starts silent and
+is regenerated with `./gradlew :synth:generateMurkAudition`; see
+[`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
+
+COROLLA is a mechanical flower of coupled metal petals around a powered
+magnetic core and a shared chamber. TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT
+and HUSK share TUNE, PULL, BLOOM, FIELD, CONTACT, CHAMBER and HOLD. It
+renders dry; finite notes route as TONAL for IN KEY, and HOLD's top step
+returns settled LOOP material. Twelve
+presets and `SynthKits.corolla()` expose the first implementation, awaiting
+the owner's listening review. Audition: `./gradlew :synth:generateCorollaAudition`.
+Individual presets can also be rendered with
+`./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -345,11 +447,11 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK and GRAINS round out the lineup — thirteen engines in the `Engine` picker
-counting SKIN, RESIN, TIDE, GLINT, SIREN and FORK; GRAINS is a fourteenth thing entirely, out of the
-picker's scope since it has no voice enum and works on a source snip
-instead of picking one. VOX is formant vocal
-synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
+VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW, SUTURE and GRAINS round out the lineup —
+twenty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+since it has no voice enum and works on a source snip instead of picking
+one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
+proudly: a VOWEL knob morphs
 continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. It sings
 through a vocal-cord pulse with vibrato; CHOIR is seven singers in
 sections, in stereo; a long DECAY holds; SIZE scales the throat from
@@ -371,9 +473,9 @@ snapped PITCH, SHINE), deterministic per seed, honest enough that a
 texture classifies as the LOOP it is. `SynthKits.cloud()` is the
 atmosphere kit both of them make together.
 
-SNAP is the twelfth thing, and the other half of the name: a photo becomes
-a pad. A picture is already mathematical data — three numbers per pixel —
-so the engine only decides which numbers to read and in what order. One
+SNAP is the other half of the name: a photo becomes a pad. A picture is
+already mathematical data — three numbers per pixel — so the engine only
+decides which numbers to read and in what order. One
 line through the photo is one cycle of a wavetable (HORIZON reads across,
 each column averaged so it is the picture's silhouette rather than one
 noisy row; PLUMB reads down; ORBIT walks a circle round the centre, which
@@ -526,6 +628,17 @@ and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
+That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
+THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
+GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW,
+SUTURE, plus GRAINS, SNAP and DRAW, which sit beside the
+picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
+MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
+CISTERN is also in the picker, preset roster and starter kits; the CLI's
+`--midi` and `--velocity` options set its note and strike energy directly.
+TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
+no roster entry. Each file's own KDoc names its spec.
+
 The filters got a generational upgrade from the DSP literature: `Dsp.TptSvf`
 is a topology-preserving (trapezoidal) state-variable filter after Andy
 Simper's Cytomic papers — stable to Nyquist where the Chamberlin design
@@ -664,19 +777,29 @@ The circular sequencer ([`docs/ORBITS.md`](docs/ORBITS.md)): a bar taped
 end to end into a ring, a longer snip taped into a bigger ring around it,
 one needle speed driving them all so the inner ring comes round first. Each
 ring is a pad pattern or a snip from the shelf, any length from 1 to 64
-steps, with a per-ring toggle between **SPEED** (same needle speed — a
-16-step ring against a 20-step ring is 4/4 against 5/4, meeting every five
-bars) and **LAP** (once a bar whatever the steps — three even hits against
-four). `OrbitClock` is the arithmetic, every position a function of one
+steps. **SPAN FREE** keeps one needle speed, so a 16-step ring against a
+20-step ring is 4/4 against 5/4. **SPAN ½ BAR** through **4 BARS** makes
+one turn of the ring that many laps of the bar, so three steps across one
+bar is a triplet. `OrbitClock` is the arithmetic, every position a function of one
 frame count; `OrbitEngine` plays it through the same `AudioSink` the loop
 grid uses; `OrbitStore` keeps `orbits.json` beside the kit. Reached from
-GROOVE's **ORBIT ▸**. Phone-side only for now — export is a listed
-follow-up.
+the ORBIT menu item, and from GROOVE's **ORBIT ▸**. **CLIP ▸ KIT** writes
+the set into the kit's `groove.json`, and the native export takes that
+clip to the MPC. [`docs/ORBITS.md`](docs/ORBITS.md) is the arithmetic.
+
+### `:app`
+
+The Android shell: Compose bound to `:shell`, kit storage, capture
+services, and the native library (`SurfaceEngine`, `PadEngine`,
+`LiveSnapEngine`). How to build it, and the per-feature phone notes, are
+in [`app/README.md`](app/README.md). CI compiles it in `android-build`.
 
 ## Docs
 
-- [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
-- [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — **the remaining work, scoped**: the Android app milestone by milestone, the hardware queue, and the odds and ends
+- [`docs/README.md`](docs/README.md) — which document is current, and which are dated notes
+- [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, the original MVP cut, architecture
+- [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — milestone record of the Android app, and what is still open
+- [`docs/BENCH.md`](docs/BENCH.md) — the phone and Live III checks, in the order to run them
 - [`docs/FEATURE_PLAN.md`](docs/FEATURE_PLAN.md) — the six product features ranked by ROI, each planned to done with owners and exit tests
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/CLI.md`](docs/CLI.md) — the SnipSnap CLI: chop a file into a kit from any desktop
@@ -710,6 +833,5 @@ file in `reference/golden/liveiii-36/` — the last word on what firmware
 itself writes. Procedure in [`reference/README.md`](reference/README.md).
 
 MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
-— nobody here owns an MPC One or a 2.x Live II — but `:xpm` is live regardless,
-since it is the only thing producing loadable output today and MPC 3 loads MPC 2
-content.
+— nobody here owns an MPC One or a 2.x Live II. Both writers are shipping
+paths the Live III has already loaded, and MPC 3 loads MPC 2 content.

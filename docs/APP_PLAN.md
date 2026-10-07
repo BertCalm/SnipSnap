@@ -16,12 +16,12 @@ L ≈ a week-plus of sessions).
 | Capture/conditioning core (`:audio`) | done, tested — ring buffer, cleanup, transients, chopper, classifier, auto-place, pitch/scales/tuner, loudness, resampler + bake path |
 | Kit pipeline (`:kit`) | done, tested — kit folders, preflight, balance, in-key, velocity layers, recipes, every export driver |
 | Formats (`:xpm`, `:mpc3`) | done, tested, corpus-guarded — `.xpm`, keygroups, expansions, `.xpn`, `.xtd`, `.xty`, clips, `.xpj` projects; drums hardware-verified |
-| Synthesis (`:synth`) | done, tested — eight engines, FX rack, recipes, groove, S5 instrument suite with loop points |
-| Design | done — TapeOS system, eight schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
-| Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
+| Synthesis (`:synth`) | done, tested — the engines in `SynthScreen`'s picker and the ones outside it, the FX rack, recipes, presets, groove, the instrument suite |
+| Design | done — TapeOS system, eight schemes (`Schemes.ALL`), ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
+| Acceptance artifacts (`testkit/`) | done — kit folders plus the packed downloads `scripts/pack_testkit_zips.py` rebuilds, from the diag kit to the Session project. Later kits are folders until a zip is packed |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
-| **The Android app** | **M0–M5 built** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models, card write included. What is *unproven* is every milestone's exit test: each needs a phone in a hand and none has been run — `docs/BENCH.md` §A is that list |
+| **The Android app** | **M0–M5 built** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models, card write included. PLAY's exit test passed on a phone on 2026-09-08 (`docs/BENCH.md` A1, 8–11 ms exclusive). The bench was paused on 2026-09-11; the open rows are still that file |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
 The concept doc's "deliberately v2" list (velocity layers, expansions,
@@ -97,11 +97,11 @@ test-first.
 - **`ui-tooling` is deliberately absent** — it drags
   `androidx.compose.material` onto the debug classpath. A milestone that
   wants `@Preview` should re-add it with an `exclude`.
-- **Untested by design:** `@Composable` functions and the `SoundPool`
-  adapter. There is no Compose or Robolectric harness; M1 should decide
-  whether to add one rather than inherit the gap silently.
-- **Deferred, with reasons:** the KGP "loaded multiple times" warning
-  (wants a repo-wide version catalog); IME padding in `NewTapeDialog`
+- **Host unit tests:** M0 shipped with none for `@Composable` functions,
+  and the `SoundPool` adapter was deleted with `PadPlayer` (EEE10).
+  `app/src/androidTest` is the Compose suite, run on a device by
+  `emulator-tests`. There is still no `app/src/test`.
+- **Deferred, with reasons:** IME padding in `NewTapeDialog`
   (latent at the verified screen size); glyph fallback for ▶ ■ ⟳, which
   no bundled font carries — it is invisible for ⚙ at menu size and will
   not be at M2/M4 transport size.
@@ -112,9 +112,11 @@ test-first.
 **The habit worth keeping:** four defects on this branch came from
 looking at the running app and none from the test suite — clipped system
 bars, "1 TAPES", a hard-clipped pad label, and a shelf that claimed to be
-empty while filling itself. `scripts/m0-exit-test.sh` exists to make that
-repeatable; M1's exit test should be written the same way, and run
-before the milestone is called done rather than after.
+empty while filling itself. `scripts/m0-exit-test.sh` was that check for
+the M0 tree. It is retired: it still waited on `files/kits/SNIPSNAP KIT 01`,
+a `SnipSnapPad` log tag, and six schemes, and the app keeps kits under
+`files/Kits`, plays them through `PadEngine`, and ships eight schemes.
+The phone checks are `docs/BENCH.md`.
 
 ### M1 — Capture · L, the riskiest milestone, do it second on purpose — built; exit test unrun [BENCH A5]
 

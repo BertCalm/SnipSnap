@@ -13,7 +13,6 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.tanh
-import kotlin.math.tanh
 import kotlin.random.Random
 
 /**

@@ -1,14 +1,19 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.CisternVoice
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class StarterKitsTest {
@@ -38,6 +43,28 @@ class StarterKitsTest {
                 // carry recipes (not all — some treatments are render-only).
                 assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
             }
+            if (starter.id == "cistern") {
+                // Reuse this rendered kit to exercise its saved recipes through
+                // the editing door, rather than rendering the whole kit twice.
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                val drumClasses = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
+                val voices = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<CisternPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the wet surface is the engine itself")
+                    assertTrue(pad.drumClass !in drumClasses, "${pad.displayName}: ${pad.drumClass}")
+                    assertTrue(pad.oneShot, "${pad.displayName}: starter pads play their complete rendered surface")
+                    patch.voice
+                }
+                assertEquals(CisternVoice.entries.toSet(), voices.toSet(), "all six surfaces are reachable")
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "pitch and velocity survive replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved surface regenerates exactly")
+            }
             assertEquals(starter, StarterKits.byId(starter.id))
         }
         assertEquals(null, StarterKits.byId("nope"))
@@ -61,11 +88,15 @@ class StarterKitsTest {
     }
 
     @Test
-    fun `nine starters, and blank leads them`() {
+    fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "skin", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "undertow", "suture", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
+        val cistern = StarterKits.byId("cistern")!!
+        assertEquals("CISTERN", cistern.displayName)
+        assertFalse(cistern.seeded, "CISTERN is a fixed authored kit")
+        assertEquals(KeySpec.parse("Cminpent"), cistern.key)
     }
 
     @Test

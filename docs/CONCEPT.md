@@ -95,6 +95,11 @@ everything below is additive on top of a thing that already works.
 
 ## Deliberately v2
 
+Written as the list the first loop would not include. Auto-chop,
+auto-place, velocity layers, expansion export, keygroups, and the synth
+engines have since shipped. The "what's left" lines below are that
+original cut. Where the work stands is [`APP_PLAN.md`](APP_PLAN.md).
+
 - **Auto-chop UI** — the detection and slicing themselves are done and tested
   (`Transients`, `Chopper` in `:audio`); what's left is the gesture and the
   review screen
@@ -150,7 +155,7 @@ halfway with a half-written kit on the user's SD card.
 | Android 14+ requires consent per capture session | Design around long-lived sessions rather than per-snip capture; one dialog per session, not per snip |
 | Play Store policy | Never market as recording a named service. Frame as "sample your own sources." No URL downloader, ever. No root/Xposed capture-policy overrides. |
 | XPM format drift across firmware | Golden-file tests per target device; target the MPC 2-era format as the common denominator |
-| Scope creep into keygroups / expansions / layers | Three separate rabbit holes, all explicitly v2 |
+| Scope creep into keygroups / expansions / layers | The original v2 cut. Those three have shipped; further scope earns a row in [`APP_PLAN.md`](APP_PLAN.md) |
 
 ## Open questions
 

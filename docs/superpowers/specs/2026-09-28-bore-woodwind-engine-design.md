@@ -2187,7 +2187,7 @@ one-shot's +4.5; whole is +7.8; before, -14.3).
 
 - **Not heard.** The numbers say a loop carries the one-shot's rasp and voicing; whether it stops sounding like a cheap
   keyboard is the audition's question (the new first section: BELL ONLY, TWO-THIRDS and SHIPPED for the SOLO LOOP and the
-  PAD REED, the defaults at three notes, each with its one-shot).
+  PAD REED, the defaults at three notes, each with its one-shot). *Heard since, and the answer was no: Round 1.6.*
 - **A loop is brighter than its one-shot at low notes** (above), by choice of the constant and the prototype's strength,
   and the one-shot may be the one that is low.
 - **The four corners that never close are still there.**
@@ -2209,6 +2209,77 @@ broken alone and a named test failed: no rasp and no voicing in the loop (the bi
 claims test), no retry and a retry always (the retry test), no join-local last rung (the join test), a plain window
 (the precision, claims and fuzz tests), no sub-sample refinement (five tests), the full-strength branch off (the
 voicing test and the claims test) and a loose convergence tolerance (four tests).
+
+### Round 1.6: the loop, heard — 2026-10-04
+
+Round 1.5 made the loop carry the rasp and the voicing and close better. The owner listened, and it is still a cheap
+keyboard. Nothing in the engine changed in this round: it is what was heard, what was measured to find out why, two
+prototypes made outside the engine (in Python, on the finished loop and on a long one-shot), and where the work was
+left. Everything below is one note, the SOLO LOOP's (SAX, 233 Hz), and was heard through clips sent in the
+conversation; the audition page's own verdicts for the round (`bore_r15`) were not read.
+
+**What was heard.** In order:
+
+1. After Round 1.4's listening, on the kit card: "Solo loop sounds like a cheap keyboard".
+2. After Round 1.5, the SOLO LOOP as BELL ONLY and as SHIPPED (the other clips of the section were not sent): "Still sound cheap".
+3. After the first prototype below: "Still doesn't sound very good". Asked, the owner said **the one-shot of the same note
+   sounds good and only the loops are bad**, and picked "too steady or hissy" and "buzzy, thin or harsh" for what is wrong.
+4. After the second prototype: "Ok. Fine for now. Might revisit in the future". That is not a verdict on how it sounds.
+
+**Why the loop is frozen.** The steady stretch takes no turbulence and no vibrato (`blow`, `steady`: "a loop cannot
+carry a signal that does not repeat"). It cannot: the bore is a feedback loop, and noise inside it moves the note's phase,
+so a noisy stretch does not come back to where it started and the seam fails. The result is a perfectly periodic wave.
+Measured on the same note, over 0.35-0.85 s of the one-shot's held middle against the loop:
+
+| | one-shot | loop (shipped) |
+|---|---|---|
+| level range over 50 ms steps | 0.34 dB | 0.20 dB |
+| pitch wander (std / range) | 5.24 / 15.1 cents | 0.00 / 0.02 cents |
+| energy between the harmonics (100 Hz-8 kHz) | -42 dB | -80 dB |
+| harmonics 1-6, level wobble | about 0.5 dB | 0.00 dB |
+| brightness (spectral centroid) wander | 2.34% | 0.01% |
+
+The one-shot's 5 cents of wander is its own vibrato (HOLD 0.5 is about 10 cents peak at 5.2 Hz), and its between-harmonic
+energy is the bore's turbulence, rising steeply with frequency: -60, -41 and -27 dB in the 0.1-1, 1-3 and 3-8 kHz
+bands. The loop's spectrum is not a clarinet's (even and odd harmonics are level: +1.0 dB against -1.1 dB for the
+one-shot). It is flatter than the one-shot's: harmonics 9-12 sit 8 to 9 dB higher against the fundamental. The dark
+loop of the first rounds (centroid 761 Hz) and the bright one (2466 Hz) were both called cheap, so brightness alone is not
+the cause (the one-shot's centroid, 2311 Hz averaged over the whole note, attack included, is close to the bright loop's).
+
+**Prototype 1: the loop with life added afterwards.** On the finished loop, everything circular so it repeats exactly: a
+7-cent vibrato at 5.2 Hz (a whole number of cycles in the loop, its depth swelling twice per loop) plus a slow drift, by
+reading the loop at warped positions with a cubic read, the warp's mean removed so the pitch is unchanged; a
+multiplicative shimmer of 0.0015 over 20-400 Hz and a hiss of -34 dB over 1.5-9 kHz, made in the frequency domain so they
+repeat; a 0.3 dB swell. The noise was fitted band by band to the one-shot's (target -60.2, -40.7, -27.1 dB; got
+-59.8, -39.9, -27.4) and the wrap had no click. By the numbers it matched the one-shot (pitch alone gave harmonic wobble
+0.39 dB against 0.50 and brightness wander 2.2% against 2.3%). It was heard as "still doesn't sound very good", and
+"hissy". Why was not established. Two candidates: the hiss is added to the output, where in the one-shot the turbulence
+multiplies the pressure inside the pipe and the pipe shapes it; and the loop's top harmonics are 8 dB higher anyway.
+**Matching a one-shot's statistics by hand is not the one-shot.**
+
+**Prototype 2: a loop cut out of the one-shot.** The one-shot's own path (`finish(blow(..., gateSeconds = 4f))`, the
+SOLO LOOP's macros at HOLD 0.5) gave a 4.13 s note. The loop is a stretch of its held middle from 0.55 s, its length
+searched within 0.12 s of 2 s for the best alignment of its head with the material after its end (normalised
+correlation 0.994 over 0.3 s; the length came to 93,284 samples, 2.1153 s), and its head is a linear crossfade, 0.3 s
+long, from that following material into the stretch's own start, so the wrap is continuous. Checked: the step at the wrap
+0.00095 against a median step of 0.00024 and a 99.9th percentile of 0.034 (no click); the level in the blend -30.23 dB
+against -30.24 dB outside it (no dip); between-harmonic energy -41.5 dB (one-shot -42.2), harmonic wobble 0.37 dB (0.50),
+brightness wander 2.32% (2.34%), where the shipped loop reads -77 dB, 0.00 dB and 0.01%. **Not heard as good or bad.**
+
+**If it is picked up.**
+
+- The loop would be built from a long one-shot's held middle and closed by a crossfade, not by a whole number of periods.
+  That replaces `renderLoop`'s periodic construction (the pitch ladder, the retry) and changes what `Keys.seamError`
+  means for a loop: it closes by blend, so the test would be the wrap step and the level through the blend. The four SAX
+  corners that never close might close too, since a signal that is not periodic is what a crossfade accepts; nobody has
+  tried, and it is a guess.
+- What the prototype does not answer: whether the repeat is audible (the same breath and the same vibrato every 2.1 s),
+  how deep the vibrato of a LOOP should be (HOLD's top step reads 20 cents at 5.2 Hz in the one-shot's own mapping; the
+  prototype used the 10 cents of HOLD 0.5), the loop length, render cost (a 4 s render plus a search), and FLUTE and the
+  other notes, none of which were looked at.
+- The scripts were scratch and are not kept. The method above is enough to redo them in an afternoon.
+- The brightness finding of Round 1.5 stands: a whole-strength voicing is brighter than the one-shot's plateau at low
+  notes, and a loop cut from the one-shot would have the one-shot's.
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 
