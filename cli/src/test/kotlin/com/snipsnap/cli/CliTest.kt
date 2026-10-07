@@ -1231,6 +1231,14 @@ class CliTest {
         val (badFrom, _, badFromErr) = cli("recipe", kitDir.path, "A04", "--from", "nowhere")
         assertTrue(badFrom != 0)
         assertContains(badFromErr, "<kit-dir>:<pad>")
+
+        // A mutated pad's recipe names its partner by label; the bytes never rode along. The refusal is
+        // built in :shell (Copy.replayNeedsPartner) and printed lower-cased here, so the phone's one word
+        // for that input, PARTNER, reaches the terminal too: the CLI's one changed line, pinned.
+        assertEquals(0, cli("mutate", kitDir.path, "A04", "--with", "A01", "--splice").first)
+        val (mutated, _, mutatedErr) = cli("recipe", kitDir.path, "A05", "--from", "${kitDir.path}:A04")
+        assertTrue(mutated != 0)
+        assertContains(mutatedErr, "needs its partner - not carried")
     }
 
     @Test

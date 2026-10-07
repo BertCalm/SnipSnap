@@ -1500,7 +1500,34 @@ object Copy {
     fun keyed(segment: String, pad: String, key: String): String = "$segment ON $pad, IN $key. ORIGINAL SLEEPS IN THE BIN."
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
     fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
-    fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
+    /**
+     * MUTATE's KEEP: the move, the pad and its partner, then where the take
+     * before it went; then each partner STACK flipped because it was
+     * cancelling the pad, as the CLI reports it; then [lengthNote] when the
+     * move changed the pad's length enough to say.
+     */
+    fun mutated(move: String, pad: String, partner: String, flipped: List<String> = emptyList(), lengthNote: String = ""): String =
+        buildString {
+            append("$move: $pad × $partner. THE TAKE BEFORE IT SLEEPS IN THE BIN.")
+            for (f in flipped) append(" $f WAS FLIPPED: IT WAS CANCELLING THE PAD.")
+            if (lengthNote.isNotEmpty()) append(" $lengthNote")
+        }
+
+    /**
+     * MUTATE's length line, or "" when the length did not change enough to
+     * say: at least 10 % of [beforeMs] and at least 50 ms (the redesign's
+     * Decision 11). Seconds, at the first precision where the two lengths
+     * read differently, so a change worth saying never reads as the same
+     * number twice (0.25 S and 0.30 S are both 0.3 at one decimal).
+     */
+    fun lengthNote(beforeMs: Int, afterMs: Int): String {
+        val change = kotlin.math.abs(afterMs - beforeMs)
+        if (change < 50 || change * 10 < beforeMs) return ""
+        val (now, was) = (1..3).map { seconds(afterMs, it) to seconds(beforeMs, it) }.first { it.first != it.second }
+        return "IT RUNS $now S NOW, NOT $was S."
+    }
+
+    private fun seconds(ms: Int, decimals: Int): String = "%.${decimals}f".format(java.util.Locale.ROOT, ms / 1000.0)
     /**
      * DE-SAMPLE: the pad is a patch now; [engine] and [voice] the two
      * words that identify it, [distance] the honest number.
@@ -1516,13 +1543,43 @@ object Copy {
     /** DE-SAMPLE's refusal: no patch near enough, and which one was nearest. */
     fun desampleFar(engine: String, voice: String, distance: Float): String =
         "NO PATCH IS NEAR. THE CLOSEST IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
-    /** DRIFT: the pad drifted toward what the crate dealt. */
+    /** DRIFT: the pad drifted toward the partner the shelf picked. */
     fun drifted(pad: String, toward: String): String = "$pad DRIFTED TOWARD $toward. ORIGINAL SLEEPS IN THE BIN."
-    const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."
+    /**
+     * MUTATE's UNDO. It restores the newest take of the pad's file from the
+     * bin, which after two mutates is the first mutate's result, not the
+     * original; so the line says exactly what came back.
+     */
+    const val UNMUTATED = "UNDONE. THE TAKE BEFORE THE LAST MUTATE IS BACK FROM THE BIN."
     const val MUTATE_NEEDS_ONE = "GHOSTS ON. MUTATE WANTS ONE SAMPLE - CLEAR THEM FIRST."
-    const val CRATE_EMPTY = "THE CRATE HAS NOTHING TO DEAL. ONLY YOU ON THE SHELF."
-    /** A FILE: the picked file cannot be a parent; [reason] the decoder's or the holder's own words. */
-    fun fileRefused(reason: String): String = "NOT A PARENT: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
+    /** ROULETTE or DRIFT on a shelf with no other pad. The name stays (PersonalityTest lists it); the words say PARTNER's way. */
+    const val CRATE_EMPTY = "THE SHELF HOLDS NO OTHER PAD. ROULETTE HAS NOTHING TO PICK."
+    /** MUTATE's HEAR, KEEP or the like with no partner picked yet. */
+    const val MUTATE_PICK_PARTNER = "PICK A PARTNER FIRST."
+    /**
+     * MUTATE on a velocity-layered pad, naming the chip the pad sheet
+     * prints. Turning SOFT HITS off clears every layer, GHOSTS' rendered
+     * ones and STACK THE TAKES' copies alike, so the line points at a safe
+     * act for both. [MUTATE_NEEDS_ONE] stays, for DE-SAMPLE.
+     */
+    const val MUTATE_LAYERED = "SOFT HITS IS ON: THIS PAD HAS LAYERS. MUTATE WANTS ONE SAMPLE - TURN SOFT HITS OFF FIRST."
+    /**
+     * MUTATE on a pad that plays a chain of slices in turn. No phone
+     * control unchains a pad, so the line names the phone's way to pads of
+     * one sample instead (the redesign's Decision 3).
+     */
+    const val MUTATE_CHAINED =
+        "THIS PAD PLAYS ITS SLICES IN TURN. MUTATE WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE."
+    /** ROULETTE or DRIFT when every other sound on the shelf is a near-double of this pad. */
+    const val ROULETTE_ONLY_COPIES = "EVERY OTHER SOUND ON THE SHELF IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF."
+    /** The picked partner is no longer there: a pad deleted, a kit removed, a room or a file gone. */
+    const val MUTATE_PARTNER_GONE = "THAT PARTNER IS GONE. PICK ANOTHER."
+    /** MUTATE's UNDO on a pad that carries no mutate. */
+    const val UNDO_NOTHING = "THIS PAD CARRIES NO MUTATE. NOTHING TO UNDO HERE."
+    /** MUTATE's UNDO when the bin holds no earlier take of the pad. */
+    const val UNDO_NOT_BINNED = "THE BIN HOLDS NO EARLIER TAKE OF THIS PAD. THE MUTATE STAYS."
+    /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
+    fun fileRefused(reason: String): String = "NOT A PARTNER: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
     // ---- TAPE SPLICE: two takes of one pad, joined at one chosen frame ----
     const val SPLICE_NEEDS_HISTORY =
@@ -1539,9 +1596,9 @@ object Copy {
     const val REPLAY_CLIPBOARD_EMPTY = "NOTHING COPIED YET. COPY LAST TREATMENT OFF A PAD FIRST."
     /** The honest limit, under the buttons: the recipe is the last step, never the stack. */
     const val REPLAY_LAST_ONLY = "COPIES THE LAST TREATMENT ONLY. A CRUSHED-THEN-WASHED PAD COPIES AS WASHED."
-    /** MUTATE's recipe names its parents by label; the bytes never rode along. */
-    fun replayNeedsParent(move: String, parents: List<String>): String =
-        "MUTATE ($move WITH ${parents.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARENT - NOT CARRIED."
+    /** MUTATE's recipe names its partners by label; the bytes never rode along. The CLI's `recipe` prints it lower-cased. */
+    fun replayNeedsPartner(move: String, partners: List<String>): String =
+        "MUTATE ($move WITH ${partners.joinToString(" + ").ifEmpty { "?" }}) NEEDS ITS PARTNER - NOT CARRIED."
     const val REPLAY_SPLICE = "SPLICE NAMES NO TAKES - NOT REPLAYABLE."
     const val REPLAY_OUTSIDE = "OUTSIDE WAS A ROOM, NOT A SETTING - NOT REPLAYABLE."
     /** CLEAN, THE DOCTOR and SCULPT are readings of that exact sound, not settings for another. */

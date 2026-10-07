@@ -551,12 +551,14 @@ fun ToastOverlay(
                 }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
+            // Three lines: MUTATE's longest toasts (a STACK keep with its flip sentence and length note,
+            // MUTATE_CHAINED) are cut at two on a 390 dp phone, and their last words are the point.
             if (door == null) {
-                TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+                TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 3)
             } else {
                 val (label, open) = door
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2, modifier = Modifier.weight(1f, fill = false))
+                    TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 3, modifier = Modifier.weight(1f, fill = false))
                     Spacer(Modifier.width(10.dp))
                     Box(
                         Modifier

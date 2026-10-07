@@ -2033,71 +2033,139 @@ class ConventionTest {
     }
 
     /**
-     * BECOME's row on the MUTATE card: drawn for every move, enabled by
-     * BECOME's own label, fed from the one holder, snapped like the knob.
+     * The MUTATE card's two knob rows: the move's knob and BECOME, drawn
+     * under the move line on every move, at one height, in words where
+     * there is nothing to dial. Round M1 of the MUTATE redesign
+     * (`docs/superpowers/specs/2026-10-04-mutate-card-redesign-design.md`,
+     * "The empty rows become words"); this law replaces A1b's
+     * two-`StepperSlider` law, whose dash literals the words retire.
      *
-     * - Every move draws it: MORPH as BECOME, every other move as the same
-     *   disabled `—` row STACK's knob shows, so the card never jumps.
-     * - It is enabled on `becomeLabel != null`, not on `knobLabel` as the
-     *   spec words it (the A1 plan's recorded deviation): `knobLabel` is
-     *   non-null on SPLICE, SPLIT, ROOM and TRANSPLANT, which ignore
-     *   BECOME, so a row copied from the knob's would be live on four moves
-     *   where it does nothing. That copy is the likely slip, so it is
-     *   refused here rather than left to review by eye.
-     * - It is drawn unconditionally: its `StepperSlider(` stands alone on
-     *   its line, directly after the knob row's closing `)`, so no inline
-     *   or braceless guard (`if (…) StepperSlider(`) can hide it on some
-     *   moves.
-     * - Its fraction and its readout both read `pendingBecome`, and it
-     *   snaps with exactly `(f * 40f).roundToInt() / 40f`, the knob row's
-     *   own expression: `MutateSheetTest` sweeps that exact text and proves
-     *   it lands only on whole 50 ms steps, so the literal is pinned here,
-     *   on the screen, and not only as the two rows' equality.
+     * - Every move draws both rows through `KnobRow`: exactly two calls in
+     *   `MutateCard`, each alone on its line, the first directly under the
+     *   move line and the second directly after the first's closing `)`,
+     *   so no guard, inline or on the line before, hides a row on some
+     *   moves and makes the card jump. `MutateCard` draws no
+     *   `StepperSlider` of its own.
+     * - The knob sits under the moves and above the partner rows: the move
+     *   line and the knob's meaning are read together.
+     * - A dead row's words come from `MutateSheet` (STACK: `NO KNOB — THEY
+     *   LINE UP ON THE HIT`; BECOME off MORPH: `ONLY MORPH TURNS OVER
+     *   TIME`), never a literal dash, which TalkBack read out bare, twice.
+     * - BECOME's row is enabled on `becomeLabel != null`, never on
+     *   `knobLabel` (A1b's recorded deviation): `knobLabel` is set on four
+     *   moves that ignore BECOME.
+     * - `KnobRow` draws a dead row at the live row's height (the 48 dp hit
+     *   floor, one line) with its words as its only spoken content, and
+     *   every row a caption line under the bar: the live row's meaning,
+     *   blank on a dead row (the owner's CAPTION, Decision 16).
+     * - The call site's half is A1b's, kept: `becomeKnob`, the readout and
+     *   the fraction from `pendingBecome`, and both snaps exactly
+     *   `(f * 40f).roundToInt() / 40f`, the expression `MutateSheetTest`
+     *   sweeps and proves lands on whole 50 ms steps.
      */
     @Test
-    fun `law - MUTATE draws BECOME's row on every move, enabled by BECOME's own label`() {
+    fun `law - MUTATE draws both knob rows on every move, under the move line, in words where nothing turns`() {
         val card = codeOnly(topLevelFun(padSheetScreen, "MutateCard"))
-        val first = card.indexOf("StepperSlider(")
-        val second = card.indexOf("StepperSlider(", first + 1)
-        assertTrue(
-            first >= 0 && second > first && card.indexOf("StepperSlider(", second + 1) < 0,
-            "expected MutateCard to draw exactly two StepperSliders: the move's knob, then BECOME under it",
+        assertFalse(
+            "StepperSlider(" in card,
+            "MutateCard draws a StepperSlider of its own. Both knob rows go through KnobRow, which draws the live " +
+                "bar and the dead row's words at one height.",
         )
-        val knobRow = normalizeSpan(blockAfterList(card, "StepperSlider("))
+        val first = card.indexOf("KnobRow(")
+        val second = card.indexOf("KnobRow(", first + 1)
         assertTrue(
-            "label = knobLabel ?: \"—\"" in knobRow,
-            "the move's knob row is no longer MutateCard's first StepperSlider:\n  $knobRow",
+            first >= 0 && second > first && card.indexOf("KnobRow(", second + 1) < 0,
+            "expected MutateCard to draw exactly two KnobRows: the move's knob, then BECOME under it",
         )
-        val becomeRow = normalizeSpan(blockAfterList(card.substring(second), "StepperSlider("))
+        fun lineAt(i: Int) = card.substring(card.lastIndexOf('\n', i) + 1, card.indexOf('\n', i).let { if (it < 0) card.length else it }).trim()
+        fun previousLine(i: Int) = card.substring(0, card.lastIndexOf('\n', i) + 1).lines().lastOrNull { it.isNotBlank() }?.trim()
+        assertTrue(
+            lineAt(first) == "KnobRow(" && previousLine(first)?.startsWith("TapeText(MutateSheet.outcomeLine(move, becomeFraction)") == true,
+            "the knob's row is guarded or has left the move line: its `KnobRow(` must stand alone on its line, " +
+                "directly under `TapeText(MutateSheet.outcomeLine(move, becomeFraction), …)`; found " +
+                "`${lineAt(first)}` after `${previousLine(first)}`.",
+        )
+        assertTrue(
+            lineAt(second) == "KnobRow(" && previousLine(second) == ")",
+            "BECOME's row is guarded, so it is drawn only for some moves and the card jumps when the move " +
+                "changes. Its `KnobRow(` must stand alone on its line, directly after the knob row's closing " +
+                "`)`; found `${lineAt(second)}` after `${previousLine(second)}`.",
+        )
+        val moves = card.indexOf("modes.chunked(3)")
+        val partners = card.indexOf("partners.chunked(4)")
+        assertTrue(
+            moves in 0 until first && partners > second,
+            "the knob rows are not between the move chips and the partner rows: the move line and the knob's " +
+                "meaning are read together, under the moves.",
+        )
+
+        val knobRow = normalizeSpan(blockAfterList(card, "KnobRow("))
         for (want in listOf(
-            "label = becomeLabel ?: \"—\"",
+            "label = knobLabel ?: \"\"",
+            "meaning = MutateSheet.knobMeaning(move)",
+            "deadText = if (knobLabel == null) MutateSheet.deadKnobLine else null",
+            "enabled = !busy && knobLabel != null",
+            "onChange = onKnobChange",
+        )) {
+            assertTrue(want in knobRow, "the knob's row lacks `$want`:\n  $knobRow")
+        }
+        val becomeRow = normalizeSpan(blockAfterList(card.substring(second), "KnobRow("))
+        for (want in listOf(
+            "label = MutateSheet.BECOME.label",
+            "meaning = if (becomeLabel == null) null else MutateSheet.becomeMeaning(move)",
             "fraction = if (becomeLabel == null) 0f else becomeFraction",
             "valueText = becomeText",
+            "deadText = if (becomeLabel == null) MutateSheet.becomeMeaning(move) else null",
             "enabled = !busy && becomeLabel != null",
-            "onFractionChange = onBecomeChange",
+            "onChange = onBecomeChange",
         )) {
             assertTrue(want in becomeRow, "BECOME's row lacks `$want`:\n  $becomeRow")
         }
         assertFalse(
             "knobLabel" in becomeRow,
             "BECOME's row reads `knobLabel`, which is non-null on SPLICE, SPLIT, ROOM and TRANSPLANT: the row " +
-                "would be live on four moves that ignore BECOME. Key it on `becomeLabel` (the recorded " +
-                "deviation from the spec's wording).",
-        )
-        val lineStart = card.lastIndexOf('\n', second) + 1
-        val lineEnd = card.indexOf('\n', second).let { if (it < 0) card.length else it }
-        val previous = card.substring(0, lineStart).lines().lastOrNull { it.isNotBlank() }?.trim()
-        assertTrue(
-            card.substring(lineStart, lineEnd).trim() == "StepperSlider(" && previous == ")",
-            "BECOME's row is guarded, so it is drawn only for some moves and the card jumps when the move " +
-                "changes. Its `StepperSlider(` must stand alone on its line, directly after the knob row's " +
-                "closing `)`; found `${card.substring(lineStart, lineEnd).trim()}` after `$previous`. Draw it " +
-                "for every move and let `becomeLabel ?: \"—\"` show the disabled row.",
+                "would be live on four moves that ignore BECOME. Key it on `becomeLabel` (A1b's recorded deviation).",
         )
         assertFalse(
-            Regex("""becomeLabel\s*!=\s*null\s*\)\s*\{|becomeLabel\?\.let""").containsMatchIn(card),
-            "BECOME's row is drawn only for some moves, so the card jumps when the move changes. Draw it for " +
-                "every move and let `becomeLabel ?: \"—\"` show the disabled row.",
+            "\"—\"" in card,
+            "MutateCard draws a literal dash. A row with nothing to dial says so in words read from MutateSheet " +
+                "(deadKnobLine, becomeMeaning); a bare dash reads as broken and TalkBack reads it out twice.",
+        )
+
+        val row = codeOnly(topLevelFun(padSheetScreen, "KnobRow"))
+        val bar = row.indexOf("StepperSlider(")
+        assertTrue(bar >= 0 && row.indexOf("StepperSlider(", bar + 1) < 0, "expected KnobRow to draw exactly one StepperSlider, the live bar")
+        val dead = normalizeSpan(row)
+        for (want in listOf(
+            "heightIn(min = Layout.MIN_HIT_TARGET.dp)",
+            "clearAndSetSemantics { contentDescription = if (label.isEmpty()) deadText else \"\$label, \$deadText\" }",
+            "TapeText(deadText, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)",
+        )) {
+            assertTrue(
+                want in dead,
+                "KnobRow's dead row lacks `$want`: a dead row stands at the live row's height, on one line, and " +
+                    "TalkBack reads its words once, not a slider it cannot move.",
+            )
+        }
+        // CAPTION (the owner's answer to Decision 16): the meaning on a caption line under the bar, on every
+        // row alike, so the bar keeps its full width and every row is one height.
+        val caption = row.indexOf("TapeText(if (deadText == null) meaning ?: \"\" else \"\", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(start = 52.dp), maxLines = 1)")
+        assertTrue(
+            caption > bar && "\"· \$meaning\"" !in row,
+            "KnobRow does not draw the knob's meaning as a caption line under the bar on every row (blank on a " +
+                "dead row), so the bar keeps its full width and every row is one height.",
+        )
+        // ... and "every row" means after the WHOLE dead/live if/else, at the Column's own level: a caption
+        // moved into the live `else {}` would stay below the bar yet vanish from a dead row, and the card
+        // would change height with the move.
+        assertEquals(1, Regex("""\}\s*else\s*\{""").findAll(row).count(), "expected KnobRow to branch dead/live with exactly one if/else")
+        val elseAt = Regex("""\}\s*else\s*\{""").find(row)!!.range.first
+        val elseOpen = row.indexOf('{', elseAt + 1)
+        val elseEnd = elseOpen + blockAfter(row, row.substring(elseAt, elseOpen)).length
+        assertTrue(
+            caption >= elseEnd,
+            "KnobRow's caption line sits inside the live `else {}` branch, not after the whole dead/live if/else: " +
+                "a dead row would lose its caption line and the card would change height.",
         )
 
         val src = padSheetScreen.readText(Charsets.UTF_8)
@@ -2136,6 +2204,298 @@ class ConventionTest {
                 "differently under the same thumb.",
         )
     }
+
+    /**
+     * The MUTATE card's words and buttons, round M1 of the redesign: the
+     * card says what each control will do, in MutateSheet's words, and
+     * nothing is greyed without a reason.
+     *
+     * - Only `busy` disables HEAR, KEEP and UNDO. With no partner, HEAR and
+     *   KEEP are dimmed (their doors toast PICK A PARTNER FIRST); with
+     *   nothing to undo, UNDO is dimmed by `MutateSheet.undoRefusal`, the
+     *   same answer its door toasts.
+     * - ROULETTE and A FILE are actions, not states, so they are never
+     *   dimmed at rest, exactly when a new player needs them.
+     * - The words are MutateSheet's, where MutateWordsTest holds them:
+     *   HEAR THE RESULT, the note line, KEEP, DRIFT · BLEND & SAVE,
+     *   ROULETTE · PICK A PARTNER OFF THE SHELF. `MUTATE ▸` is gone, and no
+     *   string the card draws says PARENT, CRATE, DEAL, NEIGHBOUR, GHOSTS
+     *   or KEEP ROOM.
+     * - The order is the round's: the partner rows, ROULETTE on its own
+     *   row, HEAR, the note, then KEEP and DRIFT side by side.
+     * - Each move says what it does, on the line under the six chips
+     *   (`MutateSheet.outcomeLine`).
+     * - The status line is the pairing line, read uncut by TalkBack, and
+     *   a selected move says so (`, SELECTED`).
+     */
+    @Test
+    fun `law - the MUTATE card says what each control does, and greys nothing without a reason`() {
+        val card = codeOnly(topLevelFun(padSheetScreen, "MutateCard"))
+        fun button(marker: String): String {
+            val at = card.indexOf(marker)
+            assertTrue(at >= 0, "expected MutateCard to draw `$marker`")
+            return normalizeSpan(blockAfterList(card.substring(card.lastIndexOf("ActionButton(", at)), "ActionButton("))
+        }
+        for ((marker, dimmed) in listOf(
+            "MutateSheet.HEAR_LABEL" to "dimmed = partner == null",
+            "MutateSheet.KEEP_LABEL" to "dimmed = partner == null",
+            "\"UNDO\"" to "dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null",
+        )) {
+            val b = button(marker)
+            assertTrue(
+                Regex("""enabled = !busy\s*[,)]""").containsMatchIn(b) && dimmed in b,
+                "`$marker` is greyed for a reason it does not say. Only `busy` disables it (`enabled = !busy`); " +
+                    "when it cannot act it is `$dimmed` and its door's toast explains:\n  $b",
+            )
+        }
+        for (marker in listOf("onClick = onRoulette", "onClick = onPickFile")) {
+            assertFalse(
+                "dimmed" in button(marker),
+                "the button with `$marker` is dimmed at rest. ROULETTE and A FILE are actions, not states: draw " +
+                    "them at full ink so a new player sees they can be tapped.",
+            )
+        }
+        val drift = button("MutateSheet.DRIFT_LABEL")
+        assertTrue("onClick = onDrift" in drift, "DRIFT's button does not read MutateSheet.DRIFT_LABEL")
+        assertTrue("MutateSheet.ROULETTE_LABEL" in button("onClick = onRoulette"), "ROULETTE's resting label is not MutateSheet.ROULETTE_LABEL")
+        assertTrue("Modifier.fillMaxWidth()" in button("onClick = onRoulette"), "ROULETTE does not have its own full row")
+
+        val order = listOf(
+            "onClick = onPickFile", "onClick = onRoulette", "MutateSheet.HEAR_LABEL",
+            "MutateSheet.NOTE_LINE", "MutateSheet.KEEP_LABEL", "MutateSheet.DRIFT_LABEL",
+        ).map { it to card.indexOf(it) }
+        assertTrue(
+            order.all { it.second >= 0 } && order.zipWithNext().all { (a, b) -> a.second < b.second },
+            "MutateCard's bottom rows are out of the round's order (A FILE, ROULETTE, HEAR, the note, KEEP, " +
+                "DRIFT): ${order.sortedBy { it.second }.map { it.first }}",
+        )
+        val keepRowAt = card.lastIndexOf("Row(", card.indexOf("MutateSheet.KEEP_LABEL"))
+        val keepRow = blockAfter(card.substring(keepRowAt), "Row(")
+        assertTrue(
+            keepRowAt > card.indexOf("MutateSheet.NOTE_LINE") && "MutateSheet.KEEP_LABEL" in keepRow && "MutateSheet.DRIFT_LABEL" in keepRow,
+            "KEEP and DRIFT do not share one row under the note line, as the round draws them side by side.",
+        )
+
+        val chips = card.indexOf("modes.chunked(3)")
+        val moveLine = card.indexOf("TapeText(MutateSheet.outcomeLine(move, becomeFraction)")
+        assertTrue(
+            chips >= 0 && moveLine > chips && moveLine < card.indexOf("partners.chunked(4)"),
+            "the move line is not under the six move chips: each move says what it does, right under them.",
+        )
+
+        assertFalse("MUTATE ▸" in card, "the commit button still reads `MUTATE ▸`; it is KEEP, and it writes in place")
+        val literals = Regex(""""(?:[^"\\]|\\.)*"""").findAll(card).map { it.value }.toList()
+        for (lit in literals) {
+            assertFalse(
+                Regex("""\b(PARENTS?|NEIGHBOU?RS?|CRATES?|DEALS?|GHOSTS)\b|KEEP ROOM""").containsMatchIn(lit.uppercase()),
+                "MutateCard draws $lit. MUTATE's one word for its input is PARTNER, GHOSTS is CHOP's word, and " +
+                    "KEEP is the card's commit verb, not OUTSIDE's KEEP ROOM.",
+            )
+        }
+
+        val pairAt = card.indexOf("pairLine,")
+        assertTrue(pairAt >= 0, "MutateCard does not draw `pairLine` as its status line")
+        val status = normalizeSpan(blockAfterList(card.substring(card.lastIndexOf("TapeText(", pairAt)), "TapeText("))
+        assertTrue(
+            status.startsWith("( pairLine,") && "Modifier.clearAndSetSemantics { contentDescription = pairSpoken }" in status,
+            "the card's status line is not the pairing line read uncut by TalkBack:\n  $status",
+        )
+        assertTrue(
+            "tapeClick(label = if (selected) \"\$m, SELECTED\" else m" in card,
+            "a move chip does not say it is selected; its bevel's fill is invisible to TalkBack",
+        )
+        val call = normalizeSpan(blockAfterList(padSheetScreen.readText(Charsets.UTF_8), "MutateCard("))
+        for (want in listOf(
+            "pairLine = MutateSheet.pairLine(MutateSheet.padTag(slot), pad.displayName, partnerName)",
+            "pairSpoken = MutateSheet.pairSpoken(MutateSheet.padTag(slot), pad.displayName, partnerName)",
+        )) {
+            assertTrue(want in call, "the MutateCard call lacks `$want`:\n  $call")
+        }
+    }
+
+    // ---- Law: the MUTATE card's honest doors (the redesign's round M1) ----
+
+    /**
+     * Round M1 of the MUTATE redesign
+     * (`docs/superpowers/specs/2026-10-04-mutate-card-redesign-design.md`,
+     * "Honest refusals" and "What changes in MutateCard"): no silent middle.
+     *
+     * HEAR and MUTATE used to return silently with no partner
+     * (`val who = partner ?: return`), behind buttons greyed with no reason
+     * given; the house rule is "dimmed, not disabled; the toast explains".
+     * Every door now asks `MutateSheet.refusalBefore` before it launches
+     * anything and toasts the refusal: HEAR and KEEP need a partner, DRIFT
+     * and ROULETTE pick their own. A pad's layers are no longer the door's
+     * own check with GHOSTS' words (`Copy.MUTATE_NEEDS_ONE`, which stays
+     * for DE-SAMPLE); the typed refusal names SOFT HITS. UNDO asks
+     * `MutateSheet.undoRefusal` before it commits, so a dimmed UNDO says
+     * why instead of doing nothing.
+     */
+    @Test
+    fun `law - MUTATE's doors refuse in words before they launch, never with a silent return`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        val doors = listOf(
+            Triple("fun onHear() {", "scope.launch", true),
+            Triple("fun onMutate() {", "appScope.launch", true),
+            Triple("fun onRoulette() {", "scope.launch", false),
+            Triple("fun onDrift() {", "appScope.launch", false),
+        )
+        for ((door, launcher, needsPartner) in doors) {
+            val body = codeOnly(blockAfter(src, door))
+            assertFalse(
+                Regex("""partner\s*\?:\s*return""").containsMatchIn(body),
+                "`$door` returns silently with no partner (`partner ?: return`). Ask MutateSheet.refusalBefore and " +
+                    "toast its line: PICK A PARTNER FIRST.",
+            )
+            assertFalse(
+                "Copy.MUTATE_NEEDS_ONE" in body,
+                "`$door` still says GHOSTS for a layered pad. MutateSheet.refusalBefore names SOFT HITS, the chip " +
+                    "the pad sheet prints; MUTATE_NEEDS_ONE stays for DE-SAMPLE alone.",
+            )
+            val check = Regex("""MutateSheet\.refusalBefore\([^)]*needsPartner\s*=\s*$needsPartner\s*\)""").find(body)
+            val launch = body.indexOf(launcher)
+            assertTrue(launch >= 0, "expected `$door` to start its work with `$launcher`")
+            assertTrue(
+                check != null && check.range.first < launch,
+                "`$door` does not ask `MutateSheet.refusalBefore(…, needsPartner = $needsPartner)` before `$launcher`, " +
+                    "so a layered or chained pad (or a missing partner) reaches the work and fails in the wrong words.",
+            )
+        }
+        val undo = codeOnly(blockAfter(src, "fun onUnmutate() {"))
+        val ask = undo.indexOf("MutateSheet.undoRefusal(")
+        val commit = undo.indexOf("commitPadEditNow(")
+        assertTrue(
+            ask >= 0 && commit > ask && "onToast(nothing)" in undo,
+            "UNDO commits without asking `MutateSheet.undoRefusal` first and toasting it, so a dimmed UNDO with " +
+                "nothing to undo either does nothing or says the original is back when it is not.",
+        )
+    }
+
+    /**
+     * ROULETTE and DRIFT used to turn every IllegalArgumentException into
+     * "the crate is empty": a chained pad, a shelf of doubles and a real
+     * failure all read the same, wrong line. They, and HEAR and KEEP, now
+     * read `MutateSheet.refusalOf`, which knows ROULETTE's two typed kinds
+     * and a gone partner, and every other exception is a real failure that
+     * says `<ACTION> FAILED. TRY AGAIN.` with the screen's word for the
+     * action: KEEP, not the old MUTATE.
+     */
+    @Test
+    fun `law - MUTATE's doors read the refusal's type, and the empty-shelf guess is gone`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        assertFalse(
+            Regex("""IllegalArgumentException\)\s*onToast\(Copy\.CRATE_EMPTY\)""").containsMatchIn(codeOnly(src)),
+            "a door still maps every IllegalArgumentException to CRATE_EMPTY, so a chained pad or a shelf of " +
+                "doubles reads as an empty shelf. Map the exception with MutateSheet.refusalOf.",
+        )
+        for ((door, word) in listOf(
+            "fun onHear() {" to "HEAR",
+            "fun onMutate() {" to "KEEP",
+            "fun onRoulette() {" to "ROULETTE",
+            "fun onDrift() {" to "DRIFT",
+        )) {
+            val body = codeOnly(blockAfter(src, door))
+            val catchAt = body.indexOf("catch (e: Exception)")
+            assertTrue(catchAt >= 0, "expected `$door` to catch its failure")
+            val handler = body.substring(catchAt)
+            assertTrue(
+                "MutateSheet.refusalOf(e)" in handler,
+                "`$door` does not read MutateSheet.refusalOf in its catch, so a gone partner or ROULETTE's typed " +
+                    "refusal says TRY AGAIN, which never helps.",
+            )
+            assertTrue(
+                "failure(\"$word\", e)" in handler,
+                "`$door`'s real failure does not say `$word`, the word its button prints.",
+            )
+        }
+    }
+
+    /**
+     * After KEEP and DRIFT write, the result plays, through the house's
+     * own idiom for a write that swaps the model: the write sets
+     * `auditionOnRefresh` and the effect plays the new file once the fresh
+     * model has decoded it, as SMEAR does (`if (applied)
+     * auditionOnRefresh = true`). Before the redesign both wrote and then
+     * left the player in silence, hunting for HIT.
+     */
+    @Test
+    fun `law - KEEP and DRIFT play what they wrote`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for ((door, flag) in listOf("fun onMutate() {" to """applied""", "fun onDrift() {" to """drifted\s*!=\s*null""")) {
+            val body = codeOnly(blockAfter(src, door))
+            val set = Regex("""if\s*\(\s*$flag\s*\)\s*auditionOnRefresh\s*=\s*true""").find(body)
+            val swap = body.indexOf("model = fresh")
+            assertTrue(swap >= 0, "expected `$door` to swap `model = fresh` after its write")
+            assertTrue(
+                set != null && set.range.first < swap,
+                "`$door` writes the pad and plays nothing: set `auditionOnRefresh = true` when it wrote, before " +
+                    "`model = fresh`, as applySmear does.",
+            )
+        }
+    }
+
+    /**
+     * The toasts say what the write did: a STACK flip, as the CLI reports
+     * it, and a length change worth saying. The length is measured where
+     * the write happens, under the writers' lock, before and after the
+     * call (`MutateSheet.lengthMs`), so `apply`'s and `drift`'s signatures
+     * stay as the BECOME laws above read them. HEAR measures the render
+     * against the pad.
+     */
+    @Test
+    fun `law - the keep and DRIFT toasts carry the flip and the length the write measured`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for ((door, call) in listOf("fun onMutate() {" to "MutateSheet.apply(", "fun onDrift() {" to "MutateSheet.drift(")) {
+            val body = codeOnly(blockAfter(src, door))
+            val write = body.indexOf(call)
+            val first = body.indexOf("MutateSheet.lengthMs(f, slot)")
+            val second = body.indexOf("MutateSheet.lengthMs(f, slot)", first + 1)
+            assertTrue(
+                write >= 0 && first in 0 until write && second > write,
+                "`$door` does not read the pad's length inside its write, before and after `$call`, so its toast " +
+                    "cannot say how the length changed.",
+            )
+            assertTrue(
+                "Copy.lengthNote(beforeMs, afterMs)" in body,
+                "`$door`'s toast does not carry Copy.lengthNote(beforeMs, afterMs).",
+            )
+            // The length line is optional: the after-read happens once the write has landed and before kit.json
+            // is saved, so a read that throws must not turn a landed write into a reported failure.
+            assertTrue(
+                "afterMs = runCatching { MutateSheet.lengthMs(f, slot) }.getOrDefault(beforeMs)" in body,
+                "`$door`'s after-write length read is not `runCatching { ... }.getOrDefault(beforeMs)`: a decode " +
+                    "that throws after the write landed would report a failure and skip the save.",
+            )
+        }
+        val keep = normalizeSpan(codeOnly(blockAfter(src, "fun onMutate() {")))
+        assertTrue(
+            "flipped = MutateSheet.apply(f, slot, who, move, fraction, becomeFraction).flipped.isNotEmpty()" in keep &&
+                "flipped = if (flipped) listOf(name) else emptyList()" in keep,
+            "KEEP's toast does not report the flip the write made (Mutate.Outcome.flipped), which the CLI reports.",
+        )
+        val hear = codeOnly(blockAfter(src, "fun onHear() {"))
+        assertTrue(
+            Regex("""Copy\.lengthNote\(\s*padMs\s*,\s*MutateSheet\.lengthMs\(\s*rendered\s*\)\s*\)""").containsMatchIn(hear),
+            "HEAR does not compare the render's length with the pad's, so a move that changes the length plays " +
+                "without saying so.",
+        )
+        // The pad's side of that comparison is the pad's own file, read off the live model beside the render
+        // (`padMs`), not a number from anywhere else: a note comparing the render with the wrong length lies.
+        assertTrue(
+            Regex("""val\s*\(\s*rendered\s*,\s*padMs\s*\)""").containsMatchIn(hear) &&
+                Regex("""\bto\s+MutateSheet\.lengthMs\(\s*m\s*,\s*slot\s*\)""").containsMatchIn(hear),
+            "HEAR's `padMs` does not come from `MutateSheet.lengthMs(m, slot)`, the pad's own file on the model " +
+                "it renders from, so the length note could compare the render with some other length.",
+        )
+        // The note belongs to the play: a decode that lands after ON_STOP plays nothing, so it says nothing.
+        val played = blockAfter(hear, "isAtLeast(Lifecycle.State.STARTED)")
+        assertTrue(
+            "audition(rendered, p.level, p)" in played && "Copy.lengthNote(" in played && "onToast(note)" in played,
+            "HEAR's length note is not inside the lifecycle gate that guards its audition, so a decode that lands " +
+                "after ON_STOP toasts a length for a play that never happened.",
+        )
+    }
+
     /**
      * J22. `TapeDeckViewTest` proves the carrier carries; this proves TAPE
      * still uses it.
