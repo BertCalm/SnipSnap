@@ -7,6 +7,7 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /** A detected fundamental: where it is and how sure the detector is. */
 data class PitchEstimate(
@@ -71,8 +72,12 @@ object Pitch {
 
         for (lag in minLag + 1 until maxLag) {
             if (r[lag] > 0.85 * rmax && r[lag] >= r[lag - 1] && r[lag] >= r[lag + 1]) {
+                // A parabola through the peak and its neighbours places the period between
+                // whole samples, which the lag alone cannot (nine cents a step near 1 kHz).
+                val curve = r[lag - 1] - 2 * r[lag] + r[lag + 1]
+                val shift = if (abs(curve) > 1e-12) (.5 * (r[lag - 1] - r[lag + 1]) / curve).coerceIn(-.5, .5) else 0.0
                 return PitchEstimate(
-                    hz = refine(mono, from, n, snip.sampleRate, snip.sampleRate.toFloat() / lag),
+                    hz = refine(mono, from, n, snip.sampleRate, (snip.sampleRate / (lag + shift)).toFloat()),
                     confidence = r[lag].toFloat().coerceIn(0f, 1f),
                 )
             }
@@ -115,6 +120,13 @@ object Pitch {
         // Reject distant partial leakage and noise near an absent fundamental. The
         // autocorrelation still owns confidence and the decision that this is a note.
         if (peak < 0 || strongest < globalPower * .005) return candidate
+        // Move only to a separate component that outweighs the candidate's own bin. A peak
+        // within a bin of the candidate is the candidate's own Hann lobe: in a short window a
+        // bin spans tens of cents, so interpolating it is coarser than the interpolated period
+        // (TIDE's BUZZ SAW read 32 cents flat that way). An inharmonic pull leaves the candidate
+        // nearly empty with the real fundamental standing well clear of it.
+        val candidateBin = (candidate / binHz).roundToInt()
+        if (abs(peak - candidateBin) < 2 || strongest < power(candidateBin) * 10) return candidate
         val left = ln(power(peak - 1).coerceAtLeast(1e-30))
         val middle = ln(strongest.coerceAtLeast(1e-30))
         val right = ln(power(peak + 1).coerceAtLeast(1e-30))
