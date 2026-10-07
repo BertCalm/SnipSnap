@@ -1305,7 +1305,9 @@ fun PadSheetScreen(
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
                         beforeMs = MutateSheet.lengthMs(f, slot)
                         flipped = MutateSheet.apply(f, slot, who, move, fraction, becomeFraction).flipped.isNotEmpty()
-                        afterMs = MutateSheet.lengthMs(f, slot)
+                        // The length line is optional: a write that landed must be saved and reported,
+                        // so a failed re-read here falls back to the before length (no length line).
+                        afterMs = runCatching { MutateSheet.lengthMs(f, slot) }.getOrDefault(beforeMs)
                         applied = true
                     }
                 }
@@ -1530,7 +1532,9 @@ fun PadSheetScreen(
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
                         beforeMs = MutateSheet.lengthMs(f, slot)
                         drifted = MutateSheet.drift(f, slot, root, seed, fraction)
-                        afterMs = MutateSheet.lengthMs(f, slot)
+                        // The length line is optional: a write that landed must be saved and reported,
+                        // so a failed re-read here falls back to the before length (no length line).
+                        afterMs = runCatching { MutateSheet.lengthMs(f, slot) }.getOrDefault(beforeMs)
                     }
                 }
                 if (drifted != null) auditionOnRefresh = true

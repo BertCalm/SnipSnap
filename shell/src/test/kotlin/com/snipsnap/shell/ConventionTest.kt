@@ -2447,6 +2447,13 @@ class ConventionTest {
                 "Copy.lengthNote(beforeMs, afterMs)" in body,
                 "`$door`'s toast does not carry Copy.lengthNote(beforeMs, afterMs).",
             )
+            // The length line is optional: the after-read happens once the write has landed and before kit.json
+            // is saved, so a read that throws must not turn a landed write into a reported failure.
+            assertTrue(
+                "afterMs = runCatching { MutateSheet.lengthMs(f, slot) }.getOrDefault(beforeMs)" in body,
+                "`$door`'s after-write length read is not `runCatching { ... }.getOrDefault(beforeMs)`: a decode " +
+                    "that throws after the write landed would report a failure and skip the save.",
+            )
         }
         val keep = normalizeSpan(codeOnly(blockAfter(src, "fun onMutate() {")))
         assertTrue(
