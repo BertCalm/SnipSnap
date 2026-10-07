@@ -169,6 +169,9 @@ import com.snipsnap.synth.ThawVoice
 import com.snipsnap.synth.Undertow
 import com.snipsnap.synth.UndertowPatch
 import com.snipsnap.synth.UndertowVoice
+import com.snipsnap.synth.Suture
+import com.snipsnap.synth.SuturePatch
+import com.snipsnap.synth.SutureVoice
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
@@ -1062,6 +1065,7 @@ fun SynthScreen(
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
@@ -1893,7 +1897,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW, SUTURE;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1919,6 +1923,7 @@ private enum class Engine {
         THAW -> ThawVoice.entries
         UNDERTOW -> UndertowVoice.entries
         COROLLA -> CorollaVoice.entries
+        SUTURE -> SutureVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1942,6 +1947,7 @@ private enum class Engine {
         THAW -> Thaw.macrosFor(voice as ThawVoice)
         UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
         COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
+        SUTURE -> Suture.macrosFor(voice as SutureVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1965,6 +1971,7 @@ private enum class Engine {
         THAW -> Thaw.defaults(voice as ThawVoice)
         UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
         COROLLA -> Corolla.defaults(voice as CorollaVoice)
+        SUTURE -> Suture.defaults(voice as SutureVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1988,6 +1995,7 @@ private enum class Engine {
         THAW -> Thaw.scramble(voice as ThawVoice, random)
         UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
         COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
+        SUTURE -> Suture.scramble(voice as SutureVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2016,6 +2024,7 @@ private enum class Engine {
         THAW -> Thaw.render(voice as ThawVoice, macros)
         UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
         COROLLA -> Corolla.render(voice as CorollaVoice, macros)
+        SUTURE -> Suture.render(voice as SutureVoice, macros)
     }
 
     /**
@@ -2045,6 +2054,7 @@ private enum class Engine {
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
         UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
         COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
+        SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2068,6 +2078,7 @@ private enum class Engine {
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
         UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
         COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
+        SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

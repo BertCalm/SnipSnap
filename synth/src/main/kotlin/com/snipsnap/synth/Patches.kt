@@ -73,6 +73,7 @@ object Patches {
             ThawPatch.ENGINE -> ThawPatch.fromJsonValue(value)
             UndertowPatch.ENGINE -> UndertowPatch.fromJsonValue(value)
             CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
+            SuturePatch.ENGINE -> SuturePatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
