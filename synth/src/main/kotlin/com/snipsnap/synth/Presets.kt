@@ -106,6 +106,10 @@ object Presets {
             val v = UndertowVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             UndertowPresets.forVoice(v)
         }
+        SuturePatch.ENGINE -> {
+            val v = SutureVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            SuturePresets.forVoice(v)
+        }
         CorollaPatch.ENGINE -> {
             val v = CorollaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             CorollaPresets.forVoice(v)
@@ -145,5 +149,5 @@ object Presets {
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() +
-            CorollaPresets.all() + UndertowPresets.all() + TesseraPresets.all()
+            CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all()
 }

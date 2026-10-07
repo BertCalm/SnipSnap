@@ -443,6 +443,20 @@ tasks.register<JavaExec>("generateThawAudition") {
     (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
 }
 
+/** Render SUTURE's raw/matched mechanical and listening evidence locally. */
+tasks.register<JavaExec>("generateSutureAudition") {
+    group = "distribution"
+    description = "Render SUTURE's voices, macro sweeps, interaction grids, mechanical diagnostics and held loops with a local listening page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SutureAuditionGenerator")
+    workingDir = projectDir
+    val firstListen = project.hasProperty("sutureFirstListen")
+    args("${rootDir}/testkit/" + if (firstListen) "suture-first-listen" else "suture-audition")
+    if (firstListen) args("--first-listen")
+    (project.findProperty("sutureSections") as String?)?.let { args("--sections=$it") }
+}
+
 /** Export the sixteen dry THAW acceptance pads as an MPC program folder. */
 tasks.register<JavaExec>("generateThawKit") {
     group = "distribution"

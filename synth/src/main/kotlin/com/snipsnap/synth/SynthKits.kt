@@ -623,4 +623,24 @@ object SynthKits {
             preset("HEAVY CATCH"), preset("RETURNING AIR"), preset("GENTLE BYPASS"), preset("HELD SUCTION"),
         )
     }
+
+    /**
+     * A dry vessel kit: A01–A08 walk C minor pentatonic from C3 on BLOOM, A09–A14
+     * explore the threaded, closing, murmuring, strained and deep bodies, and A15–A16
+     * contain settled powered loops. Every pad carries its complete regenerable recipe.
+     */
+    fun suture(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = SuturePatch(
+            "Bronze $n", SutureVoice.BLOOM,
+            Suture.defaults(SutureVoice.BLOOM) + ("TUNE" to semitone / Suture.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Suture.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = SuturePresets.all().first { it.name == name }
+            .let { pad(it, Suture.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("WOODEN EYE"), preset("SLOW TAKE-UP"), preset("CLOSING SHELL"), preset("FINE SEAM"),
+            preset("RESISTED STITCH"), preset("DEEP VESSEL"), preset("QUIET MURMUR"), preset("RETURNING GAP"),
+        )
+    }
 }

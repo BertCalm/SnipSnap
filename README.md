@@ -232,6 +232,17 @@ pressure/contact diagnostics and a listening page under
 `testkit/undertow-audition/`. The owner's sonic verdict remains pending;
 [implementation notes](docs/UNDERTOW.md) describe the model, probes and limits.
 
+SUTURE is a pitched bronze vessel whose opening ring stretches elastic cords
+through wooden eyelets. Bounded stitchers close the gaps against vibration,
+changing the cavity loading and bringing the seams into contact. BLOOM,
+THREAD, CLOSE, MURMUR, STRAIN and SHELL share TUNE (C3–C5), GAP, STITCH, CORD,
+SEAM, CAVITY and HOLD. Twelve presets, a dry sixteen-pad kit, FRESH TAPE and
+the synth picker use the same deterministic renderer. Run
+`./gradlew :synth:generateSutureAudition -PsutureFirstListen` for the smaller
+listening set, or omit the property for the full raw/matched and diagnostic
+gate. [Implementation notes](docs/SUTURE.md) explain the model and HOLD's
+settled-loop format. The sound awaits the owner's listening verdict.
+
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
 the gesture. Six voices, eight presets and a dry sixteen-pad kit use MATERIAL,
@@ -447,8 +458,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW and GRAINS round out the lineup —
-twenty engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW, SUTURE, TESSERA and GRAINS round out the lineup —
+twenty-two engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -631,7 +642,7 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW,
-plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 CISTERN is also in the picker, preset roster and starter kits; the CLI's

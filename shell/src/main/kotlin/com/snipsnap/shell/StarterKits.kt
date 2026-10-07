@@ -119,6 +119,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.undertow() },
         Starter(
+            "suture", "SUTURE",
+            "Bronze vessels and sliding cords in C minor pentatonic. Open bloom closes into a seam murmur.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.suture() },
+        Starter(
             "tessera", "TESSERA",
             "Wood, paired wire and metal answer through a moving chamber in C minor pentatonic.",
             seeded = false,
