@@ -652,6 +652,21 @@ class MutateSheetTest {
     }
 
     @Test
+    fun `a gone partner says so - a pad on this kit whose WAV was deleted`() {
+        val (_, mine) = goneShelf()
+        assertTrue(File(mine.kitDir, mine.pad(2)!!.sampleFile).delete(), "the partner pad's WAV was there to delete")
+        assertGone(mine, MutateSheet.Partner.Pad(2))
+    }
+
+    @Test
+    fun `a gone partner says so - a pad on another kit whose WAV was deleted`() {
+        val (shelf, mine) = goneShelf()
+        val soul = otherKit(shelf, "Soul")
+        assertTrue(File(soul.kitDir, soul.pad(3)!!.sampleFile).delete(), "the partner pad's WAV was there to delete")
+        assertGone(mine, MutateSheet.Partner.Other("Soul", soul.kitDir, 3))
+    }
+
+    @Test
     fun `a gone partner says so - another kit's folder deleted`() {
         val (shelf, mine) = goneShelf()
         val funk = otherKit(shelf, "Funk")

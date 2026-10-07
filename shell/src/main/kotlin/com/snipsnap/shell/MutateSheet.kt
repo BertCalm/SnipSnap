@@ -250,7 +250,7 @@ object MutateSheet {
     fun source(model: KitBuilderModel, partner: Partner): Mutate.Source = when (partner) {
         is Partner.Pad -> {
             val pad = model.pad(partner.slot) ?: throw PartnerGone("no pad on ${padTag(partner.slot)}")
-            Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", WavReader.read(File(model.kitDir, pad.sampleFile)))
+            Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", WavReader.read(present(File(model.kitDir, pad.sampleFile))))
         }
         is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(present(partner.file)))
         is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(present(partner.file)))
@@ -261,7 +261,7 @@ object MutateSheet {
             val pad = kit.pads.firstOrNull { it.slot == partner.slot }
                 ?: throw PartnerGone("no pad on ${partner.kitName} ${padTag(partner.slot)}")
             // The CLI's own Kit:Pad label, so the lineage reads the same as a roulette deal's.
-            Mutate.Source("${kit.name}:${padTag(partner.slot)}", WavReader.read(File(partner.kitDir, pad.sampleFile)))
+            Mutate.Source("${kit.name}:${padTag(partner.slot)}", WavReader.read(present(File(partner.kitDir, pad.sampleFile))))
         }
         // The file's own name, as `--with hit.wav` labels it.
         is Partner.Wav -> Mutate.Source(partner.label, WavReader.read(present(partner.file)))
