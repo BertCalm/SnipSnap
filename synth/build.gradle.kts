@@ -393,7 +393,7 @@ tasks.register<JavaExec>("decodeArcoBodyGate") {
 
 tasks.register<JavaExec>("generateMercuryKit") {
     group = "distribution"
-    description = "Render the MERCURY modal-glass acceptance kit under testkit/."
+    description = "Render the MERCURY modal-glass acceptance kits (SnipSnap Mercury Kit and Kit 2) under testkit/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.MercuryKitGenerator")
     workingDir = projectDir

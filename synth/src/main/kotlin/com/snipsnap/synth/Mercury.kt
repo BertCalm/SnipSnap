@@ -23,15 +23,20 @@ import kotlin.random.Random
  * - **Design:** `docs/superpowers/specs/2026-10-01-mercury-modal-glass-engine-design.md`.
  * - **Phase-0 record:** `docs/superpowers/plans/2026-10-01-mercury-phase-0-spike.md`.
  *
- * **The object** is a [Modes.Bank] of up to 12 primary modes and 4 vessel modes:
- * - **Primary ratios** are Rayleigh's closed forms. PING and SING use the thin
- *   ring's inextensional bending modes, f_k ∝ k(k²−1)/√(k²+1) (a glass rim).
- *   BLADE uses the free-free beam, β_k², whose first four are
+ * **The object** is a [Modes.Bank] of up to 12 primary modes and 4 vessel modes, and a voice is the
+ * [Geometry] it hangs on (`MercuryGeometry.kt`: the mode table, where the contact and the pickup sit, how
+ * the mass loads each mode, how BEND deforms it, how the vessel is hung):
+ * - **PING and SING** use the thin ring's inextensional bending modes, f_k ∝ k(k²−1)/√(k²+1) (a glass
+ *   rim), Rayleigh's closed form; **BLADE** the free-free beam, β_k², whose first four are
  *   `Modes.METAL_BAR`'s ratios.
- * - **Vessel modes** sit 3.5–7 % from the first four primaries (designed
- *   numbers). They are never struck or rubbed and only gain energy through
- *   the springs, which is what makes COUPLE audible as an exchange rather
- *   than as a gain.
+ * - **EDDY** (R2c) is a rubbed singing bowl: a *measured* table of six doublets (Inácio, Henrique and
+ *   Antunes 2006). **VESSEL** is a thin cylindrical shell, a pipe or a tank, whose table is derived from
+ *   its Love/Sanders energy; each vessel is the quadrature partner of a primary. **SHARD** is a free
+ *   rectangular plate cut a little off square: a converged Rayleigh-Ritz table, dense and irregular. The
+ *   tables are *designed* in the design doc's sense, frozen as numbers with their sources named.
+ * - **Vessel modes** sit near the primaries they hang from (3.5–7 % for the first three voices, wider
+ *   for VESSEL where the loop needs it). They are never struck or rubbed and only gain energy through
+ *   the springs, which is what makes COUPLE audible as an exchange rather than as a gain.
  *
  * **One contact vector** carries both the strike and the friction. RUB moves
  * energy from the one to the other along the same vector, so a tap can seed a
@@ -41,10 +46,10 @@ import kotlin.random.Random
  * **The mapping is Phase 0's iteration 3**, measured and not heard:
  * - pressure is set by a target e-fold of `max(20 ms, 12 periods)`, scaled by
  *   RUB²;
- * - a contact-patch taper, `b_i = ratio^−0.5`, keeps mode 1 from capturing a
- *   low note;
+ * - a contact-patch taper, by default `b_i = ratio^−0.5` ([Geometry.contact]), keeps mode 1 from
+ *   capturing a low note;
  * - the tap weight has a 0.2 floor, so even RUB 1 has a finger landing;
- * - WATER's depth goes with WATER^0.25 (round 2: √WATER was not heard below 0.2);
+ * - WATER's depth goes with WATER^0.25 by default ([Geometry.waterCurve]; round 2: √WATER was not heard below 0.2);
  * - the coupled anchor is put back on the note once per note
  *   ([Modes.Bank.anchorScale]).
  *
@@ -55,7 +60,7 @@ import kotlin.random.Random
  * the note and whole orbits of the WATER mass, retuned until it closes and checked against the seam bar
  * ([renderLoopNudged]). Below the step HOLD is the contact length of a one-shot, as in R1.
  */
-enum class MercuryVoice { PING, SING, BLADE }
+enum class MercuryVoice { PING, SING, BLADE, EDDY, VESSEL, SHARD }
 
 object Mercury {
 
@@ -66,13 +71,15 @@ object Mercury {
     const val SING_ROOT_MIDI = 55
     const val BLADE_ROOT_MIDI = 55
 
+    /** EDDY's and VESSEL's two octaves start at A2, 110 Hz: the rub locks to within 4 cents from there up, and the default note is above the classifier's 200 Hz low band. */
+    const val EDDY_ROOT_MIDI = 45
+    const val VESSEL_ROOT_MIDI = 45
+    const val SHARD_ROOT_MIDI = 60
+
     // ---- the object --------------------------------------------------------
 
     const val PRIMARIES = 12
     const val VESSELS = 4
-
-    /** Vessel mode v sits this far from primary v: near enough for COUPLE to trade energy with it. Designed, not sourced. */
-    private val VESSEL_DETUNE = doubleArrayOf(0.035, -0.045, 0.06, -0.07)
 
     /** Spring kappa per COUPLE, before WATER's loading lifts it. The busiest mode has four springs, so its sum stays under 0.77. */
     const val KAPPA_PER_COUPLE = 0.12
@@ -132,8 +139,8 @@ object Mercury {
     const val CONTACT_TAPER = 0.5
 
     /**
-     * Velocity, a render parameter (not a knob) that only the rubbed voices read; PING's velocity is GLASS
-     * (`Velocity.brightnessOverride`). A rubbed body is close to a pure tone, so a harder touch cannot be heard as
+     * Velocity, a render parameter (not a knob) that only the rubbed (TOUCH) voices read, SING, BLADE and EDDY; the
+     * struck ones' velocity (PING, VESSEL, SHARD) is GLASS ([velocityKind], `Velocity.brightnessOverride`). A rubbed body is close to a pure tone, so a harder touch cannot be heard as
      * brighter (a steeper contact taper moved the held body 4–13%); it is heard in how the note starts. The owner
      * chose "attack and bite" (2026-10-02). A soft touch: the finger or bow comes up to speed up to this many times
      * slower than [DRIVER_RAMP_SECONDS], so the note swells in. Listening value.
@@ -195,6 +202,9 @@ object Mercury {
         MercuryVoice.PING -> 0.08
         MercuryVoice.SING -> 0.6
         MercuryVoice.BLADE -> 0.4
+        MercuryVoice.EDDY -> 0.6
+        MercuryVoice.VESSEL -> 0.25
+        MercuryVoice.SHARD -> 0.12
     }
 
     // ---- WATER --------------------------------------------------------------
@@ -302,16 +312,19 @@ object Mercury {
         MercuryVoice.PING -> specs(bend = 0.5f, rub = 0.08f, water = 0.10f, glass = 0.75f, couple = 0.20f)
         MercuryVoice.SING -> specs(bend = 0.5f, rub = 0.85f, water = 0.12f, glass = 0.85f, couple = 0.25f)
         MercuryVoice.BLADE -> specs(bend = 0.65f, rub = 0.80f, water = 0.15f, glass = 0.45f, couple = 0.30f)
+        MercuryVoice.EDDY -> specs(bend = 0.50f, rub = 0.70f, water = 0.65f, glass = 0.65f, couple = 0.60f, hold = 0.75f)
+        MercuryVoice.VESSEL -> specs(bend = 0.40f, rub = 0.30f, water = 0.40f, glass = 0.40f, couple = 0.65f)
+        MercuryVoice.SHARD -> specs(bend = 0.75f, rub = 0.45f, water = 0.75f, glass = 0.80f, couple = 0.75f)
     }
 
-    private fun specs(bend: Float, rub: Float, water: Float, glass: Float, couple: Float) = listOf(
+    private fun specs(bend: Float, rub: Float, water: Float, glass: Float, couple: Float, hold: Float = DEFAULT_HOLD) = listOf(
         MacroSpec("TUNE", 0.5f, neutral = 0.5f),
         MacroSpec("BEND", bend, neutral = 0.5f),
         MacroSpec("RUB", rub, neutral = 0.35f),
         MacroSpec("WATER", water, neutral = 0f),
         MacroSpec("GLASS", glass, neutral = 0.55f),
         MacroSpec("COUPLE", couple, neutral = 0.25f),
-        MacroSpec("HOLD", DEFAULT_HOLD),
+        MacroSpec("HOLD", hold),
     )
 
     fun defaults(voice: MercuryVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
@@ -326,6 +339,23 @@ object Mercury {
         MercuryVoice.PING -> PING_ROOT_MIDI
         MercuryVoice.SING -> SING_ROOT_MIDI
         MercuryVoice.BLADE -> BLADE_ROOT_MIDI
+        MercuryVoice.EDDY -> EDDY_ROOT_MIDI
+        MercuryVoice.VESSEL -> VESSEL_ROOT_MIDI
+        MercuryVoice.SHARD -> SHARD_ROOT_MIDI
+    }
+
+    /**
+     * How a voice takes velocity. A struck object's is [GLASS]: a harder hit is a harder mallet and a brighter ring
+     * (`Velocity.brightnessOverride`). A rubbed one's is the [TOUCH]: a soft rub swells in and a hard one catches with a
+     * scrape, a render parameter ([VELOCITY_RAMP], [SCRAPE_DB]), since a rubbed body is close to a pure tone and cannot
+     * be heard as brighter. The new voices' kinds follow how much of their default is a tap (the tap's weight at the
+     * default RUB: PING .99, VESSEL .89, SHARD .76, EDDY .45, BLADE .31, SING .23).
+     */
+    enum class VelocityKind { GLASS, TOUCH }
+
+    fun velocityKind(voice: MercuryVoice): VelocityKind = when (voice) {
+        MercuryVoice.PING, MercuryVoice.VESSEL, MercuryVoice.SHARD -> VelocityKind.GLASS
+        MercuryVoice.SING, MercuryVoice.BLADE, MercuryVoice.EDDY -> VelocityKind.TOUCH
     }
 
     /** The snapped MIDI note TUNE lands on. */
@@ -395,24 +425,27 @@ object Mercury {
         return DoubleArray(n) { (b[it] / b[0]).pow(2) }
     }
 
-    private fun isRing(voice: MercuryVoice) = voice != MercuryVoice.BLADE
-
-    /** BEND's signed per-mode deformation: the first mode never moves; the others drift up or down. Designed. */
-    private fun bendA(i: Int) = if (i == 0) 0.0 else 0.12 * sin(1.3 * i + 0.4)
-    private fun bendB(i: Int, n: Int) = if (i == 0) 0.0 else 0.05 * i / n
+    /** The object a voice is: its mode table, contact, pickup, load, BEND and vessel ([Geometry]). */
+    internal fun geometryOf(voice: MercuryVoice): Geometry = when (voice) {
+        MercuryVoice.PING, MercuryVoice.SING -> RingGeometry
+        MercuryVoice.BLADE -> BeamGeometry
+        MercuryVoice.EDDY -> BowlGeometry
+        MercuryVoice.VESSEL -> ShellGeometry
+        MercuryVoice.SHARD -> PlateGeometry
+    }
 
     // ---- the render ---------------------------------------------------------
 
     /**
-     * [velocity] is a render parameter, as on PLUCK: no knob, no preset. SING and BLADE read it as the touch
-     * ([VELOCITY_RAMP], [SCRAPE_DB]); PING ignores it, since its velocity is GLASS. 1, the default, is a full
+     * [velocity] is a render parameter, as on PLUCK: no knob, no preset. the TOUCH voices (SING, BLADE, EDDY) read it as the
+     * touch ([VELOCITY_RAMP], [SCRAPE_DB]); the GLASS voices (PING, VESSEL, SHARD) ignore it, since theirs is GLASS. 1, the default, is a full
      * touch, so a kit pad or a preset renders the hard version.
      */
     fun render(voice: MercuryVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
         val m = settled(macros, voice)
         if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
-        val touch = if (voice == MercuryVoice.PING) 1.0 else velocity.coerceIn(0f, 1f).toDouble()
+        val touch = if (velocityKind(voice) == VelocityKind.GLASS) 1.0 else velocity.coerceIn(0f, 1f).toDouble()
         return Snip(finish(sound(voice, hz, m, touch), tailSeconds(m.getValue("GLASS"))), channels = 1, sampleRate = RATE)
     }
 
@@ -448,50 +481,63 @@ object Mercury {
         val frames = steady?.total ?: rawFrames(m)
 
         // Which modes take part: those that cannot reach the ceiling at the widest bend.
-        val base = if (isRing(voice)) ringRatios(PRIMARIES) else beamRatios(PRIMARIES)
+        val geo = geometryOf(voice)
+        val base = geo.ratios
         val primaries = (0 until PRIMARIES).count { hz * base[it] * MODE_HEADROOM < MODE_CEILING_HZ }.coerceAtLeast(1)
-        val vessels = min(VESSELS, primaries)
+        val vessels = (0 until VESSELS).count { geo.vesselHost(it) < primaries }
         val n = primaries + vessels
-        val ratio0 = DoubleArray(n) { i -> if (i < primaries) base[i] else base[i - primaries] * (1 + VESSEL_DETUNE[i - primaries]) }
+        val ratio0 = DoubleArray(n) { i ->
+            if (i < primaries) base[i] else base[geo.vesselHost(i - primaries)] * (1 + geo.vesselDetune[i - primaries])
+        }
         val isVessel = BooleanArray(n) { it >= primaries }
-        val modeIndex = IntArray(n) { if (it < primaries) it else it - primaries }
+        // The primary a mode is: itself, or the one its vessel hangs from.
+        fun hostOf(i: Int) = if (i < primaries) i else geo.vesselHost(i - primaries)
 
         // GLASS: correlated damping, its slope up the modes, and the pickup's tilt.
         val t60Fund = t60Fundamental(glass.toFloat())
         val slope = T60_SLOPE_LOW + (T60_SLOPE_HIGH - T60_SLOPE_LOW) * glass
-        val t60Base = DoubleArray(n) { i ->
-            if (isVessel[i]) VESSEL_T60_LOW + (VESSEL_T60_HIGH - VESSEL_T60_LOW) * glass
-            else max(0.02, t60Fund * ratio0[i].pow(-slope))
+        val t60Base = DoubleArray(n)
+        for (i in 0 until n) {
+            t60Base[i] = if (isVessel[i]) geo.vesselT60(glass, t60Base[hostOf(i)]) else max(0.02, t60Fund * ratio0[i].pow(-slope))
         }
         val tilt = TILT_LOW + (TILT_HIGH - TILT_LOW) * glass
-        fun beamShape(k: Int, x: Double) = cos((k + 1.5) * PI * x)
-        val contact0 = DoubleArray(n) { i -> if (isVessel[i]) 0.0 else ratio0[i].pow(-CONTACT_TAPER) }
+        val contact0 = DoubleArray(n) { i -> if (isVessel[i]) 0.0 else geo.contact(i, ratio0[i]) }
         val pickup0 = DoubleArray(n) { i ->
-            if (isVessel[i]) {
-                0.5 * (if ((i - primaries) % 2 == 0) 1 else -1)
-            } else {
-                val s = if (isRing(voice)) cos((modeIndex[i] + 2) * 0.4) else beamShape(modeIndex[i], 0.3)
-                s * ratio0[i].pow(-tilt)
-            }
+            if (isVessel[i]) geo.vesselPickup(i - primaries) else geo.pickup(i, ratio0[i], tilt)
         }
 
         // BEND: a gesture from flat toward the target curvature, with a signed pitch excursion that settles to the note.
         val cTarget = 2 * bend - 1
         val tau = gestureSeconds(voice)
-        fun ratioAt(i: Int, c: Double) = ratio0[i] * exp(bendA(i) * c + bendB(i, n) * c * c)
+        val bendA = DoubleArray(n) { geo.bendA(it, primaries) }
+        val bendB = DoubleArray(n) { geo.bendB(it, n, primaries) }
+        fun ratioAt(i: Int, c: Double) = ratio0[i] * exp(bendA[i] * c + bendB[i] * c * c)
 
         // The bank, at the settled shape, for the anchor fix.
         val bank = Modes.Bank(n, rate)
         val kappa = KAPPA_PER_COUPLE * couple
         val edgeI = ArrayList<Int>()
         val edgeJ = ArrayList<Int>()
-        for (i in 0 until primaries - 1) { edgeI += i; edgeJ += i + 1 }
+        val edgeScale = ArrayList<Double>()
+        for (i in 0 until primaries - 1) { edgeI += i; edgeJ += i + 1; edgeScale += geo.neighbourScale(i) }
         for (v in 0 until vessels) {
-            edgeI += primaries + v; edgeJ += v
-            if (v + 1 < primaries) { edgeI += primaries + v; edgeJ += v + 1 }
+            val host = geo.vesselHost(v)
+            edgeI += primaries + v; edgeJ += host; edgeScale += geo.vesselKappaScale
+            if (geo.vesselSpringsToNext && host + 1 < primaries) { edgeI += primaries + v; edgeJ += host + 1; edgeScale += geo.vesselKappaScale }
         }
         for (i in 0 until n) bank.tune(i, (hz * ratioAt(i, cTarget)).coerceAtMost(MODE_CEILING_HZ), t60Base[i])
-        val edges = IntArray(edgeI.size) { e -> bank.connect(edgeI[e], edgeJ[e], kappa) }
+        val edges = IntArray(edgeI.size) { e -> bank.connect(edgeI[e], edgeJ[e], kappa * edgeScale[e]) }
+        // WATER's depth is needed here for the anchor, and below for the loads.
+        val waterCurve = if (water > 0.0) water.pow(geo.waterCurve) else 0.0
+        val mu = WATER_DEPTH * waterCurve
+        if (geo.anchorAtMeanWater && mu > 0.0) {
+            // Solve the anchor where the water leaves the bank on average, so the note sits on its pitch with the
+            // water moving and not only without it (the bank is retuned at the first control step anyway).
+            val meanLoad = DoubleArray(n) { geo.loadWeight(hostOf(it)) * geo.meanUnitLoad(it, primaries) }
+            val dry = sqrt(1 + mu * geo.anchorMeanLoad)
+            for (i in 0 until n) bank.tune(i, (hz * ratioAt(i, cTarget) * dry / sqrt(1 + mu * meanLoad[i])).coerceAtMost(MODE_CEILING_HZ), t60Base[i])
+            for (e in edges.indices) bank.setKappa(edges[e], kappa * edgeScale[e] * (1 + KAPPA_WATER_LIFT * water * (meanLoad[edgeI[e]] + meanLoad[edgeJ[e]])))
+        }
         val pitchFix = bank.anchorScale()
 
         // WATER: one damped, circularly forced mass that every mode reads.
@@ -501,11 +547,10 @@ object Mercury {
         var my = 0.3 * massRng.next()
         var mvx = 0.0
         var mvy = 0.0
-        val waterCurve = if (water > 0.0) water.pow(WATER_CURVE) else 0.0
-        val mu = WATER_DEPTH * waterCurve
         val shimmer = WATER_SHIMMER * waterCurve
-        // Every load swings between 0 and 1 and averages about a half; the pitch is centred there.
-        val anchorNominal = 1.0 / sqrt(1 + mu * 0.5)
+        // Every load swings between 0 and 1 and averages about a half; the pitch is centred on the fundamental's mean.
+        val anchorNominal = 1.0 / sqrt(1 + mu * geo.anchorMeanLoad)
+        val unit = DoubleArray(n)
         val load = DoubleArray(n)
         val ctrlDt = CTRL * dt
 
@@ -520,7 +565,7 @@ object Mercury {
         val releaseFrames = (CONTACT_RELEASE_SECONDS * rate).toInt()
         val rampFrames = (DRIVER_RAMP_SECONDS * (1 + VELOCITY_RAMP * (1 - velocity)) * rate).toInt()
 
-        val strikeFrames = ((STRIKE_MS_HARD + (STRIKE_MS_SOFT - STRIKE_MS_HARD) * (1 - glass)) * 1e-3 * rate).toInt().coerceAtLeast(2)
+        val strikeFrames = ((geo.strikeMsHard + (geo.strikeMsSoft - geo.strikeMsHard) * (1 - glass)) * 1e-3 * rate).toInt().coerceAtLeast(2)
         val strikePeak = STRIKE_IMPULSE * tapW * PI / (2 * strikeFrames * dt)
         val noiseFrames = (STRIKE_NOISE_SECONDS * rate).toInt()
         val noise = Dsp.Noise(Dsp.seedFor("MERCURY", voice, hz, "strike"))
@@ -556,24 +601,24 @@ object Mercury {
                 val xm = (0.5 + 0.45 * mx).coerceIn(0.0, 1.0)
                 val env = if (steady != null) 0.0 else exp(-time / tau)
                 val c = cTarget * (1 - env)
-                val excursion = 2.0.pow(BEND_EXCURSION_SEMITONES * cTarget * env / 12)
+                val excursion = 2.0.pow(geo.bendExcursionSemitones * cTarget * env / 12)
                 for (i in 0 until n) {
-                    load[i] = when {
+                    unit[i] = when {
                         mu == 0.0 -> 0.0
-                        isVessel[i] -> 0.5 * rho2
-                        isRing(voice) -> min(1.0, rho2 / RING_ORBIT_LOAD) * cos(ang - RING_LOAD_PHASE * modeIndex[i]).let { it * it }
-                        else -> beamShape(modeIndex[i], xm).let { it * it }
+                        isVessel[i] -> geo.vesselUnitLoad(i - primaries, rho2, ang)
+                        else -> geo.unitLoad(i, rho2, ang, xm)
                     }
+                    load[i] = geo.loadWeight(hostOf(i)) * unit[i]
                     val f = (hz * pitchFix * excursion * ratioAt(i, c) / sqrt(1 + mu * load[i]) / anchorNominal)
                         .coerceAtMost(MODE_CEILING_HZ)
                     val fade = fade(f)
                     contact[i] = contact0[i] * fade * (1 - WATER_CONTACT * water * load[i])
-                    pickup[i] = pickup0[i] * fade * (if (isVessel[i]) 1.0 else 1 + shimmer * (2 * load[i] - 1))
+                    pickup[i] = pickup0[i] * fade * (if (isVessel[i]) 1.0 else 1 + shimmer * (2 * unit[i] - 1))
                     bank.tune(i, f, t60Base[i] / (1 + WATER_DAMPING * mu * load[i]))
                 }
                 if (water > 0.0) {
                     for (e in edges.indices) {
-                        bank.setKappa(edges[e], kappa * (1 + KAPPA_WATER_LIFT * water * (load[edgeI[e]] + load[edgeJ[e]])))
+                        bank.setKappa(edges[e], kappa * edgeScale[e] * (1 + KAPPA_WATER_LIFT * water * (load[edgeI[e]] + load[edgeJ[e]])))
                     }
                 }
                 compliance = bank.compliance(contact)
@@ -597,7 +642,7 @@ object Mercury {
             }
             out[t] = bank.velocityAlong(pickup).toFloat()
         }
-        if (steady == null && scrape && voice != MercuryVoice.PING && rub > 0.0) addScrape(out, voice, hz, velocity, rate)
+        if (steady == null && scrape && velocityKind(voice) == VelocityKind.TOUCH && rub > 0.0) addScrape(out, voice, hz, velocity, rate)
         return out
     }
 
