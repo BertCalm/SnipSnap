@@ -265,12 +265,13 @@ object Velocity {
         // exactly what this function exists to find. Proven monotonic by
         // ForkTest's `STRIKE moves the onset centroid at every step`.
         patch is ForkPatch -> "STRIKE"
-        // MERCURY PING's GLASS shortens the strike (a harder mallet) and tilts
+        // MERCURY's struck voices (PING, VESSEL, SHARD: Mercury.velocityKind)
+        // register GLASS, which shortens the strike (a harder mallet) and tilts
         // the pickup bright. Proven monotonic by MercuryTest's `velocity
-        // brightens PING at every step`; the owner heard it and kept it
-        // (2026-10-02). SING and BLADE take velocity as a number instead
-        // ([touchedVelocity]).
-        patch is MercuryPatch && patch.voice == MercuryVoice.PING -> "GLASS"
+        // brightens the struck voices, and swells or bites the rubbed ones`;
+        // the owner heard PING's and kept it (2026-10-02). The rubbed voices
+        // take velocity as a number instead ([touchedVelocity]).
+        patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.GLASS -> "GLASS"
         // MAGNET's PICK is a thumb to a wire: the string exciter's low-pass
         // corner (150 to 16000 Hz, pinned at the voice's default) with a
         // second pole below the default and the loop's and the pickup's
@@ -285,17 +286,18 @@ object Velocity {
 
     /**
      * Voices that take velocity as a number on their own render, with no
-     * macro moved and no [soften]. MERCURY SING and BLADE use velocity as
-     * touch; AEROSTAT and CISTERN use it as strike energy, CIRCUIT as event
-     * energy, and TREMOR as the blow. MURK uses it as event energy and response
-     * reach, preserving the STRIKE contact character. THAW uses it as runner
-     * gesture energy while retaining the selected contact character.
-     * TESSERA scales hammer energy while retaining HAMMER's contact character.
-     * UNDERTOW uses it as piston work while preserving the weighted-flap recipe, and
+     * macro moved and no [soften]. MERCURY's rubbed voices (SING, BLADE, EDDY:
+     * [Mercury.velocityKind]) use velocity as touch; AEROSTAT and CISTERN use it
+     * as strike energy, CIRCUIT as event energy, and TREMOR as the blow. MURK uses
+     * it as event energy and response reach, preserving the STRIKE contact
+     * character. THAW uses it as runner gesture energy while retaining the
+     * selected contact character. TESSERA scales hammer energy while retaining
+     * HAMMER's contact character. UNDERTOW uses it as piston work while
+     * preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
-        (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
+        (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch

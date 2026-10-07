@@ -113,7 +113,14 @@ object InstrumentSuite {
     fun renderAll(dir: File): List<KeygroupProgram> =
         listOf(renderEp(dir), renderOrgan(dir), renderHarp(dir), renderMusicBox(dir), renderResinPad(dir), renderFork(dir))
 
-    fun renderMercuryAll(dir: File): List<KeygroupProgram> = MercuryVoice.entries.map { renderMercury(it, dir) }
+    /**
+     * The voices that ship as instruments: the three whose loops the owner heard and approved (round 5; their keys await round 6). EDDY,
+     * VESSEL and SHARD render as pads through [Keys.mercuryPad] like any voice (`MercuryHeldTest` reads all six), but each
+     * instrument is 6 to 9 MB of WAV and a zip entry, so theirs are made once their sound has been approved.
+     */
+    val MERCURY_INSTRUMENT_VOICES = listOf(MercuryVoice.PING, MercuryVoice.SING, MercuryVoice.BLADE)
+
+    fun renderMercuryAll(dir: File): List<KeygroupProgram> = MERCURY_INSTRUMENT_VOICES.map { renderMercury(it, dir) }
 
     private class Layered(
         val stem: String,

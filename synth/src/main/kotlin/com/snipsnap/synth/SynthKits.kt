@@ -358,6 +358,29 @@ object SynthKits {
     }
 
     /**
+     * The second MERCURY kit (R2c): the three voices the first kit does not carry, as their own presets, none of them
+     * at the default TUNE. EDDY five (A01-A05), VESSEL five (A06-A10), SHARD six (A11-A16), each a one-shot pad, dry, filed
+     * by [Mercury.drumClassFor] (LOOP by length, like the first). The first kit stays as the owner heard it, the pentatonic
+     * row included; this one is the audition's way to hear the three on the MPC. Provisional until their audition.
+     */
+    fun mercury2(): List<ArrangedPad?> {
+        fun preset(voice: MercuryVoice, name: String) = MercuryPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Mercury.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            preset(MercuryVoice.EDDY, "HEARTH HUM"), preset(MercuryVoice.EDDY, "TWIN BEATING"),               // A01 A02
+            preset(MercuryVoice.EDDY, "SLOW SWIRL"), preset(MercuryVoice.EDDY, "RIM WAVER"),                  // A03 A04
+            preset(MercuryVoice.EDDY, "STRUCK BOWL"),                                                         // A05
+            preset(MercuryVoice.VESSEL, "CISTERN"), preset(MercuryVoice.VESSEL, "DRAIN PIPE"),                // A06 A07
+            preset(MercuryVoice.VESSEL, "BOILER HUM"), preset(MercuryVoice.VESSEL, "WATER TOWER"),            // A08 A09
+            preset(MercuryVoice.VESSEL, "TWIN PIPES"),                                                        // A10
+            preset(MercuryVoice.SHARD, "BROKEN PANE"), preset(MercuryVoice.SHARD, "SPLINTER"),                // A11 A12
+            preset(MercuryVoice.SHARD, "SKITTER"), preset(MercuryVoice.SHARD, "HAIRLINE"),                    // A13 A14
+            preset(MercuryVoice.SHARD, "FRAYED EDGE"), preset(MercuryVoice.SHARD, "TIN SKY"),                 // A15 A16
+        )
+    }
+
+    /**
      * The LEAD family's amp (shape), written in the kit: DRIVE 0.78 is gain 37 on VALVE's law, a
      * cooler drive than CHUG's landing (DRIVE 0.85, gain 106; it was hotter than the first build's
      * gain 13), with SAG and CAB as CHUG's and TONE 0.5 (flat) against CHUG's 0.3. The owner heard
