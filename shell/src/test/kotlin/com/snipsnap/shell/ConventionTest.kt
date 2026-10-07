@@ -2467,6 +2467,21 @@ class ConventionTest {
             "HEAR does not compare the render's length with the pad's, so a move that changes the length plays " +
                 "without saying so.",
         )
+        // The pad's side of that comparison is the pad's own file, read off the live model beside the render
+        // (`padMs`), not a number from anywhere else: a note comparing the render with the wrong length lies.
+        assertTrue(
+            Regex("""val\s*\(\s*rendered\s*,\s*padMs\s*\)""").containsMatchIn(hear) &&
+                Regex("""\bto\s+MutateSheet\.lengthMs\(\s*m\s*,\s*slot\s*\)""").containsMatchIn(hear),
+            "HEAR's `padMs` does not come from `MutateSheet.lengthMs(m, slot)`, the pad's own file on the model " +
+                "it renders from, so the length note could compare the render with some other length.",
+        )
+        // The note belongs to the play: a decode that lands after ON_STOP plays nothing, so it says nothing.
+        val played = blockAfter(hear, "isAtLeast(Lifecycle.State.STARTED)")
+        assertTrue(
+            "audition(rendered, p.level, p)" in played && "Copy.lengthNote(" in played && "onToast(note)" in played,
+            "HEAR's length note is not inside the lifecycle gate that guards its audition, so a decode that lands " +
+                "after ON_STOP toasts a length for a play that never happened.",
+        )
     }
 
     /**

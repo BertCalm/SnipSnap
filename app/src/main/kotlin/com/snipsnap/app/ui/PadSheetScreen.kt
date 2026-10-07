@@ -1382,11 +1382,12 @@ fun PadSheetScreen(
                 }
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                     audition(rendered, p.level, p)
+                    // A move can change the pad's length (STACK, SPLIT or SPLICE onto a longer
+                    // partner, ROOM's tail); the play says so only when it does, and only when
+                    // it happened: a decode that lands after ON_STOP plays nothing, so says nothing.
+                    val note = Copy.lengthNote(padMs, MutateSheet.lengthMs(rendered))
+                    if (note.isNotEmpty()) onToast(note)
                 }
-                // A move can change the pad's length (STACK, SPLIT or SPLICE onto a longer
-                // partner, ROOM's tail); the play says so only when it does.
-                val note = Copy.lengthNote(padMs, MutateSheet.lengthMs(rendered))
-                if (note.isNotEmpty()) onToast(note)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 val why = MutateSheet.refusalOf(e)
