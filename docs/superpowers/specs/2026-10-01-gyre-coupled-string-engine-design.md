@@ -887,7 +887,7 @@ HOLD on a bowed note is the stroke, and the bow plays all four strings weighted 
 - **The catch zone is a texture.** Just over its minimum force a bow is raucous (string 1's third partial
   louder than its first). Between TOUCH 0.4 and 0.75 the house detector (`Pitch.detect`, 0.05 to 0.30 s) reads
   a higher partial on some notes (FLICK 10 of 25 at TOUCH 0.5, HALO 4, DRAWN 0, BOURDON 1 and no pitch on 7),
-  never one below the note; the pluck, TOUCH .25 and the full bow read exactly except BOURDON's lowest notes.
+  never an octave low (since `Pitch` refines to the spectral peak within a semitone, BOURDON's lowest bowed note, E2 at BODY 1, reads 60 cents flat); the pluck, TOUCH .25 and the full bow read exactly except BOURDON's lowest notes.
   The sympathetic share at the catch itself runs up to 4.6 dB hot.
 - **The classifier files FLICK at TOUCH 0.5 as a drum on 2 of 25 notes** (A4 and B4 read KICK, one reads TONAL, 22
   PERC), where its render crosses the classifier's 1.5 s line: every other voice and TOUCH files as PERC or LOOP on
