@@ -113,6 +113,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.thaw() },
         Starter(
+            "undertow", "UNDERTOW",
+            "Weighted ceramic flaps and hollow breath in C minor pentatonic. One draw wakes the shell.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.undertow() },
+        Starter(
             "tessera", "TESSERA",
             "Wood, paired wire and metal answer through a moving chamber in C minor pentatonic.",
             seeded = false,

@@ -140,7 +140,9 @@ combination or perceived-pitch judgments.
 
 All eight other JVM-module suites passed (2,360 checks), as did the 102-case
 native host harness. Local Android debug assembly passed for all four supported
-native ABIs.
+native ABIs. The combined Tessera/Undertow registries also passed 67 targeted
+preset, recipe, CLI, starter and convention checks, followed by a successful
+Android rebuild; Tessera's DSP and audition inputs were unchanged.
 
 The owner's listening verdict is still required for timbral distinctions,
 recognizable root and useful motion. Host tests do not certify playback on a

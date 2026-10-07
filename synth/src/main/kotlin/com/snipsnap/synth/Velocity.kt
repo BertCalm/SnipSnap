@@ -228,6 +228,7 @@ object Velocity {
         is CircuitPatch -> Circuit.macrosFor(patch.voice)
         is MurkPatch -> Murk.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
     }
@@ -289,12 +290,13 @@ object Velocity {
      * reach, preserving the STRIKE contact character. THAW uses it as runner
      * gesture energy while retaining the selected contact character.
      * TESSERA scales hammer energy while retaining HAMMER's contact character.
+     * UNDERTOW uses it as piston work while preserving the weighted-flap recipe.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch ||
-            patch is CorollaPatch || patch is TesseraPatch
+            patch is CorollaPatch || patch is UndertowPatch || patch is TesseraPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -327,6 +329,7 @@ object Velocity {
                 is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
+                is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
             }
         }

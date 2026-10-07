@@ -145,6 +145,9 @@ testkit/thaw-audition/
 testkit/thaw-first-listen/
 testkit/SnipSnap Thaw Kit/
 
+# The UNDERTOW raw/matched audition and pressure/contact evidence are generated locally.
+testkit/undertow-audition/
+
 # Tessera's generated listening matrix, diagnostic traces and kit audio.
 testkit/tessera-audition/
 testkit/SnipSnap Tessera Kit/

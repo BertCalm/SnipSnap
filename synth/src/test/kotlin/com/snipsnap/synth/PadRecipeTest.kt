@@ -44,6 +44,7 @@ class PadRecipeTest {
         MurkPatch("Wood Test", MurkVoice.CLUNK, mapOf("FOG" to 0.4f)),
         ThawPatch("Ice Test", ThawVoice.BRITTLE, mapOf("HEAT" to 0.4f)),
         TesseraPatch("Mixed Material Test", TesseraVoice.ANSWER, mapOf("FOLD" to 0.7f)),
+        UndertowPatch("Shell Test", UndertowVoice.KNOCK, mapOf("DRAW" to 0.4f)),
     )
 
     @Test
