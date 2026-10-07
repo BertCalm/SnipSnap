@@ -12,19 +12,17 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Renders the GYRE round-one audition (docs/superpowers/specs/2026-10-01-gyre-coupled-string-engine-design.md,
- * the round-one gate; the clip list is the plan's Task 4) under testkit/gyre-audition/ (gitignored): both
- * voices at three notes, the round's own claim as sound (one string plucked with the others answering, and
- * with the bridge off), each knob at five settings, the sympathetic strings alone, the rotor beside a tremolo
- * of the same depth, the knobs together, and the edges. Clips share one loudness ([AuditionLevel]). Writes
+ * Renders the GYRE round-two audition (docs/superpowers/plans/2026-10-04-gyre-round-2.md, Task 7) under
+ * testkit/gyre-audition/ (gitignored): all four voices at three notes, TOUCH at the document's five points
+ * on FLICK and DRAWN, the pluck the bow catches beside a 50/50 crossfade of the two ends (so "is it a
+ * crossfade?" can be heard), TOUCH 0 against the frozen round-one engine, HOLD on the two bowed voices, SPIN
+ * on DRAWN, the knobs together and the edges. Clips share one loudness ([AuditionLevel]). Writes
  * `manifest.json`, which the page builds itself from, then copies the listening page from the test resources.
  * Run via `./gradlew :synth:generateGyreAudition`.
  *
- * Round 1b re-renders it after the owner's first listen, which kept SYMPATHY and HOLD and sent BODY ("Body
- * doesn't make an impact") and SPIN ("Spin not noticable on short notes") back; SPIN gains a short FLICK note,
- * still and turning. Its verdicts save under their own prefix, beside the first listen's.
- * Round 1c re-renders it after the second listen, which passed BODY and SPIN and found no difference between
- * HOLD's steps ("I don't hear the distinction"): HOLD now runs from choked to open at five settings.
+ * Earlier rounds' listens are in the spec and in the artifact database under `verdicts/gyre_r1_*`,
+ * `gyre_r1b_*` and `gyre_r1c_*`: round one kept SYMPATHY and HOLD, round 1b fixed BODY and SPIN, round 1c
+ * refitted HOLD. This round saves under `gyre_r2_*`.
  */
 object GyreAuditionGenerator {
 
@@ -32,8 +30,12 @@ object GyreAuditionGenerator {
     private class Group(val label: String, val key: Boolean, val clips: List<Clip>)
 
     private const val DOT = "·"
-    private val PHRASE = listOf(7f / 24, 12f / 24, 19f / 24)
-    private val NOTES = listOf("G3", "C4", "G4")
+    private val PHRASE = listOf(7, 12, 19)
+    private val BOWED = listOf(GyreVoice.FLICK, GyreVoice.DRAWN)
+    private val NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+
+    /** A MIDI note's name the house's way: 60 is C4. */
+    private fun noteName(midi: Int) = NAMES[midi % 12] + (midi / 12 - 1)
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -47,114 +49,148 @@ object GyreAuditionGenerator {
             count++
         }
         fun render(voice: GyreVoice, macros: Map<String, Float>) = Gyre.render(voice, macros)
-        fun probed(voice: GyreVoice, macros: Map<String, Float>, probe: Gyre.Probe) =
-            Snip(Gyre.finish(Gyre.play(voice, macros, probe).raw), channels = 1, sampleRate = Dsp.RATE)
         fun tag(voice: GyreVoice) = voice.name.lowercase()
+        fun c4(voice: GyreVoice) = Gyre.defaults(voice) + ("TUNE" to 12f / Gyre.TUNE_SEMITONES)
+        fun shares(touch: Float) = "the pluck %d%%, the bow's contact %d%%".format(Math.round(Gyre.pluckAmount(touch) * 100), Math.round(Gyre.contactFor(touch) * 100))
 
         // 1. The voices, three notes each.
         sections += section(
-            "VOICES", "THE VOICES", "each voice at its defaults, three notes",
-            listOf("FLICK: A DRY, PLUCKED STRING ON A SMALL BODY", "HALO: SOFTER, LONGER, A CLOUD OF SYMPATHETIC STRINGS"),
+            "VOICES", "THE VOICES", "each voice at its defaults, three notes (the same three intervals above its own root)",
+            listOf(
+                "FLICK: A DRY, PLUCKED STRING ON A SMALL BODY",
+                "HALO: SOFTER, LONGER, A CLOUD OF SYMPATHETIC STRINGS",
+                "DRAWN: A BOWED STRING WITH A PLUCK'S ATTACK IN IT",
+                "BOURDON: A LOW DRONE ON A LARGE BODY",
+            ),
             GyreVoice.entries.map { voice ->
-                Group(voice.name, key = true, clips = PHRASE.mapIndexed { i, t ->
-                    val id = "${tag(voice)}_${NOTES[i].lowercase()}"
-                    write("VOICES", id, render(voice, mapOf("TUNE" to t)))
-                    Clip(id, "${voice.name} ${NOTES[i]}", "every knob at its default")
+                Group(voice.name, key = true, clips = PHRASE.map { semis ->
+                    val id = "${tag(voice)}_${noteName(Gyre.rootMidi(voice) + semis).lowercase().replace("#", "s")}"
+                    write("VOICES", id, render(voice, mapOf("TUNE" to semis.toFloat() / Gyre.TUNE_SEMITONES)))
+                    Clip(id, "${voice.name} ${noteName(Gyre.rootMidi(voice) + semis)}", "every knob at its default (TOUCH ${fmt(Gyre.defaults(voice).getValue("TOUCH"))})")
                 })
             },
         )
 
-        // 2. The claim: strings answering strings.
+        // 2. TOUCH at the document's five points, on the plucked voice and the bowed one.
         sections += section(
-            "ANSWER", "STRINGS ANSWERING STRINGS", "only the first string is plucked; the other three answer through the bridge (sympathetic strings off in both, so only the bridge differs)",
-            listOf("BRIDGE ON: THE OTHERS RING IN", "BRIDGE OFF: THE SAME PLUCK, ALONE"),
-            GyreVoice.entries.map { voice ->
-                val d = Gyre.defaults(voice)
-                // The sympathetic strings listen to the bridge whatever its coupling, so both clips leave
-                // them out: the only difference between ON and OFF is the bridge.
-                write("ANSWER", "${tag(voice)}_on", probed(voice, d, Gyre.Probe(solo = 0, sympathy = false)))
-                write("ANSWER", "${tag(voice)}_off", probed(voice, d, Gyre.Probe(solo = 0, coupling = 0f, sympathy = false)))
+            "TOUCH", "TOUCH", "FLICK and DRAWN at the document's five points, C4 above each root's octave, the other knobs at their defaults",
+            listOf("FLICK: A PLUCK, THEN A BOW LOWERED ONTO IT", "DRAWN: THE SAME, ON THE VOICE THAT STARTS BOWED"),
+            BOWED.map { voice ->
+                Group("${voice.name} ${DOT} DEFAULT TOUCH " + fmt(Gyre.defaults(voice).getValue("TOUCH")), key = true, clips = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { v ->
+                    val id = "${tag(voice)}_touch${fmt(v).trimStart('.')}"
+                    write("TOUCH", id, render(voice, c4(voice) + ("TOUCH" to v)))
+                    Clip(id, "TOUCH ${fmt(v)}", shares(v))
+                })
+            },
+        )
+
+        // 3. The question itself: the middle beside a crossfade of the ends.
+        sections += section(
+            "CATCH", "THE PLUCK THE BOW CATCHES", "TOUCH .5 beside the two ends and a 50/50 mix of them: is the middle one string being plucked and bowed, or two instruments at once?",
+            listOf("THE MIDDLE IS THE MECHANISM CHANGING; THE MIX IS TWO SOUNDS TOGETHER"),
+            BOWED.map { voice ->
+                val plucked = render(voice, c4(voice) + ("TOUCH" to 0f))
+                val bowed = render(voice, c4(voice) + ("TOUCH" to 1f))
+                val middle = render(voice, c4(voice) + ("TOUCH" to 0.5f))
+                val n = maxOf(plucked.samples.size, bowed.samples.size)
+                val mix = FloatArray(n) { i -> 0.5f * (plucked.samples.getOrElse(i) { 0f }) + 0.5f * (bowed.samples.getOrElse(i) { 0f }) }
+                write("CATCH", "${tag(voice)}_pluck", plucked)
+                write("CATCH", "${tag(voice)}_bow", bowed)
+                write("CATCH", "${tag(voice)}_middle", middle)
+                write("CATCH", "${tag(voice)}_mix", Snip(mix, channels = 1, sampleRate = Dsp.RATE))
                 Group(voice.name, key = true, clips = listOf(
-                    Clip("${tag(voice)}_on", "BRIDGE ON", "one string plucked; the others answer"),
-                    Clip("${tag(voice)}_off", "BRIDGE OFF", "the same string alone: nothing to answer it"),
+                    Clip("${tag(voice)}_pluck", "PLUCK", "TOUCH 0: the string alone"),
+                    Clip("${tag(voice)}_bow", "BOW", "TOUCH 1: the bow alone"),
+                    Clip("${tag(voice)}_middle", "TOUCH .5", "one string, plucked and bowed (the bow catches near here)"),
+                    Clip("${tag(voice)}_mix", "50/50 MIX", "the PLUCK and the BOW clips played together, for comparison: this is what a crossfade sounds like"),
                 ))
             },
         )
 
-        // 3-6. Each knob at five settings, both voices; SYMPATHY also alone, SPIN also against a tremolo.
-        val shares = mapOf(0f to "none", 0.3f to "subtle, about -22 dB", 0.6f to "clear, about -12 dB", 0.8f to "a halo, about -8 dB", 1f to "a cloud, about -5 dB")
-        sections += knob("SYMPATHY", listOf(0f, 0.3f, 0.6f, 0.8f, 1f), { _, v -> "the sympathetic strings: " + shares.getValue(v) }, ::write) { voice, groups ->
-            val m = Gyre.defaults(voice)
-            val on = Gyre.play(voice, m).raw
-            val off = Gyre.play(voice, m, Gyre.Probe(sympathy = false)).raw
-            val alone = FloatArray(on.size) { on[it] - off[it] }
-            write("SYMPATHY", "${tag(voice)}_alone", Snip(Gyre.finish(alone), channels = 1, sampleRate = Dsp.RATE))
-            groups += Group("${voice.name}: THE SYMPATHETIC STRINGS ALONE", key = false, clips = listOf(
-                Clip("${tag(voice)}_alone", "ALONE", "at the default SYMPATHY " + fmt(m.getValue("SYMPATHY")) + ": the strings nobody plucked"),
-            ))
-        }
-        sections += knob("BODY", listOf(0f, 0.25f, 0.5f, 0.75f, 1f), { _, v ->
-            val low = Dsp.expMap(Gyre.boxSize(v), Gyre.BOX_SMALL_HZ[0], Gyre.BOX_LARGE_HZ[0])
-            "the box's lowest mode at %.0f Hz".format(java.util.Locale.ROOT, low) + if (v <= 0f) ": small, thin and nasal" else if (v >= 1f) ": large, hollow and warm" else ""
-        }, ::write)
-        sections += knob("SPIN", listOf(0f, 0.02f, 0.25f, 0.45f, 0.75f, 1f), { _, v ->
-            if (v <= 0f) "the rotor still" else "the rotor at %.2f Hz".format(java.util.Locale.ROOT, Gyre.rotorHz(v))
-        }, ::write) { voice, groups ->
-            if (voice == GyreVoice.FLICK) {
-                // The first listen's complaint, as its own pair: a short note, still and at a quarter turn.
-                // The hand 0.55 s after the pluck, the test's short note.
-                val open = Gyre.openSeconds(Gyre.defaults(voice).getValue("SYMPATHY"))
-                val hold = (ln(0.55 / Gyre.CHOKE_SECONDS) / ln(open / Gyre.CHOKE_SECONDS.toDouble())).toFloat() * Gyre.LOOP_THRESHOLD
-                val short = Gyre.defaults(voice) + ("HOLD" to hold)
-                write("SPIN", "flick_short_still", render(voice, short + ("SPIN" to 0f)))
-                write("SPIN", "flick_short_spun", render(voice, short + ("SPIN" to 0.25f)))
-                groups += Group("FLICK: A SHORT NOTE (%.2f S), STILL AND TURNING".format(java.util.Locale.ROOT, Gyre.dampSeconds(hold, short.getValue("SYMPATHY"))), key = true, clips = listOf(
-                    Clip("flick_short_still", "STILL", "SPIN 0: the rotor still"),
-                    Clip("flick_short_spun", "SPIN .25", "the rotor at %.2f Hz: it should move before the hand lands".format(java.util.Locale.ROOT, Gyre.rotorHz(0.25f))),
-                ))
-                return@knob
-            }
-            val m = Gyre.defaults(voice) + mapOf("SPIN" to 0.45f, "HOLD" to 0.9f)
+        // 4. TOUCH 0 against round one, keyed for an A/B.
+        sections += section(
+            "ROUND1", "TOUCH 0 IS ROUND ONE", "FLICK and HALO from the frozen round-one engine, beside the new engine at TOUCH 0: they should be the same sound",
+            listOf("EACH PAIR: ROUND ONE FIRST, THEN ROUND TWO AT TOUCH 0"),
+            listOf(GyreVoice.FLICK, GyreVoice.HALO).map { voice ->
+                Group(voice.name, key = true, clips = PHRASE.flatMap { semis ->
+                    val m = mapOf("TUNE" to semis.toFloat() / Gyre.TUNE_SEMITONES)
+                    val name = noteName(Gyre.rootMidi(voice) + semis)
+                    val old = "${tag(voice)}_${name.lowercase().replace("#", "s")}_r1"
+                    val now = "${tag(voice)}_${name.lowercase().replace("#", "s")}_r2"
+                    write("ROUND1", old, LegacyGyre.render(LegacyGyreVoice.valueOf(voice.name), m))
+                    write("ROUND1", now, render(voice, m))
+                    listOf(Clip(old, "$name ROUND 1", "the frozen round-one engine"), Clip(now, "$name ROUND 2", "the new engine, TOUCH 0"))
+                })
+            },
+        )
+
+        // 5. HOLD on a bowed note: the stroke.
+        val bowedVoices = listOf(GyreVoice.DRAWN, GyreVoice.BOURDON)
+        sections += section(
+            "HOLD", "HOLD ON A BOWED NOTE", "HOLD at five settings on the two bowed voices: from a bow that stops almost at once to one drawn for its whole stroke",
+            listOf("THE BOW LIFTS WHEN THE HAND LANDS; AT THE TOP IT HAS BEEN DRAWN FOR THE STROKE"),
+            bowedVoices.map { voice ->
+                Group("${voice.name} ${DOT} DEFAULT HOLD " + fmt(Gyre.defaults(voice).getValue("HOLD")), key = true, clips = listOf(0f, 0.25f, 0.5f, 0.75f, 0.95f).map { v ->
+                    val id = "${tag(voice)}_hold${fmt(v).trimStart('.')}"
+                    write("HOLD", id, render(voice, Gyre.defaults(voice) + ("HOLD" to v)))
+                    val s = Gyre.handSeconds(voice, Gyre.defaults(voice) + ("HOLD" to v))
+                    Clip(id, "HOLD ${fmt(v)}", "the bow lifts after %.2f s".format(java.util.Locale.ROOT, s) + if (v <= 0f) ": choked" else if (v >= 0.95f) ": nearly the whole stroke (%.0f s)".format(java.util.Locale.ROOT, Gyre.shapeOf(voice).stroke) else "")
+                })
+            },
+        )
+
+        // 6. SPIN on DRAWN, as round 1b's SPIN section.
+        run {
+            val voice = GyreVoice.DRAWN
+            val spins = listOf(0f, 0.02f, 0.25f, 0.45f, 0.75f, 1f)
+            val m = Gyre.defaults(voice) + mapOf("SPIN" to 0.45f)
             val spun = render(voice, m)
             val still = render(voice, m + ("SPIN" to 0f)).samples
             val hz = Gyre.rotorHz(0.45f).toDouble()
             val depth = logSwing(spun.samples, hz)
             val tremolo = FloatArray(still.size) { i -> (still[i] * exp(depth * sin(2 * PI * hz * i / Dsp.RATE))).toFloat() }
-            write("SPIN", "halo_rotor", spun)
-            write("SPIN", "halo_tremolo", Snip(tremolo, channels = 1, sampleRate = Dsp.RATE))
-            groups += Group("HALO: THE ROTOR AGAINST A TREMOLO", key = true, clips = listOf(
-                Clip("halo_rotor", "ROTOR", "SPIN .45, %.1f Hz: the rotor inside the instrument".format(java.util.Locale.ROOT, hz)),
-                Clip("halo_tremolo", "TREMOLO", "the still sound with its volume swung by the same amount: only the level moves"),
-            ))
+            write("SPIN", "drawn_rotor", spun)
+            write("SPIN", "drawn_tremolo", Snip(tremolo, channels = 1, sampleRate = Dsp.RATE))
+            sections += section(
+                "SPIN", "SPIN ON A BOWED NOTE", "DRAWN at six settings of SPIN, then the rotor beside a tremolo of the same depth: with a bow on the strings the rotor also moves how hard each upper string is bowed",
+                listOf("THE ROTOR MOVES THE TIMBRE INSIDE THE NOTE, NEVER ITS LOUDNESS"),
+                listOf(
+                    Group("DRAWN ${DOT} DEFAULT SPIN " + fmt(Gyre.defaults(voice).getValue("SPIN")), key = true, clips = spins.map { v ->
+                        val id = "drawn_spin${fmt(v).trimStart('.')}"
+                        write("SPIN", id, render(voice, Gyre.defaults(voice) + ("SPIN" to v)))
+                        Clip(id, "SPIN ${fmt(v)}", if (v <= 0f) "the rotor still" else "the rotor at %.2f Hz".format(java.util.Locale.ROOT, Gyre.rotorHz(v)))
+                    }),
+                    Group("DRAWN: THE ROTOR AGAINST A TREMOLO", key = true, clips = listOf(
+                        Clip("drawn_rotor", "ROTOR", "SPIN .45, %.1f Hz: the rotor inside the instrument".format(java.util.Locale.ROOT, hz)),
+                        Clip("drawn_tremolo", "TREMOLO", "the still sound with its volume swung by the same amount: only the level moves"),
+                    )),
+                ),
+            )
         }
-        sections += knob("HOLD", listOf(0f, 0.25f, 0.5f, 0.75f, 0.95f), { voice, v ->
-            "the hand lands after %.2f s".format(java.util.Locale.ROOT, Gyre.dampSeconds(v, Gyre.defaults(voice).getValue("SYMPATHY"))) +
-                if (v <= 0f) ": choked" else if (v >= 0.95f) ": open, the note has rung out" else ""
-        }, ::write)
 
         // 7. Together.
-        fun corners(a: String, b: String): List<Group> = GyreVoice.entries.map { voice ->
+        fun corners(a: String, b: String): List<Group> = BOWED.map { voice ->
             Group("${voice.name}: $a ${DOT} $b", key = false, clips = listOf(0f to 0f, 1f to 0f, 0f to 1f, 1f to 1f).map { (x, y) ->
                 val id = "${tag(voice)}_${a.lowercase()}${fmt(x).trimStart('.')}_${b.lowercase()}${fmt(y).trimStart('.')}"
-                write("TOGETHER", id, render(voice, mapOf(a to x, b to y)))
+                write("TOGETHER", id, render(voice, c4(voice) + mapOf(a to x, b to y)))
                 Clip(id, "$a ${fmt(x)} $b ${fmt(y)}", "the rest at the defaults")
             })
         }
         sections += section(
-            "TOGETHER", "THE KNOBS TOGETHER", "each pair at its four corners",
-            listOf("SYMPATHY X BODY: A BIGGER BODY FEEDS THE SYMPATHETIC STRINGS MORE", "SYMPATHY X SPIN: THE ROTOR PICKS WHICH SYMPATHETIC STRING ANSWERS"),
-            corners("SYMPATHY", "BODY") + corners("SYMPATHY", "SPIN"),
+            "TOGETHER", "THE KNOBS TOGETHER", "each pair at its four corners, on FLICK and DRAWN",
+            listOf("TOUCH X SPIN: THE ROTOR AND THE BOW", "TOUCH X SYMPATHY: A SUSTAINED BOW KEEPS THE SYMPATHETIC STRINGS RINGING"),
+            corners("TOUCH", "SPIN") + corners("TOUCH", "SYMPATHY"),
         )
 
         // 8. The edges.
         val edges = listOf(
-            "sym1" to mapOf("SYMPATHY" to 1f), "body1" to mapOf("BODY" to 1f), "spin1" to mapOf("SPIN" to 1f),
-            "all1" to mapOf("SYMPATHY" to 1f, "BODY" to 1f, "SPIN" to 1f),
+            "touch1" to mapOf("TOUCH" to 1f), "sym1" to mapOf("SYMPATHY" to 1f), "body1" to mapOf("BODY" to 1f), "spin1" to mapOf("SPIN" to 1f),
+            "all1" to mapOf("TOUCH" to 1f, "SYMPATHY" to 1f, "BODY" to 1f, "SPIN" to 1f),
         )
         sections += section(
-            "EDGES", "THE EDGES", "every knob at its top, then all of them",
+            "EDGES", "THE EDGES", "every knob at its top, then all of them, on the two bowed voices",
             listOf("BOUNDED BY CONSTRUCTION: NOTHING HERE CAN RUN AWAY"),
-            GyreVoice.entries.map { voice ->
+            bowedVoices.map { voice ->
                 Group(voice.name, key = false, clips = edges.map { (id, m) ->
                     write("EDGES", "${tag(voice)}_$id", render(voice, m))
                     Clip("${tag(voice)}_$id", m.keys.joinToString(" ") { "$it 1" }, "the rest at the defaults")
@@ -167,26 +203,6 @@ object GyreAuditionGenerator {
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
         File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
         println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
-    }
-
-    /** One knob at [values] on both voices, the rest at the defaults; [extra] may add groups for a voice. */
-    private fun knob(
-        name: String,
-        values: List<Float>,
-        describe: (GyreVoice, Float) -> String,
-        write: (String, String, Snip) -> Unit,
-        extra: (GyreVoice, MutableList<Group>) -> Unit = { _, _ -> },
-    ): String {
-        val groups = mutableListOf<Group>()
-        for (voice in GyreVoice.entries) {
-            groups += Group("${voice.name} ${DOT} DEFAULT " + fmt(Gyre.defaults(voice).getValue(name)), key = true, clips = values.map { v ->
-                val id = voice.name.lowercase() + "_" + fmt(v).trimStart('.')
-                write(name, id, Gyre.render(voice, mapOf(name to v)))
-                Clip(id, "$name ${fmt(v)}", describe(voice, v))
-            })
-            extra(voice, groups)
-        }
-        return section(name, name, "$name at ${values.size} settings, the other knobs at their defaults", listOf("BOTH VOICES"), groups)
     }
 
     /** The swing of the log level at [hz] (20 ms blocks, a linear trend removed): the rotor's level movement, for the tremolo control. */
