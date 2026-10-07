@@ -49,6 +49,9 @@ class MercuryPresetsTest {
             MercuryVoice.PING to listOf("CLEAR RIM", "SOFT MALLET", "STILL WATER", "COLD GLASS", "WARPED PLATE", "FLOATING MASS", "PAIRED MODES", "LOW BELL"),
             MercuryVoice.SING to listOf("LONG RUB", "SINGING EDGE", "GLASS CURRENT", "SLOW CURRENT", "HUSHED GLASS", "WET FINGER", "UPPER RIM", "LOW HUM"),
             MercuryVoice.BLADE to listOf("BENT RIBBON", "BOWED STEEL", "WHISTLE BEND", "SLOW GLIDE", "DOWN BEND", "WOBBLE STEEL", "LOW STEEL", "TAPPED STEEL"),
+            MercuryVoice.EDDY to listOf("HEARTH HUM", "STILL BASIN", "TWIN BEATING", "SLOW SWIRL", "DEEP BASIN", "RIM WAVER", "STRUCK BOWL", "HALF LIGHT"),
+            MercuryVoice.VESSEL to listOf("CISTERN", "DRAIN PIPE", "BOILER HUM", "WATER TOWER", "SILO BOOM", "TWIN PIPES", "DENTED CAN", "TAUT TANK"),
+            MercuryVoice.SHARD to listOf("BROKEN PANE", "SPLINTER", "SKITTER", "HAIRLINE", "FRAYED EDGE", "BENT FOIL", "TIN SKY", "SHARP GLASS"),
         )
 
         /** The note each preset's comment in [MercuryPresets] names. */
@@ -59,6 +62,12 @@ class MercuryPresetsTest {
             "HUSHED GLASS" to "F#4", "WET FINGER" to "G#4", "UPPER RIM" to "E5", "LOW HUM" to "A3",
             "BENT RIBBON" to "G4", "BOWED STEEL" to "A4", "WHISTLE BEND" to "D5", "SLOW GLIDE" to "E4",
             "DOWN BEND" to "G4", "WOBBLE STEEL" to "G4", "LOW STEEL" to "A3", "TAPPED STEEL" to "A4",
+            "HEARTH HUM" to "A3", "STILL BASIN" to "E3", "TWIN BEATING" to "G3", "SLOW SWIRL" to "C3",
+            "DEEP BASIN" to "A2", "RIM WAVER" to "D3", "STRUCK BOWL" to "C4", "HALF LIGHT" to "E4",
+            "CISTERN" to "E3", "DRAIN PIPE" to "D4", "BOILER HUM" to "A2", "WATER TOWER" to "G3",
+            "SILO BOOM" to "C3", "TWIN PIPES" to "B3", "DENTED CAN" to "E4", "TAUT TANK" to "F#3",
+            "BROKEN PANE" to "G4", "SPLINTER" to "G5", "SKITTER" to "D#5", "HAIRLINE" to "A#5",
+            "FRAYED EDGE" to "F4", "BENT FOIL" to "A#4", "TIN SKY" to "F5", "SHARP GLASS" to "C6",
         )
     }
 
@@ -123,8 +132,8 @@ class MercuryPresetsTest {
             FathomPatch.ENGINE, ResinPatch.ENGINE, TidePatch.ENGINE, VoxPatch.ENGINE, SnapPatch.ENGINE, GlintPatch.ENGINE,
             SirenPatch.ENGINE, ForkPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, BorePatch.ENGINE, ArcoPatch.ENGINE,
             MercuryPatch.ENGINE,
-            // R2's three voices, named in the design, so a preset does not take a name a voice is about to have.
-            "EDDY", "VESSEL", "SHARD",
+            // GYRE, MAGNET and TREMOR were built after this list was written.
+            GyrePatch.ENGINE, MagnetPatch.ENGINE, TremorPatch.ENGINE,
         ) + FxChain.SECTION_NAMES.map { it.uppercase() } + MercuryVoice.entries.map { it.name }
         assertTrue(taken.size > 30, "the list of taken names lost its rack sections")
         for (preset in MercuryPresets.all()) {
