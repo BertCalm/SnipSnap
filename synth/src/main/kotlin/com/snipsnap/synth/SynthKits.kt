@@ -396,6 +396,88 @@ object SynthKits {
     }
 
     /**
+     * The AEROSTAT acceptance kit. A01–A08 walk the minor pentatonic from C3 with
+     * every other knob at its default, so the row is the instrument before anyone
+     * touches it. A09–A13 are the five factory presets. A14 and A15 climb two
+     * more notes, and A16 is the held loop (the strike is not in that buffer).
+     * Every pad is dry: the whistle and the vessel are the engine, not a rack
+     * section. Filed by [Aerostat.drumClassFor], which is PERC or LOOP and never
+     * a drum class.
+     */
+    fun aerostat(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int, extra: Map<String, Float> = emptyMap()) = AerostatPatch(
+            "Float $n", AerostatVoice.FLOAT,
+            Aerostat.defaults(AerostatVoice.FLOAT) + mapOf("TUNE" to semitone / Aerostat.TUNE_SEMITONES.toFloat()) + extra,
+        ).let { pad(it, Aerostat.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = AerostatPresets.forVoice(AerostatVoice.FLOAT).first { it.name == name }
+            .let { pad(it, Aerostat.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("SOFT CATCH"), preset("TWIN PIPES"), preset("HEAVY ROTOR"), preset("DRIFTING STEAM"),
+            preset("HIGH ENVELOPE"),
+            note(9, 14),
+            note(10, 19),
+            note(11, 24, mapOf("HOLD" to 1f)),
+        )
+    }
+
+    /**
+     * The FLOTILLA kit: RIPPLE up the minor pentatonic from C4 on A01–A08, then eight presets
+     * that walk the rest of the idea (open wood, a large hull, crossing routes, the warm dome,
+     * a gentle drift, a dense gather, and the two held notes). Every pad is dry. The length rule
+     * files them LOOP. A drum program plays each pad once; the held pads' wrap is the audition's.
+     */
+    fun flotilla(): List<ArrangedPad?> {
+        val walk = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17)
+        fun note(n: Int, semi: Int) = FlotillaPatch(
+            "Wake $n",
+            FlotillaVoice.RIPPLE,
+            Flotilla.defaults(FlotillaVoice.RIPPLE),
+            midi = (60 + semi).coerceIn(Flotilla.MIDI_MIN, Flotilla.MIDI_MAX),
+        ).let { pad(it, Flotilla.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: FlotillaVoice, name: String) =
+            FlotillaPresets.forVoice(voice).first { it.name == name }
+                .let { pad(it, Flotilla.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, walk[0]), note(2, walk[1]), note(3, walk[2]), note(4, walk[3]),
+            note(5, walk[4]), note(6, walk[5]), note(7, walk[6]), note(8, walk[7]),
+            preset(FlotillaVoice.KNOCK, "Open Wood"),
+            preset(FlotillaVoice.HOLLOW, "Deep Cavity"),
+            preset(FlotillaVoice.CROSSWAVE, "Crossing Paths"),
+            preset(FlotillaVoice.DRIFT, "Warm Canopy"),
+            preset(FlotillaVoice.DRIFT, "Gentle Current"),
+            preset(FlotillaVoice.GATHER, "Gathered Vessels"),
+            preset(FlotillaVoice.DRIFT, "Held Sparse"),
+            preset(FlotillaVoice.GATHER, "Held Dense"),
+        )
+    }
+
+    /**
+     * A01–A08 walk C minor pentatonic from C4 with all six surface profiles:
+     * clear strike, delayed rain, spreading cascade, wet basin, thin ripple,
+     * draining return, soft skin and an isolated heavy answer. A09–A16 add
+     * low-register landings and sustained liquid, high-register articulation,
+     * and a settled held circle. All twelve presets appear, with deliberate
+     * register repeats; every recipe is dry and stores its exact MIDI pitch.
+     */
+    fun cistern(): List<ArrangedPad?> {
+        fun preset(name: String, midi: Int) =
+            CisternPresets.all().first { it.name == name }.copy(midi = midi)
+                .let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            preset("First Drop", 60), preset("Hanging Rain", 63),
+            preset("Wide Cascade", 65), preset("Wet Basin", 67),
+            preset("Thin Ripple", 70), preset("Clear Return", 72),
+            preset("Soft Skin", 75), preset("Quiet Reservoir", 77),
+            preset("Heavy Landing", 48), preset("Slow Drain", 55),
+            preset("Dense Surface", 63), preset("Hanging Rain", 67),
+            preset("Wet Basin", 48), preset("Thin Ripple", 75),
+            preset("Clear Return", 70), preset("Replenished Circle", 60),
+        )
+    }
+
+    /**
      * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
      * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
      * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).
@@ -418,6 +500,92 @@ object SynthKits {
             note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
             preset("FOUR HANDS"), preset("SETTLING BED"), preset("DRY CAGE"), preset("CHARGED TAIL"),
             preset("LATE STRAND"), preset("BROKEN RETURN"), preset("HELD DRUM"), preset("HELD BLOOM"),
+        )
+    }
+
+    /**
+     * CIRCUIT's pitched ensemble kit. The first two rows walk C minor
+     * pentatonic from C2; the remaining pads explore every voice and end
+     * with the recurring ensemble. Every pad carries its editable recipe
+     * and lands dry so the circle and canyon remain the engine's own paths.
+     */
+    fun circuit(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = CircuitPatch(
+            "Circuit $n", CircuitVoice.ROOT,
+            Circuit.defaults(CircuitVoice.ROOT) + ("TUNE" to semitone / Circuit.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Circuit.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = CircuitPresets.all().first { it.name == name }
+            .let { pad(it, Circuit.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("SLOW PARADE"), preset("MOVING ACCENTS"), preset("PAIRED WOOD"), preset("CLAY REPLY"),
+            preset("CHEST GESTURE"), preset("WIDE CIRCLE"), preset("FAST GATHER"), preset("HELD CIRCLE"),
+        )
+    }
+
+    /**
+     * The MURK audition kit: CLUNK climbs the C minor pentatonic on A01–A08, then six sounds
+     * explore sharp wood, heavy fog and owl answers. A15–A16 carry settled recurring groves.
+     * Every pad is dry, carries its regenerable recipe, and is filed by [Murk.drumClassFor].
+     */
+    fun murk(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = MurkPatch(
+            "Wood $n", MurkVoice.CLUNK,
+            Murk.defaults(MurkVoice.CLUNK) + ("TUNE" to semitone / Murk.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = MurkPresets.all().first { it.name == name }
+            .let { pad(it, Murk.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("TONAL AXE"), preset("FIRST PULSE"), preset("DISTANT CALL"), preset("HEAVY AIR"),
+            preset("ANSWERING WOOD"), preset("SOFT BARK"), preset("HELD TREES"), preset("HELD OWLS"),
+        )
+    }
+
+    /**
+     * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
+     * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
+     * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
+     * material suitable for repeated playback. The engine's pitched identity takes precedence
+     * over the generic classifier's length-based LOOP bucket.
+     */
+    fun corolla(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = CorollaPatch(
+            "Petal $n", CorollaVoice.TONGUE,
+            Corolla.defaults(CorollaVoice.TONGUE) + ("TUNE" to semitone / Corolla.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = CorollaPresets.all().first { it.name == name }
+            .let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("OPENING BELL"), preset("FOLDED CHAMBER"), preset("MAGNETIC CHOIR"), preset("QUIET CHATTER"),
+            preset("FAST ORBIT"), preset("HOLLOW HUSK"), preset("PETAL CLOUD"), preset("CLOSED CIRCUIT"),
+        )
+    }
+
+    /**
+     * The THAW kit. A01–A08 walk C minor pentatonic from C3 on BRITTLE. A09–A14 explore the
+     * warming runner, melt, channels, frozen bridges, heavy sheet and returning frost; A15–A16
+     * are settled held material. Each dry pad carries its full recipe and uses THAW's pitched
+     * duration-aware filing.
+     * Held samples contain the settled loop alone, and the kit plays them once like other held
+     * factory pads. No external effect supplies the material transition.
+     */
+    fun thaw(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = ThawPatch(
+            "Ice $n", ThawVoice.BRITTLE,
+            Thaw.defaults(ThawVoice.BRITTLE) + ("TUNE" to semitone / Thaw.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Thaw.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = ThawPresets.all().first { it.name == name }
+            .let { pad(it, Thaw.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("COPPER RUNNER"), preset("SOFT MELT"), preset("CLEAR CHANNEL"), preset("FROZEN BRIDGE"),
+            preset("SLOW SHEET"), preset("RETURNING FROST"), preset("COLD CHOIR"), preset("THERMAL CYCLE"),
         )
     }
 }

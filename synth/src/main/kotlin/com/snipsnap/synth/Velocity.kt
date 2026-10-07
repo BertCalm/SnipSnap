@@ -221,7 +221,14 @@ object Velocity {
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
+        is AerostatPatch -> Aerostat.macrosFor(patch.voice)
+        is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
+        is CisternPatch -> Cistern.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
+        is CircuitPatch -> Circuit.macrosFor(patch.voice)
+        is MurkPatch -> Murk.macrosFor(patch.voice)
+        is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is CorollaPatch -> Corolla.macrosFor(patch.voice)
     }
 
     /**
@@ -275,20 +282,17 @@ object Velocity {
 
     /**
      * Voices that take velocity as a number on their own render, with no
-     * macro moved and no [soften]: MERCURY SING and BLADE, where velocity is
-     * the touch (`Mercury.VELOCITY_RAMP`, `Mercury.SCRAPE_DB`): a soft rub
-     * swells in, a hard one catches at once with a short scrape.
-     *
-     * A rubbed glass or a bowed blade is close to a pure tone: the rub
-     * sustains the fundamental, and the upper modes are not harmonics of it,
-     * so a harder touch barely brightens the held body (4% on SING and 13%
-     * on BLADE, measured with a steeper contact taper). Round 2's GLASS moved
-     * only the first 50 ms, and soften is a low-pass well above the body; the
-     * owner heard no difference in either, and chose attack and bite
-     * (2026-10-02).
+     * macro moved and no [soften]. MERCURY SING and BLADE use velocity as
+     * touch; AEROSTAT and CISTERN use it as strike energy, CIRCUIT as event
+     * energy, and TREMOR as the blow. MURK uses it as event energy and response
+     * reach, preserving the STRIKE contact character. THAW uses it as runner
+     * gesture energy while retaining the selected contact character.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
-        (patch is MercuryPatch && patch.voice != MercuryVoice.PING) || patch is TremorPatch
+        (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
+            patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
+            patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch ||
+            patch is CorollaPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -308,13 +312,18 @@ object Velocity {
     /** [atVelocity] with [spec] already resolved — see that function and [brightnessSpec]. */
     fun atVelocity(patch: Patch, velocity: Float, spec: MacroSpec?): Snip {
         val v = velocity.coerceIn(0f, 1f)
+        if (patch is FlotillaPatch) return Flotilla.render(patch.voice, patch.macros, patch.midi, velocity = v)
         if (touchedVelocity(patch)) {
-            // MERCURY's rubbed voices, and TREMOR: velocity is a number on the render, not a
-            // macro scaled toward a floor. On TREMOR it is the blow — force, brightness, how
-            // hard the beads leave and how hard the cage is driven — and STRIKE stays the hardness.
             return when (patch) {
                 is MercuryPatch -> Mercury.render(patch.voice, patch.macros, velocity = v)
+                is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
                 is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+                is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
+                is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
+                is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
+                // COROLLA scales the pull and contact energy; PULL keeps the playing character.
+                is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
+                is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
             }
         }

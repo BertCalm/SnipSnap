@@ -1,0 +1,894 @@
+<title>Aerostat Audition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
+<style>
+  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md,
+     the same page the PLUCK, TINES, SIREN and FORK auditions wear. The scheme is
+     dark by design (light shells were cut), so this page commits to one
+     theme and paints every surface explicitly. */
+  :root {
+    --desk1: #0C0618;
+    --desk2: #140B24;
+    --desk-glow: #2A1050;
+    --win: #1A1424;
+    --win2: #120E1A;
+    --field: #161020;
+    --field-border: #34285A;
+    --raised1: #221A34;
+    --raised2: #161020;
+    --gray-hi: #40306A;
+    --lcd: #0A0714;
+    --lcd-ink: #C8B2F8;
+    --lcd-glow: rgba(154, 108, 240, .9);
+    --cyan: #40E0E8;
+    --cyan-glow: rgba(64, 224, 232, .8);
+    --warn: #FFB000;
+    --ink: #C8B2F8;
+    --ink2: #8D80AE;
+    --ink3: #584A80;
+    --title-ink: #FFFFFF;
+    --accent: #E040C8;
+    --bin-red: #C86050;
+    --oil: conic-gradient(from 210deg at 50% 40%, #5A2AE0, #E040C8 25%, #40E0E8 50%, #8A5AF0 75%, #5A2AE0);
+    --f-lcd: "VT323", "Courier New", monospace;
+    --f-pixel: "Silkscreen", "Courier New", monospace;
+    --f-display: "Michroma", "Arial Black", sans-serif;
+    --f-marker: "Rock Salt", "Comic Sans MS", cursive;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 16px 48px;
+    padding-inline: 16px;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 50% 110%, var(--desk-glow) 0%, transparent 60%),
+      repeating-linear-gradient(90deg, rgba(90, 42, 224, .12) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(224, 64, 200, .08) 0 1px, transparent 1px 22px),
+      repeating-conic-gradient(var(--desk1) 0 25%, var(--desk2) 0 50%) 0 0 / 6px 6px;
+    background-color: var(--desk1);
+    font-family: var(--f-lcd);
+    font-size: 17px;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .win {
+    max-width: 430px;
+    margin: 0 auto;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background:
+      linear-gradient(var(--win), var(--win2)) padding-box,
+      var(--oil) border-box;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  }
+
+  .titlebar {
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding-inline: 12px;
+    background: linear-gradient(90deg, #5A2AE0, #E040C8);
+    color: var(--title-ink);
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .titlebar .tag {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    opacity: .85;
+  }
+
+  .lcd {
+    position: relative;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    text-shadow: 0 0 6px var(--lcd-glow);
+  }
+  .lcd::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px);
+  }
+  .lcd > * { position: relative; z-index: 1; }
+
+  .transport {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--field-border);
+  }
+  .transport > div { min-width: 0; }
+  .transport .label {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    text-shadow: none;
+  }
+  .transport .now {
+    font-size: 22px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .transport .now.idle { color: var(--lcd-ink); text-shadow: 0 0 6px var(--lcd-glow); }
+
+  .raised {
+    appearance: none;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  .toggle {
+    min-height: 44px;
+    min-width: 88px;
+    padding-inline: 12px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .toggle .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ink3);
+  }
+  .toggle[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+  .toggle[aria-pressed="true"] .dot { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+
+  .guide {
+    margin: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .guide p { margin: 0; }
+  .guide p + p { margin-top: 6px; }
+  .guide .hd {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+    margin-bottom: 6px;
+  }
+
+  .voice {
+    margin: 0 12px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+    overflow: hidden;
+  }
+  .voice-hd {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 4px 12px;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--field-border);
+    background: linear-gradient(var(--raised1), var(--field));
+  }
+  .voice-hd h2 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 400;
+    color: var(--title-ink);
+    text-wrap: balance;
+  }
+  .voice-hd .readout {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 17px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .voice-hd .readout b { font-weight: 400; color: var(--ink); }
+  .voice-hd .body-note {
+    font-family: var(--f-marker);
+    font-size: 11px;
+    color: var(--ink2);
+    text-align: right;
+    max-width: 160px;
+  }
+
+  .group { padding: 8px 8px 4px; }
+  .group + .group { border-top: 1px dashed var(--field-border); }
+  .group-hd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 4px 6px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+  }
+  .group.key .group-hd { color: var(--accent); }
+  .group.key .group-hd::before {
+    content: "";
+    width: 3px; height: 12px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  .clip {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    grid-template-areas: "pad meta" "pad desc" "pad chips";
+    gap: 4px 10px;
+    align-items: center;
+    padding: 6px 4px;
+    border-radius: 6px;
+  }
+  .clip.playing { background: rgba(64, 224, 232, .06); }
+
+  .pad {
+    grid-area: pad;
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    font-family: var(--f-pixel);
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    align-self: center;
+  }
+  .pad .ico { display: block; width: 14px; height: 14px; }
+  .pad .ico path, .pad .ico rect { fill: currentColor; }
+  .pad .stop { display: none; }
+  .pad[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25);
+  }
+  .pad[aria-pressed="true"] .play { display: none; }
+  .pad[aria-pressed="true"] .stop { display: block; }
+
+  .meta {
+    grid-area: meta;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  .meta .name {
+    font-size: 18px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .meta .dur {
+    margin-left: auto;
+    flex: none;
+    font-size: 15px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .desc {
+    grid-area: desc;
+    font-size: 15px;
+    color: var(--ink2);
+    line-height: 1.2;
+  }
+
+  .chips {
+    grid-area: chips;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 2px;
+  }
+  .chip {
+    appearance: none;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink2);
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip .g { font-family: var(--f-lcd); font-size: 15px; line-height: 1; }
+  .chip.worse .g { color: var(--bin-red); }
+  .chip.closer .g { color: var(--cyan); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--title-ink);
+    box-shadow: 0 0 10px rgba(224, 64, 200, .45);
+  }
+  .chip[aria-pressed="true"] .g { color: var(--title-ink); }
+
+  .notes {
+    padding: 8px 12px 12px;
+    border-top: 1px solid var(--field-border);
+    display: grid;
+    gap: 6px;
+  }
+  .notes label {
+    font-family: var(--f-marker);
+    font-size: 13px;
+    color: var(--ink);
+  }
+  textarea {
+    width: 100%;
+    min-height: 64px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    font-family: var(--f-lcd);
+    font-size: 19px;
+    line-height: 1.25;
+    caret-color: var(--cyan);
+  }
+  textarea::placeholder { color: var(--ink3); }
+
+  .verdict { margin: 0 12px 12px; }
+  .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
+  .q + .q { border-top: 1px dashed var(--field-border); }
+  .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
+
+  .actions {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--field-border);
+  }
+  .primary {
+    appearance: none;
+    min-height: 52px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background:
+      linear-gradient(#0C2426, #081418) padding-box,
+      var(--oil) border-box;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 20px rgba(64, 224, 232, .35);
+  }
+  .primary:disabled { opacity: .6; cursor: default; box-shadow: none; }
+  .status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .status .k { font-family: var(--f-pixel); font-size: 8px; letter-spacing: .5px; color: var(--ink2); text-shadow: none; align-self: center; }
+  .status.warn .v { color: var(--warn); text-shadow: 0 0 8px rgba(255, 176, 0, .6); }
+  .status.ok .v { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+
+  .jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 12px 12px;
+  }
+  .jump a {
+    min-height: 36px;
+    padding: 8px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--cyan);
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    text-decoration: none;
+    text-shadow: 0 0 6px var(--cyan-glow);
+  }
+  .jump a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+  .foot {
+    margin: 4px 12px 12px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink3);
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pad[aria-pressed="true"] { animation: breathe 1.2s ease-in-out infinite; }
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25); }
+      50% { box-shadow: 0 0 22px rgba(64, 224, 232, .85), inset 0 0 14px rgba(64, 224, 232, .35); }
+    }
+  }
+</style>
+
+<div class="win">
+  <div class="titlebar">
+    <span>Aerostat Audition</span>
+    <span class="tag">S24 GATE &middot; KNOCK, CATCH, WHISTLE</span>
+  </div>
+
+  <div class="transport lcd">
+    <div>
+      <div class="label">NOW PLAYING</div>
+      <div class="now idle" id="now">TAP A PAD TO PLAY</div>
+    </div>
+    <button class="raised toggle" id="repeat" type="button" aria-pressed="false">
+      <span class="dot"></span>REPEAT
+    </button>
+  </div>
+
+  <div class="guide lcd">
+    <div class="hd">WHAT YOU ARE LISTENING FOR</div>
+    <p>AEROSTAT is one imaginary instrument: a strike on two tubes, a rotor that catches a valve, and a shared reservoir that blows a whistle at the same pitch. Exhaust warms a vessel. The vessel rises and settles, and that motion changes the tail. Both banks always play. There is no bank selector.</p>
+    <p>Listen for the gesture, in order: knock, a short wait, the whistle blooming, the pressure falling, a floating tail. A tube hit followed by an unrelated pad does not pass. The tube tap should be the knock alone. The flow tap should arrive later and be the whistle. Quick is brighter and earlier. Heavy is darker and about five cents sharp. At LIFT 0 the tail should barely move in pitch. At LIFT 1 it may drift, and the note should still be the note.</p>
+    <p>The held loop is the settled whistle only. The static sample has no place to mark where a loop starts, so the opening strike is not in that buffer. Use REPEAT on the loop card and listen for a click or a pump. A phrase shares one reservoir: the second strike should not be a copy of the first.</p>
+    <p>Every clip is brought to one loudness after it is rendered, including the raw clip, so a control that only made something quieter will not show up as quiet. It has to show up as a different tone. Mark each KEEP, MEH or CUT. A CUT on a knob end means that end goes too far. Then answer the four questions and press SAVE VERDICT. Write SIGNED in the last box if you would approve this integration.</p>
+  </div>
+
+  <nav class="jump" id="jump" aria-label="Sections"></nav>
+
+  <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
+
+  <div class="voice verdict" id="verdict">
+    <div class="voice-hd">
+      <h2>Verdict</h2>
+      <div class="readout"><span>FOUR QUESTIONS &middot; THEN SAVE</span></div>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_voices">1 &middot; The instrument: does the default knock catch into a whistle at the same pitch? Can you tell the tube tap from the flow tap, and Quick from Heavy?</label>
+      <textarea id="q_voices" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_knobs">2 &middot; The knobs: do STRIKE, PRESSURE, INERTIA, RELEASE, LIFT and HOLD each move the gesture their names say? Does the held loop sustain without a second knock?</label>
+      <textarea id="q_knobs" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_landing">3 &middot; The grids: do PRESSURE x INERTIA and STRIKE x RELEASE stay playable, or does a corner fall apart? Which presets would you keep?</label>
+      <textarea id="q_landing" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_else">4 &middot; Sign-off. Write SIGNED if you would approve this integration. Otherwise say what blocks it.</label>
+      <textarea id="q_else" placeholder="SIGNED, or what blocks it"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="save" type="button">Save verdict</button>
+      <div class="status lcd" id="status"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    RENDERED BY generateAerostatAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
+    THE PRESETS ARE MEASURED, NOT HEARD &middot; THE HELD LOOP OMITS THE STRIKE &middot;
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
+  </div>
+</div>
+
+<script>window.AEROSTAT_MANIFEST = {"voices": [
+{"id":"KIT","display":"THE KIT","body":"sixteen dry pads, the way they land","readout":["A01-A08 PENTATONIC FROM C3, EVERY OTHER KNOB AT ITS DEFAULT","A09-A13 THE FIVE PRESETS","A14-A15 TWO MORE NOTES","A16 THE HELD LOOP, STRIKE NOT IN THE BUFFER"],"groups":[{"label":"PENTATONIC","key":true,"clips":[["a01_float_1","A01 FLOAT 1","TUNE 0"],["a02_float_2","A02 FLOAT 2","TUNE .13"],["a03_float_3","A03 FLOAT 3","TUNE .21"],["a04_float_4","A04 FLOAT 4","TUNE .29"],["a05_float_5","A05 FLOAT 5","TUNE .42"],["a06_float_6","A06 FLOAT 6","every knob at its default"],["a07_float_7","A07 FLOAT 7","TUNE .63"],["a08_float_8","A08 FLOAT 8","TUNE .71"]]},{"label":"PRESETS","key":true,"clips":[["a09_soft_catch","A09 SOFT CATCH","STRIKE .35 PRESSURE .40 INERTIA .28 RELEASE .42 LIFT .22"],["a10_twin_pipes","A10 TWIN PIPES","STRIKE .72 PRESSURE .68 INERTIA .40 RELEASE .58 LIFT .48"],["a11_heavy_rotor","A11 HEAVY ROTOR","TUNE .29 STRIKE .88 PRESSURE .50 INERTIA .92 RELEASE .32 LIFT .28"],["a12_drifting_steam","A12 DRIFTING STEAM","TUNE .67 STRIKE .58 PRESSURE .78 INERTIA .52 RELEASE .84 LIFT .90 HOLD .22"],["a13_high_envelope","A13 HIGH ENVELOPE","TUNE .79 STRIKE .80 PRESSURE .92 INERTIA .22 RELEASE .74 LIFT .60 HOLD .16"]]},{"label":"CLIMB AND THE LOOP","key":true,"clips":[["a14_float_9","A14 FLOAT 9","TUNE .58"],["a15_float_10","A15 FLOAT 10","TUNE .79"],["a16_float_11","A16 FLOAT 11","TUNE 1 HOLD 1"]]}]},
+{"id":"TAPS","display":"THE TAPS","body":"engineering branches of one default strike, then velocity","readout":["DEFAULT KNOBS","VELOCITY IS THE HIT, STRIKE STAYS PUT"],"groups":[{"label":"TUBE, FLOW, QUICK, HEAVY, FULL","key":true,"clips":[["tube","TUBE","the knock alone, no whistle"],["flow","FLOW","the whistle alone, after the catch"],["quick","QUICK","the brighter bank, on the note"],["heavy","HEAVY","the darker bank, about five cents sharp"],["full","FULL","both banks, the instrument"]]},{"label":"VELOCITY","key":false,"clips":[["velocity_30","SOFT","velocity .30: event energy, not a second STRIKE"],["velocity_65","MEDIUM","velocity .65: event energy, not a second STRIKE"],["velocity_1","HARD","velocity 1: event energy, not a second STRIKE"]]}]},
+{"id":"NOTES","display":"THE NOTES","body":"C3, C4 and C5 with lift held off, so the pitch is the tube and the whistle","readout":["ROOT C3","24 SEMITONES","LIFT 0"],"groups":[{"label":"LOW, MIDDLE, HIGH","key":true,"clips":[["tune_0","C3","the end of TUNE, LIFT held at 0"],["tune_50","C4","the middle, the default, LIFT held at 0"],["tune_1","C5","the end of TUNE, LIFT held at 0"]]}]},
+{"id":"SWEEPS","display":"THE KNOBS","body":"each control at 0, .25, .5, .75 and 1, the others at the default","readout":["ONE LOUDNESS","A CHANGE HAS TO BE A DIFFERENT TONE"],"groups":[{"label":"STRIKE - DEFAULT .60","key":false,"clips":[["strike_0","STRIKE 0","the rest at the defaults."],["strike_25","STRIKE .25","the rest at the defaults."],["strike_50","STRIKE .50","the rest at the defaults."],["strike_75","STRIKE .75","the rest at the defaults."],["strike_1","STRIKE 1","the rest at the defaults."]]},{"label":"PRESSURE - DEFAULT .55","key":false,"clips":[["pressure_0","PRESSURE 0","the rest at the defaults."],["pressure_25","PRESSURE .25","the rest at the defaults."],["pressure_50","PRESSURE .50","the rest at the defaults."],["pressure_75","PRESSURE .75","the rest at the defaults."],["pressure_1","PRESSURE 1","the rest at the defaults."]]},{"label":"INERTIA - DEFAULT .45","key":false,"clips":[["inertia_0","INERTIA 0","the rest at the defaults."],["inertia_25","INERTIA .25","the rest at the defaults."],["inertia_50","INERTIA .50","the rest at the defaults."],["inertia_75","INERTIA .75","the rest at the defaults."],["inertia_1","INERTIA 1","the rest at the defaults."]]},{"label":"RELEASE - DEFAULT .50","key":false,"clips":[["release_0","RELEASE 0","the rest at the defaults."],["release_25","RELEASE .25","the rest at the defaults."],["release_50","RELEASE .50","the rest at the defaults."],["release_75","RELEASE .75","the rest at the defaults."],["release_1","RELEASE 1","the rest at the defaults."]]},{"label":"LIFT - DEFAULT .40","key":false,"clips":[["lift_0","LIFT 0","the rest at the defaults."],["lift_25","LIFT .25","the rest at the defaults."],["lift_50","LIFT .50","the rest at the defaults."],["lift_75","LIFT .75","the rest at the defaults."],["lift_1","LIFT 1","the rest at the defaults."]]},{"label":"HOLD - DEFAULT 0","key":true,"clips":[["hold_0","HOLD 0","the rest at the defaults."],["hold_25","HOLD .25","the rest at the defaults."],["hold_50","HOLD .50","the rest at the defaults."],["hold_75","HOLD .75","the rest at the defaults."],["hold_1","HOLD 1","the rest at the defaults. The strike is not in this buffer."]]}]},
+{"id":"PRESETS","display":"THE PRESETS","body":"five names, provisional until this page","readout":["SOFT CATCH","TWIN PIPES","HEAVY ROTOR","DRIFTING STEAM","HIGH ENVELOPE"],"groups":[{"label":"THE ROSTER","key":true,"clips":[["preset_soft_catch","SOFT CATCH","C4 - STRIKE .35 PRESSURE .40 INERTIA .28 RELEASE .42 LIFT .22"],["preset_twin_pipes","TWIN PIPES","C4 - STRIKE .72 PRESSURE .68 INERTIA .40 RELEASE .58 LIFT .48"],["preset_heavy_rotor","HEAVY ROTOR","G3 - TUNE .29 STRIKE .88 PRESSURE .50 INERTIA .92 RELEASE .32 LIFT .28"],["preset_drifting_steam","DRIFTING STEAM","E4 - TUNE .67 STRIKE .58 PRESSURE .78 INERTIA .52 RELEASE .84 LIFT .90 HOLD .22"],["preset_high_envelope","HIGH ENVELOPE","G4 - TUNE .79 STRIKE .80 PRESSURE .92 INERTIA .22 RELEASE .74 LIFT .60 HOLD .16"]]}]},
+{"id":"LOOP","display":"THE HELD LOOP","body":"the settled whistle. The opening strike is not in this buffer, because a pad sample has no loop-start mark. Press REPEAT and listen for a click or a pump.","readout":["HOLD 1","STRIKE ABSENT","HEAVY SITS ON THE SAME PERIOD SO THE SEAM CAN CLOSE"],"groups":[{"label":"SETTLED SUSTAIN","key":true,"clips":[["held","HOLD 1","no second knock, no strike at the start"]]}]},
+{"id":"PHRASE","display":"THE PHRASE","body":"three strikes on one reservoir. The second and third should not be copies of the first.","readout":["C4, E4, G4","SHARED PRESSURE AND ALTITUDE","A HARNESS, NOT THE PAD API"],"groups":[{"label":"ONE RESERVOIR","key":true,"clips":[["phrase","C4 E4 G4","STRIKE .90, carry kept between notes"]]}]},
+{"id":"LEVEL","display":"RAW AND LEVELLED","body":"the same hard strike at a low pressure, before and after the engine's own loudness. Both are then brought to this page's one level, so a collapse has to be heard as tone.","readout":["STRIKE 1","PRESSURE .35","PAGE LOUDNESS AFTER"],"groups":[{"label":"THE SAME NOTE","key":true,"clips":[["raw","RAW","before the engine's own level"],["levelled","LEVELLED","after it"]]}]},
+{"id":"GRIDS","display":"THE GRIDS","body":"pressure against inertia, and strike against release. A corner that only gets quieter has already been levelled; listen for whether the catch still happens.","readout":["EACH 3 x 3","0, .5, 1"],"groups":[{"label":"PRESSURE x INERTIA","key":true,"clips":[["pressure_0_inertia_0","PRESSURE 0 INERTIA 0","the rest at the defaults"],["pressure_0_inertia_50","PRESSURE 0 INERTIA .50","the rest at the defaults"],["pressure_0_inertia_1","PRESSURE 0 INERTIA 1","the rest at the defaults"],["pressure_50_inertia_0","PRESSURE .50 INERTIA 0","the rest at the defaults"],["pressure_50_inertia_50","PRESSURE .50 INERTIA .50","the rest at the defaults"],["pressure_50_inertia_1","PRESSURE .50 INERTIA 1","the rest at the defaults"],["pressure_1_inertia_0","PRESSURE 1 INERTIA 0","the rest at the defaults"],["pressure_1_inertia_50","PRESSURE 1 INERTIA .50","the rest at the defaults"],["pressure_1_inertia_1","PRESSURE 1 INERTIA 1","the rest at the defaults"]]},{"label":"STRIKE x RELEASE","key":true,"clips":[["strike_0_release_0","STRIKE 0 RELEASE 0","the rest at the defaults"],["strike_0_release_50","STRIKE 0 RELEASE .50","the rest at the defaults"],["strike_0_release_1","STRIKE 0 RELEASE 1","the rest at the defaults"],["strike_50_release_0","STRIKE .50 RELEASE 0","the rest at the defaults"],["strike_50_release_50","STRIKE .50 RELEASE .50","the rest at the defaults"],["strike_50_release_1","STRIKE .50 RELEASE 1","the rest at the defaults"],["strike_1_release_0","STRIKE 1 RELEASE 0","the rest at the defaults"],["strike_1_release_50","STRIKE 1 RELEASE .50","the rest at the defaults"],["strike_1_release_1","STRIKE 1 RELEASE 1","the rest at the defaults"]]}]}
+]};</script>
+<script>
+(function () {
+  'use strict';
+
+  // Non-ASCII glyphs are escaped so the page reads the same whatever
+  // charset a host serves it under.
+  var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
+
+  // The clip list is the generator's manifest.json, published beside this
+  // page - one list, written where the clips are rendered.
+  var VOICES = [];
+
+  var REACTIONS = [
+    { v: 'keep', cls: 'closer', g: String.fromCharCode(0x25B2), t: 'KEEP' },
+    { v: 'meh',  cls: 'same',   g: '=', t: 'MEH' },
+    { v: 'cut',  cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'CUT' }
+  ];
+
+  var QUESTIONS = ['q_voices', 'q_knobs', 'q_landing', 'q_else'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  // ---------- state ----------
+  var state = { overall: { q_voices: '', q_knobs: '', q_landing: '', q_else: '' } };
+
+  // ---------- build ----------
+  var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
+                 '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
+
+  function build() {
+    var host = $('voices');
+    host.textContent = '';
+    VOICES.forEach(function (v) {
+      state[v.id] = state[v.id] || { reactions: {}, note: '' };
+      var card = el('section', 'voice');
+      card.id = 'voice-' + v.id;
+
+      var hd = el('div', 'voice-hd');
+      var h2 = el('h2', null, v.display);
+      var note = el('div', 'body-note', v.body);
+      var ro = el('div', 'readout');
+      (v.readout || []).forEach(function (r) { ro.appendChild(el('span', null, r)); });
+      hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
+      card.appendChild(hd);
+
+      v.groups.forEach(function (g) {
+        var grp = el('div', 'group' + (g.key ? ' key' : ''));
+        grp.appendChild(el('div', 'group-hd', g.label));
+        g.clips.forEach(function (c) {
+          var fid = c[0], name = c[1], desc = c[2];
+          var row = el('div', 'clip');
+          row.id = 'clip-' + v.id + '-' + fid;
+
+          var pad = el('button', 'raised pad');
+          pad.type = 'button';
+          pad.setAttribute('aria-pressed', 'false');
+          pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + name);
+          pad.innerHTML = PLAY_SVG;
+          pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
+          row.appendChild(pad);
+
+          var meta = el('div', 'meta');
+          meta.appendChild(el('span', 'name', name));
+          var durEl = el('span', 'dur', ''); meta.appendChild(durEl); row.durEl = durEl;
+          row.appendChild(meta);
+          row.appendChild(el('div', 'desc', desc));
+
+          var chips = el('div', 'chips');
+          REACTIONS.forEach(function (r) {
+            var chip = el('button', 'chip ' + r.cls);
+            chip.type = 'button';
+            chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
+            chip.setAttribute('aria-pressed', 'false');
+            chip.setAttribute('aria-label', v.display + ' ' + name + ': ' + r.t.toLowerCase());
+            chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
+            chip.addEventListener('click', function () { react(v.id, fid, r.v); });
+            chips.appendChild(chip);
+          });
+          row.appendChild(chips);
+          grp.appendChild(row);
+        });
+        card.appendChild(grp);
+      });
+
+      var notes = el('div', 'notes');
+      var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
+      var ta = el('textarea');
+      ta.id = 'note-' + v.id;
+      ta.placeholder = 'what it sounds like, in your words';
+      lab.htmlFor = ta.id;
+      ta.addEventListener('input', function () {
+        state[v.id].note = ta.value;
+        debounce(v.id, function () { persist(v.id); });
+      });
+      notes.appendChild(lab); notes.appendChild(ta);
+      card.appendChild(notes);
+
+      host.appendChild(card);
+    });
+    buildNav();
+  }
+
+  function buildNav() {
+    var nav = $('jump');
+    if (!nav) return;
+    nav.textContent = '';
+    VOICES.forEach(function (v) {
+      var a = el('a', null, v.display);
+      a.href = '#voice-' + v.id;
+      nav.appendChild(a);
+    });
+    var verdict = el('a', null, 'VERDICT');
+    verdict.href = '#verdict';
+    nav.appendChild(verdict);
+  }
+
+  // ---------- audio ----------
+  var audio = null, current = null, repeat = false;
+  var nowEl = $('now');
+
+  function ensureAudio() {
+    if (audio) return audio;
+    audio = new Audio();
+    audio.preload = 'auto';
+    audio.addEventListener('ended', function () {
+      if (repeat && current) {
+        audio.currentTime = 0;
+        audio.play().catch(function () { setPlaying(null); });
+      } else {
+        setPlaying(null);
+      }
+    });
+    audio.addEventListener('error', function () {
+      setPlaying(null);
+      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
+      nowEl.classList.remove('idle');
+    });
+    audio.addEventListener('loadedmetadata', function () {
+      if (current && current.row.durEl && isFinite(audio.duration)) {
+        current.row.durEl.textContent = audio.duration.toFixed(2) + ' S';
+      }
+    });
+    return audio;
+  }
+
+  function setPlaying(next) {
+    if (current) {
+      current.pad.setAttribute('aria-pressed', 'false');
+      current.row.classList.remove('playing');
+    }
+    current = next;
+    if (next) {
+      next.pad.setAttribute('aria-pressed', 'true');
+      next.row.classList.add('playing');
+      nowEl.textContent = next.voice.display + DOT + next.name;
+      nowEl.classList.remove('idle');
+    } else {
+      nowEl.textContent = 'TAP A PAD TO PLAY';
+      nowEl.classList.add('idle');
+    }
+  }
+
+  function toggle(voice, fid, name, pad, row) {
+    var a = ensureAudio();
+    if (current && current.pad === pad) {
+      a.pause();
+      setPlaying(null);
+      return;
+    }
+    a.pause();
+    a.src = voice.id + '/' + fid + '.wav';
+    setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
+    a.play().catch(function () { setPlaying(null); });
+  }
+
+  $('repeat').addEventListener('click', function () {
+    repeat = !repeat;
+    this.setAttribute('aria-pressed', repeat ? 'true' : 'false');
+  });
+
+  // ---------- reactions ----------
+  function react(voiceId, fid, value) {
+    var cur = state[voiceId].reactions[fid];
+    var next = cur === value ? null : value;
+    if (next) state[voiceId].reactions[fid] = next; else delete state[voiceId].reactions[fid];
+    paintChips(voiceId, fid);
+    persist(voiceId);
+  }
+
+  function paintChips(voiceId, fid) {
+    var cur = state[voiceId].reactions[fid] || null;
+    REACTIONS.forEach(function (r) {
+      var chip = $('chip-' + voiceId + '-' + fid + '-' + r.v);
+      if (chip) chip.setAttribute('aria-pressed', cur === r.v ? 'true' : 'false');
+    });
+  }
+
+  // A field being typed into wins over anything arriving from the store:
+  // state takes the live value instead, so the next save cannot re-save
+  // stale text over what was just typed.
+  function paintVoice(voiceId) {
+    var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
+    if (voice) voice.groups.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
+    var ta = $('note-' + voiceId);
+    if (!ta) return;
+    if (ta === document.activeElement) { state[voiceId].note = ta.value; }
+    else if (ta.value !== state[voiceId].note) { ta.value = state[voiceId].note; }
+  }
+
+  function paintOverall() {
+    QUESTIONS.forEach(function (k) {
+      var ta = $(k);
+      if (!ta) return;
+      if (ta === document.activeElement) { state.overall[k] = ta.value; }
+      else if (ta.value !== state.overall[k]) { ta.value = state.overall[k]; }
+    });
+  }
+
+  // The answers keep a local draft as they are typed; only SAVE VERDICT
+  // writes them to the shared store.
+  QUESTIONS.forEach(function (k) {
+    $(k).addEventListener('input', function () {
+      state.overall[k] = this.value;
+      debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
+    });
+  });
+  $('save').addEventListener('click', function () { persist('overall'); });
+
+  // ---------- persistence ----------
+  var db = null;
+  var statusEl = $('status'), statusV = $('statusv');
+  var timers = {}, queues = {};
+
+  function setStatus(kind, text) {
+    statusEl.classList.remove('warn', 'ok');
+    if (kind) statusEl.classList.add(kind);
+    statusV.textContent = text;
+  }
+
+  function debounce(key, fn) {
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(fn, 700);
+  }
+
+  function snapshotOf(key) {
+    var data;
+    if (key === 'overall') {
+      data = {};
+      QUESTIONS.forEach(function (k) { data[k] = state.overall[k]; });
+    } else {
+      data = { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
+    }
+    data.savedAt = new Date().toISOString();
+    return data;
+  }
+
+  // Every round's verdicts live under their own prefix, so a later round's
+  // page never opens pre-filled with this one's notes and saves over them.
+  var PHASE = 'aerostat_r1';
+  function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
+
+  function saveLocal(key, data) {
+    try { localStorage.setItem('aerostat-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+  }
+
+  function loadLocal(key) {
+    try {
+      var raw = localStorage.getItem('aerostat-audition:' + PHASE + ':' + key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function apply(key, data) {
+    if (!data) return;
+    if (key === 'overall') {
+      QUESTIONS.forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
+      paintOverall();
+    } else if (state[key]) {
+      if (data.reactions && typeof data.reactions === 'object') state[key].reactions = Object.assign({}, data.reactions);
+      if (typeof data.note === 'string') state[key].note = data.note;
+      paintVoice(key);
+    }
+  }
+
+  function persist(key) {
+    var data = snapshotOf(key);
+    saveLocal(key, data);
+    if (!db) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    setStatus(null, 'SAVING...');
+    queues[key] = (queues[key] || Promise.resolve())
+      .then(function () { return db.doc(docPath(key)).set(data); })
+      .then(function () { setStatus('ok', 'SAVED ' + clock()); },
+            function (e) { setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase()); });
+  }
+
+  function clock() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  var KEYS = ['overall'];
+
+  function connect() {
+    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
+    Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
+      .then(function (ns) {
+        if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
+        return Promise.all(KEYS.map(function (k) {
+          return ns.doc(docPath(k)).get().then(function (snap) {
+            if (snap && snap.exists) apply(k, snap.data());
+          }, function () { /* keep the local copy */ });
+        })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });
+      })
+      .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
+  }
+
+  function boot(m) {
+    VOICES = m.voices || [];
+    if (!VOICES.length) throw new Error('empty');
+    build();
+    KEYS = VOICES.map(function (v) { return v.id; }).concat(['overall']);
+    KEYS.forEach(function (k) { apply(k, loadLocal(k)); });
+    connect();
+  }
+
+  function showMissing() {
+    $('voices').innerHTML = '<div class="guide lcd" id="manifest-error"><p>THE CLIP LIST DID NOT LOAD. RE-RENDER WITH generateAerostatAudition, THEN OPEN THIS PAGE BESIDE manifest.json.</p></div>';
+    var nav = $('jump');
+    if (nav) nav.textContent = '';
+    KEYS.forEach(function (k) { apply(k, loadLocal(k)); });
+    connect();
+  }
+
+  // fetch() of a neighbour is refused when the file is opened from disk.
+  // The published copy sets AEROSTAT_MANIFEST so double-clicking index.html
+  // still builds the page. A copy without that, and without manifest.json,
+  // shows the error.
+  if (location.protocol === 'file:' && window.AEROSTAT_MANIFEST) {
+    try { boot(window.AEROSTAT_MANIFEST); }
+    catch (e) { showMissing(); }
+  } else {
+    fetch('manifest.json')
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(boot)
+      .catch(function () {
+        if (window.AEROSTAT_MANIFEST) {
+          try { boot(window.AEROSTAT_MANIFEST); return; }
+          catch (e) { /* the embedded list was empty */ }
+        }
+        showMissing();
+      });
+  }
+})();
+</script>

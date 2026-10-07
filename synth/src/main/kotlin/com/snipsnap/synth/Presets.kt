@@ -5,8 +5,7 @@ package com.snipsnap.synth
  *
  * Authored engine by engine, not all at once — THUMP was first (U1 of
  * `docs/SYNTH_UPGRADE.md`, PR #189) and SKIN was last, a whole wave after
- * the engine itself shipped. This dispatcher now covers all sixteen
- * registered engines with a roster.
+ * the engine itself shipped. This dispatcher covers every registered engine with a roster.
  *
  * An unregistered engine name (or a future one with no roster yet)
  * returns an empty list rather than throwing, so the UI can ask before
@@ -75,9 +74,37 @@ object Presets {
             val v = MercuryVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MercuryPresets.forVoice(v)
         }
+        AerostatPatch.ENGINE -> {
+            val v = AerostatVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            AerostatPresets.forVoice(v)
+        }
+        FlotillaPatch.ENGINE -> {
+            val v = FlotillaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            FlotillaPresets.forVoice(v)
+        }
+        CisternPatch.ENGINE -> {
+            val v = CisternVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CisternPresets.forVoice(v)
+        }
         TremorPatch.ENGINE -> {
             val v = TremorVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TremorPresets.forVoice(v)
+        }
+        CircuitPatch.ENGINE -> {
+            val v = CircuitVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CircuitPresets.forVoice(v)
+        }
+        MurkPatch.ENGINE -> {
+            val v = MurkVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            MurkPresets.forVoice(v)
+        }
+        ThawPatch.ENGINE -> {
+            val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ThawPresets.forVoice(v)
+        }
+        CorollaPatch.ENGINE -> {
+            val v = CorollaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CorollaPresets.forVoice(v)
         }
         else -> emptyList()
     }
@@ -107,5 +134,7 @@ object Presets {
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + TremorPresets.all()
+            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
+            AerostatPresets.all() +
+            TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + CorollaPresets.all()
 }

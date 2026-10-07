@@ -1,10 +1,20 @@
-# :app — the Android shell (M0, pre-written)
+# :app — the Android app
 
-This tree is APP_PLAN.md's **M0 walking skeleton**, written ahead of time
-by the cloud session — which **cannot compile it**: that environment has
-no Android SDK and its network policy blocks `dl.google.com`. Every other
-module on this branch is tested; this one is carefully written, reviewed
-Kotlin that has **never been through a compiler**. Treat it accordingly.
+Compose over `:shell`, `:kit`, and the native engines (`SurfaceEngine`,
+`PadEngine`, `LiveSnapEngine`). CI's `android-build` job compiles it
+(`./gradlew :app:assembleDebug`) on a runner with an SDK. A machine
+without one never sees `:app`: `settings.gradle.kts` leaves it out, which
+is why a cloud session's `./gradlew test` is the nine JVM modules only.
+
+There is no `app/src/test`. The on-device Compose suites live in
+`app/src/androidTest` and run under `emulator-tests` when a PR touches
+`app/`. The native engines and the JNI bridge have host tests in
+`src/main/cpp/test`, which need no SDK. `versionName` is `0.1`.
+
+`:app:assembleDebug` passed in the cloud during the THAW integration on
+2026-10-05 with a full JDK 17 and Android SDK. This verifies compilation and
+packaging; THAW's on-device and listening checks still require a phone or
+emulator.
 
 ## Building (desktop session or any machine with an Android SDK)
 
@@ -18,11 +28,10 @@ Kotlin that has **never been through a compiler**. Treat it accordingly.
 
 2. `./gradlew :app:assembleDebug`
 
-3. Fix what the compiler finds. The likely nit categories, in honesty
-   order: Compose API drift against the pinned BOM (2024.12.01), an
-   import the blind write missed, a modifier-order surprise. The
-   architecture is deliberately boring — no algorithm lives here, every
-   screen binds to `:shell`/`:kit` code that is already tested.
+3. The same assemble is what CI's `android-build` job runs, so a local
+   failure is a real compiler finding. The architecture stays boring on
+   purpose: no algorithm lives here, and every screen binds to
+   `:shell`/`:kit` code that already has tests.
 
 4. Install: `adb install app/build/outputs/apk/debug/app-debug.apk`
    (or copy the APK to the phone and tap it).
@@ -52,10 +61,21 @@ flight. What needs an ear stays in the pass.
 
 ## M0's exit test (from docs/APP_PLAN.md)
 
-Browse kits on a phone, tap pads, hear WAVs (interim `SoundPool`), flip
-schemes in Tape Properties. The FRESH TAPE menu (nine starters from
-`StarterKits`, rendered by the `:synth` engines on-device) makes the
-shelf useful before capture (M1) exists.
+M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
+schemes in Tape Properties. The player for that test was `SoundPool`
+(`PadPlayer`), since deleted. Every screen that makes a sound goes
+through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
+(`docs/BENCH.md` A1). The FRESH TAPE menu (twelve starters including CIRCUIT, THAW and CISTERN,
+from `StarterKits`, rendered by
+the `:synth` engines on-device) makes the shelf useful before a capture
+exists. The ordered hardware list is `docs/BENCH.md`; the notes below
+are the per-feature detail.
+
+The SYNTH source picker has nineteen engines: THUMP, SKIN, TINES, VELVET,
+VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
+CISTERN, CIRCUIT, THAW, MURK and COROLLA. CIRCUIT, THAW and CISTERN also
+provide FRESH TAPE starters.
+GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here
 
@@ -64,7 +84,7 @@ shelf useful before capture (M1) exists.
 | Scaffold | `build.gradle.kts` (AGP 8.7.3, Kotlin 2.0.21 + Compose plugin, minSdk 29, foundation-only Compose — no Material; TapeOS draws itself) |
 | Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers; OILSLICK sweep |
 | Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
-| Screens | SHELF (the shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
+| Screens | The menu's screens under `ui/` — SHELF, KIT (4×4, MPC geometry: A13 top-left, A01 bottom-left), TAPE, CHOP, PLAY, KEYS, SURFACE, GROOVE, SYNTH, SNAP, EXPORT, SETUP, HELP, and the rest |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
 | Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
 | Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
@@ -77,9 +97,9 @@ against the hardware checks and gives each one a line to answer on. The
 list here stays the per-feature detail — what to look at, and which
 logcat tag to grab when something is wrong.
 
-- **SoundPool vs the kit WAVs**: starters render standard PCM WAVs;
-  confirm depth/rate decode cleanly. If any pad is silent, check the
-  logcat `SoundPool` line first.
+- **Pad WAVs**: starters render standard PCM WAVs; confirm depth and
+  rate decode cleanly. If any pad is silent, check the logcat
+  `PadEngine` line.
 - **Scheme flip repaint**: every colour flows from `LocalScheme`, so a
   SETUP flip should repaint the whole window instantly; a stale surface
   means a colour got captured outside the composition local.
@@ -124,8 +144,7 @@ logcat tag to grab when something is wrong.
   in the header means the device refused every open; check logcat's
   `PadEngine` line.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
-  grid — same engine PLAY uses, so it should feel just as tight, not
-  the SoundPool preview's decode lag. A closed hat should still cut a
+  grid — same engine PLAY uses, so it should feel just as tight. A closed hat should still cut a
   ringing open one (the mute group chokes here too); tapping the same
   pad rapidly should retrigger cleanly rather than layering forever;
   editing a pad on PAD SHEET and coming back to KIT should play the

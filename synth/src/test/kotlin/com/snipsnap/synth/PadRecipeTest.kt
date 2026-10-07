@@ -39,7 +39,11 @@ class PadRecipeTest {
         GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
         GyrePatch("Drawn Test", GyreVoice.DRAWN, mapOf("TOUCH" to 0.6f, "BODY" to 0.7f)),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
+        AerostatPatch("Float Test", AerostatVoice.FLOAT, mapOf("STRIKE" to 0.7f)),
+        FlotillaPatch("Wake Test", FlotillaVoice.RIPPLE, mapOf("SURFACE" to 0.4f), midi = 64),
         TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
+        MurkPatch("Wood Test", MurkVoice.CLUNK, mapOf("FOG" to 0.4f)),
+        ThawPatch("Ice Test", ThawVoice.BRITTLE, mapOf("HEAT" to 0.4f)),
     )
 
     @Test

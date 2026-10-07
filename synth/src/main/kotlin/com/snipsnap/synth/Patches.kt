@@ -31,6 +31,13 @@ object Patches {
 
     const val VERSION = 1
 
+    /** Edit the common fields while retaining engine-specific state such as FLOTILLA's pitch and velocity. */
+    fun edited(patch: Patch, name: String, macros: Map<String, Float>): Patch {
+        val obj = LinkedHashMap(patch.withMacros(macros).toJsonValue().entries)
+        obj["name"] = JsonValue.Str(name)
+        return fromJsonValue(JsonValue.Obj(obj))
+    }
+
     fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
 
     fun fromJsonValue(value: JsonValue): Patch {
@@ -57,7 +64,14 @@ object Patches {
             MercuryPatch.ENGINE -> MercuryPatch.fromJsonValue(value)
             GyrePatch.ENGINE -> GyrePatch.fromJsonValue(value)
             MagnetPatch.ENGINE -> MagnetPatch.fromJsonValue(value)
+            AerostatPatch.ENGINE -> AerostatPatch.fromJsonValue(value)
+            FlotillaPatch.ENGINE -> FlotillaPatch.fromJsonValue(value)
+            CisternPatch.ENGINE -> CisternPatch.fromJsonValue(value)
             TremorPatch.ENGINE -> TremorPatch.fromJsonValue(value)
+            CircuitPatch.ENGINE -> CircuitPatch.fromJsonValue(value)
+            MurkPatch.ENGINE -> MurkPatch.fromJsonValue(value)
+            ThawPatch.ENGINE -> ThawPatch.fromJsonValue(value)
+            CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

@@ -1,14 +1,21 @@
 # SnipSnap device-test guide
 
-Everything in this build passed compile, 1971 JVM tests, and code review. The
-`:app` module has NO unit tests at all, so every UI change in it is verified by
-compilation, diff review and screenshots only — never by a test. This guide is keyed to exactly what desk review
-could NOT verify. Test in this order; each item names what "wrong" looks like.
+A short first session on a phone. The ordered hardware list, with a line
+to write each answer on, is [`docs/BENCH.md`](docs/BENCH.md). The
+per-feature notes are [`app/README.md`](app/README.md). This guide is
+keyed to what a desk review cannot hear. Each item names what "wrong"
+looks like.
+
+`:app` has no host unit tests (`app/src/test` does not exist). Compose
+UI tests live in `app/src/androidTest` and run on a device under
+`emulator-tests`. The native engines have host tests under
+`app/src/main/cpp/test`. The JVM suites are `./gradlew test`.
 
 ## First five minutes
-1. **NEW KIT ▸ STARTERS → any starter → tap pads.** Do hits feel instant? SoundPool
-   latency varies wildly per device; if taps feel spongy everywhere, say so —
-   that's an engine-swap conversation, not a bug fix.
+1. **NEW KIT ▸ a starter → tap pads.** Do hits feel instant? Playback is
+   `PadEngine`. BENCH A1, on 2026-09-08, measured 8–11 ms on the
+   exclusive path. If taps feel spongy, write down the header's latency
+   and whether it says SHARED.
 2. **KIT → tap the closed hat, then the open hat, then closed again.**
    The open hat must CUT OFF when the closed hat fires (choke group). If both
    ring together, chokes are broken on your device.
