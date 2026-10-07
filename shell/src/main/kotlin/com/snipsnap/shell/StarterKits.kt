@@ -113,6 +113,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.thaw() },
         Starter(
+            "nimbus", "NIMBUS",
+            "Six metal plates spread and gather in C minor pentatonic. Rings, shimmer and held suspension.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.nimbus() },
+        Starter(
             "undertow", "UNDERTOW",
             "Weighted ceramic flaps and hollow breath in C minor pentatonic. One draw wakes the shell.",
             seeded = false,

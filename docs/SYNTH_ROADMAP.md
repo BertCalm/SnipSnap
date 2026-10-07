@@ -142,6 +142,25 @@ wood, atmosphere, and owl clips expose the dry engine before effects. See
 The port remains subject to the owner's listening verdict and phone/MPC checks.
 Numerical stability and deterministic rendering do not establish sonic acceptance.
 
+### NIMBUS — six suspended cymbals at one root
+
+NIMBUS ports the [engineering spec](superpowers/specs/2026-10-05-nimbus-engine-engineering-spec.md)
+into the deterministic offline melodic pipeline. Every render contains Body,
+Bell, Paper, Dark, Flex and Wire. Six voices select excitation and response;
+upper modal ratios, losses and bounded flex distinguish the cymbals while the
+principal modes retain the requested note. Neighbor exchange, slow suspension,
+chamber reaction and motion-derived rim contact create the spreading and
+gathering gesture. HEIGHT and SPACING control independent geometry.
+
+Nine dry presets and `SynthKits.nimbus()` provide a sixteen-pad kit. The SYNTH
+picker, FRESH TAPE, patches, recipes and physical velocity share the existing
+host interfaces. HOLD supplies explicit powered modal drive and settled loop
+material. The [published audition](https://snipsnap-nimbus-audition.bertcalm.chatgpt.site)
+and `./gradlew :synth:generateNimbusAudition` expose voice/pitch/velocity checks,
+macro and interaction sweeps, raw/matched pairs, isolated identities, causal
+switches and held loops. See [NIMBUS](NIMBUS.md) for implementation limits and
+validation. The owner's listening verdict and phone/MPC checks remain open.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,

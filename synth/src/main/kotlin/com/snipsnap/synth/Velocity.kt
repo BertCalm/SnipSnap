@@ -227,6 +227,7 @@ object Velocity {
         is TremorPatch -> Tremor.macrosFor(patch.voice)
         is CircuitPatch -> Circuit.macrosFor(patch.voice)
         is MurkPatch -> Murk.macrosFor(patch.voice)
+        is NimbusPatch -> Nimbus.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
         is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
@@ -289,15 +290,16 @@ object Velocity {
      * [Mercury.velocityKind]) use velocity as touch; AEROSTAT and CISTERN use it
      * as strike energy, CIRCUIT as event energy, and TREMOR as the blow. MURK uses
      * it as event energy and response reach, preserving the STRIKE contact
-     * character. THAW uses it as runner gesture energy while retaining the
-     * selected contact character. UNDERTOW uses it as piston work while
+     * character. NIMBUS uses it as flex impulse and transient stack displacement,
+     * preserving EXCITE's contact character. THAW uses it as runner gesture energy while retaining
+     * the selected contact character. UNDERTOW uses it as piston work while
      * preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
-            patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch ||
+            patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch
 
     /**
@@ -327,6 +329,7 @@ object Velocity {
                 is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
                 is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
                 is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
+                is NimbusPatch -> Nimbus.render(patch.voice, patch.macros, velocity = v)
                 // COROLLA scales the pull and contact energy; PULL keeps the playing character.
                 is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)

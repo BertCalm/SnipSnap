@@ -633,3 +633,16 @@ tasks.register<JavaExec>("generateCorollaAudition") {
     args("${rootDir}/testkit/corolla-audition")
     if (project.hasProperty("corollaQuick")) args("--quick")
 }
+
+/** Render Nimbus's six same-note identities, interaction grids and powered HOLD listening pack. */
+tasks.register<JavaExec>("generateNimbusAudition") {
+    group = "distribution"
+    description = "Render NIMBUS dry audition WAVs, mechanical evidence and an accessible page under testkit/nimbus-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NimbusAuditionGenerator")
+    maxHeapSize = "512m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/nimbus-audition")
+    if (providers.gradleProperty("nimbusRefreshPage").orNull == "true") args("--refresh-page")
+    if (providers.gradleProperty("nimbusQuick").orNull == "true") args("--quick")
+}

@@ -65,15 +65,15 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (fourteen starters including CIRCUIT, THAW, UNDERTOW, CISTERN and SUTURE,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (fifteen starters including CIRCUIT, THAW, NIMBUS, UNDERTOW, CISTERN and SUTURE,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has twenty engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has twenty-two engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW and SUTURE. CIRCUIT, THAW, CISTERN and SUTURE also
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW and SUTURE. CIRCUIT, THAW, NIMBUS, CISTERN and SUTURE also
 provide FRESH TAPE starters.
 GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
