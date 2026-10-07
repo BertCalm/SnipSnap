@@ -81,6 +81,11 @@ class MutateWordsTest {
         for (mode in Mutate.Mode.values()) {
             val line = MutateSheet.outcomeLine(mode, 0f)
             assertTrue(">$line</span>" in board, "$mode's line '$line' is not the board's (design/mutate-v2/Moves.dc.html)")
+            // Not just somewhere on the board: on THIS move's chip row (one board line per move), so swapping
+            // two moves' lines is caught.
+            val chipRow = board.lines().singleOrNull { ">${mode.name}</span></div>" in it && "class=\"sunken\"" in it }
+            assertTrue(chipRow != null, "expected exactly one chip row for $mode on the board")
+            assertTrue(">$line</span>" in chipRow!!, "$mode's line '$line' is not on $mode's own chip row of the board")
             val knob = MutateSheet.knobFor(mode)
             val meaning = MutateSheet.knobMeaning(mode)
             if (knob == null) {
@@ -90,8 +95,19 @@ class MutateWordsTest {
                 assertTrue(">${knob.label} · $meaning</span>" in board, "${knob.label}'s meaning '$meaning' is not the board's")
             }
         }
-        assertEquals("BOTH AT ONCE. THICKER.", MutateSheet.outcomeLine(Mutate.Mode.STACK, 0f))
-        assertEquals("MY TIMING, THEIR TONE.", MutateSheet.outcomeLine(Mutate.Mode.TRANSPLANT, 0f))
+        // The spec's table, move by move: the exact six lines.
+        assertEquals(
+            mapOf(
+                Mutate.Mode.STACK to "BOTH AT ONCE. THICKER.",
+                Mutate.Mode.SPLICE to "THIS ATTACK, THAT TAIL.",
+                Mutate.Mode.SPLIT to "MY LOWS, THEIR HIGHS.",
+                Mutate.Mode.MORPH to "A HIT BETWEEN THE TWO.",
+                Mutate.Mode.ROOM to "MY HIT, PLAYED IN THEIR ROOM.",
+                Mutate.Mode.TRANSPLANT to "MY TIMING, THEIR TONE.",
+            ),
+            Mutate.Mode.values().associateWith { MutateSheet.outcomeLine(it, 0f) },
+            "each move's line, as the spec's table has it",
+        )
         assertEquals("NO KNOB — THEY LINE UP ON THE HIT", MutateSheet.deadKnobLine)
         // BECOME's lines are this spec's and the brief's, not the board's: pinned as written.
         assertEquals("HOW LONG THE TURN TAKES", MutateSheet.becomeMeaning(Mutate.Mode.MORPH))
