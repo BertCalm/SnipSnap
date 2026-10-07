@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Undertow listening audition</title>
+<style>
+:root{color-scheme:dark;--bg:#09151a;--panel:#11272e;--line:#34545b;--ink:#edf5f2;--muted:#b3c7c8;--accent:#85ded0;--gold:#edc88c}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#1d4651,transparent 65%),var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:32px 18px 64px}h1{font-size:38px;letter-spacing:3px;margin:0}h2{font-size:19px;color:var(--gold)}h3{font-size:16px;margin:0}p{max-width:850px}.muted{color:var(--muted)}.skip{position:absolute;top:-80px;left:12px;padding:10px;background:var(--panel);z-index:4}.skip:focus{top:8px}a{color:var(--accent)}button,input,textarea,select{font:inherit;color:var(--ink);background:#0b1e25;border:1px solid var(--line);border-radius:5px}button{padding:8px 12px;cursor:pointer}button:hover{border-color:var(--accent)}:focus-visible{outline:3px solid var(--accent);outline-offset:3px}button.active{background:var(--accent);color:#092127}input[type=checkbox]{accent-color:var(--accent)}input[type=search]{padding:9px 12px;width:min(100%,430px)}.transport{position:sticky;top:0;z-index:2;margin:24px -4px 20px;padding:12px;background:#0a1b21f5;border:1px solid var(--line);border-radius:6px}.transport-row,.toolbar,.buttons,.downloads,.legend{display:flex;gap:12px;align-items:center;flex-wrap:wrap}#now{flex:1;min-width:190px;color:var(--accent)}audio{width:100%;display:block;height:36px;margin-top:10px}.toolbar{margin:20px 0}.section{border:1px solid var(--line);border-radius:6px;background:var(--panel);margin:14px 0}.section>summary{padding:15px;cursor:pointer;font-weight:700;letter-spacing:1px}.section-body{padding:0 16px 16px}.group{margin:24px 0}.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr))}.card{padding:15px;border:1px solid var(--line);border-radius:5px;background:#0d1e25}.card p{font-size:13px;color:var(--muted);margin:8px 0}.buttons{margin:14px 0 9px}.downloads{font-size:13px;margin-bottom:12px}.card details{font-size:13px;margin-top:12px}.card details>summary{cursor:pointer}.readout{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;color:var(--muted)}canvas{display:block;width:100%;height:120px;background:#09151a;border-radius:4px;margin-top:10px}.legend{gap:9px;font-size:11px;color:var(--muted)}textarea{width:100%;min-height:75px;margin-top:10px;padding:8px;resize:vertical}select{padding:6px;width:100%;margin-top:10px}.notice{padding:12px 16px;border:1px solid var(--gold);border-radius:5px;color:var(--gold)}[hidden]{display:none!important}@media(max-width:500px){main{padding:22px 14px 50px}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<a class="skip" href="#cases">Skip to listening cases</a>
+<main>
+<h1>UNDERTOW</h1>
+<p class="muted">One shell · four competing openings</p>
+<p>Draw → weighted contact → pitched breath → competing apertures → settling shell. Listen for ceramic catches and hollow breath emerging from the same moving apertures, and for one opening changing the voice of the whole shell.</p>
+<p class="muted">RAW retains the engine's amplitude before melodic loudness targeting. MATCHED compares the same render at the shared audition level. Both are downloadable PCM-24 WAVs, with no rack effects. Numerical evidence supports review; the owner's listening verdict remains pending.</p>
+<p id="counts" class="muted"></p>
+<p id="coverage" class="notice" hidden></p>
+<div class="transport" aria-label="Audition player">
+<div class="transport-row"><span id="now" role="status" aria-live="polite">Choose a clip</span><label><input id="repeat" type="checkbox"> Repeat</label><button id="stop" type="button">Stop</button></div>
+<audio id="player" controls preload="none" aria-label="Selected listening clip"></audio>
+</div>
+<div class="toolbar"><input id="search" type="search" aria-label="Filter listening cases" placeholder="Filter by voice, control or case…"><button id="expand" type="button">Open all</button><button id="export" type="button">Save listening notes</button><a href="manifest.json" download>Download evidence manifest</a></div>
+<div id="cases" tabindex="-1"></div>
+<p class="muted">HOLD contains settled sustain and omits the first catch in the loop-only host format. Enable Repeat and listen across several wraps for double contacts, missing breath and jumps in pressure or timbre. Notes stay in this browser until exported. Keep index.html beside its WAV and CSV folders when sharing this audition.</p>
+</main>
+<script>
+/* UNDERTOW_MANIFEST */
+(() => {
+'use strict';
+const data=window.UNDERTOW_MANIFEST,player=document.querySelector('#player'),now=document.querySelector('#now'),repeat=document.querySelector('#repeat');
+let selected=null,request=0,cancelPending=null,notes={};
+const storageKey='snipsnap-undertow-listening-v1';
+try{notes=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch(_){}
+function el(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node}
+function persist(){try{localStorage.setItem(storageKey,JSON.stringify(notes))}catch(_){}}
+function num(v,d=4){return v===null||v===undefined?'unavailable':Number(v).toFixed(d)}
+function sci(v){return v===null||v===undefined?'unavailable':Number(v).toExponential(3)}
+function link(path,label){const node=el('a',label);node.href=path;node.download='';return node}
+function metric(label,m){return `${label}: peak ${num(m.peak)} · RMS ${num(m.rms)} · DC ${sci(m.dc)} · window RMS ${num(m.loudness)}`}
+function play(c,variant,button){
+ const token=++request,position=selected&&selected.id===c.id&&!player.ended?(selected.waiting?selected.position:player.currentTime):0;
+ if(cancelPending)cancelPending();player.pause();document.querySelectorAll('.buttons button.active').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false')});
+ button.classList.add('active');button.setAttribute('aria-pressed','true');selected={id:c.id,position,waiting:true};
+ const label=`${c.voice} · ${c.label} · ${variant.toUpperCase()}`;now.textContent=label;player.loop=repeat.checked;player.preload='auto';
+ function ready(){if(token!==request)return;player.currentTime=position<player.duration?position:0;selected.waiting=false}
+ function mediaError(){if(token===request)now.textContent=`${label} · Audio could not load. Use the download link or try another browser.`}
+ function playError(error){if(token!==request||error.name==='AbortError')return;if(player.error){mediaError();return}now.textContent=`${label} · Use the audio player's Play button to start.`}
+ player.addEventListener('canplay',ready,{once:true});player.addEventListener('error',mediaError);
+ cancelPending=()=>{player.removeEventListener('canplay',ready);player.removeEventListener('error',mediaError);cancelPending=null};
+ player.src=c[variant];player.load();try{const playing=player.play();if(playing)playing.catch(playError)}catch(error){playError(error)}
+}
+repeat.addEventListener('change',()=>{player.loop=repeat.checked});
+document.querySelector('#stop').addEventListener('click',()=>{++request;if(cancelPending)cancelPending();player.pause();if(player.readyState)player.currentTime=0;if(selected){selected.position=0;selected.waiting=false}now.textContent='Stopped'});
+document.querySelector('#counts').textContent=`${data.renderCount} renders · ${data.caseCount} listening cases · ${data.wavCount} PCM-${data.bitDepth} WAV files · ${data.sampleRate.toLocaleString()} Hz`;
+if(data.quick){const node=document.querySelector('#coverage');node.hidden=false;node.textContent=data.coverage}
+function draw(canvas,curves){
+ const ctx=canvas.getContext('2d');if(!ctx)return;const w=canvas.width=600,h=canvas.height=190,left=38,right=w-12,top=14,bottom=h-30;
+ ctx.strokeStyle='#34545b';ctx.fillStyle='#b3c7c8';ctx.font='17px system-ui';
+ for(const level of [0,.5,1]){const y=bottom-level*(bottom-top);ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();ctx.fillText(String(level),3,y+5)}
+ for(const [key,color] of [['suction','#85ded0'],['totalFlow','#edc88c'],['meanAperture','#b0b8f2']]){
+  const values=curves[key],peak=Math.max(1e-12,...values.map(v=>Math.abs(v)));ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();
+  values.forEach((v,i)=>{const x=left+i*(right-left)/Math.max(1,values.length-1),y=bottom-Math.max(0,Math.min(1,v/peak))*(bottom-top);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.stroke()
+ }
+ ctx.fillText('0 s',left,h-5);ctx.fillText(`${num(curves.seconds.at(-1)||0,1)} s`,right-70,h-5)
+}
+const allCards=[],allGroups=[],allSections=[];
+for(const section of data.sections){
+ const wrap=el('details',undefined,'section');wrap.open=section.id==='MECHANICS'||data.quick;wrap.append(el('summary',`${section.id} · ${section.cases.length} cases`));
+ const body=el('div',undefined,'section-body');body.append(el('p',section.description,'muted'));const groups=new Map();
+ for(const c of section.cases){
+  if(!groups.has(c.group)){const group=el('div',undefined,'group'),cards=el('div',undefined,'cards');group.append(el('h2',c.group),cards);body.append(group);groups.set(c.group,{group,cards});allGroups.push(group)}
+  const card=el('article',undefined,'card');card.dataset.search=`${section.id} ${c.group} ${c.label} ${c.description} ${c.voice}`.toLowerCase();card.append(el('h3',c.label),el('p',c.description));
+  const buttons=el('div',undefined,'buttons'),downloads=el('div',undefined,'downloads');
+  for(const variant of ['raw','matched']){const button=el('button',variant.toUpperCase());button.type='button';button.setAttribute('aria-label',`${c.voice} ${c.label}, play ${variant}`);button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>play(c,variant,button));buttons.append(button);downloads.append(link(c[variant],`Download ${variant}`))}
+  card.append(buttons,downloads);
+  if(c.mechanics&&c.mechanics.curves.seconds.length){
+   const curves=c.mechanics.curves,canvas=el('canvas');canvas.setAttribute('role','img');canvas.setAttribute('aria-label',`Measured reservoir suction, total inlet flow and mean aperture over ${num(curves.seconds.at(-1),1)} seconds. Each curve is normalized to its own maximum; download the state CSV for actual values.`);card.append(canvas);draw(canvas,curves);
+   const legend=el('div',undefined,'legend');for(const [text,color] of [['Suction','#85ded0'],['Flow','#edc88c'],['Aperture','#b0b8f2']]){const label=el('span',text);label.style.color=color;legend.append(label)}card.append(legend,el('p','Each curve uses its own peak; CSV retains actual normalized model units.'))
+  }
+  const evidence=el('details');evidence.append(el('summary','Inputs and measured evidence'));
+  let text=`${Object.entries(c.macros).map(([k,v])=>`${k} ${num(v,2)}`).join(' · ')}\nEvent energy ${num(c.eventEnergy,2)} · root target ${num(c.requestedHz,2)} Hz\n${num(c.rawMetrics.seconds,2)} s · render ${num(c.renderMs,1)} ms\n${metric('RAW',c.rawMetrics)}\n${metric('MATCHED',c.matchedMetrics)}`;
+  if(c.probe)text+=`\nInlets ${c.probe.activeChambers} · independent reservoirs ${c.probe.independentReservoirs} · contacts ${c.probe.contactsEnabled}\nDrive stop ${num(c.probe.driveStopSeconds,2)} s · final network energy ${sci(c.finalNetworkEnergy)}\nJVM used-heap change ${c.heapDeltaBytes.toLocaleString()} bytes (includes garbage collection)`;
+  if(c.mechanics){const m=c.mechanics;text+=`\nContacts ${m.contactCount} · first at ${num(m.firstContactSeconds,3)} s\nPer inlet: ${m.contactsPerChamber.join(' / ')}\nPeak suction ${num(m.maxSuction)} · peak total flow ${num(m.maxFlow)}\nPeak network energy ${sci(m.maxStateEnergy)} · piston work ${num(m.pistonWork)}\nSealed snapshots per inlet: ${m.sealedSnapshotCounts.join(' / ')}`}
+  if(c.loopEvidence){const m=c.loopEvidence;text+=`\nLoop seam ${sci(m.seamError)} · < 1e-3 target ${m.meetsSeamTarget}\nComplete cycle-state error ${sci(m.cycleStateError)}\nPrevious-cycle acoustic relative error ${sci(m.acousticCycleRelativeError)}\nPrevious-cycle frames ${m.previousCycleFrames} · raw RMS ${sci(m.rawRms)}`}
+  evidence.append(el('div',text,'readout'));if(c.traceCsv)evidence.append(link(c.traceCsv,'Download state CSV'));if(c.contactsCsv){evidence.append(el('br'),link(c.contactsCsv,'Download contact events CSV'))}card.append(evidence);
+  const verdict=el('details');verdict.append(el('summary','Listening notes'));const rating=el('select');rating.setAttribute('aria-label',`Verdict for ${c.voice} ${c.label}`);
+  for(const name of ['Unreviewed','Convincing / useful','Needs work']){const option=el('option',name);option.value=name;rating.append(option)}const note=el('textarea');note.placeholder='Catch, root, breath, competition, tail or seam…';note.setAttribute('aria-label',`Notes for ${c.voice} ${c.label}`);rating.value=(notes[c.id]||{}).verdict||'Unreviewed';note.value=(notes[c.id]||{}).note||'';
+  function save(){notes[c.id]={voice:c.voice,label:c.label,verdict:rating.value,note:note.value};persist()}rating.addEventListener('change',save);note.addEventListener('input',save);verdict.append(rating,note);card.append(verdict);groups.get(c.group).cards.append(card);allCards.push(card)
+ }
+ wrap.append(body);document.querySelector('#cases').append(wrap);allSections.push(wrap)
+}
+document.querySelector('#search').addEventListener('input',event=>{const query=event.target.value.trim().toLowerCase();for(const card of allCards)card.hidden=!card.dataset.search.includes(query);for(const group of allGroups)group.hidden=!Array.from(group.querySelectorAll('.card')).some(c=>!c.hidden);for(const section of allSections){section.hidden=!Array.from(section.querySelectorAll('.group')).some(g=>!g.hidden);if(query&&!section.hidden)section.open=true}});
+document.querySelector('#expand').addEventListener('click',event=>{const open=event.target.textContent==='Open all';allSections.forEach(s=>{s.open=open});event.target.textContent=open?'Close all':'Open all'});
+document.querySelector('#export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:'UNDERTOW',quick:data.quick,savedAt:new Date().toISOString(),notes},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),node=el('a');node.href=url;node.download='undertow-listening-notes.json';node.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+})();
+</script>
+</body>
+</html>

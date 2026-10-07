@@ -144,3 +144,6 @@ testkit/corolla-audition/
 testkit/thaw-audition/
 testkit/thaw-first-listen/
 testkit/SnipSnap Thaw Kit/
+
+# The UNDERTOW raw/matched audition and pressure/contact evidence are generated locally.
+testkit/undertow-audition/
