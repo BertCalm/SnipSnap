@@ -1190,7 +1190,7 @@ fun PadSheetScreen(
     // third kind of parent. Read off the shelf once per sheet and again
     // after a keep; the shelf is the kit folder's parent, as ROULETTE has it.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
-    // The other kits on the shelf, for the picker (the crate with intent);
+    // The other kits on the shelf, for the picker (the shelf with intent);
     // the picked kit's pads load when one is picked.
     var otherKits by remember { mutableStateOf<List<MutateSheet.OtherKit>>(emptyList()) }
     var pickedKit by remember(slot) { mutableStateOf<MutateSheet.OtherKit?>(null) }
@@ -1343,9 +1343,9 @@ fun PadSheetScreen(
     /**
      * HEAR: what MUTATE would write, played without writing it — through
      * [MutateSheet.preview], which reads [slot] and [partner] exactly as
-     * [onMutate] does and refuses exactly what it refuses (own-parent,
-     * GHOSTS, chained — `MutateSheetTest` asserts the SAME words), so
-     * nothing a player hears here is a promise KEEP can't keep.
+     * [onMutate] does and refuses exactly what it refuses (layered (SOFT
+     * HITS), chained, no partner — `MutateSheetTest` asserts the SAME
+     * words), so nothing a player hears here is a promise KEEP can't keep.
      *
      * Runs against the live [model], not a fresh one under [withFreshKit]:
      * nothing is written, so there is nothing to serialise against a
@@ -1415,7 +1415,7 @@ fun PadSheetScreen(
         commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
     }
 
-    /** ROULETTE: the shelf (the kit folder's parent) is the crate; the deal becomes the partner. */
+    /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
     fun onRoulette() {
         if (busy) return
         val m = model ?: return
@@ -1469,7 +1469,7 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        // A chained pad used to reach the shelf's empty-crate line; the pre-check says what is true.
+        // A chained pad used to reach the "nothing on the shelf" line; the pre-check says what is true.
         val refused = MutateSheet.refusalBefore(p, partner, needsPartner = false)
         if (refused != null) {
             onToast(refused.line)
@@ -3762,7 +3762,7 @@ private fun MutateCard(
             onChange = onBecomeChange,
         )
 
-        // The partner: this kit's other pads, four to a row, then the crate.
+        // The partner: this kit's other pads, four to a row, then the shelf's other kits.
         val chosenSlot = (partner as? MutateSheet.Partner.Pad)?.slot
         for (row in partners.chunked(4)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -3824,8 +3824,8 @@ private fun MutateCard(
             }
         }
         // Another kit, picked: its name among the shelf's kits (two to a row),
-        // then its pads (four to a row) - the crate with intent, where
-        // ROULETTE below is the crate by chance. Absent on a one-kit shelf.
+        // then its pads (four to a row) - the shelf with intent, where
+        // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
             TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             for (row in otherKits.chunked(2)) {

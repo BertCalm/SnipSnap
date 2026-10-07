@@ -211,10 +211,11 @@ object MutateSheet {
     }
 
     /**
-     * DRIFT: one tap — the crate under [root] deals the neighbour and MORPH
+     * DRIFT: one tap — the shelf under [root] deals the neighbour and MORPH
      * blends [fraction] of the MIX knob toward it, through [Mutate.drift] so
      * the recipe records the spin and the drift. A new [seed] is a new
-     * neighbour. Throws [IllegalArgumentException] when the crate is empty.
+     * neighbour. Throws [Mutate.RouletteRefused] when the shelf has nothing
+     * to deal (EMPTY, or ONLY_COPIES: every sound is this pad's double).
      */
     fun drift(model: KitBuilderModel, slot: Int, root: File, seed: Int, fraction: Float): Mutate.Drifted {
         val mix = knobFor(Mutate.Mode.MORPH)!!
@@ -222,10 +223,11 @@ object MutateSheet {
     }
 
     /**
-     * ROULETTE: the crate under [root] (the shelf, on the phone) deals a
+     * ROULETTE: the shelf under [root] (the crate, on the CLI) deals a
      * partner for [slot] — guided, never wild, never the pad itself; a new
      * [seed] is a new deal, the same seed the same one. Throws
-     * [IllegalArgumentException] when the crate has nothing to deal.
+     * [Mutate.RouletteRefused] (EMPTY or ONLY_COPIES) when the shelf has
+     * nothing to deal.
      */
     fun deal(model: KitBuilderModel, slot: Int, root: File, seed: Int): Partner.Deal {
         val pick = Mutate.roulette(model, slot, root, seed = seed, wild = false)
@@ -512,7 +514,7 @@ object MutateSheet {
     /** MORPH's line while BECOME is above OFF (the brief's). */
     private const val BECOME_LINE = "STARTS AS MINE, TURNS INTO THE MIX."
 
-    /** What each knob means, after its value: `design/mutate-v2/Moves.dc.html:46-50`, verbatim. */
+    /** What each knob means, on a caption line under its bar: `design/mutate-v2/Moves.dc.html:46-50`, verbatim. */
     private val KNOB_MEANINGS: Map<Mutate.Mode, String> = mapOf(
         Mutate.Mode.SPLICE to "WHERE THEY HAND OVER",
         Mutate.Mode.SPLIT to "WHERE LOWS BECOME HIGHS",
@@ -529,10 +531,10 @@ object MutateSheet {
     fun outcomeLine(mode: Mutate.Mode, becomeFraction: Float): String =
         if (becomeMs(mode, becomeFraction) > 0) BECOME_LINE else MOVE_LINES.getValue(mode)
 
-    /** The knob's meaning, drawn after its value; null for STACK, which has no knob ([deadKnobLine] instead). */
+    /** The knob's meaning, drawn on a caption line under its bar; null for STACK, which has no knob ([deadKnobLine] instead). */
     fun knobMeaning(mode: Mutate.Mode): String? = KNOB_MEANINGS[mode]
 
-    /** BECOME's row: its meaning after the value on MORPH; on every other move, the words its dead row draws. */
+    /** BECOME's row: its meaning on the caption line under its bar on MORPH; on every other move, the words its dead row draws. */
     fun becomeMeaning(mode: Mutate.Mode): String =
         if (mode == Mutate.Mode.MORPH) "HOW LONG THE TURN TAKES" else "ONLY MORPH TURNS OVER TIME"
 
@@ -570,7 +572,8 @@ object MutateSheet {
      * ([ROW_CHARS]). When both sides do not fit, each is cut to an even
      * share, its tag kept whole; a side shorter than its share gives the
      * rest to the other. The empty state's tail is never cut: the pad's
-     * name gives way and its tag stays. [partnerName] is [partnerName]'s.
+     * name gives way and its tag stays. The `partnerName` argument is the
+     * partner's name as the [partnerName] function returns it.
      */
     fun pairLine(padTag: String, padName: String, partnerName: String?): String {
         val mine = pairSide(padTag, padName)
