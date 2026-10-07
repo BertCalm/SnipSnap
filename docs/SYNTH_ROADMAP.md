@@ -320,6 +320,24 @@ and verification notes are in `docs/THAW.md`. **Awaiting the owner's sonic
 verdict.** The normalized material constants and preset names remain
 provisional.
 
+UNDERTOW follows as S28, ported from
+[`2026-10-05-undertow-engine-engineering-spec.md`](superpowers/specs/2026-10-05-undertow-engine-engineering-spec.md):
+one powered suction reservoir, four weighted flaps, ceramic rim contacts,
+four tuned airflow resonators and a shared hollow shell. KNOCK, BREATH,
+FLUTTER, SEAL, HOLLOW and SURGE share TUNE (C3–C5), DRAW, FLAP, WEIGHT,
+SPIRAL, LEAK and HOLD. The apertures alter excitation, loading and shared
+pressure before the final sum. Twelve dry presets, patch/recipe replay,
+velocity energy, pitched kit routing, `SynthKits.undertow()`, the phone synth
+picker and the FRESH TAPE starter use the same deterministic network.
+`generateUndertowAudition` provides raw/matched voices,
+macro sweeps, interaction grids, pressure/contact ablations, passive release
+and difficult held material. Independent pads begin at rest; HOLD's top step
+exports settled powered suction without the first catch because the sample
+format has no attack-plus-loop-region field. [UNDERTOW](UNDERTOW.md) records
+the diagnostic and verification contracts. **Awaiting the owner's listening
+verdict.** The material settings, preset names and sonic acceptance remain
+provisional.
+
 SUTURE follows as S29, ported from [the supplied engineering specification](SUTURE_SPEC.md).
 BLOOM, THREAD, CLOSE, MURMUR, STRAIN and SHELL share a pitched bronze vessel,
 elastic cords, wooden eyelets, bounded stitch closure, aperture-dependent

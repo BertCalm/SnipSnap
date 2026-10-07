@@ -166,6 +166,9 @@ import com.snipsnap.synth.MurkVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
+import com.snipsnap.synth.Undertow
+import com.snipsnap.synth.UndertowPatch
+import com.snipsnap.synth.UndertowVoice
 import com.snipsnap.synth.Suture
 import com.snipsnap.synth.SuturePatch
 import com.snipsnap.synth.SutureVoice
@@ -190,6 +193,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
@@ -483,7 +487,7 @@ fun SynthScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) {
+            val rendered = runInterruptible(Dispatchers.Default) {
                 val dry = if (loadedPatch != null) buildCurrentPatch(engine.patchDisplayName(voice)).render()
                     else engine.render(voice, macros)
                 // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
@@ -1060,6 +1064,7 @@ fun SynthScreen(
                                 engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
@@ -1892,7 +1897,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, SUTURE;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW, SUTURE;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1916,6 +1921,7 @@ private enum class Engine {
         CIRCUIT -> CircuitVoice.entries
         MURK -> MurkVoice.entries
         THAW -> ThawVoice.entries
+        UNDERTOW -> UndertowVoice.entries
         COROLLA -> CorollaVoice.entries
         SUTURE -> SutureVoice.entries
     }
@@ -1939,6 +1945,7 @@ private enum class Engine {
         CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
         MURK -> Murk.macrosFor(voice as MurkVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
+        UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
         COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
         SUTURE -> Suture.macrosFor(voice as SutureVoice)
     }
@@ -1962,6 +1969,7 @@ private enum class Engine {
         CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
         MURK -> Murk.defaults(voice as MurkVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
+        UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
         COROLLA -> Corolla.defaults(voice as CorollaVoice)
         SUTURE -> Suture.defaults(voice as SutureVoice)
     }
@@ -1985,6 +1993,7 @@ private enum class Engine {
         CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
         MURK -> Murk.scramble(voice as MurkVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
+        UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
         COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
         SUTURE -> Suture.scramble(voice as SutureVoice, random)
     }
@@ -2013,6 +2022,7 @@ private enum class Engine {
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
         MURK -> Murk.render(voice as MurkVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
+        UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
         COROLLA -> Corolla.render(voice as CorollaVoice, macros)
         SUTURE -> Suture.render(voice as SutureVoice, macros)
     }
@@ -2042,6 +2052,7 @@ private enum class Engine {
         CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
+        UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
         COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
         SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
     }
@@ -2065,6 +2076,7 @@ private enum class Engine {
         CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
+        UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
         COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
         SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
     }

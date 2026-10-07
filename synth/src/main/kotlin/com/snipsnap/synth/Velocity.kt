@@ -228,6 +228,7 @@ object Velocity {
         is CircuitPatch -> Circuit.macrosFor(patch.voice)
         is MurkPatch -> Murk.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
         is SuturePatch -> Suture.macrosFor(patch.voice)
     }
@@ -287,14 +288,15 @@ object Velocity {
      * touch; AEROSTAT and CISTERN use it as strike energy, CIRCUIT as event
      * energy, and TREMOR as the blow. MURK uses it as event energy and response
      * reach, preserving the STRIKE contact character. THAW uses it as runner
-     * gesture energy while retaining the selected contact character, and
+     * gesture energy while retaining the selected contact character.
+     * UNDERTOW uses it as piston work while preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch ||
-            patch is CorollaPatch || patch is SuturePatch
+            patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -326,6 +328,7 @@ object Velocity {
                 // COROLLA scales the pull and contact energy; PULL keeps the playing character.
                 is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
+                is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
             }

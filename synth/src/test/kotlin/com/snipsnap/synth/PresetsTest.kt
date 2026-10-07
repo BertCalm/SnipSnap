@@ -38,6 +38,7 @@ class PresetsTest {
         for (voice in CircuitVoice.entries) assertEquals(CircuitPresets.forVoice(voice), Presets.forVoice("CIRCUIT", voice.name))
         for (voice in MurkVoice.entries) assertEquals(MurkPresets.forVoice(voice), Presets.forVoice("MURK", voice.name))
         for (voice in ThawVoice.entries) assertEquals(ThawPresets.forVoice(voice), Presets.forVoice("THAW", voice.name))
+        for (voice in UndertowVoice.entries) assertEquals(UndertowPresets.forVoice(voice), Presets.forVoice("UNDERTOW", voice.name))
         for (voice in SutureVoice.entries) assertEquals(SuturePresets.forVoice(voice), Presets.forVoice("SUTURE", voice.name))
         for (voice in CorollaVoice.entries) assertEquals(CorollaPresets.forVoice(voice), Presets.forVoice("COROLLA", voice.name))
     }
@@ -60,9 +61,9 @@ class PresetsTest {
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
-            FlotillaPresets.all() + CisternPresets.all() + AerostatPresets.all() +
-            TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() +
-            MurkPresets.all() + CorollaPresets.all() + SuturePresets.all()
+            FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
+            CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
+            MurkPresets.all() + CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }
