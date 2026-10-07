@@ -2155,6 +2155,18 @@ class ConventionTest {
             "KnobRow does not draw the knob's meaning as a caption line under the bar on every row (blank on a " +
                 "dead row), so the bar keeps its full width and every row is one height.",
         )
+        // ... and "every row" means after the WHOLE dead/live if/else, at the Column's own level: a caption
+        // moved into the live `else {}` would stay below the bar yet vanish from a dead row, and the card
+        // would change height with the move.
+        assertEquals(1, Regex("""\}\s*else\s*\{""").findAll(row).count(), "expected KnobRow to branch dead/live with exactly one if/else")
+        val elseAt = Regex("""\}\s*else\s*\{""").find(row)!!.range.first
+        val elseOpen = row.indexOf('{', elseAt + 1)
+        val elseEnd = elseOpen + blockAfter(row, row.substring(elseAt, elseOpen)).length
+        assertTrue(
+            caption >= elseEnd,
+            "KnobRow's caption line sits inside the live `else {}` branch, not after the whole dead/live if/else: " +
+                "a dead row would lose its caption line and the card would change height.",
+        )
 
         val src = padSheetScreen.readText(Charsets.UTF_8)
         assertTrue(
