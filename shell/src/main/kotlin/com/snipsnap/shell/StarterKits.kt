@@ -131,6 +131,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.suture() },
         Starter(
+            "tessera", "TESSERA",
+            "Wood, paired wire and metal answer through a moving chamber in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.tessera() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

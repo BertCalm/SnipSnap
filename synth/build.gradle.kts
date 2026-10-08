@@ -649,3 +649,15 @@ tasks.register<JavaExec>("generateNimbusAudition") {
     providers.gradleProperty("nimbusBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
     if (providers.gradleProperty("nimbusCompareHold").orNull == "true") args("--compare-hold")
 }
+
+/** Render Tessera's dry materials, moving paths, causal probes and settled loops. */
+tasks.register<JavaExec>("generateTesseraAudition") {
+    group = "distribution"
+    description = "Render TESSERA raw/matched WAVs, traces, manifest and listening page under testkit/tessera-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TesseraAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tessera-audition")
+    if (project.hasProperty("tesseraRefreshPage")) args("--refresh-page")
+    else if (project.hasProperty("tesseraQuick")) args("--quick")
+}

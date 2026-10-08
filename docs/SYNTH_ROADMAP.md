@@ -161,6 +161,25 @@ macro and interaction sweeps, raw/matched pairs, isolated identities, causal
 switches and held loops. See [NIMBUS](NIMBUS.md) for implementation limits and
 validation. The owner's listening verdict and phone/MPC checks remain open.
 
+### TESSERA — mixed materials answering through a moving chamber
+
+TESSERA ports the [engineering spec](superpowers/specs/2026-10-05-tessera-engine-engineering-spec.md)
+into the deterministic melodic pipeline. WOOD, COURSE, TUBE, ANSWER, FOLDING
+and CHAMBER use one coupled object: wooden bars, paired string courses, metal
+tubes and a shared frame. MATERIAL changes hammer projection continuously;
+HAMMER changes contact, SCALE and FOLD shape the returning paths, and MOTION
+lets bounded powered walls reshape sound already traveling. Receiving ports
+and finite pressure collectors excite the other materials inside the engine.
+
+TUNE spans C3–C5. HOLD extends finite activity before its top step exports a
+settled loop, without the initial isolated strike. Eight presets, a dry
+sixteen-pad kit, patch recipes, CLI rendering and the phone synth picker use
+the same object. `./gradlew :synth:generateTesseraAudition` generates the
+listening page, raw/matched audio and causal traces under
+`testkit/tessera-audition/`. [TESSERA](TESSERA.md) documents the model,
+integration contracts and listening gates. Sonic acceptance remains the
+owner's listening decision; device validation remains outstanding.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,

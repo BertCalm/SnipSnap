@@ -41,6 +41,7 @@ class PresetsTest {
         for (voice in UndertowVoice.entries) assertEquals(UndertowPresets.forVoice(voice), Presets.forVoice("UNDERTOW", voice.name))
         for (voice in SutureVoice.entries) assertEquals(SuturePresets.forVoice(voice), Presets.forVoice("SUTURE", voice.name))
         for (voice in CorollaVoice.entries) assertEquals(CorollaPresets.forVoice(voice), Presets.forVoice("COROLLA", voice.name))
+        for (voice in TesseraVoice.entries) assertEquals(TesseraPresets.forVoice(voice), Presets.forVoice("TESSERA", voice.name))
     }
 
     @Test
@@ -63,7 +64,8 @@ class PresetsTest {
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
-            MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all()
+            MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
+            SuturePresets.all() + TesseraPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

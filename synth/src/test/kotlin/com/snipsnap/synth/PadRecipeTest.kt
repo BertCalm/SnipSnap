@@ -44,6 +44,7 @@ class PadRecipeTest {
         TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
         MurkPatch("Wood Test", MurkVoice.CLUNK, mapOf("FOG" to 0.4f)),
         ThawPatch("Ice Test", ThawVoice.BRITTLE, mapOf("HEAT" to 0.4f)),
+        TesseraPatch("Mixed Material Test", TesseraVoice.ANSWER, mapOf("FOLD" to 0.7f)),
         UndertowPatch("Shell Test", UndertowVoice.KNOCK, mapOf("DRAW" to 0.4f)),
         SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
     )
