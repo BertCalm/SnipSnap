@@ -568,6 +568,21 @@ object SynthKits {
     }
 
     /**
+     * TESSERA's dry pitched kit. A01–A08 walk WOOD up C minor pentatonic from C3; A09–A16
+     * contain the eight named material and chamber recipes, ending with settled held material.
+     * Every pad stores its complete recipe. Frame transfers and chamber answers come from the
+     * engine, with no external effect, mute group or shared state between independently rendered pads.
+     */
+    fun tessera(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = TesseraPatch(
+            "Tessera $n", TesseraVoice.WOOD,
+            Tessera.defaults(TesseraVoice.WOOD) + ("TUNE" to semitone / Tessera.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Tessera.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            TesseraPresets.all().map { pad(it, Tessera.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

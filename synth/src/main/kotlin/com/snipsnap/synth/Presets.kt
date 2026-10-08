@@ -114,6 +114,10 @@ object Presets {
             val v = CorollaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             CorollaPresets.forVoice(v)
         }
+        TesseraPatch.ENGINE -> {
+            val v = TesseraVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TesseraPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -145,5 +149,5 @@ object Presets {
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() +
-            CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all()
+            CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all()
 }
