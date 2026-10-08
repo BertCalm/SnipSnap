@@ -35,6 +35,7 @@
     .hero p { margin:.5rem 0; }
     .read-first { max-width:800px; border-left:3px solid var(--accent); padding:.4rem .8rem; background:var(--panel); font-size:.95rem; }
     .read-first strong { color:var(--accent); }
+    .comparison-note { max-width:900px; border-left:3px solid var(--accent); padding:.6rem .8rem; background:var(--panel); font-size:.95rem; }
     .listening-guide { max-width:900px; }
     .listening-guide > summary { font-size:.95rem; }
     .story { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-top:.6rem; margin-bottom:1rem; }
@@ -62,6 +63,7 @@
     .clip-group { margin-bottom:2rem; }
     .clip-group h3 { font-size:1rem; margin:0 0 .8rem; color:var(--accent); }
     .clip-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+    #comparison .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .clip { min-width:0; border:1px solid var(--line); border-radius:.65rem; background:var(--panel); padding:1.2rem; display:flex; flex-direction:column; }
     .clip.playing { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
     .clip-badges { display:flex; gap:.45rem; flex-wrap:wrap; }
@@ -85,7 +87,7 @@
     footer p { max-width:850px; }
     .empty { padding:2rem 0; }
     @media(max-width:980px) { .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media(max-width:650px) { html { scroll-padding-top:15rem; } .hero { padding-top:1rem; } .story { grid-template-columns:1fr; gap:1rem; } .filters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; padding-top:1rem; } .filters label:last-child { grid-column:1/-1; } .clip-grid { grid-template-columns:1fr; } .transport-main { gap:.4rem 1rem; } .volume { margin-left:auto; } .volume input { width:90px; } .clip { padding:1rem; } }
+    @media(max-width:650px) { html { scroll-padding-top:15rem; } .hero { padding-top:1rem; } .story { grid-template-columns:1fr; gap:1rem; } .filters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; padding-top:1rem; } .filters label:last-child { grid-column:1/-1; } .clip-grid,#comparison .clip-grid { grid-template-columns:1fr; } .transport-main { gap:.4rem 1rem; } .volume { margin-left:auto; } .volume input { width:90px; } .clip { padding:1rem; } }
     @media(max-height:500px) { html { scroll-padding-top:1rem; } .transport { position:static; } }
     @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
     @media(forced-colors:active) { .clip.playing { outline:2px solid Highlight; } .transport,.clip { border:1px solid CanvasText; } }
@@ -98,6 +100,7 @@
     <div class="hero-title"><h1>Nimbus.</h1><span>Six rings, one note.</span></div>
     <p class="intro">Six distinct metal cymbals share one requested note inside an imaginary funnel. A selected attack wakes neighboring rings; the suspended stack yields, then gathers into a shimmer.</p>
     <p class="read-first"><strong>Audio starts off.</strong> Read each clip's description before enabling playback. Nothing plays automatically.</p>
+    <!-- NIMBUS_COMPARISON_NOTE -->
     <details class="listening-guide"><summary>What to listen for: identity, movement and gathering</summary><div class="story" aria-label="The sound's three connected parts">
       <div><span>01 / Six cymbals</span><h2>One note, six characters</h2><p>Body, Bell, Paper, Dark, Flex and Wire have distinct upper modes and decay. Each principal mode belongs to the same requested root.</p></div>
       <div><span>02 / Suspension</span><h2>A stack that yields</h2><p>A harder event changes excitation and displacement. SPACING changes neighboring transfer; FIELD changes the stack's restoration. Compare matched velocity clips.</p></div>
@@ -118,11 +121,11 @@
   <main id="audition" class="shell" tabindex="-1">
     <form class="filters" aria-label="Filter audition clips" onsubmit="return false">
       <label for="voice-filter">Voice<select id="voice-filter"><option value="all">All six voices</option><option>RING</option><option>SHIMMER</option><option>GATHER</option><option>THROAT</option><option>CONTACT</option><option>SUSPEND</option></select></label>
-      <label for="category-filter">Section<select id="category-filter"><option value="all">All sections</option><option value="voices">Voices and registers</option><option value="presets">Factory presets</option><option value="energy">Physical velocity</option><option value="sweeps">Macro sweeps</option><option value="grids">Interaction grids</option><option value="levels">Raw and matched pairs</option><option value="diagnostics">Identity taps and causal probes</option><option value="hold">HOLD and loops</option></select></label>
+      <label for="category-filter">Section<select id="category-filter"><option value="all">All sections</option><!-- NIMBUS_COMPARISON_FILTER --><option value="voices">Voices and registers</option><option value="presets">Factory presets</option><option value="energy">Physical velocity</option><option value="sweeps">Macro sweeps</option><option value="grids">Interaction grids</option><option value="levels">Raw and matched pairs</option><option value="diagnostics">Identity taps and causal probes</option><option value="hold">HOLD and loops</option></select></label>
       <label for="search-filter">Search descriptions<input id="search-filter" type="search" placeholder="For example: Body, throat, coupling off" autocomplete="off"></label>
     </form>
     <div class="browse-meta"><p id="filter-status" role="status" aria-live="polite" aria-atomic="true">All audition clips.</p><a href="manifest.json">Full evidence manifest</a></div>
-    <nav aria-label="Audition sections"><ul class="section-nav"><li><a href="#voices">Voices</a></li><li><a href="#presets">Presets</a></li><li><a href="#energy">Velocity</a></li><li><a href="#sweeps">Sweeps</a></li><li><a href="#grids">Interactions</a></li><li><a href="#levels">Raw / matched</a></li><li><a href="#diagnostics">Diagnostics</a></li><li><a href="#hold">HOLD</a></li></ul></nav>
+    <nav aria-label="Audition sections"><ul class="section-nav"><!-- NIMBUS_COMPARISON_NAV --><li><a href="#voices">Voices</a></li><li><a href="#presets">Presets</a></li><li><a href="#energy">Velocity</a></li><li><a href="#sweeps">Sweeps</a></li><li><a href="#grids">Interactions</a></li><li><a href="#levels">Raw / matched</a></li><li><a href="#diagnostics">Diagnostics</a></li><li><a href="#hold">HOLD</a></li></ul></nav>
     <noscript><p>The clip descriptions and native audio controls work without JavaScript. HOLD clips repeat; use their native Pause control to stop. Repeat settings, filters, global volume and Stop all require JavaScript.</p></noscript>
     <p class="empty" id="empty-state" hidden>No clips match these filters. Choose another voice or section, or clear the search.</p>
     <!-- NIMBUS_CARDS -->
@@ -473,7 +476,7 @@
     voiceFilter.addEventListener('change', filter);
     categoryFilter.addEventListener('change', filter);
     searchFilter.addEventListener('input', filter);
-    document.querySelectorAll('.section-nav a').forEach(link => link.addEventListener('click', () => {
+    document.querySelectorAll('.section-nav a, .comparison-note a').forEach(link => link.addEventListener('click', () => {
       voiceFilter.value = 'all'; categoryFilter.value = link.hash.slice(1); searchFilter.value = ''; filter();
     }));
     filter();

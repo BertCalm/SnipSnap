@@ -2,10 +2,12 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import java.io.File
+import java.security.MessageDigest
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -68,12 +70,24 @@ object NimbusAuditionGenerator {
     fun main(args: Array<String>) {
         val positional = args.filterNot { it.startsWith("--") }
         require(positional.size <= 1 && args.filter { it.startsWith("--") }.all {
-            it == "--quick" || it == "--refresh-page"
-        }) { "supply one output directory and optional --quick or --refresh-page" }
+            it == "--quick" || it == "--refresh-page" || it == "--compare-hold" ||
+                it.startsWith("--baseline-dir=") || it.startsWith("--baseline-revision=")
+        }) { "supply one output directory and optional --quick, --refresh-page, --baseline-dir=, --baseline-revision= or --compare-hold" }
+        fun argument(prefix: String): String? = args.filter { it.startsWith(prefix) }.let {
+            require(it.size <= 1) { "duplicate $prefix argument" }
+            it.singleOrNull()?.removePrefix(prefix)?.also { value -> require(value.isNotBlank()) }
+        }
         val root = File(positional.firstOrNull() ?: "../testkit/nimbus-audition")
         val quick = "--quick" in args
+        val compareHold = "--compare-hold" in args
+        val baselineDir = argument("--baseline-dir=")?.let(::File)
+        val baselineRevision = argument("--baseline-revision=")
+        require((baselineDir == null) == (baselineRevision == null)) { "baseline directory and full source revision must be supplied together" }
+        require(baselineRevision == null || baselineRevision.matches(Regex("[0-9a-f]{40}"))) { "baseline revision must be a full Git commit SHA" }
+        require(!compareHold || baselineDir != null && !quick) { "HOLD comparison requires a baseline and the full audition" }
+        require(baselineDir == null || baselineDir.canonicalFile != root.canonicalFile) { "preserve the previous audition in a separate baseline directory" }
         if ("--refresh-page" in args) {
-            require(!quick) { "refresh uses the existing audition manifest" }
+            require(!quick && baselineDir == null && !compareHold) { "refresh uses the existing audition manifest and its comparison" }
             val manifestText = File(root, "manifest.json").readText()
             val manifest = Json.parse(manifestText).obj()
             require(manifest.getValue("engine").str() == "NIMBUS")
@@ -89,6 +103,16 @@ object NimbusAuditionGenerator {
             writePage(root, clips, manifestText)
             println("Refreshed ${clips.size} Nimbus cards; audio and mechanical records unchanged")
             return
+        }
+        val baselineManifest = baselineDir?.let { Json.parse(File(it, "manifest.json").readText()).obj() }
+        if (baselineManifest != null) {
+            require(baselineManifest.getValue("engine").str() == "NIMBUS") { "baseline must describe Nimbus" }
+            require(baselineManifest.getValue("sourceRevision").str() == baselineRevision) { "baseline source revision differs from the requested SHA" }
+            require(!baselineManifest.getValue("workingTreeDirty").bool()) { "baseline must come from a clean source checkout" }
+            require(abs(baselineManifest.getValue("listeningTarget").num() - LISTENING_TARGET) < 1e-6 &&
+                abs(baselineManifest.getValue("listeningPeakCeiling").num() - LISTENING_CEILING) < 1e-6) {
+                "baseline must use the same RMS 0.12 target and 0.90 ceiling"
+            }
         }
         root.mkdirs()
         val clips = mutableListOf<Clip>()
@@ -332,6 +356,8 @@ object NimbusAuditionGenerator {
                 }
             }
         }
+        val comparison = if (baselineDir == null) null else appendComparison(
+            root, clips, baselineDir, requireNotNull(baselineRevision), compareHold)
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "NIMBUS", "formatVersion" to 1, "clipCount" to clips.size, "quick" to quick,
             "description" to "Dry listening evidence for the Nimbus port; sonic acceptance remains pending owner listening.",
@@ -348,6 +374,7 @@ object NimbusAuditionGenerator {
             "elapsedMilliseconds" to (System.nanoTime() - started) / 1_000_000.0,
             "peakObservedUsedHeapBytes" to peakObservedHeap,
             "memoryMeasurement" to "JVM used heap sampled before and after renders; excludes native allocation.",
+            "comparison" to comparison,
             "clips" to clips.map { it.evidence },
         )
         val manifestText = Json.write(json(manifest)) + "\n"
@@ -383,13 +410,127 @@ object NimbusAuditionGenerator {
             Tooling smoke subset: ./gradlew :synth:generateNimbusAudition -PnimbusQuick=true
             Refresh descriptions/controls only: ./gradlew :synth:generateNimbusAudition -PnimbusRefreshPage=true
 
+            ${if (comparison == null) "" else "A previous/revised listening comparison is included. Original WAVs are copied unchanged from source revision $baselineRevision; the previous manifest and each source WAV/mechanical record are SHA-256 identified. Revised partners reuse the new default renders at the same requested note and event velocity. Each card shows its own recipe, so changed defaults remain visible. The common listening target is RMS 0.12 with a 0.90 peak ceiling; no comparison constitutes a listening verdict."}
+
+            Optional baseline comparison: pass --baseline-dir=/absolute/path/to/preserved-audition
+            and --baseline-revision=<full clean source Git SHA> to this generator. Add --compare-hold
+            for SHIMMER/SUSPEND C4 HOLD and the difficult settled C3 CONTACT pair. Standard
+            generation does not depend on a preserved baseline. To reproduce the original source,
+            check out the recorded SHA separately, run its ordinary generateNimbusAudition task,
+            and preserve that output directory before rendering the revision elsewhere. Baselines
+            may contain only the selected clips, their mechanical records and original manifest rows.
+
             ${clips.size} dry mono PCM16 WAVs. Factory and macro acceptance remain open for listening.
         """.trimIndent() + "\n")
         println("Wrote ${clips.size} Nimbus WAVs, mechanical records, manifest and listening page under ${root.absolutePath} in " +
             String.format(Locale.ROOT, "%.1f", (System.nanoTime() - started) / 1e9) + " s")
     }
 
+    /** Preserve source PCM byte-for-byte and reuse revised renders, with no extra DSP simulation. */
+    private fun appendComparison(
+        root: File, clips: MutableList<Clip>, baselineDir: File, revision: String, compareHold: Boolean,
+    ): Map<String, Any?> {
+        val manifestFile = File(baselineDir, "manifest.json")
+        val baseline = Json.parse(manifestFile.readText()).obj()
+        val originalManifestHash = baseline["sourceManifestSha256"]?.str()?.also { expected ->
+            val original = File(baselineDir, "original-manifest.json")
+            require(original.isFile && sha256(original) == expected) { "preserved original manifest differs from its SHA-256" }
+        }
+        val rows = baseline.getValue("clips").arr().associate { row ->
+            row.obj().getValue("id").str() to row.obj()
+        }
+        val sourceIds = NimbusVoice.entries.map { "${it.name.lowercase()}_middle" } +
+            if (!compareHold) emptyList() else listOf("shimmer_hold", "suspend_hold", "contact_hold_settled_rims_c3")
+        fun asset(path: String): File = File(baselineDir, path).canonicalFile.also {
+            require(it.toPath().startsWith(baselineDir.canonicalFile.toPath()) && it.isFile) {
+                "missing or unsafe baseline asset: $path"
+            }
+        }
+        for (sourceId in sourceIds) {
+            val source = rows[sourceId] ?: error("baseline has no $sourceId clip")
+            val current = clips.singleOrNull { it.id == sourceId } ?: error("revision has no $sourceId render")
+            val previous = source.mapValues { fromJson(it.value) }
+            val revised = current.evidence
+            require(source.getValue("voice").str() == revised.getValue("voice") &&
+                source.getValue("branch").str() == "full" && source.getValue("level").str() == "matched") {
+                "$sourceId baseline is not the requested matched full voice"
+            }
+            require(source.getValue("loop").bool() == revised.getValue("loop") &&
+                source.getValue("requestedMidi").int() == (revised.getValue("requestedMidi") as Number).toInt()) {
+                "$sourceId comparison must use the same requested note and HOLD mode"
+            }
+            val originalMacros = source.getValue("macros").obj().mapValues { it.value.num().toFloat() }
+            val revisedMacros = (revised.getValue("macros") as Map<*, *>).entries.associate {
+                it.key.toString() to (it.value as Number).toFloat()
+            }
+            require(originalMacros == revisedMacros &&
+                abs(source.getValue("energy").num() - (revised.getValue("energy") as Number).toDouble()) < 1e-6) {
+                "$sourceId comparison requires the same macro recipe and event velocity"
+            }
+            val previousWav = asset(source.getValue("path").str())
+            val previousEvent = asset(source.getValue("eventPath").str())
+            val preserved = WavReader.read(previousWav)
+            require(preserved.channels == 1 && preserved.sampleRate == Dsp.RATE &&
+                preserved.samples.isNotEmpty() && preserved.samples.all { it.isFinite() } && preserved.peak() <= .9001f) {
+                "$sourceId baseline must be finite mono 44.1 kHz audio at the listening ceiling"
+            }
+            require(abs(preserved.peak() - source.getValue("exportPeak").num()) < .0001 &&
+                abs(Loudness.of(preserved) - source.getValue("exportLoudness").num()) < .0001) {
+                "$sourceId baseline WAV differs from its recorded listening level"
+            }
+            val voice = revised.getValue("voice").toString()
+            val held = revised.getValue("loop") as Boolean
+            val note = noteName((revised.getValue("requestedMidi") as Number).toInt())
+            val group = "$voice · $note${if (held) " · settled HOLD" else " · default event"}"
+            val question = when (voice) {
+                "RING" -> "Can you hear distinct metal weight and upper-mode responses around the same note?"
+                "SHIMMER" -> "Does the fine upper-mode response and tail give SHIMMER a recognizable character?"
+                "GATHER" -> "Does the attack lead to an audible spread and gathering gesture?"
+                "THROAT" -> "Does concentrated chamber loading give THROAT a recognizable dark body and tail?"
+                "CONTACT" -> "Does the wire and rim response give CONTACT a recognizable character while the requested root remains clear?"
+                else -> "Does supported metal have a recognizable texture and decay rather than a uniform bell envelope?"
+            }
+            for ((version, evidence) in listOf("before" to previous, "revised" to revised)) {
+                val id = "comparison_${version}_$sourceId"
+                val path = "clips/${id}_listen_012.wav"
+                val eventPath = "mechanics/$id.json"
+                val wav = if (version == "before") previousWav else File(root, revised.getValue("path") as String)
+                val event = if (version == "before") previousEvent else File(root, revised.getValue("eventPath") as String)
+                File(root, path).apply { parentFile.mkdirs(); wav.copyTo(this, overwrite = true) }
+                val mechanics = Json.parse(event.readText()).obj().toMutableMap().apply {
+                    put("id", JsonValue.Str(id))
+                    put("comparisonVersion", JsonValue.Str(version))
+                    put("comparisonSourceClipId", JsonValue.Str(sourceId))
+                    put("comparisonBaselineRevision", JsonValue.Str(revision))
+                }
+                File(root, eventPath).apply { parentFile.mkdirs(); writeText(Json.write(JsonValue.Obj(mechanics)) + "\n") }
+                val provenance = if (version == "before") linkedMapOf<String, Any?>(
+                    "baselineSourceRevision" to revision, "baselineSourceClipId" to sourceId,
+                    "baselineSourceAudioSha256" to sha256(previousWav), "baselineSourceEventSha256" to sha256(previousEvent),
+                    "baselineSourceManifestSha256" to sha256(manifestFile),
+                ) else linkedMapOf("currentSourceClipId" to sourceId, "currentSourceAudioSha256" to sha256(wav))
+                clips += Clip(evidence + linkedMapOf(
+                    "id" to id, "title" to "${if (version == "before") "BEFORE" else "REVISED"} · $voice · $note${if (held) " · HOLD" else ""}",
+                    "description" to if (version == "before")
+                        "Preserved previous version from ${revision.take(12)}, copied without changing its PCM audio or listening gain. Compare the revised partner at the same note, controls and event velocity. $question"
+                    else "Listening revision using the same note, controls and event velocity as the previous partner. $question Compare the attack, body and tail; listening acceptance remains open.",
+                    "category" to "comparison", "group" to group, "path" to path, "eventPath" to eventPath,
+                    "comparisonVersion" to version, "comparisonBaselineRevision" to revision,
+                    "renderMilliseconds" to 0.0,
+                ) + provenance)
+            }
+        }
+        return linkedMapOf(
+            "baselineSourceRevision" to revision, "baselineManifestSha256" to sha256(manifestFile),
+            "baselineOriginalManifestSha256" to originalManifestHash,
+            "clipCount" to sourceIds.size * 2, "sourceClipIds" to sourceIds,
+            "sameNoteMacrosAndVelocity" to true, "baselineAudioUnchanged" to true,
+            "description" to "Preserved BEFORE PCM beside reused REVISED renders at the same requested note, macro recipe and event velocity. Both use the same RMS 0.12 listening target and 0.90 ceiling. Listening verdict remains open.",
+        )
+    }
+
     private val categories = linkedMapOf(
+        "comparison" to ("Previous and revised: are the voices distinct?" to "The first audition was heard as predominantly bell-like across voices. Compare each preserved previous default with the revised default at the same note and velocity. Does the attack, upper-mode balance, motion and tail now give each voice a useful identity? Both versions use the same listening target; recipes and source hashes remain visible. Listening acceptance is open."),
         "voices" to ("Six voices, three registers" to "Begin with defaults at C3, C4 and C5. Every voice keeps six persistent cymbal identities around the requested root; compare the selected attack and the gathering tail."),
         "presets" to ("Nine factory starting points" to "The exact saved dry recipes in SnipSnap. HELD METAL uses explicit powered sustain; its loop starts after the isolated attack."),
         "energy" to ("Physical velocity across the note range" to "Quiet and medium events at every voice/register complement the strong voice cards. Matched playback exposes modal excitation and stack movement rather than gain alone."),
@@ -400,27 +541,33 @@ object NimbusAuditionGenerator {
         "hold" to ("Powered sustain and difficult seams" to "HOLD adds explicit bounded modal drive. Repeat uses one audio buffer with no seek gaps. The main Pause and Stop controls fade smoothly; Repeat off previews one cycle. Inspect seam measurements and listen across repeated boundaries."),
     )
     private fun writePage(root: File, clips: List<Clip>, manifestText: String) {
+        val cacheKey = assetCacheKey(manifestText)
         val template = javaClass.getResourceAsStream("/audition/nimbus-audition.html")
             ?.use { it.readBytes().toString(Charsets.UTF_8) } ?: error("Nimbus listening template is missing")
         require(template.contains("<!-- NIMBUS_CARDS -->") && template.contains("<!-- NIMBUS_MANIFEST -->"))
         File(root, "index.html").writeText(template
-            .replace("<!-- NIMBUS_CARDS -->", sectionsHtml(clips))
+            .replace("<!-- NIMBUS_CARDS -->", sectionsHtml(clips, cacheKey))
+            .replace("href=\"manifest.json\"", "href=\"${assetUrl("manifest.json", cacheKey)}\"")
+            .replace("href=\"README.md\"", "href=\"${assetUrl("README.md", cacheKey)}\"")
+            .replace("<!-- NIMBUS_COMPARISON_NOTE -->", if (clips.none { it.category == "comparison" }) "" else "<p class=\"comparison-note\"><strong>Listening revision.</strong> <a href=\"#comparison\">Start with the previous / revised pairs.</a> Compare the six C4 voices for distinct attacks and tails while the requested note stays recognizable. These clips ask for a listening verdict; they do not claim acceptance.</p>")
+            .replace("<!-- NIMBUS_COMPARISON_FILTER -->", if (clips.none { it.category == "comparison" }) "" else "<option value=\"comparison\">Previous / revised listening</option>")
+            .replace("<!-- NIMBUS_COMPARISON_NAV -->", if (clips.none { it.category == "comparison" }) "" else "<li><a href=\"#comparison\">Previous / revised</a></li>")
             .replace("<!-- NIMBUS_MANIFEST -->", "<script type=\"application/json\" id=\"nimbus-manifest\">${manifestText.replace("<", "\\u003c")}</script>"))
     }
-    private fun sectionsHtml(clips: List<Clip>): String = buildString {
+    private fun sectionsHtml(clips: List<Clip>, cacheKey: String): String = buildString {
         for ((category, copy) in categories) {
             val members = clips.filter { it.category == category }
             if (members.isEmpty()) continue
             append("<section class=\"audition-section\" id=\"$category\" aria-labelledby=\"heading-$category\"><div class=\"section-heading\"><p class=\"eyebrow\">${h(category)}</p><h2 id=\"heading-$category\">${h(copy.first)}</h2><p>${h(copy.second)}</p></div>")
             for ((group, rows) in members.groupBy { it.group }) {
                 append("<div class=\"clip-group\"><h3>${h(group)}</h3><div class=\"clip-grid\">")
-                for (clip in rows) append(clipHtml(clip))
+                for (clip in rows) append(clipHtml(clip, cacheKey))
                 append("</div></div>")
             }
             append("</section>")
         }
     }
-    private fun clipHtml(clip: Clip): String {
+    private fun clipHtml(clip: Clip, cacheKey: String): String {
         val e = clip.evidence
         val title = e.getValue("title") as String
         val voice = e.getValue("voice") as String
@@ -432,17 +579,23 @@ object NimbusAuditionGenerator {
         val macros = (e.getValue("macros") as Map<*, *>).entries.joinToString(" · ") {
             "${it.key} ${fmt((it.value as Number).toFloat())}"
         }
+        val version = e["comparisonVersion"] as? String
+        val provenance = (e["baselineSourceRevision"] as? String)?.let {
+            "<dt>Previous source revision</dt><dd><code>${h(it.take(12))}</code></dd><dt>Preserved WAV SHA-256</dt><dd><code>${h(e.getValue("baselineSourceAudioSha256").toString().take(12))}…</code></dd>"
+        }.orEmpty()
+        val audioUrl = h(assetUrl(e.getValue("path") as String, cacheKey))
+        val mechanicsUrl = h(assetUrl(e.getValue("eventPath") as String, cacheKey))
         return """
             <article class="clip" id="clip-${clip.id}" data-voice="$voice" data-category="${clip.category}" aria-labelledby="title-${clip.id}">
-              <div class="clip-badges"><span>${h(voice)}</span><span>${h(e.getValue("level").toString())}</span>${if (loop) "<span>loop</span>" else ""}</div>
+              <div class="clip-badges"><span>${h(voice)}</span><span>${h(e.getValue("level").toString())}</span>${if (version == null) "" else "<span>${h(version)}</span>"}${if (loop) "<span>loop</span>" else ""}</div>
               <h4 id="title-${clip.id}">${h(title)}</h4>
               <p class="description" id="desc-${clip.id}">${h(e.getValue("description") as String)}</p>
               <p class="macro-line">${h(macros)}</p>
               <p class="clip-meta">$duration s · velocity ${fmt((e.getValue("energy") as Number).toFloat())} · root ${number((e.getValue("rootHz") as Number).toDouble())} Hz · ${(e.getValue("contactEvents") as Number).toInt()} contacts</p>
-              <div class="clip-actions"><button class="play" type="button" aria-label="Play ${h(title)}" aria-describedby="desc-${clip.id}" aria-pressed="false" disabled>Play</button>${if (loop) "<label class=\"repeat\"><input type=\"checkbox\" class=\"loop-toggle\" checked disabled> Repeat</label>" else ""}<a class="download" href="${e.getValue("path")}" download>WAV <span class="sr-only">${h(title)}</span></a></div>
+              <div class="clip-actions"><button class="play" type="button" aria-label="Play ${h(title)}" aria-describedby="desc-${clip.id}" aria-pressed="false" disabled>Play</button>${if (loop) "<label class=\"repeat\"><input type=\"checkbox\" class=\"loop-toggle\" checked disabled> Repeat</label>" else ""}<a class="download" href="$audioUrl" download>WAV <span class="sr-only">${h(title)}</span></a></div>
               <progress value="0" max="$duration" aria-label="Playback progress for ${h(title)}"></progress>
-              <details class="evidence"><summary>Measurements and mechanical record</summary><dl><dt>Raw peak</dt><dd>${number((e.getValue("rawPeak") as Number).toDouble())}</dd><dt>Export peak</dt><dd>${number((e.getValue("exportPeak") as Number).toDouble())}</dd><dt>Export listening RMS</dt><dd>${number((e.getValue("exportLoudness") as Number).toDouble())}</dd><dt>Export safety gain</dt><dd>${number((e.getValue("exportSafetyGain") as Number).toDouble())}×</dd><dt>Final passive energy</dt><dd>${scientific((e.getValue("finalPassiveEnergy") as Number).toDouble())}</dd><dt>Valid sampled geometry</dt><dd>${e.getValue("geometryValid")}</dd>$seam</dl><a href="${e.getValue("eventPath")}">Mechanical JSON <span class="sr-only">for ${h(title)}</span></a></details>
-              <details class="native"><summary>Native audio controls</summary><p class="native-hint" hidden>Enable audio playback above to show these controls.</p><audio controls${if (loop) " loop" else ""} preload="none" src="${e.getValue("path")}" aria-label="${h(title)}" aria-describedby="desc-${clip.id}">Your browser can download the WAV above.</audio></details>
+              <details class="evidence"><summary>Measurements and mechanical record</summary><dl><dt>Raw peak</dt><dd>${number((e.getValue("rawPeak") as Number).toDouble())}</dd><dt>Export peak</dt><dd>${number((e.getValue("exportPeak") as Number).toDouble())}</dd><dt>Export listening RMS</dt><dd>${number((e.getValue("exportLoudness") as Number).toDouble())}</dd><dt>Export safety gain</dt><dd>${number((e.getValue("exportSafetyGain") as Number).toDouble())}×</dd><dt>Final passive energy</dt><dd>${scientific((e.getValue("finalPassiveEnergy") as Number).toDouble())}</dd><dt>Valid sampled geometry</dt><dd>${e.getValue("geometryValid")}</dd>$seam$provenance</dl><a href="$mechanicsUrl">Mechanical JSON <span class="sr-only">for ${h(title)}</span></a></details>
+              <details class="native"><summary>Native audio controls</summary><p class="native-hint" hidden>Enable audio playback above to show these controls.</p><audio controls${if (loop) " loop" else ""} preload="none" src="$audioUrl" aria-label="${h(title)}" aria-describedby="desc-${clip.id}">Your browser can download the WAV above.</audio></details>
             </article>
         """.trimIndent()
     }
@@ -484,6 +637,20 @@ object NimbusAuditionGenerator {
         val output = process.inputStream.bufferedReader().use { it.readText().trim() }
         output.takeIf { process.waitFor() == 0 }
     }.getOrNull()
+    /** URLs change across published revisions; disk paths and evidence hashes stay stable. */
+    private fun assetCacheKey(manifestText: String): String {
+        val manifest = Json.parse(manifestText).obj()
+        val revision = (manifest["sourceRevision"] as? JsonValue.Str)?.value
+            ?.takeIf { it.matches(Regex("[0-9a-f]{40}")) }
+        val dirty = (manifest["workingTreeDirty"] as? JsonValue.Bool)?.value
+        if (revision != null && dirty == false) return revision
+        val digest = sha256(manifestText.toByteArray(Charsets.UTF_8)).take(12)
+        return if (revision == null) "dev-$digest" else "$revision-${if (dirty == true) "dirty" else "dev"}-$digest"
+    }
+    private fun assetUrl(path: String, cacheKey: String) = "$path?v=$cacheKey"
+    private fun sha256(file: File): String = sha256(file.readBytes())
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes)
+        .joinToString("") { "%02x".format(Locale.ROOT, it.toInt() and 255) }
     private fun tag(value: Float) = (value * 100).roundToInt().toString().padStart(3, '0')
     private fun fmt(value: Float) = String.format(Locale.ROOT, "%.2f", value).trimEnd('0').trimEnd('.')
     private fun number(value: Double) = String.format(Locale.ROOT, "%.3f", value).trimEnd('0').trimEnd('.')

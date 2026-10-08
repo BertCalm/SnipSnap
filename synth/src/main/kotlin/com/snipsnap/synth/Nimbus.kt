@@ -39,28 +39,30 @@ object Nimbus {
     const val LOOP_THRESHOLD = .99f
     const val MAX_SECONDS = 8f
     private const val CYMBALS = 6
-    private const val MODES = 6
+    private const val MODES = 16
     private const val INTERNAL_RATE = RATE * Dsp.OVERSAMPLE
     private const val DEFAULT_CONTROL_STRIDE = 128
     private const val SNAPSHOT_STRIDE = 4096
     private const val HOLD_PREROLL_CYCLES = 6
-    private const val OUTPUT_TRIM = .58
+    private const val OUTPUT_TRIM = .38
     private const val MASS = .08
-    private const val RIM_SCALE = 4.0
+    private const val RIM_SCALE = 6.0
     private const val CONTACT_STIFFNESS = 850.0
     private const val CONTACT_CAP = .003
 
     private data class Shape(
         val excite: Float, val spacing: Float, val height: Float, val field: Float, val funnel: Float,
         val selected: Int, val decay: Double,
+        val rootShare: Double, val spectralTilt: Double, val upperDecay: Double,
+        val releaseStrength: Double, val pullMillis: Double, val releases: Int,
     )
     private fun shape(voice: NimbusVoice) = when (voice) {
-        NimbusVoice.RING -> Shape(.50f, .70f, .65f, .55f, .35f, 0, 1.0)
-        NimbusVoice.SHIMMER -> Shape(.35f, .50f, .70f, .45f, .50f, 2, .96)
-        NimbusVoice.GATHER -> Shape(.65f, .35f, .50f, .35f, .55f, 4, 1.04)
-        NimbusVoice.THROAT -> Shape(.45f, .45f, .15f, .50f, .85f, 3, .98)
-        NimbusVoice.CONTACT -> Shape(.65f, .10f, .50f, .55f, .55f, 5, .91)
-        NimbusVoice.SUSPEND -> Shape(.30f, .55f, .55f, .65f, .65f, 1, 1.10)
+        NimbusVoice.RING -> Shape(.50f, .70f, .65f, .55f, .35f, 0, 1.0, .38, .15, 1.10, 1.05, .42, 1)
+        NimbusVoice.SHIMMER -> Shape(.35f, .50f, .70f, .45f, .50f, 2, .74, .14, .95, .85, 1.05, .95, 3)
+        NimbusVoice.GATHER -> Shape(.65f, .35f, .50f, .35f, .55f, 4, .90, .26, .45, 1.10, .88, .74, 2)
+        NimbusVoice.THROAT -> Shape(.45f, .45f, .15f, .50f, .85f, 3, .69, .24, -1.10, 1.50, 1.45, .65, 1)
+        NimbusVoice.CONTACT -> Shape(.65f, .10f, .50f, .55f, .55f, 5, .65, .17, .90, .80, 1.06, .34, 4)
+        NimbusVoice.SUSPEND -> Shape(.30f, .55f, .55f, .65f, .65f, 1, 1.20, .22, -.10, 1.65, .72, 2.60, 2)
     }
     fun macrosFor(voice: NimbusVoice): List<MacroSpec> {
         val s = shape(voice)
@@ -139,23 +141,25 @@ object Nimbus {
 
     // Body, Bell, Paper, Dark, Flex, Wire. These are persistent identities, not voice enums.
     private val RATIOS = arrayOf(
-        doubleArrayOf(1.0, 2.40, 4.30, 6.70, 9.15, 12.40),
-        doubleArrayOf(1.0, 3.10, 5.20, 8.10, 11.65, 15.30),
-        doubleArrayOf(1.0, 2.73, 4.86, 7.37, 10.48, 14.75),
-        doubleArrayOf(1.0, 2.18, 3.83, 5.76, 8.38, 11.18),
-        doubleArrayOf(1.0, 2.57, 4.65, 7.08, 10.13, 13.86),
-        doubleArrayOf(1.0, 3.47, 6.19, 9.79, 13.21, 17.37),
+        doubleArrayOf(1.0, 1.68, 2.40, 3.21, 4.30, 4.63, 5.39, 6.70, 7.08, 7.85, 9.15, 9.67, 10.52, 11.43, 12.40, 14.08),
+        doubleArrayOf(1.0, 1.91, 3.10, 3.63, 4.45, 5.20, 5.77, 6.89, 8.10, 8.47, 9.68, 10.34, 11.65, 12.16, 13.57, 15.30),
+        doubleArrayOf(1.0, 1.77, 2.73, 3.47, 4.07, 4.86, 5.21, 5.83, 6.44, 7.37, 8.18, 8.79, 9.53, 10.48, 12.03, 14.75),
+        doubleArrayOf(1.0, 1.54, 2.18, 2.79, 3.32, 3.83, 4.48, 5.09, 5.76, 6.29, 7.15, 8.38, 9.06, 9.82, 10.43, 11.18),
+        doubleArrayOf(1.0, 1.83, 2.57, 3.38, 4.09, 4.65, 5.23, 6.02, 7.08, 7.62, 8.27, 9.11, 10.13, 11.29, 12.42, 13.86),
+        doubleArrayOf(1.0, 2.06, 3.47, 4.12, 4.79, 6.19, 6.47, 7.71, 8.62, 9.79, 10.17, 11.58, 13.21, 14.09, 15.47, 17.37),
     )
+    // Excitation participation is separate from listener radiation: do not square these weights.
     private val WEIGHTS = arrayOf(
-        doubleArrayOf(1.0, .46, .30, .21, .14, .09),
-        doubleArrayOf(1.0, .57, .38, .32, .18, .13),
-        doubleArrayOf(.88, .49, .46, .38, .29, .21),
-        doubleArrayOf(1.0, .56, .39, .22, .09, .035),
-        doubleArrayOf(1.0, .43, .35, .26, .18, .13),
-        doubleArrayOf(.93, .78, .10, .54, .065, .29),
+        doubleArrayOf(1.0, .86, .75, .63, .67, .55, .50, .48, .39, .43, .36, .32, .29, .27, .25, .20),
+        doubleArrayOf(.90, .50, .85, .46, .62, .76, .41, .61, .70, .38, .58, .34, .55, .31, .40, .33),
+        doubleArrayOf(.70, .54, .61, .74, .67, .81, .76, .69, .82, .75, .65, .72, .62, .68, .56, .49),
+        doubleArrayOf(.94, .82, .86, .77, .75, .72, .59, .51, .46, .41, .30, .23, .19, .15, .12, .09),
+        doubleArrayOf(.88, .68, .78, .70, .64, .73, .62, .60, .67, .54, .56, .51, .44, .40, .35, .29),
+        doubleArrayOf(.76, .42, .87, .30, .44, .79, .54, .35, .49, .76, .40, .62, .68, .31, .59, .43),
     )
     private val ROOT_DECAY = doubleArrayOf(4.4, 3.4, 2.9, 3.6, 4.0, 3.1)
-    private val LOSS_EXP = doubleArrayOf(.50, .63, .93, .79, .62, .72)
+    private val UPPER_DECAY = doubleArrayOf(3.4, 2.8, 3.1, 2.6, 3.5, 2.5)
+    private val LOSS_EXP = doubleArrayOf(.16, .20, .08, .34, .13, .12)
 
     internal fun probe(
         voice: NimbusVoice,
@@ -280,14 +284,25 @@ object Nimbus {
         private val random = Random(seed)
         private val plates = Array(CYMBALS) { Bank(MODES) }
         private val chamber = Bank(4)
-        private val port = Array(CYMBALS) { i -> normalize(DoubleArray(MODES) { j -> if (j == 0) 1.0 else WEIGHTS[i][j] * (.34 + .58 * excite) }) }
-        private val pickup = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> if (j == 0) 1.0 else WEIGHTS[i][j] * (.84 + .30 * excite) } }
-        private val impulse = Array(CYMBALS) { i -> normalize(DoubleArray(MODES) { j ->
-            val cutoff = if (root * RATIOS[i][j] < RATE * .43) 1.0 else 0.0
-            WEIGHTS[i][j] * (if (j == 0) 1.0 else .25 + 1.05 * excite) * (.94 + .12 * random.nextDouble()) * cutoff
+        private val supported = Array(CYMBALS) { i -> BooleanArray(MODES) { j -> root * RATIOS[i][j] < RATE * .43 } }
+        private val port = Array(CYMBALS) { i -> normalize(DoubleArray(MODES) { j ->
+            if (!supported[i][j]) 0.0 else if (j == 0) .85 else .25 * sqrt(WEIGHTS[i][j]) * (.75 + .45 * excite)
         }) }
+        private val pickup = Array(CYMBALS) { DoubleArray(MODES) }
+        private val rootShare = (shape.rootShare * (1.10 - .35 * excite)).coerceIn(.10, .55)
+        private val bodyImpulse = Array(CYMBALS) { i ->
+            val b = normalize(DoubleArray(MODES) { j ->
+                if (j == 0 || !supported[i][j]) 0.0 else {
+                    val participation = WEIGHTS[i][j] * RATIOS[i][j].pow((shape.spectralTilt + .55 * excite - .20) * .36)
+                    val sign = if (sin((j + 1) * 2.07 + i * .73) >= 0) 1.0 else -1.0
+                    participation * sign * (.91 + .18 * random.nextDouble())
+                }
+            })
+            for (j in b.indices) b[j] *= sqrt(1 - rootShare)
+            b
+        }
         private val chamberPort = Array(CYMBALS) { i -> normalize(DoubleArray(4) { j -> .36 + .60 * abs(sin((i + 1) * (j + 1) * .73)) }) }
-        private val gap = .032 + .104 * spacing * spacing
+        private val gap = .032 + .104 * spacing * spacing * spacing
         private val restSpan = 5 * gap
         private val center = .055 + restSpan / 2 + height * (.89 - restSpan)
         private val resting = DoubleArray(CYMBALS) { center + (it - 2.5) * gap }
@@ -311,7 +326,8 @@ object Nimbus {
             if (cycle > 0) ((hz * cycle / INTERNAL_RATE).roundToInt() * INTERNAL_RATE.toDouble() / cycle) else hz
         } }
         private val lossTimes = Array(CYMBALS) { i -> DoubleArray(MODES) { j ->
-            ROOT_DECAY[i] * shape.decay / RATIOS[i][j].pow(LOSS_EXP[i])
+            if (j == 0) ROOT_DECAY[i] * shape.decay else
+                (UPPER_DECAY[i] * shape.upperDecay / RATIOS[i][j].pow(LOSS_EXP[i])).coerceAtMost(4.5)
         } }
         private val driveX = Array(CYMBALS) { DoubleArray(MODES) }
         private val driveY = Array(CYMBALS) { DoubleArray(MODES) }
@@ -319,7 +335,9 @@ object Nimbus {
         private val driveSin = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> sin(2 * PI * rates[i][j] / INTERNAL_RATE) } }
         private val drivePhase = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> if (j == 0) (if (i % 2 == 0) -.90 else .90) + .03 * random.nextDouble() else 2 * PI * random.nextDouble() } }
         private val driveAmplitude = Array(CYMBALS) { i -> DoubleArray(MODES) { j ->
-            val target = (.048 + .022 * funnel) * impulse[i][j] * (if (j == 0) 1.0 else .45 + .55 * excite)
+            val preference = .24 + .76 * exp(-abs(i - selected) * (.58 + .32 * excite))
+            val target = if (j == 0) (if (selected == 5) .26 else .12) * sqrt(rootShare) * preference else
+                (.115 + .035 * funnel) * bodyImpulse[i][j] * shape.releaseStrength * preference
             2 * 6.907755278982137 / lossTimes[i][j] / INTERNAL_RATE * target
         } }
         var driveWork = 0.0; private set
@@ -335,7 +353,12 @@ object Nimbus {
         private val chamberSin = DoubleArray(6)
         private val contactActive = BooleanArray(5)
         private var contactEnergy = 0.0
-        private val pulseFrames = ((.0022 - .0015 * excite) * INTERNAL_RATE).roundToInt().coerceAtLeast(20)
+        private val pulseFrames = ((.00015 + .001 * shape.pullMillis * (1 - .50 * excite)) * INTERNAL_RATE).roundToInt().coerceAtLeast(12)
+        private val releaseFrames = ((.000035 + .00010 * (1 - excite)) * INTERNAL_RATE).roundToInt().coerceAtLeast(6)
+        private val releaseStart = (.00018 * shape.pullMillis * (1 - .60 * excite) * INTERNAL_RATE).roundToInt()
+        private val releaseInterval = (.00017 * INTERNAL_RATE).roundToInt()
+        private val eventFrames = max(pulseFrames, releaseStart + (shape.releases - 1) * releaseInterval + releaseFrames)
+        private var eventWork = 0.0
         private var initialEnergy = 0.0
         private var maxPenetration = 0f
         private var currentPenetration = 0f
@@ -370,11 +393,13 @@ object Nimbus {
                 for (j in 0 until MODES) {
                     // Static chamber loading changes losses, not note. Only Flex yields a tiny
                     // bounded transient stiffness shift; exact rotations still preserve energy.
-                    val flex = if (i == 4) 1 + .0018 * moving * (if (j == 0) .45 else 1.0) else 1.0
-                    val t60 = lossTimes[i][j] / (1 + enclosure * (.28 + .30 * j) + moving * .045)
+                    val flex = if (i == 4) 1 + moving * (if (j == 0) .0005 else .008 + .004 * sin(j * .91)) else 1.0
+                    val t60 = lossTimes[i][j] / (1 + enclosure * (.30 + .72 * ln(RATIOS[i][j])) + moving * .045)
                     // Mouth exposure radiates more upper flexural modes. This is independent
                     // of overall level, while enclosure also changes the actual modal losses.
-                    pickup[i][j] = if (j == 0) 1.0 else WEIGHTS[i][j] * (.84 + .30 * excite) * (.25 + 1.65 * z[i])
+                    pickup[i][j] = if (!supported[i][j]) 0.0 else if (j == 0) .76 else
+                        (.57 + .10 * sin(j * 1.13 + i * .63)) * (.52 + 1.10 * z[i]) *
+                            (if (i == 4) 1 + .55 * moving * sin(j * 1.33) else 1.0)
                     plates[i].tune(j, rates[i][j] * flex, t60)
                 }
             }
@@ -453,7 +478,7 @@ object Nimbus {
                     contactActive[i] = true
                     val relative = velocity[i + 1] - velocity[i] + RIM_SCALE * (b.velocity(port[i + 1]) - a.velocity(port[i]))
                     val restoring = CONTACT_STIFFNESS * penetration / (1 + penetration / CONTACT_CAP)
-                    val damping = .17 * max(0.0, -relative) / (1 + abs(relative) / 2.0)
+                    val damping = .35 * max(0.0, -relative) / (1 + abs(relative) / 2.0)
                     val force = restoring + damping
                     val kick = force / INTERNAL_RATE
                     a.addVelocity(port[i], -kick * RIM_SCALE)
@@ -462,7 +487,7 @@ object Nimbus {
                     velocity[i + 1] += kick / MASS
                     contactEnergy += CONTACT_STIFFNESS * CONTACT_CAP * (penetration - CONTACT_CAP * ln(1 + penetration / CONTACT_CAP))
                     // Impact radiation is the actual relative rim speed under compliant pressure.
-                    audible += .075 * force * relative
+                    audible += .12 * force * relative
                 } else contactActive[i] = false
             }
             lastContact = audible
@@ -483,13 +508,31 @@ object Nimbus {
                 if (frame % controlStride == 0) control()
                 for (plate in plates) plate.step()
                 chamber.step()
-                if (options.primaryStrikeEnabled && frame < pulseFrames && eventVelocity > 0) {
-                    val pulse = sin(PI * (frame + .5) / pulseFrames) * PI / (2 * pulseFrames)
+                if (options.primaryStrikeEnabled && frame < eventFrames && eventVelocity > 0) {
+                    val rootPulse = if (frame < pulseFrames) sin(PI * (frame + .5) / pulseFrames) * PI / (2 * pulseFrames) else 0.0
                     for (i in 0 until CYMBALS) {
                         val distance = abs(i - selected)
                         val distribution = if (options.selectedCymbal != null) { if (distance == 0) 1.0 else 0.0 }
                             else if (distance == 0) .79 + .13 * excite else (.13 + .30 * (1 - excite)) * exp(-distance * (.65 + .66 * excite))
-                        plates[i].addVelocity(impulse[i], eventVelocity * (.79 + .26 * excite) * distribution * pulse)
+                        val strength = eventVelocity * (.79 + .26 * excite) * distribution
+                        val before = plates[i].energy()
+                        plates[i].v[0] += sqrt(rootShare) * strength * rootPulse
+                        for (release in 0 until shape.releases) {
+                            val age = frame - releaseStart - release * releaseInterval
+                            if (age in 0 until releaseFrames) {
+                                val pulse = sin(PI * (age + .5) / releaseFrames) * PI / (2 * releaseFrames)
+                                // A few finite pull/release projections excite the same plate. The
+                                // contact point moves across modes; no independent noise is mixed.
+                                val gain = strength * shape.releaseStrength * pulse / sqrt(shape.releases.toDouble())
+                                for (j in 1 until MODES) {
+                                    val projection = if (release == 0) 1.0 else sin(j * .71 + release * 1.43).let { if (it >= 0) 1.0 else -1.0 }
+                                    plates[i].v[j] += bodyImpulse[i][j] * gain * projection
+                                }
+                            }
+                        }
+                        // Positive work supplied by the finite note event; discarded work and
+                        // passive loss do not become a reusable unlimited excitation budget.
+                        eventWork += max(0.0, plates[i].energy() - before)
                     }
                 }
                 val time = frame.toDouble() / INTERNAL_RATE
@@ -533,7 +576,7 @@ object Nimbus {
                     selectedPeak = max(selectedPeak, currentPenetration)
                     selectedContacts += contacts - countBefore
                 }
-                if (frame == pulseFrames - 1) initialEnergy = passiveEnergy()
+                if (frame == eventFrames - 1) initialEnergy = eventWork
                 if (frame >= captureStart) {
                     val index = frame - captureStart
                     var metal = 0.0

@@ -3,12 +3,12 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Fft
-import com.snipsnap.audio.Pitch
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.log10
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.test.Test
@@ -78,16 +78,69 @@ class NimbusTest {
                 )
                 worst = max(worst, abs(cents))
                 assertTrue(abs(cents) <= 10.0, "cymbal $cymbal TUNE $tune principal is $cents cents off root")
-                if (tune == .5f) signatures += spectrum(tap)
+                if (tune == .5f) signatures += spectrum(tap, minimumHz = p.rootHz * 1.8)
             }
         }
         var closest = Double.POSITIVE_INFINITY
         for (i in signatures.indices) for (j in 0 until i) {
             val difference = spectralDifference(signatures[i], signatures[j])
             closest = minOf(closest, difference)
-            assertTrue(difference > .04, "cymbals $j and $i have indistinguishable spectra: $difference")
+            assertTrue(difference > .35, "isolated upper-mode spectra $j and $i collapsed: $difference")
         }
         println("NIMBUS isolated roots: worst $worst cents; closest normalized spectra $closest")
+    }
+
+    @Test
+    fun `ordinary metal retains substantial upper bands through attack and body`() {
+        // These anti-regression bounds reject the original 98–100% common-root bell.
+        // They measure spectral substance; the owner's listening verdict remains separate.
+        val deficient = mutableListOf<String>()
+        for (voice in NimbusVoice.entries) for (tune in floatArrayOf(0f, .5f, 1f)) {
+            val p = Nimbus.probe(voice, mapOf("TUNE" to tune), options = Nimbus.ProbeOptions(durationSeconds = .8f, recordDiagnostics = false))
+            val attack = bands(p.samples, p.rootHz.toDouble(), .015, .15)
+            val body = bands(p.samples, p.rootHz.toDouble(), .18, .65)
+            println("NIMBUS $voice TUNE $tune spectral substance: attack root=${attack.rootShare} upper=${attack.upperShare} bands=${attack.upperOccupied}, body root=${body.rootShare} upper=${body.upperShare} bands=${body.upperOccupied}")
+            if (attack.upperShare < .20 || body.upperShare < .10 || attack.upperOccupied < 4 || body.upperOccupied < 3) {
+                deficient += "$voice TUNE $tune attack upper=${attack.upperShare}/bands=${attack.upperOccupied}, body upper=${body.upperShare}/bands=${body.upperOccupied}"
+            }
+            if (body.rootShare < .01) deficient += "$voice TUNE $tune lost material requested-root energy: ${body.rootShare}"
+            val cents = FineTuning.cents(FineTuning.measuredHz(p.samples, Dsp.RATE, p.rootHz, .08f, .4f), p.rootHz.toDouble())
+            if (abs(cents) > 10.0) deficient += "$voice TUNE $tune material principal moved $cents cents"
+        }
+        assertTrue(deficient.isEmpty(), "Metal upper bands disappeared or collapsed into a sparse common-root bell: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
+    fun `default voices keep contrasting metal spectra and temporal profiles`() {
+        val probes = NimbusVoice.entries.associateWith { voice ->
+            Nimbus.probe(voice, options = Nimbus.ProbeOptions(durationSeconds = 1.5f, recordDiagnostics = false))
+        }
+        val attacks = probes.mapValues { (_, p) -> bands(p.samples, p.rootHz.toDouble(), .015, .15) }
+        val bodies = probes.mapValues { (_, p) -> bands(p.samples, p.rootHz.toDouble(), .18, .65) }
+        val envelopes = probes.mapValues { (_, p) -> envelope(p.samples) }
+        val deficient = mutableListOf<String>()
+        var leastContrast = Double.POSITIVE_INFINITY
+        for ((i, a) in NimbusVoice.entries.withIndex()) for (b in NimbusVoice.entries.take(i)) {
+            val attack = spectralDifference(attacks.getValue(a).profile, attacks.getValue(b).profile)
+            val body = spectralDifference(bodies.getValue(a).profile, bodies.getValue(b).profile)
+            val temporal = spectralDifference(envelopes.getValue(a), envelopes.getValue(b))
+            val contrast = maxOf(attack, body, temporal)
+            leastContrast = minOf(leastContrast, contrast)
+            println("NIMBUS $a/$b default contrast: attack=$attack body=$body envelope=$temporal")
+            if (max(attack, body) < .20 || contrast < .30) deficient += "$a/$b attack=$attack body=$body envelope=$temporal"
+        }
+        println("NIMBUS minimum default voice contrast: $leastContrast")
+        val highContrast = attacks.getValue(NimbusVoice.SHIMMER).highShare /
+            attacks.getValue(NimbusVoice.THROAT).highShare.coerceAtLeast(1e-30)
+        if (highContrast <= 1.5) deficient += "SHIMMER/THROAT high-band contrast=$highContrast"
+        val shimmer = probes.getValue(NimbusVoice.SHIMMER).samples
+        val suspend = probes.getValue(NimbusVoice.SUSPEND).samples
+        fun bodySupport(samples: FloatArray) = rms(samples, (1f * Dsp.RATE).roundToInt(), (1.4f * Dsp.RATE).roundToInt()) /
+            rms(samples, (.015f * Dsp.RATE).roundToInt(), (.15f * Dsp.RATE).roundToInt()).coerceAtLeast(1e-30)
+        val supportContrast = bodySupport(suspend) / bodySupport(shimmer).coerceAtLeast(1e-30)
+        println("NIMBUS intended character contrast: SHIMMER/THROAT high-band=$highContrast, SUSPEND/SHIMMER relative late-body=$supportContrast")
+        if (supportContrast <= 1.5) deficient += "SUSPEND/SHIMMER relative late-body contrast=$supportContrast"
+        assertTrue(deficient.isEmpty(), "Default voices collapsed or lost their intended contrast: ${deficient.joinToString("; ")}")
     }
 
     @Test
@@ -193,6 +246,13 @@ class NimbusTest {
         assertEquals(0f, wide.peakContactPenetration)
         assertEquals(0.0, rms(wide.contact))
         assertTrue(normalizedDifference(close.samples, muted.samples) > .01, "rim contact made no audible contribution")
+        val ordinary = Nimbus.probe(NimbusVoice.CONTACT, options = options)
+        val ordinaryMuted = Nimbus.probe(NimbusVoice.CONTACT, options = options.copy(contactsEnabled = false))
+        assertTrue(ordinary.contactEvents > 0 && ordinary.peakContactPenetration > 0f, "default CONTACT contained no actual rim encounters")
+        val contactRatio = rms(ordinary.contact) / rms(ordinary.samples).coerceAtLeast(1e-30)
+        val contribution = normalizedDifference(ordinary.samples, ordinaryMuted.samples)
+        println("NIMBUS default contact: ${ordinary.contactEvents} encounters, relative tap=$contactRatio, on/off difference=$contribution")
+        assertTrue(contactRatio >= .01 && contribution >= .03, "default rim contact remained negligible: tap=$contactRatio change=$contribution")
     }
 
     @Test
@@ -325,10 +385,10 @@ class NimbusTest {
             val filed = Nimbus.drumClassFor(voice)
             assertTrue(heard !in drums, "$voice sounds like $heard to current routing guards")
             assertTrue(filed !in drums, "$voice filed as $filed")
-            val pitch = Pitch.detect(snip) ?: error("$voice full stack has no detectable root")
             val want = Nimbus.frequencyFor(voice, Nimbus.defaults(voice).getValue("TUNE"))
-            val cents = FineTuning.cents(pitch.hz.toDouble(), want.toDouble())
-            assertTrue(abs(cents) < 50.0, "$voice root estimator read $cents cents off requested note")
+            val cents = FineTuning.cents(FineTuning.measuredHz(snip, want, .08f, .4f), want.toDouble())
+            assertTrue(abs(cents) <= 10.0, "$voice physical principal moved $cents cents off requested note")
+            assertTrue(bands(snip.samples, want.toDouble(), .18, .65).rootShare >= .01, "$voice calibrated principal became negligible")
         }
         for (tune in floatArrayOf(0f, .5f, 1f)) {
             val p = Nimbus.probe(NimbusVoice.RING, mapOf("TUNE" to tune), options = Nimbus.ProbeOptions(durationSeconds = .7f))
@@ -362,6 +422,9 @@ class NimbusTest {
             assertEquals(p.samples.size, p.previousCycle.size, "$voice supplied no natural preceding cycle")
             assertTrue(p.poweredDriveWork > 0.0, "$voice HOLD was not powered separately")
             assertTrue(p.samples.all { it.isFinite() } && p.rawPeak < 1f)
+            val heldMetal = bands(p.samples, p.rootHz.toDouble(), .05, .65)
+            assertTrue(heldMetal.upperShare >= .15 && heldMetal.upperOccupied >= 4, "$voice held texture collapsed to a sparse bell: upper=${heldMetal.upperShare}, bands=${heldMetal.upperOccupied}")
+            assertTrue(heldMetal.rootShare >= .01, "$voice held requested root became negligible: ${heldMetal.rootShare}")
             if (voice == NimbusVoice.CONTACT) {
                 assertTrue(p.contactEvents > 0, "difficult held case contained no settled rim contacts")
                 assertTrue(p.contact.all { it.isFinite() } && rms(p.contact) > 1e-7, "settled contacts emitted no finite contact sound")
@@ -430,7 +493,59 @@ class NimbusTest {
         return sqrt(difference / n.coerceAtLeast(1))
     }
 
-    private fun spectrum(samples: FloatArray): DoubleArray {
+    private data class Bands(
+        val rootShare: Double, val upperShare: Double, val highShare: Double,
+        val upperOccupied: Int, val profile: DoubleArray,
+    )
+
+    private fun bands(samples: FloatArray, root: Double, start: Double, end: Double): Bands {
+        val from = (start * Dsp.RATE).roundToInt()
+        val count = minOf(samples.size - from, ((end - start) * Dsp.RATE).roundToInt())
+        require(count > 8)
+        var n = 2048
+        while (n < count) n *= 2
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) re[i] = (samples[from + i] * (.5 - .5 * cos(2 * PI * i / (count - 1)))).toFloat()
+        Fft.forward(re, im)
+        // Center a band on the requested root. A root at a band boundary could make tiny
+        // phase/loading shifts look like a substantial change in an otherwise identical bell.
+        val edges = DoubleArray(26) { root * .5 * 2.0.pow((it - .5) * .25) }
+        val energyBands = DoubleArray(25)
+        var total = 0.0
+        var principal = 0.0
+        var upper = 0.0
+        var high = 0.0
+        var band = 0
+        for (k in 1 until n / 2) {
+            val hz = k.toDouble() * Dsp.RATE / n
+            if (hz < root * .45) continue
+            val energy = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            total += energy
+            if (hz in root * .94..root * 1.06) principal += energy
+            if (hz >= root * 1.8) upper += energy
+            if (hz >= root * 4.0) high += energy
+            while (band < energyBands.size && hz >= edges[band + 1]) band++
+            if (band < energyBands.size && hz >= edges[band]) energyBands[band] += energy
+        }
+        val denominator = total.coerceAtLeast(1e-30)
+        val occupied = energyBands.indices.count { edges[it] >= root * 1.8 && energyBands[it] >= total * .005 }
+        val inBands = energyBands.sum().coerceAtLeast(1e-30)
+        val profile = DoubleArray(energyBands.size) { sqrt(energyBands[it] / inBands) }
+        return Bands(principal / denominator, upper / denominator, high / denominator, occupied, profile)
+    }
+
+    private fun envelope(samples: FloatArray): DoubleArray {
+        val energies = DoubleArray(14) { index ->
+            val from = (.1 * index * Dsp.RATE).roundToInt()
+            val to = minOf(samples.size, (.1 * (index + 1) * Dsp.RATE).roundToInt())
+            (from until to).sumOf { samples[it].toDouble() * samples[it] }
+        }
+        val total = energies.sum().coerceAtLeast(1e-30)
+        return DoubleArray(energies.size) { sqrt(energies[it] / total) }
+    }
+
+    private fun spectrum(samples: FloatArray, minimumHz: Double = 0.0): DoubleArray {
         val n = 16384
         val from = (.015f * Dsp.RATE).roundToInt()
         val count = minOf(n, samples.size - from)
@@ -438,7 +553,10 @@ class NimbusTest {
         val im = FloatArray(n)
         for (i in 0 until count) re[i] = (samples[from + i] * (.5 - .5 * cos(2 * PI * i / (count - 1)))).toFloat()
         Fft.forward(re, im)
-        val magnitudes = DoubleArray(n / 2) { sqrt(re[it].toDouble() * re[it] + im[it].toDouble() * im[it]) }
+        val magnitudes = DoubleArray(n / 2) {
+            if (it.toDouble() * Dsp.RATE / n < minimumHz) 0.0
+            else sqrt(re[it].toDouble() * re[it] + im[it].toDouble() * im[it])
+        }
         val norm = sqrt(magnitudes.sumOf { it * it }).coerceAtLeast(1e-30)
         return magnitudes.map { it / norm }.toDoubleArray()
     }

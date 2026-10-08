@@ -21,16 +21,36 @@ provide a fallback.
 ```
 
 The task writes `testkit/nimbus-audition/index.html`, a manifest, PCM16 WAVs
-and mechanical records. The full matrix contains 323 clips, including voices at C3/C4/C5 and
-three physical velocities, all nine factory presets, every timbral control
-at 0/.25/.5/.75/1 for all six voices, five interaction grids, raw/matched
+and mechanical records. Normal generation contains 323 clips, including
+voices at C3/C4/C5 and three physical velocities, all nine factory presets,
+every timbral control at 0/.25/.5/.75/1 for all six voices, five interaction grids, raw/matched
 pairs, six isolated identities, full-stack source taps, coupling/funnel/
 contact switches, geometry corners, finite decay and difficult held loops.
 Generated files are ignored by Git; source, tests and templates are tracked.
 
-Start with RING at C4 and the six isolated identities. Listen for a common
-root and different upper rings. Compare the velocity cards for a changing
-attack and gathering gesture. Compare HEIGHT at fixed SPACING, then SPACING
+The first C4 default audition concentrated nearly all early/body energy in
+the shared root. This revision changes modal excitation and loss so the
+upper metal modes have a stronger, longer role. The original pitch and
+stability checks did not establish useful audible voice character.
+
+When previous/revised pairs are present, start there at C4. Each pair uses
+the same controls and event velocity; the previous audio is preserved from
+its recorded source SHA. Compare attack, upper wash, motion and tail while
+checking that the common note remains recognizable. The listening targets
+are:
+
+| Voice | Listen for |
+| --- | --- |
+| RING | A rounded Body attack with clear metal rings |
+| SHIMMER | Thin Paper shimmer with a richer upper wash |
+| GATHER | Flexural wavering and a yielding, gathering tail |
+| THROAT | Dark lower and middle metal concentrated in the chamber |
+| CONTACT | Wiry upper modes and fine motion-driven rim contact |
+| SUSPEND | A soft broad attack and a longer supported metallic body |
+
+Then compare the six isolated identities for a common root and different
+upper rings. Compare the velocity cards for a changing attack and
+gathering gesture. Compare HEIGHT at fixed SPACING, then SPACING
 at fixed HEIGHT. Finally compare contact on/off and repeat each HOLD clip
 for several cycles. Descriptions provide listening questions; they do not
 establish that a clip has passed a subjective listening gate.
@@ -56,12 +76,36 @@ Disable Repeat to hear one cycle with a smooth ending.
 ./gradlew --no-daemon :cli:run --args="synth NIMBUS RING --all --out /tmp/nimbus"
 ```
 
+Optional before/after evidence uses a separately preserved audition from a
+clean source revision:
+
+```sh
+./gradlew --no-daemon :synth:generateNimbusAudition \
+  -PnimbusBaselineDir=/absolute/path/to/preserved-nimbus-audition \
+  -PnimbusBaselineRevision=9b77e2eaaff8c050d683399b197c5319b8bea8de \
+  -PnimbusCompareHold=true
+```
+
+The example uses the preserved first-audition source. For another baseline,
+supply its full 40-character Git SHA. Generate the baseline from a separate
+checkout of that revision and preserve its output before regenerating the
+revision. The directory must contain its manifest, selected original WAVs and mechanical
+records. The generator validates source provenance and matching recipes,
+copies the previous WAVs unchanged, and records source hashes.
+
+Supplying the baseline directory and revision adds six C4 default pairs,
+for 335 clips. `nimbusCompareHold=true` adds SHIMMER and SUSPEND at C4 plus
+the difficult settled CONTACT rim case at C3, for 341 clips. Comparison
+partners use the same note, controls, velocity and listening target.
+Normal 323-clip regeneration needs no preserved baseline. Page refresh
+uses the existing manifest and retains its comparison section.
+
 ## Host contract
 
 - Deterministic mono output at 44.1 kHz through the shared 4× internal path
   and decimator. Every independent note starts a new complete stack.
-- RING, SHIMMER, GATHER, THROAT, CONTACT and SUSPEND bias excitation and loss;
-  they retain all six cymbal identities.
+- RING, SHIMMER, GATHER, THROAT, CONTACT and SUSPEND bias excitation, modal
+  balance and loss; they retain all six cymbal identities.
 - TUNE follows the current C3–C5 grid (MIDI 48–72), in semitone steps.
   C4 is the midpoint.
 - EXCITE, SPACING, HEIGHT, FIELD and FUNNEL are independent normalized
@@ -89,12 +133,23 @@ Disable Repeat to hear one cycle with a smooth ending.
 
 ## Numerical model
 
-Six banks of six modes use exact damped rotations in energy-normalized
-coordinates. Ten lossy traveling-wave stores form five reciprocal neighbor
+Six banks of sixteen modes use exact damped rotations in energy-normalized
+coordinates: one common principal and fifteen inharmonic upper modes per
+cymbal. Unsupported upper modes are suppressed at the note-range edges.
+Separate excitation participation and listener radiation give upper modes
+independent energy and pickup balance. Each voice sets the
+root/upper excitation balance, spectral tilt, upper losses and finite
+release pattern. A magnetic pull is followed by short projected flex
+releases into the same modes; these are finite note-on gestures. Upper
+losses are gentler than in the first audition, and their unloaded decay
+times are bounded at 4.5 seconds.
+
+Ten lossy traveling-wave stores form five reciprocal neighbor
 links. Orthogonal scattering exchanges modal velocity with those waves;
 output radiation gains are readouts and never feed back into the network.
 Static loading changes losses rather than transposing the note. Flex has a
-small bounded movement-dependent stiffness deviation.
+small bounded movement-dependent stiffness deviation at the root and a
+larger bounded deviation in its upper modes.
 
 Six separate slow height coordinates follow positive restoring springs and
 damping. Positions integrate smoothly on every internal sample; slow forces
@@ -113,7 +168,8 @@ This is a deliberate simplification of the design specification.
 
 Intermediate HOLD adds a smooth finite drive that releases before the tail;
 HOLD at .99 and above returns a settled repeating region. Both use weak
-modal forcing, distinct from stabilization. The
+modal forcing, distinct from stabilization. Voice and selected-material
+weights also shape the sustained upper modes. The
 seamless region follows bounded preroll of the complete acoustic and
 mechanical state. The probe retains an independently rendered preceding
 cycle for the current `Keys.seamError` metric; a copied boundary cannot serve
@@ -134,17 +190,15 @@ Raw probes expose six cymbal taps, chamber/contact/return taps, acoustic and
 mechanical energy, heights, resting positions, velocity, controller work,
 penetration, contact count, powered work and the genuine preceding cycle.
 Tests check deterministic variation, silence at rest, isolated and full-root
-calibration, spectral identity, causal sympathetic and chamber response,
-passive decay, field restoration, valid geometry, motion-derived contact,
+calibration, isolated spectral identity, audible-band upper energy through
+attack and body, contrasting voice spectra and temporal profiles, causal
+sympathetic and chamber response, passive decay, field restoration,
+valid geometry, motion-derived contact,
 control activity and interactions, control-rate convergence, DC, loudness,
 drum guards, held continuity and saved-patch/recipe/kit/velocity integration.
 
-Numerical checks establish the tested behavior. The owner's listening
+These numerical checks guard against a return to the shared-root-dominated
+mix and establish the measured behavior in their tested cases. They do not
+establish the intended voice character by listening. The owner's listening
 verdict, phone playback and MPC export feel remain part of acceptance.
 Release naming checks remain open, as in the supplied specification.
-
-The 7 October 2026 probe pass measured a worst isolated principal error of
-0.278 cents across six identities at C3/C4/C5. The tested close finite
-extreme decayed by 123 dB after six seconds while returning to valid rest
-geometry. These figures describe those probe cases, not every patch or a
-listening verdict.

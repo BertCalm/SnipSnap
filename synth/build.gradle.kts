@@ -645,4 +645,7 @@ tasks.register<JavaExec>("generateNimbusAudition") {
     args("${rootDir}/testkit/nimbus-audition")
     if (providers.gradleProperty("nimbusRefreshPage").orNull == "true") args("--refresh-page")
     if (providers.gradleProperty("nimbusQuick").orNull == "true") args("--quick")
+    providers.gradleProperty("nimbusBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("nimbusBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
+    if (providers.gradleProperty("nimbusCompareHold").orNull == "true") args("--compare-hold")
 }

@@ -440,7 +440,13 @@ physical velocity join the existing patch and recipe pipeline. Audition:
 `./gradlew :synth:generateNimbusAudition`. The
 [published listening page](https://snipsnap-nimbus-audition.bertcalm.chatgpt.site)
 compares voices, notes, velocities, controls, isolated cymbals and held loops.
-See [NIMBUS](docs/NIMBUS.md) for the contract and listening procedure.
+The first C4 defaults concentrated nearly all early/body energy in their
+shared root. Revised sixteen-mode cymbals change excitation and upper-mode
+losses to expose rounded rings, thin shimmer, wavering metal, dark chamber
+tone, rim contact and supported sustain. Optional preserved-source pairs
+support direct listening comparisons; normal regeneration remains 323 clips.
+See [NIMBUS](docs/NIMBUS.md) for the contract, comparison command and
+listening procedure.
 Listening and device acceptance remain open.
 
 COROLLA is a mechanical flower of coupled metal petals around a powered
