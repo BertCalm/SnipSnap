@@ -88,11 +88,15 @@ object NimbusAuditionGenerator {
         require(baselineDir == null || baselineDir.canonicalFile != root.canonicalFile) { "preserve the previous audition in a separate baseline directory" }
         if ("--refresh-page" in args) {
             require(!quick && baselineDir == null && !compareHold) { "refresh uses the existing audition manifest and its comparison" }
-            val manifestText = File(root, "manifest.json").readText()
-            val manifest = Json.parse(manifestText).obj()
+            val manifest = Json.parse(File(root, "manifest.json").readText()).obj()
             require(manifest.getValue("engine").str() == "NIMBUS")
             val clips = manifest.getValue("clips").arr().map { row ->
-                Clip(row.obj().mapValues { fromJson(it.value) }).also { clip ->
+                val evidence = row.obj().mapValues { fromJson(it.value) }
+                val refreshed = if (evidence.getValue("category") != "comparison") evidence else evidence +
+                    ("description" to comparisonDescription(evidence.getValue("comparisonVersion") as String,
+                        evidence.getValue("voice") as String, evidence.getValue("loop") as Boolean,
+                        evidence.getValue("comparisonBaselineRevision") as String))
+                Clip(refreshed).also { clip ->
                     for (key in listOf("path", "eventPath")) {
                         val asset = File(root, clip.evidence.getValue(key) as String).canonicalFile
                         require(asset.toPath().startsWith(root.canonicalFile.toPath()) && asset.isFile)
@@ -100,6 +104,14 @@ object NimbusAuditionGenerator {
                 }
             }
             require(manifest.getValue("clipCount").int() == clips.size && clips.isNotEmpty())
+            val refreshedManifest = manifest.toMutableMap().apply {
+                put("clips", json(clips.map { it.evidence }))
+                // These describe presentation only; sourceRevision/workingTreeDirty stay the audio provenance.
+                put("pageRevision", json(git("rev-parse", "HEAD")))
+                put("pageWorkingTreeDirty", json(git("status", "--porcelain")?.isNotBlank()))
+            }
+            val manifestText = Json.write(JsonValue.Obj(refreshedManifest)) + "\n"
+            File(root, "manifest.json").writeText(manifestText)
             writePage(root, clips, manifestText)
             println("Refreshed ${clips.size} Nimbus cards; audio and mechanical records unchanged")
             return
@@ -358,6 +370,8 @@ object NimbusAuditionGenerator {
         }
         val comparison = if (baselineDir == null) null else appendComparison(
             root, clips, baselineDir, requireNotNull(baselineRevision), compareHold)
+        val sourceRevision = git("rev-parse", "HEAD")
+        val sourceDirty = git("status", "--porcelain")?.isNotBlank()
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "NIMBUS", "formatVersion" to 1, "clipCount" to clips.size, "quick" to quick,
             "description" to "Dry listening evidence for the Nimbus port; sonic acceptance remains pending owner listening.",
@@ -369,7 +383,8 @@ object NimbusAuditionGenerator {
             "loopPlayback" to linkedMapOf("repeatByDefault" to true,
                 "mainControls" to "Sample-accurate buffer repeat with gain ramps only at playback start and stop.",
                 "singlePass" to "Turn Repeat off for one cycle with a smooth exit; WAV boundaries stay unchanged."),
-            "sourceRevision" to git("rev-parse", "HEAD"), "workingTreeDirty" to git("status", "--porcelain")?.isNotBlank(),
+            "sourceRevision" to sourceRevision, "workingTreeDirty" to sourceDirty,
+            "pageRevision" to sourceRevision, "pageWorkingTreeDirty" to sourceDirty,
             "renderMilliseconds" to totalRenderNanos / 1_000_000.0,
             "elapsedMilliseconds" to (System.nanoTime() - started) / 1_000_000.0,
             "peakObservedUsedHeapBytes" to peakObservedHeap,
@@ -482,14 +497,6 @@ object NimbusAuditionGenerator {
             val held = revised.getValue("loop") as Boolean
             val note = noteName((revised.getValue("requestedMidi") as Number).toInt())
             val group = "$voice · $note${if (held) " · settled HOLD" else " · default event"}"
-            val question = when (voice) {
-                "RING" -> "Can you hear distinct metal weight and upper-mode responses around the same note?"
-                "SHIMMER" -> "Does the fine upper-mode response and tail give SHIMMER a recognizable character?"
-                "GATHER" -> "Does the attack lead to an audible spread and gathering gesture?"
-                "THROAT" -> "Does concentrated chamber loading give THROAT a recognizable dark body and tail?"
-                "CONTACT" -> "Does the wire and rim response give CONTACT a recognizable character while the requested root remains clear?"
-                else -> "Does supported metal have a recognizable texture and decay rather than a uniform bell envelope?"
-            }
             for ((version, evidence) in listOf("before" to previous, "revised" to revised)) {
                 val id = "comparison_${version}_$sourceId"
                 val path = "clips/${id}_listen_012.wav"
@@ -511,9 +518,7 @@ object NimbusAuditionGenerator {
                 ) else linkedMapOf("currentSourceClipId" to sourceId, "currentSourceAudioSha256" to sha256(wav))
                 clips += Clip(evidence + linkedMapOf(
                     "id" to id, "title" to "${if (version == "before") "BEFORE" else "REVISED"} · $voice · $note${if (held) " · HOLD" else ""}",
-                    "description" to if (version == "before")
-                        "Preserved previous version from ${revision.take(12)}, copied without changing its PCM audio or listening gain. Compare the revised partner at the same note, controls and event velocity. $question"
-                    else "Listening revision using the same note, controls and event velocity as the previous partner. $question Compare the attack, body and tail; listening acceptance remains open.",
+                    "description" to comparisonDescription(version, voice, held, revision),
                     "category" to "comparison", "group" to group, "path" to path, "eventPath" to eventPath,
                     "comparisonVersion" to version, "comparisonBaselineRevision" to revision,
                     "renderMilliseconds" to 0.0,
@@ -529,8 +534,31 @@ object NimbusAuditionGenerator {
         )
     }
 
+    private fun comparisonDescription(version: String, voice: String, held: Boolean, revision: String): String {
+        require(version == "before" || version == "revised")
+        val context = if (version == "before")
+            "Preserved previous version from ${revision.take(12)}, copied without changing its PCM audio or listening gain. Compare the revised partner at the same note, controls and event velocity."
+        else "Listening revision using the same note, controls and event velocity as the previous partner."
+        val question = if (held) {
+            val texture = when (voice) {
+                "SHIMMER" -> "fine sustained upper texture"
+                "CONTACT" -> "sustained rim and upper texture"
+                else -> "supported sustained upper texture"
+            }
+            "How do the $texture and motion compare across several repeated cycles? Does the shared requested note stay recognizable throughout?"
+        } else when (voice) {
+            "RING" -> "Can you hear distinct metal weight and upper-mode responses around the same note? Compare the attack, body and tail."
+            "SHIMMER" -> "Does the fine upper-mode response and tail give SHIMMER a recognizable character? Compare the attack, body and tail."
+            "GATHER" -> "Does the attack lead to an audible spread and gathering gesture? Compare the body and tail."
+            "THROAT" -> "Does concentrated chamber loading give THROAT a recognizable dark body and tail? Compare the attack and decay."
+            "CONTACT" -> "Does the wire and rim response give CONTACT a recognizable character while the requested root remains clear? Compare the attack, body and tail."
+            else -> "Does supported metal have a recognizable texture and decay rather than a uniform bell envelope? Compare the attack, body and tail."
+        }
+        return "$context $question Listening acceptance remains open."
+    }
+
     private val categories = linkedMapOf(
-        "comparison" to ("Previous and revised: are the voices distinct?" to "The first audition was heard as predominantly bell-like across voices. Compare each preserved previous default with the revised default at the same note and velocity. Does the attack, upper-mode balance, motion and tail now give each voice a useful identity? Both versions use the same listening target; recipes and source hashes remain visible. Listening acceptance is open."),
+        "comparison" to ("Previous and revised: are the voices distinct?" to "The first audition was heard as predominantly bell-like across voices. Compare each preserved previous default with the revised default at the same note and velocity. Listen to attack, body and tail on finite pairs; compare sustained upper texture, motion and common-note recognition across repeated cycles on HOLD pairs. Both versions use the same listening target; recipes and source hashes remain visible. Listening acceptance is open."),
         "voices" to ("Six voices, three registers" to "Begin with defaults at C3, C4 and C5. Every voice keeps six persistent cymbal identities around the requested root; compare the selected attack and the gathering tail."),
         "presets" to ("Nine factory starting points" to "The exact saved dry recipes in SnipSnap. HELD METAL uses explicit powered sustain; its loop starts after the isolated attack."),
         "energy" to ("Physical velocity across the note range" to "Quiet and medium events at every voice/register complement the strong voice cards. Matched playback exposes modal excitation and stack movement rather than gain alone."),
@@ -637,15 +665,21 @@ object NimbusAuditionGenerator {
         val output = process.inputStream.bufferedReader().use { it.readText().trim() }
         output.takeIf { process.waitFor() == 0 }
     }.getOrNull()
-    /** URLs change across published revisions; disk paths and evidence hashes stay stable. */
+    /** Audio and presentation revisions identify URLs; disk paths and evidence hashes stay stable. */
     private fun assetCacheKey(manifestText: String): String {
         val manifest = Json.parse(manifestText).obj()
-        val revision = (manifest["sourceRevision"] as? JsonValue.Str)?.value
+        fun revision(key: String) = (manifest[key] as? JsonValue.Str)?.value
             ?.takeIf { it.matches(Regex("[0-9a-f]{40}")) }
-        val dirty = (manifest["workingTreeDirty"] as? JsonValue.Bool)?.value
-        if (revision != null && dirty == false) return revision
+        val audioRevision = revision("sourceRevision")
+        val audioDirty = (manifest["workingTreeDirty"] as? JsonValue.Bool)?.value
+        val hasPageRevision = manifest.containsKey("pageRevision")
+        val pageRevision = if (hasPageRevision) revision("pageRevision") else audioRevision
+        val pageDirty = if (hasPageRevision) (manifest["pageWorkingTreeDirty"] as? JsonValue.Bool)?.value else audioDirty
+        val key = (audioRevision ?: "dev") + if (pageRevision != null && pageRevision != audioRevision)
+            "-page-$pageRevision" else ""
+        if (audioRevision != null && pageRevision != null && audioDirty == false && pageDirty == false) return key
         val digest = sha256(manifestText.toByteArray(Charsets.UTF_8)).take(12)
-        return if (revision == null) "dev-$digest" else "$revision-${if (dirty == true) "dirty" else "dev"}-$digest"
+        return "$key-${if (audioDirty == true || pageDirty == true) "dirty" else "dev"}-$digest"
     }
     private fun assetUrl(path: String, cacheKey: String) = "$path?v=$cacheKey"
     private fun sha256(file: File): String = sha256(file.readBytes())
