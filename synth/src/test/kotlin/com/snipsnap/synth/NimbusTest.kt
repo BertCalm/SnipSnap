@@ -56,6 +56,9 @@ class NimbusTest {
         assertEquals(0.0, rms(rest.returns))
         assertEquals(0.0, rest.initialEnergy)
         assertEquals(0.0, rest.finalPassiveEnergy)
+        assertTrue(rest.bodyTransfers.isEmpty(), "an unexcited field scheduled a new metal response")
+        assertTrue(rest.snapshots.all { state -> state.bodyReservoirEnergy.all { it == 0.0 } },
+            "an unexcited field charged a hidden body reservoir")
     }
 
     @Test
@@ -105,6 +108,7 @@ class NimbusTest {
             }
             if (body.rootShare < .01) deficient += "$voice TUNE $tune lost material requested-root energy: ${body.rootShare}"
             val cents = FineTuning.cents(FineTuning.measuredHz(p.samples, Dsp.RATE, p.rootHz, .08f, .4f), p.rootHz.toDouble())
+            println("NIMBUS $voice TUNE $tune material principal: $cents cents")
             if (abs(cents) > 10.0) deficient += "$voice TUNE $tune material principal moved $cents cents"
         }
         assertTrue(deficient.isEmpty(), "Metal upper bands disappeared or collapsed into a sparse common-root bell: ${deficient.joinToString("; ")}")
@@ -144,8 +148,72 @@ class NimbusTest {
     }
 
     @Test
+    fun `one metal attack grows into several substantial native cymbal contributions`() {
+        // Shares exclude the shared principal, retain the actual simultaneous tap levels,
+        // and inspect the audible body rather than a nearly silent late tail. These bounds
+        // reject the c95 single-plate body; they do not replace the listening audition.
+        val deficient = mutableListOf<String>()
+        for (voice in NimbusVoice.entries) for (tune in floatArrayOf(0f, .5f, 1f)) {
+            val label = "$voice TUNE $tune"
+            val p = Nimbus.probe(voice, mapOf("TUNE" to tune), options = Nimbus.ProbeOptions(durationSeconds = 1.6f, snapshotStride = 65536))
+            val onset = DoubleArray(6) { bands(p.cymbals[it], p.rootHz.toDouble(), 0.0, .010, upperCutoff = 1.35).upperPower }
+            val selected = onset.indices.maxBy { onset[it] }
+            val onsetOthers = 1.0 - onset[selected] / onset.sum().coerceAtLeast(1e-30)
+            val body = ensemble(p, selected, .3, 1.5)
+            // CONTACT deliberately has a shorter upper tail. Require useful neighbor level
+            // in the audible gathering body, then assess later balance separately.
+            val audible = ensemble(p, selected, .08, .6)
+            val windows = listOf(.06 to .3, .3 to .8, .8 to 1.5).map { (start, end) -> ensemble(p, selected, start, end) }
+            val strongestShare = DoubleArray(6) { plate -> windows.maxOf { it.shares[plate] } }
+            println("NIMBUS $label ensemble: selected=$selected onsetOtherShare=$onsetOthers bodyShares=${body.shares.contentToString()} effective=${body.effectiveCount} otherFive/fullUpper=${body.otherToFullUpper} otherFive/attack=${body.otherToAttack} audibleBody/attack=${audible.otherToAttack} peakWindowShares=${strongestShare.contentToString()}")
+            for ((index, window) in windows.withIndex()) println("NIMBUS $label ensemble window $index shares=${window.shares.contentToString()} effective=${window.effectiveCount} otherFive/fullUpper=${window.otherToFullUpper}")
+            if (onsetOthers > .10) deficient += "$label seeded a simultaneous broad attack: other upper share=$onsetOthers"
+            if (body.effectiveCount <= 2.0 || body.shares.max() >= .70 || body.shares.count { it >= .05 } < 3) {
+                deficient += "$label body remains one plate: shares=${body.shares.contentToString()} effective=${body.effectiveCount}"
+            }
+            if (body.otherToFullUpper <= .35 || audible.otherToAttack <= .03) {
+                deficient += "$label neighbors are too quiet at whole-mix gain: laterOtherFive/fullUpper=${body.otherToFullUpper}, audibleBody/attack=${audible.otherToAttack}"
+            }
+            if (1.0 - body.shares[selected] - onsetOthers <= .25) {
+                deficient += "$label has no substantial growing neighbor body: onsetOtherShare=$onsetOthers bodyOtherShare=${1.0 - body.shares[selected]}"
+            }
+            for (plate in 0 until 6) if (strongestShare[plate] <= .005) {
+                deficient += "$label plate $plate never contributes substantial native upper energy: peakWindowShare=${strongestShare[plate]}"
+            }
+            val contributors = body.shares.indices.sortedByDescending { body.shares[it] }.take(3)
+            val signatures = contributors.associateWith { plate -> spectrum(p.cymbals[plate], p.rootHz * 1.35, .15) }
+            for ((index, plate) in contributors.withIndex()) for (other in contributors.take(index)) {
+                val contrast = spectralDifference(signatures.getValue(plate), signatures.getValue(other))
+                println("NIMBUS $label connected material $plate/$other upper contrast=$contrast")
+                if (contrast <= .35) deficient += "$label connected material $plate/$other collapsed into the same upper spectrum: $contrast"
+            }
+        }
+        assertTrue(deficient.isEmpty(), "The gathering body lost the audible ensemble: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
+    fun `settled powered hold preserves actual six cymbal upper participation`() {
+        val deficient = mutableListOf<String>()
+        for (voice in NimbusVoice.entries) {
+            val p = Nimbus.probe(voice, mapOf("HOLD" to 1f), options = Nimbus.ProbeOptions(snapshotStride = 65536))
+            val end = p.samples.size.toDouble() / Dsp.RATE
+            val powers = DoubleArray(6) { bands(p.cymbals[it], p.rootHz.toDouble(), 0.0, end, upperCutoff = 1.35).upperPower }
+            val selected = powers.indices.maxBy { powers[it] }
+            val held = ensemble(p, selected, 0.0, end)
+            println("NIMBUS $voice HOLD ensemble: shares=${held.shares.contentToString()} effective=${held.effectiveCount} otherFive/fullUpper=${held.otherToFullUpper}")
+            if (held.effectiveCount <= 2.0 || held.shares.max() >= .70 || held.shares.min() <= .01 || held.otherToFullUpper <= .45) {
+                deficient += "$voice held ensemble collapsed: shares=${held.shares.contentToString()} effective=${held.effectiveCount} otherFive/fullUpper=${held.otherToFullUpper}"
+            }
+            if (bands(p.samples, p.rootHz.toDouble(), 0.0, end).upperShare < .15) deficient += "$voice held upper material became too quiet"
+            if (p.seamError >= 1e-3) deficient += "$voice held participation is not continuous: seam=${p.seamError}"
+            if (p.bodyTransfers.isNotEmpty()) deficient += "$voice repeatedly schedules gathering attacks inside settled HOLD"
+        }
+        assertTrue(deficient.isEmpty(), "Powered HOLD lost the settled ensemble: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
     fun `a selected strike reaches silent neighbors through the coupled structure`() {
-        val options = Nimbus.ProbeOptions(funnelEnabled = false, contactsEnabled = false, selectedCymbal = 0, durationSeconds = .8f)
+        val options = Nimbus.ProbeOptions(funnelEnabled = false, contactsEnabled = false, selectedCymbal = 0, durationSeconds = 1.6f)
         val macros = mapOf("SPACING" to .1f, "FIELD" to .7f)
         val isolated = Nimbus.probe(NimbusVoice.RING, macros, options = options.copy(couplingEnabled = false))
         val coupled = Nimbus.probe(NimbusVoice.RING, macros, options = options)
@@ -158,6 +226,15 @@ class NimbusTest {
         val remoteStart = firstAudible(coupled.cymbals[5])
         assertTrue(remoteStart > sourceStart, "a remote plate answered before finite transfer: $sourceStart -> $remoteStart")
         assertTrue(relativeDifference(coupled.samples, isolated.samples) > .03, "sympathetic transfer is inaudible")
+        val body = ensemble(coupled, 0, .3, 1.5)
+        println("NIMBUS source-only causal ensemble: shares=${body.shares.contentToString()} effective=${body.effectiveCount} otherFive/fullUpper=${body.otherToFullUpper} otherFive/attack=${body.otherToAttack}")
+        assertTrue(body.effectiveCount > 2.0 && body.shares.max() < .70 && body.shares.count { it >= .05 } >= 3,
+            "coupling reaches modal states but not several audible native upper bodies: ${body.shares.contentToString()}")
+        val audible = ensemble(coupled, 0, .08, .6)
+        assertTrue(body.otherToFullUpper > .35 && audible.otherToAttack > .03,
+            "causal upper neighbors remain below the whole-mix listening level: later ${body.otherToFullUpper}, audible body ${audible.otherToAttack}")
+        for (plate in 1 until 6) assertTrue(body.shares[plate] > .005,
+            "causal neighbor $plate has no meaningful native upper contribution: ${body.shares[plate]}")
     }
 
     @Test
@@ -183,6 +260,14 @@ class NimbusTest {
         )
         assertTrue(p.initialEnergy > 0.0, "event stored no energy")
         assertEquals(0.0, p.poweredDriveWork, "one-shot levitation supplied sustain energy")
+        assertTrue(p.bodyTransfers.any { it.cymbal != p.selectedCymbal && it.injectedEnergy > 0.0 },
+            "finite field energy never paid for a neighboring native body")
+        assertTrue(p.bodyTransfers.all { event ->
+            event.timeSeconds > 0f && event.gap.isFinite() && event.gap > 0f &&
+                event.reservedEnergy.isFinite() && event.reservedEnergy > 0.0 &&
+                event.injectedEnergy.isFinite() && event.injectedEnergy >= 0.0 &&
+                event.injectedEnergy <= event.reservedEnergy * (1 + 1e-10) + 1e-14
+        }, "a native body release exceeded its reserved passive work or escaped real geometry")
         assertTrue(p.samples.all { it.isFinite() })
         assertTrue(p.rawPeak < 1f, "raw extreme peak ${p.rawPeak} escaped its headroom")
         assertTrue(p.snapshots.isNotEmpty())
@@ -493,12 +578,34 @@ class NimbusTest {
         return sqrt(difference / n.coerceAtLeast(1))
     }
 
-    private data class Bands(
-        val rootShare: Double, val upperShare: Double, val highShare: Double,
-        val upperOccupied: Int, val profile: DoubleArray,
+    private data class Ensemble(
+        val shares: DoubleArray, val effectiveCount: Double, val otherToFullUpper: Double, val otherToAttack: Double,
     )
 
-    private fun bands(samples: FloatArray, root: Double, start: Double, end: Double): Bands {
+    private fun ensemble(p: Nimbus.Probe, selected: Int, start: Double, end: Double): Ensemble {
+        val root = p.rootHz.toDouble()
+        // Include every material's lowest native upper (1.54–2.06x root). The separate
+        // full-mix richness checks keep their broader >=1.8x-root threshold.
+        val powers = DoubleArray(6) { bands(p.cymbals[it], root, start, end, upperCutoff = 1.35).upperPower }
+        val total = powers.sum().coerceAtLeast(1e-30)
+        val shares = DoubleArray(6) { powers[it] / total }
+        val others = FloatArray(p.samples.size) { frame ->
+            var sum = 0.0
+            for (plate in 0 until 6) if (plate != selected) sum += p.cymbals[plate][frame]
+            sum.toFloat()
+        }
+        val otherUpper = sqrt(bands(others, root, start, end, upperCutoff = 1.35).upperPower)
+        val wholeUpper = sqrt(bands(p.samples, root, start, end, upperCutoff = 1.35).upperPower).coerceAtLeast(1e-30)
+        val attack = rms(p.samples, 0, minOf(p.samples.size, (.15 * Dsp.RATE).roundToInt())).coerceAtLeast(1e-30)
+        return Ensemble(shares, 1.0 / shares.sumOf { it * it }.coerceAtLeast(1e-30), otherUpper / wholeUpper, otherUpper / attack)
+    }
+
+    private data class Bands(
+        val rootShare: Double, val upperShare: Double, val highShare: Double,
+        val upperOccupied: Int, val profile: DoubleArray, val upperPower: Double,
+    )
+
+    private fun bands(samples: FloatArray, root: Double, start: Double, end: Double, upperCutoff: Double = 1.8): Bands {
         val from = (start * Dsp.RATE).roundToInt()
         val count = minOf(samples.size - from, ((end - start) * Dsp.RATE).roundToInt())
         require(count > 8)
@@ -506,7 +613,12 @@ class NimbusTest {
         while (n < count) n *= 2
         val re = FloatArray(n)
         val im = FloatArray(n)
-        for (i in 0 until count) re[i] = (samples[from + i] * (.5 - .5 * cos(2 * PI * i / (count - 1)))).toFloat()
+        var windowPower = 0.0
+        for (i in 0 until count) {
+            val window = .5 - .5 * cos(2 * PI * i / (count - 1))
+            re[i] = (samples[from + i] * window).toFloat()
+            windowPower += window * window
+        }
         Fft.forward(re, im)
         // Center a band on the requested root. A root at a band boundary could make tiny
         // phase/loading shifts look like a substantial change in an otherwise identical bell.
@@ -523,16 +635,19 @@ class NimbusTest {
             val energy = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
             total += energy
             if (hz in root * .94..root * 1.06) principal += energy
-            if (hz >= root * 1.8) upper += energy
+            if (hz >= root * upperCutoff) upper += energy
             if (hz >= root * 4.0) high += energy
             while (band < energyBands.size && hz >= edges[band + 1]) band++
             if (band < energyBands.size && hz >= edges[band]) energyBands[band] += energy
         }
         val denominator = total.coerceAtLeast(1e-30)
-        val occupied = energyBands.indices.count { edges[it] >= root * 1.8 && energyBands[it] >= total * .005 }
+        val occupied = energyBands.indices.count { edges[it] >= root * upperCutoff && energyBands[it] >= total * .005 }
         val inBands = energyBands.sum().coerceAtLeast(1e-30)
         val profile = DoubleArray(energyBands.size) { sqrt(energyBands[it] / inBands) }
-        return Bands(principal / denominator, upper / denominator, high / denominator, occupied, profile)
+        // Parseval plus the Hann power correction retains each tap's actual physical level.
+        // A normalized upper spectrum alone could certify an inaudibly quiet neighbor.
+        return Bands(principal / denominator, upper / denominator, high / denominator, occupied, profile,
+            2.0 * upper / (n * windowPower))
     }
 
     private fun envelope(samples: FloatArray): DoubleArray {
@@ -545,9 +660,9 @@ class NimbusTest {
         return DoubleArray(energies.size) { sqrt(energies[it] / total) }
     }
 
-    private fun spectrum(samples: FloatArray, minimumHz: Double = 0.0): DoubleArray {
+    private fun spectrum(samples: FloatArray, minimumHz: Double = 0.0, startSeconds: Double = .015): DoubleArray {
         val n = 16384
-        val from = (.015f * Dsp.RATE).roundToInt()
+        val from = (startSeconds * Dsp.RATE).roundToInt()
         val count = minOf(n, samples.size - from)
         val re = FloatArray(n)
         val im = FloatArray(n)

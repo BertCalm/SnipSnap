@@ -44,11 +44,14 @@ object Nimbus {
     private const val DEFAULT_CONTROL_STRIDE = 128
     private const val SNAPSHOT_STRIDE = 4096
     private const val HOLD_PREROLL_CYCLES = 6
-    private const val OUTPUT_TRIM = .38
+    private const val OUTPUT_TRIM = .34
     private const val MASS = .08
     private const val RIM_SCALE = 6.0
     private const val CONTACT_STIFFNESS = 850.0
     private const val CONTACT_CAP = .003
+    // Musical limits for the imaginary field-mediated body release, not measured magnetics.
+    private const val BODY_ONSET_SECONDS = .90
+    private const val BODY_RELEASES_PER_PLATE = 2
 
     private data class Shape(
         val excite: Float, val spacing: Float, val height: Float, val field: Float, val funnel: Float,
@@ -59,8 +62,8 @@ object Nimbus {
     private fun shape(voice: NimbusVoice) = when (voice) {
         NimbusVoice.RING -> Shape(.50f, .70f, .65f, .55f, .35f, 0, 1.0, .38, .15, 1.10, 1.05, .42, 1)
         NimbusVoice.SHIMMER -> Shape(.35f, .50f, .70f, .45f, .50f, 2, .74, .14, .95, .85, 1.05, .95, 3)
-        NimbusVoice.GATHER -> Shape(.65f, .35f, .50f, .35f, .55f, 4, .90, .26, .45, 1.10, .88, .74, 2)
-        NimbusVoice.THROAT -> Shape(.45f, .45f, .15f, .50f, .85f, 3, .69, .24, -1.10, 1.50, 1.45, .65, 1)
+        NimbusVoice.GATHER -> Shape(.65f, .35f, .50f, .35f, .55f, 4, .90, .23, .50, 1.40, .88, .74, 2)
+        NimbusVoice.THROAT -> Shape(.45f, .45f, .15f, .50f, .85f, 3, .69, .24, -2.00, 1.50, 1.45, .65, 1)
         NimbusVoice.CONTACT -> Shape(.65f, .10f, .50f, .55f, .55f, 5, .65, .17, .90, .80, 1.06, .34, 4)
         NimbusVoice.SUSPEND -> Shape(.30f, .55f, .55f, .65f, .65f, 1, 1.20, .22, -.10, 1.65, .72, 2.60, 2)
     }
@@ -77,6 +80,7 @@ object Nimbus {
         )
     }
     fun defaults(voice: NimbusVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
+    internal fun selectedCymbalFor(voice: NimbusVoice): Int = shape(voice).selected
     internal fun settled(voice: NimbusVoice, macros: Map<String, Float>): Map<String, Float> =
         defaults(voice).mapValues { (key, default) -> (macros[key]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f) }
     fun rootMidi(@Suppress("UNUSED_PARAMETER") voice: NimbusVoice): Int = ROOT_MIDI
@@ -117,6 +121,18 @@ object Nimbus {
         val controllerWork: Double,
         val contactPenetration: Float,
         val geometryValid: Boolean,
+        val plateEnergy: DoubleArray = DoubleArray(0),
+        val plateUpperEnergy: DoubleArray = DoubleArray(0),
+        val bodyReservoirEnergy: DoubleArray = DoubleArray(0),
+    )
+    internal data class BodyTransferEvent(
+        val timeSeconds: Float,
+        val cymbal: Int,
+        val source: Int,
+        val reservedEnergy: Double,
+        val injectedEnergy: Double,
+        val gathering: Boolean,
+        val gap: Float,
     )
     internal data class Probe(
         val samples: FloatArray,
@@ -137,6 +153,8 @@ object Nimbus {
         val seamError: Double = 0.0,
         val sampleRate: Int = RATE,
         val loopStartFrame: Int = 0,
+        val selectedCymbal: Int = 0,
+        val bodyTransfers: List<BodyTransferEvent> = emptyList(),
     )
 
     // Body, Bell, Paper, Dark, Flex, Wire. These are persistent identities, not voice enums.
@@ -205,7 +223,10 @@ object Nimbus {
         return Probe(audio, Array(CYMBALS) { tap(it + 1) }, tap(7), tap(8), tap(9), snapshots,
             rawPeak, result.initialEnergy, simulation.passiveEnergy(), root.toFloat(),
             Array(CYMBALS) { RATIOS[it].map(Double::toFloat).toFloatArray() }, result.peakPenetration,
-            result.contacts, simulation.driveWork, previous, seam)
+            result.contacts, simulation.driveWork, previous, seam,
+            selectedCymbal = (options.selectedCymbal ?: shape(voice).selected).coerceIn(0, CYMBALS - 1),
+            bodyTransfers = if (held) simulation.bodyTransfers.filter { it.timeSeconds >= offset && it.timeSeconds < offset + cycle.toFloat() / INTERNAL_RATE }
+                .map { it.copy(timeSeconds = it.timeSeconds - offset) } else simulation.bodyTransfers.toList())
     }
 
     /** Exact energy-normalized free rotation; a finite impulse is a velocity increment. */
@@ -234,6 +255,7 @@ object Nimbus {
         fun displacement(b: DoubleArray): Double { var value = 0.0; for (i in 0 until size) value += b[i] * x[i] / w[i]; return value }
         fun addVelocity(b: DoubleArray, delta: Double) { for (i in 0 until size) v[i] += b[i] * delta }
         fun energy(): Double { var e = 0.0; for (i in 0 until size) e += .5 * (x[i] * x[i] + v[i] * v[i]); return e }
+        fun upperEnergy(): Double { var e = 0.0; for (i in 1 until size) e += .5 * (x[i] * x[i] + v[i] * v[i]); return e }
         fun deplete(amount: Double): Double {
             val e = energy()
             val taken = minOf(e, max(0.0, amount))
@@ -301,6 +323,28 @@ object Nimbus {
             for (j in b.indices) b[j] *= sqrt(1 - rootShare)
             b
         }
+        // A separate root-free flexural port preserves each material's upper response.
+        // It carries actual wave energy; receivers can store some of that energy before
+        // spending it on their own finite body projection rather than on the donor's pitch.
+        private val bodyPort = Array(CYMBALS) { normalize(bodyImpulse[it].copyOf()) }
+        private val bodyWaves = Array(10) { p ->
+            Delay(.012 + .023 * spacing + .0011 * (p / 2), .945 - .015 * spacing)
+        }
+        private val bodyReservoir = DoubleArray(CYMBALS)
+        private val bodyPending = DoubleArray(CYMBALS)
+        private val bodyChargeFrame = IntArray(CYMBALS) { -1 }
+        private val bodyReleaseAge = IntArray(CYMBALS) { -1 }
+        private val bodyReleaseAmplitude = DoubleArray(CYMBALS)
+        private val bodyArrivalSign = DoubleArray(CYMBALS) { 1.0 }
+        private val bodyReleaseSign = DoubleArray(CYMBALS) { 1.0 }
+        private val bodyChargeThreshold = .00010 * eventVelocity * eventVelocity
+        private val bodySource = IntArray(CYMBALS) { -1 }
+        private val bodySourcePeak = DoubleArray(CYMBALS)
+        private val bodyReleaseCount = IntArray(CYMBALS)
+        private val bodyEventIndex = IntArray(CYMBALS) { -1 }
+        val bodyTransfers = ArrayList<BodyTransferEvent>()
+        private val bodyLeak = exp(-1.0 / (.11 * INTERNAL_RATE))
+        private val bodyBurstFrames = ((.000045 + .00005 * (1 - excite)) * INTERNAL_RATE).roundToInt().coerceAtLeast(8)
         private val chamberPort = Array(CYMBALS) { i -> normalize(DoubleArray(4) { j -> .36 + .60 * abs(sin((i + 1) * (j + 1) * .73)) }) }
         private val gap = .032 + .104 * spacing * spacing * spacing
         private val restSpan = 5 * gap
@@ -335,7 +379,7 @@ object Nimbus {
         private val driveSin = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> sin(2 * PI * rates[i][j] / INTERNAL_RATE) } }
         private val drivePhase = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> if (j == 0) (if (i % 2 == 0) -.90 else .90) + .03 * random.nextDouble() else 2 * PI * random.nextDouble() } }
         private val driveAmplitude = Array(CYMBALS) { i -> DoubleArray(MODES) { j ->
-            val preference = .24 + .76 * exp(-abs(i - selected) * (.58 + .32 * excite))
+            val preference = .30 + .70 * exp(-abs(i - selected) * (.58 + .32 * excite))
             val target = if (j == 0) (if (selected == 5) .26 else .12) * sqrt(rootShare) * preference else
                 (.115 + .035 * funnel) * bodyImpulse[i][j] * shape.releaseStrength * preference
             2 * 6.907755278982137 / lossTimes[i][j] / INTERNAL_RATE * target
@@ -343,6 +387,13 @@ object Nimbus {
         var driveWork = 0.0; private set
         private val incomingNeighbors = DoubleArray(10)
         private val outgoingNeighbors = DoubleArray(10)
+        private val incomingBody = DoubleArray(10)
+        private val outgoingBody = DoubleArray(10)
+        private val bodyCos = DoubleArray(5)
+        private val bodySin = DoubleArray(5)
+        private val donorBodyCos = DoubleArray(5)
+        private val donorBodySin = DoubleArray(5)
+        private var bodyWindow = true
         private val incomingEarly = DoubleArray(12)
         private val outgoingEarly = DoubleArray(12)
         private val neighborCos = DoubleArray(5)
@@ -382,6 +433,16 @@ object Nimbus {
                     (separation * (1 + .5 * spacing))
                 val angle = sqrt(coupling / INTERNAL_RATE)
                 neighborCos[i] = cos(angle); neighborSin[i] = sin(angle)
+                // Close, yielding stacks exchange body energy quickly; spread plates take
+                // longer to charge and give it back. This uses the actual suspension gap.
+                val bodyCoupling = if (bodyWindow) (130.0 + 340.0 * (1 - spacing)) *
+                    (.65 + .35 * field) / separation else 0.0
+                val bodyAngle = sqrt(bodyCoupling / INTERNAL_RATE)
+                bodyCos[i] = cos(bodyAngle); bodySin[i] = sin(bodyAngle)
+                // The struck Flex face is more susceptible to the field: it donates more
+                // of its existing upper energy through the same passive wave junction.
+                val donorAngle = bodyAngle * (if (selected == 4) sqrt(1.40) else 1.0)
+                donorBodyCos[i] = cos(donorAngle); donorBodySin[i] = sin(donorAngle)
             }
             for (i in 0 until CYMBALS) {
                 val enclosure = funnel * (1 - z[i])
@@ -394,7 +455,9 @@ object Nimbus {
                     // Static chamber loading changes losses, not note. Only Flex yields a tiny
                     // bounded transient stiffness shift; exact rotations still preserve energy.
                     val flex = if (i == 4) 1 + moving * (if (j == 0) .0005 else .008 + .004 * sin(j * .91)) else 1.0
-                    val t60 = lossTimes[i][j] / (1 + enclosure * (.30 + .72 * ln(RATIOS[i][j])) + moving * .045)
+                    // Enclosure remains dissipative, but its growing upper loss is gentle
+                    // enough to preserve recipient bodies after the finite field transfer.
+                    val t60 = lossTimes[i][j] / (1 + enclosure * (.25 + .25 * ln(RATIOS[i][j])) + moving * .045)
                     // Mouth exposure radiates more upper flexural modes. This is independent
                     // of overall level, while enclosure also changes the actual modal losses.
                     pickup[i][j] = if (!supported[i][j]) 0.0 else if (j == 0) .76 else
@@ -413,7 +476,8 @@ object Nimbus {
             return e
         }
         fun passiveEnergy(): Double = plates.sumOf { it.energy() } + chamber.energy() +
-            (if (options.couplingEnabled) neighbors.sumOf { it.energy() } else 0.0) +
+            (if (options.couplingEnabled) neighbors.sumOf { it.energy() } + bodyWaves.sumOf { it.energy() } else 0.0) +
+            bodyReservoir.sum() + bodyPending.sum() +
             (if (options.funnelEnabled) early.sumOf { it.energy() } else 0.0) + mechanicalEnergy() + contactEnergy
         private fun depleteModal(amount: Double): Double {
             val total = plates.sumOf { it.energy() }
@@ -462,6 +526,91 @@ object Nimbus {
             bank.addVelocity(b, (c - 1) * v + s * wave)
             return -s * v + c * wave
         }
+        /** Split an arriving wave without gain: the missing wave energy charges the field. */
+        private fun receiveBody(cymbal: Int, source: Int, wave: Double, frame: Int): Double {
+            // The initially struck plate donates and reacts through ordinary wave ports;
+            // only unstruck recipients turn stored field energy into native body answers.
+            if (!bodyWindow || cymbal == selected || bodyReleaseCount[cymbal] >= BODY_RELEASES_PER_PLATE) return wave
+            val absorbed = .44
+            val deposit = .5 * absorbed * wave * wave
+            bodyReservoir[cymbal] += deposit
+            if (bodyChargeFrame[cymbal] < 0 && bodyReservoir[cymbal] > max(1e-9, bodyChargeThreshold)) bodyChargeFrame[cymbal] = frame
+            if (abs(wave) > bodySourcePeak[cymbal]) {
+                bodySourcePeak[cymbal] = abs(wave)
+                bodySource[cymbal] = source
+                bodyArrivalSign[cymbal] = if (wave < 0) -1.0 else 1.0
+            }
+            return sqrt(1 - absorbed) * wave
+        }
+        /**
+         * Only energy that arrived through a body wave can pay for a recipient flex release.
+         * A bounded charging interval follows the real gap and returning suspension motion.
+         * Positive velocity-increment work is paid exactly; negative work is dissipated.
+         */
+        private fun releaseBodies(frame: Int) {
+            for (i in 0 until CYMBALS) {
+                bodyReservoir[i] *= bodyLeak
+                if (!bodyWindow) bodyChargeFrame[i] = -1
+                if (bodyWindow && bodyChargeFrame[i] >= 0 && bodyReleaseAge[i] < 0 &&
+                    bodyReleaseCount[i] < BODY_RELEASES_PER_PLATE) {
+                    val source = bodySource[i].coerceIn(0, CYMBALS - 1)
+                    val gapNow = if (source == i) gap else abs(z[i] - z[source])
+                    val separation = (gapNow / gap).coerceIn(.5, 1.5)
+                    val yielding = abs(z[i] - resting[i]) / displacementBound
+                    val gathering = (z[i] - resting[i]) * velocity[i] < 0
+                    val wait = (.014 + .032 * spacing) * separation * (1 + .45 * yielding) *
+                        (if (gathering) .67 else 1.0) / (.82 + .35 * field)
+                    if (frame - bodyChargeFrame[i] >= wait * INTERNAL_RATE && bodyReservoir[i] > 1e-8) {
+                        val reserved = bodyReservoir[i] * .88
+                        bodyReservoir[i] -= reserved
+                        bodyPending[i] = reserved
+                        bodyReleaseAmplitude[i] = sqrt(2 * reserved)
+                        // Stored energy has no retained carrier phase. Let a flex release
+                        // accelerate the recipient's own motion, rather than canceling its
+                        // previous native ring because a donor wave happened to oppose it.
+                        val recipientVelocity = plates[i].velocity(bodyPort[i])
+                        bodyReleaseSign[i] = if (abs(recipientVelocity) > 1e-9) {
+                            if (recipientVelocity < 0) -1.0 else 1.0
+                        } else bodyArrivalSign[i]
+                        bodyReleaseAge[i] = 0
+                        bodyReleaseCount[i]++
+                        bodyChargeFrame[i] = -1
+                        bodySourcePeak[i] = 0.0
+                        if (options.recordDiagnostics) {
+                            bodyEventIndex[i] = bodyTransfers.size
+                            bodyTransfers.add(BodyTransferEvent(frame.toFloat() / INTERNAL_RATE, i, source,
+                                reserved, 0.0, gathering, gapNow.toFloat()))
+                        }
+                    }
+                }
+                val age = bodyReleaseAge[i]
+                if (age >= 0) {
+                    val pulse = sin(PI * (age + .5) / bodyBurstFrames) * PI / (2 * bodyBurstFrames)
+                    val direction = bodyReleaseSign[i]
+                    var amount = bodyReleaseAmplitude[i] * pulse
+                    val projected = direction * plates[i].velocity(bodyPort[i])
+                    val wanted = projected * amount + .5 * amount * amount
+                    if (wanted > bodyPending[i]) {
+                        amount = max(0.0, -projected + sqrt(projected * projected + 2 * bodyPending[i]))
+                    }
+                    val paid = max(0.0, projected * amount + .5 * amount * amount)
+                    plates[i].addVelocity(bodyPort[i], direction * amount)
+                    bodyPending[i] = max(0.0, bodyPending[i] - paid)
+                    val index = bodyEventIndex[i]
+                    if (index >= 0) {
+                        val event = bodyTransfers[index]
+                        bodyTransfers[index] = event.copy(injectedEnergy = event.injectedEnergy + paid)
+                    }
+                    bodyReleaseAge[i]++
+                    if (bodyReleaseAge[i] >= bodyBurstFrames) {
+                        bodyPending[i] = 0.0 // Unspent reserved work is a loss, never a fresh attack.
+                        bodyReleaseAge[i] = -1
+                        bodyEventIndex[i] = -1
+                    }
+                }
+                if (bodyReservoir[i] < 1e-25) bodyReservoir[i] = 0.0
+            }
+        }
         private fun contacts(): Double {
             var audible = 0.0
             contactEnergy = 0.0
@@ -505,16 +654,16 @@ object Nimbus {
             if (options.recordDiagnostics) snapshots.add(snapshot(0))
             for (frame in 0 until frames) {
                 if (frame % 8192 == 0 && cancelled()) throw CancellationException("NIMBUS render cancelled")
+                if (bodyWindow && frame >= BODY_ONSET_SECONDS * INTERNAL_RATE) { bodyWindow = false; load() }
                 if (frame % controlStride == 0) control()
                 for (plate in plates) plate.step()
                 chamber.step()
                 if (options.primaryStrikeEnabled && frame < eventFrames && eventVelocity > 0) {
                     val rootPulse = if (frame < pulseFrames) sin(PI * (frame + .5) / pulseFrames) * PI / (2 * pulseFrames) else 0.0
-                    for (i in 0 until CYMBALS) {
-                        val distance = abs(i - selected)
-                        val distribution = if (options.selectedCymbal != null) { if (distance == 0) 1.0 else 0.0 }
-                            else if (distance == 0) .79 + .13 * excite else (.13 + .30 * (1 - excite)) * exp(-distance * (.65 + .66 * excite))
-                        val strength = eventVelocity * (.79 + .26 * excite) * distribution
+                    // The selected plate is the only initial source. Every other native
+                    // body response is funded by subsequent wave, chamber or rim interaction.
+                    for (i in selected..selected) {
+                        val strength = eventVelocity * (.79 + .26 * excite)
                         val before = plates[i].energy()
                         plates[i].v[0] += sqrt(rootShare) * strength * rootPulse
                         for (release in 0 until shape.releases) {
@@ -559,6 +708,34 @@ object Nimbus {
                         returnAudio += incomingNeighbors[2 * i] + incomingNeighbors[2 * i + 1]
                     }
                     for (p in neighbors.indices) neighbors[p].put(outgoingNeighbors[p])
+                    for (p in bodyWaves.indices) incomingBody[p] = bodyWaves[p].read()
+                    for (i in 0 until CYMBALS - 1) {
+                        val towardLower = receiveBody(i, i + 1, incomingBody[2 * i + 1], frame)
+                        val towardUpper = receiveBody(i + 1, i, incomingBody[2 * i], frame)
+                        // A recipient's finite charging port disengages after its two
+                        // funded answers, preserving its own native ring. The struck source
+                        // keeps donating stored body energy throughout the onset window.
+                        val lowerOpen = bodyWindow && (i == selected || bodyReleaseCount[i] < BODY_RELEASES_PER_PLATE)
+                        val upperOpen = bodyWindow && (i + 1 == selected || bodyReleaseCount[i + 1] < BODY_RELEASES_PER_PLATE)
+                        outgoingBody[2 * i] = if (lowerOpen) scatter(plates[i], bodyPort[i], towardLower,
+                            if (i == selected) donorBodyCos[i] else bodyCos[i],
+                            if (i == selected) donorBodySin[i] else bodySin[i]) else towardLower
+                        outgoingBody[2 * i + 1] = if (upperOpen) scatter(plates[i + 1], bodyPort[i + 1], towardUpper,
+                            if (i + 1 == selected) donorBodyCos[i] else bodyCos[i],
+                            if (i + 1 == selected) donorBodySin[i] else bodySin[i]) else towardUpper
+                    }
+                    // A passive direction permutation lets the field packet pass through
+                    // an interior plate instead of reflecting at every nearest-neighbor port.
+                    // Both modal scatters above are still reciprocal orthogonal junctions.
+                    for (i in 1 until CYMBALS - 1) {
+                        val lower = 2 * (i - 1) + 1
+                        val upper = 2 * i
+                        val swap = outgoingBody[lower]
+                        outgoingBody[lower] = outgoingBody[upper]
+                        outgoingBody[upper] = swap
+                    }
+                    for (p in bodyWaves.indices) bodyWaves[p].put(outgoingBody[p])
+                    releaseBodies(frame)
                 }
                 if (options.funnelEnabled) {
                     for (p in early.indices) incomingEarly[p] = early[p].read()
@@ -606,6 +783,8 @@ object Nimbus {
             velocity.map(Double::toFloat).toFloatArray(), plates.sumOf { it.energy() } + chamber.energy(), passiveEnergy(),
             mechanicalEnergy(), controllerWork, currentPenetration, z.all { it >= .01 && it <= .99 } &&
                 (0 until CYMBALS - 1).all { z[it + 1] - z[it] >= .017 },
+            DoubleArray(CYMBALS) { plates[it].energy() }, DoubleArray(CYMBALS) { plates[it].upperEnergy() },
+            DoubleArray(CYMBALS) { bodyReservoir[it] + bodyPending[it] },
         )
     }
     private fun normalize(values: DoubleArray): DoubleArray {

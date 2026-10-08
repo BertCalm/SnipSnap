@@ -70,6 +70,10 @@
     .clip-badges span { color:var(--muted); border:1px solid var(--line); border-radius:1rem; padding:.08rem .5rem; font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; }
     .clip h4 { font-size:1.08rem; line-height:1.45; margin:.75rem 0 .5rem; }
     .description { margin:0 0 .8rem; font-size:1rem; }
+    .sequence-now { border-left:2px solid var(--accent); padding-left:.65rem; color:var(--accent); font-size:.9rem; margin:0 0 .8rem; }
+    .sequence-stages { margin:0 0 .9rem; padding-left:1.5rem; font-size:.875rem; }
+    .sequence-stages li { margin:.2rem 0; }
+    .sequence-time { color:var(--muted); font-variant-numeric:tabular-nums; }
     .macro-line { font: .875rem/1.8 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--muted); margin:.2rem 0 .6rem; }
     .clip-meta { color:var(--muted); font-size:.875rem; margin:auto 0 .8rem; font-variant-numeric:tabular-nums; }
     .clip-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; }
@@ -79,6 +83,11 @@
     progress { width:100%; height:.3rem; margin:1rem 0 .55rem; accent-color:var(--accent); }
     details { font-size:.875rem; }
     .evidence { overflow-wrap:anywhere; }
+    .table-scroll { max-width:100%; overflow:auto; margin:.75rem 0; }
+    table { border-collapse:collapse; min-width:31rem; font-variant-numeric:tabular-nums; }
+    caption { text-align:left; font-weight:650; margin-bottom:.45rem; }
+    th,td { padding:.35rem .45rem; border-bottom:1px solid var(--line); text-align:right; }
+    th:first-child { text-align:left; }
     summary { cursor:pointer; min-height:36px; padding:.3rem 0; color:var(--muted); }
     dl { display:grid; grid-template-columns:1fr 1fr; gap:.25rem .75rem; margin:.5rem 0; font-variant-numeric:tabular-nums; }
     dd { margin:0; text-align:right; }
@@ -98,15 +107,16 @@
   <header class="shell hero">
     <p class="eyebrow">SnipSnap / dry engine audition</p>
     <div class="hero-title"><h1>Nimbus.</h1><span>Six rings, one note.</span></div>
-    <p class="intro">Six distinct metal cymbals share one requested note inside an imaginary funnel. A selected attack wakes neighboring rings; the suspended stack yields, then gathers into a shimmer.</p>
+    <p class="intro">Six metal identities share one requested note inside an imaginary funnel. Hear the connected whole, then compare the actual cymbal contributions to its attack, body and gathering tail.</p>
     <p class="read-first"><strong>Audio starts off.</strong> Read each clip's description before enabling playback. Nothing plays automatically.</p>
+    <!-- NIMBUS_ENSEMBLE_NOTE -->
     <!-- NIMBUS_COMPARISON_NOTE -->
     <details class="listening-guide"><summary>What to listen for: identity, movement and gathering</summary><div class="story" aria-label="The sound's three connected parts">
       <div><span>01 / Six cymbals</span><h2>One note, six characters</h2><p>Body, Bell, Paper, Dark, Flex and Wire have distinct upper modes and decay. Each principal mode belongs to the same requested root.</p></div>
       <div><span>02 / Suspension</span><h2>A stack that yields</h2><p>A harder event changes excitation and displacement. SPACING changes neighboring transfer; FIELD changes the stack's restoration. Compare matched velocity clips.</p></div>
       <div><span>03 / Funnel</span><h2>A gathering shimmer</h2><p>HEIGHT changes the source's position; FUNNEL changes its enclosure. Close rims can add contact, while powered HOLD supplies a settled sustain.</p></div>
     </div></details>
-    <p class="read-first">These clips document a new DSP port. Descriptions state intended behavior; <strong>listening acceptance remains open.</strong> Begin with RING at C4, then compare the isolated identities and HEIGHT × FUNNEL grid.</p>
+    <p class="read-first">These clips document a new DSP port. Descriptions state intended behavior; <strong>listening acceptance remains open.</strong> Begin with the natural whole instrument at C4. Compare its selected contribution, selected-muted mix and other five cymbals at the same playback level.</p>
   </header>
   <div class="transport">
     <div class="shell">
@@ -120,12 +130,12 @@
   </div>
   <main id="audition" class="shell" tabindex="-1">
     <form class="filters" aria-label="Filter audition clips" onsubmit="return false">
-      <label for="voice-filter">Voice<select id="voice-filter"><option value="all">All six voices</option><option>RING</option><option>SHIMMER</option><option>GATHER</option><option>THROAT</option><option>CONTACT</option><option>SUSPEND</option></select></label>
-      <label for="category-filter">Section<select id="category-filter"><option value="all">All sections</option><!-- NIMBUS_COMPARISON_FILTER --><option value="voices">Voices and registers</option><option value="presets">Factory presets</option><option value="energy">Physical velocity</option><option value="sweeps">Macro sweeps</option><option value="grids">Interaction grids</option><option value="levels">Raw and matched pairs</option><option value="diagnostics">Identity taps and causal probes</option><option value="hold">HOLD and loops</option></select></label>
+      <label for="voice-filter">Voice<select id="voice-filter"><option value="all">All voices</option><option>RING</option><option>SHIMMER</option><option>GATHER</option><option>THROAT</option><option>CONTACT</option><option>SUSPEND</option></select></label>
+      <label for="category-filter">Section<select id="category-filter"><option value="all">All sections</option><!-- NIMBUS_SECTION_FILTER_OPTIONS --></select></label>
       <label for="search-filter">Search descriptions<input id="search-filter" type="search" placeholder="For example: Body, throat, coupling off" autocomplete="off"></label>
     </form>
     <div class="browse-meta"><p id="filter-status" role="status" aria-live="polite" aria-atomic="true">All audition clips.</p><a href="manifest.json">Full evidence manifest</a></div>
-    <nav aria-label="Audition sections"><ul class="section-nav"><!-- NIMBUS_COMPARISON_NAV --><li><a href="#voices">Voices</a></li><li><a href="#presets">Presets</a></li><li><a href="#energy">Velocity</a></li><li><a href="#sweeps">Sweeps</a></li><li><a href="#grids">Interactions</a></li><li><a href="#levels">Raw / matched</a></li><li><a href="#diagnostics">Diagnostics</a></li><li><a href="#hold">HOLD</a></li></ul></nav>
+    <nav aria-label="Audition sections"><ul class="section-nav"><!-- NIMBUS_SECTION_NAV --></ul></nav>
     <noscript><p>The clip descriptions and native audio controls work without JavaScript. HOLD clips repeat; use their native Pause control to stop. Repeat settings, filters, global volume and Stop all require JavaScript.</p></noscript>
     <p class="empty" id="empty-state" hidden>No clips match these filters. Choose another voice or section, or clear the search.</p>
     <!-- NIMBUS_CARDS -->
@@ -175,6 +185,23 @@
       button.setAttribute('aria-label', `${loading ? 'Cancel loading' : playing ? 'Pause' : 'Play'} ${title(card)}`);
       button.setAttribute('aria-pressed', String(playing));
       card.classList.toggle('playing', playing);
+      updateSequence(card);
+    }
+    const sequences = new Map();
+    function updateSequence(card) {
+      const label = card.querySelector('.sequence-now');
+      if (!label) return;
+      if (!sequences.has(card)) sequences.set(card, JSON.parse(card.dataset.sequence));
+      const audio = media(card);
+      let text;
+      if (audio.ended) text = 'Edited sequence finished. Return to Whole for the natural response.';
+      else if (audio.paused && audio.currentTime === 0) text = 'Edited sequence ready. Follow the timed stage list below; JavaScript names the current section during playback.';
+      else {
+        const section = sequences.get(card).find(part => audio.currentTime >= part.startSeconds && audio.currentTime < part.endSeconds);
+        text = section ? `${audio.paused ? 'Paused edited section' : 'Edited section'}: ${section.label}.`
+          : 'Edited sequence: short gap before the next addition.';
+      }
+      if (label.textContent !== text) label.textContent = text;
     }
     function barrier(promise) {
       stopBarrier = Promise.all([stopBarrier, promise]).then(() => {});
@@ -420,7 +447,11 @@
         if (active && active.card === card && active.backend === 'native') { active = null; announce(`Finished ${title(card)}.`); }
       });
       audio.addEventListener('error', () => { if (active && active.card === card && active.backend === 'native') announce(`Cannot load ${title(card)}. Try its WAV download.`); });
-      audio.addEventListener('timeupdate', () => { if (!held.has(card) || (active && active.card === card && active.backend === 'native')) card.querySelector('progress').value = audio.currentTime; });
+      audio.addEventListener('timeupdate', () => {
+        if (!held.has(card) || (active && active.card === card && active.backend === 'native')) card.querySelector('progress').value = audio.currentTime;
+        updateSequence(card);
+      });
+      audio.addEventListener('seeked', () => updateSequence(card));
       button.addEventListener('click', () => {
         if (!enabled.checked) return;
         if (active && active.card === card) {

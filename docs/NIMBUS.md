@@ -21,19 +21,36 @@ provide a fallback.
 ```
 
 The task writes `testkit/nimbus-audition/index.html`, a manifest, PCM16 WAVs
-and mechanical records. Normal generation contains 323 clips, including
+and mechanical records. Normal generation contains 345 clips, including
 voices at C3/C4/C5 and three physical velocities, all nine factory presets,
 every timbral control at 0/.25/.5/.75/1 for all six voices, five interaction grids, raw/matched
-pairs, six isolated identities, full-stack source taps, coupling/funnel/
+pairs, a front-of-page ensemble demonstration, six isolated identities,
+full-stack source taps, coupling/funnel/
 contact switches, geometry corners, finite decay and difficult held loops.
 Generated files are ignored by Git; source, tests and templates are tracked.
 
-The first C4 default audition concentrated nearly all early/body energy in
-the shared root. This revision changes modal excitation and loss so the
-upper metal modes have a stronger, longer role. The original pitch and
-stability checks did not establish useful audible voice character.
+Start with the ensemble demonstration at C4. For both RING and GATHER,
+the whole event, selected connected component, selected-muted event,
+other five cymbals and six named taps come from one simulation at one
+shared gain. The selected-muted event retains the chamber, contacts and
+returns; the other-five clip contains only those five cymbal taps. Their
+actual timing and relative levels are preserved. A cumulative build is an
+edited teaching sequence, not the instrument's natural attack.
 
-When previous/revised pairs are present, start there at C4. Each pair uses
+Listen for an initial selected character followed by overlapping responses
+with different upper rings, then a changing metallic tail around the same
+note. Replay the whole event after learning the taps, and compare it with
+the selected-muted and other-five clips. Those contributions must be
+audible in the complete sound for the ensemble concept to succeed.
+
+The first audition was dominated by the shared root. The next had richer
+upper modes, but its selected component still dominated the audible body
+while neighbors mainly added quiet common-root tails. The current model
+transfers finite body energy into the other cymbals' own upper modes.
+Pitch, stability and spectral contrast alone do not establish that the
+ensemble concept is audible.
+
+Then use the previous/revised pairs at C4, when present. Each pair uses
 the same controls and event velocity; the previous audio is preserved from
 its recorded source SHA. Compare attack, upper wash, motion and tail while
 checking that the common note remains recognizable. The listening targets
@@ -82,11 +99,11 @@ clean source revision:
 ```sh
 ./gradlew --no-daemon :synth:generateNimbusAudition \
   -PnimbusBaselineDir=/absolute/path/to/preserved-nimbus-audition \
-  -PnimbusBaselineRevision=9b77e2eaaff8c050d683399b197c5319b8bea8de \
+  -PnimbusBaselineRevision=c95bfdf0055daa7723914825e61e391c146aa0d9 \
   -PnimbusCompareHold=true
 ```
 
-The example uses the preserved first-audition source. For another baseline,
+The example uses the preserved previous audio source. For another baseline,
 supply its full 40-character Git SHA. Generate the baseline from a separate
 checkout of that revision and preserve its output before regenerating the
 revision. The directory must contain its manifest, selected original WAVs and mechanical
@@ -94,10 +111,10 @@ records. The generator validates source provenance and matching recipes,
 copies the previous WAVs unchanged, and records source hashes.
 
 Supplying the baseline directory and revision adds six C4 default pairs,
-for 335 clips. `nimbusCompareHold=true` adds SHIMMER and SUSPEND at C4 plus
-the difficult settled CONTACT rim case at C3, for 341 clips. Comparison
+for 357 clips. `nimbusCompareHold=true` adds SHIMMER and SUSPEND at C4 plus
+the difficult settled CONTACT rim case at C3, for 363 clips. Comparison
 partners use the same note, controls, velocity and listening target.
-Normal 323-clip regeneration needs no preserved baseline. Page refresh
+Normal 345-clip regeneration needs no preserved baseline. Page refresh
 uses the existing manifest and retains its comparison section.
 
 ## Host contract
@@ -124,7 +141,7 @@ uses the existing manifest and retains its comparison section.
 
 | Control | Low → high |
 | --- | --- |
-| EXCITE | Soft distributed magnetic flex → harder concentrated contact |
+| EXCITE | Soft magnetic flex → harder concentrated release |
 | SPACING | Close sympathetic loading → separated individual rings |
 | HEIGHT | Enclosed throat position → exposed mouth position |
 | FIELD | Yielding suspension → firmer restoration and coupling |
@@ -140,12 +157,34 @@ Separate excitation participation and listener radiation give upper modes
 independent energy and pickup balance. Each voice sets the
 root/upper excitation balance, spectral tilt, upper losses and finite
 release pattern. A magnetic pull is followed by short projected flex
-releases into the same modes; these are finite note-on gestures. Upper
+releases into the selected cymbal's modes; only that cymbal receives the
+initial event. The other components answer through transferred energy.
+These are finite note-on gestures. Upper
 losses are gentler than in the first audition, and their unloaded decay
 times are bounded at 4.5 seconds.
 
-Ten lossy traveling-wave stores form five reciprocal neighbor
-links. Orthogonal scattering exchanges modal velocity with those waves;
+Five reciprocal neighbor links carry separate pressure and root-free body
+paths in twenty lossy traveling-wave stores. Orthogonal scattering exchanges
+modal velocity with those waves. The body paths expose upper vibration and
+travel on a longer musical timescale than the pressure paths. Interior nodes
+pass the remaining packet onward through an energy-preserving direction swap.
+Each recipient absorbs part of the arriving body-wave energy into a leaky finite reservoir,
+then projects a short flex release into its own material modes. Actual gap,
+displacement and restoration set its bounded charge time. Positive release
+work is deducted from the reservoir; negative work dissipates. After an
+unstruck recipient reserves its two responses, its body modal port decouples
+so those paid native modes can ring with their own losses. The initially
+struck source continues donating during the finite onset window. It retains
+ordinary wave and chamber reactions without receiving another nonlinear
+native-body strike. A struck Flex component has stronger field susceptibility
+and donates more of its stored upper energy through the same passive junction.
+Wave, reservoir and pending release energy remain in the passive energy budget.
+
+This nonlinear transfer is an invented musical mapping that lets unlike
+modal spectra answer each other. It does not add independently scheduled
+notes or a new energy supply. The onset transfer has a finite release count
+and window (at most two releases per plate during the first 0.9 seconds),
+and drains before the settled HOLD region. Listener
 output radiation gains are readouts and never feed back into the network.
 Static loading changes losses rather than transposing the note. Flex has a
 small bounded movement-dependent stiffness deviation at the root and a
@@ -161,7 +200,8 @@ and velocity plus slow motion to produce compliant contact. Wide spacing
 disables contact. No independent buzz oscillator supplies its identity.
 
 Four chamber modes and twelve source-specific early paths return pressure
-to the same cymbals. Height affects modal loss, radiation and return weighting.
+to the same cymbals. Enclosure adds a modest frequency-dependent loss to
+each material's native decay. Height affects modal loss, radiation and return weighting.
 Early path lengths are fixed per render to avoid delay-motion energy and
 unwanted Doppler; movement changes loading rather than moving delay taps.
 This is a deliberate simplification of the design specification.
@@ -169,7 +209,8 @@ This is a deliberate simplification of the design specification.
 Intermediate HOLD adds a smooth finite drive that releases before the tail;
 HOLD at .99 and above returns a settled repeating region. Both use weak
 modal forcing, distinct from stabilization. Voice and selected-material
-weights also shape the sustained upper modes. The
+weights also shape the sustained upper modes. The settled drive retains
+multiple material contributions after the finite onset-transfer path drains. The
 seamless region follows bounded preroll of the complete acoustic and
 mechanical state. The probe retains an independently rendered preceding
 cycle for the current `Keys.seamError` metric; a copied boundary cannot serve
@@ -180,25 +221,30 @@ within sample-period quantization.
 ## Checks and acceptance
 
 ```sh
-./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.Nimbus*'
+./gradlew --no-daemon :synth:test \
+  --tests 'com.snipsnap.synth.NimbusTest' \
+  --tests 'com.snipsnap.synth.NimbusIntegrationTest' \
+  --tests 'com.snipsnap.synth.PresetsTest'
 ./gradlew --no-daemon test
 # With an Android SDK:
 ./gradlew --no-daemon :app:compileDebugKotlin
 ```
 
 Raw probes expose six cymbal taps, chamber/contact/return taps, acoustic and
-mechanical energy, heights, resting positions, velocity, controller work,
+mechanical energy, per-cymbal modal energy, transfer reservoirs and release
+events, heights, resting positions, velocity, controller work,
 penetration, contact count, powered work and the genuine preceding cycle.
 Tests check deterministic variation, silence at rest, isolated and full-root
 calibration, isolated spectral identity, audible-band upper energy through
 attack and body, contrasting voice spectra and temporal profiles, causal
-sympathetic and chamber response, passive decay, field restoration,
+sympathetic and chamber response, substantial upper-bearing ensemble
+participation across C3/C4/C5 while the body is audible, passive decay, field restoration,
 valid geometry, motion-derived contact,
 control activity and interactions, control-rate convergence, DC, loudness,
 drum guards, held continuity and saved-patch/recipe/kit/velocity integration.
 
 These numerical checks guard against a return to the shared-root-dominated
 mix and establish the measured behavior in their tested cases. They do not
-establish the intended voice character by listening. The owner's listening
+establish the intended voice or ensemble character by listening. The owner's listening
 verdict, phone playback and MPC export feel remain part of acceptance.
 Release naming checks remain open, as in the supplied specification.

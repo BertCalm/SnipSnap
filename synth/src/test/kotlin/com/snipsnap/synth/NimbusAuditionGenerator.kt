@@ -28,8 +28,8 @@ object NimbusAuditionGenerator {
     private val identities = listOf("Body", "Bell", "Paper", "Dark", "Flex", "Wire")
     private val voiceDescriptions = mapOf(
         NimbusVoice.RING to "Clear same-note metal characters with wider neighboring separation.",
-        NimbusVoice.SHIMMER to "A softer distributed impulse favors fine upper-mode shimmer.",
-        NimbusVoice.GATHER to "A stronger impulse and yielding field favor a spread-and-return gesture.",
+        NimbusVoice.SHIMMER to "Softer magnetic flex of the selected cymbal favors fine upper-mode shimmer; neighboring answers develop through connected transfer.",
+        NimbusVoice.GATHER to "A stronger selected release and yielding field favor a spread-and-return gesture with causal neighboring answers.",
         NimbusVoice.THROAT to "Low resting height and a deeper funnel concentrate the darker chamber response.",
         NimbusVoice.CONTACT to "Close spacing permits motion-dependent rim contact around the pitched metal.",
         NimbusVoice.SUSPEND to "Gentler excitation and firm suspension favor a longer supported metallic texture.",
@@ -43,7 +43,7 @@ object NimbusAuditionGenerator {
         "A wiry buzzing edge with sparse sharp modes and contact sensitivity.",
     )
     private val macroDescriptions = mapOf(
-        "EXCITE" to "Soft distributed magnetic pull becomes harder concentrated contact. Listen to attack, modal balance and stack disturbance at equal playback level.",
+        "EXCITE" to "Softer magnetic flex becomes a harder concentrated release on the selected cymbal. Neighboring answers develop through connected transfer. Listen to attack, modal balance and stack disturbance at equal playback level.",
         "SPACING" to "Close neighbor loading becomes separated individual rings. Compare transfer, decay and contact; stack height stays independent.",
         "HEIGHT" to "The resting stack moves from the narrow throat toward the open mouth. Compare loading, source balance and early returns at a fixed spacing.",
         "FIELD" to "A yielding suspension becomes firmer restoration and limited coupling. Listen for changed gathering time and sympathetic transfer.",
@@ -70,18 +70,23 @@ object NimbusAuditionGenerator {
     fun main(args: Array<String>) {
         val positional = args.filterNot { it.startsWith("--") }
         require(positional.size <= 1 && args.filter { it.startsWith("--") }.all {
-            it == "--quick" || it == "--refresh-page" || it == "--compare-hold" ||
+            it == "--quick" || it == "--refresh-page" || it == "--compare-hold" || it == "--ensemble-only" ||
                 it.startsWith("--baseline-dir=") || it.startsWith("--baseline-revision=")
-        }) { "supply one output directory and optional --quick, --refresh-page, --baseline-dir=, --baseline-revision= or --compare-hold" }
+        }) { "supply one output directory and optional --quick, --refresh-page, --ensemble-only, --baseline-dir=, --baseline-revision= or --compare-hold" }
         fun argument(prefix: String): String? = args.filter { it.startsWith(prefix) }.let {
             require(it.size <= 1) { "duplicate $prefix argument" }
             it.singleOrNull()?.removePrefix(prefix)?.also { value -> require(value.isNotBlank()) }
         }
         val root = File(positional.firstOrNull() ?: "../testkit/nimbus-audition")
         val quick = "--quick" in args
+        val ensembleOnly = "--ensemble-only" in args
         val compareHold = "--compare-hold" in args
         val baselineDir = argument("--baseline-dir=")?.let(::File)
         val baselineRevision = argument("--baseline-revision=")
+        require(!ensembleOnly || !quick && baselineDir == null && !compareHold && "--refresh-page" !in args) {
+            "compact ensemble evidence uses its own output directory without quick, baseline or refresh options"
+        }
+        require(!ensembleOnly || positional.isNotEmpty()) { "supply a separate output directory for the compact ensemble demonstration" }
         require((baselineDir == null) == (baselineRevision == null)) { "baseline directory and full source revision must be supplied together" }
         require(baselineRevision == null || baselineRevision.matches(Regex("[0-9a-f]{40}"))) { "baseline revision must be a full Git commit SHA" }
         require(!compareHold || baselineDir != null && !quick) { "HOLD comparison requires a baseline and the full audition" }
@@ -143,6 +148,8 @@ object NimbusAuditionGenerator {
             energy: Float = 1f,
             options: Nimbus.ProbeOptions = Nimbus.ProbeOptions(),
             branch: String = "full", matched: Boolean = true, existing: Nimbus.Probe? = null,
+            sharedGain: Float? = null, sourceOverride: FloatArray? = null,
+            evidenceExtra: Map<String, Any?> = emptyMap(),
         ): Nimbus.Probe {
             require(clips.none { it.id == id }) { "duplicate Nimbus audition ID: $id" }
             observeHeap()
@@ -151,7 +158,7 @@ object NimbusAuditionGenerator {
             val renderNanos = if (existing == null) System.nanoTime() - before else 0L
             totalRenderNanos += renderNanos
             observeHeap()
-            val samples = when {
+            val samples = sourceOverride ?: when {
                 branch.startsWith("cymbal-") -> probe.cymbals[branch.substringAfter('-').toInt()]
                 branch == "funnel" -> probe.funnel
                 branch == "contact" -> probe.contact
@@ -163,7 +170,7 @@ object NimbusAuditionGenerator {
             val rawPeak = raw.peak()
             val rawLoudness = Loudness.of(raw)
             val reference = Snip(probe.samples, channels = 1, sampleRate = Dsp.RATE)
-            val gain = if (matched) {
+            val gain = sharedGain ?: if (matched) {
                 val referenceLoudness = Loudness.of(reference)
                 if (referenceLoudness <= 1e-6f) 1f else minOf(
                     LISTENING_TARGET / referenceLoudness,
@@ -172,7 +179,10 @@ object NimbusAuditionGenerator {
             } else 1f
             // An export-only reduction is recorded if a raw diagnostic exceeds PCM range.
             // Synthesis peak and energy remain unscaled evidence; no clip is silently saturated.
-            val exportSafetyGain = minOf(1f, (if (matched) LISTENING_CEILING else .99f) /
+            val exportSafetyGain = if (sharedGain != null) {
+                require(rawPeak * gain <= LISTENING_CEILING + 1e-6f) { "$id requires a common group headroom gain" }
+                1f
+            } else minOf(1f, (if (matched) LISTENING_CEILING else .99f) /
                 (rawPeak * gain).coerceAtLeast(1e-9f))
             val output = Snip(FloatArray(samples.size) { samples[it] * gain * exportSafetyGain },
                 channels = 1, sampleRate = Dsp.RATE)
@@ -186,29 +196,37 @@ object NimbusAuditionGenerator {
                 "primaryStrikeEnabled" to options.primaryStrikeEnabled, "selectedCymbal" to options.selectedCymbal,
                 "durationSeconds" to options.durationSeconds, "seedContext" to options.seedContext,
                 "recordDiagnostics" to options.recordDiagnostics, "controlStride" to options.controlStride,
-                "poweredDriveEnabled" to options.poweredDriveEnabled,
+                "poweredDriveEnabled" to options.poweredDriveEnabled, "snapshotStride" to options.snapshotStride,
             )
             val mechanics = linkedMapOf<String, Any?>(
                 "id" to id, "voice" to voice.name, "macros" to macros, "energy" to energy,
                 "options" to optionsEvidence, "rootHz" to probe.rootHz,
+                "selectedCymbal" to probe.selectedCymbal,
                 "identities" to identities, "modeRatios" to probe.modeRatios.map { it.toList() },
                 "initialEnergy" to probe.initialEnergy, "finalPassiveEnergy" to probe.finalPassiveEnergy,
                 "contactEvents" to probe.contactEvents, "peakContactPenetration" to probe.peakContactPenetration,
                 "poweredDriveWork" to probe.poweredDriveWork,
+                "bodyTransfers" to probe.bodyTransfers.map { event -> linkedMapOf(
+                    "timeSeconds" to event.timeSeconds, "cymbal" to event.cymbal, "source" to event.source,
+                    "reservedEnergy" to event.reservedEnergy, "injectedEnergy" to event.injectedEnergy,
+                    "gathering" to event.gathering, "gap" to event.gap,
+                ) },
                 "snapshots" to probe.snapshots.map { state -> linkedMapOf(
                     "timeSeconds" to state.timeSeconds, "heights" to state.heights.toList(),
                     "restingHeights" to state.restingHeights.toList(), "velocities" to state.velocities.toList(),
                     "modalEnergy" to state.modalEnergy, "passiveEnergy" to state.passiveEnergy,
                     "mechanicalEnergy" to state.mechanicalEnergy, "controllerWork" to state.controllerWork,
                     "contactPenetration" to state.contactPenetration, "geometryValid" to state.geometryValid,
+                    "plateEnergy" to state.plateEnergy.toList(), "plateUpperEnergy" to state.plateUpperEnergy.toList(),
+                    "bodyReservoirEnergy" to state.bodyReservoirEnergy.toList(),
                 ) },
-            )
+            ) + evidenceExtra
             File(root, eventPath).apply { parentFile.mkdirs(); writeText(Json.write(json(mechanics)) + "\n") }
             clips += Clip(linkedMapOf(
                 "id" to id, "title" to title, "description" to description, "category" to category,
                 "voice" to voice.name, "group" to group, "path" to path, "eventPath" to eventPath,
-                "macros" to macros, "energy" to energy, "branch" to branch,
-                "level" to if (!matched) "raw" else if (branch == "full") "matched" else "reference gain",
+                "macros" to macros, "energy" to energy, "branch" to branch, "selectedCymbal" to probe.selectedCymbal,
+                "level" to if (sharedGain != null) "shared mix gain" else if (!matched) "raw" else if (branch == "full") "matched" else "reference gain",
                 "loop" to loop, "durationSeconds" to output.durationSeconds, "sampleRate" to Dsp.RATE,
                 "requestedMidi" to Nimbus.midiFor(voice, macros.getValue("TUNE")), "rootHz" to probe.rootHz,
                 "rawPeak" to rawPeak, "exportPeak" to output.peak(), "rawLoudness" to rawLoudness,
@@ -220,15 +238,79 @@ object NimbusAuditionGenerator {
                 "initialEnergy" to probe.initialEnergy, "finalPassiveEnergy" to probe.finalPassiveEnergy,
                 "contactEvents" to probe.contactEvents, "peakContactPenetration" to probe.peakContactPenetration,
                 "poweredDriveWork" to probe.poweredDriveWork,
+                "bodyTransferEvents" to probe.bodyTransfers.size,
+                "bodyTransferredEnergy" to probe.bodyTransfers.sumOf { it.injectedEnergy },
                 "geometryValid" to probe.snapshots.all { it.geometryValid },
                 "peakControllerWork" to probe.snapshots.maxOfOrNull { abs(it.controllerWork) },
                 "seamError" to if (loop) probe.seamError else null,
                 "options" to optionsEvidence,
-            ))
+            ) + evidenceExtra)
             if (clips.size % 25 == 0) println("Rendered ${clips.size} Nimbus audition clips")
             return probe
         }
 
+        fun renderEnsemble(voice: NimbusVoice) {
+            val macros = Nimbus.defaults(voice)
+            observeHeap()
+            val before = System.nanoTime()
+            val probe = Nimbus.probe(voice, macros)
+            totalRenderNanos += System.nanoTime() - before
+            observeHeap()
+            val selected = probe.selectedCymbal
+            val selectedName = identities[selected]
+            val reconstructed = sumSources(probe.cymbals.toList() + listOf(probe.funnel, probe.contact, probe.returns))
+            val sumError = probe.samples.indices.maxOf { abs(probe.samples[it] - reconstructed[it]) }
+            require(sumError < 1e-5f) { "ensemble taps do not reconstruct the connected output" }
+            val otherIndices = identities.indices.filter { it != selected }
+            val others = sumSources(otherIndices.map { probe.cymbals[it] })
+            val muted = FloatArray(probe.samples.size) { probe.samples[it] - probe.cymbals[selected][it] }
+            val order = identities.indices.sortedWith(compareBy<Int> { abs(it - selected) }.thenBy { it })
+            val additions = order.indices.map { stage -> sumSources(order.take(stage + 1).map { probe.cymbals[it] }) }
+            val sequence = buildSequence(additions + listOf(probe.samples),
+                order.indices.map { stage -> order.take(stage + 1).joinToString(" + ") { identities[it] } } +
+                    "Whole stack · six cymbals + funnel, contact and returns")
+            val sources = listOf(probe.samples, probe.cymbals[selected], muted, others) + probe.cymbals.toList() + additions
+            val peak = sources.maxOf { source -> source.maxOf { abs(it) } }
+            val referenceLoudness = Loudness.of(Snip(probe.samples, 1, Dsp.RATE))
+            val gain = minOf(LISTENING_TARGET / referenceLoudness.coerceAtLeast(1e-9f),
+                LISTENING_CEILING / peak.coerceAtLeast(1e-9f))
+            val context = linkedMapOf<String, Any?>(
+                "ensembleSelectedIndex" to selected, "ensembleSelectedIdentity" to selectedName,
+                "sourceSimulationId" to "ensemble_${voice.name.lowercase()}_whole",
+                "gainPolicy" to "One whole-mix listening gain with common headroom for every aligned source and edited build stage. No stem is independently normalized.",
+                "underlyingSourceSeconds" to probe.samples.size.toDouble() / Dsp.RATE,
+                "alignedReadoutSumError" to sumError,
+            )
+            val group = "$voice · C4 · whole and connected contributions"
+            fun card(suffix: String, title: String, description: String, samples: FloatArray,
+                branch: String, extra: Map<String, Any?> = emptyMap()) = render(
+                "ensemble_${voice.name.lowercase()}_$suffix", title, description, "ensemble", group,
+                voice, macros, branch = branch, existing = probe, sharedGain = gain,
+                sourceOverride = samples, evidenceExtra = context + extra)
+            card("whole", "$voice · whole six-cymbal stack",
+                "Start with the actual connected instrument at C4. Selected $selectedName, the other five cymbals, funnel, rim reaction and traveling returns all contribute to this unchanged mix. Compare the adjacent source-removal cards at the identical gain: can you hear more than one metal character answering the event?",
+                probe.samples, "full", mapOf("componentWindows" to componentWindows(probe)))
+            card("selected", "$voice · selected $selectedName only",
+                "Only the selected $selectedName readout from the SAME connected simulation. The other five, funnel, contact and return readouts are muted; their internal reactions still affected this cymbal. Gain is inherited from the whole mix, so this is not an independently raised isolated render.",
+                probe.cymbals[selected], "cymbal-$selected")
+            card("selected_muted", "$voice · selected $selectedName muted",
+                "The exact whole waveform minus its selected $selectedName contribution. The other five connected cymbals, funnel, contact and returns remain at their original balance. Compare with Whole: what survives without the preferred cymbal? This is output muting, not another simulation.",
+                muted, "full-minus-selected")
+            card("other_five", "$voice · other five cymbals only",
+                "The aligned sum of the five connected cymbal readouts other than $selectedName. Enclosure, rim and return readouts are muted. No quiet contributor is independently normalized; the same whole-mix gain exposes how much the five actually contribute.",
+                others, "other-five-cymbals")
+            for ((index, identity) in identities.withIndex()) {
+                card("stem_${identity.lowercase()}", "$voice · $identity connected contribution",
+                    identityDescriptions[index] + " This is the actual $identity readout from the same C4 event, at the whole mix's exact gain. ${if (index == selected) "It receives the initial excitation." else "Its answer develops through connected transfer; compare its arrival and ringdown with the initially excited $selectedName contribution."} Quietness is evidence of its real balance.",
+                    probe.cymbals[index], "cymbal-$index")
+            }
+            card("build", "$voice · edited build from aligned stems",
+                "An edited demonstration, not the instrument's natural onset: each labeled section replays the first 2.5 seconds of the SAME connected event, adding one actual cymbal readout. The final section includes the whole instrument with funnel, contact and returns. All stages use the same gain; short gaps and excerpt-end fades only separate the teaching sections. Return to Whole to judge the natural musical response.",
+                sequence.samples, "edited-build", mapOf("editedDemonstration" to true,
+                    "sequenceSegments" to sequence.segments))
+        }
+
+        if (!ensembleOnly) {
         for (voice in NimbusVoice.entries) {
             for ((tune, register) in if (quick) listOf(.5f to "middle") else registers) {
                 val note = noteName(Nimbus.midiFor(voice, tune))
@@ -243,7 +325,7 @@ object NimbusAuditionGenerator {
                 render("preset_" + preset.name.lowercase().replace(' ', '_'), "${preset.name} · C4",
                     presetDescriptions.getValue(preset.name) + if (held)
                         " This is a settled powered loop; the initial isolated attack is excluded. Repeat begins on after you request playback."
-                    else " This is the exact dry factory recipe, including all six identities.",
+                    else " This is the exact dry factory recipe. One selected cymbal receives the initial event; the other five answer through connected transfer.",
                     "presets", preset.voice.name, preset.voice, preset.macros)
             }
             for (voice in NimbusVoice.entries) for ((tune, _) in registers) {
@@ -294,7 +376,7 @@ object NimbusAuditionGenerator {
                 "Reference for the causal switches and source taps. Selected excitation, reciprocal neighbor transfer, height-dependent funnel loading and optional rim reactions form one shared finite instrument.",
                 "diagnostics", "Causal switches", macros = diagnostic)
             render("diagnostic_coupling_off", "Neighbor coupling off",
-                "The same event and controller retain their geometry, but reciprocal neighbor transfer is disabled. Compare neighboring rings and the late balance with the connected reference.",
+                    "The same event begins from the same initial geometry, but reciprocal neighbor transfer is disabled. Later trajectories and contact can change. Compare neighboring rings and the late balance with the connected reference.",
                 "diagnostics", "Causal switches", macros = diagnostic,
                 options = Nimbus.ProbeOptions(couplingEnabled = false))
             render("diagnostic_funnel_off", "Funnel loading and returns off",
@@ -368,14 +450,18 @@ object NimbusAuditionGenerator {
                 }
             }
         }
+        }
+        if (!quick) for (voice in listOf(NimbusVoice.RING, NimbusVoice.GATHER)) renderEnsemble(voice)
         val comparison = if (baselineDir == null) null else appendComparison(
             root, clips, baselineDir, requireNotNull(baselineRevision), compareHold)
         val sourceRevision = git("rev-parse", "HEAD")
         val sourceDirty = git("status", "--porcelain")?.isNotBlank()
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "NIMBUS", "formatVersion" to 1, "clipCount" to clips.size, "quick" to quick,
-            "description" to "Dry listening evidence for the Nimbus port; sonic acceptance remains pending owner listening.",
-            "sampleRate" to Dsp.RATE, "bitDepth" to 16, "noteRange" to "C3–C5", "audioStartsOff" to true,
+            "ensembleOnly" to ensembleOnly,
+            "description" to if (ensembleOnly) "Compact connected-ensemble evidence at actual shared gain; listening acceptance remains open."
+                else "Dry listening evidence for the Nimbus port; sonic acceptance remains pending owner listening.",
+            "sampleRate" to Dsp.RATE, "bitDepth" to 16, "noteRange" to if (ensembleOnly) "C4" else "C3–C5", "audioStartsOff" to true,
             "listeningTarget" to LISTENING_TARGET, "listeningPeakCeiling" to LISTENING_CEILING,
             "loudness" to "Linear full-clip gain targets loudest-200-ms RMS 0.12 with a 0.90 peak ceiling. Source taps inherit full-reference gain. Raw PCM safety reductions, if needed, are explicit in exportSafetyGain.",
             "velocityContract" to "Host velocity changes finite modal impulse and transient stack displacement within EXCITE's contact character.",
@@ -403,10 +489,10 @@ object NimbusAuditionGenerator {
             manifest are embedded; all WAVs and mechanical records use local relative paths.
             Audio starts off and only plays after a user request. Stop all or Escape stops playback.
 
-            Begin with RING at C4, then compare the six isolated C4 identities. The voice/velocity
-            matrix covers C3, C4 and C5. Every timbral control has five steps on every voice, and
-            the five required interactions have 3 × 3 grids. Three-second sweeps and grids compare
-            the attack and gathering; default voices and presets preserve the longer ringdown.
+            ${if (quick) "Begin with RING at C4, then compare the other default C4 voices and their settled powered HOLD clips. This tooling subset checks finite playback and sustain transport; the connected-ensemble front section is included in the ordinary full audition." else "Begin with the Hear the stack section: RING and GATHER at C4 expose the unchanged whole mix, selected connected contribution, selected-muted whole and other five cymbals. Every aligned stem uses one whole-reference gain with common headroom; quiet sources keep their actual balance. The edited build replays short aligned excerpts and adds actual readouts; it is explicitly not the instrument's natural onset. Return to Whole to judge whether multiple cymbal characters are present in the musical response."}
+
+            ${if (quick) "Use ordinary full generation for the C3–C5 pitch/velocity matrix, factory presets, macro sweeps, interaction grids and mechanical diagnostics." else if (ensembleOnly) "This compact package contains only connected-ensemble evidence; it does not contain the full pitch, velocity, control or HOLD matrix." else "The voice/velocity matrix covers C3, C4 and C5, all five timbral controls have five-step sweeps on every voice, and the five required interactions have 3 × 3 grids. Full-tail voices/presets and powered HOLD remain available below the ensemble section."}
+
             Identity descriptions express intended sound, not a completed listening verdict.
 
             Matched full clips target loudest-200-ms RMS 0.12, capped at peak 0.90. Source taps
@@ -423,6 +509,8 @@ object NimbusAuditionGenerator {
 
             Rebuild: ./gradlew :synth:generateNimbusAudition
             Tooling smoke subset: ./gradlew :synth:generateNimbusAudition -PnimbusQuick=true
+            Compact ensemble demonstration: pass --ensemble-only and a separate output directory
+            to this generator; no baseline or quick flag is needed.
             Refresh descriptions/controls only: ./gradlew :synth:generateNimbusAudition -PnimbusRefreshPage=true
 
             ${if (comparison == null) "" else "A previous/revised listening comparison is included. Original WAVs are copied unchanged from source revision $baselineRevision; the previous manifest and each source WAV/mechanical record are SHA-256 identified. Revised partners reuse the new default renders at the same requested note and event velocity. Each card shows its own recipe, so changed defaults remain visible. The common listening target is RMS 0.12 with a 0.90 peak ceiling; no comparison constitutes a listening verdict."}
@@ -439,6 +527,61 @@ object NimbusAuditionGenerator {
         """.trimIndent() + "\n")
         println("Wrote ${clips.size} Nimbus WAVs, mechanical records, manifest and listening page under ${root.absolutePath} in " +
             String.format(Locale.ROOT, "%.1f", (System.nanoTime() - started) / 1e9) + " s")
+    }
+
+    private data class EditedSequence(val samples: FloatArray, val segments: List<Map<String, Any?>>)
+
+    private fun sumSources(sources: List<FloatArray>): FloatArray {
+        require(sources.isNotEmpty() && sources.all { it.size == sources.first().size })
+        return FloatArray(sources.first().size) { frame -> sources.sumOf { it[frame].toDouble() }.toFloat() }
+    }
+
+    /** Short edited excerpts preserve alignment and gain; this is not a generated natural onset. */
+    private fun buildSequence(sources: List<FloatArray>, labels: List<String>): EditedSequence {
+        require(sources.size == labels.size && sources.isNotEmpty())
+        val frames = minOf((2.5 * Dsp.RATE).roundToInt(), sources.minOf { it.size })
+        val gap = (0.25 * Dsp.RATE).roundToInt()
+        val samples = FloatArray(sources.size * frames + (sources.size - 1) * gap)
+        val segments = sources.mapIndexed { index, source ->
+            val start = index * (frames + gap)
+            val excerpt = source.copyOf(frames)
+            Dsp.fadeTail(excerpt, ms = 8f)
+            excerpt.copyInto(samples, start)
+            linkedMapOf<String, Any?>("label" to "${index + 1} / ${labels[index]}",
+                "startSeconds" to start.toDouble() / Dsp.RATE,
+                "endSeconds" to (start + frames).toDouble() / Dsp.RATE)
+        }
+        return EditedSequence(samples, segments)
+    }
+
+    private fun componentWindows(probe: Nimbus.Probe): List<Map<String, Any?>> {
+        val duration = probe.samples.size.toDouble() / Dsp.RATE
+        val windows = listOf(Triple("attack", 0.0, .08), Triple("early", .08, .30),
+            Triple("body", .30, .90), Triple("tail", .90, 1.80), Triple("ringdown", 1.80, duration))
+        fun rms(samples: FloatArray, start: Int, end: Int): Double {
+            if (end <= start) return 0.0
+            var energy = 0.0
+            for (index in start until end) energy += samples[index].toDouble() * samples[index]
+            return sqrt(energy / (end - start))
+        }
+        return probe.cymbals.mapIndexed { index, samples ->
+            val window = (0.02 * Dsp.RATE).roundToInt()
+            val hop = (0.01 * Dsp.RATE).roundToInt()
+            val peakStart = (0 until samples.size step hop).maxByOrNull { start ->
+                rms(samples, start, minOf(start + window, samples.size))
+            } ?: 0
+            linkedMapOf<String, Any?>("identity" to identities[index], "selected" to (index == probe.selectedCymbal),
+                "peakRmsWindowStartSeconds" to peakStart.toDouble() / Dsp.RATE,
+                "windows" to windows.map { (label, start, end) ->
+                    val first = minOf((start * Dsp.RATE).roundToInt(), samples.size)
+                    val last = minOf((end * Dsp.RATE).roundToInt(), samples.size)
+                    val part = rms(samples, first, last)
+                    val whole = rms(probe.samples, first, last)
+                    linkedMapOf("label" to label, "startSeconds" to start, "endSeconds" to end,
+                        "rawRms" to part, "wholeRawRms" to whole,
+                        "ratioToWholeRms" to if (whole <= 1e-12) 0.0 else part / whole)
+                })
+        }
     }
 
     /** Preserve source PCM byte-for-byte and reuse revised renders, with no extra DSP simulation. */
@@ -558,7 +701,8 @@ object NimbusAuditionGenerator {
     }
 
     private val categories = linkedMapOf(
-        "comparison" to ("Previous and revised: are the voices distinct?" to "The first audition was heard as predominantly bell-like across voices. Compare each preserved previous default with the revised default at the same note and velocity. Listen to attack, body and tail on finite pairs; compare sustained upper texture, motion and common-note recognition across repeated cycles on HOLD pairs. Both versions use the same listening target; recipes and source hashes remain visible. Listening acceptance is open."),
+        "ensemble" to ("Hear the stack: whole and real contributions" to "Begin with the natural whole instrument. Then hear the selected cymbal, the same whole with that contribution muted, and the other five cymbals alone. All come from one connected event at one common gain. Six named contributions and an explicitly edited build expose the actual balance; they are listening evidence, not a claim that the natural response succeeds."),
+        "comparison" to ("Previous and revised: hear the connected stack" to "Compare each preserved previous default with the revised default at the same note and velocity. Listen to attack, body and tail on finite pairs; compare sustained upper texture, motion and common-note recognition across repeated cycles on HOLD pairs. Do multiple cymbal characters now remain audible in the whole musical response? Both versions use the same listening target; recipes and source hashes remain visible. Listening acceptance is open."),
         "voices" to ("Six voices, three registers" to "Begin with defaults at C3, C4 and C5. Every voice keeps six persistent cymbal identities around the requested root; compare the selected attack and the gathering tail."),
         "presets" to ("Nine factory starting points" to "The exact saved dry recipes in SnipSnap. HELD METAL uses explicit powered sustain; its loop starts after the isolated attack."),
         "energy" to ("Physical velocity across the note range" to "Quiet and medium events at every voice/register complement the strong voice cards. Matched playback exposes modal excitation and stack movement rather than gain alone."),
@@ -577,10 +721,25 @@ object NimbusAuditionGenerator {
             .replace("<!-- NIMBUS_CARDS -->", sectionsHtml(clips, cacheKey))
             .replace("href=\"manifest.json\"", "href=\"${assetUrl("manifest.json", cacheKey)}\"")
             .replace("href=\"README.md\"", "href=\"${assetUrl("README.md", cacheKey)}\"")
+            .replace("<!-- NIMBUS_ENSEMBLE_NOTE -->", if (clips.none { it.category == "ensemble" }) "" else "<p class=\"comparison-note\"><strong>Hear the six-cymbal stack.</strong> <a href=\"#ensemble\">Start with Whole, then compare the actual connected contributions.</a> Every source uses the same mix gain; the labeled build is an edited demonstration. Judge the natural response on Whole.</p>")
             .replace("<!-- NIMBUS_COMPARISON_NOTE -->", if (clips.none { it.category == "comparison" }) "" else "<p class=\"comparison-note\"><strong>Listening revision.</strong> <a href=\"#comparison\">Start with the previous / revised pairs.</a> Compare the six C4 voices for distinct attacks and tails while the requested note stays recognizable. These clips ask for a listening verdict; they do not claim acceptance.</p>")
-            .replace("<!-- NIMBUS_COMPARISON_FILTER -->", if (clips.none { it.category == "comparison" }) "" else "<option value=\"comparison\">Previous / revised listening</option>")
-            .replace("<!-- NIMBUS_COMPARISON_NAV -->", if (clips.none { it.category == "comparison" }) "" else "<li><a href=\"#comparison\">Previous / revised</a></li>")
+            .replace("<!-- NIMBUS_SECTION_FILTER_OPTIONS -->", categories.keys.filter { category -> clips.any { it.category == category } }
+                .joinToString("") { category -> "<option value=\"$category\">${h(sectionLabel(category))}</option>" })
+            .replace("<!-- NIMBUS_SECTION_NAV -->", categories.keys.filter { category -> clips.any { it.category == category } }
+                .joinToString("") { category -> "<li><a href=\"#$category\">${h(sectionLabel(category))}</a></li>" })
             .replace("<!-- NIMBUS_MANIFEST -->", "<script type=\"application/json\" id=\"nimbus-manifest\">${manifestText.replace("<", "\\u003c")}</script>"))
+    }
+    private fun sectionLabel(category: String) = when (category) {
+        "ensemble" -> "Hear the stack"
+        "comparison" -> "Before / revised"
+        "voices" -> "Voices and registers"
+        "presets" -> "Factory presets"
+        "energy" -> "Physical velocity"
+        "sweeps" -> "Macro sweeps"
+        "grids" -> "Interactions"
+        "levels" -> "Raw / matched"
+        "diagnostics" -> "Diagnostics"
+        else -> "HOLD"
     }
     private fun sectionsHtml(clips: List<Clip>, cacheKey: String): String = buildString {
         for ((category, copy) in categories) {
@@ -613,19 +772,50 @@ object NimbusAuditionGenerator {
         }.orEmpty()
         val audioUrl = h(assetUrl(e.getValue("path") as String, cacheKey))
         val mechanicsUrl = h(assetUrl(e.getValue("eventPath") as String, cacheKey))
+        val segments = e["sequenceSegments"] as? List<*>
+        val sequenceData = segments?.let { " data-sequence=\"${h(Json.write(json(it)))}\"" }.orEmpty()
+        val sequenceCopy = if (segments == null) "" else buildString {
+            append("<p class=\"sequence-now\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\">Edited sequence ready. Follow the timed stage list below; JavaScript names the current section during playback.</p><ol class=\"sequence-stages\" aria-label=\"Edited sequence stages\">")
+            for (value in segments) {
+                val stage = value as Map<*, *>
+                val start = number((stage["startSeconds"] as Number).toDouble())
+                val end = number((stage["endSeconds"] as Number).toDouble())
+                val label = requireNotNull(stage["label"]).toString().substringAfter(" / ")
+                append("<li><span class=\"sequence-time\">$start–$end s</span> ${h(label)}</li>")
+            }
+            append("</ol>")
+        }
+        val componentTable = componentTable(e["componentWindows"] as? List<*>)
         return """
-            <article class="clip" id="clip-${clip.id}" data-voice="$voice" data-category="${clip.category}" aria-labelledby="title-${clip.id}">
-              <div class="clip-badges"><span>${h(voice)}</span><span>${h(e.getValue("level").toString())}</span>${if (version == null) "" else "<span>${h(version)}</span>"}${if (loop) "<span>loop</span>" else ""}</div>
+            <article class="clip" id="clip-${clip.id}" data-voice="$voice" data-category="${clip.category}"$sequenceData aria-labelledby="title-${clip.id}">
+              <div class="clip-badges"><span>${h(voice)}</span><span>${h(e.getValue("level").toString())}</span>${if (version == null) "" else "<span>${h(version)}</span>"}${if (loop) "<span>loop</span>" else ""}${if (segments != null) "<span>edited demonstration</span>" else ""}</div>
               <h4 id="title-${clip.id}">${h(title)}</h4>
               <p class="description" id="desc-${clip.id}">${h(e.getValue("description") as String)}</p>
+              $sequenceCopy
               <p class="macro-line">${h(macros)}</p>
               <p class="clip-meta">$duration s · velocity ${fmt((e.getValue("energy") as Number).toFloat())} · root ${number((e.getValue("rootHz") as Number).toDouble())} Hz · ${(e.getValue("contactEvents") as Number).toInt()} contacts</p>
               <div class="clip-actions"><button class="play" type="button" aria-label="Play ${h(title)}" aria-describedby="desc-${clip.id}" aria-pressed="false" disabled>Play</button>${if (loop) "<label class=\"repeat\"><input type=\"checkbox\" class=\"loop-toggle\" checked disabled> Repeat</label>" else ""}<a class="download" href="$audioUrl" download>WAV <span class="sr-only">${h(title)}</span></a></div>
               <progress value="0" max="$duration" aria-label="Playback progress for ${h(title)}"></progress>
-              <details class="evidence"><summary>Measurements and mechanical record</summary><dl><dt>Raw peak</dt><dd>${number((e.getValue("rawPeak") as Number).toDouble())}</dd><dt>Export peak</dt><dd>${number((e.getValue("exportPeak") as Number).toDouble())}</dd><dt>Export listening RMS</dt><dd>${number((e.getValue("exportLoudness") as Number).toDouble())}</dd><dt>Export safety gain</dt><dd>${number((e.getValue("exportSafetyGain") as Number).toDouble())}×</dd><dt>Final passive energy</dt><dd>${scientific((e.getValue("finalPassiveEnergy") as Number).toDouble())}</dd><dt>Valid sampled geometry</dt><dd>${e.getValue("geometryValid")}</dd>$seam$provenance</dl><a href="$mechanicsUrl">Mechanical JSON <span class="sr-only">for ${h(title)}</span></a></details>
+              <details class="evidence"><summary>Measurements and mechanical record</summary><dl><dt>Raw peak</dt><dd>${number((e.getValue("rawPeak") as Number).toDouble())}</dd><dt>Export peak</dt><dd>${number((e.getValue("exportPeak") as Number).toDouble())}</dd><dt>Export listening RMS</dt><dd>${number((e.getValue("exportLoudness") as Number).toDouble())}</dd><dt>Export safety gain</dt><dd>${number((e.getValue("exportSafetyGain") as Number).toDouble())}×</dd><dt>Final passive energy</dt><dd>${scientific((e.getValue("finalPassiveEnergy") as Number).toDouble())}</dd><dt>Valid sampled geometry</dt><dd>${e.getValue("geometryValid")}</dd>$seam$provenance</dl>$componentTable<a href="$mechanicsUrl">Mechanical JSON <span class="sr-only">for ${h(title)}</span></a></details>
               <details class="native"><summary>Native audio controls</summary><p class="native-hint" hidden>Enable audio playback above to show these controls.</p><audio controls${if (loop) " loop" else ""} preload="none" src="$audioUrl" aria-label="${h(title)}" aria-describedby="desc-${clip.id}">Your browser can download the WAV above.</audio></details>
             </article>
         """.trimIndent()
+    }
+    private fun componentTable(rows: List<*>?): String {
+        if (rows == null) return ""
+        return buildString {
+            append("<p>Each source's RMS divided by whole-mix RMS in the same time window. These ratios describe balance and are not additive percentages.</p><div class=\"table-scroll\" role=\"region\" aria-label=\"Connected component balance by phase\" tabindex=\"0\"><table><caption>Actual connected contributions · same gain</caption><thead><tr><th scope=\"col\">Cymbal</th><th scope=\"col\">0–80 ms</th><th scope=\"col\">80–300 ms</th><th scope=\"col\">0.3–0.9 s</th><th scope=\"col\">0.9–1.8 s</th><th scope=\"col\">Later</th></tr></thead><tbody>")
+            for (value in rows) {
+                val row = value as Map<*, *>
+                append("<tr><th scope=\"row\">${h(requireNotNull(row["identity"]).toString())}${if (row["selected"] == true) " · selected" else ""}</th>")
+                for (window in row["windows"] as List<*>) {
+                    val ratio = ((window as Map<*, *>)["ratioToWholeRms"] as Number).toDouble()
+                    append("<td>${number(ratio)}×</td>")
+                }
+                append("</tr>")
+            }
+            append("</tbody></table></div>")
+        }
     }
     private fun json(value: Any?): JsonValue = when (value) {
         null -> JsonValue.Null
