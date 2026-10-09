@@ -645,3 +645,15 @@ tasks.register<JavaExec>("generateTesseraAudition") {
     if (project.hasProperty("tesseraRefreshPage")) args("--refresh-page")
     else if (project.hasProperty("tesseraQuick")) args("--quick")
 }
+
+/** Render Pitchwheel's provisional dry voices, causal probes and settled held loops. */
+tasks.register<JavaExec>("generatePitchwheelAudition") {
+    group = "distribution"
+    description = "Render PITCHWHEEL raw/matched WAVs, mechanical traces, a manifest and a local listening page under testkit/pitchwheel-audition/. -PpitchwheelFull adds complete sweeps and interaction grids."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PitchwheelAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pitchwheel-audition")
+    if (project.hasProperty("pitchwheelFull")) args("--full")
+}
