@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23111b19'/%3E%3Cpath d='M17 42V22M27 49V15M37 43V21M47 36V28' stroke='%23c9ec83' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>NIMBUS · six rings, one note — SnipSnap audition</title>
+  <style>
+    :root { color-scheme: dark; --bg:#111b25; --panel:#182736; --raised:#223548; --ink:#eef3f8; --muted:#bdcbd7; --accent:#99dbea; --line:#6b879f; --focus:#ffd38c; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; scroll-padding-top:13rem; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:1rem/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:var(--accent); text-underline-offset:.2em; }
+    button,input,select { font:inherit; }
+    input::placeholder { color:var(--muted); opacity:1; }
+    button,select,input[type="search"] { border:1px solid var(--line); border-radius:.4rem; background:var(--raised); color:var(--ink); }
+    button { padding:.65rem 1rem; font-weight:650; cursor:pointer; min-height:44px; }
+    button:hover:not(:disabled) { background:#365066; }
+    button:disabled { color:#a9bbca; background:#26384a; cursor:default; }
+    input[type="checkbox"],input[type="range"] { accent-color:var(--accent); }
+    input[type="checkbox"] { width:1.15rem; height:1.15rem; }
+    :focus-visible { outline:3px solid var(--focus); outline-offset:4px; }
+    [hidden] { display:none!important; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .skip { position:absolute; z-index:20; left:1rem; top:1rem; transform:translateY(-160%); background:var(--accent); color:var(--bg); padding:.6rem 1rem; }
+    .skip:focus { transform:translateY(0); }
+    .shell { max-width:1280px; margin:0 auto; padding:0 clamp(1rem,4vw,3rem); }
+    .hero { padding-block:1.5rem 1.2rem; position:relative; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.16em; font-size:.78rem; font-weight:750; margin:0 0 .5rem; }
+    h1 { font:700 clamp(2.75rem,7vw,4rem)/1 Georgia,"Times New Roman",serif; letter-spacing:-.07em; margin:.25rem 0 .6rem; }
+    .hero-title { display:flex; align-items:end; gap:1rem; flex-wrap:wrap; }
+    .hero-title span { margin-bottom:.6rem; color:var(--muted); font-size:1.05rem; }
+    .hero .intro { max-width:800px; font-size:1.05rem; line-height:1.5; }
+    .hero p { margin:.5rem 0; }
+    .read-first { max-width:800px; border-left:3px solid var(--accent); padding:.4rem .8rem; background:var(--panel); font-size:.95rem; }
+    .read-first strong { color:var(--accent); }
+    .comparison-note { max-width:900px; border-left:3px solid var(--accent); padding:.6rem .8rem; background:var(--panel); font-size:.95rem; }
+    .listening-guide { max-width:900px; }
+    .listening-guide > summary { font-size:.95rem; }
+    .story { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-top:.6rem; margin-bottom:1rem; }
+    .story div { border-top:1px solid var(--line); padding-top:1rem; }
+    .story span { color:var(--accent); font-size:.8rem; }
+    .story h2 { margin:.4rem 0; font-size:1.1rem; }
+    .story p { margin:0; color:var(--muted); font-size:.95rem; }
+    .transport { position:sticky; top:0; z-index:10; background:var(--panel); border-block:1px solid var(--line); padding-block:.8rem; box-shadow:0 5px 20px #0004; }
+    .transport-main { display:flex; flex-wrap:wrap; gap:1rem 2rem; align-items:center; }
+    .enable { display:flex; align-items:center; gap:.65rem; font-weight:650; min-height:44px; cursor:pointer; }
+    .volume { display:flex; gap:.65rem; align-items:center; flex-wrap:wrap; max-width:100%; }
+    .volume input { width:130px; min-height:44px; }
+    .volume output { min-width:3ch; font-variant-numeric:tabular-nums; color:var(--muted); }
+    #playback-status { margin:.45rem 0 0; color:var(--muted); font-size:.95rem; min-height:1.5rem; }
+    .filters { display:grid; grid-template-columns:1fr 1.3fr 2fr; gap:1rem; padding-block:1.5rem .7rem; }
+    .filters label { display:grid; gap:.35rem; font-weight:600; }
+    .filters input,.filters select { width:100%; min-height:44px; padding:.65rem; }
+    .browse-meta { display:flex; gap:1rem; align-items:baseline; justify-content:space-between; flex-wrap:wrap; color:var(--muted); }
+    #filter-status { margin:0; }
+    .section-nav { display:flex; gap:.55rem 1.2rem; flex-wrap:wrap; list-style:none; padding:0; margin:1rem 0 0; font-size:.95rem; }
+    .audition-section { padding-block:2.5rem 1rem; border-top:1px solid var(--line); margin-top:2rem; }
+    .section-heading { max-width:780px; margin-bottom:1.5rem; }
+    .section-heading h2 { font:600 clamp(1.5rem,3vw,2rem)/1.3 Georgia,"Times New Roman",serif; margin:.2rem 0 .7rem; }
+    .section-heading p:last-child { color:var(--muted); }
+    .clip-group { margin-bottom:2rem; }
+    .clip-group h3 { font-size:1rem; margin:0 0 .8rem; color:var(--accent); }
+    .clip-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+    #comparison .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .clip { min-width:0; border:1px solid var(--line); border-radius:.65rem; background:var(--panel); padding:1.2rem; display:flex; flex-direction:column; }
+    .clip.playing { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+    .clip-badges { display:flex; gap:.45rem; flex-wrap:wrap; }
+    .clip-badges span { color:var(--muted); border:1px solid var(--line); border-radius:1rem; padding:.08rem .5rem; font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; }
+    .clip h4 { font-size:1.08rem; line-height:1.45; margin:.75rem 0 .5rem; }
+    .description { margin:0 0 .8rem; font-size:1rem; }
+    .sequence-now { border-left:2px solid var(--accent); padding-left:.65rem; color:var(--accent); font-size:.9rem; margin:0 0 .8rem; }
+    .sequence-stages { margin:0 0 .9rem; padding-left:1.5rem; font-size:.875rem; }
+    .sequence-stages li { margin:.2rem 0; }
+    .sequence-time { color:var(--muted); font-variant-numeric:tabular-nums; }
+    .macro-line { font: .875rem/1.8 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--muted); margin:.2rem 0 .6rem; }
+    .clip-meta { color:var(--muted); font-size:.875rem; margin:auto 0 .8rem; font-variant-numeric:tabular-nums; }
+    .clip-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; }
+    .play { flex:1; }
+    .repeat { display:flex; align-items:center; gap:.35rem; min-height:44px; font-size:.9rem; }
+    .download { min-height:44px; display:flex; align-items:center; font-size:.9rem; }
+    progress { width:100%; height:.3rem; margin:1rem 0 .55rem; accent-color:var(--accent); }
+    details { font-size:.875rem; }
+    .evidence { overflow-wrap:anywhere; }
+    .table-scroll { max-width:100%; overflow:auto; margin:.75rem 0; }
+    table { border-collapse:collapse; min-width:31rem; font-variant-numeric:tabular-nums; }
+    caption { text-align:left; font-weight:650; margin-bottom:.45rem; }
+    th,td { padding:.35rem .45rem; border-bottom:1px solid var(--line); text-align:right; }
+    th:first-child { text-align:left; }
+    summary { cursor:pointer; min-height:36px; padding:.3rem 0; color:var(--muted); }
+    dl { display:grid; grid-template-columns:1fr 1fr; gap:.25rem .75rem; margin:.5rem 0; font-variant-numeric:tabular-nums; }
+    dd { margin:0; text-align:right; }
+    audio { width:100%; margin:.5rem 0; }
+    footer { border-top:1px solid var(--line); color:var(--muted); padding-block:2rem 3rem; margin-top:2rem; font-size:.9rem; }
+    footer p { max-width:850px; }
+    .empty { padding:2rem 0; }
+    @media(max-width:980px) { .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:650px) { html { scroll-padding-top:15rem; } .hero { padding-top:1rem; } .story { grid-template-columns:1fr; gap:1rem; } .filters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; padding-top:1rem; } .filters label:last-child { grid-column:1/-1; } .clip-grid,#comparison .clip-grid { grid-template-columns:1fr; } .transport-main { gap:.4rem 1rem; } .volume { margin-left:auto; } .volume input { width:90px; } .clip { padding:1rem; } }
+    @media(max-height:500px) { html { scroll-padding-top:1rem; } .transport { position:static; } }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media(forced-colors:active) { .clip.playing { outline:2px solid Highlight; } .transport,.clip { border:1px solid CanvasText; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#audition">Skip to the audition clips</a>
+  <header class="shell hero">
+    <p class="eyebrow">SnipSnap / dry engine audition</p>
+    <div class="hero-title"><h1>Nimbus.</h1><span>Six rings, one note.</span></div>
+    <p class="intro">Six metal identities share one requested note inside an imaginary funnel. Hear the connected whole, then compare the actual cymbal contributions to its attack, body and gathering tail.</p>
+    <p class="read-first"><strong>Audio starts off.</strong> Read each clip's description before enabling playback. Nothing plays automatically.</p>
+    <!-- NIMBUS_ENSEMBLE_NOTE -->
+    <!-- NIMBUS_COMPARISON_NOTE -->
+    <details class="listening-guide"><summary>What to listen for: identity, movement and gathering</summary><div class="story" aria-label="The sound's three connected parts">
+      <div><span>01 / Six cymbals</span><h2>One note, six characters</h2><p>Body, Bell, Paper, Dark, Flex and Wire have distinct upper modes and decay. Each principal mode belongs to the same requested root.</p></div>
+      <div><span>02 / Suspension</span><h2>A stack that yields</h2><p>A harder event changes excitation and displacement. SPACING changes neighboring transfer; FIELD changes the stack's restoration. Compare matched velocity clips.</p></div>
+      <div><span>03 / Funnel</span><h2>A gathering shimmer</h2><p>HEIGHT changes the source's position; FUNNEL changes its enclosure. Close rims can add contact, while powered HOLD supplies a settled sustain.</p></div>
+    </div></details>
+    <p class="read-first">These clips document a new DSP port. Descriptions state intended behavior; <strong>listening acceptance remains open.</strong> Begin with the natural whole instrument at C4. Compare its selected contribution, selected-muted mix and other five cymbals at the same playback level.</p>
+  </header>
+  <div class="transport">
+    <div class="shell">
+      <div class="transport-main">
+        <label class="enable"><input id="audio-enabled" type="checkbox"> Enable audio playback</label>
+        <button id="stop-all" type="button">Stop all <span aria-hidden="true">· Esc</span></button>
+        <div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="100" value="85"><output id="volume-value" for="volume">85%</output></div>
+      </div>
+      <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Audio off. Descriptions are ready to read.</p>
+    </div>
+  </div>
+  <main id="audition" class="shell" tabindex="-1">
+    <form class="filters" aria-label="Filter audition clips" onsubmit="return false">
+      <label for="voice-filter">Voice<select id="voice-filter"><option value="all">All voices</option><option>RING</option><option>SHIMMER</option><option>GATHER</option><option>THROAT</option><option>CONTACT</option><option>SUSPEND</option></select></label>
+      <label for="category-filter">Section<select id="category-filter"><option value="all">All sections</option><!-- NIMBUS_SECTION_FILTER_OPTIONS --></select></label>
+      <label for="search-filter">Search descriptions<input id="search-filter" type="search" placeholder="For example: Body, throat, coupling off" autocomplete="off"></label>
+    </form>
+    <div class="browse-meta"><p id="filter-status" role="status" aria-live="polite" aria-atomic="true">All audition clips.</p><a href="manifest.json">Full evidence manifest</a></div>
+    <nav aria-label="Audition sections"><ul class="section-nav"><!-- NIMBUS_SECTION_NAV --></ul></nav>
+    <noscript><p>The clip descriptions and native audio controls work without JavaScript. HOLD clips repeat; use their native Pause control to stop. Repeat settings, filters, global volume and Stop all require JavaScript.</p></noscript>
+    <p class="empty" id="empty-state" hidden>No clips match these filters. Choose another voice or section, or clear the search.</p>
+    <!-- NIMBUS_CARDS -->
+  </main>
+  <footer class="shell"><p>Dry mono audio, no effects. Matched full clips use a loudest-200-ms listening RMS of 0.12 with a 0.90 peak ceiling. Source taps inherit their full reference gain; raw partners preserve synthesis amplitude. The mechanics JSON records displacement, energy and geometry; it is evidence, not a listening verdict.</p><p>Everything on this page works from local relative assets. <a href="README.md">Audition notes</a> · <a href="manifest.json">Manifest and render measurements</a></p></footer>
+  <!-- NIMBUS_MANIFEST -->
+  <script>
+  (() => {
+    'use strict';
+    const cards = Array.from(document.querySelectorAll('.clip'));
+    const enabled = document.getElementById('audio-enabled');
+    const volume = document.getElementById('volume');
+    const status = document.getElementById('playback-status');
+    const voiceFilter = document.getElementById('voice-filter');
+    const categoryFilter = document.getElementById('category-filter');
+    const searchFilter = document.getElementById('search-filter');
+    const FADE = 0.02;
+    let context = null, master = null, active = null, epoch = 0;
+    let stopBarrier = Promise.resolve();
+    const buffers = new Map(), held = new Map();
+    const title = card => card.querySelector('h4').textContent;
+    const media = card => card.querySelector('audio');
+    const announce = text => { status.textContent = text; };
+    enabled.checked = false;
+    volume.value = '85';
+    document.getElementById('volume-value').value = '85%';
+
+    function audioContext() {
+      if (context) return context;
+      const Constructor = window.AudioContext || window.webkitAudioContext;
+      if (!Constructor) throw new Error('Audio buffers unavailable');
+      context = new Constructor({sampleRate:44100});
+      master = context.createGain();
+      master.gain.value = Number(volume.value) / 100;
+      master.connect(context.destination);
+      return context;
+    }
+    function isCurrent(card, ticket) {
+      return ticket === epoch && enabled.checked && !card.hidden;
+    }
+    function update(card) {
+      const player = held.get(card);
+      const loading = active && active.card === card && active.backend === 'loading';
+      const playing = (player && player.state === 'playing') || (!media(card).paused && !media(card).ended);
+      const button = card.querySelector('.play');
+      button.textContent = loading ? 'Loading…' : playing ? 'Pause' : 'Play';
+      button.setAttribute('aria-label', `${loading ? 'Cancel loading' : playing ? 'Pause' : 'Play'} ${title(card)}`);
+      button.setAttribute('aria-pressed', String(playing));
+      card.classList.toggle('playing', playing);
+      updateSequence(card);
+    }
+    const sequences = new Map();
+    function updateSequence(card) {
+      const label = card.querySelector('.sequence-now');
+      if (!label) return;
+      if (!sequences.has(card)) sequences.set(card, JSON.parse(card.dataset.sequence));
+      const audio = media(card);
+      let text;
+      if (audio.ended) text = 'Edited sequence finished. Return to Whole for the natural response.';
+      else if (audio.paused && audio.currentTime === 0) text = 'Edited sequence ready. Follow the timed stage list below; JavaScript names the current section during playback.';
+      else {
+        const section = sequences.get(card).find(part => audio.currentTime >= part.startSeconds && audio.currentTime < part.endSeconds);
+        text = section ? `${audio.paused ? 'Paused edited section' : 'Edited section'}: ${section.label}.`
+          : 'Edited sequence: short gap before the next addition.';
+      }
+      if (label.textContent !== text) label.textContent = text;
+    }
+    function barrier(promise) {
+      stopBarrier = Promise.all([stopBarrier, promise]).then(() => {});
+      return stopBarrier;
+    }
+
+    class HeldPlayer {
+      constructor(card) {
+        this.card = card;
+        this.state = 'stopped';
+        this.offset = 0;
+        this.source = null;
+        this.gain = null;
+        this.pendingStop = null;
+        this.buffer = null;
+        this.ticket = 0;
+        this.endingAt = null;
+        this.automation = [];
+      }
+      async load() {
+        const path = media(this.card).getAttribute('src');
+        if (!buffers.has(path)) {
+          const promise = (async () => {
+            const response = await fetch(path);
+            if (!response.ok) throw new Error('Audio unavailable');
+            const bytes = await response.arrayBuffer();
+            // Decode the original 44.1 kHz frames; hardware resampling remains continuous.
+            const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+            const decoder = Offline ? new Offline(1, 1, 44100) : audioContext();
+            return decoder.decodeAudioData(bytes);
+          })();
+          buffers.set(path, promise);
+          promise.catch(() => { if (buffers.get(path) === promise) buffers.delete(path); });
+        }
+        return buffers.get(path);
+      }
+      phase(time) {
+        if (!this.buffer) return 0;
+        if (this.endingAt !== null && time >= this.endingAt) return this.buffer.length;
+        const frames = this.startOffset + Math.max(0, time - this.startedAt) * this.buffer.sampleRate;
+        return Math.max(0, Math.round(frames)) % this.buffer.length;
+      }
+      envelope(time) {
+        let previous = this.automation[0] || {time, value:0};
+        for (let i = 1; i < this.automation.length; i++) {
+          const point = this.automation[i];
+          if (time < point.time) {
+            if (point.ramp && point.time > previous.time) {
+              const fraction = Math.max(0, (time - previous.time) / (point.time - previous.time));
+              return previous.value + fraction * (point.value - previous.value);
+            }
+            return previous.value;
+          }
+          previous = point;
+        }
+        return previous.value;
+      }
+      scheduleGain(value, time, ramp = false) {
+        this.automation.push({time, value, ramp});
+        if (ramp) this.gain.gain.linearRampToValueAtTime(value, time);
+        else this.gain.gain.setValueAtTime(value, time);
+      }
+      holdGain(time) {
+        const value = this.envelope(time);
+        this.automation = this.automation.filter(point => point.time < time);
+        this.gain.gain.cancelScheduledValues(time);
+        this.scheduleGain(value, time);
+        return value;
+      }
+      setRepeat(repeat) {
+        if (!this.source || this.state !== 'playing') return;
+        const now = context.currentTime;
+        this.holdGain(now);
+        this.source.loop = repeat;
+        if (repeat) {
+          this.endingAt = null;
+          this.scheduleGain(1, now + FADE, true);
+        } else {
+          const total = this.startOffset + Math.max(0, now - this.startedAt) * this.buffer.sampleRate;
+          const cycle = Math.floor(total / this.buffer.length);
+          this.endingAt = this.startedAt + ((cycle + 1) * this.buffer.length - this.startOffset) / this.buffer.sampleRate;
+          const start = Math.max(now, this.endingAt - FADE);
+          if (start > now) {
+            this.scheduleGain(1, Math.min(start, now + FADE), true);
+            this.scheduleGain(1, start);
+          }
+          this.scheduleGain(0, this.endingAt, true);
+        }
+      }
+      async play(ticket) {
+        this.ticket = ticket;
+        this.state = 'loading';
+        const ctx = audioContext();
+        await ctx.resume();
+        const buffer = await this.load();
+        await stopBarrier;
+        if (!isCurrent(this.card, ticket) || this.ticket !== ticket) return;
+        this.buffer = buffer;
+        const source = ctx.createBufferSource(), gain = ctx.createGain();
+        source.buffer = buffer;
+        source.loopStart = 0;
+        source.loopEnd = buffer.length / buffer.sampleRate;
+        source.loop = this.card.querySelector('.loop-toggle').checked;
+        source.connect(gain).connect(master);
+        this.source = source;
+        this.gain = gain;
+        gain.gain.value = 0;
+        this.automation = [{time:ctx.currentTime, value:0, ramp:false}];
+        this.startOffset = Math.max(0, Math.min(buffer.length - 1, this.offset));
+        this.startedAt = Math.ceil((ctx.currentTime + 0.005) * ctx.sampleRate) / ctx.sampleRate;
+        const remaining = (buffer.length - this.startOffset) / buffer.sampleRate;
+        this.fadeIn = source.loop ? FADE : Math.min(FADE, remaining / 2);
+        this.endingAt = source.loop ? null : this.startedAt + remaining;
+        this.scheduleGain(0, this.startedAt);
+        this.scheduleGain(1, this.startedAt + this.fadeIn, true);
+        if (!source.loop) {
+          this.scheduleGain(1, Math.max(this.startedAt + this.fadeIn, this.endingAt - FADE));
+          this.scheduleGain(0, this.endingAt, true);
+        }
+        this.state = 'playing';
+        active = {card:this.card, backend:'buffer', ticket};
+        this.card.dataset.playback = 'buffer';
+        this.card.querySelector('progress').max = buffer.duration;
+        source.onended = () => {
+          source.disconnect(); gain.disconnect();
+          if (this.source === source) {
+            this.source = null; this.gain = null;
+            if (this.state === 'playing') {
+              this.state = 'stopped'; this.offset = 0;
+              this.card.querySelector('progress').value = buffer.duration;
+              if (active && active.card === this.card && active.backend === 'buffer') {
+                active = null; announce(`Finished ${title(this.card)}.`);
+              }
+            }
+            update(this.card);
+          }
+          if (source.finishStop) source.finishStop();
+        };
+        source.start(this.startedAt, this.startOffset / buffer.sampleRate);
+        update(this.card);
+        announce(`Playing ${title(this.card)}${source.loop ? ', repeating' : ', one cycle'}.`);
+      }
+      stop(pause) {
+        this.ticket = 0;
+        this.state = pause ? 'paused' : 'stopped';
+        if (!pause) this.offset = 0;
+        if (this.pendingStop) { update(this.card); return this.pendingStop; }
+        const source = this.source;
+        if (!source) { update(this.card); return Promise.resolve(); }
+        const now = context.currentTime;
+        const end = context.state === 'running' ? Math.max(now, Math.min(now + FADE, this.endingAt === null ? Infinity : this.endingAt)) : now;
+        if (pause) this.offset = this.phase(end) % this.buffer.length;
+        this.holdGain(now);
+        this.scheduleGain(0, end, true);
+        this.pendingStop = new Promise(resolve => { source.finishStop = resolve; });
+        const pending = this.pendingStop;
+        source.stop(end);
+        if (context.state !== 'running') {
+          source.disconnect(); this.gain.disconnect(); this.source = null; this.gain = null; source.finishStop();
+        }
+        pending.then(() => { if (this.pendingStop === pending) this.pendingStop = null; });
+        this.card.querySelector('progress').value = pause ? this.offset / this.buffer.sampleRate : 0;
+        update(this.card);
+        return pending;
+      }
+    }
+
+    function stopActive(reset = true) {
+      const previous = active;
+      active = null;
+      if (!previous) return stopBarrier;
+      const player = held.get(previous.card);
+      let pending = Promise.resolve();
+      if (player && previous.backend !== 'native') pending = player.stop(!reset);
+      else {
+        media(previous.card).pause();
+        if (reset) { media(previous.card).currentTime = 0; previous.card.querySelector('progress').value = 0; }
+      }
+      update(previous.card);
+      return barrier(pending);
+    }
+    function stopAll() {
+      ++epoch;
+      active = null;
+      cards.forEach(card => {
+        const player = held.get(card);
+        if (player) barrier(player.stop(false));
+        media(card).pause(); media(card).currentTime = 0;
+        card.querySelector('progress').value = 0;
+        update(card);
+      });
+      announce(enabled.checked ? 'All playback stopped.' : 'Audio off. Descriptions are ready to read.');
+    }
+    async function nativePlay(card, ticket) {
+      await stopBarrier;
+      if (!isCurrent(card, ticket)) return;
+      active = {card, backend:'native', ticket};
+      card.dataset.playback = 'native';
+      try { await media(card).play(); }
+      catch (_) {
+        if (isCurrent(card, ticket)) { active = null; update(card); announce(`Playback did not start for ${title(card)}. Try its native audio controls or WAV download.`); }
+      }
+    }
+    async function requestPlay(card, native = false) {
+      const ticket = ++epoch;
+      stopActive(true);
+      active = {card, backend:'loading', ticket};
+      update(card);
+      const player = held.get(card);
+      if (!player || native) { await nativePlay(card, ticket); return; }
+      try { await player.play(ticket); }
+      catch (_) {
+        if (!isCurrent(card, ticket)) return;
+        player.state = 'stopped';
+        await nativePlay(card, ticket);
+        if (isCurrent(card, ticket) && !media(card).paused) announce(`Playing ${title(card)} with native audio controls.`);
+      }
+    }
+
+    cards.forEach(card => {
+      const audio = media(card), button = card.querySelector('.play'), repeat = card.querySelector('.loop-toggle');
+      if (repeat) { repeat.checked = true; repeat.disabled = false; held.set(card, new HeldPlayer(card)); }
+      audio.loop = !!repeat;
+      audio.controls = false;
+      audio.volume = Number(volume.value) / 100;
+      card.querySelector('.native-hint').hidden = false;
+      audio.addEventListener('play', () => {
+        // A queued play event may arrive after another request paused this element.
+        // It no longer represents a user request and must not claim the transport again.
+        if (audio.paused) { update(card); return; }
+        if (!enabled.checked) { audio.pause(); return; }
+        if (!active || active.card !== card || active.backend !== 'native') {
+          audio.pause(); requestPlay(card, true); return;
+        }
+        update(card); announce(`Playing ${title(card)}${audio.loop ? ', repeating' : ''}.`);
+      });
+      audio.addEventListener('pause', () => {
+        update(card);
+        if (active && active.card === card && active.backend === 'native' && !audio.ended && audio.currentTime > 0) announce(`Paused ${title(card)}.`);
+      });
+      audio.addEventListener('ended', () => {
+        update(card);
+        if (active && active.card === card && active.backend === 'native') { active = null; announce(`Finished ${title(card)}.`); }
+      });
+      audio.addEventListener('error', () => { if (active && active.card === card && active.backend === 'native') announce(`Cannot load ${title(card)}. Try its WAV download.`); });
+      audio.addEventListener('timeupdate', () => {
+        if (!held.has(card) || (active && active.card === card && active.backend === 'native')) card.querySelector('progress').value = audio.currentTime;
+        updateSequence(card);
+      });
+      audio.addEventListener('seeked', () => updateSequence(card));
+      button.addEventListener('click', () => {
+        if (!enabled.checked) return;
+        if (active && active.card === card) {
+          if (active.backend === 'loading') { ++epoch; stopActive(true); announce(`Loading cancelled for ${title(card)}.`); }
+          else if (active.backend === 'buffer') { ++epoch; stopActive(false); announce(`Paused ${title(card)}.`); }
+          else if (!audio.paused) { audio.pause(); }
+          else { const ticket = ++epoch; nativePlay(card, ticket); }
+        } else requestPlay(card);
+      });
+      if (repeat) repeat.addEventListener('change', () => {
+        audio.loop = repeat.checked;
+        const player = held.get(card);
+        player.setRepeat(repeat.checked);
+        if (active && active.card === card) announce(`${title(card)}: ${repeat.checked ? 'repeat on' : 'finishing this cycle'}.`);
+      });
+    });
+    function progress() {
+      if (active && active.backend === 'buffer') {
+        const player = held.get(active.card);
+        active.card.querySelector('progress').value = player.phase(context.currentTime) / player.buffer.sampleRate;
+      }
+      requestAnimationFrame(progress);
+    }
+    requestAnimationFrame(progress);
+    enabled.addEventListener('change', () => {
+      if (!enabled.checked) stopAll();
+      cards.forEach(card => { card.querySelector('.play').disabled = !enabled.checked; media(card).controls = enabled.checked; card.querySelector('.native-hint').hidden = enabled.checked; });
+      announce(enabled.checked ? 'Audio enabled. Choose a clip to play.' : 'Audio off. Descriptions are ready to read.');
+    });
+    volume.addEventListener('input', () => {
+      const value = Number(volume.value) / 100;
+      document.getElementById('volume-value').value = `${volume.value}%`;
+      cards.forEach(card => { media(card).volume = value; });
+      if (master) { master.gain.cancelScheduledValues(context.currentTime); master.gain.setTargetAtTime(value, context.currentTime, 0.01); }
+    });
+    document.getElementById('stop-all').addEventListener('click', stopAll);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') stopAll(); });
+    function filter() {
+      const query = searchFilter.value.trim().toLocaleLowerCase();
+      let visible = 0;
+      cards.forEach(card => {
+        card.hidden = (voiceFilter.value !== 'all' && card.dataset.voice !== voiceFilter.value)
+          || (categoryFilter.value !== 'all' && card.dataset.category !== categoryFilter.value)
+          || !card.textContent.toLocaleLowerCase().includes(query);
+        if (!card.hidden) visible++;
+        else if (active && active.card === card) { ++epoch; stopActive(true); announce('Playback stopped because the clip is outside the current filters.'); }
+      });
+      document.querySelectorAll('.clip-group').forEach(group => { group.hidden = !Array.from(group.querySelectorAll('.clip')).some(card => !card.hidden); });
+      document.querySelectorAll('.audition-section').forEach(section => { section.hidden = !Array.from(section.querySelectorAll('.clip')).some(card => !card.hidden); });
+      document.getElementById('filter-status').textContent = `${visible} of ${cards.length} clips shown.`;
+      document.getElementById('empty-state').hidden = visible !== 0;
+    }
+    voiceFilter.addEventListener('change', filter);
+    categoryFilter.addEventListener('change', filter);
+    searchFilter.addEventListener('input', filter);
+    document.querySelectorAll('.section-nav a, .comparison-note a').forEach(link => link.addEventListener('click', () => {
+      voiceFilter.value = 'all'; categoryFilter.value = link.hash.slice(1); searchFilter.value = ''; filter();
+    }));
+    filter();
+  })();
+  </script>
+</body>
+</html>
