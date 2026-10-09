@@ -98,6 +98,10 @@ object Presets {
             val v = MurkVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MurkPresets.forVoice(v)
         }
+        NimbusPatch.ENGINE -> {
+            val v = NimbusVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            NimbusPresets.forVoice(v)
+        }
         ThawPatch.ENGINE -> {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
@@ -152,6 +156,6 @@ object Presets {
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
-            TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() +
+            TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all()
 }

@@ -64,7 +64,8 @@ class PresetsTest {
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
-            MurkPresets.all() + CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all()
+            MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

@@ -634,6 +634,22 @@ tasks.register<JavaExec>("generateCorollaAudition") {
     if (project.hasProperty("corollaQuick")) args("--quick")
 }
 
+/** Render Nimbus's six same-note identities, interaction grids and powered HOLD listening pack. */
+tasks.register<JavaExec>("generateNimbusAudition") {
+    group = "distribution"
+    description = "Render NIMBUS dry audition WAVs, mechanical evidence and an accessible page under testkit/nimbus-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NimbusAuditionGenerator")
+    maxHeapSize = "512m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/nimbus-audition")
+    if (providers.gradleProperty("nimbusRefreshPage").orNull == "true") args("--refresh-page")
+    if (providers.gradleProperty("nimbusQuick").orNull == "true") args("--quick")
+    providers.gradleProperty("nimbusBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("nimbusBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
+    if (providers.gradleProperty("nimbusCompareHold").orNull == "true") args("--compare-hold")
+}
+
 /** Render Tessera's dry materials, moving paths, causal probes and settled loops. */
 tasks.register<JavaExec>("generateTesseraAudition") {
     group = "distribution"

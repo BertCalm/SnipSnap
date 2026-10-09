@@ -455,6 +455,25 @@ sixteen-pad pitched kit. The accessible listening page starts silent and
 is regenerated with `./gradlew :synth:generateMurkAudition`; see
 [`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
 
+NIMBUS is a pitched stack of six suspended cymbals: Body, Bell, Paper, Dark,
+Flex and Wire answer at the same requested root. RING, SHIMMER, GATHER,
+THROAT, CONTACT and SUSPEND change the initial excitation and response while
+retaining the full stack. EXCITE, SPACING, HEIGHT, FIELD and FUNNEL shape
+contact, sympathetic transfer, motion and chamber loading; HOLD supplies
+explicit powered sustain. Nine dry presets, a sixteen-pad pitched kit and
+physical velocity join the existing patch and recipe pipeline. Audition:
+`./gradlew :synth:generateNimbusAudition`. The
+[published listening page](https://snipsnap-nimbus-audition.bertcalm.chatgpt.site)
+compares voices, notes, velocities, controls, isolated cymbals and held loops.
+The first C4 defaults concentrated nearly all early/body energy in their
+shared root. Revised sixteen-mode cymbals change excitation and upper-mode
+losses to expose rounded rings, thin shimmer, wavering metal, dark chamber
+tone, rim contact and supported sustain. Optional preserved-source pairs
+support direct listening comparisons; normal regeneration remains 323 clips.
+See [NIMBUS](docs/NIMBUS.md) for the contract, comparison command and
+listening procedure.
+Listening and device acceptance remain open.
+
 COROLLA is a mechanical flower of coupled metal petals around a powered
 magnetic core and a shared chamber. TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT
 and HUSK share TUNE, PULL, BLOOM, FIELD, CONTACT, CHAMBER and HOLD. It
@@ -472,9 +491,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW, SUTURE,
+VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL and GRAINS round out the lineup —
-twenty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+twenty-four engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -656,7 +675,7 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, COROLLA, UNDERTOW,
+GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
 SUTURE, TESSERA, PITCHWHEEL, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.

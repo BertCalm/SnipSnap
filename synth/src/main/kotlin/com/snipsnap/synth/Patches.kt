@@ -70,6 +70,7 @@ object Patches {
             TremorPatch.ENGINE -> TremorPatch.fromJsonValue(value)
             CircuitPatch.ENGINE -> CircuitPatch.fromJsonValue(value)
             MurkPatch.ENGINE -> MurkPatch.fromJsonValue(value)
+            NimbusPatch.ENGINE -> NimbusPatch.fromJsonValue(value)
             ThawPatch.ENGINE -> ThawPatch.fromJsonValue(value)
             UndertowPatch.ENGINE -> UndertowPatch.fromJsonValue(value)
             CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)

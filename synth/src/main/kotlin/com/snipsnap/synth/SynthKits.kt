@@ -568,6 +568,26 @@ object SynthKits {
     }
 
     /**
+     * The dry NIMBUS kit. A01–A08 walk RING up C minor pentatonic from C3. The top half
+     * explores shimmer, stack restoration, chamber geometry and rim contact, then holds metal.
+     * Each pad keeps its full recipe and the engine's pitched routing.
+     */
+    fun nimbus(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = NimbusPatch(
+            "Metal $n", NimbusVoice.RING,
+            Nimbus.defaults(NimbusVoice.RING) + ("TUNE" to semitone / Nimbus.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Nimbus.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = NimbusPresets.all().first { it.name == name }
+            .let { pad(it, Nimbus.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("THIN CROWN"), preset("GATHERING STACK"), preset("NARROW THROAT"), preset("WIDE MOUTH"),
+            preset("DARK PLATE"), preset("SOFT FIELD"), preset("RIM KISS"), preset("HELD METAL"),
+        )
+    }
+
+    /**
      * TESSERA's dry pitched kit. A01–A08 walk WOOD up C minor pentatonic from C3; A09–A16
      * contain the eight named material and chamber recipes, ending with settled held material.
      * Every pad stores its complete recipe. Frame transfers and chamber answers come from the
@@ -580,6 +600,7 @@ object SynthKits {
         ).let { pad(it, Tessera.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
             TesseraPresets.all().map { pad(it, Tessera.drumClassFor(it.voice, it.macros)) }
+    }
     }
 
     /**
