@@ -31,6 +31,13 @@ object Pitchwheel {
     private const val CLEARANCE = .012
     private const val MAX_SECONDS = 8f
 
+    // A gentle push must still clear a finger. This passive launch-energy floor
+    // tapers smoothly to zero at the lowest default PUSH; the curve is monotonic.
+    private fun launchSpeed(push: Double): Double {
+        val t = (push / .45f.toDouble()).coerceIn(0.0, 1.0)
+        return 1.0 + 3.0 * push + .6 * (1.0 - t * t * (3.0 - 2.0 * t))
+    }
+
     private val settings = arrayOf(
         floatArrayOf(.45f, .25f, .30f, .40f, .75f),
         floatArrayOf(.55f, .70f, .35f, .55f, .40f),
@@ -186,7 +193,7 @@ object Pitchwheel {
         val loopHz = if (held) round(hz * period / RATE) * RATE / period else hz
         val wood = Wood(loopHz, body, tooth, voice)
         var angle = -.025
-        var speed = (1.0 + 3.0 * push) * sqrt(velocity.toDouble())
+        var speed = launchSpeed(push) * sqrt(velocity.toDouble())
         var temperature = heat
         var time = 0.0
         var inputWork = 0.0
@@ -406,7 +413,7 @@ object Pitchwheel {
         val m = settled(voice, macros)
         val held = isLoop(m.getValue("HOLD"))
         val hz = frequencyFor(voice, m.getValue("TUNE"), midi).toDouble()
-        val duration = TAU / (1.0 + 3.0 * m.getValue("PUSH"))
+        val duration = TAU / launchSpeed(m.getValue("PUSH").toDouble())
         val period = (round(hz * duration).coerceAtLeast(16.0) * RATE / hz).roundToInt().coerceAtLeast(2048)
         val engine = Engine(voice, m, midi, velocity, held, period, true, resin, contacts, bowSound, snapSound, solverRate)
         if (velocity == 0f) {

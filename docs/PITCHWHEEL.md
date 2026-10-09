@@ -81,7 +81,10 @@ tooth/finger and wooden body networks. Wheel angle uses radians and speed
 uses radians per second. Inertia is .08 in normalized internal units; energy
 and work use the corresponding normalized units.
 
-PUSH sets the initial mechanical energy. Wheel motion determines encounter
+PUSH sets the initial mechanical energy, with a smooth low-end launch floor
+so a gentle push can still clear the first finger. The floor tapers away by
+PUSH .45, preserving the default gestures; velocity zero remains silent.
+Wheel motion determines encounter
 timing while resonant frequencies determine the note. Tooth contacts bend
 fingers and apply reaction torque to the wheel. A release spends stored
 finger energy on its excitation projection; a reverse encounter needs real

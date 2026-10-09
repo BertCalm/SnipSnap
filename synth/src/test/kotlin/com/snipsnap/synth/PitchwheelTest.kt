@@ -292,6 +292,18 @@ class PitchwheelTest {
     }
 
     @Test
+    fun `minimum push still clears a finger and produces a pitched finite gesture`() {
+        for (voice in PitchwheelVoice.entries) {
+            val p = Pitchwheel.renderProbe(voice, mapOf("PUSH" to 0f), seconds = 2f)
+            assertTrue(p.diagnostics.events.any { it.kind.name == "RELEASE" && it.energy > 0 },
+                "$voice minimum PUSH strains without ever releasing a finger")
+            assertTrue(p.samples.maxOf { abs(it) } > 1e-6f,
+                "$voice minimum PUSH is an off control")
+            assertEquals(0.0, p.diagnostics.inputWork, "$voice low PUSH receives hidden powered assistance")
+        }
+    }
+
+    @Test
     fun `timbral controls change dry character after matching signal energy`() {
         val base = mapOf("PUSH" to .65f, "TOOTH" to .45f, "ADHESION" to .45f, "HEAT" to .5f, "BODY" to .5f)
         for (macro in timbral) {
