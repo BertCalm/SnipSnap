@@ -137,6 +137,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tessera() },
         Starter(
+            "pitchwheel", "PITCHWHEEL",
+            "Wooden teeth and stretching resin in C minor pentatonic. Push, catch, pluck and recoil.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.pitchwheel() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

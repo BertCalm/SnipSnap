@@ -156,3 +156,7 @@ testkit/suture-first-listen/
 # Tessera's generated listening matrix, diagnostic traces and kit audio.
 testkit/tessera-audition/
 testkit/SnipSnap Tessera Kit/
+
+# Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
+testkit/pitchwheel-audition/
+testkit/SnipSnap Pitchwheel Kit/

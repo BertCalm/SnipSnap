@@ -254,6 +254,20 @@ contains 297 dry clips and diagnostics. The sound awaits the owner's listening
 verdict; [implementation notes](docs/TESSERA.md) describe the render, saving
 and export contracts.
 
+PITCHWHEEL is a pitched wooden wheel whose teeth catch flexible fingers while
+resin filaments stretch, bow and release. CLUNK, PLUCK, DRAW, RECOIL, THAWED
+and TURN share PUSH, TOOTH, ADHESION, HEAT, BODY and HOLD. Patches retain an
+explicit MIDI root (24–96), strike velocity and model version; TUNE is a
+relative ±12-semitone offset, neutral at 0.5, so the effective note spans
+12–108 without clamping back to the saved-root range. Seven provisional presets
+and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
+FRESH TAPE's 16 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+for the compact first listening set, or add `-PpitchwheelFull` for the broader
+dry probes. HOLD's top step returns settled loop-only material with a
+deterministic attachment cycle and capped adhesion. The owner's dry listening
+approval is pending; preset expansion waits on that approval.
+[Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
+
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
 decaying sine partials at inharmonic ratios, the textbook recipe for a
@@ -477,8 +491,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA and GRAINS round out the lineup —
-twenty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
+TESSERA, PITCHWHEEL and GRAINS round out the lineup —
+twenty-four engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -661,11 +676,11 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN is also in the picker, preset roster and starter kits; the CLI's
-`--midi` and `--velocity` options set its note and strike energy directly.
+CISTERN and PITCHWHEEL are also in the picker, preset roster and starter kits;
+the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
 

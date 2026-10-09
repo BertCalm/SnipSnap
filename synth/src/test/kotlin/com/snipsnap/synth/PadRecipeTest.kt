@@ -47,6 +47,7 @@ class PadRecipeTest {
         TesseraPatch("Mixed Material Test", TesseraVoice.ANSWER, mapOf("FOLD" to 0.7f)),
         UndertowPatch("Shell Test", UndertowVoice.KNOCK, mapOf("DRAW" to 0.4f)),
         SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
+        PitchwheelPatch("Wheel Test", PitchwheelVoice.RECOIL, mapOf("ADHESION" to 0.8f), midi = 55, velocity = 0.6f),
     )
 
     @Test
@@ -73,6 +74,17 @@ class PadRecipeTest {
         val back = PadRecipe.fromJsonText(recipe.toJsonText())
         assertEquals(recipe, back)
         assertTrue(back.render().samples.contentEquals(recipe.render().samples))
+    }
+
+    @Test
+    fun `editing a wheel recipe retains its root velocity and model`() {
+        val source = PitchwheelPatch("Low Wheel", PitchwheelVoice.DRAW, mapOf("BODY" to .7f), midi = 36, velocity = .3f)
+        val edited = Patches.edited(source, "Warm Wheel", source.macros + ("HEAT" to .8f))
+        assertEquals(source.copy(name = "Warm Wheel", macros = source.macros + ("HEAT" to .8f)), edited)
+        val recipe = PadRecipe(edited)
+        val restored = PadRecipe.fromJsonText(recipe.toJsonText())
+        assertEquals(recipe, restored, "recipe dispatch retains state outside the macro map")
+        assertNull(restored.fx)
     }
 
     @Test

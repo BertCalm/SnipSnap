@@ -17,6 +17,8 @@ import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.Tessera
@@ -49,7 +51,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA and TESSERA) override
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA and PITCHWHEEL) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -78,7 +80,8 @@ object SynthCommand {
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA and TESSERA, got $engine")
+                PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA and PITCHWHEEL, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -123,6 +126,7 @@ object SynthCommand {
             if (noteFlags.isEmpty()) patch else when (patch) {
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
                     macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
                 )

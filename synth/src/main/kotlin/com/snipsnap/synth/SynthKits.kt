@@ -604,6 +604,25 @@ object SynthKits {
     }
 
     /**
+     * A dry pitched wheel kit for the first audition. A01–A08 walk CLUNK up C minor
+     * pentatonic from C3. A09–A14 contain the six voice defaults, A15 adds the next
+     * scale note, and A16 is the settled held TURN. Each pad has a fresh independent
+     * object and an editable recipe with its exact root; finite gestures use TONAL
+     * routing and HOLD uses LOOP, preserving the instrument's pitched identity.
+     */
+    fun pitchwheel(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = PitchwheelPatch(
+            "Wheel $n", PitchwheelVoice.CLUNK, Pitchwheel.defaults(PitchwheelVoice.CLUNK),
+            midi = Pitchwheel.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Pitchwheel.drumClassFor(it.voice, it.macros)) }
+        val defaults = PitchwheelPresets.all().filterNot { Pitchwheel.isLoop(it.macros.getValue("HOLD")) }
+        val held = PitchwheelPresets.all().single { Pitchwheel.isLoop(it.macros.getValue("HOLD")) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            defaults.map { pad(it, Pitchwheel.drumClassFor(it.voice, it.macros)) } +
+            listOf(note(9, PENTATONIC[8]), pad(held, Pitchwheel.drumClassFor(held.voice, held.macros)))
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
