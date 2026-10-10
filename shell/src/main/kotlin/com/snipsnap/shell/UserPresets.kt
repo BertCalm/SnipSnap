@@ -9,6 +9,7 @@ import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RevelPatch
 import java.io.File
 import java.util.Locale
 
@@ -331,7 +332,8 @@ object UserPresets {
      * with every macro's exact value, so the promoted preset renders the
      * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
+     * PITCHWHEEL keeps its render-model version as well; REVEL retains the
+     * microphones, phrase configuration, seed and saved velocity. The name is a
      * Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
@@ -340,6 +342,18 @@ object UserPresets {
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is RevelPatch -> {
+                val c = patch.configuration
+                fun values(items: List<*>, literal: (Any?) -> String): String =
+                    if (items.isEmpty()) "emptyList()" else items.joinToString(", ", "listOf(", ")", transform = literal)
+                val seed = if (c.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${c.seed}L"
+                ".copy(configuration = RevelConfig(" +
+                    "micCount = ${c.micCount}, phraseTempo = ${c.phraseTempo}f, phraseBeats = ${c.phraseBeats}, " +
+                    "trajectories = ${values(c.trajectories) { "RevelTrajectory.$it" }}, " +
+                    "phaseOffsets = ${values(c.phaseOffsets) { "${it}f" }}, " +
+                    "directions = ${values(c.directions) { it.toString() }}, " +
+                    "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
+            }
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
