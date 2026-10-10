@@ -5,8 +5,6 @@ import com.snipsnap.audio.Snip
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class PitchwheelVoice { CLUNK, PLUCK, DRAW, RECOIL, THAWED, TURN }
-
 /**
  * A finite push into a shared wooden resonator. Angular coordinates are radians,
  * time is seconds, inertia is .08 in normalised mechanical units. Spring work,
@@ -16,9 +14,9 @@ enum class PitchwheelVoice { CLUNK, PLUCK, DRAW, RECOIL, THAWED, TURN }
  * projection removes integration error BEFORE audio conditioning, never adds power.
  * Constants describe an imaginary instrument, not measured resin or wood.
  */
-object Pitchwheel {
+internal object PitchwheelV1 {
     const val RATE = Dsp.RATE
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 1
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 24
     const val MIDI_MAX = 96
@@ -89,133 +87,77 @@ object Pitchwheel {
         var born: Double = 0.0, var stiffness: Double = 0.0, var limit: Double = 0.0,
         var direction: Int = 1)
 
-    private enum class Transfer { RELEASE, SNAP, SLIP, CREAK }
-
-    /** One ten-mode wooden body, with work-conserving contact transfers. Release
-     * work waits in a short contact reservoir; it is part of the stored energy.
-     * Resin slip pumps a broader subset of these same modes, never a noise layer. */
-    private class Wood(hz: Double, body: Double, tooth: Double, voice: PitchwheelVoice, period: Int = 0) {
+    /** Exact damped modal rotations; E=.5*(x*x+v*v). Impulses solve the
+     * quadratic work equation, including existing modal velocity cross terms. */
+    private class Wood(hz: Double, body: Double, tooth: Double, voice: PitchwheelVoice) {
         val x = DoubleArray(10)
         val v = DoubleArray(10)
-        val pending = DoubleArray(10)
-        val pendingDirection = DoubleArray(10) { 1.0 }
         private val c = DoubleArray(10)
         private val s = DoubleArray(10)
         private val d = DoubleArray(10)
         private val pickup = DoubleArray(10)
-        private val release = DoubleArray(10)
-        private val snap = DoubleArray(10)
-        private val slip = DoubleArray(10)
-        private val creak = DoubleArray(10)
-        private val transferRate: Double
+        private val pluck = DoubleArray(10)
+        private val bow = DoubleArray(10)
         init {
-            val ratios = doubleArrayOf(1.0, 2.0, 3.0, 3.9, 6.2, 1.42, 1.86, 2.72, 4.12, 6.43)
-            val rootDecay = when (voice) {
-                PitchwheelVoice.CLUNK -> .16 + .34 * body
-                PitchwheelVoice.PLUCK -> .40 + .80 * body
-                PitchwheelVoice.DRAW -> .22 + .42 * body
-                PitchwheelVoice.RECOIL -> .25 + .45 * body
-                PitchwheelVoice.THAWED -> .12 + .30 * body
-                PitchwheelVoice.TURN -> .25 + .60 * body
-            }
-            val bodyDecay = when (voice) {
-                PitchwheelVoice.CLUNK -> .07 + .19 * body
-                PitchwheelVoice.PLUCK -> .06 + .10 * body
-                PitchwheelVoice.DRAW -> .14 + .32 * body
-                PitchwheelVoice.RECOIL -> .08 + .28 * body
-                PitchwheelVoice.THAWED -> .06 + .16 * body
-                PitchwheelVoice.TURN -> .12 + .28 * body
-            }
-            val edge = when (voice) {
-                PitchwheelVoice.CLUNK -> .38
-                PitchwheelVoice.PLUCK -> 1.55
-                PitchwheelVoice.DRAW -> .62
-                PitchwheelVoice.RECOIL -> 1.25
-                PitchwheelVoice.THAWED -> .72
-                PitchwheelVoice.TURN -> .95
-            }
-            val bodyTransfer = when (voice) {
-                PitchwheelVoice.CLUNK -> 2.2
-                PitchwheelVoice.PLUCK -> .45
-                PitchwheelVoice.DRAW -> 1.1
-                PitchwheelVoice.RECOIL -> 1.35
-                PitchwheelVoice.THAWED -> 1.6
-                PitchwheelVoice.TURN -> 1.0
-            }
-            val attack = (.00045 + .004 * (1 - tooth).pow(2)) * when (voice) {
-                PitchwheelVoice.CLUNK -> 1.4
-                PitchwheelVoice.PLUCK -> .55
-                PitchwheelVoice.DRAW -> 1.3
-                PitchwheelVoice.RECOIL -> .65
-                PitchwheelVoice.THAWED -> 1.5
-                PitchwheelVoice.TURN -> 1.0
-            }
-            transferRate = 1 - exp(-1 / (INTERNAL_RATE * attack))
+            val ratios = doubleArrayOf(1.0, 2.0, 3.0, 3.9, 6.2, 1.0, 1.48, 2.13, 3.17, 4.73)
             for (j in x.indices) {
-                var f = hz * ratios[j] * if (j >= 5) 1.15 - .30 * body else 1.0
-                // A held wheel repeats one settled body state, including modal phase.
-                if (period > 0) f = round(f * period / RATE) * RATE / period
+                val ratio = if (j >= 6) ratios[j] * (1.15 - .3 * body) else ratios[j]
+                val f = hz * ratio
                 val a = TAU * f / INTERNAL_RATE
                 c[j] = cos(a); s[j] = sin(a)
-                val t60 = if (j < 5) rootDecay / (1 + .36 * j)
-                    else bodyDecay / (1 + .19 * (j - 5))
+                val t60 = if (j < 5) (.8 + 2.2 * body) / (1 + .27 * j)
+                    else (.18 + 1.2 * body) / (1 + .32 * (j - 5))
                 d[j] = exp(-ln(1000.0) / (INTERNAL_RATE * t60))
+                // Root pickup remains dominant at all sizes and contact hardness.
                 pickup[j] = if (f > RATE * .42) 0.0 else when (j) {
-                    0 -> 1.0; 1 -> .70; 2 -> .55; 3 -> .42; 4 -> .30
-                    else -> (.62 + .50 * body) / (1 + .18 * (j - 5))
+                    0 -> 1.0; 1 -> .22; 2 -> .13; 3 -> .10; 4 -> .07
+                    5 -> .22 + .22 * body; else -> .10 * body / (j - 4)
                 }
-                release[j] = when (j) {
-                    0 -> 1.0
-                    1 -> (.30 + .75 * tooth) * edge
-                    2 -> (.16 + .65 * tooth) * edge
-                    3 -> (.10 + .70 * tooth) * edge
-                    4 -> (.06 + .58 * tooth) * edge
-                    else -> (.18 + .65 * body) * bodyTransfer / (1 + .24 * (j - 5))
+                pluck[j] = if (pickup[j] == 0.0) 0.0 else when (j) {
+                    0 -> 1.0; 1 -> .18 + .18 * tooth; 2 -> .09 + .15 * tooth
+                    3 -> .07 + .32 * tooth; 4 -> .04 + .24 * tooth
+                    else -> (.15 + .45 * body) / (j - 4)
                 }
-                snap[j] = if (j == 0) .45 else if (j < 5) (.55 + .40 * tooth) / (1 + .10 * j)
-                    else (.45 + .35 * body) / (1 + .12 * (j - 5))
-                slip[j] = when (j) {
-                    0 -> .75; 1 -> .90; 2 -> .65; 3 -> .30; 4 -> .18
-                    else -> (.45 + .45 * body) / (1 + .25 * (j - 5))
-                }
-                creak[j] = if (j < 5) .16 / (j + 1) else .70 / (1 + .18 * (j - 5))
-                if (pickup[j] == 0.0) { release[j] = 0.0; snap[j] = 0.0; slip[j] = 0.0; creak[j] = 0.0 }
+                bow[j] = if (j == 0) 1.0 else if (j in 1..2) .12 / j else 0.0
             }
+            if (voice == PitchwheelVoice.CLUNK) for (j in 5..9) pluck[j] *= 1.5
+            if (voice == PitchwheelVoice.DRAW) for (j in 3..4) pluck[j] *= .7
+            normalise(pluck); normalise(bow)
         }
-        fun energy() = x.indices.sumOf { .5 * (x[it] * x[it] + v[it] * v[it]) + pending[it] }
-        private fun pump(j: Int, work: Double, direction: Double) {
-            if (work <= 0.0) return
-            val existing = .5 * (x[j] * x[j] + v[j] * v[j])
-            if (existing > 1e-22) {
-                val gain = sqrt(1 + work / existing); x[j] *= gain; v[j] *= gain
-            } else v[j] = direction * sqrt(2 * work)
-        }
-        fun excite(energy: Double, transfer: Transfer = Transfer.RELEASE, direction: Int = 1,
-            variation: Double = 1.0, strain: Double = 0.0, temperature: Double = .5) {
+        private fun normalise(a: DoubleArray) { val n = sqrt(a.sumOf { it * it }); for (j in a.indices) a[j] /= n }
+        fun energy() = x.indices.sumOf { .5 * (x[it] * x[it] + v[it] * v[it]) }
+        fun excite(energy: Double, bowed: Boolean = false, direction: Int = 1, variation: Double = 1.0) {
             if (energy <= 0.0) return
-            val p = when (transfer) { Transfer.RELEASE -> release; Transfer.SNAP -> snap; Transfer.SLIP -> slip; Transfer.CREAK -> creak }
-            val weights = DoubleArray(10)
-            var norm = 0.0
-            for (j in p.indices) {
-                val colour = if (j == 0) 1.0 else variation * (if (direction < 0) 1.0 + .16 * j else 1.0)
-                val texture = if (transfer == Transfer.SLIP && j > 0)
-                    (1.0 + .55 * strain + .30 * (1 - temperature)) * (1 + .22 * tanh(v[j] * 12 - v[0] * 4)) else 1.0
-                val w = p[j] * colour * texture
-                weights[j] = w * w; norm += weights[j]
+            val p = if (bowed) bow else pluck
+            if (bowed) {
+                val receiving = x.indices.sumOf { .5 * p[it] * (x[it] * x[it] + v[it] * v[it]) }
+                if (receiving > 1e-18) {
+                    // Slip work sustains the harmonic subset radially, preserving its
+                    // modal phase. A velocity-only maintenance kick shifts low roots.
+                    for (j in x.indices) {
+                        val gain = sqrt(1 + energy * p[j] / receiving)
+                        x[j] *= gain; v[j] *= gain
+                    }
+                    return
+                }
             }
-            if (norm == 0.0) { pending[0] += energy; return }
-            for (j in weights.indices) {
-                val work = energy * weights[j] / norm
-                if (transfer == Transfer.RELEASE || transfer == Transfer.SNAP) {
-                    pending[j] += work; pendingDirection[j] = direction.toDouble()
-                } else pump(j, work, direction.toDouble())
+            // Root receiving modes retain their phase on repeated encounters.
+            // Body/upper-mode velocity kicks carry the asymmetric release edge.
+            // Every component receives an explicit share of the elastic work.
+            var norm = 0.0
+            for (j in p.indices) { val w = p[j] * if (j == 0) 1.0 else variation; norm += w * w }
+            for (j in p.indices) {
+                val w = p[j] * if (j == 0) 1.0 else variation
+                val work = energy * w * w / norm
+                val existing = .5 * (x[j] * x[j] + v[j] * v[j])
+                if ((j == 0 || j == 5) && existing > 1e-18) {
+                    val gain = sqrt(1 + work / existing); x[j] *= gain; v[j] *= gain
+                } else if (work > 0.0) v[j] = direction * sqrt(v[j] * v[j] + 2 * work)
             }
         }
         fun tick(): Double {
             var loss = 0.0
             for (j in x.indices) {
-                val work = pending[j] * transferRate
-                pending[j] -= work; pump(j, work, pendingDirection[j])
                 val old = .5 * (x[j] * x[j] + v[j] * v[j])
                 val xx = (c[j] * x[j] + s[j] * v[j]) * d[j]
                 v[j] = (c[j] * v[j] - s[j] * x[j]) * d[j]; x[j] = xx
@@ -247,7 +189,7 @@ object Pitchwheel {
         val offsets = doubleArrayOf(0.0, .27)
         val hz = frequencyFor(voice, m.getValue("TUNE"), midi).toDouble()
         val loopHz = if (held) round(hz * period / RATE) * RATE / period else hz
-        val wood = Wood(loopHz, body, tooth, voice, if (held) period else 0)
+        val wood = Wood(loopHz, body, tooth, voice)
         var angle = -.025
         var speed = launchSpeed(push) * sqrt(velocity.toDouble())
         var temperature = heat
@@ -269,7 +211,7 @@ object Pitchwheel {
         private val powered = held && velocity > 0f
         init {
             // Geometry varies with voice/root but remains fixed across macro comparisons.
-            val r = Random(Dsp.seedFor("PITCHWHEEL", 1, voice, midi))
+            val r = Random(Dsp.seedFor("PITCHWHEEL", MODEL_VERSION, voice, midi))
             for (j in phases.indices) {
                 phases[j] = j * TAU / TEETH + if (j == 0) 0.0 else r.nextDouble(-.016, .016)
                 attach[j] = r.nextDouble(); variation[j] = r.nextDouble(.83, 1.17)
@@ -302,7 +244,7 @@ object Pitchwheel {
                         val release = x * finger.direction >= width
                         val send = if (release) e * (.62 + .18 * tooth) else 0.0
                         if (release) {
-                            wood.excite(send, direction = finger.direction, variation = variation[finger.tooth], temperature = temperature)
+                            wood.excite(send, direction = finger.direction, variation = variation[finger.tooth])
                             releasedEnergy += send; event(EventKind.RELEASE, finger.tooth, finger.direction, send, f)
                         }
                         dissipated += e - send
@@ -331,7 +273,7 @@ object Pitchwheel {
                 if (snap || stretch < -.006) {
                     val e = .5 * fil.stiffness * (angle - fil.anchor).pow(2)
                     val send = if (snap && snapSound) .36 * e else 0.0
-                    if (send > 0) wood.excite(send, transfer = Transfer.SNAP, direction = fil.direction, variation = 1.0 + adhesion, strain = stretch / fil.limit, temperature = temperature)
+                    if (send > 0) wood.excite(send, direction = fil.direction, variation = 1.5)
                     snappedEnergy += send; dissipated += e - send
                     event(if (snap) EventKind.SNAP else EventKind.DETACH, fil.tooth, dir, send)
                     fil.tooth = -1
@@ -374,9 +316,7 @@ object Pitchwheel {
             val driveWork = drive * step
             if (driveWork > 0) inputWork += driveWork else dissipated -= driveWork
             val frictionWork = max(0.0, (drag + slipDrag) * step).coerceAtMost(before + max(0.0, driveWork))
-            val bowBudget = if (nfil > 0) min(frictionWork * .80,
-                max(0.0, (slipDrag + filamentLoss) * step) * .85) else 0.0
-            val creakBudget = max(0.0, fingerLoss * step) * (.22 + .30 * tooth)
+            val bowBudget = if (bowSound && nfil > 0) min(frictionWork * .42, max(0.0, slipDrag * step) * .65) else 0.0
             val allowed = max(0.0, before + driveWork - frictionWork)
             val after = mechanicalEnergy()
             if (after > allowed + 1e-14) {
@@ -401,26 +341,18 @@ object Pitchwheel {
             val retained = mechanicalEnergy()
             // All work lost from mechanics is either heat/loss or acoustic bow work.
             val lost = max(0.0, before + driveWork - retained)
-            val bowWork = min(bowBudget, lost)
-            val creakWork = min(creakBudget, max(0.0, lost - bowWork))
-            val send = if (bowSound) bowWork else 0.0
+            val send = min(bowBudget, lost)
             if (send > 0.0) {
-                val strain = filaments.filter { it.tooth >= 0 }.sumOf {
-                    abs(angle - it.anchor) / it.limit
-                } / nfil
-                wood.excite(send, transfer = Transfer.SLIP, direction = if (speed >= 0) 1 else -1,
-                    strain = strain, temperature = temperature)
-                bowedEnergy += send
+                // Bounded stick/slip feedback selects polarity, not energy. This can
+                // sustain a root mode only while a real attachment dissipates work.
+                val sign = if (wood.v[0] >= 0.0) 1 else -1
+                wood.excite(send, bowed = true, direction = sign); bowedEnergy += send
             }
-            if (creakWork > 0.0) wood.excite(creakWork, transfer = Transfer.CREAK,
-                direction = if (speed >= 0) 1 else -1, temperature = temperature)
-            dissipated += lost - send - creakWork
+            dissipated += lost - send
             val resinDrag = if (resin) .034 * adhesion * (1 - .67 * temperature) * speed +
                 .004 * adhesion * (1 - .55 * temperature) * tanh(speed / .035) + slipDrag + filamentLoss else 0.0
             val resinWork = min(frictionWork, max(0.0, resinDrag * step))
-            // A diagnostic mute sends the same allocated work to a silent sink;
-            // it must not change temperature, encounters or wheel trajectory.
-            val warming = max(0.0, resinWork - bowWork) * 2.5
+            val warming = max(0.0, resinWork - send) * 2.5
             temperature = (temperature + min(.6 * dt, warming) - (temperature - heat) * dt / 2.2).coerceIn(0.0, 1.0)
             geometry(old)
             time += dt
@@ -452,7 +384,6 @@ object Pitchwheel {
             }
             for (b in armed) a.add(if (b) 1.0 else 0.0)
             a.addAll(wood.x.toList()); a.addAll(wood.v.toList())
-            a.addAll(wood.pending.toList()); a.addAll(wood.pendingDirection.toList())
             return a.toDoubleArray()
         }
     }
@@ -467,19 +398,6 @@ object Pitchwheel {
         if (normalize) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         if (fade) Dsp.fadeTail(out)
         return out
-    }
-
-    /** One contact with no wheel motion, for hearing and measuring attack colour. */
-    internal fun acousticProbe(voice: PitchwheelVoice, macros: Map<String, Float> = emptyMap(),
-        midiNote: Int = DEFAULT_MIDI, kind: EventKind = EventKind.RELEASE, direction: Int = 1,
-        seconds: Double = 1.0): FloatArray {
-        val m = settled(voice, macros)
-        val wood = Wood(frequencyFor(voice, m.getValue("TUNE"), midiNote).toDouble(),
-            m.getValue("BODY").toDouble(), m.getValue("TOOTH").toDouble(), voice)
-        val transfer = if (kind == EventKind.SNAP) Transfer.SNAP else Transfer.RELEASE
-        wood.excite(.025, transfer, direction, temperature = m.getValue("HEAT").toDouble())
-        val raw = FloatArray((seconds * INTERNAL_RATE).roundToInt()) { wood.tick(); wood.sample() }
-        return finish(raw)
     }
 
     internal fun renderProbe(voice: PitchwheelVoice, macros: Map<String, Float> = emptyMap(),
