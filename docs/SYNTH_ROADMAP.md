@@ -211,6 +211,28 @@ not been listened to or approved; broader presets wait for that approval.
 Numerical verification, phone/MPC validation and release naming remain
 separate acceptance work.
 
+### REVEL — interlocking skins through moving microphones
+
+REVEL ports the [supplied specification](REVEL_SPEC.md): six modal heads at
+four stations share a passive floor and one deterministic interlocking phrase.
+A bounded friction contact, pressure-bent articulated pair, alternating rolling
+pair and broad pulse remain active across CIRCLE, CLOSE, CROSSING, SPIRO,
+FRICTION and PROCESSION. One to three microphones observe the same source states
+through moving gain, absorption and fractional-delay paths, summed to mono.
+PLAY, SKIN, ORBIT, WEAVE and REACH are the five timbral controls; TUNE supplies
+the host's C3–C5 root and HOLD selects settled loop-only material.
+
+Patches save phrase timing, microphone geometry, performer seed and velocity.
+Ten provisional presets, `SynthKits.revel()`, the phone picker, FRESH TAPE,
+CLI note/velocity overrides and dry recipes use the existing melodic pipeline.
+`./gradlew :synth:generateRevelAudition` produces raw/matched comparisons,
+source and floor studies, microphone contrasts, macro grids and held loops.
+Add `-Pquick` for the compact first listening set. The
+[private published audition](https://snipsnap-revel-audition.bertcalm.chatgpt.site)
+awaits the owner's listening verdict. [REVEL](REVEL.md) documents current
+contracts and measured validation; phone/MPC verification and release naming
+remain separate gates.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,

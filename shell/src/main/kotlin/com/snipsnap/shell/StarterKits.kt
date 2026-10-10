@@ -131,6 +131,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.suture() },
         Starter(
+            "revel", "REVEL",
+            "Interlocking skins and friction in C minor pentatonic, heard by moving microphones.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.revel() },
+        Starter(
             "tessera", "TESSERA",
             "Wood, paired wire and metal answer through a moving chamber in C minor pentatonic.",
             seeded = false,

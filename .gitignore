@@ -160,3 +160,7 @@ testkit/SnipSnap Tessera Kit/
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
+
+# REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
+testkit/revel-audition/
+testkit/SnipSnap Revel Kit/
