@@ -76,7 +76,9 @@ Run `./gradlew --no-daemon :synth:generateRevelAudition` to generate the complet
 raw/matched listening matrix and standalone page in `testkit/revel-audition/`.
 Add `-Pquick` for the smaller first listening set. Raw and loudness-matched files
 are derived from the same render, with no rack effects. Diagnostics and the
-manifest accompany the audio. HOLD cases can repeat across their wraps; source
+manifest accompany the audio. Path CSV floating-point fields use six decimal
+places for compact hosting; waveform files and scalar diagnostic measurements
+retain their original precision. HOLD cases can repeat across their wraps; source
 and floor ablations and fixed-performance microphone comparisons help identify
 what creates the sound.
 
