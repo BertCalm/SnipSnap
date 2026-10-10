@@ -182,15 +182,20 @@ owner's listening decision; device validation remains outstanding.
 
 ### PITCHWHEEL — wooden teeth catching through stretching resin
 
-PITCHWHEEL's first port is provisional and awaits the owner's dry listening
-approval. CLUNK, PLUCK, DRAW, RECOIL, THAWED and TURN share one pitched wheel,
-flexible fingers and bounded resin attachments. PUSH supplies gesture energy;
-TOOTH shapes catches and releases; ADHESION changes stretch and resistance;
+The owner heard PITCHWHEEL R1 as six similar struck sounds distinguished
+mainly by rhythm. A model 2 prototype revises acoustic articulation and awaits
+the next dry listening verdict. CLUNK, PLUCK, DRAW, RECOIL, THAWED and TURN
+share one pitched wheel, flexible fingers and bounded resin attachments.
+PUSH supplies gesture energy; TOOTH shapes catches and releases;
+ADHESION changes stretch and resistance;
 HEAT sets the initial thermal state; BODY shapes the wooden resonance.
 Independent renders reset wheel phase, heat and resin state.
 
 Patches save an explicit MIDI root from 24–96 (default 48), velocity from
-0–1 and model version 1. TUNE is neutral at 0.5 and offsets that root by
+0–1 and a render model. Newly authored patches use model 2. Saved model 1
+patches retain `PitchwheelV1`; JSON with an absent or null model also selects
+that original renderer. Editing, recipe replay and velocity variants preserve
+the stored model. TUNE is neutral at 0.5 and offsets that root by
 ±12 semitones, giving an effective note range of 12–108 without clamping
 back to the saved-root range. Modes above 0.42 times the output sample rate
 are removed from the audible pickup before decimation. HOLD at or above
@@ -199,6 +204,16 @@ Its loop-specific calibration uses a deterministic attachment cycle and
 caps adhesion at 0.65; it is an explicit export constraint rather than
 evidence that every finite mechanical trajectory repeats.
 
+Model 2 gives the same ten-mode bank stronger body pickup, separate
+inharmonic body modes, voice-dependent loss and TOOTH projection, and a
+contact-rise reservoir for release work. Finger friction, filament slip and
+snaps use distinct receiving projections. Transfers remain charged to the
+mechanical work ledger; modal radial growth adds exactly the allocated work,
+and undelivered release energy counts as stored energy and held-loop state.
+The geometry seed deliberately retains legacy model 1, preserving the tooth
+layout across the revision. Revised acoustic transfers can still change
+heating and damping, so this does not promise identical encounter timing.
+
 The initial roster is limited to six voice defaults and Endless Turn.
 `SynthKits.pitchwheel()`, the FRESH TAPE starter, patch recipes, CLI rendering
 and the phone picker expose the same dry instrument. Finite notes route as
@@ -206,8 +221,9 @@ TONAL; held notes route as LOOP. Run
 `./gradlew :synth:generatePitchwheelAudition` for the compact first listening
 pack under `testkit/pitchwheel-audition/`, or append `-PpitchwheelFull` for
 the broader raw/matched probes and interaction checks. [PITCHWHEEL](PITCHWHEEL.md)
-records the model, diagnostics and integration contracts. The dry sound has
-not been listened to or approved; broader presets wait for that approval.
+records the model, diagnostics and integration contracts. The revised prototype
+has not received the owner's dry listening approval; broader presets wait for
+that approval.
 Numerical verification, phone/MPC validation and release naming remain
 separate acceptance work.
 

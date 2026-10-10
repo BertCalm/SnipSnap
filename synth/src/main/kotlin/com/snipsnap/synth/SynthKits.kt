@@ -601,7 +601,6 @@ object SynthKits {
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
             TesseraPresets.all().map { pad(it, Tessera.drumClassFor(it.voice, it.macros)) }
     }
-    }
 
     /**
      * A dry pitched wheel kit for the first audition. A01–A08 walk CLUNK up C minor
