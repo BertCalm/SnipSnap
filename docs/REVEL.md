@@ -28,15 +28,15 @@ Station radius is 2 m, microphone height is 0.30 m and REACH sets path radius
 from 0.15 to 1.55 m. Direct gains stay between 0.55 and 1.95. Pickup evaluates
 geometry at reception time and reads each shared source history. Delay
 excursions around the central propagation delay use at most 16% of their
-physical size, with an analytical speed bound reducing that further when
+physical size (8% for opposed CROSSING paths), with an analytical speed bound reducing that further when
 necessary. Delay rate stays within 0.004 internal samples per sample. This
 musical Doppler approximation also compresses the distance differences of
 stationary microphones. Proximity gain, absorption and sparse early returns
 follow the actual geometry. Microphone signals use an arithmetic mean;
-coincident paths reproduce one microphone. A restrained common pickup combines the root-only response with the actual
-full head responses at the central delay. Its total root gain is unchanged by
-that blend; it preserves some body through mono cancellation without changing
-the performer states.
+coincident paths reproduce one microphone. A restrained common pickup combines
+0.23 of the root-only response with 0.12 of the actual full head responses at the central delay.
+It preserves body through mono cancellation while allowing the moving pickup to
+retain each membrane's character, without changing the performer states.
 
 ## Controls and saved state
 
@@ -46,6 +46,24 @@ or settled repeating material. Performance tempo and microphone orbit speed
 are independent. CIRCLE, CLOSE, CROSSING, SPIRO, FRICTION and PROCESSION retain
 all four source families while changing articulation balance and listening
 perspective.
+
+Voice identity also changes the physical performance and membrane projection;
+it is retained when every voice uses identical macro values. Each still includes
+friction, articulated, rolling and broad-pulse sources.
+
+| Voice | Performance and source emphasis |
+| --- | --- |
+| CIRCLE | Spacious turns between all four families, with ringing rolling responses. |
+| CLOSE | Ringing center and edge strokes, a loaded bass answer and a damped touch. |
+| CROSSING | Opposed call-and-answer stations with contrasting upper body resonance. |
+| SPIRO | Dense, uneven palm/finger cells and brighter short membrane responses. |
+| FRICTION | Connected, pressure-shaped rubs with shifting upper resonance and hand punctuation. |
+| PROCESSION | Broad mallet beat anchors with alternating rolling answer trains. |
+
+These differences arise before pickup through finite source work, contact
+projection, modal radiation and decay. PLAY adds bounded pickups and replies as
+well as changing stroke energy. The friction surface drives an implicit contact
+with a work budget; its roughness never enters the audio directly.
 
 `RevelPatch` saves macros, voice, velocity and `RevelConfig`: microphone count,
 phrase tempo and beats, trajectory roster, phases, directions, speed ratios
@@ -104,25 +122,34 @@ The repository checks use the existing CI paths: `./gradlew --no-daemon test`
 checked in Chromium with real PCM24 playback, raw/matched switching, HOLD
 repeat, note persistence/export and layouts from 320 to 1440 pixels.
 
+The 23 engine and patch checks include a voice-contrast regression over all 15
+pairs at defaults and again with identical controls. Root-centered quarter-octave
+power bands avoid crediting phase changes or rhythm alone as timbral contrast.
+The minimum normalized spectral distance is 0.2377 at defaults and 0.2093 with
+shared controls, above the 0.15 regression floor. All four source families must
+also retain at least 0.5% of pre-pickup power in those comparisons. These checks
+catch collapsed spectra or a nearly isolated lead; they do not certify that the
+six voices satisfy a listener.
+
 The published [audition](https://snipsnap-revel-audition.bertcalm.chatgpt.site)
 contains 299 listening positions and 538 PCM24 WAVs from 261 simulations.
 Its manifest identifies source SHA256
-`33b55769250b1b23d2fb387d13b20ed0ce0da4716183fefb53e0a143ca8198d4`.
+`7c0a64c7417d9b082a783a6451d603ce4685fe485b78fcdf807c6730f7bd130f`.
 The complete matrix records zero forbidden drum-family short classifications
 and zero failed HOLD seams. The 54 voice/note/velocity cases all detect pitch;
-the maximum error of the recorded best-confidence window is 16.17 cents.
+the maximum error of the recorded best-confidence window is 24.89 cents.
 Separate released-contact probes return to the modal root.
 
-Raw ensemble peak is at most 0.4391 and absolute mean DC is below 6.07e-10.
-Diagnostic source taps peak at 0.88494; no WAV required PCM safety attenuation.
+Raw ensemble peak is at most 0.44592 and absolute mean DC is below 1.95e-10.
+Diagnostic source taps peak at 0.63716; no WAV required PCM safety attenuation.
 Maximum direct pickup gain is 1.81261 and delay rate is 0.00395244. All 11
-exported HOLD cases pass genuine pre-wrap comparison: maximum seam 5.86e-13,
-waveform convergence 3.23e-13 and complete acoustic-state convergence 1.34e-16.
+exported HOLD cases pass genuine pre-wrap comparison: maximum seam 1.28e-12,
+waveform convergence 5.72e-13 and complete acoustic-state convergence 5.39e-16.
 Three hidden preroll periods precede those comparisons. The regression suite
 also covers a one-beat, 200 BPM, 0.6-second loop with a fast spiro path.
 
-On this shared cloud run, median synthesis time is 643 ms per unique render;
-the most expensive all-high SPIRO HOLD render takes 3.97 seconds, including
+On this shared cloud run, median synthesis time is 467 ms per unique render;
+the most expensive all-high SPIRO HOLD render takes 3.35 seconds, including
 hidden preroll. These timings exclude file encoding and are not a phone
 benchmark. Browser checks exercise real audio playback and all 1,345 referenced
 assets at 320, 390 and 1440 pixels.

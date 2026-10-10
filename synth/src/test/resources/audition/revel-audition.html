@@ -117,13 +117,26 @@
     const isHold = clip => Boolean(clip.held || clip.loop === true || (clip.loop && typeof clip.loop === 'object'));
     const pathFor = clip => mode === 'raw' ? clip.rawPath : clip.matchedPath || clip.rawPath;
     const safePath = path => typeof path === 'string' && !/^\s*(javascript|data|vbscript):/i.test(path) ? path : '';
+    const assetVersion = [manifest.listeningRound, manifest.dspSourceSha256 || manifest.sourceHash].filter(Boolean).join('.');
+    // Keep saved asset paths and download names stable; each listening round gets
+    // its own browser/CDN cache key when the actual asset is requested.
+    function requestPath(path) {
+      const safe = safePath(path);
+      if (!safe || !assetVersion) return safe;
+      const hashIndex = safe.indexOf('#'), fragment = hashIndex < 0 ? '' : safe.slice(hashIndex);
+      const base = hashIndex < 0 ? safe : safe.slice(0, hashIndex), queryIndex = base.indexOf('?');
+      const pathname = queryIndex < 0 ? base : base.slice(0, queryIndex);
+      const query = new URLSearchParams(queryIndex < 0 ? '' : base.slice(queryIndex + 1));
+      query.set('revel', assetVersion);
+      return `${pathname}?${query}${fragment}`;
+    }
     const audioAssets = new Map(), pendingAudioAssets = new Map();
     let audioLoadSerial = 0, audioLoading = false, pendingPlayback = false, activeAudioUrl = '', loadingAudioPath = '';
     function assetName(path) { try { return decodeURIComponent(new URL(path, location.href).pathname.split('/').pop() || 'revel-download').replace(/\.gz$/i, ''); } catch (_) { return 'revel-download'; } }
     function encodedAsset(path) { try { return /\.(wav|json|csv)\.gz$/i.test(new URL(path, location.href).pathname); } catch (_) { return false; } }
     function assetMime(path) { const name = assetName(path); return /\.wav$/i.test(name) ? 'audio/wav' : /\.json$/i.test(name) ? 'application/json' : 'text/csv;charset=utf-8'; }
     async function decodedAsset(path) {
-      const response = await fetch(safePath(path));
+      const response = await fetch(requestPath(path));
       if (!response.ok) throw new Error('The selected file is unavailable. Reload this page and try again.');
       const bytes = await response.arrayBuffer();
       const signature = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 2));
@@ -160,7 +173,7 @@
     const joinedMacros = clip => macroNames.map((name, i) => `${name} ${number(macroValue(clip, name, i))}`).join(' ');
     const metricsRows = [ ['Peak', 'peak', 4], ['RMS', 'rms', 4], ['DC', 'dc', 6], ['Loudness', 'loudness', 4], ['Centroid Hz', 'centroidHz', 0], ['Pitch Hz', 'pitchHz', 1], ['Pitch error cents', 'pitchErrorCents', 1], ['Pitch confidence', 'pitchConfidence', 3], ['Classifier / whole phrase', 'classifier', null], ['Classifier / first 1.35 s', 'shortClassifier', null] ];
     function metricValue(value, digits) { if (value == null) return '—'; if (digits == null) return escape(typeof value === 'object' ? JSON.stringify(value) : value); return number(value, digits); }
-    function link(path, label) { const href = safePath(path); return href ? `<a href="${escape(href)}" download${encodedAsset(href) ? `="${escape(assetName(href))}" data-encoded-download="${escape(href)}"` : ''}>${label}</a>` : ''; }
+    function link(path, label) { const href = safePath(path); return href ? `<a href="${escape(requestPath(href))}" download="${escape(assetName(href))}"${encodedAsset(href) ? ` data-encoded-download="${escape(href)}"` : ''}>${label}</a>` : ''; }
     function saveNotes() { try { localStorage.setItem(storageKey, JSON.stringify(notes)); storageAvailable = true; } catch (_) { storageAvailable = false; } }
     function updateNote(id, changes) { notes[id] = {...(notes[id] || {}), ...changes, updatedAt: new Date().toISOString()}; saveNotes(); const card = document.getElementById(`clip-${id}`); if (card) { const indicator = card.querySelector('.saved-indicator'); const entry = notes[id]; indicator.textContent = entry.verdict ? entry.verdict.toUpperCase() : entry.text ? 'NOTED' : entry.listenedAt ? 'HEARD' : ''; indicator.hidden = !indicator.textContent; const help = card.querySelector('.note-help'); help.textContent = storageAvailable ? 'Saved in this browser. Export notes before moving devices.' : 'Browser storage is unavailable. Export notes to keep this session.'; } }
     function clipCard(clip) {
@@ -212,7 +225,7 @@
       $('play-status').textContent = 'Loading selected audio…'; updatePlayButtons();
       if (!path) { audioLoading = false; $('play-status').textContent = 'This clip has no audio export.'; return; }
       try {
-        let source = path;
+        let source = requestPath(path);
         if (encodedAsset(path)) source = await audioAssetUrl(path);
         if (serial !== audioLoadSerial) { trimAudioAssets(); return; }
         activeAudioUrl = source; player.dataset.sourcePath = path;

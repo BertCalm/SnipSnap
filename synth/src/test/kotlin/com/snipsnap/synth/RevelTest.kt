@@ -9,6 +9,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -227,6 +228,52 @@ class RevelTest {
     }
 
     @Test
+    fun `voice defaults and shared controls retain material spectral and source family contrast`() {
+        val failures = ArrayList<String>()
+        val common = Revel.defaults(RevelVoice.CIRCLE) + ("TUNE" to .5f)
+        for ((label, controls) in listOf("defaults" to mapOf("TUNE" to .5f), "shared controls" to common)) {
+            val evidence = RevelVoice.entries.associateWith { voice ->
+                val report = Revel.inspect(voice, controls, velocity = 1f,
+                    probe = Revel.Probe(recordSources = true, seconds = 2.6f))
+                assertBounded(report, "$label $voice")
+                val frames = (report.rates.phraseSeconds * Dsp.RATE).toInt()
+                val families = familyPowerShares(requireNotNull(report.sources), frames)
+                println("REVEL $label $voice source family shares (friction, articulated, rolling, pulse): ${families.contentToString()}")
+                // A foreground must keep the other ensemble families present.
+                // Half a percent is about 23 dB below aggregate source power;
+                // this modest anti-solo floor leaves the listening verdict open.
+                for ((family, share) in families.withIndex()) {
+                    if (share < .005) failures += "$label $voice source family $family only contributes $share"
+                }
+                VoiceEvidence(phraseSpectrum(report.snip.samples, Revel.frequencyFor(voice, .5f).toDouble(), frames),
+                    phraseEnvelope(report.snip.samples, frames), families)
+            }
+            for ((index, a) in RevelVoice.entries.withIndex()) for (b in RevelVoice.entries.take(index)) {
+                val spectral = profileDistance(evidence.getValue(a).spectrum, evidence.getValue(b).spectrum)
+                val temporal = profileDistance(evidence.getValue(a).envelope, evidence.getValue(b).envelope)
+                println("REVEL $label $a/$b phrase contrast: spectrum=$spectral, envelope=$temporal")
+                // The rejected audition's distances were .017–.131 at defaults,
+                // and .009–.073 with shared controls. Its envelopes already differed.
+                // Broad root-centered power bands reject phase and small pitch changes;
+                // rhythm differences cannot excuse the same spectral envelope.
+                if (spectral <= .15) failures += "$label $a/$b spectral contrast $spectral (envelope $temporal)"
+            }
+            val circle = evidence.getValue(RevelVoice.CIRCLE).families
+            val friction = evidence.getValue(RevelVoice.FRICTION).families[0]
+            val articulated = evidence.getValue(RevelVoice.CLOSE).families[1]
+            // Measure vibrating sources, rather than counting scheduled gesture labels.
+            // These material-participation floors do not certify a listening verdict.
+            if (friction < .10 || friction < 3.0 * circle[0]) {
+                failures += "$label friction source share $friction versus CIRCLE ${circle[0]}"
+            }
+            if (articulated < .30 || articulated < 1.5 * circle[1]) {
+                failures += "$label CLOSE articulated source share $articulated versus CIRCLE ${circle[1]}"
+            }
+        }
+        assertTrue(failures.isEmpty(), "Voice audio or source participation collapsed:\n${failures.joinToString("\n")}")
+    }
+
+    @Test
     fun `play changes participation while orbit keeps its own clock and velocity changes source work`() {
         val probe = Revel.Probe(seconds = 2.6f)
         val sparse = Revel.inspect(RevelVoice.CIRCLE, mapOf("PLAY" to 0f, "ORBIT" to .1f), probe = probe)
@@ -375,6 +422,52 @@ class RevelTest {
     }
 
     private fun rms(samples: FloatArray): Double = sqrt(samples.sumOf { it.toDouble() * it } / samples.size.coerceAtLeast(1))
+
+    private data class VoiceEvidence(val spectrum: DoubleArray, val envelope: DoubleArray, val families: DoubleArray)
+
+    private fun phraseSpectrum(samples: FloatArray, root: Double, frames: Int): DoubleArray {
+        val n = 8192
+        val edges = DoubleArray(26) { root * .5 * 2.0.pow((it - .5) * .25) }
+        val powers = DoubleArray(25)
+        val window = DoubleArray(n) { .5 - .5 * cos(2 * PI * it / (n - 1)) }
+        for (from in (.025 * Dsp.RATE).toInt()..frames - n step 2048) {
+            val re = FloatArray(n) { (samples[from + it] * window[it]).toFloat() }
+            val im = FloatArray(n)
+            Fft.forward(re, im)
+            var band = 0
+            for (bin in 1 until n / 2) {
+                val hz = bin.toDouble() * Dsp.RATE / n
+                if (hz < edges[0]) continue
+                while (band < powers.size && hz >= edges[band + 1]) band++
+                if (band < powers.size) powers[band] += re[bin].toDouble() * re[bin] + im[bin].toDouble() * im[bin]
+            }
+        }
+        return amplitudeProfile(powers)
+    }
+
+    private fun phraseEnvelope(samples: FloatArray, frames: Int): DoubleArray = amplitudeProfile(DoubleArray(46) { bin ->
+        val from = frames * bin / 46
+        val until = frames * (bin + 1) / 46
+        (from until until).sumOf { samples[it].toDouble() * samples[it] }
+    })
+
+    private fun familyPowerShares(sources: Array<FloatArray>, frames: Int): DoubleArray {
+        val powers = DoubleArray(4)
+        for (head in sources.indices) {
+            val family = when (head) { 0 -> 0; 1, 2 -> 1; 3, 4 -> 2; else -> 3 }
+            powers[family] += (0 until frames).sumOf { sources[head][it].toDouble() * sources[head][it] }
+        }
+        val total = powers.sum().coerceAtLeast(1e-30)
+        return DoubleArray(powers.size) { powers[it] / total }
+    }
+
+    private fun amplitudeProfile(powers: DoubleArray): DoubleArray {
+        val total = powers.sum().coerceAtLeast(1e-30)
+        return DoubleArray(powers.size) { sqrt(powers[it] / total) }
+    }
+
+    private fun profileDistance(a: DoubleArray, b: DoubleArray): Double =
+        sqrt(a.indices.sumOf { (a[it] - b[it]) * (a[it] - b[it]) })
 
     private fun brightness(samples: FloatArray): Double {
         var difference = 0.0

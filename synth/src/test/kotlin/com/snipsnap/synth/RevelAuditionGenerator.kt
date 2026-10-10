@@ -445,12 +445,12 @@ object RevelAuditionGenerator {
         description: String, macros: Map<String, Float> = emptyMap()) =
         Case("${voice.name.lowercase(Locale.ROOT)}_$suffix", section, voice, label, description, macros)
     private fun voiceDescription(voice: RevelVoice) = when (voice) {
-        RevelVoice.CIRCLE -> "One listener follows a clear rotating conversation among friction, articulated strokes, rolls and broad pulses."
-        RevelVoice.CLOSE -> "One listener passes close to individual players, exposing contact and membrane details."
-        RevelVoice.CROSSING -> "Two counter-moving perspectives hear the same interlocking performance."
-        RevelVoice.SPIRO -> "Three listeners trace intricate loops through one shared circle of performers."
-        RevelVoice.FRICTION -> "Elastic vocal gestures speak above an ensemble that retains all four source families."
-        RevelVoice.PROCESSION -> "Broad pulses and alternating rolling answers anchor the friction and articulated responses."
+        RevelVoice.CIRCLE -> "Spacious calls and answers let friction, edge strokes, palms and fingers take turns around broad pulses."
+        RevelVoice.CLOSE -> "Ringing center and edge strokes lead into loaded bass answers and damped touches. A close listener reveals the contact detail."
+        RevelVoice.CROSSING -> "Opposed stations trade palm calls and membrane replies with a pronounced upper body tone. Two listeners cross the conversation."
+        RevelVoice.SPIRO -> "Three uneven palm-and-finger cells interlock with bright membrane tones, heard along three looping listener paths."
+        RevelVoice.FRICTION -> "Connected pressure rubs carry shifting vocal tones, with quiet hand strokes punctuating their gaps."
+        RevelVoice.PROCESSION -> "Broad mallet pulses anchor each beat; alternating palm-and-finger rolling trains answer them."
     }
     private fun macroDescription(macro: String) = when (macro) {
         "PLAY" -> "Sparse conversation to lively overlaps; participation, density and stroke energy change while the microphone clock remains separate."

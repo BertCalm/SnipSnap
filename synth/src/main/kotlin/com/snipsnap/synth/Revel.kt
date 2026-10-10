@@ -176,28 +176,94 @@ object Revel {
             if (probe.soloHead != null && probe.soloHead != head) return
             val jitter = if (at == 0.0) 0.0 else (random.nextDouble() - .5) * .028 * beat
             val time = (at * beat + jitter).coerceAtLeast(0.0)
-            val bias = when {
-                voice == RevelVoice.FRICTION && head == 0 -> 1.65
-                voice == RevelVoice.PROCESSION && head >= 3 -> 1.3
-                voice == RevelVoice.CLOSE && head in 1..2 -> 1.2
-                else -> 1.0
+            // Energy belongs to the performer, before the common floor or pickup.
+            val bias = when (voice) {
+                RevelVoice.CIRCLE -> doubleArrayOf(1.65, .95, .95, 1.10, 1.10, .72)[head]
+                RevelVoice.CLOSE -> doubleArrayOf(1.90, 1.25, 1.20, .85, .85, .65)[head]
+                RevelVoice.CROSSING -> doubleArrayOf(1.65, 1.20, 1.35, 1.35, 1.05, .45)[head]
+                RevelVoice.SPIRO -> doubleArrayOf(1.65, 1.05, 1.15, 1.35, 1.50, .40)[head]
+                RevelVoice.FRICTION -> doubleArrayOf(1.00, .85, .85, .80, .80, .70)[head]
+                RevelVoice.PROCESSION -> doubleArrayOf(1.00, .50, .50, 1.45, 1.25, 1.15)[head]
             }
             val fittedDuration = min(duration, max(.0001, p.rates.phraseSeconds - time - .002))
             out.add(Event(head, family(head), kind, time, fittedDuration,
                 strength * bias * (.40 + .60 * velocity) * velocity * (.88 + .24 * random.nextDouble())))
         }
+        val broadWidth = .012 + .014 * (1 - m.getValue("SKIN"))
+        val hand = .23 + .38 * play
+        val palm = .25 + .35 * play
+        val finger = .18 + .28 * play
         for (b in 0 until p.beats) {
-            add(5, b.toDouble(), "broad", if (b == 0) .85 else .46 + .25 * play, .012 + .014 * (1 - m.getValue("SKIN")))
-            add(if (b % 2 == 0) 3 else 4, b + .25, "palm", .25 + .35 * play, .0018)
-            if (play > .25 || b == 0) add(if (b % 2 == 0) 4 else 3, b + .72, "finger", .18 + .28 * play, .0008)
-            add(if (b % 2 == 0) 2 else 1, b + .49, if (b % 3 == 2) "touch" else if (b % 2 == 0) "edge" else "center",
-                .23 + .38 * play, if (b % 3 == 2) .004 else .0012)
-            if (b % 2 == 0 || play > .75) add(0, b + .56, "rub", .26 + .30 * play, beat * (.34 + .16 * (1 - play)))
-            if (play > .70 && b % 2 == 1) add(1, b + .88, "center", .20 * play, .0018)
-            if (play > .88 && b == 0) add(4, .25, "emphasis", .20, .0013)
+            val even = b % 2 == 0
+            when (voice) {
+                RevelVoice.CIRCLE -> {
+                    // Four families take turns around a spacious, balanced circle.
+                    if (even) add(5, b.toDouble(), "broad", if (b == 0) .85 else .60, broadWidth)
+                    add(if (even) 2 else 1, b + .06, if (even) "edge" else "center", hand, .0012)
+                    add(if (even) 3 else 4, b + .31, "palm", palm, .0018)
+                    add(if (even) 4 else 3, b + .76, "finger", finger, .0008)
+                    if (even) add(0, b + .43, "rub", .36 + .34 * play, beat * .43)
+                }
+                RevelVoice.CLOSE -> {
+                    // Ringing fingers, a loaded bass answer, then a quiet damped touch.
+                    if (even) add(5, b + .12, "broad", .55, broadWidth)
+                    add(2, b.toDouble(), "center", hand, .0015)
+                    add(1, b + .29, "center", hand * .92, .0030)
+                    if (play > .25 || b == 0) add(2, b + .48, "edge", hand * .58, .0009)
+                    add(2, b + .81, "touch", hand * .28, .007)
+                    add(if (even) 3 else 4, b + .58, "palm", palm * .85, .0022)
+                    add(if (even) 4 else 3, b + .67, "finger", finger * .85, .0008)
+                    if (even) add(0, b + .37, "rub", .38 + .22 * play, beat * .42)
+                }
+                RevelVoice.CROSSING -> {
+                    // Two opposed stations exchange different call and answer colors.
+                    if (even) add(5, b + .18, "broad", .60, broadWidth)
+                    add(if (even) 3 else 2, b.toDouble(), if (even) "palm" else "edge", palm, .0015)
+                    add(if (even) 2 else 4, b + .46, if (even) "center" else "finger", hand, .0011)
+                    add(if (even) 4 else 1, b + .72, if (even) "finger" else "center", finger, .0010)
+                    if (even) add(0, b + .22, "rub", .40 + .30 * play, beat * .52)
+                    if (!even && play > .65) add(3, b + .87, "palm", palm * .42, .0018)
+                }
+                RevelVoice.SPIRO -> {
+                    // Three unequal cells weave palm/finger and touch gestures.
+                    if (even) add(5, b + .12, "broad", .58, broadWidth)
+                    add(if (even) 4 else 3, b.toDouble(), "finger", finger, .0007)
+                    add(if (even) 2 else 1, b + .19, if (even) "edge" else "center", hand, .0010)
+                    add(if (even) 3 else 4, b + .43, "palm", palm, .0015)
+                    add(if (even) 1 else 2, b + .63, if (even) "center" else "touch", hand * .64, .002)
+                    add(if (even) 4 else 3, b + .82, "finger", finger * (.70 + .35 * play), .0007)
+                    add(0, b + .30, "rub", .38 + .28 * play, beat * .57)
+                }
+                RevelVoice.FRICTION -> {
+                    // Connected rod pressure is the lead; hands quietly mark its gaps.
+                    add(0, b.toDouble(), "rub", .45 + .18 * play, beat * (.82 + .07 * play))
+                    if (even) add(5, b + .09, "broad", .70, broadWidth)
+                    add(if (even) 2 else 1, b + .21, if (even) "edge" else "center", hand * .90, .0012)
+                    add(if (even) 3 else 4, b + .51, "palm", palm * .90, .0018)
+                    add(if (even) 4 else 3, b + .88, "finger", finger * .90, .0008)
+                }
+                RevelVoice.PROCESSION -> {
+                    // Deep mallets lead; alternately handed rolling trains answer.
+                    add(5, b.toDouble(), "broad", if (b == 0) .85 else .62 + .18 * play, broadWidth)
+                    add(if (even) 3 else 4, b + .35, "palm", palm, .0022)
+                    add(if (even) 4 else 3, b + .48, "finger", finger, .0008)
+                    if (play > .25 || b == 0) add(if (even) 3 else 4, b + .65, "palm", palm * .70, .0016)
+                    add(if (even) 4 else 3, b + .76, "finger", finger * .80, .0007)
+                    add(if (even) 1 else 2, b + .87, if (even) "center" else "touch", hand * .60, .0018)
+                    if (even) add(0, b + .17, "rub", .32 + .22 * play, beat * .48)
+                }
+            }
         }
-        // One-beat fallback still contains both rolling projections and a bass response.
-        if (p.beats == 1) add(1, .83, "center", .25, .0012)
+        // PLAY adds audible replies without replacing the sparse family roster.
+        if (play > .70) for (b in 0 until p.beats) {
+            add(if (b % 2 == 0) 1 else 2, b + .93, "edge", hand * .24 * play, .0010)
+            if (play > .88) add(if (b % 2 == 0) 4 else 3, b + .10, "finger", finger * .24 * play, .0007)
+        }
+        // Short phrases retain every membrane and family; fit release before rendering.
+        for (head in 0 until HEADS) if (out.none { it.head == head } &&
+            (probe.soloHead == null || probe.soloHead == head))
+            add(head, .78 + .025 * head, if (head == 0) "rub" else if (head == 5) "broad" else "center",
+                .20, if (head == 0) beat * .12 else .0015)
         return out.sortedWith(compareBy<Event> { it.timeSeconds }.thenBy { it.head })
     }
 
@@ -226,7 +292,10 @@ object Revel {
                 val intricate = (2 * weave - 1).coerceAtLeast(0.0)
                 val speedBound = radius * 2 * PI * p.rates.orbitHz * ratios[mic] *
                     (1 + intricate * (.68 + .32 * k - 1))
-                min(.16, MAX_DELAY_RATE * SOUND_SPEED / max(speedBound, 1e-9))
+                // Counter-calls retain separate gains and moving arrival, with a
+                // smaller excursion so opposed pickups keep their body in mono.
+                min(if (voice == RevelVoice.CROSSING) .08 else .16,
+                    MAX_DELAY_RATE * SOUND_SPEED / max(speedBound, 1e-9))
             }
         }
         fun position(mic: Int, time: Double, out: DoubleArray) {
@@ -258,6 +327,13 @@ object Revel {
             doubleArrayOf(1.0, 1.51, 2.26, 3.49, 4.72), doubleArrayOf(1.0, 1.94, 2.79, 4.08, 5.37),
             doubleArrayOf(1.0, 1.69, 2.57, 3.67, 4.96), doubleArrayOf(1.0, 1.87, 2.92, 4.31, 5.86),
             doubleArrayOf(1.0, 2.01, 3.03, 4.19, 5.31))
+        private val spectral = Array(HEADS) { h -> if (h == 5)
+            doubleArrayOf(1.0, 2.55, 3.975, 4.23, 4.41) else doubleArrayOf(1.0, .45, .32, .21, .12) }
+        private val tails = doubleArrayOf(1.35, 1.65, 1.45, 1.3, 1.1, 2.5)
+        private val frictionLead = voice == RevelVoice.FRICTION
+        private val frictionProjection = if (frictionLead) doubleArrayOf(1.0, .65, .45, .30, .20)
+            else doubleArrayOf(1.0, .30, .16, .08, .04)
+        private val harmonicBody = BooleanArray(HEADS)
         var pressure = 0.0
         var bristle = 0.0
         var poweredWork = 0.0
@@ -272,6 +348,51 @@ object Revel {
         var energy = 0.0
         var floorEnergy = 0.0
         init {
+            // Profiles change physical projection and loss, not a post-render EQ.
+            // Strong low-order body modes stay near root harmonics, while the
+            // upper pair and the other membranes retain inharmonic differences.
+            when (voice) {
+                RevelVoice.CIRCLE -> {
+                    spectral[0] = doubleArrayOf(1.0, .65, .45, .24, .14)
+                    spectral[2] = doubleArrayOf(1.0, 1.45, .85, .30, .15)
+                    ratios[3] = doubleArrayOf(1.0, 2.01, 3.04, 4.24, 5.38)
+                    ratios[4] = doubleArrayOf(1.0, 2.02, 3.06, 4.31, 5.47)
+                    spectral[3] = doubleArrayOf(1.0, 1.10, 2.45, .65, .35)
+                    spectral[4] = doubleArrayOf(1.0, 1.25, 2.15, .75, .40)
+                    harmonicBody[3] = true; harmonicBody[4] = true
+                }
+                RevelVoice.CLOSE -> {
+                    ratios[2] = doubleArrayOf(1.0, 2.01, 3.03, 4.16, 5.27)
+                    spectral[2] = doubleArrayOf(1.0, 4.2, 1.6, .55, .25)
+                    spectral[1] = doubleArrayOf(1.0, .70, .42, .20, .10)
+                    tails[2] = .95; tails[1] = 1.90; harmonicBody[2] = true
+                }
+                RevelVoice.CROSSING -> {
+                    ratios[2] = doubleArrayOf(1.0, 2.02, 3.03, 4.19, 6.10)
+                    ratios[3] = doubleArrayOf(1.0, 2.01, 3.02, 4.12, 5.22)
+                    spectral[2] = doubleArrayOf(1.0, .70, 10.5, 1.50, .70)
+                    spectral[3] = doubleArrayOf(1.0, .85, 9.5, 1.20, .55)
+                    tails[2] = 1.10; tails[3] = 1.50
+                    harmonicBody[2] = true; harmonicBody[3] = true
+                }
+                RevelVoice.SPIRO -> {
+                    for (h in 1..4) {
+                        ratios[h] = doubleArrayOf(1.0, 2.01, 3.03, 4.005 + .005 * h, 5.015 + .010 * h)
+                        spectral[h] = doubleArrayOf(1.0, .70, .80, 3.8, 3.2)
+                        tails[h] = .78 + .08 * h; harmonicBody[h] = true
+                    }
+                }
+                RevelVoice.FRICTION -> {
+                    ratios[0] = doubleArrayOf(1.0, 2.00, 3.02, 5.04, 8.06)
+                    spectral[0] = doubleArrayOf(1.0, 1.8, 3.2, 2.1, 1.3)
+                    tails[0] = 1.85; harmonicBody[0] = true
+                }
+                RevelVoice.PROCESSION -> {
+                    spectral[3] = doubleArrayOf(1.0, .35, .24, .12, .08)
+                    spectral[4] = doubleArrayOf(1.0, 1.1, .75, .40, .18)
+                    tails[3] = 1.70; tails[4] = .82
+                }
+            }
             for (head in 0 until HEADS) for (mode in 0 until MODES) {
                 val i = head * MODES + mode
                 // The broad pulse's strong lower body modes remain close to
@@ -280,11 +401,10 @@ object Revel {
                 // below C3 despite an accurately tuned fundamental.
                 val spacing = if (head == 5) {
                     if (mode <= 2) .995 + .01 * skin else .98 + .04 * skin
-                } else .94 + .12 * skin
+                } else if (harmonicBody[head]) .995 + .01 * skin else .94 + .12 * skin
                 val r = if (mode == 0) 1.0 else ratios[head][mode] * spacing
                 omega[i] = 2 * PI * hz * r
-                val upper = (if (head == 5) doubleArrayOf(1.0, 2.55, 3.975, 4.23, 4.41)
-                    else doubleArrayOf(1.0, .45, .32, .21, .12))[mode]
+                val upper = spectral[head][mode]
                 val skinRadiation = if (head == 5) .85 + .55 * skin else .55 + .9 * skin
                 radiation[i] = upper * (if (mode == 0) 1.0 else skinRadiation) *
                     ((16_000 - hz * r) / 4000).coerceIn(0.0, 1.0)
@@ -302,8 +422,8 @@ object Revel {
                 val tail = if (i >= FLOOR) 1.15 else {
                     // Pulse body modes radiate promptly, then yield to its long
                     // root-bearing tail rather than sustaining a virtual note.
-                    val base = when (head) { 0 -> 1.35; 1 -> 1.65; 2 -> 1.45; 3 -> 1.3; 4 -> 1.1
-                        else -> if (mode == 0) 2.5 else .90 }
+                    val base = if (head == 5 && mode > 0) .90
+                        else if (frictionLead && head == 0 && mode > 0) .85 else tails[head]
                     base * (1.12 - .32 * skin) / (1 + .42 * mode)
                 }
                 val load = if (head == 1) pressure else 0.0
@@ -320,7 +440,7 @@ object Revel {
             duration[h] = (e.durationSeconds * INTERNAL_RATE).roundToInt().coerceAtLeast(1)
             strength[h] = e.energy
             kinds[h] = when (e.kind) { "edge" -> 1; "touch" -> 2; "finger", "emphasis" -> 3; else -> 0 }
-            budgets[h] = if (h == 0) e.energy * .30 else e.energy * e.energy * .85
+            budgets[h] = if (h == 0) e.energy * (if (frictionLead) 1.0 else .40) else e.energy * e.energy * .85
         }
         private fun exchange(i: Int, j: Int, a: Double) {
             val d = im[j] - im[i]
@@ -378,18 +498,29 @@ object Revel {
                 return
             }
             val u = (at + .5) / duration[0]
-            val pressureEnvelope = sin(PI * u).pow(.75)
-            // Seed-independent microscopic texture closes with the phrase in HOLD.
-            val grain = sin(2 * PI * hz * time) + .16 * sin(2 * PI * hz * 3 * time + .71)
-            val surface = .20 * strength[0] * pressureEnvelope * (.36 + .64 * grain)
-            val b0 = 1.0; val b1 = .30 + .12 * skin; val b2 = .16
-            val contactVelocity = im[0] * b0 + im[1] * b1 + im[2] * b2
+            val pressureEnvelope = sin(PI * u).pow(if (frictionLead) .45 else .75)
+            // Roughness moves the mechanical surface only: it never enters pickup.
+            // Event-relative phase also closes exactly when a held gesture repeats.
+            val phase = 2 * PI * hz * at * DT
+            val grain = if (frictionLead) sin(phase) + .45 * sin(2 * phase) + .30 * sin(3 * phase) +
+                .20 * sin(5 * phase) + .12 * sin(8 * phase)
+                else sin(phase) + .16 * sin(3 * phase + .71)
+            val surface = (if (frictionLead) .28 else .23) * strength[0] * pressureEnvelope *
+                (if (frictionLead) .08 + grain else .36 + .64 * grain)
+            var contactVelocity = 0.0
+            var norm = 0.0
+            // A moving contact projection opens the rod's formant region, then closes.
+            val opening = if (frictionLead) .78 + .32 * sin(PI * u) else 1.0
+            for (j in 0 until MODES) {
+                contact[j] = frictionProjection[j] * (if (j == 0) 1.0 else opening)
+                contactVelocity += im[j] * contact[j]
+                norm += contact[j] * contact[j]
+            }
             val slip = surface - contactVelocity
             val stribeck = .30 + .70 * exp(-(slip / (.025 + .02 * (1 - skin))).pow(2))
             bristle += (slip - bristle) * (1 - exp(-(.9 + 2 * skin) * 900 * DT))
             val rate = (700 + 3600 * skin) * pressureEnvelope * stribeck *
                 (1 + .25 * tanh(bristle * 12)).coerceIn(.75, 1.25)
-            val norm = b0 * b0 + b1 * b1 + b2 * b2
             val alpha = rate * DT / (1 + rate * DT * norm)
             var impulse = alpha * slip
             val input = impulse * surface
@@ -399,7 +530,7 @@ object Revel {
             if (supplied >= 0) { budgets[0] = max(0.0, budgets[0] - supplied); poweredWork += supplied }
             else passiveLoss -= supplied
             passiveLoss += max(0.0, supplied - change)
-            im[0] += impulse * b0; im[1] += impulse * b1; im[2] += impulse * b2
+            for (j in 0 until MODES) im[j] += impulse * contact[j]
         }
         fun tick(sample: Int, time: Double, input: Boolean) {
             val age = sample - started[1]
@@ -571,10 +702,9 @@ object Revel {
             histories[HEADS + 1][write] = ensemble.rootSample.toFloat()
             var diffuse = 0.0
             for (h in 0 until HEADS) diffuse += Dsp.tap(histories[h], write, centralDelay.toFloat())
-            // Substituting .20 of the existing .50 root anchor with actual head
-            // radiation preserves exactly the root gain and a restrained common
-            // body. Independently phased microphones still hear moving details.
-            val anchor = .30 * Dsp.tap(histories[HEADS + 1], write, centralDelay.toFloat()) + .20 * diffuse
+            // Restrained diffuse body and root support complement each moving pickup.
+            // Voice identity originates in the same shared membrane histories.
+            val anchor = .23 * Dsp.tap(histories[HEADS + 1], write, centralDelay.toFloat()) + .12 * diffuse
             val floorPickup = if (probe.floor) Dsp.tap(histories[HEADS], write, (centralDelay + 330).toFloat()).toDouble() else 0.0
             for (mic in 0 until geometry.count) {
                 var sound = anchor + .18 * floorPickup
