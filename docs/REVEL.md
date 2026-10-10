@@ -82,6 +82,13 @@ retain their original precision. HOLD cases can repeat across their wraps; sourc
 and floor ablations and fixed-performance microphone comparisons help identify
 what creates the sound.
 
+For a hosting service with an expanded-archive limit, run
+`python3 scripts/package_revel_audition.py testkit/revel-audition /tmp/revel-hosting`
+after generation. This packages audio and diagnostics with lossless gzip
+transport; the player restores the original WAV and diagnostic bytes for
+playback and downloads. It requires a current browser with `DecompressionStream`
+support. The ordinary generated pack continues to use direct files.
+
 Ten provisional presets and `SynthKits.revel()` use the shared patch, recipe,
 velocity and MPC export pipeline. Finite pads use melodic routing; HOLD uses
 loop routing. Tests also call the actual audio classifier rather than relying

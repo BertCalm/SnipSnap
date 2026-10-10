@@ -117,12 +117,50 @@
     const isHold = clip => Boolean(clip.held || clip.loop === true || (clip.loop && typeof clip.loop === 'object'));
     const pathFor = clip => mode === 'raw' ? clip.rawPath : clip.matchedPath || clip.rawPath;
     const safePath = path => typeof path === 'string' && !/^\s*(javascript|data|vbscript):/i.test(path) ? path : '';
+    const audioAssets = new Map(), pendingAudioAssets = new Map();
+    let audioLoadSerial = 0, audioLoading = false, pendingPlayback = false, activeAudioUrl = '', loadingAudioPath = '';
+    function assetName(path) { try { return decodeURIComponent(new URL(path, location.href).pathname.split('/').pop() || 'revel-download').replace(/\.gz$/i, ''); } catch (_) { return 'revel-download'; } }
+    function encodedAsset(path) { try { return /\.(wav|json|csv)\.gz$/i.test(new URL(path, location.href).pathname); } catch (_) { return false; } }
+    function assetMime(path) { const name = assetName(path); return /\.wav$/i.test(name) ? 'audio/wav' : /\.json$/i.test(name) ? 'application/json' : 'text/csv;charset=utf-8'; }
+    async function decodedAsset(path) {
+      const response = await fetch(safePath(path));
+      if (!response.ok) throw new Error('The selected file is unavailable. Reload this page and try again.');
+      const bytes = await response.arrayBuffer();
+      const signature = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 2));
+      let blob = new Blob([bytes]);
+      // A server may already decode Content-Encoding:gzip. Inspect the body so a valid
+      // original file is not decompressed twice; ordinary .gz assets use the native stream.
+      if (signature[0] === 0x1f && signature[1] === 0x8b) {
+        if (typeof DecompressionStream !== 'function') throw new Error('Use an up-to-date browser to listen to and download this audition.');
+        blob = await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).blob();
+      }
+      return new Blob([blob], {type:assetMime(path)});
+    }
+    function trimAudioAssets() {
+      for (const [path, entry] of audioAssets) {
+        if (audioAssets.size <= 4) break;
+        if (entry.url === activeAudioUrl || path === loadingAudioPath) continue;
+        audioAssets.delete(path); URL.revokeObjectURL(entry.url);
+      }
+    }
+    async function audioAssetUrl(path) {
+      const cached = audioAssets.get(path);
+      if (cached) { audioAssets.delete(path); audioAssets.set(path, cached); return cached.url; }
+      if (pendingAudioAssets.has(path)) return pendingAudioAssets.get(path);
+      const request = decodedAsset(path).then(blob => {
+        const entry = {blob, url:URL.createObjectURL(blob)};
+        audioAssets.set(path, entry);
+        return entry.url;
+      }).finally(() => pendingAudioAssets.delete(path));
+      pendingAudioAssets.set(path, request);
+      return request;
+    }
     const macroNames = ['PLAY', 'SKIN', 'ORBIT', 'WEAVE', 'REACH'];
     const macroValue = (clip, name, index) => Array.isArray(clip.macros) ? clip.macros[index] : (clip.macros && (clip.macros[name] ?? clip.macros[name.toLowerCase()]));
     const joinedMacros = clip => macroNames.map((name, i) => `${name} ${number(macroValue(clip, name, i))}`).join(' ');
     const metricsRows = [ ['Peak', 'peak', 4], ['RMS', 'rms', 4], ['DC', 'dc', 6], ['Loudness', 'loudness', 4], ['Centroid Hz', 'centroidHz', 0], ['Pitch Hz', 'pitchHz', 1], ['Pitch error cents', 'pitchErrorCents', 1], ['Pitch confidence', 'pitchConfidence', 3], ['Classifier / whole phrase', 'classifier', null], ['Classifier / first 1.35 s', 'shortClassifier', null] ];
     function metricValue(value, digits) { if (value == null) return '—'; if (digits == null) return escape(typeof value === 'object' ? JSON.stringify(value) : value); return number(value, digits); }
-    function link(path, label) { const href = safePath(path); return href ? `<a href="${escape(href)}" download>${label}</a>` : ''; }
+    function link(path, label) { const href = safePath(path); return href ? `<a href="${escape(href)}" download${encodedAsset(href) ? `="${escape(assetName(href))}" data-encoded-download="${escape(href)}"` : ''}>${label}</a>` : ''; }
     function saveNotes() { try { localStorage.setItem(storageKey, JSON.stringify(notes)); storageAvailable = true; } catch (_) { storageAvailable = false; } }
     function updateNote(id, changes) { notes[id] = {...(notes[id] || {}), ...changes, updatedAt: new Date().toISOString()}; saveNotes(); const card = document.getElementById(`clip-${id}`); if (card) { const indicator = card.querySelector('.saved-indicator'); const entry = notes[id]; indicator.textContent = entry.verdict ? entry.verdict.toUpperCase() : entry.text ? 'NOTED' : entry.listenedAt ? 'HEARD' : ''; indicator.hidden = !indicator.textContent; const help = card.querySelector('.note-help'); help.textContent = storageAvailable ? 'Saved in this browser. Export notes before moving devices.' : 'Browser storage is unavailable. Export notes to keep this session.'; } }
     function clipCard(clip) {
@@ -165,14 +203,47 @@
     function refreshDeck() { $('mode-caption').textContent = mode === 'matched' ? 'matched level' : 'raw export'; $('mode-matched').setAttribute('aria-pressed', mode === 'matched'); $('mode-raw').setAttribute('aria-pressed', mode === 'raw'); $('repeat-hold').setAttribute('aria-pressed', repeatHold); player.loop = Boolean(selected && isHold(selected) && repeatHold); if (!selected) return; $('now-label').textContent = selected.label || selected.id; $('now-meta').textContent = `${selected.voice || 'Diagnostic tap'} · MIDI ${selected.midi ?? '—'} · ${number(selected.seconds)}s · ${isHold(selected) ? player.loop ? 'HOLD / repeating' : 'HOLD' : 'finite phrase'} · ${mode.toUpperCase()}`; }
     function listen(clip) {
       if (!clip) return;
-      if (selected && selected.id === clip.id) { if (player.paused) attemptPlay(); else player.pause(); return; }
-      player.pause(); selected = clip; const path = safePath(pathFor(clip)); refreshDeck();
-      if (!path) { $('play-status').textContent = 'This clip has no audio export.'; return; }
-      player.src = path; player.load(); $('play-status').textContent = 'Loading selected audio…'; updatePlayButtons(); attemptPlay();
+      if (selected && selected.id === clip.id) { if (audioLoading) { pendingPlayback = !pendingPlayback; return; } if (player.paused) attemptPlay(); else player.pause(); return; }
+      selected = clip; refreshDeck(); loadSelectedAudio(0, true);
     }
-    function attemptPlay() { const result = player.play(); if (result && result.catch) result.catch(() => { $('play-status').textContent = 'Use the audio player’s play control to start listening.'; updatePlayButtons(); }); }
-    function setMode(nextMode) { if (mode === nextMode) return; const playing = !player.paused, time = player.currentTime || 0; mode = nextMode; refreshDeck(); if (!selected) return; player.pause(); const path = safePath(pathFor(selected)); if (!path) { $('play-status').textContent = 'This mode has no audio export.'; player.removeAttribute('src'); player.load(); return; } player.src = path; const restore = () => { try { player.currentTime = Math.min(time, Number.isFinite(player.duration) ? Math.max(0,player.duration-.02) : time); } catch (_) {} if (playing) attemptPlay(); }; player.addEventListener('loadedmetadata', restore, {once:true}); player.load(); updatePlayButtons(); }
-    function downloadJson(value, filename) { const blob = new Blob([JSON.stringify(value, null, 2) + '\n'], {type:'application/json'}); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    async function loadSelectedAudio(time, shouldPlay) {
+      const serial = ++audioLoadSerial, path = safePath(pathFor(selected));
+      audioLoading = true; pendingPlayback = shouldPlay; loadingAudioPath = path; player.pause();
+      $('play-status').textContent = 'Loading selected audio…'; updatePlayButtons();
+      if (!path) { audioLoading = false; $('play-status').textContent = 'This clip has no audio export.'; return; }
+      try {
+        let source = path;
+        if (encodedAsset(path)) source = await audioAssetUrl(path);
+        if (serial !== audioLoadSerial) { trimAudioAssets(); return; }
+        activeAudioUrl = source; player.dataset.sourcePath = path;
+        const restore = () => {
+          if (serial !== audioLoadSerial) return;
+          try { player.currentTime = Math.min(time, Number.isFinite(player.duration) ? Math.max(0,player.duration-.02) : time); } catch (_) {}
+          audioLoading = false; loadingAudioPath = ''; trimAudioAssets();
+          if (pendingPlayback) attemptPlay(serial);
+        };
+        player.addEventListener('loadedmetadata', restore, {once:true});
+        player.src = source; player.load();
+        if (time === 0 && pendingPlayback) attemptPlay(serial);
+        trimAudioAssets(); updatePlayButtons();
+      } catch (error) {
+        if (serial !== audioLoadSerial) { trimAudioAssets(); return; }
+        audioLoading = false; loadingAudioPath = ''; trimAudioAssets();
+        $('play-status').textContent = error.message || 'Audio unavailable. Reload this page and try again.';
+        updatePlayButtons();
+      }
+    }
+    function attemptPlay(serial = audioLoadSerial) { const result = player.play(); if (result && result.catch) result.catch(() => { if (serial !== audioLoadSerial) return; $('play-status').textContent = 'Use the audio player’s play control to start listening.'; updatePlayButtons(); }); }
+    function setMode(nextMode) { if (mode === nextMode) return; const playing = audioLoading ? pendingPlayback : !player.paused, time = player.currentTime || 0; mode = nextMode; refreshDeck(); if (selected) loadSelectedAudio(time, playing); }
+    function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    function downloadJson(value, filename) { downloadBlob(new Blob([JSON.stringify(value, null, 2) + '\n'], {type:'application/json'}), filename); }
+    async function restoreDownload(path) {
+      const filename = assetName(path);
+      $('play-status').textContent = 'Preparing download…';
+      const blob = audioAssets.get(path)?.blob || await decodedAsset(path);
+      downloadBlob(blob, filename);
+      $('play-status').textContent = `Downloaded ${filename}`;
+    }
     function exportNotes() { saveNotes(); downloadJson({engine:manifest.engine || 'REVEL', sourceHash:manifest.dspSourceSha256 || manifest.sourceHash || null, listeningRound:manifest.listeningRound || null, exportedAt:new Date().toISOString(), sonicAcceptance:'pending owner listening', listeningMode:mode, notes:clips.filter(clip => notes[String(clip.id)]).map(clip => ({id:clip.id, section:clip.section, voice:clip.voice, label:clip.label, ...notes[String(clip.id)]}))}, 'revel-listening-notes.json'); }
     $('total-clips').textContent = String(clips.length);
     $('evidence-cases').textContent = String(clips.length); $('evidence-classifiers').textContent = String(classFlags.size); $('evidence-seams').textContent = String(seamFlags.size);
@@ -192,13 +263,23 @@
     $('load-more').addEventListener('click', () => { visibleLimit += 48; render(); });
     $('clips').addEventListener('click', event => { const button = event.target.closest('button[data-action]'); if (!button) return; const card = button.closest('.clip'), id = card.dataset.id; if (button.dataset.action === 'play') listen(byId.get(id)); else { const verdict = notes[id]?.verdict === button.dataset.verdict ? '' : button.dataset.verdict; updateNote(id, {verdict}); card.querySelectorAll('[data-verdict]').forEach(item => item.setAttribute('aria-pressed', item.dataset.verdict === verdict)); } });
     $('clips').addEventListener('input', event => { if (event.target.matches('textarea[data-note]')) updateNote(event.target.dataset.note, {text:event.target.value}); });
+    document.addEventListener('click', async event => {
+      const anchor = event.target.closest('a[data-encoded-download]');
+      if (!anchor) return;
+      event.preventDefault();
+      if (anchor.getAttribute('aria-busy') === 'true') return;
+      anchor.setAttribute('aria-busy', 'true');
+      try { await restoreDownload(anchor.dataset.encodedDownload); }
+      catch (error) { $('play-status').textContent = error.message || 'Download unavailable. Try again.'; }
+      finally { anchor.removeAttribute('aria-busy'); }
+    });
     $('mode-matched').addEventListener('click', () => setMode('matched')); $('mode-raw').addEventListener('click', () => setMode('raw'));
     $('repeat-hold').addEventListener('click', () => { repeatHold = !repeatHold; refreshDeck(); $('play-status').textContent = repeatHold ? 'HOLD files repeat; finite phrases play once.' : 'Repeat disabled.'; });
     $('first-listen').addEventListener('click', () => { setMode('matched'); const preferred = clips.find(clip => clip.voice === 'CIRCLE' && !isHold(clip) && clip.section === 'defaults') || clips.find(clip => clip.voice === 'CIRCLE' && !isHold(clip) && /voice|overview|preset|baseline/i.test(clip.section)) || clips.find(clip => clip.voice === 'CIRCLE' && !isHold(clip)) || clips[0]; if (preferred) { $('search').value = ''; $('voice-filter').value = ''; $('notes-filter').value = ''; sectionFilter = String(preferred.section || 'auditions'); visibleLimit = 48; render(); listen(preferred); document.getElementById(`clip-${preferred.id}`)?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}); } });
     player.addEventListener('playing', () => { $('play-status').textContent = player.loop ? 'Playing · HOLD repeat enabled' : 'Playing'; if (selected) updateNote(String(selected.id), {listenedAt: new Date().toISOString()}); updatePlayButtons(); });
     player.addEventListener('pause', updatePlayButtons); player.addEventListener('ended', () => { $('play-status').textContent = 'Finished. Record what you heard.'; updatePlayButtons(); });
     player.addEventListener('error', () => { $('play-status').textContent = 'Audio unavailable. Keep the WAV files beside this page in their exported folders.'; $('now-meta').textContent = 'Audio file unavailable — check the published asset path.'; updatePlayButtons(); });
-    ['download-manifest','download-manifest-mobile'].forEach(id => $(id).addEventListener('click', () => downloadJson(manifest, 'revel-manifest.json')));
+    ['download-manifest','download-manifest-mobile'].forEach(id => $(id).addEventListener('click', () => { if (manifest.transportEncoding === 'gzip') restoreDownload('manifest.json.gz').catch(error => { $('play-status').textContent = error.message || 'Manifest download unavailable. Try again.'; }); else downloadJson(manifest, 'revel-manifest.json'); }));
     ['download-notes','download-notes-mobile'].forEach(id => $(id).addEventListener('click', exportNotes));
     document.addEventListener('keydown', event => { if (!event.altKey || !['ArrowRight','ArrowLeft'].includes(event.key) || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return; const index = filtered.findIndex(clip => selected && clip.id === selected.id); const next = filtered[index + (event.key === 'ArrowRight' ? 1 : -1)]; if (next) { event.preventDefault(); listen(next); } });
     if (!clips.length) $('first-listen').disabled = true;
