@@ -285,6 +285,26 @@ awaits the owner's listening verdict. [REVEL](REVEL.md) documents current
 contracts and measured validation; phone/MPC verification and release naming
 remain separate gates.
 
+### PRISM — harmonics with different lifetimes
+
+PRISM ports the [engineering specification](superpowers/specs/2026-10-11-prism-engine-engineering-spec.md)
+as a deterministic 32-partial additive engine. KEY, PLUCK, ORGAN, BASS, GLASS
+and VEIL share five independently developing spectral groups. GRAIN changes
+spectral organization, DRIFT separates group timing, SHAPE moves broad partial
+masks, STRIKE articulates the onset and BODY reinforces lower and middle energy.
+TUNE keeps the requested root stable; HOLD exports settled loop-only material.
+
+The initial eight presets, patches, dry sixteen-pad kit, starter, CLI and phone
+picker use the same 44.1 kHz mono/4× renderer and shared melodic loudness.
+Finite notes route as TONAL and held material as LOOP. The
+[published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
+contains raw/matched voices across register and velocity, five-point sweeps,
+interaction corners and HOLD extremes. Run
+`./gradlew :synth:generatePrismAudition` to regenerate the listening pack.
+[PRISM](PRISM.md) records saving, rendering and loop contracts. The proposed
+36-preset expansion waits for the owner's dry sonic approval. Device playback
+and release naming remain outstanding.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,

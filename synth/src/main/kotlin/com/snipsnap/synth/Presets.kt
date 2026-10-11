@@ -134,6 +134,10 @@ object Presets {
             val v = EmbouchureVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             EmbouchurePresets.forVoice(v)
         }
+        PrismPatch.ENGINE -> {
+            val v = PrismVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            PrismPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -166,5 +170,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + EmbouchurePresets.all()
+            RevelPresets.all() + PrismPresets.all() + EmbouchurePresets.all()
 }

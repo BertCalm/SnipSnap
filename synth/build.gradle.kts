@@ -701,3 +701,14 @@ tasks.register<JavaExec>("generateEmbouchureAudition") {
     if (project.hasProperty("embouchureQuick")) args("--quick")
     providers.gradleProperty("embouchureReference").orNull?.let { args("--reference-dir=$it") }
 }
+
+/** Render Prism's dry register/velocity, macro, interaction and HOLD matrix. */
+tasks.register<JavaExec>("generatePrismAudition") {
+    group = "distribution"
+    description = "Render PRISM prelevel raw and matched WAVs, metrics and manifest under testkit/prism-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-audition")
+}

@@ -149,6 +149,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.pitchwheel() },
         Starter(
+            "prism", "PRISM",
+            "Harmonic keys, glass and separating partials in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.prism() },
+        Starter(
             "embouchure", "EMBOUCHURE",
             "Dry expressive reeds, muted brass, breathy bass and bowed notes in C minor pentatonic.",
             seeded = false,

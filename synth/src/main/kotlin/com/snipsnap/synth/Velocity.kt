@@ -236,6 +236,7 @@ object Velocity {
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
         is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
+        is PrismPatch -> Prism.macrosFor(patch.voice)
     }
 
     /**
@@ -302,13 +303,14 @@ object Velocity {
      * SUTURE uses finite opening and release energy in the selected vessel.
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
+     * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is RevelPatch || patch is EmbouchurePatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is EmbouchurePatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -345,6 +347,7 @@ object Velocity {
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
                 is PitchwheelPatch -> patch.copy(velocity = v).render()
                 is EmbouchurePatch -> patch.copy(velocity = v).render()
+                is PrismPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")

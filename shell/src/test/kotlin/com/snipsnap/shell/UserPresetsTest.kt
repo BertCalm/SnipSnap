@@ -9,6 +9,7 @@ import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.TideVoice
@@ -140,8 +141,9 @@ class UserPresetsTest {
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
-                "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
                 "REVEL" to RevelVoice.entries.map { it.name },
+                "PRISM" to PrismVoice.entries.map { it.name },
+                "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
