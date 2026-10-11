@@ -47,7 +47,8 @@ data class SpoolRoute(val source: Int, val destination: Int, val gain: Float = 0
 /**
  * Serializable machine geometry. Every render rebuilds original recordings and fresh overlays;
  * transient buffers, positions, motor and spring energy never travel between pads.
- * Empty [roster] requests the documented voice roster; patches save that roster explicitly.
+ * Empty [roster] requests the documented voice roster and remains empty when saved;
+ * default patches instead save the explicit voice roster.
  * [headOffsets] are recorded seconds. [writeDelaySamples] uses the 44.1 kHz output timebase.
  */
 data class SpoolMachine(

@@ -24,6 +24,8 @@ import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.Spool
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.SpoolVoice
+import com.snipsnap.synth.Revel
+import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Tessera
 import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.Velocity
@@ -54,7 +56,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and SPOOL) override
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and SPOOL) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -85,7 +87,8 @@ object SynthCommand {
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and SPOOL, got $engine")
+                RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and SPOOL, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -135,6 +138,11 @@ object SynthCommand {
                     macros = midiOverride?.let { midi ->
                         patch.macros + ("TUNE" to (midi - Spool.rootMidi(patch.voice)) / Spool.TUNE_SEMITONES.toFloat())
                     } ?: patch.macros,
+                    velocity = velocityOverride ?: patch.velocity,
+                )
+                is RevelPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(

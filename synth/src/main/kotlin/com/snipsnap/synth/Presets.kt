@@ -114,6 +114,10 @@ object Presets {
             val v = SutureVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             SuturePresets.forVoice(v)
         }
+        RevelPatch.ENGINE -> {
+            val v = RevelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            RevelPresets.forVoice(v)
+        }
         SpoolPatch.ENGINE -> {
             val v = SpoolVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             SpoolPresets.forVoice(v)
@@ -161,5 +165,6 @@ object Presets {
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
-            CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + SpoolPresets.all() + TesseraPresets.all() + PitchwheelPresets.all()
+            CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
+            RevelPresets.all() + SpoolPresets.all()
 }
