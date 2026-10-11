@@ -689,6 +689,17 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     if (project.hasProperty("pitchwheelFull")) args("--full")
 }
 
+/** Render Prism's dry register/velocity, macro, interaction and HOLD matrix. */
+tasks.register<JavaExec>("generatePrismAudition") {
+    group = "distribution"
+    description = "Render PRISM prelevel raw and matched WAVs, metrics and manifest under testkit/prism-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-audition")
+}
+
 /** Render Alloy's provisional dry hybrid patches, causal FUSE comparisons and held-loop listening pack. */
 tasks.register<JavaExec>("generateAlloyAudition") {
     group = "distribution"
