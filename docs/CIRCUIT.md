@@ -10,12 +10,14 @@ The owner rejected the initial audio: “It all sounds the same. The brrrr sound
 overpowered everything.” After the balance revision, the owner could distinguish
 the parts, but described the vocal as honking and the ensemble as chaotic and
 abrupt. The owner then described R3 as stilted and driven by forced randomness.
-The current R4 candidate uses a shared breath and an authored four-pulse figure,
-aiming for one imagined desert-night ensemble around a fire. Its full 370-variant
-audition pack is complete; owner listening acceptance remains pending.
-Numerical checks and patch round-trips do not
-establish that its sound is useful. Vocal integration, phrasing, mono movement,
-and the feeling of an ensemble listening to its surroundings still need listening.
+R4 introduced a shared breath and an authored four-pulse figure. The owner next
+reported that stone, wood and breath overpowered the sound and felt like separate
+voices. The current R5 candidate retains that figure while lowering surrounding
+radiation and shaping each gesture's excitation with the continuing shared effort.
+Its aim is one imagined instrument whose materials articulate its sound.
+Owner listening acceptance remains pending. Numerical checks and patch
+round-trips do not establish that its sound is useful. Vocal integration,
+phrasing, mono movement and the feeling of shared intention still need listening.
 
 ## Listening revisions
 
@@ -26,7 +28,7 @@ each configuration its identity. The revision substantially lowers central
 mix weights relative to the surrounding players. This changes their
 balance before the shared output loudness target is applied.
 
-The three tube roles now use distinct starting phases, fundamental/octave drive
+R2 gave the three tube roles distinct starting phases, fundamental/octave drive
 balances, modal gains and decay times. The anchor remains rooted; pulse and upper
 sources explicitly excite octave modes. Resonator losses also vary by voice,
 with wider upper resonances intended to let throat modulation reach the output.
@@ -90,8 +92,8 @@ deferred or omitted if no suitable space existed within the bounded response
 window. Reply count and energy budgets, refractory intervals and depth-one cues
 remained enforced; ORBIT controlled movement independently.
 
-Finite tube pressure now starts and releases through smooth .12/.44-second
-transitions. Tube accents have overlapping smooth .42-second pressure gestures;
+R3 introduced smooth .12/.44-second finite tube pressure transitions.
+Tube accents have overlapping smooth .42-second pressure gestures;
 a new accent no longer discards its predecessor's remaining pressure. The
 bounded active-accent scan also includes the periodic predecessor at a held
 seam. These are source and performer changes, before propagation and shared
@@ -111,7 +113,8 @@ uses 10 ms RMS envelopes above 10% of each source's own peak. They describe the
 
 ### R4: one shared figure
 
-`CircuitPhrase` supplies one repeating four-pulse figure to the entire ensemble.
+R4 introduced `CircuitPhrase`, which supplies one repeating four-pulse figure
+retained by R5.
 An opening wood/pulse accent, weaker support, a vocal affirmation and a clay
 settling gesture share the same smooth effort profile. Quiet rattle and wood
 support can overlap the vocal. The source's own occupied interval protects a
@@ -152,12 +155,46 @@ These observations inform pacing only, without a listening assessment.
 Circuit's figure, instruments and gestures are original synthesis; the reference
 media stays outside the repository and Site, without authenticity or cloning claims.
 
+The R4 audition provided six R3/R4 pairs alongside its full 370-variant matrix.
+Those measurements and comparisons describe that revision; numerical analysis
+cannot establish shared intention or humanity.
+
+### R5: materials as articulations
+
+R5 keeps R4's score, shared figure, tube gains and pitch clocks. It lowers each
+configuration's surrounding radiation weights by fixed factors: stone rattle
+`.60`, wooden clapper `.60`, clay `.65` and synthesized breath voice `.48`.
+The continuous trio is not raised to compensate. All six configurations retain
+their roles, authored stresses, answer opportunities and independent movement.
+
+`CircuitInstruments.gesture` accepts an optional excitation curve sampled at
+relative gesture age. Returned values must be finite and within `0..1`; without
+a curve, excitation retains its original strength. Circuit supplies
+`.65 + .35 * phrase.effort(event.timeSeconds + age)`, so the shared effort
+continues through the gesture instead of being represented only by its onset
+energy. The curve shapes contact forces, the glottal source, air before filtering
+and chest input while they are powered. It does not gate modal or tract output:
+existing states retain their passive response after excitation stops. The power
+cutoff still ends input at the same relative frame, and stable source identities
+and oscillation clocks are retained.
+
+Stone contacts now span `.75–1.35 ms`, capped at `.9 / (4.5 * rootHz)` to preserve
+their main pitched modes in the upper register. The `7.07×`, `10.6×` and `15.2×`
+mode weights fall from `.033/.022/.013` to `.024/.014/.007`; the cavity and main
+`3×/4.5×` modes remain. Wood's nominal contacts widen to `3.2/3.8 ms`, retaining
+their `1.25 / (2 * rootHz)` and `1.25 / (3 * rootHz)` caps, paired-knock gap and
+main pitched modes. Its `5.08×/7.63×` weights fall from `.016/.013` to `.010/.008`.
+These changes soften material edges before propagation. Direct paths, wall
+images, facing, distance losses and separate performer-listening arrivals remain
+part of the same causal geometry.
+
 The [private Circuit audition](https://circuit-snipsnap-audition.bertcalm.chatgpt.site/#comparison)
-is prepared with six R3/R4 pairs alongside all 370 current variations. Each pair
-retains identical macros and performer energy at a matched listening target.
-R3 defaults are preserved separately, with R1/R2 audio, diagnostics and metadata
-linked from the footer. All six revised defaults come from the completed R4
-pack; numerical analysis cannot establish shared intention or humanity.
+uses matching R4 defaults as the preceding revision for R5 comparisons. Each
+pair retains identical macros and performer energy. Earlier revision evidence
+remains available separately. The seven source examples now use one gain
+derived from the full default VOICED mix, so a quiet articulation stays quiet
+when isolated. This is a diagnostic of its actual mix level, not independent
+solo loudness matching. Owner listening acceptance of R5 remains pending.
 
 ## Host contract
 
@@ -289,23 +326,28 @@ The generator also accepts `--quick` directly. Its default destination is
 directly: the manifest is embedded so local file URLs work. Generated artifacts
 are not automatically published or committed.
 
-Every variant has a 24-bit raw WAV and a WAV at the shared `AuditionLevel`
-target, plus a diagnostic JSON sidecar. Raw retains source gain; matched
-clips support fair comparison of tone and timing. A raw peak above the PCM
+Every variant has a 24-bit raw WAV and a matched WAV, plus a diagnostic JSON
+sidecar. Raw retains source gain. Full mixes and other independently auditioned
+clips use the existing `AuditionLevel` target. The seven source isolates instead
+reuse the raw-to-matched gain of `DEFAULTS/voiced`, retaining their relative
+levels inside that mix. Manifest entries record `levelReference` and
+`matchedGainFromRaw`; source examples name `DEFAULTS/voiced`, while independently
+matched clips name `self`. A raw peak above the PCM
 range or a non-finite sample stops the generator instead of being hidden by
 file conversion. Standard full mixes reject KICK, SNARE, CLAP, either HAT and
 TOM classifications. Source isolates and passive-decay diagnostics omit that
 guard so their individual roles can be heard.
 
-Separately matched source solos help identify instrument character, but they
-cannot establish ensemble balance: matching each branch independently makes a
-buried source sound foregrounded. The source-balance regression therefore sums
-raw trio stems and raw surrounding-player stems at one shared gain and compares
-their active-phrase energy. The VOICED regression requires combined player RMS
-above trio RMS to support the current calmer balance. It also checks upper-tube
-octave content. These
-checks catch the previous sustained-root masking; they complement listening to
-the full mix and do not certify every voice's musical balance.
+Earlier revisions matched source solos separately, making a buried source sound
+foregrounded. R5's shared-gain isolates permit comparison of their mix levels.
+The source-balance regression likewise sums raw trio and surrounding-player
+stems at one shared gain. In VOICED it requires surrounding-player RMS between
+`.25` and `1.0` times trio RMS, allowing audible accompaniment that supports the
+tubes. Local checks also require the stone/wood opening and both vocal syllables
+to remain below the rest of the ensemble in their own turns. Upper-tube octave
+content, source identity and requested-root checks remain enforced. These checks
+cover the former masking and current accompaniment goals; they complement full
+mix listening and do not certify every configuration's musical balance.
 
 The complete pack includes:
 
@@ -350,6 +392,9 @@ owner's listening verdict alongside any measured results. The initial revision
 was rejected; a verdict on the revised candidate remains pending.
 
 ## Build and runtime evidence
+
+The following completed-pack and build evidence is historical R4 evidence;
+R5 requires its own verification and owner listening verdict.
 
 The completed R4 pack contains 370 variants and 740 raw/matched PCM24 WAVs.
 All 360 full-mix classifier guards pass, with zero numerical recoveries. Eleven

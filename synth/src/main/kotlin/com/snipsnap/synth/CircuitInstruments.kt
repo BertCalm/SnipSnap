@@ -21,6 +21,8 @@ import kotlin.random.Random
  * at the engine's 4x rate. Nothing remains excited after a finite gesture.
  * [gesture]'s optional power cutoff ends excitation at that relative time;
  * the returned buffer still contains the instrument's passive response.
+ * Its optional effort curve shapes force at a relative age, leaving passive
+ * modal and tract decay intact when the shared gesture settles.
  */
 internal object CircuitInstruments {
     enum class Kind { RATTLE, CLAPPER, CLAY, GRUNT, UH_HUH }
@@ -33,6 +35,7 @@ internal object CircuitInstruments {
         seed: Long,
         breath: Double = .55,
         poweredSeconds: Double? = null,
+        excitationAtSeconds: ((Double) -> Double)? = null,
     ): FloatArray {
         require(rate >= 8_000) { "Circuit gesture rate must be at least 8000 Hz" }
         val root = if (rootHz.isFinite()) rootHz.coerceIn(20.0, 5_000.0) else 130.8128
@@ -55,10 +58,10 @@ internal object CircuitInstruments {
         }
         if (strength == 0.0 || poweredFrames == 0) return result
         when (kind) {
-            Kind.RATTLE -> rattle(result, root, rate, random, poweredFrames)
-            Kind.CLAPPER -> clapper(result, root, rate, random, poweredFrames)
-            Kind.CLAY -> clay(result, root, rate, random, poweredFrames)
-            Kind.GRUNT, Kind.UH_HUH -> vocal(result, root, rate, random, air, kind == Kind.UH_HUH, poweredFrames)
+            Kind.RATTLE -> rattle(result, root, rate, random, poweredFrames, excitationAtSeconds)
+            Kind.CLAPPER -> clapper(result, root, rate, random, poweredFrames, excitationAtSeconds)
+            Kind.CLAY -> clay(result, root, rate, random, poweredFrames, excitationAtSeconds)
+            Kind.GRUNT, Kind.UH_HUH -> vocal(result, root, rate, random, air, kind == Kind.UH_HUH, poweredFrames, excitationAtSeconds)
         }
         finish(result, rate, strength)
         return result
@@ -66,15 +69,23 @@ internal object CircuitInstruments {
 
     private data class Mode(val ratio: Double, val decay: Double, val weight: Double)
 
-    /** A rounded contact with a fixed impulse area, rather than a rate-dependent spike. */
-    private fun contact(force: FloatArray, rate: Int, at: Double, width: Double, amount: Double, poweredFrames: Int) {
+    private fun excitation(curve: ((Double) -> Double)?, seconds: Double): Double {
+        val value = curve?.invoke(seconds) ?: return 1.0
+        require(value.isFinite() && value in 0.0..1.0) { "Circuit excitation must be finite and in 0..1" }
+        return value
+    }
+
+    /** Shape contact force, leaving the subsequent passive modes free to ring. */
+    private fun contact(force: FloatArray, rate: Int, at: Double, width: Double, amount: Double, poweredFrames: Int,
+                        excitationAtSeconds: ((Double) -> Double)?) {
         val start = (at * rate).toInt()
         val length = max(3, (width * rate).toInt())
         val scale = 2.0 * amount / (length - 1)
         for (i in 0 until length) {
             val frame = start + i
             if (frame >= 0 && frame < min(force.size, poweredFrames)) {
-                force[frame] += (scale * .5 * (1.0 - cos(2.0 * PI * i / (length - 1)))).toFloat()
+                force[frame] += (scale * .5 * (1.0 - cos(2.0 * PI * i / (length - 1))) *
+                    excitation(excitationAtSeconds, frame.toDouble() / rate)).toFloat()
             }
         }
     }
@@ -102,7 +113,8 @@ internal object CircuitInstruments {
         }
     }
 
-    private fun rattle(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int) {
+    private fun rattle(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int,
+                       excitationAtSeconds: ((Double) -> Double)?) {
         val force = FloatArray(output.size)
         val collisions = random.nextInt(7, 13)
         // One finite shake: individual collisions accelerate then scatter, all before 100 ms.
@@ -110,46 +122,49 @@ internal object CircuitInstruments {
             val position = i.toDouble() / (collisions - 1)
             val at = .003 + .085 * position.pow(.8) + random.nextDouble(0.0, .004)
             val strength = random.nextDouble(.45, .95) * sin(PI * (.15 + .70 * position))
-            contact(force, rate, at, random.nextDouble(.00036, .00096), strength, poweredFrames)
+            val width = min(random.nextDouble(.00075, .00135), .9 / (4.5 * root))
+            contact(force, rate, at, width, strength, poweredFrames, excitationAtSeconds)
         }
         modes(output, force, root, rate, arrayOf(
             Mode(1.5, .027, .035), // hollow cavity; pitched below the granular mineral surface
             Mode(3.0, .020, .055),
             Mode(4.5, .015, .052),
-            Mode(7.07, .009, .033),
-            Mode(10.6, .006, .022),
-            Mode(15.2, .004, .013),
+            Mode(7.07, .009, .024),
+            Mode(10.6, .006, .014),
+            Mode(15.2, .004, .007),
         ))
     }
 
-    private fun clapper(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int) {
+    private fun clapper(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int,
+                        excitationAtSeconds: ((Double) -> Double)?) {
         val first = FloatArray(output.size)
         val second = FloatArray(output.size)
         // Wider force contacts soften each edge. Their own main arm modes set
         // the upper-register limit, preserving a pitched second knock as well.
-        val firstWidth = min(.0024, 1.25 / (2.0 * root))
-        val secondWidth = min(.0028, 1.25 / (3.0 * root))
-        contact(first, rate, .003, firstWidth, random.nextDouble(.85, 1.0), poweredFrames)
-        contact(second, rate, random.nextDouble(.046, .057), secondWidth, random.nextDouble(.82, 1.0), poweredFrames)
+        val firstWidth = min(.0032, 1.25 / (2.0 * root))
+        val secondWidth = min(.0038, 1.25 / (3.0 * root))
+        contact(first, rate, .003, firstWidth, random.nextDouble(.85, 1.0), poweredFrames, excitationAtSeconds)
+        contact(second, rate, random.nextDouble(.046, .057), secondWidth, random.nextDouble(.82, 1.0), poweredFrames, excitationAtSeconds)
         modes(output, first, root, rate, arrayOf(
-            Mode(2.0, .030, .080), Mode(3.0, .020, .044), Mode(5.08, .008, .016),
+            Mode(2.0, .030, .080), Mode(3.0, .020, .044), Mode(5.08, .008, .010),
         ))
         modes(output, second, root, rate, arrayOf(
             // Its higher main mode loses more energy through the wider contact;
             // this weight keeps the pair balanced without restoring the bright spikes.
-            Mode(3.0, .034, .200), Mode(4.5, .023, .044), Mode(7.63, .008, .013),
+            Mode(3.0, .034, .200), Mode(4.5, .023, .044), Mode(7.63, .008, .008),
         ))
         // Both arms transfer force to the same mounting cavity, rather than two unrelated hits.
         for (i in first.indices) first[i] += second[i]
         modes(output, first, root, rate, arrayOf(Mode(1.0, .060, .018), Mode(1.5, .045, .008)))
     }
 
-    private fun clay(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int) {
+    private fun clay(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int,
+                     excitationAtSeconds: ((Double) -> Double)?) {
         val force = FloatArray(output.size)
         // Keep rounded force below the membrane's second contact-spectrum null
         // at upper roots, where a fixed long contact would cancel the pitched mode.
         val contactWidth = min(random.nextDouble(.005, .008), 1.25 / root)
-        contact(force, rate, .002, contactWidth, random.nextDouble(.90, 1.0), poweredFrames)
+        contact(force, rate, .002, contactWidth, random.nextDouble(.90, 1.0), poweredFrames, excitationAtSeconds)
         // A membrane and vessel, with no kick-style descending oscillator or sub-bass boost.
         modes(output, force, root, rate, arrayOf(
             Mode(1.0, .073, .145), Mode(1.5, .060, .095),
@@ -157,7 +172,8 @@ internal object CircuitInstruments {
         ))
     }
 
-    private fun vocal(output: FloatArray, root: Double, rate: Int, random: Random, breath: Double, two: Boolean, poweredFrames: Int) {
+    private fun vocal(output: FloatArray, root: Double, rate: Int, random: Random, breath: Double, two: Boolean, poweredFrames: Int,
+                      excitationAtSeconds: ((Double) -> Double)?) {
         val ceiling = min(11_000.0, rate * .40)
         var fundamental = root * if (root < 75.0) 2.0 else 1.0
         while (fundamental * 1.04 > ceiling) fundamental *= .5
@@ -204,6 +220,7 @@ internal object CircuitInstruments {
             var hc = c
             var glottal = 0.0
             val powered = i < poweredFrames && envelope > 0.0
+            val effort = if (powered) excitation(excitationAtSeconds, time) else 0.0
             // An asymmetric glottal flow derivative synthesized from a bounded harmonic series.
             // Recurrence avoids a separate transcendental oscillator for every partial.
             if (powered) {
@@ -214,15 +231,15 @@ internal object CircuitInstruments {
                     hs = next
                 }
             }
-            val noise = if (powered) random.nextDouble(-1.0, 1.0) else 0.0
+            val noise = if (powered) random.nextDouble(-1.0, 1.0) * effort else 0.0
             airLow += airLowCoefficient * (noise - airLow)
             airBase += airHighCoefficient * (airLow - airBase)
             // Air precedes voicing, especially at the second "h"; both soften before closure.
             val voicedGate = smooth((localTime - if (second) .016 else .006) / .036) * smooth((duration - localTime) / .070)
             val air = (airLow - airBase) * (.060 + breath * .110)
-            val source = if (powered) .82 * glottal * voicedGate + air else 0.0
+            val source = if (powered) .82 * glottal * voicedGate * effort + air else 0.0
             val throat = .48 * formants[0].process(source) + .42 * formants[1].process(source) + .20 * formants[2].process(source)
-            val chestInput = if (powered) .025 * s * voicedGate else 0.0
+            val chestInput = if (powered) .025 * s * voicedGate * effort else 0.0
             chest += chestCoefficient * (chestInput - chest)
             output[i] = (.55 * envelope * (throat + chest + .25 * air) * if (two && !second) .84 else 1.0).toFloat()
         }

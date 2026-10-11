@@ -390,7 +390,10 @@ object Circuit {
                 INTERNAL_RATE, event.energy, Dsp.seedFor("CIRCUIT-PLAYER", voice, event.source,
                     if (event.source == 6) "vocal" else event.kind,
                     if (event.source == 6) "identity" else event.reason).toLong(), breath,
-                poweredSeconds = probe.inputOffSeconds?.let { max(0.0, it - event.timeSeconds) })
+                poweredSeconds = probe.inputOffSeconds?.let { max(0.0, it - event.timeSeconds) },
+                // Materials borrow the ongoing breath at the force input. Their
+                // passive modes and tract keep decaying after that force settles.
+                excitationAtSeconds = { age -> .65 + .35 * phrase.effort(event.timeSeconds + age) })
             val start = (event.timeSeconds * INTERNAL_RATE).roundToInt()
             for (k in wave.indices) {
                 val at = start + k
@@ -410,6 +413,10 @@ object Circuit {
             CircuitVoice.EXPANSE -> doubleArrayOf(.037, .023, .027, .85, 1.25, 1.80, 1.00)
             CircuitVoice.CONFLUENCE -> doubleArrayOf(.025, .040, .030, 1.70, 2.00, 1.75, 1.50)
         }
+        // These are articulations inside the breath-led ensemble. Keep their
+        // native level; source auditions use the same gain as the full mix.
+        val articulation = doubleArrayOf(.60, .60, .65, .48)
+        for (source in 3..6) weights[source] *= articulation[source - 3]
         // Preroll acoustic filters once, then measure/export two real adjacent cycles.
         val acousticCycles = if (p.held) 3 else 1
         val rawInternal = FloatArray(n * acousticCycles)
