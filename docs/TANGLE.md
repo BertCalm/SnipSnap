@@ -126,7 +126,10 @@ correction budget fails with a diagnostic. These are prototype budgets,
 not evidence that the held sound matches a free sustain.
 
 Loop selection preserves the requested pitch, with only the fine adjustment
-needed to fit whole periods to output frames. The settling search compares
+needed to fit whole periods to output frames. The physical period fits whole
+root/sub cycles near 1.65 seconds, above the house's 1.5-second sustain
+classification threshold; it contains synthesized motion rather than padding.
+The settling search compares
 consecutive synthesis states and also the eight retained states of the
 antialias filter plus enough filtered-sample history to cover every sinc
 decimation stage. The largest synthesis or conditioning difference enters
@@ -155,6 +158,55 @@ manifest and probe data under `testkit/tangle-audition/`. The comparisons
 include voice defaults, low/middle/high notes and velocities, five-step
 timbral sweeps, paired interactions and held examples. Capture and held
 event traces expose their oscillator lineage and bounded timing.
+
+The raw PCM listening files apply one common gain of 0.5 before export, so
+over-unity internal headroom cannot clip their waveforms. This preserves
+relative levels across the raw comparisons. `rawExportGain` records that
+attenuation; raw probe metrics describe the engine output before it. Matched
+files use the separate shared melodic and audition leveling paths.
+
+## Measured prototype limits
+
+The first complete matrix on 2026-10-11 contained 372 probe cases and 172
+listening clips, including all 36 presets. Every case was finite, all six
+default voices repeated sample-identically, and none of the 90 standard
+cases received a forbidden drum class. The house classifier's length rule
+files long material as LOOP; this result alone does not prove perceived pitch.
+Maximum internal raw peak was 1.4332 against the 1.5 budget, and maximum
+leveled-output DC magnitude was 4.11e-7. The fourteen held cases had maximum
+full-state error 1.34e-11; independent PCM16 seam checks read zero after
+quantization. These numbers establish recurrence and bounds, not listening
+acceptance.
+
+All 90 standard cases retained a local requested-root spectral peak within
+25 cents. Five nevertheless exceeded 50 cents in the global house pitch
+detector: KNOT at MIDI 84 at each of the three velocities, Slow Encounter,
+and Heavy Sideband. Across all 372 cases, 25 exceeded the detector threshold
+and one experimental corner (`pair_knot_chase1_catch0`) exceeded the local
+root-peak threshold. The house detector only covers notes at or above MIDI
+28; low C1 cases use the separate requested-root measurements. Proposed
+MIDI 24–84 input coverage is therefore not a universal tonal guarantee.
+
+The all-high MIDI 84 references compare 4×, 8× and 16× generation. Maximum
+normalized twelve-band spectral distances were .04090 (4×/8×), .02834
+(4×/16×) and .03125 (8×/16×). Interaction trajectories can change with the
+update rate, so these comparisons do not isolate alias energy or prove its
+absence.
+
+Render costs were measured on Linux amd64, Java 21.0.12.1, four available
+processors, while the repository suite ran concurrently:
+
+| Path | Cases | Median | 95th percentile | Maximum |
+| --- | ---: | ---: | ---: | ---: |
+| Finite probe plus shared leveling | 358 | 317 ms | 748 ms | 1180 ms |
+| Held validation, two complete synthesis runs plus leveling | 14 | 2278 ms | 3088 ms | 3393 ms |
+
+The complete pack took 216.1 seconds including analysis, file writing and
+higher-rate references. The provisional workstation budget is a 95th
+percentile below one second for finite rendering and below four seconds for
+the duplicated held validation path on this class of worker. Single held
+render cost and phone performance need separate measurements; this benchmark
+is not a device latency claim or a timing assertion in CI.
 
 The [private published audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
 uses this generated audio and awaits the owner's listening verdict.

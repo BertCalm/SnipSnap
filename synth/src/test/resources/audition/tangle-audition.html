@@ -267,7 +267,7 @@
           </div>
           <div class="patch-controls" id="patch-controls" aria-label="Selected patch macro values"></div>
           <div class="downloads"><a class="button" id="download-wav" href="#" download><svg aria-hidden="true"><use href="#i-download"/></svg>Download WAV</a><button class="button" id="download-patch" disabled><svg aria-hidden="true"><use href="#i-download"/></svg>Patch JSON</button></div>
-          <p class="deck-foot"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5M10 5.5v1"/></svg><span id="level-note">Matched clips use audition loudness matching after melodic leveling. Raw preserves the prelevel output. Start with a comfortable volume.</span></p>
+          <p class="deck-foot"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5M10 5.5v1"/></svg><span id="level-note">Matched clips use audition loudness matching after melodic leveling. Raw is prelevel with a common 0.5 export gain to keep PCM unclipped. Raw metrics describe the engine output before that gain.</span></p>
         </div>
         <details class="inspect"><summary>INSPECT SELECTED RENDER</summary><div class="inspect-content"><div id="metrics"></div><p>Measured render data supports engineering review. Musical acceptance requires listening.</p></div></details>
       </aside>
@@ -420,7 +420,7 @@
       const rawAvailable=Boolean(entry.rawFile);
       $('raw').disabled=!rawAvailable;
       if(raw && !rawAvailable) { raw=false; $('matched').setAttribute('aria-pressed','true'); $('raw').setAttribute('aria-pressed','false'); }
-      $('level-note').textContent=isHold(entry)?'Both playback modes use the converged HOLD period. Matched uses audition loudness; raw preserves the prelevel loop. Enable Repeat / HOLD to inspect the seam.':'Matched clips use audition loudness matching after melodic leveling. Raw preserves the prelevel output. Start with a comfortable volume.';
+      $('level-note').textContent=isHold(entry)?'Both playback modes use the converged HOLD period. Raw is prelevel with a common 0.5 export gain to keep PCM unclipped. Raw metrics describe the engine output before that gain. Enable Repeat / HOLD to inspect the seam.':'Matched clips use audition loudness matching after melodic leveling. Raw is prelevel with a common 0.5 export gain to keep PCM unclipped. Raw metrics describe the engine output before that gain.';
       const path=file(entry);
       audio.pause(); audio.src=path; audio.loop=repeat; audio.load();
       $('play').disabled=false; $('stop').disabled=false; $('previous').disabled=visible.length<2; $('next').disabled=visible.length<2;

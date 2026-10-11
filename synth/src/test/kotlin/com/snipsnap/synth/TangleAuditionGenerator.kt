@@ -18,6 +18,8 @@ import kotlin.math.abs
  * Numeric checks establish bounded behavior; the owner must still judge the musical result.
  */
 object TangleAuditionGenerator {
+    // One fixed export gain retains raw waveform shape and relative levels within PCM range.
+    private const val RAW_EXPORT_GAIN = .5f
     private val timbral = listOf("TANGLE", "CHASE", "CATCH", "BITE", "WEIGHT")
     private val steps = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
     private val pairs = listOf("TANGLE" to "CATCH", "CHASE" to "CATCH", "TANGLE" to "BITE", "WEIGHT" to "TANGLE")
@@ -58,6 +60,7 @@ object TangleAuditionGenerator {
             val matched = AuditionLevel.level(shipped)
             metrics["matchedLoudness"] = Loudness.of(matched)
             metrics["rawSampleRate"] = probe.sampleRate
+            metrics["rawExportGain"] = RAW_EXPORT_GAIN
             if (loop != null) {
                 metrics["seamError"] = loop.seam
                 metrics["loopStateError"] = loop.stateError
@@ -100,7 +103,9 @@ object TangleAuditionGenerator {
                 val rawFile = "raw/${case.id}.wav"
                 val patchFile = "patches/${case.id}.json"
                 WavWriter.write(File(root, file), matched, WavWriter.BitDepth.PCM_16)
-                WavWriter.write(File(root, rawFile), raw, WavWriter.BitDepth.PCM_16)
+                val rawExport = Snip(FloatArray(raw.samples.size) { raw.samples[it] * RAW_EXPORT_GAIN }, 1, Dsp.RATE)
+                check(rawExport.samples.all { abs(it) < 1f }) { "${case.id}: raw PCM export exceeds unity at the common gain" }
+                WavWriter.write(File(root, rawFile), rawExport, WavWriter.BitDepth.PCM_16)
                 File(root, patchFile).also { it.parentFile.mkdirs() }.writeText(patch.toJsonText())
                 entries += linkedMapOf(
                     "id" to case.id, "title" to case.title, "description" to case.description,
@@ -170,6 +175,8 @@ object TangleAuditionGenerator {
         )
         val header = linkedMapOf<String, Any?>("engine" to "TANGLE", "schemaVersion" to 1,
             "sampleRate" to Dsp.RATE, "oversampling" to 4, "generatedAt" to Instant.now().toString(),
+            "rawExportGain" to RAW_EXPORT_GAIN,
+            "rawExportNote" to "Raw PCM WAVs use one common 0.5 gain (−6.02 dB) so the prelevel waveform fits PCM without clipping. Raw peak/RMS/DC and internal bounds are measured before this export gain; relative raw levels and waveform shape are preserved.",
             "machine" to machine, "quick" to quick, "notes" to listOf(24, 36, 48, 60, 84),
             "summary" to summary, "acceptance" to acceptance)
         File(root, "manifest.json").writeText(Json.write(json(header + ("entries" to entries))))
