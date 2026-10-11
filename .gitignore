@@ -161,6 +161,9 @@ testkit/SnipSnap Tessera Kit/
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
 
+# REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
+testkit/revel-audition/
+testkit/SnipSnap Revel Kit/
 # Alloy generated listening matrix, audio, recipes, and native MPC kit.
 testkit/alloy-audition/
 testkit/SnipSnap Alloy Kit/

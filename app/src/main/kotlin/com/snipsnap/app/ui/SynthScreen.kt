@@ -181,6 +181,9 @@ import com.snipsnap.synth.UndertowVoice
 import com.snipsnap.synth.Suture
 import com.snipsnap.synth.SuturePatch
 import com.snipsnap.synth.SutureVoice
+import com.snipsnap.synth.Revel
+import com.snipsnap.synth.RevelVoice
+import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
@@ -296,9 +299,10 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // Engines such as ALLOY carry note, velocity and synthesis configuration
-    // outside the macro map. Keep that state through preview, editing, saving
-    // and placing by editing the loaded patch rather than constructing anew.
+    // FLOTILLA, CISTERN and PITCHWHEEL carry note and velocity outside the macro map;
+    // REVEL also retains its microphones, phrase and seed configuration, and ALLOY
+    // its synthesis configuration. Keep that state through preview, editing,
+    // saving and placing by editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1083,6 +1087,7 @@ fun SynthScreen(
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.REVEL && spec.name == "HOLD" && Revel.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
@@ -1914,7 +1919,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1943,6 +1948,7 @@ private enum class Engine {
         UNDERTOW -> UndertowVoice.entries
         COROLLA -> CorollaVoice.entries
         SUTURE -> SutureVoice.entries
+        REVEL -> RevelVoice.entries
         TESSERA -> TesseraVoice.entries
         PITCHWHEEL -> PitchwheelVoice.entries
     }
@@ -1971,6 +1977,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
         COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
         SUTURE -> Suture.macrosFor(voice as SutureVoice)
+        REVEL -> Revel.macrosFor(voice as RevelVoice)
         TESSERA -> Tessera.macrosFor(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
     }
@@ -1999,6 +2006,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
         COROLLA -> Corolla.defaults(voice as CorollaVoice)
         SUTURE -> Suture.defaults(voice as SutureVoice)
+        REVEL -> Revel.defaults(voice as RevelVoice)
         TESSERA -> Tessera.defaults(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
     }
@@ -2027,6 +2035,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
         COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
         SUTURE -> Suture.scramble(voice as SutureVoice, random)
+        REVEL -> Revel.scramble(voice as RevelVoice, random)
         TESSERA -> Tessera.scramble(voice as TesseraVoice, random)
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
     }
@@ -2060,6 +2069,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
         COROLLA -> Corolla.render(voice as CorollaVoice, macros)
         SUTURE -> Suture.render(voice as SutureVoice, macros)
+        REVEL -> Revel.render(voice as RevelVoice, macros)
         TESSERA -> Tessera.render(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
     }
@@ -2094,6 +2104,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
         COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
         SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
+        REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         TESSERA -> Tessera.drumClassFor(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
     }
@@ -2122,6 +2133,7 @@ private enum class Engine {
         UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
         COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
         SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
+        REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         TESSERA -> TesseraPatch(name, voice as TesseraVoice, macros)
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
     }
