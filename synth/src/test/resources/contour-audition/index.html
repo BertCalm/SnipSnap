@@ -12,6 +12,8 @@
     @media(max-width:1050px){.wrap{padding:0 25px}.hero{gap:25px}.hero-art{min-height:280px;padding:23px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar{grid-template-columns:1fr 1fr}.compare{gap:10px}.compare-title{display:none}.compare{grid-template-columns:1fr 1fr auto}.policy{gap:22px}}
     @media(max-width:650px){body{font-size:14px}.wrap{padding:0 18px}.topline{padding-top:19px;font-size:10px}.edition{font-size:9px;letter-spacing:.06em}.hero{grid-template-columns:1fr;gap:20px;padding:33px 0 25px}h1{font-size:82px}.intro{font-size:16px}.hero-art{min-height:225px;padding:18px}.hero-art svg{height:135px}.facts{gap:14px;grid-template-columns:repeat(2,1fr);padding:19px 0;margin-bottom:25px}.fact strong{font-size:22px}.fact span{font-size:9px}.policy{grid-template-columns:1fr;gap:10px}.sectionline{align-items:start;flex-direction:column;gap:10px}.sectionline h2{font-size:33px}.save small{font-size:10px}.toolbar{gap:10px}.category-heading{align-items:start}.category-heading span{padding-top:5px}.grid{grid-template-columns:1fr}.clip{padding:20px}.clip p.description{min-height:0}.group-feedback .formline{grid-template-columns:1fr;gap:10px}.compare{bottom:8px;width:calc(100% - 16px);padding:11px;gap:8px;border-radius:12px}.slot{gap:6px;align-items:start;flex-direction:column}.slot span{font-size:10px;max-width:100%;-webkit-line-clamp:1}.slot button{font-size:10px;padding:8px 10px;min-width:59px}.compare .stop{padding:8px;font-size:10px}.footer{flex-direction:column;gap:6px;padding-bottom:130px}.group-label span{display:none}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.clip{transition:none}}
+    .grid.revision-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.group-label .load-pair{font-size:11px;padding:8px 12px}
+    @media(max-width:650px){.grid.revision-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -52,6 +54,22 @@
     feedback.updatedAt = new Date().toISOString();
     try { localStorage.setItem(storageKey, JSON.stringify(feedback)); } catch (_) { storageAvailable = false; announce('Browser storage is unavailable. Export verdicts to keep your answers.', true); }
   }
+  function feedbackForExport() {
+    const clips = Object.fromEntries(Object.entries(feedback.clips).map(([id, answers]) => {
+      const clip = byId(id); if (!clip) return [id, answers];
+      const provenance = clip.provenance || {};
+      return [id, {...answers,
+        sourceSha256: provenance.sourceSha256 || manifest.sourceSha256,
+        sourceFiles: provenance.sourceFiles || manifest.sourceFiles,
+        listeningRound: provenance.listeningRound || manifest.listeningRound,
+        recipeSha256: provenance.recipeSha256 || manifest.recipeSha256,
+        patch: clip.patch, audioSha256: clip.audioSha256, rawSha256: clip.rawSha256,
+        comparisonRevision: clip.comparisonRevision || clip.comparisonVersion,
+        baselineRound: clip.baselineRound || (clip.category === 'revision' ? manifest.comparisonBaseline?.listeningRound : undefined),
+      }];
+    }));
+    return {...feedback, clips};
+  }
   function groupKey() { return category + ' / ' + ($('group').value || 'all') + ' / ' + ($('voice').value || 'all voices'); }
   function groupFeedback() {
     const saved = feedback.groups[groupKey()] || {};
@@ -60,7 +78,8 @@
   }
   function filtered() {
     const query = $('search').value.trim().toLowerCase();
-    return manifest.clips.filter(clip => (category === 'presets' ? (clip.category === 'presets' || (clip.category === 'voices' && clip.featured) || (clip.voice === 'KEY' && ['BODY_ONLY','EDGE_ONLY','COMBINED'].includes(clip.diagnostic))) : clip.category === category) && (!$('voice').value || clip.voice === $('voice').value) && (!$('group').value || clip.group === $('group').value) && (!query || [clip.title,clip.description,clip.group,clip.voice,clip.note].join(' ').toLowerCase().includes(query)) && ($('level').value !== 'normalized' || clip.normalizedPath)).sort((a,b) => category === 'presets' ? ({presets:0,voices:1,diagnostics:2}[a.category] - {presets:0,voices:1,diagnostics:2}[b.category]) : 0);
+    const revisionOrder = new Map([...new Set(manifest.clips.filter(clip => clip.category === 'revision').map(clip => clip.group))].map((group,index) => [group,index]));
+    return manifest.clips.filter(clip => (category === 'presets' ? (clip.category === 'presets' || (clip.category === 'voices' && clip.featured) || (clip.voice === 'KEY' && ['BODY_ONLY','EDGE_ONLY','COMBINED'].includes(clip.diagnostic))) : clip.category === category) && (!$('voice').value || clip.voice === $('voice').value) && (!$('group').value || clip.group === $('group').value) && (!query || [clip.title,clip.description,clip.group,clip.voice,clip.note].join(' ').toLowerCase().includes(query)) && ($('level').value !== 'normalized' || clip.normalizedPath)).sort((a,b) => category === 'revision' ? (revisionOrder.get(a.group) - revisionOrder.get(b.group) || Number(a.id.startsWith('revised_')) - Number(b.id.startsWith('revised_'))) : category === 'presets' ? ({presets:0,voices:1,diagnostics:2}[a.category] - {presets:0,voices:1,diagnostics:2}[b.category]) : 0);
   }
   function fillGroups() {
     const prior = $('group').value;
@@ -86,7 +105,7 @@
   function render() {
     if (!manifest) return;
     const section = manifest.categories.find(item => item.id === category), clips = filtered(), shown = clips.slice(0,visibleLimit);
-    $('categoryTitle').textContent = section.title; $('categoryDescription').textContent = category === 'presets' ? 'Nine saved recipes, six center-note voice references, and the defining body + edge comparison. Start with these matched clips, then explore the complete matrix.' : section.description;
+    $('categoryTitle').textContent = section.title; $('categoryDescription').textContent = category === 'revision' ? 'Same note and velocity, dry sound, same level policy. Both versions preserve the rendered attack. Compare the original and revised voicing.' : category === 'presets' ? 'Nine saved recipes, six center-note voice references, and the defining body + edge comparison. Start with these matched clips, then explore the complete matrix.' : section.description;
     $('panel').setAttribute('aria-labelledby','tab-' + category);
     $('count').textContent = clips.length + ' cases';
     let previousGroup = '', html = '';
@@ -95,7 +114,7 @@
       const displayGroup = category === 'presets' && clip.category === 'voices' ? 'Six voice references' : clip.group;
       if (previousGroup !== displayGroup) {
         if (index) html += '</div>';
-        html += '<div class="group-label"><h3>' + esc(displayGroup) + '</h3><span>Compare at matched level · add two clips to A / B</span></div><div class="grid">'; previousGroup = displayGroup;
+        html += '<div class="group-label"><h3>' + esc(displayGroup) + '</h3>' + (category === 'revision' ? '<button type="button" class="load-pair" data-comparison-group="' + esc(displayGroup) + '" aria-label="Load Original and Revised ' + esc(displayGroup) + ' into A and B">Load A / B</button>' : '<span>Compare at matched level · add two clips to A / B</span>') + '</div><div class="grid' + (category === 'revision' ? ' revision-grid' : '') + '">'; previousGroup = displayGroup;
       }
       html += clipCard(clip,index + 1);
     }
@@ -108,7 +127,12 @@
   function selectCategory(id) {
     if (!manifest) { pendingJump = id; return; }
     category = id; visibleLimit = 18; $('group').value = ''; $('search').value = '';
+    const previousLevel = $('level').value;
+    const normalizedAvailable = category !== 'revision' || manifest.clips.filter(clip => clip.category === 'revision').every(clip => clip.normalizedPath);
+    $('level').querySelector('[value="normalized"]').disabled = !normalizedAvailable;
+    if (!normalizedAvailable && $('level').value === 'normalized') $('level').value = 'matched';
     if ($('level').value === 'normalized' && !['presets','voices'].includes(category)) $('level').value = 'matched';
+    if ($('level').value !== previousLevel) { stopPlayback(); pauseNative(); announce('Playback level: ' + $('level').value + '.'); }
     for (const tab of $('tabs').children) { const selected = tab.dataset.category === id; tab.setAttribute('aria-selected',String(selected)); tab.tabIndex = selected ? 0 : -1; }
     fillGroups(); render();
   }
@@ -145,7 +169,9 @@
       source = context.createBufferSource(); sourceGain = context.createGain(); source.buffer = buffer;
       source.loop = clip.loop && (repeatPreferences.get(clip.id) ?? true); source.loopStart = 0; source.loopEnd = buffer.duration;
       source.connect(sourceGain); sourceGain.connect(context.destination);
-      const now = context.currentTime, playbackStart = now + .02; sourceGain.gain.setValueAtTime(0,now); sourceGain.gain.setValueAtTime(0,playbackStart); sourceGain.gain.linearRampToValueAtTime(1,playbackStart + .012);
+      const now = context.currentTime, playbackStart = now + .02;
+      if (clip.loop) { sourceGain.gain.setValueAtTime(0,now); sourceGain.gain.setValueAtTime(0,playbackStart); sourceGain.gain.linearRampToValueAtTime(1,playbackStart + .012); }
+      else sourceGain.gain.setValueAtTime(1,now);
       source.onended = () => { if (request === requestId) { source = null; activeClip = null; updateActiveUI(); cancelAnimationFrame(progressFrame); announce('Finished ' + clip.title + '.'); } };
       startedAt = playbackStart; activeClip = clip; activePath = path; source.start(playbackStart); updateActiveUI();
       announce('Playing ' + clip.title + ' · ' + chosenLevel(clip) + (source.loop ? ' · sample-accurate repeat' : '') + '.');
@@ -163,6 +189,15 @@
     }
   }
   $('clips').addEventListener('click', event => {
+    const pairButton = event.target.closest('[data-comparison-group]');
+    if (pairButton) {
+      const pair = manifest.clips.filter(clip => clip.category === 'revision' && clip.group === pairButton.dataset.comparisonGroup);
+      const original = pair.find(clip => clip.id.startsWith('round1_')), revised = pair.find(clip => clip.id.startsWith('revised_'));
+      if (!original || !revised) { announce('This comparison pair is incomplete.',true); return; }
+      stopPlayback(); pauseNative();
+      slots.A = original; slots.B = revised; $('slotA').textContent = original.title; $('slotB').textContent = revised.title;
+      $('playA').disabled = false; $('playB').disabled = false; updateActiveUI(); announce('Original in A; Revised in B · ' + pairButton.dataset.comparisonGroup + '.'); return;
+    }
     const button = event.target.closest('button[data-action]'); if (!button) return;
     const clip = byId(button.closest('.clip').dataset.id), action = button.dataset.action;
     if (action === 'play') play(clip);
@@ -189,7 +224,7 @@
   for (const id of ['groupVerdict','groupNotes']) $(id).addEventListener('input',() => { feedback.groups[groupKey()] = {verdict:$('groupVerdict').value,notes:$('groupNotes').value,playbackLevel:$('level').value,updatedAt:new Date().toISOString()}; saveFeedback(); });
   $('exportVerdicts').addEventListener('click',() => {
     if (!manifest) return;
-    const verdict = {schemaVersion:1,engine:'CONTOUR',listeningRound:manifest.listeningRound,sourceSha256:manifest.sourceSha256,sourceFiles:manifest.sourceFiles,recipeSha256:manifest.recipeSha256,exportedAt:new Date().toISOString(),levelPolicy:manifest.levelPolicy,feedback};
+    const verdict = {schemaVersion:1,engine:'CONTOUR',listeningRound:manifest.listeningRound,sourceSha256:manifest.sourceSha256,sourceFiles:manifest.sourceFiles,recipeSha256:manifest.recipeSha256,comparisonBaseline:manifest.comparisonBaseline,exportedAt:new Date().toISOString(),levelPolicy:manifest.levelPolicy,feedback:feedbackForExport()};
     const url = URL.createObjectURL(new Blob([JSON.stringify(verdict,null,2)],{type:'application/json'})); const link = document.createElement('a'); link.href = url; link.download = manifest.listeningRound + '-verdicts.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000); announce('Verdicts exported. Browser answers remain saved.');
   });
   document.querySelectorAll('[data-jump]').forEach(button => button.addEventListener('click',() => { selectCategory(button.dataset.jump); $('listen').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'}); }));
@@ -207,9 +242,10 @@
     $('levelPolicy').textContent = manifest.levelPolicy.measurement + ' ' + manifest.levelPolicy.matched + ' Raw: ' + manifest.levelPolicy.raw + ' Host normalized: ' + manifest.levelPolicy.normalized;
     $('round').textContent = 'Round ' + manifest.listeningRound + ' · ' + (manifest.full ? 'Full matrix' : 'Development smoke pack');
     $('voice').innerHTML += [...new Set(manifest.clips.map(clip => clip.voice))].map(voice => '<option value="' + esc(voice) + '">' + esc(voice) + '</option>').join('');
-    $('tabs').innerHTML = manifest.categories.map(section => '<button type="button" role="tab" id="tab-' + section.id + '" aria-controls="panel" aria-selected="false" tabindex="-1" data-category="' + section.id + '">' + esc(section.title) + '</button>').join('');
+    const categories = [...manifest.categories].sort((a,b) => (a.id === 'revision' ? -1 : b.id === 'revision' ? 1 : 0));
+    $('tabs').innerHTML = categories.map(section => '<button type="button" role="tab" id="tab-' + section.id + '" aria-controls="panel" aria-selected="false" tabindex="-1" data-category="' + section.id + '">' + esc(section.title) + '</button>').join('');
     $('tabs').addEventListener('click',event => { const tab = event.target.closest('[data-category]'); if (tab) selectCategory(tab.dataset.category); });
-    selectCategory(pendingJump || 'presets');
+    selectCategory(pendingJump || (manifest.categories.some(section => section.id === 'revision') ? 'revision' : 'presets'));
     if (!storageAvailable) announce('Browser storage is unavailable. Export verdicts to keep your answers.',true);
   }).catch(error => { $('clips').innerHTML = '<div class="empty">The listening pack could not load. Serve this folder over HTTP and keep manifest.json beside index.html.</div>'; announce(error.message,true); });
 })();

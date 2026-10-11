@@ -34,6 +34,14 @@ data class ContourConfig(
     val bodyLevel: Float = .74f,
     val edgeLevel: Float = .32f,
     val subLevel: Float = 0f,
+    /** Relative non-root partial level; 1 preserves the original table balance. */
+    val bodyHarmonics: Float = 1f,
+    /** The edge's root contribution; the body continues to own the requested note. */
+    val edgeRootLevel: Float = 1f,
+    /** Independent edge excitation projection, before the shared filter. */
+    val edgeAttack: Float = .005f,
+    val edgeDecay: Float = .5f,
+    val edgeSustain: Float = 1f,
     val bodyScanBias: Float = 0f,
     val edgeScanBias: Float = 0f,
     val bodyTravel: Float = .30f,
@@ -60,6 +68,11 @@ data class ContourConfig(
         bounded("edgeLevel", edgeLevel, 0f, .8f)
         bounded("subLevel", subLevel, 0f, .25f)
         require(bodyLevel >= subLevel * 2) { "CONTOUR root anchor must remain subordinate to the body" }
+        bounded("bodyHarmonics", bodyHarmonics, .5f, 2.5f)
+        bounded("edgeRootLevel", edgeRootLevel, 0f, 1f)
+        bounded("edgeAttack", edgeAttack, .001f, 1.5f)
+        bounded("edgeDecay", edgeDecay, .02f, 3f)
+        bounded("edgeSustain", edgeSustain, 0f, 1f)
         bounded("bodyScanBias", bodyScanBias, -.8f, .8f)
         bounded("edgeScanBias", edgeScanBias, -.8f, .8f)
         bounded("bodyTravel", bodyTravel, 0f, .8f)
@@ -78,7 +91,8 @@ data class ContourConfig(
     }
 
     companion object {
-        fun forVoice(voice: ContourVoice): ContourConfig = when (voice) {
+        /** Original model-1 recipe for JSON that predates the layer projections. */
+        fun legacyForVoice(voice: ContourVoice): ContourConfig = when (voice) {
             ContourVoice.BASS -> ContourConfig(ContourTable.ROUND_PULSE, ContourTable.COPPER,
                 bodyLevel = .80f, edgeLevel = .31f, subLevel = .09f,
                 ampAttack = .006f, ampDecay = .55f, ampSustain = .48f, ampRelease = .55f,
@@ -109,6 +123,25 @@ data class ContourConfig(
                 motionShape = ContourMotionShape.RISE, motionSeconds = 2.2f,
                 bodyTravel = .32f, edgeTravel = .64f, filterAttack = .45f,
                 filterDecay = 1.4f, filterAmount = .5f, loopSeconds = 3f)
+        }
+
+        /** Fresh recipes retain a solid root while exposing the moving partials. */
+        fun forVoice(voice: ContourVoice): ContourConfig = legacyForVoice(voice).let { c ->
+            when (voice) {
+                ContourVoice.BASS -> c.copy(bodyHarmonics = 1.85f, edgeRootLevel = .45f,
+                    edgeAttack = .006f, edgeDecay = .32f, edgeSustain = .78f)
+                ContourVoice.KEY -> c.copy(bodyHarmonics = 1.8f, edgeRootLevel = .5f,
+                    edgeAttack = .008f, edgeDecay = .65f, edgeSustain = .58f)
+                ContourVoice.PLUCK -> c.copy(bodyHarmonics = 1.65f, edgeRootLevel = .45f,
+                    edgeAttack = .003f, edgeDecay = .22f, edgeSustain = .4f)
+                ContourVoice.LEAD -> c.copy(bodyHarmonics = 1.6f, edgeRootLevel = .55f,
+                    edgeAttack = .012f, edgeDecay = .75f, edgeSustain = .86f)
+                ContourVoice.HOLLOW -> c.copy(bodyHarmonics = 1.65f, edgeRootLevel = .5f,
+                    edgeLevel = .65f, edgeTravel = .30f,
+                    edgeAttack = .02f, edgeDecay = .85f, edgeSustain = .78f)
+                ContourVoice.SWELL -> c.copy(bodyHarmonics = 1.9f, edgeRootLevel = .4f,
+                    edgeAttack = .4f, edgeDecay = 1.5f, edgeSustain = .88f)
+            }
         }
     }
 }
@@ -239,6 +272,13 @@ object ContourEngine {
         }
     }
 
+    /** A bounded edge flare; neutral patches bypass its arithmetic exactly. */
+    private fun edgeProjection(t: Double, c: ContourConfig, held: Boolean): Double {
+        if (c.edgeSustain == 1f) return 1.0
+        if (held) return c.edgeSustain.toDouble()
+        return c.edgeSustain + (1 - c.edgeSustain) * (1 - exp(-t / c.edgeAttack)) * exp(-t / c.edgeDecay)
+    }
+
     private data class LoopPlan(val frames: Int, val rootCycles: Int, val noteHz: Double,
         val actualHz: Double, val edgeRatio: Double)
     private fun planLoop(hz: Double, c: ContourConfig): LoopPlan {
@@ -278,10 +318,12 @@ object ContourEngine {
         private var bodyScan = 0.0
         private var edgeScan = 0.0
         private var amp = 0.0
+        private var edgeGain = 1.0
         private var cutoff = baseCutoff
         private var db = 0.0
         private var de = 0.0
         private var da = 0.0
+        private var dg = 0.0
         private var dc = 0.0
 
         private fun controls(t: Double): DoubleArray {
@@ -293,7 +335,7 @@ object ContourEngine {
             val emphasis = (velocity - .5) * .13
             return doubleArrayOf(scans.first + emphasis * 1.4 * scans.first * (1 - scans.first),
                 scans.second + emphasis * 4 * scans.second * (1 - scans.second),
-                amplitude(t, c, hold, held), cut)
+                amplitude(t, c, hold, held), cut, edgeProjection(t, c, held))
         }
 
         fun tick(): Float {
@@ -301,15 +343,27 @@ object ContourEngine {
                 val current = controls(sample.toDouble() / INTERNAL_RATE)
                 val next = controls((sample + CONTROL_STRIDE).toDouble() / INTERNAL_RATE)
                 bodyScan = current[0]; edgeScan = current[1]; amp = current[2]; cutoff = current[3]
+                edgeGain = current[4]
                 db = (next[0] - current[0]) / CONTROL_STRIDE
                 de = (next[1] - current[1]) / CONTROL_STRIDE
                 da = (next[2] - current[2]) / CONTROL_STRIDE
                 dc = (next[3] - current[3]) / CONTROL_STRIDE
+                dg = (next[4] - current[4]) / CONTROL_STRIDE
             }
-            val body = if (diagnostic == ContourDiagnostic.EDGE_ONLY) 0.0 else
-                bodyLookup.sample(bodyPhase, bodyScan) * c.bodyLevel
-            val edge = if (diagnostic == ContourDiagnostic.BODY_ONLY) 0.0 else
-                edgeLookup.sample(edgePhase, edgeScan) * c.edgeLevel
+            val body = if (diagnostic == ContourDiagnostic.EDGE_ONLY) 0.0 else {
+                val wave = bodyLookup.sample(bodyPhase, bodyScan)
+                (if (c.bodyHarmonics == 1f) wave else {
+                    val root = bodyLookup.root(bodyPhase)
+                    root + (wave - root) * c.bodyHarmonics
+                }) * c.bodyLevel
+            }
+            val edge = if (diagnostic == ContourDiagnostic.BODY_ONLY) 0.0 else {
+                val wave = edgeLookup.sample(edgePhase, edgeScan)
+                val colored = if (c.edgeRootLevel == 1f) wave else
+                    wave - (1 - c.edgeRootLevel) * edgeLookup.root(edgePhase)
+                val projected = if (c.edgeSustain == 1f) colored else colored * edgeGain
+                projected * c.edgeLevel
+            }
             val anchor = if (diagnostic == ContourDiagnostic.EDGE_ONLY || c.subLevel == 0f) 0.0 else
                 sin(TAU * anchorPhase) * c.subLevel
             val excitation = (body + edge + anchor) * mixScale * (.28 + .72 * velocity)
@@ -322,7 +376,7 @@ object ContourEngine {
             bodyPhase += hz / INTERNAL_RATE; if (bodyPhase >= 1) bodyPhase -= 1
             edgePhase += hz * ratio / INTERNAL_RATE; if (edgePhase >= 1) edgePhase -= 1
             anchorPhase += hz / INTERNAL_RATE; if (anchorPhase >= 1) anchorPhase -= 1
-            bodyScan += db; edgeScan += de; amp += da; cutoff += dc; sample++
+            bodyScan += db; edgeScan += de; amp += da; cutoff += dc; edgeGain += dg; sample++
             return out.toFloat()
         }
 

@@ -1,6 +1,9 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Fft
+import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.abs
@@ -10,6 +13,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Audio measurements shared by CONTOUR's finite, loop and export acceptance probes. */
@@ -103,6 +107,111 @@ internal object ContourTestAudio {
 /** CONTOUR's claims are measured before shared loudness makeup as well as on finished audio. */
 class ContourEngineTest {
     private val timbre = listOf("SCAN", "OFFSET", "MOTION", "FILTER", "DRIVE")
+
+    @Test
+    fun `body partial weighting preserves root energy and changes only the overtones`() {
+        for (voice in listOf(ContourVoice.BASS, ContourVoice.KEY)) {
+            val macros = ContourEngine.defaults(voice) + mapOf("MOTION" to 0f, "FILTER" to 1f, "DRIVE" to 0f, "HOLD" to 1f)
+            val config = ContourConfig.legacyForVoice(voice).copy(subLevel = 0f)
+            val plain = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.BODY_ONLY, macros, config = config)
+            val weighted = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.BODY_ONLY, macros,
+                config = config.copy(bodyHarmonics = 2f))
+            val size = 32768
+            val p = ContourTestAudio.power(plain, 4096, size)
+            val q = ContourTestAudio.power(weighted, 4096, size)
+            val hz = ContourEngine.frequencyFor(voice, .5f).toDouble()
+            fun energy(power: DoubleArray, harmonic: Int): Double {
+                val center = (harmonic * hz * size / Dsp.RATE).toInt()
+                return (center - 4..center + 4).sumOf { power[it] }
+            }
+            val rootRatio = energy(q, 1) / energy(p, 1)
+            val overtoneRatio = (2..16).sumOf { energy(q, it) } / (2..16).sumOf { energy(p, it) }
+            println("CONTOUR $voice body harmonics 1 to 2: root power $rootRatio, overtone power $overtoneRatio")
+            assertTrue(abs(rootRatio - 1) < .001, "$voice: weighting changed the requested root energy")
+            assertTrue(abs(overtoneRatio - 4) < .03, "$voice: weighting did not independently double partial amplitudes")
+        }
+    }
+
+    @Test
+    fun `edge excitation has its own bounded transient and settles without changing the body`() {
+        val voice = ContourVoice.KEY
+        val macros = ContourEngine.defaults(voice) + mapOf("MOTION" to 0f, "FILTER" to 1f, "DRIVE" to 0f)
+        val legacy = ContourConfig.legacyForVoice(voice)
+        val projected = legacy.copy(edgeAttack = .005f, edgeDecay = .22f, edgeSustain = .4f)
+        val plain = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.EDGE_ONLY, macros, config = legacy)
+        val moving = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.EDGE_ONLY, macros, config = projected)
+        fun ratio(from: Float, to: Float): Double {
+            val a = (from * Dsp.RATE).toInt(); val b = (to * Dsp.RATE).toInt()
+            return ContourTestAudio.rms(moving, a, b) / ContourTestAudio.rms(plain, a, b)
+        }
+        val attack = ratio(.05f, .10f)
+        val rest = ratio(.6f, .7f)
+        assertTrue(attack in .75..1.0 && rest in .39.. .47 && attack > 1.6 * rest,
+            "edge projection is a uniform gain: attack $attack, rest $rest")
+        assertContentEquals(
+            ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.BODY_ONLY, macros, config = legacy),
+            ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.BODY_ONLY, macros, config = projected))
+        val held = macros + ("HOLD" to 1f)
+        val heldPlain = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.EDGE_ONLY, held, config = legacy)
+        val heldEdge = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.EDGE_ONLY, held, config = projected)
+        assertTrue(abs(ContourTestAudio.rms(heldEdge) / ContourTestAudio.rms(heldPlain) - .4) < .001,
+            "held edge did not converge to its configured sustain input level")
+    }
+
+    @Test
+    fun `edge root weighting leaves its moving overtones available to the shared filter`() {
+        val voice = ContourVoice.KEY
+        val macros = ContourEngine.defaults(voice) + mapOf("MOTION" to 0f, "FILTER" to 1f, "DRIVE" to 0f, "HOLD" to 1f)
+        val config = ContourConfig.legacyForVoice(voice)
+        val plain = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.EDGE_ONLY, macros, config = config)
+        val colored = ContourEngine.renderDiagnosticRaw(voice, ContourDiagnostic.EDGE_ONLY, macros,
+            config = config.copy(edgeRootLevel = 0f))
+        val size = 32768
+        val p = ContourTestAudio.power(plain, 4096, size)
+        val q = ContourTestAudio.power(colored, 4096, size)
+        val hz = ContourEngine.frequencyFor(voice, .5f).toDouble()
+        fun energy(power: DoubleArray, harmonic: Int): Double {
+            val center = (harmonic * hz * size / Dsp.RATE).toInt()
+            return (center - 4..center + 4).sumOf { power[it] }
+        }
+        assertTrue(energy(q, 1) / energy(p, 1) < 1e-5, "edge root projection left a root component")
+        val overtoneRatio = (2..16).sumOf { energy(q, it) } / (2..16).sumOf { energy(p, it) }
+        assertTrue(abs(overtoneRatio - 1) < .001, "edge root projection changed other partials: $overtoneRatio")
+    }
+
+    @Test
+    fun `authored richer recipes remain recognizably pitched and avoid drum hit classification`() {
+        for (patch in ContourPresets.all()) {
+            val snip = patch.render()
+            val estimated = assertNotNull(Pitch.detect(snip, .08f, .35f), patch.name)
+            val expected = ContourEngine.frequencyFor(patch.voice, patch.macros.getValue("TUNE"))
+            val cents = FineTuning.cents(estimated.hz.toDouble(), expected.toDouble())
+            val heard = Classifier.classify(snip).drumClass
+            println("CONTOUR ${patch.name}: detector $cents cents, confidence ${estimated.confidence}, class $heard")
+            assertTrue(abs(cents) < 15 && estimated.confidence > .6f,
+                "${patch.name}: stronger partials obscured the root: $estimated, $cents cents")
+            // A short tonal pluck is filed as generic PERC by classifyBright;
+            // the root/confidence probe above establishes its pitched identity.
+            val drums = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
+                DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
+            assertTrue(heard !in drums,
+                "${patch.name}: stronger partials caused $heard classification")
+        }
+    }
+
+    @Test
+    fun `allowed structural extremes remain bounded before normalization and in held state`() {
+        for (voice in ContourVoice.entries) {
+            val config = ContourConfig.forVoice(voice).copy(bodyHarmonics = 2.5f, edgeRootLevel = 0f,
+                edgeSustain = 0f, edgeAttack = .001f, edgeDecay = .02f)
+            val macros = ContourEngine.defaults(voice) + timbre.associateWith { 1f }
+            val raw = ContourEngine.renderInternalRaw(voice, macros, config = config)
+            assertTrue(raw.all { it.isFinite() && abs(it) < 4f }, "$voice: structurally extreme raw state")
+            val loop = ContourEngine.renderLoopMeasured(voice, macros, config = config)
+            assertTrue(loop.periodicError < 1e-3 && loop.seamBeforeBlend < 1e-3 && loop.stateError < 1e-3,
+                "$voice: structurally extreme held state failed to converge")
+        }
+    }
 
     @Test
     fun `the voice roster and the five timbral controls have ordinary defaults`() {

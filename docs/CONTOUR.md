@@ -37,6 +37,11 @@ Table selection is a patch property: moving macros never replaces a table ID
 mid-note. Patch JSON preserves the table pair, layer ratio, scan biases, travel,
 relationship, motion shape, filter type, envelopes, loop timing, velocity and
 render-model version. Recipes replay the same dry source through any stored rack.
+Structural body-harmonic weight, edge-root level and the edge's own attack-to-rest
+projection are saved with the patch. Fresh voices use those settings to give the
+body more overtone detail and the edge a distinct articulation. Older recipes
+missing these fields decode to neutral settings, including recipes without a
+configuration object; they retain their original rendered samples.
 
 Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
 Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
@@ -69,19 +74,35 @@ convention. Repeated playback on the audition page exposes the actual wrap.
 
 ## Audition and verification
 
-The [published first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+The [published audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
 is private to the repository owner's connected ChatGPT account.
 
 ```text
 ./gradlew --no-daemon test
 ./gradlew :synth:generateContourAudition
+./gradlew :synth:generateContourAudition -PcontourComparisonBaseline=/path/to/verified-original-pack
 ```
 
 The generator writes a listening page, manifest and dry WAVs under
-`testkit/contour-audition/`. The complete first round contains 477 cases:
+`testkit/contour-audition/`. The complete matrix contains 477 cases:
 9 presets, 36 note/velocity voice checks, 150 macro-sweep points, 216 interaction
 points, 6 all-high corners, 36 diagnostic comparisons and 24 held loops.
-Start with the nine recipes, then compare voices
+Supplying the archived first round adds nine Original/Revised pairs, bringing
+the current comparison pack to 495 cases. Original WAVs remain byte-identical;
+current references reuse the revised preset WAVs. The comparison records each
+version's complete patch, source fingerprints and audio hashes. The baseline
+directory must contain `baseline.json`, its original `source/` files, and the
+verified `raw/` and `matched/` WAVs. Generation refuses a mismatched source,
+audio hash or level policy. An existing generated `comparison/` directory is a
+valid baseline for a later regeneration.
+
+The page opens with Revision A/B when comparisons are available. Each pair can
+load Original into A and Revised into B. Both use the same note, velocity and
+level policy, with finite attacks played as rendered. The previous page added a
+12 ms entry ramp to every clip, which softened short pluck attacks; only settled
+HOLD entries now use that ramp. Stop fades remain in place.
+
+Start with the paired recipes, then compare voices
 across note and velocity. The full matrix includes five-point macro sweeps,
 SCAN × OFFSET, OFFSET × MOTION, SCAN × FILTER and FILTER × DRIVE,
 all-high settings, isolated body/edge and frozen/open/clean comparisons,
@@ -95,10 +116,11 @@ Passing these checks establishes reproducibility and bounded behavior. Sonic
 acceptance is the owner's listening decision; Android/device and MPC hardware
 checks remain separate.
 
-The rendered round's 24 held cases have a maximum unblended seam error of
+The first round's 24 held cases had a maximum unblended seam error of
 `1.14e-13`, consecutive-period relative RMS error of `3.04e-7`, and oscillator/filter
-state error of `1.79e-7`, all below the `1e-3` gates. Every raw export fits PCM
-headroom without attenuation; every matched export stays at or below .90 peak.
+state error of `1.79e-7`, all below the `1e-3` gates. Each round records current
+loop evidence in its manifest. Every matched export stays at or below .90 peak;
+the manifest reports any attenuation needed to fit a raw export into PCM.
 The manifest records complete patch JSON, source/recipe fingerprints and WAV
 hashes. Browser checks cover 320–1440 px layouts, A/B playback, repeated HOLD,
 native audio fallback, keyboard filters and persistent feedback export.
@@ -124,6 +146,12 @@ One gain per family sets the maximum absolute sample across every frame and
 pitch level to .90. No per-frame normalization erases the intended dynamics;
 the fixed fundamental and continuous interpolation retain the tonal body.
 The bank is immutable and shared; all sounding state stays local to a render.
+The layer voicing acts after lookup: body harmonic weighting leaves its root
+unchanged, while edge-root attenuation makes room for the edge's overtone path.
+Both use the same interpolated normalized root component as the table bank.
+Neutral settings bypass this projection and reproduce the original lookup
+exactly. The bounded edge envelope acts before the shared filter and converges
+to its sustain value for HOLD.
 
 The filter is the existing generic TPT state-variable filter with restrained
 damping, followed by the shared output bandwidth conditioning. HOLLOW recipes

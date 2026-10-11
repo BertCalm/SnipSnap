@@ -368,6 +368,8 @@ object UserPresets {
         "bodyTable = ContourTable.${c.bodyTable.name}", "edgeTable = ContourTable.${c.edgeTable.name}",
         "edgeRatio = ${c.edgeRatio}f", "edgeLag = ${c.edgeLag}f", "relation = ContourRelation.${c.relation.name}",
         "bodyLevel = ${c.bodyLevel}f", "edgeLevel = ${c.edgeLevel}f", "subLevel = ${c.subLevel}f",
+        "bodyHarmonics = ${c.bodyHarmonics}f", "edgeRootLevel = ${c.edgeRootLevel}f",
+        "edgeAttack = ${c.edgeAttack}f", "edgeDecay = ${c.edgeDecay}f", "edgeSustain = ${c.edgeSustain}f",
         "bodyScanBias = ${c.bodyScanBias}f", "edgeScanBias = ${c.edgeScanBias}f",
         "bodyTravel = ${c.bodyTravel}f", "edgeTravel = ${c.edgeTravel}f",
         "ampAttack = ${c.ampAttack}f", "ampDecay = ${c.ampDecay}f", "ampSustain = ${c.ampSustain}f",

@@ -11,6 +11,59 @@ import kotlin.test.assertTrue
 
 class ContourTablesTest {
     @Test
+    fun `root lookup matches the fundamental across scans and pitch levels`() {
+        val size = ContourTables.TABLE_SIZE
+        for (table in ContourTable.entries) {
+            for (hz in doubleArrayOf(55.0, 220.0, 1_760.0, 8_000.0, 17_000.0, 17_999.0)) {
+                val lookup = ContourTables.lookup(table, hz)
+                var rootProjection = 0.0
+                for (i in 0 until size) {
+                    val phase = i.toDouble() / size
+                    rootProjection += lookup.root(phase) * sin(2.0 * PI * phase) * 2.0 / size
+                }
+                for (scan in doubleArrayOf(0.0, 0.33, 1.0)) {
+                    var sourceProjection = 0.0
+                    var remainderProjection = 0.0
+                    for (i in 0 until size) {
+                        val phase = i.toDouble() / size
+                        val sine = sin(2.0 * PI * phase) * 2.0 / size
+                        val source = lookup.sample(phase, scan)
+                        sourceProjection += source * sine
+                        remainderProjection += (source - lookup.root(phase)) * sine
+                    }
+                    assertEquals(sourceProjection, rootProjection, 1e-7, "$table root at scan=$scan hz=$hz")
+                    assertEquals(0.0, remainderProjection, 1e-7, "$table residual root at scan=$scan hz=$hz")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `root lookup preserves first mip phase interpolation wrapping and invalid input behavior`() {
+        for (table in ContourTable.entries) {
+            // These pitches select only the first mip, including the fading root near 18 kHz.
+            for (hz in doubleArrayOf(10_000.0, 17_000.0, 17_999.0)) {
+                val lookup = ContourTables.lookup(table, hz)
+                for (i in 0 until 257) {
+                    val phase = i / 257.0 - 1.37
+                    val root = lookup.root(phase)
+                    assertTrue(root.isFinite() && abs(root) <= .900001)
+                    assertEquals(root, lookup.root(phase + 3.0), 1e-10)
+                    for (scan in doubleArrayOf(0.0, 0.37, 1.0)) {
+                        assertEquals(lookup.sample(phase, scan), root, "$table first mip at scan=$scan hz=$hz")
+                    }
+                }
+                for (phase in doubleArrayOf(Double.NaN, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY)) {
+                    assertEquals(0.0, lookup.root(phase))
+                }
+            }
+            for (hz in doubleArrayOf(-55.0, 0.0, 18_000.0, Double.NaN, Double.POSITIVE_INFINITY)) {
+                assertEquals(0.0, ContourTables.lookup(table, hz).root(.173))
+            }
+        }
+    }
+
+    @Test
     fun `all families are finite bounded and periodic across pitch and scan`() {
         for (table in ContourTable.entries) {
             for (hz in doubleArrayOf(20.0, 55.0, 220.0, 1_760.0, 8_000.0, 17_999.0, 25_000.0)) {

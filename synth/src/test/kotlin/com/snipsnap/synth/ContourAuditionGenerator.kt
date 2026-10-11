@@ -37,12 +37,20 @@ object ContourAuditionGenerator {
         val featured: Boolean = false,
     )
 
+    private data class ComparisonBaseline(
+        val metadata: Map<String, Any?>,
+        val clips: List<Map<String, Any?>>,
+    )
+
     @JvmStatic
     fun main(args: Array<String>) {
         val positional = args.filterNot { it.startsWith("--") }
-        require(positional.size <= 1 && args.filter { it.startsWith("--") }.all { it == "--quick" || it == "--refresh-page" }) {
-            "Supply one output directory, optionally --quick or --refresh-page"
+        require(positional.size <= 1 && args.filter { it.startsWith("--") }.all {
+            it == "--quick" || it == "--refresh-page" || it.startsWith("--comparison-baseline=")
+        }) {
+            "Supply one output directory, optionally --quick, --refresh-page or --comparison-baseline=<directory>"
         }
+        require(args.count { it.startsWith("--comparison-baseline=") } <= 1) { "Supply only one comparison baseline" }
         val root = File(positional.firstOrNull() ?: "../testkit/contour-audition")
         require(root.isDirectory || root.mkdirs()) { "Could not create $root" }
         if ("--refresh-page" in args) {
@@ -52,6 +60,8 @@ object ContourAuditionGenerator {
             return
         }
         val quick = "--quick" in args
+        val baselinePath = args.firstOrNull { it.startsWith("--comparison-baseline=") }?.substringAfter('=')
+        val comparisonBaseline = prepareComparisonBaseline(root, baselinePath)
         val cases = cases(quick)
         check(cases.map { it.id }.distinct().size == cases.size) { "Duplicate clip IDs" }
         val sourceFiles = listOf("ContourEngine.kt", "ContourTables.kt", "ContourPresets.kt")
@@ -59,6 +69,7 @@ object ContourAuditionGenerator {
         val sourceHashes = sourceFiles.mapValues { sha256(it.value) }
         val sourceHash = sha256(sourceHashes.entries.joinToString("\n") { "${it.key}:${it.value}" }.toByteArray())
         val recipeHash = sha256(cases.joinToString("\n") { "${it.id}|${it.voice}|${it.macros.toSortedMap()}|${it.velocity}|${it.config}|${it.diagnostic}" }.toByteArray())
+        val listeningRound = "contour-r02-${sourceHash.take(12)}-${recipeHash.take(12)}"
         val started = System.nanoTime()
         val clips = cases.mapIndexed { index, case ->
             check(sourceFiles.all { sha256(it.value) == sourceHashes.getValue(it.key) }) {
@@ -113,14 +124,19 @@ object ContourAuditionGenerator {
                 "rawSha256" to sha256(File(root, rawPath)), "config" to case.config.toString(),
                 "patch" to ContourPatch(case.title, case.voice, case.macros, case.config, case.velocity).toJsonValue(),
                 "recipeStatus" to "provisional; owner listening pending",
+                "provenance" to linkedMapOf(
+                    "listeningRound" to listeningRound, "sourceSha256" to sourceHash,
+                    "sourceFiles" to sourceHashes, "recipeSha256" to recipeHash,
+                ),
             )
             if ((index + 1) % 20 == 0 || index == cases.lastIndex) println("CONTOUR audition: ${index + 1}/${cases.size} cases")
             evidence
-        }
+        }.toMutableList()
         check(sourceFiles.all { sha256(it.value) == sourceHashes.getValue(it.key) }) { "CONTOUR source changed during generation" }
+        if (comparisonBaseline != null) addComparisons(clips, comparisonBaseline)
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "CONTOUR", "schemaVersion" to 1, "full" to !quick,
-            "listeningRound" to "contour-${sourceHash.take(12)}-${recipeHash.take(12)}",
+            "listeningRound" to listeningRound,
             "sourceSha256" to sourceHash, "sourceFiles" to sourceHashes, "recipeSha256" to recipeHash,
             "sampleRate" to Dsp.RATE, "bitDepth" to AUDITION_DEPTH.bits, "channels" to 1,
             "clipCount" to clips.size, "sonicAcceptance" to "Pending owner listening. Nine dry presets are provisional; expansion awaits review.",
@@ -134,7 +150,9 @@ object ContourAuditionGenerator {
             ),
             "architecture" to "Original generated band-limited table pairs, related body and edge scans, a generic low-pass filter, and oversampled bounded drive. No imported factory waves or circuit emulation claims.",
             "holdPolicy" to "Loop-only exports contain settled sustain, without the initial attack. Custom playback repeats the decoded buffer sample accurately. The four-cycle WAV repeats its exact samples without seam fades.",
-            "categories" to listOf(
+            "comparisonBaseline" to comparisonBaseline?.metadata,
+            "categories" to (if (comparisonBaseline != null) listOf(category("revision", "Revision A/B",
+                "Nine original and revised pairs at the same note and velocity. Original audio is preserved byte for byte; both sides use the same matched-level policy.")) else emptyList()) + listOf(
                 category("presets", "Start here", "Nine saved dry recipes. Compare their characters first; every recipe remains provisional."),
                 category("voices", "Six voices", "Six voice identities at three notes and two velocities. Select one voice to hear its register and attack response."),
                 category("sweeps", "Macro sweeps", "Five positions per control and voice. Companion controls are neutral; SCAN uses frozen motion."),
@@ -161,8 +179,105 @@ object ContourAuditionGenerator {
             Regenerate: ./gradlew :synth:generateContourAudition
             Refresh page only: ./gradlew :synth:generateContourAudition -PcontourRefreshPage=true
             Smoke pack: ./gradlew :synth:generateContourAudition -PcontourQuick=true
+
+            ${if (comparisonBaseline != null) "Revision A/B includes nine byte-identical original references and nine current preset references. Their patch JSON and source, recipe and audio hashes remain with each clip. Original normalized and four-cycle paths are omitted because only the original raw/matched WAVs were archived. Every comparison render requires an explicit --comparison-baseline=<archive-directory>, where baseline.json, source/, raw/ and matched/ contain the verified original pack. Use -PcontourComparisonBaseline=<archive-directory> with the Gradle generator task. Never reconstruct the baseline with the current engine." else "To add an original-versus-revised comparison, supply --comparison-baseline=<archive-directory> to this generator's Java entry point, or -PcontourComparisonBaseline=<archive-directory> to its Gradle task. The directory must contain baseline.json, source/ and its archived raw/matched WAVs with valid original hashes."}
         """.trimIndent() + "\n")
         println("Wrote ${clips.size} CONTOUR cases under ${root.absolutePath} in %.1f s".format(Locale.ROOT, (System.nanoTime() - started) / 1e9))
+    }
+
+    /** Copy and verify the archived sound before new renders can overwrite the current preset paths. */
+    private fun prepareComparisonBaseline(root: File, requestedPath: String?): ComparisonBaseline? {
+        val directory = if (requestedPath != null) {
+            require(requestedPath.isNotBlank()) { "Comparison baseline directory is empty" }
+            File(requestedPath)
+        } else return null
+        require(directory.isDirectory) { "Missing comparison baseline directory: $directory" }
+        val baselineFile = File(directory, "baseline.json")
+        require(baselineFile.isFile) { "Missing archived baseline.json: $directory" }
+        val original = Json.parse(baselineFile.readText()).obj().mapValues { fromJson(it.value) }
+        require(original["engine"] == "CONTOUR" && (original["bitDepth"] as? Number)?.toInt() == AUDITION_DEPTH.bits &&
+            (original["sampleRate"] as? Number)?.toInt() == Dsp.RATE) { "Baseline must be a CONTOUR 44.1 kHz 16-bit audition" }
+        val identityKeys = listOf("listeningRound", "sourceSha256", "sourceFiles", "recipeSha256", "bitDepth", "sampleRate", "levelPolicy")
+        require(identityKeys.all { original[it] != null }) { "Baseline provenance is incomplete" }
+        val hashes = (original["sourceFiles"] as? Map<*, *>)?.entries?.associate { it.key.toString() to it.value.toString() }
+            ?: error("Baseline source fingerprints are missing")
+        require(hashes.keys == linkedSetOf("ContourEngine.kt", "ContourTables.kt", "ContourPresets.kt")) { "Unexpected baseline source roster" }
+        require(sha256(hashes.entries.joinToString("\n") { "${it.key}:${it.value}" }.toByteArray()) == original["sourceSha256"]) {
+            "Baseline combined source fingerprint does not match its files"
+        }
+        val policy = original["levelPolicy"] as? Map<*, *> ?: error("Missing baseline level policy")
+        require(kotlin.math.abs((policy["matchedTarget"] as? Number)?.toDouble()?.minus(MATCHED_TARGET.toDouble()) ?: 1.0) < 1e-7 &&
+            kotlin.math.abs((policy["matchedPeakCeiling"] as? Number)?.toDouble()?.minus(MATCHED_CEILING.toDouble()) ?: 1.0) < 1e-7) {
+            "Baseline matched-level policy differs; an honest comparison requires the same policy"
+        }
+        val archived = (original["clips"] as? List<*>)?.map { row ->
+            (row as? Map<*, *>)?.entries?.associate { it.key.toString() to it.value } ?: error("Invalid archived preset")
+        } ?: error("Baseline preset roster is missing")
+        require(archived.size == 9 && archived.all { it["category"] == "presets" } && archived.map { it["id"] }.distinct().size == 9) {
+            "Baseline must contain exactly nine unique original presets"
+        }
+        val targetDirectory = File(root, "comparison").apply { mkdirs() }
+        fun verifiedCopy(relativePath: String, expectedHash: String): File {
+            val source = File(directory, relativePath).canonicalFile
+            require(source.toPath().startsWith(directory.canonicalFile.toPath()) && source.isFile) { "Missing or unsafe archived asset $relativePath" }
+            require(sha256(source) == expectedHash) { "Archived asset hash does not match: $relativePath" }
+            val target = File(targetDirectory, relativePath).canonicalFile
+            require(target.toPath().startsWith(targetDirectory.canonicalFile.toPath())) { "Unsafe baseline output path: $relativePath" }
+            if (source != target) {
+                target.parentFile.mkdirs()
+                source.copyTo(target, overwrite = true)
+            }
+            require(sha256(target) == expectedHash) { "Copied baseline asset changed: $relativePath" }
+            return target
+        }
+        for ((filename, hash) in hashes) verifiedCopy("source/$filename", hash)
+        for (clip in archived) {
+            require(clip["patch"] is Map<*, *> && clip["macros"] is Map<*, *>) { "Archived patch is incomplete: ${clip["id"]}" }
+            for ((pathKey, hashKey) in listOf("rawPath" to "rawSha256", "matchedPath" to "audioSha256")) {
+                val path = clip[pathKey] as? String ?: error("Missing baseline $pathKey")
+                val hash = clip[hashKey] as? String ?: error("Missing baseline $hashKey")
+                require(path.startsWith(if (pathKey == "rawPath") "raw/" else "matched/")) { "Unexpected archived audio path $path" }
+                require(verifiedCopy(path, hash).length() < 25 * 1024 * 1024) { "Baseline WAV exceeds publication file limit" }
+            }
+        }
+        if (baselineFile.canonicalFile != File(targetDirectory, "baseline.json").canonicalFile)
+            File(targetDirectory, "baseline.json").writeText(Json.write(json(original)) + "\n")
+        return ComparisonBaseline(identityKeys.associateWith { original[it] } + ("presetCount" to archived.size), archived)
+    }
+
+    private fun addComparisons(clips: MutableList<LinkedHashMap<String, Any?>>, baseline: ComparisonBaseline) {
+        val currentPresets = clips.filter { it["category"] == "presets" }.associateBy { it.getValue("id") as String }
+        require(currentPresets.size == baseline.clips.size) { "Current and original preset rosters differ" }
+        for (original in baseline.clips) {
+            val presetId = original.getValue("id") as String
+            val revised = currentPresets[presetId] ?: error("Original preset has no revised partner: $presetId")
+            require(original["voice"] == revised["voice"] && original["note"] == revised["note"] &&
+                (original["velocity"] as? Number)?.toDouble() == (revised["velocity"] as? Number)?.toDouble()) {
+                "Comparison note, voice or velocity changed for $presetId"
+            }
+            val name = original.getValue("title") as String
+            val originalReference = LinkedHashMap(original).apply {
+                put("id", "round1_$presetId"); put("category", "revision"); put("group", name)
+                put("title", "$name · Original"); put("featured", false)
+                put("description", "Preserved original dry preset, at the same note, velocity and matched-level policy as its revised partner.")
+                put("referencePresetId", presetId); put("comparisonVersion", "original")
+                put("comparisonRevision", "original"); put("baselineRound", baseline.metadata["listeningRound"])
+                put("rawPath", "comparison/${original.getValue("rawPath")}")
+                put("matchedPath", "comparison/${original.getValue("matchedPath")}")
+                put("normalizedPath", null); put("normalizedMetrics", null); put("repeatPath", null)
+                put("provenance", baseline.metadata)
+            }
+            val revisedReference = LinkedHashMap(revised).apply {
+                put("id", "revised_$presetId"); put("category", "revision"); put("group", name)
+                put("title", "$name · Revised"); put("featured", false)
+                put("description", "Current revised dry preset. Compare its articulation, sustained body and moving edge against the preserved original.")
+                put("referencePresetId", presetId); put("comparisonVersion", "revised")
+                put("comparisonRevision", "revised"); put("baselineRound", baseline.metadata["listeningRound"])
+            }
+            clips += originalReference
+            clips += revisedReference
+        }
+        check(clips.map { it["id"] }.distinct().size == clips.size) { "Duplicate comparison IDs" }
     }
 
     private fun cases(quick: Boolean): List<Case> = buildList {
@@ -263,5 +378,13 @@ object ContourAuditionGenerator {
         is Map<*, *> -> JsonValue.Obj(value.entries.associate { it.key.toString() to json(it.value) })
         is Iterable<*> -> JsonValue.Arr(value.map { json(it) })
         else -> error("Unsupported evidence ${value.javaClass}")
+    }
+    private fun fromJson(value: JsonValue): Any? = when (value) {
+        JsonValue.Null -> null
+        is JsonValue.Str -> value.value
+        is JsonValue.Bool -> value.value
+        is JsonValue.Num -> value.value
+        is JsonValue.Obj -> value.entries.mapValues { fromJson(it.value) }
+        is JsonValue.Arr -> value.items.map { fromJson(it) }
     }
 }

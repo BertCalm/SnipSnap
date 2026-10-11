@@ -51,12 +51,19 @@ object ContourTables {
         private val upper = if (valid) upperLevel(hz) else 0
         private val bright = bank[table.ordinal].levels[upper]
         private val dark = bank[table.ordinal].levels[maxOf(0, upper - 1)]
+        private val rootFrames = bank[table.ordinal].levels[0]
         private val mix = if (valid) levelMix(upper, hz) else 0.0
         private val gain = if (valid) rootFade(hz) else 0.0
 
         fun sample(phase: Double, scan: Double): Double {
             if (gain == 0.0 || !phase.isFinite() || scan.isNaN()) return 0.0
             return readAt(dark, bright, mix, phase, scan) * gain
+        }
+
+        /** The family's constant fundamental, with identical phase interpolation and pitch fade. */
+        fun root(phase: Double): Double {
+            if (gain == 0.0 || !phase.isFinite()) return 0.0
+            return readAt(rootFrames, rootFrames, 0.0, phase, 0.0) * gain
         }
     }
 

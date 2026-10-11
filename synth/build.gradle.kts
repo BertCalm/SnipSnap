@@ -700,4 +700,7 @@ tasks.register<JavaExec>("generateContourAudition") {
     args("${rootDir}/testkit/contour-audition")
     if (providers.gradleProperty("contourQuick").orNull == "true") args("--quick")
     if (providers.gradleProperty("contourRefreshPage").orNull == "true") args("--refresh-page")
+    providers.gradleProperty("contourComparisonBaseline").orNull?.let {
+        args("--comparison-baseline=$it")
+    }
 }

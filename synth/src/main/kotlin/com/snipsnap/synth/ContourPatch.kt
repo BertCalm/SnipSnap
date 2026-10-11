@@ -46,8 +46,11 @@ data class ContourPatch(
             if (model != ContourEngine.MODEL_VERSION) throw JsonException("unsupported contour model $model")
             val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
             return Patches.decode(value, ENGINE, { n -> ContourVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                // Additive timbre controls must stay neutral for previously saved model-1 recipes,
+                // including recipes that predate the config object. Fresh voice defaults may evolve.
+                val legacy = ContourConfig.legacyForVoice(voice)
                 val config = obj["config"]?.takeUnless { it is JsonValue.Null }
-                    ?.let { decodeConfig(it, ContourConfig.forVoice(voice)) } ?: ContourConfig.forVoice(voice)
+                    ?.let { decodeConfig(it, legacy) } ?: legacy
                 ContourPatch(name, voice, macros, config, velocity, model)
             }
         }
@@ -62,6 +65,8 @@ data class ContourPatch(
                 "edgeRatio" to n(c.edgeRatio), "edgeLag" to n(c.edgeLag),
                 "relation" to JsonValue.Str(c.relation.name),
                 "bodyLevel" to n(c.bodyLevel), "edgeLevel" to n(c.edgeLevel), "subLevel" to n(c.subLevel),
+                "bodyHarmonics" to n(c.bodyHarmonics), "edgeRootLevel" to n(c.edgeRootLevel),
+                "edgeAttack" to n(c.edgeAttack), "edgeDecay" to n(c.edgeDecay), "edgeSustain" to n(c.edgeSustain),
                 "bodyScanBias" to n(c.bodyScanBias), "edgeScanBias" to n(c.edgeScanBias),
                 "bodyTravel" to n(c.bodyTravel), "edgeTravel" to n(c.edgeTravel),
                 "ampAttack" to n(c.ampAttack), "ampDecay" to n(c.ampDecay), "ampSustain" to n(c.ampSustain),
@@ -72,7 +77,7 @@ data class ContourPatch(
             ))
         }
 
-        /** Missing configuration fields use the voice recipe; unknown enum values are refused. */
+        /** Older fields use the voice recipe; missing additive timbre controls use legacy-neutral values. */
         private fun decodeConfig(value: JsonValue, d: ContourConfig): ContourConfig {
             val o = value.obj()
             fun f(key: String, fallback: Float) = o[key]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: fallback
@@ -86,6 +91,8 @@ data class ContourPatch(
                 edgeRatio = f("edgeRatio", d.edgeRatio), edgeLag = f("edgeLag", d.edgeLag),
                 relation = e("relation", ContourRelation.entries, d.relation),
                 bodyLevel = f("bodyLevel", d.bodyLevel), edgeLevel = f("edgeLevel", d.edgeLevel), subLevel = f("subLevel", d.subLevel),
+                bodyHarmonics = f("bodyHarmonics", 1f), edgeRootLevel = f("edgeRootLevel", 1f),
+                edgeAttack = f("edgeAttack", .005f), edgeDecay = f("edgeDecay", .5f), edgeSustain = f("edgeSustain", 1f),
                 bodyScanBias = f("bodyScanBias", d.bodyScanBias), edgeScanBias = f("edgeScanBias", d.edgeScanBias),
                 bodyTravel = f("bodyTravel", d.bodyTravel), edgeTravel = f("edgeTravel", d.edgeTravel),
                 ampAttack = f("ampAttack", d.ampAttack), ampDecay = f("ampDecay", d.ampDecay),
