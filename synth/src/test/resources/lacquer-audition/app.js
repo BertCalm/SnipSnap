@@ -32,6 +32,22 @@
     return wrapper;
   }
 
+  function decorativePlay() {
+    const wrapper = element('span', 'tiny-play');
+    wrapper.setAttribute('aria-hidden', 'true');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '12');
+    svg.setAttribute('height', '12');
+    svg.setAttribute('fill', 'currentColor');
+    svg.setAttribute('focusable', 'false');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M8 5v14l11-7z');
+    svg.append(path);
+    wrapper.append(svg);
+    return wrapper;
+  }
+
   function number(value, fallback = 0) {
     const result = Number(value);
     return Number.isFinite(result) ? result : fallback;
@@ -360,7 +376,7 @@
       if (state.tab === 'interactions' || (state.tab === 'layers' && title.textContent.length > 9)) title.style.fontSize = '14px';
       copy.append(title, element('span', 'diagnostic-label', clip.label || (state.tab === 'relief' ? 'RELIEF ' + number(clip.value).toFixed(2) : 'Engine comparison')));
       copy.append(element('span', 'clip-meta', noteName(clip.note) + ' · vel ' + (clip.velocity === undefined ? '—' : velocityLabel(clip.velocity)) + (isHeld(clip) ? ' · held' : '')));
-      button.append(copy, element('span', 'tiny-play', '▶'));
+      button.append(copy, decorativePlay());
       button.addEventListener('click', () => loadClip(clip, true));
       $('diagnostic-clips').append(button);
     }

@@ -11,6 +11,11 @@ BRASS, BASS, PLUCK and SILK. Dry sonic acceptance and the wider 36-preset bank
 remain owner listening decisions. The sources are generated in code, without
 external PCM assets or a hidden fixed-chord recipe.
 
+The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
+is private to the owner's account. It includes 163 rendered clips in native and
+level-matched versions, layer solos, macro and interaction comparisons, and the
+dry sixteen-pad MPC kit. The commands below reproduce the pack locally.
+
 ## Controls and host behavior
 
 | Control | Behavior |

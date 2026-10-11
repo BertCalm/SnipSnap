@@ -284,7 +284,9 @@ HOLD's top step supplies settled loop material, with periodic layer contours
 preserving RELIEF after the initial arrivals have passed. Run
 `./gradlew :synth:generateLacquerAudition` for native/matched samples, layer solos,
 macro sweeps and interaction grids. [Implementation notes](docs/LACQUER.md)
-describe the contracts. Dry sonic approval precedes the full preset expansion.
+describe the contracts. The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
+is private to the owner's account and includes the dry sixteen-pad MPC kit.
+Dry sonic approval precedes the full preset expansion.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
