@@ -8,6 +8,8 @@ import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.StoopVoice
+import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.SkinVoice
@@ -138,6 +140,7 @@ class UserPresetsTest {
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
+                "STOOP" to StoopVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -176,9 +179,16 @@ class UserPresetsTest {
         assertEquals("p(ThumpVoice.KICK, \"MY KICK\", \"TUNE\" to 0.34f, \"SWEEP\" to 0.45f),", line)
         // Every factory preset, back out of its own line to the float it holds.
         val value = Regex("\"[^\"]+\" to ([-0-9.E]+)f")
+        val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
-            val parsed = value.findAll(UserPresets.rosterLine(preset)).map { it.groupValues[1].toFloat() }.toList()
-            assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            val line = UserPresets.rosterLine(preset)
+            if (preset is StoopPatch) {
+                val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
+                assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
+            } else {
+                val parsed = value.findAll(line).map { it.groupValues[1].toFloat() }.toList()
+                assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            }
         }
         val quoted = UserPresets.rosterLine(ThumpPatch("SAY \"HI\" \$X", ThumpVoice.KICK, emptyMap()))
         assertTrue("\"SAY \\\"HI\\\" \\\$X\"" in quoted, quoted)
@@ -241,8 +251,16 @@ class UserPresetsTest {
         for (engine in engines) {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
-            val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
-            assertTrue(helper in table.readText(Charsets.UTF_8), "${table.name} is written with the helper the line uses: $helper")
+            val text = table.readText(Charsets.UTF_8)
+            if (engine == StoopPatch.ENGINE) {
+                assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
+                for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
+                    assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
+                }
+            } else {
+                val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
+                assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
+            }
             val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
             assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
         }

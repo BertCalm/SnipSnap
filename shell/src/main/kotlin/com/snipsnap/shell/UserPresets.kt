@@ -8,6 +8,7 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Presets
 import java.io.File
 import java.util.Locale
@@ -326,16 +327,37 @@ object UserPresets {
     fun rosterFile(engine: String): String = engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
 
     /**
-     * [patch] as the line its engine's table is written in — the same
-     * `p(voice, name, macros…)` helper every `<Engine>Presets.kt` has —
-     * with every macro's exact value, so the promoted preset renders the
-     * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
+     * [patch] as the line its engine's table is written in, using its
+     * `p` helper with every macro's exact value. STOOP's metadata table
+     * takes named macro arguments and a description alongside the recipe,
+     * so the promoted preset renders the
+     * bytes the phone heard. CISTERN, PITCHWHEEL and STOOP also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
+     * STOOP retains its source, answer and chord recipe; PITCHWHEEL and
+     * STOOP keep their render-model versions as well. The name is a
      * Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+        if (patch is StoopPatch) {
+            val arguments = buildList {
+                add("source = StoopSource(shape = ${patch.source.shape}f, sub = ${patch.source.sub}f, " +
+                    "fmRatio = ${patch.source.fmRatio}f, fmIndex = ${patch.source.fmIndex}f, " +
+                    "harmonicTilt = ${patch.source.harmonicTilt}f, detuneCents = ${patch.source.detuneCents}f)")
+                add("description = \"User-authored preset.\"")
+                add("tags = \"saved\"")
+                addAll(patch.macros.map { (k, v) -> "${k.lowercase(Locale.ROOT)} = ${v}f" })
+                add("midi = ${patch.midi}")
+                add("velocity = ${patch.velocity}f")
+                add("shadowInterval = ${patch.shadowInterval}")
+                add("shadowDelayMs = ${patch.shadowDelayMs}f")
+                add("shadowArticulation = ${patch.shadowArticulation}f")
+                add("shadowReplies = ${patch.shadowReplies}")
+                add("chordIntervals = listOf(${patch.chordIntervals.joinToString(", ")})")
+                add("model = ${patch.model}")
+            }
+            return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
+        }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"

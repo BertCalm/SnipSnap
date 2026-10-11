@@ -83,6 +83,7 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
@@ -172,6 +173,9 @@ import com.snipsnap.synth.TesseraVoice
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.Stoop
+import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
@@ -233,7 +237,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA and PITCHWHEEL, join it here.
+ * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL and STOOP, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -293,7 +297,7 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN and PITCHWHEEL carry note and velocity outside the macro map.
+    // FLOTILLA, CISTERN, PITCHWHEEL and STOOP carry note and velocity outside the macro map.
     // Keep that state through preview, editing, saving and placing.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
@@ -320,6 +324,14 @@ fun SynthScreen(
         touched = true
         currentPresetByVoice.remove(engine to voice)
         macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value)
+    }
+    fun updateStoopRoot(midi: Int) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        // Copy the current recipe so transposition retains its source,
+        // answering gesture, chord intervals and velocity.
+        loadedPatchesByVoice[engine to voice] = patch.copy(midi = midi.coerceIn(Stoop.MIDI_MIN, Stoop.MIDI_MAX))
     }
     fun loadPreset(patch: Patch) {
         touched = true
@@ -905,7 +917,9 @@ fun SynthScreen(
             try {
                 val src = withContext(Dispatchers.Default) {
                     val rendered = patch.render()
-                    val midi = Spread.detect(rendered)
+                    // STOOP keeps an explicit root even when a chord, sub or
+                    // shadow makes the strongest detected partial another note.
+                    val midi = if (patch is StoopPatch) patch.midi.toFloat() else Spread.detect(rendered)
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
                 spreadPatch = patch
@@ -1053,6 +1067,33 @@ fun SynthScreen(
                     }
                 }
 
+                if (engine == Engine.STOOP) {
+                    val root = (loadedPatch as? StoopPatch)?.midi ?: Stoop.DEFAULT_MIDI
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ActionButton(
+                            "OCT −", scheme, enabled = root - 12 >= Stoop.MIDI_MIN,
+                            accessibilityLabel = "ROOT OCTAVE DOWN", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root - 12) }
+                        ActionButton(
+                            "−", scheme, enabled = root > Stoop.MIDI_MIN,
+                            accessibilityLabel = "ROOT DOWN", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root - 1) }
+                        TapeText("ROOT ${Scales.nameOf(root)}", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.4f))
+                        ActionButton(
+                            "+", scheme, enabled = root < Stoop.MIDI_MAX,
+                            accessibilityLabel = "ROOT UP", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root + 1) }
+                        ActionButton(
+                            "OCT +", scheme, enabled = root + 12 <= Stoop.MIDI_MAX,
+                            accessibilityLabel = "ROOT OCTAVE UP", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root + 12) }
+                    }
+                }
+
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
@@ -1074,6 +1115,7 @@ fun SynthScreen(
                                 engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.PITCHWHEEL && spec.name == "HOLD" && Pitchwheel.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.STOOP && spec.name == "HOLD" && Stoop.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1909,7 +1951,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, STOOP;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1939,6 +1981,7 @@ private enum class Engine {
         SUTURE -> SutureVoice.entries
         TESSERA -> TesseraVoice.entries
         PITCHWHEEL -> PitchwheelVoice.entries
+        STOOP -> StoopVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1966,6 +2009,7 @@ private enum class Engine {
         SUTURE -> Suture.macrosFor(voice as SutureVoice)
         TESSERA -> Tessera.macrosFor(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
+        STOOP -> Stoop.macrosFor(voice as StoopVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1993,6 +2037,7 @@ private enum class Engine {
         SUTURE -> Suture.defaults(voice as SutureVoice)
         TESSERA -> Tessera.defaults(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
+        STOOP -> Stoop.defaults(voice as StoopVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2020,6 +2065,7 @@ private enum class Engine {
         SUTURE -> Suture.scramble(voice as SutureVoice, random)
         TESSERA -> Tessera.scramble(voice as TesseraVoice, random)
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
+        STOOP -> Stoop.scramble(voice as StoopVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2052,6 +2098,7 @@ private enum class Engine {
         SUTURE -> Suture.render(voice as SutureVoice, macros)
         TESSERA -> Tessera.render(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
+        STOOP -> Stoop.render(voice as StoopVoice, macros)
     }
 
     /**
@@ -2085,6 +2132,7 @@ private enum class Engine {
         SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
         TESSERA -> Tessera.drumClassFor(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
+        STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2112,6 +2160,7 @@ private enum class Engine {
         SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
         TESSERA -> TesseraPatch(name, voice as TesseraVoice, macros)
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
+        STOOP -> StoopPatch(name, voice as StoopVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
