@@ -16,7 +16,7 @@ opening position or stitch travel.
 | Control | Behavior |
 | --- | --- |
 | TUNE | Requested root, snapped in semitones from C3 to C5 |
-| GAP | Opening distance, release energy and changing geometry |
+| GAP | Opening distance, bending excitation, release energy and changing geometry |
 | STITCH | Bounded closure force, speed and linkage compliance |
 | CORD | Elastic links, stretched harmonics and sliding eyelet texture |
 | SEAM | Edge clearance, contact roughness and dissipative loading; zero disables contact |
@@ -25,8 +25,10 @@ opening position or stitch travel.
 
 Velocity supplies finite release energy for a one-shot and changes actual
 travel and force in a powered HOLD cycle. It is passed through `Velocity`
-and is not an extra saved macro. Patches save the voice and macro map with the
-existing JSON version. `PadRecipe` retains the optional `FxChain`.
+and is not an extra saved macro. Patches save the voice and macro map with
+JSON version 1. DSP model revision 2 does not change that schema: existing
+SUTURE recipes retain their controls and requested note and render through
+the revised model. `PadRecipe` retains the optional `FxChain`.
 `SynthKits.suture()` supplies sixteen dry pads, and FRESH TAPE includes a
 SUTURE starter.
 
@@ -35,6 +37,60 @@ SUTURE buffer contains settled powered material, omitting the initial spread
 and release. A long one-shot can also receive the host's duration-based LOOP
 classification; that routing is separate from a certified repeating HOLD
 buffer.
+
+## Control mappings in model revision 2
+
+The owner heard distinct voices but weak parameter changes in the first
+audition. Analysis of its matched C4 sweeps found that the requested root
+typically held 94–99% of spectral energy during the first 1.2 seconds.
+Most sound energy decayed before the later closure and seam events. Controls
+could therefore change the mechanics and weak upper bands while leaving the
+main audible note almost unchanged. Those observations describe revision 1,
+not acceptance measurements for the revised renderer.
+
+Revision 2 revises the material and envelope mappings within the same vessel.
+The table uses normalized control values and the mean aperture of the two
+modeled gaps. Voice weights, modal falloff and geometry still shape the final
+response; these coefficients are not final output-gain controls.
+
+| Control | Revised mapping |
+| --- | --- |
+| GAP | Upper release projection uses `0.18 + 2.20 × GAP`, then the entire projection is normalized to its finite energy allowance. Aperture radiation uses `0.20 + 2.80 × aperture` for answering and bending modes, while the root uses `0.75 + 0.35 × aperture`. BLOOM and STRAIN multiply the primary root pickup by `2.50` to balance their broad inharmonic fields. |
+| STITCH | Finite closure targets `0.16 + 1.70 × STITCH` speed and caps force at `0.70 + 6 × STITCH`. Mounting load divides plate decay times: `1 + 3 × STITCH × (1 − aperture)` for the primary root and `1 + 4.50 × STITCH × (1 − aperture)` for other plate modes. A firmer closing linkage passively absorbs more vibration. |
+| CORD | Cord pickup uses `0.035 + 1.25 × CORD`, wooden pickup `0.10 + 1.10 × CORD`, and cord decay starts from `0.20 + 1.80 × CORD`. Plate decay also divides by tension load `(0.60 + 1.60 × CORD) / (0.60 + 1.60 × voice default CORD)`, increasing mounting loss as links tighten while keeping each voice's reference loading. |
+| SEAM | Clearance uses `0.012 + 0.240 × SEAM`, and contact loss rate uses `8 + 160 × SEAM + 220 × SEAM²`, through gap- and vibration-dependent contact. The primary root's loss projection is `0.10` for finite gestures, `0.05` on MURMUR, and `0.015` in HOLD. Responding fundamentals and upper bending modes retain their stronger contact loading. Zero removes contact. |
+| CAVITY | Primary root decay starts from `(1 + 6.20 × CAVITY) / (1 + 0.25 × aperture)`, bending decay from `0.55 + 3.40 × CAVITY`, and cavity decay from `0.10 + 1.60 × CAVITY`, before voice, mode, aperture and plate mounting/tension factors. MURMUR multiplies its primary root decay time by `1.20` to retain a tonal tail under contact. Stronger upper-mode loading and cavity pickup expand enclosure color; the root bridge retains its pitch-scaled bound. |
+
+The answering bronze fundamentals already carry coherent 2×, 3× and 4×
+root ratios in the coupled plate network. Their pickup starts from `1.60`
+on BLOOM and `0.95` on the other voices, instead of revision 1's `0.48`,
+with the same seeded mounting variation. On every voice that answering
+pickup also multiplies by `1 + clamp((GAP − 0.40) / 0.60, 0, 1)²`.
+The factor stays one through the neutral opening and reaches two at full
+opening, progressively exposing the coherent bronze field without supplying
+additional acoustic work or changing modal frequencies.
+This exposes existing vibration through changing aperture radiation;
+the inharmonic bending pickup remains unchanged. The revised SEAM loss
+curve broadens its early travel and raises its maximum rate from `163`
+to `388`.
+
+Finite note-on release also reaches the preloaded cords. Three modal weights
+`0.30 / 0.62 / 0.38` multiply CORD, voice elasticity and an even/odd link
+factor `1 / 0.50`, then normalize together with the plate projection into
+one shared gesture allowance. The work-limited sliding friction increasingly
+projects into upper cord modes. Cord fundamentals retain a fixed `1.0`
+stretch factor; upper modes use
+`1 + 0.10 × max(0, strain − (0.10 + 0.26 × CORD))`.
+The primary reciprocal cord bridge uses angular rate `0.125 + 0.45 × CORD`,
+bounding its unloaded per-mode shift below `1.3` cents at C3. Keeping the
+harmonic reference fixed and its bridge weak limits near-root phase
+interference, which can cancel components and shift their mixed spectral
+peak even when their individual frequencies remain close to the root.
+
+TUNE, velocity, HOLD format, voice roster and factory recipe values retain
+their existing contracts. Saved recipes keep their settings but can sound
+different under revision 2. Compare raw and matched clips of the same inputs
+to assess changes in color, timing and decay independently of level.
 
 ## Reduced vessel model
 
@@ -54,10 +110,18 @@ state-recovery reset.
 Two linked gap coordinates run near 2 kHz. A finite note-on spread and release
 opens them; a force-limited stitcher closes them. Ringing increases a bounded
 dashpot that opposes closing travel, allowing stronger notes to close later.
+Finite gestures use a peak-following measured-energy load with a 180 ms
+relaxation time: closing resistance is capped at `24` and scales by `1800`.
+HOLD uses instantaneous measured acoustic energy, a `650` scale and a `10`
+cap. Both paths act only against closing velocity. Ringing load is included
+in complete-state and loop-convergence comparisons.
 Cord strain follows gap geometry and preload and reacts on the linkage.
 The slow linkage receives the positive contact-force envelope through a
 20 ms projection, retaining actual catch resistance across mechanical
 update rates.
+The note-on projection shares a finite energy allowance between plate
+bending and preloaded cord modes. A firmer closing mount and tighter cords
+increase passive plate loss without introducing another energy source.
 An internal take-up coordinate follows the actual powered carriage; its
 material displacement and gap-driven sliding traverse the same seeded
 surface grain. Mechanical geometry, material position and tension interpolate
@@ -95,44 +159,73 @@ detector a clearer starting window while retaining the later cord chirps
 and the same repeating material. The root-bearing cavity link has a bounded,
 pitch-scaled footprint; upper cavity modes retain their stronger loading.
 
-## Numerical evidence
+## Verification
 
-The 53 SUTURE and integration checks pass on the frozen implementation
-(`Suture.kt` SHA-256
-`e4a6923758cb6b345a551353987765a124dd3ff86ec6fa7581a5aa9a6466bd03`).
-The following measurements come from the dry renderer before loudness
-matching. They establish numerical behavior; the listening and device
-checks described below still require the owner's verdict.
+The complete JVM gate, `./gradlew --no-daemon test`, exits zero for final
+revision 2 `Suture.kt` SHA-256
+`91854d3248e672f3b64c24297bcad8844cf5274ce69aad42592ffd75119b7fcc`.
+Its reports contain 4,296 tests in 432 suites: 1,105 freshly executed in
+CLI and shell, and 3,191 retained from cached modules. Both groups have
+zero failures, errors or skips. All 29 SUTURE checks—22 engine and seven
+patch checks—freshly passed in the archived prior full attempt against
+the same DSP, test and build inputs; the successful retry reused them.
+`./gradlew --no-daemon :app:assembleDebug` also exits zero and packages the
+debug APK. This verifies Android compilation and packaging; no on-device
+audio, timing or Compose tests were run.
 
-The integrated branch's plain JVM gate, `./gradlew --no-daemon test`, exits
-zero on Java 17 with `ANDROID_HOME` and `ANDROID_SDK_ROOT` unset and no test
-filters or exclusions. Reports cover 4,039 tests across 404 classes, with
-zero failures, errors or skips. The synthesis suite reruns 1,690 tests;
-Gradle reuses the other up-to-date tasks.
+The added range check covers all six voices and five timbral controls at
+C4 with strong finite gesture energy and neutral companions. All 30 endpoint
+comparisons and 120 adjacent quarter-step comparisons pass fixed targets.
+Endpoints require spectral-energy L1 of at least `0.16` or envelope-energy
+L1 of at least `0.45`; each quarter requires at least `0.02` or `0.06`
+respectively. Both spectral windows and 50 ms envelope bins operate on the
+finished, unnormalized 44.1 kHz output. Independently normalizing their energy
+prevents a gain-only change from satisfying these checks. The same 150 C4
+renders pass the house pitch detector's 50-cent root limit.
+All 120 public-render endpoint cases also pass, covering all six voices,
+five timbral controls and their zero/one endpoints at C3 and C5 with neutral companions:
+the requested-root FFT must stay within 10 cents and the house detector
+within 50 cents. Existing pitch, routing, passive-energy and convergence
+limits remain unchanged. These descriptors
+establish measurable travel, while the owner determines whether the range
+sounds useful.
 
-The integrated Android debug build passes `:app:assembleDebug` with Java 17
-and packages native libraries for arm64-v8a, armeabi-v7a, x86 and x86_64.
-Compilation does not establish on-device UI behavior, render cost or sound.
+The before/after analysis pairs all 150 preserved revision 1 sweep recipes
+with final revision 2 at C4, strong gesture energy and HOLD off. Whole-note
+total variation is half the L1 distance between independently normalized
+energy distributions, so a gain change cannot satisfy it. Each table entry
+spans the smallest and largest zero/one endpoint change across the six voices.
 
-| Check | Measured result |
-| --- | --- |
-| Requested one-shot roots, six voices at C3/C4/C5 | Worst error 9.34 cents; minimum root power 92.67% |
-| Neutral upper modes, BLOOM/THREAD/STRAIN | 8.74% / 4.48% / 6.12% above 1.5 times the root |
-| Acoustic resistance | Strong notes close 29.93 ms later; fixed-velocity stored-energy probe adds 95.28 ms; resistance-off difference is zero |
-| Passive acoustic balance | Energy falls from 0.02 to 1.15e-25; maximum balance error 4.47e-10 |
-| Default raw tails | Worst final 50 ms / early RMS ratio 9.80e-6 (−100.17 dB) |
-| One-shot stability probes | Peak 0.1943; maximum normalized acoustic energy 0.03573; zero recovery resets |
-| Seven held cases, including both factory loops | Settle in 5–12 cycles; worst complete-state error 7.82e-4; seam 1.40e-5; root error at most 5.15 cents |
-| Quiet C5 BLOOM, all timbral controls zero and HOLD one | State error 3.25e-4; seam 7.48e-11; dry and public RMS both 1.20e-7, with exact sample equality |
-| Mechanical 2 kHz versus 8 kHz | Vessel band difference 0.504 dB / envelope L1 0.0320; eyelets 0.137 dB / 0.00851 |
-| Eyelet power at mechanical-clock harmonics | 0.3765% at 2 kHz; 0.00128% at 4 kHz; 0.0000295% at 8 kHz |
-| Nonlinear contact at 4× versus 8× audio rate | Band difference 0.00414 dB / envelope L1 0.00236; identical closure; work, loss and energy deviations below 0.016% |
+| Control | Spectral energy redistributed, revision 1 → 2 | 50 ms envelope energy redistributed, revision 1 → 2 |
+| --- | ---: | ---: |
+| GAP | 10.4–18.5% → 12.5–28.8% | 35.4–38.5% → 11.5–14.9% |
+| STITCH | 1.5–3.0% → 3.7–11.9% | 14.9–15.7% → 32.2–38.1% |
+| CORD | 1.5–4.2% → 7.8–28.1% | 7.8–17.4% → 35.0–46.8% |
+| SEAM | 3.7–8.3% → 1.7–6.7% | 1.2–2.5% → 22.1–48.5% |
+| CAVITY | 1.0–2.0% → 3.1–13.4% | 1.5–5.9% → 54.0–59.1% |
+
+STITCH, CORD and CAVITY widen in both measures on every voice. SEAM gains
+timing range on every voice; its whole-note color response narrows on BLOOM,
+CLOSE and STRAIN. GAP color expands on THREAD, CLOSE, MURMUR and SHELL,
+stays near its prior range on BLOOM, and narrows on STRAIN to retain the
+requested root. Its delayed-bloom envelope range is narrower on every voice.
+These whole-note descriptors are less sensitive to narrow partial movement
+than the fixed Hann-window gate and need not give the same numerical values.
+Passing that gate establishes activity, not a wider range for every control.
+Neither descriptor establishes audibility.
+
+The checks cover requested roots, matched-level macro activity, passive
+acoustic balance, bounded powered input, finite tails, deterministic renders,
+saved recipes and routing. HOLD checks compare the complete acoustic,
+mechanical, coefficient and work-store state, alongside the audible seam.
+Mechanical-clock and audio-oversampling comparisons check that stronger
+contact branches do not reveal numerical cadence or unresolved contacts.
 
 The original approximately 1 kHz mechanical rate did not meet the sound
 convergence limits. Production therefore uses 88 oversampled ticks per
-mechanical update (about 2 kHz), checked against 4 kHz and 8 kHz with the
-same acceptance thresholds. These diagnostics cover normalized acoustic
-energy, not the total physical energy of the slow mechanism.
+mechanical update (about 2 kHz); the convergence tests compare 4 kHz and
+8 kHz with the same acceptance thresholds. These diagnostics cover
+normalized acoustic energy, not the total physical energy of the slow mechanism.
 
 Physical convergence uses the complete-state and seam limits independently
 of signal level. A smooth, low-motion HOLD can be very quiet while still
@@ -142,10 +235,26 @@ retain their audibility, pitch and powered-work requirements.
 
 ## Audition
 
+The [hosted SUTURE audition](https://snipsnap-suture-audition.bertcalm.chatgpt.site)
+is published as owner-only Site version 3 from site source commit
+`4005646fc968638c9a8b9f21bdf5a7934ba3f3fb`, using the final DSP source above.
+Its 986 indexed FLAC clips decode to byte-identical original PCM, and its
+112 deterministic gzip traces decompress exactly to the generated CSVs.
+Local Chromium checks pass playback, RAW/MATCHED position preservation,
+previous/current comparison, seeking, held wrap, 375-pixel mobile layout
+and exact HTTP Range responses. The corrected Stop handler cancels the
+comparison and restores single-clip Repeat; native Play then wraps that
+clip when Repeat is checked and ends without advancing when unchecked.
+The browser receipt records zero application JavaScript errors and three
+local favicon 404 warnings. These checks use the saved deployment bundle
+locally; authenticated production playback and Android device
+performance have not been measured.
+
 ```sh
 ./gradlew --no-daemon test
 ./gradlew :synth:generateSutureAudition
 ./gradlew :synth:generateSutureAudition -PsutureFirstListen
+./gradlew :synth:generateSutureAudition -PsutureSections=SWEEPS -PsuturePrevious=/path/to/preserved/suture-audition
 ./gradlew :cli:run --args='synth SUTURE BLOOM --all --out /tmp/suture-bloom'
 ```
 
@@ -159,24 +268,44 @@ The manifest identifies the DSP source by SHA-256 and records JVM render
 cost and memory observations. Those measurements describe the generator,
 not Android device performance.
 
-The full export produces 325 listening cases from 320 engine renders,
-650 PCM-24 mono 44.1 kHz WAVs, and 112 finite mechanical CSVs. All 24 held
-captures converge. All 36 first-listen clips and 44 held preflight clips
-match their full-export counterparts byte for byte. The largest raw peak
-across this larger pack is 0.2640.
+The verified final-source export contains 325 full-gallery listening cases
+from 320 renders: 650 current clips plus 300 unchanged revision 1 sweep
+clips, with 112 mechanical CSV traces. The first-listen export contains
+18 cases and 36 current clips. All 986 WAVs are PCM-24 mono at 44.1 kHz.
+The 150 previous/current sweep recipes match exactly, and every copied
+previous clip matches its preserved original byte for byte.
 
-The recorded full export took 267.0 seconds on Java 17 with a 512 MiB
-heap and four visible CPUs, alongside the repository tests. Engine and
-raw finishing account for 255.3 seconds across 1,240.5 seconds of returned
-audio, with powered-loop preroll included in render time. Per-case costs
-exclude file export; these observations are not device benchmarks.
+All 24 full-gallery held captures and both first-listen held captures
+converge. The full gallery's maximum complete-state error is `7.43e-4`
+and maximum seam error is `4.05e-5`; none of these captures falls below
+the optional raw-RMS `1e-5` audibility flag. Held actuator and acoustic
+work remain positive, and the finite diagnostics report zero recovery
+resets. The gallery evidence and manifests identify the same final source
+as the JVM gate.
 
-The first-listen task produces 18 cases / 36 clips: all twelve factory
-presets and six neutral C4 voices, each with raw and matched versions.
-The held-case preflight settles all 22 captures. Quiet BLOOM and SHELL
-have raw RMS below the report's optional 1e-5 audibility flag; their
-matched clips reach the shared 0.03 window-RMS target. That flag describes
-low model output level and is retained in the report.
+The focused parameter panel keeps the voice and companion controls fixed
+while playing 0, .25, .5, .75 and 1. It can play the complete range or alternate
+its endpoints, with RAW or MATCHED selected. Choose each of GAP, STITCH,
+CORD, SEAM and CAVITY to judge the range within a voice.
+
+Preserve a previous full audition in a separate directory before generating
+new clips into `testkit/suture-audition`. Passing `-PsuturePrevious` copies
+its unchanged sweep audio into the new pack only when case ID, voice,
+controls, velocity, loop mode and diagnostic settings match the current
+input recipe. The generator records
+both source hashes. The panel then offers Previous and Current versions
+and a Previous → current comparison at the selected parameter step.
+This compares the same settings across DSP revisions; it does not
+substitute newly rendered clips for the earlier evidence. Earlier notes stay
+associated with their original listening round; revised sources or recipes
+open a fresh round. Parameter-range notes also identify the DSP hash.
+
+The first-listen task selects all twelve factory presets and six neutral C4
+voices, each with raw and matched versions. Generated manifests report
+actual case counts, held convergence, peaks, costs and optional raw
+audibility flags for that export. Low model output can be physically
+converged while still falling below the shared loudness processor's
+amplification threshold.
 
 The owner's sonic verdict is still required. Listen for one connected object:
 the bronze pulls the cords, eyelets answer actual travel, vibration delays
@@ -186,6 +315,7 @@ the wrap. Names and preset settings remain provisional.
 
 ## Deferred scope
 
-V1 does not model full plate deformation, literal knots, tearing, physical
-robotics, stereo propagation, shared phrase state or external recordings.
+The reduced model does not include full plate deformation, literal knots,
+tearing, physical robotics, stereo propagation, shared phrase state or
+external recordings.
 The diagnostic surface stays outside the product macros.
