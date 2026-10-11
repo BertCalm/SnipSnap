@@ -75,6 +75,7 @@ object Patches {
             UndertowPatch.ENGINE -> UndertowPatch.fromJsonValue(value)
             CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
             SuturePatch.ENGINE -> SuturePatch.fromJsonValue(value)
+            RevelPatch.ENGINE -> RevelPatch.fromJsonValue(value)
             TesseraPatch.ENGINE -> TesseraPatch.fromJsonValue(value)
             PitchwheelPatch.ENGINE -> PitchwheelPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
