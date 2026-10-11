@@ -493,6 +493,7 @@ object PitchwheelAuditionGenerator {
         <p id="previousFeedback"></p>
         <div class="row"><button data-section="Isolated attacks">Release-only hits</button><button data-section="Previous model 2 hits">Previous model 2 hits</button><button data-section="Real mechanisms">Real mechanisms</button><button data-section="Defaults">Full gestures</button><button data-section="Previous model 2">Previous model 2 defaults</button><button data-section="Previous model 1">Previous model 1 defaults</button><button data-section="">Full matrix</button></div>
         <div class="controls"><select id="voice" aria-label="Filter voices"><option value="">All voices</option></select><select id="section" aria-label="Filter sections"><option value="">All sections</option></select><input id="search" type="search" aria-label="Search clips" placeholder="Find a voice, macro, note or mechanism"><button id="export">Export listening notes</button></div>
+        <p>Votes and notes stay in this browser. Use Export listening notes and attach the JSON in this chat so I can read your feedback.</p>
         <div id="count" class="count" role="status"></div><div id="clips"></div>
         <details><summary>How to read the measurements</summary><p id="metricNotes"></p></details></main>
         <div class="player"><div id="now" class="now" role="status">Choose a clip</div><audio id="audio" controls preload="none"></audio><label><input id="repeat" type="checkbox" checked>Repeat held loops</label><button id="stop">Stop</button></div>
