@@ -705,4 +705,29 @@ object SynthKits {
             preset("RESISTED STITCH"), preset("DEEP VESSEL"), preset("QUIET MURMUR"), preset("RETURNING GAP"),
         )
     }
+
+    /**
+     * Relay's dry audition kit: eight C-minor-pentatonic keys, one seed for each voice,
+     * and two held phrases. Every pad stores the source definitions, handoff roster,
+     * accent clock and loop configuration needed to regenerate it. Finite phrases are
+     * TONAL; only HOLD phrases use LOOP routing. The held pads export their repeating
+     * region and play once in a drum program, like the other held factory kits.
+     */
+    fun relay(): List<ArrangedPad?> {
+        fun arranged(patch: RelayPatch) = pad(patch, Relay.drumClassFor(patch.voice, patch.macros))
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            RelayPatch(
+                "Handoff ${index + 1}", RelayVoice.KEY,
+                Relay.defaults(RelayVoice.KEY) + ("TUNE" to semitone / Relay.TUNE_SEMITONES.toFloat()),
+            ).let(::arranged)
+        }
+        val voices = RelayPresets.all().map(::arranged)
+        val held = listOf(RelayVoice.ORGAN, RelayVoice.FLOW).map { voice ->
+            RelayPatch(
+                if (voice == RelayVoice.ORGAN) "HELD HANDOFF" else "FOUR CORNERS",
+                voice, Relay.defaults(voice) + ("HOLD" to 1f),
+            ).let(::arranged)
+        }
+        return notes + voices + held
+    }
 }

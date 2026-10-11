@@ -9,6 +9,7 @@ import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RelayPatch
 import java.io.File
 import java.util.Locale
 
@@ -329,10 +330,10 @@ object UserPresets {
      * [patch] as the line its engine's table is written in — the same
      * `p(voice, name, macros…)` helper every `<Engine>Presets.kt` has —
      * with every macro's exact value, so the promoted preset renders the
-     * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
-     * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
-     * Kotlin string literal, escaped.
+     * bytes the phone heard. Engine fields outside the macros travel too:
+     * CISTERN and PITCHWHEEL retain note/velocity, and RELAY retains its
+     * complete source and phrase schedules. Names and embedded JSON are
+     * escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -340,6 +341,11 @@ object UserPresets {
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is RelayPatch -> {
+                val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                    .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+                ".let { RelayPatch.fromJsonText(\"$json\") }"
+            }
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"

@@ -157,6 +157,7 @@ threshold by.
 
 ```
 snipsnap synth TINES BELL --all --out <dir>
+snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
 ```
@@ -170,6 +171,11 @@ ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
 hold on the phone's MAKE INSTRUMENT; this command refuses them. An
 engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR)
 still renders here.
+
+RELAY auditions use the complete saved phrase at the requested root: `--midi`
+accepts 48–72 for KEY, PLUCK, ORGAN, CHIME and FLOW, or 24–48 for BASS.
+`--velocity 0..1` changes excitation and accent energy. Its six dry factory
+seeds each cover one voice; rendered pulse timing follows sample transposition.
 
 ### `crate <root>` — the library as a collection
 
