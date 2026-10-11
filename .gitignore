@@ -161,6 +161,9 @@ testkit/SnipSnap Tessera Kit/
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
 
+# REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
+testkit/revel-audition/
+testkit/SnipSnap Revel Kit/
 # CONTOUR's generated dry listening matrix and kit audio.
 testkit/contour-audition/
 testkit/SnipSnap Contour Kit/
