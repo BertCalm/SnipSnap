@@ -274,8 +274,8 @@
     $("player-detail").textContent = clip.detail || "Listen for the attack changing the tonal body as it enters.";
     $("player-category").textContent = state.section === "presets" ? "PROVISIONAL PRESET" : clip.loop ? "SETTLED / LOOP-ONLY RENDER" : `${state.sections.find(section => section.id === state.section)?.title || "ALLOY"} / OFFLINE RENDER`;
     $("duration").textContent = timeLabel(clip.duration);
-    $("loop-button").setAttribute("aria-pressed", String(state.loop));
-    $("loop-button").title = clip.loop ? "Loop the complete settled buffer without playback gaps" : "Repeat this complete finite render";
+    updateRepeatButton();
+    $("loop-button").title = clip.loop ? "Repeat the complete settled buffer without playback gaps" : "Repeat this complete finite render";
     const seam = clip.exportedSeamError ?? clip.seamError;
     $("player-tags").innerHTML = [clip.note, clip.velocity != null ? `VEL ${clip.velocity}` : "", clip.loop ? "LOOP ONLY" : "FINITE", seam != null && clip.loop ? `SEAM ${Number(seam).toExponential(1)}` : ""].filter(Boolean).map(tag => `<span>${escapeText(tag)}</span>`).join("");
     $("wav-download").href = safeUrl(clip.file);
@@ -394,6 +394,11 @@
     updateCardStates();
   }
 
+  function updateRepeatButton() {
+    $("loop-button").setAttribute("aria-pressed", String(state.loop));
+    $("loop-button").innerHTML = `<span aria-hidden="true">↻</span> ${state.loop ? "Repeating" : "Repeat"}`;
+  }
+
   function updateCardStates() {
     for (const card of $("clip-grid").querySelectorAll("[data-clip-id]")) {
       const selected = card.dataset.clipId === state.selected?.id;
@@ -470,7 +475,7 @@
   [["voice-filter", "voice"], ["group-filter", "group"], ["note-filter", "note"]].forEach(([id, key]) => $(id).addEventListener("change", event => { state.filters[key] = event.target.value; renderCards(); const clips = filteredClips(); if (clips.length && !clips.some(clip => clip.id === state.selected?.id)) selectClip(clips[0].id); }));
   $("play-button").addEventListener("click", togglePlayback);
   $("stop-button").addEventListener("click", () => { stopSource(); state.offset = 0; updateProgress(); });
-  $("loop-button").addEventListener("click", () => { const position = playbackPosition(); const playing = state.playing; state.loop = !state.loop; if (playing) { stopSource(); state.offset = position; startPlayback(); } $("loop-button").setAttribute("aria-pressed", String(state.loop)); });
+  $("loop-button").addEventListener("click", () => { const position = playbackPosition(); const playing = state.playing; state.loop = !state.loop; if (playing) { stopSource(); state.offset = position; startPlayback(); } updateRepeatButton(); });
   $("wave-seek").addEventListener("click", event => { const rect = event.currentTarget.getBoundingClientRect(); seekTo((event.clientX - rect.left) / rect.width * (state.buffer?.duration || 0)); });
   $("wave-seek").addEventListener("keydown", event => { if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return; event.preventDefault(); seekTo(event.key === "Home" ? 0 : event.key === "End" ? state.buffer?.duration || 0 : playbackPosition() + (event.key === "ArrowLeft" ? -1 : 1)); });
   ["fusion-on", "fusion-off"].forEach(id => $(id).addEventListener("click", event => { const clipId = event.currentTarget.dataset.clip; if (clipId) switchFusionClip(clipId); }));
