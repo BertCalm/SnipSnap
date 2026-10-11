@@ -29,13 +29,13 @@ data class EmbouchurePatch(
         val playedMidi = midi + (tune * Embouchure.TUNE_SEMITONES).roundToInt()
         require(playedMidi in range) { "EMBOUCHURE $voice played midi out of ${range.first}..${range.last}: $playedMidi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "EMBOUCHURE velocity out of 0..1: $velocity" }
-        require(model == Embouchure.MODEL_VERSION) { "unsupported embouchure model $model" }
+        require(Embouchure.supportsModel(model)) { "unsupported embouchure model $model" }
     }
 
     val driver get() = Embouchure.driverFor(voice)
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Embouchure.render(voice, macros, midi, velocity, gesture)
+    override fun render() = Embouchure.render(voice, macros, midi, velocity, gesture, model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -56,7 +56,7 @@ data class EmbouchurePatch(
         fun fromJsonValue(value: JsonValue): Patch {
             val obj = value.obj()
             val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: INITIAL_MODEL
-            if (model != Embouchure.MODEL_VERSION) throw JsonException("unsupported embouchure model $model")
+            if (!Embouchure.supportsModel(model)) throw JsonException("unsupported embouchure model $model")
             return Patches.decode(value, ENGINE, { n -> EmbouchureVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Embouchure.rootMidi(voice)
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f

@@ -21,49 +21,52 @@ enum class EmbouchureDriver { REED, LIP, BOW }
 enum class EmbouchureGesture { SOFT_ENTRY, LEANING_SWELL, OVERPRESSURE, PRESSURE_RELEASE, BOWED_CAPTURE }
 
 /**
- * One player, one root-bearing instrument. Pressure and velocity are dimensionless acoustic
- * units, not pascals or metres/second. REED uses a regularised single-reed scattering law;
- * BRASS adds a compliant lip aperture to that junction; BOW uses two travelling-wave segments
- * of ONE string and bounded velocity-dependent friction. WHISTLE is explicitly a clear,
- * reed-derived approximation, not a jet-edge flute model or a Yamaha algorithm.
+ * One player, one root-bearing instrument. Pressure and velocity use dimensionless acoustic
+ * units. REED uses a regularised single-reed scattering law; BRASS adds compliant lip loading;
+ * BOW uses two travelling-wave segments of ONE string and velocity-dependent friction.
+ * WHISTLE is a clear reed-derived approximation, not a jet-edge flute or Yamaha algorithm.
+ *
+ * Model 2 retains each voice's exact finite default sound and the same source seed as model 1.
+ * [EmbouchureV1] freezes old saved recipes, including its gestures and complete loop policy.
+ * Changes span signed, voice-relative distances from the default: EFFORT widens capture and
+ * relaxation gestures, REED changes contact plus correlated tuned loss, SHAPE changes tuned
+ * impedance/body response, and GRAIN changes pressure-linked flow and mobile-aperture texture.
+ * Bow contact also moves along the string as grip tightens, while SHAPE moves its body position.
+ * LENGTH preserves the original finite duration range and changes its relaxation proportions.
  *
  * Update order at 176.4 kHz: smooth player segments -> bounded roughness -> returning wave ->
- * contact -> outgoing wave into the SAME delay -> two passive body modes -> radiation/DC.
- * There is no pitched oscillator during sustain. An eight-period tongue/capture impulse starts
- * the resonator; it is finite source work and its frequency comes from that resonator's root.
+ * contact -> outgoing wave into the SAME delay -> passive body modes -> radiation/DC.
+ * No pitched oscillator supplies sustain. An eight-period tongue/capture impulse starts the
+ * resonator; it is finite player work with frequency supplied by that resonator's root.
+ * Source and travelling waves share velocityScale=v^.40 to preserve soft-velocity capture.
+ * Zero velocity supplies no work and takes no division. Pressure <= 1.5, bow speed <= .22,
+ * reflection magnitude <= .98, and friction coefficient <= .995.
  *
- * The reed law is y = P + (r-P) R, R=clamp(offset-.3*(r-P)/velocityScale, -.98, .98).
- * Source and travelling waves share velocityScale=v^.40; rescaling their pressure units
- * together preserves the aperture's speaking region at soft velocity. The basic reed scattering
- * derivative is 2*R-offset (R when clipped), bounded even as velocity approaches zero; zero
- * velocity supplies no source and takes no division. Its equivalent flow
- * is y-r=(P-r)*(1-R); 1-R is the bounded aperture. Lip compliance follows the same pressure
- * difference through an exact, damped rotation and modulates R by a small bounded amount.
- * Bow push is c*(vBow-v)*rho(vBow-v), rho=min(.995,(.75+s*abs(dv))^-4), s in [1,1.6].
- * Seeded flow turbulence is flowBound*P*tanh(GRAIN*(2+12*EFFORT^2)*aperture*flowRoot(dp)*noise),
- * Finite flowBound=.36 for REED, .27 for BASS, .045 for the clear WHISTLE, .18 otherwise.
- * HOLD caps REED at .112, scales lip/bass to .35 and gentler voices to .55 of their finite
- * bounds: a declared rough-regime capture calibration that keeps the complete state periodic.
- * Its source GRAIN stays proportional but SOFT uses half its finite roughness, while REED
- * smoothly reduces it from 1 to .30 as EFFORT*REED rises from .70 to 1. These held-only
- * contact limits prevent aperiodic closure at the hardest settings; finite gestures are unchanged.
- * flowRoot(dp)=sqrt(abs(dp)+.0025)-.05: the .0025 acoustic-pressure regularisation bounds
- * the root-flow gradient at 10 rather than allowing an infinite gradient at contact closure.
- * bow texture is .22*vBow*tanh(GRAIN*(2+12*EFFORT^2)*noise)*contact. Both enter the junction,
- * are bounded by their player's pressure/speed, and supply exactly zero energy after release.
- * Source pressure <= 1.5, speed <= .22, aperture in [.02,1.98], friction coefficient <= .995.
- * When the player ends P=0 and bow contact=0: the reed/lip scattering is contractive, bridge
- * reflection is .95, and all delay, body and output filters are passive. No limiter sits in
- * the resonator or repairs an unstable feedback state. Stores below 1e-30 flush to exact zero
- * to prevent denormals; final shared loudness has a peak cap.
+ * Aperture irregularity vanishes at immobile closure, preventing a roughness knob from merely
+ * quenching the captured note. Bounded turbulent flow follows P, the live aperture and the
+ * regularised root-flow sqrt(abs(dp)+.0025)-.05. It supplies exactly zero work after release;
+ * friction texture likewise vanishes with bow speed/contact. No output noise or distortion is
+ * added. At source-off the reed/lip scattering is contractive, bridge reflection is .95, and
+ * delay, body and radiation stores are passive. Stores below 1e-30 flush to exact zero.
+ * The production path band-limits before decimation, then uses shared melodic loudness.
  *
- * Delay tuning charges filter and fractional-delay phase using [Strings.tune]. Supported
- * V1 registers are two octaves: BASS C2-C4, REED/BRASS/BOW/SOFT C3-C5, WHISTLE C4-C6.
- * These are reduced instrument roles, not claims of acoustic reconstruction. Sonic approval
- * belongs to the dry audition; the accompanying probes establish numerical capture/bounds.
+ * HOLD preserves the narrower captured driver window instead of applying finite articulation
+ * excursions to a repeating note. Seeded flow stays periodic; SOFT uses half finite GRAIN,
+ * and REED smoothly reduces it to .18 as EFFORT*REED rises from .70 to 1. Bow keeps its proven
+ * speed/friction capture window. Body shaping remains active. True complete-state closure is
+ * measured after two/three warm periods, extending to seven when needed; a failed state is
+ * refused rather than repaired with a seam crossfade.
+ *
+ * Delay tuning charges filter and fractional-delay phase using [Strings.tune]. Both models
+ * support BASS C2-C4, REED/BRASS/BOW/SOFT C3-C5 and WHISTLE C4-C6. These reduced instrument
+ * roles are not acoustic reconstruction claims. Numerical capture/bounds do not replace the
+ * owner's dry listening approval.
  */
 object Embouchure {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    fun supportsModel(model: Int): Boolean = model == 1 || model == MODEL_VERSION
+    /** Preserve the source realization across versions for direct control comparisons. */
+    internal fun seedFor(voice: EmbouchureVoice, midi: Int): Int = Dsp.seedFor("EMBOUCHURE",1,voice,midi)
     const val TUNE_SEMITONES = 24
     private const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val TRACE_HOP = 64
@@ -140,6 +143,7 @@ object Embouchure {
         val traceHop: Int=TRACE_HOP,
         val held: Boolean=false,
         val controlStride: Int=1,
+        val model: Int=MODEL_VERSION,
     )
     internal class Trace(val rate: Float, val hop: Int, frames: Int) {
         val player=FloatArray(frames)
@@ -214,6 +218,13 @@ object Embouchure {
         fun energy(): Double = re*re+im*im
     }
 
+    /** Signed distance from this voice's approved default, with each side spanning its full knob travel. */
+    private fun relative(value: Float, anchor: Float): Float =
+        if(value < anchor) (value-anchor)/anchor else (value-anchor)/(1f-anchor)
+    private fun heldSeconds(macros: Map<String,Float>): Double {
+        val length=macros.getValue("LENGTH")
+        return 1.65+.55*length
+    }
     private fun smooth(x: Float): Float { val v=x.coerceIn(0f,1f); return v*v*(3f-2f*v) }
     /** Smooth segments with zero slopes at every knot; the gesture is a reproducible score. */
     private fun segment(t: Float, times: FloatArray, values: FloatArray): Float {
@@ -226,8 +237,11 @@ object Embouchure {
     }
     private class Player(v: Voice, private val gesture: EmbouchureGesture, effort: Float, length: Float,
                          val duration: Float, private val held: Boolean, private val period: Int, private val rate: Int) {
-        private val attack=(v.attack*(1.35f-.7f*effort)).coerceAtLeast(.018f)
-        private val times=floatArrayOf(0f,attack/duration,.19f,.39f,.65f,.84f,1f)
+        private val effortMotion=relative(effort,v.defaults[0])
+        private val lengthMotion=relative(length,v.defaults[4])
+        private val attack=if(held) (v.attack*(1.35f-.7f*effort)).coerceAtLeast(.018f) else
+            (v.attack*(1.35f-.7f*effort)*exp(-.95f*effortMotion)).coerceIn(.010f,duration*.16f)
+        private val times=floatArrayOf(0f,attack/duration,.19f,.39f,.65f,.84f+.08f*lengthMotion,1f)
         private val values=when(gesture) {
             EmbouchureGesture.SOFT_ENTRY -> floatArrayOf(0f,.68f,.90f,1f,1f,.73f,0f)
             EmbouchureGesture.LEANING_SWELL -> floatArrayOf(0f,.84f,.86f,1f+.11f*effort,1f,.68f,0f)
@@ -235,9 +249,16 @@ object Embouchure {
             EmbouchureGesture.PRESSURE_RELEASE -> floatArrayOf(0f,1f,1f,.98f,.94f,.82f,0f)
             EmbouchureGesture.BOWED_CAPTURE -> floatArrayOf(0f,1f+.20f*effort,.96f,1f,.96f,.67f,0f)
         }
+        private val expressiveValues=values.copyOf().also { knots ->
+            // A firm player captures the note early; a gentle player leans into it gradually.
+            knots[1] *= 1f+.28f*effortMotion
+            knots[2] *= 1f+.13f*effortMotion
+            knots[3] *= 1f+.09f*effortMotion
+            knots[5] *= 1f+.12f*lengthMotion
+        }
         private val heldDepth=.007f+.025f*effort*(.35f+.65f*length)
         fun at(i: Int): Float {
-            if(!held) return segment(i.toFloat()/rate/duration,times,values)
+            if(!held) return segment(i.toFloat()/rate/duration,times,expressiveValues)
             val phase=(i%period).toDouble()/period
             val contour=1f+heldDepth*sin(2*PI*phase).toFloat()+heldDepth*.35f*sin(4*PI*phase).toFloat()
             return smooth(i.toFloat()/rate/attack)*contour
@@ -250,22 +271,42 @@ object Embouchure {
         val rate=probe.rate
         val duration=gestureSeconds(name,m)
         val stop=probe.sourceStopSeconds?.let { if(it.isFinite()) it.coerceAtLeast(0f) else duration } ?: duration
-        val seed=probe.seed ?: Dsp.seedFor("EMBOUCHURE",MODEL_VERSION,name,midi)
+        val seed=probe.seed ?: seedFor(name,midi)
         private val effort=m.getValue("EFFORT")
         private val reed=m.getValue("REED")
         private val shape=m.getValue("SHAPE")
         private val grain=m.getValue("GRAIN")
+        private val effortMotion=relative(effort,v.defaults[0])
+        private val reedMotion=relative(reed,v.defaults[1])
+        private val shapeMotion=relative(shape,v.defaults[2])
+        private val grainMotion=relative(grain,v.defaults[3])
         private val velocity=unit(probe.velocity,1f)
         private val sourceScale=velocity.pow(.40f)
         private val held=heldFrames>0 || probe.held
+        private val roughMotion=sqrt(max(0f,grainMotion))
+        private val roughExpansion=1f+(if(held) 0f else 2.2f)*roughMotion
+        private val flowExpansion=1f+(if(held) .2f else when(name) {
+            EmbouchureVoice.WHISTLE -> 22f
+            EmbouchureVoice.SOFT -> 12f
+            EmbouchureVoice.BRASS -> 10f
+            EmbouchureVoice.REED -> 5f
+            else -> 7f
+        })*roughMotion
         // Capture the repeating driver rather than forcing a seam onto an aperiodic state.
-        // GRAIN still spans a proportional texture range, including at maximum contact.
+        // Held GRAIN remains proportional, including in the hardest closure regime.
         private val sourceGrain=grain*(if(held) when(name) {
             EmbouchureVoice.SOFT -> .5f
-            EmbouchureVoice.REED -> 1f-.7f*smooth((effort*reed-.70f)/.30f)
+            EmbouchureVoice.REED -> 1f-.82f*smooth((effort*reed-.70f)/.30f)
             else -> 1f
-        } else 1f)
-        private val period=if(heldFrames>0) heldFrames else ((1.65f+.55f*m.getValue("LENGTH"))*rate).toInt()
+        } else 1f+when(name) {
+            EmbouchureVoice.WHISTLE -> 1.2f
+            EmbouchureVoice.SOFT -> .6f
+            EmbouchureVoice.BASS -> .4f
+            else -> 0f
+        }*roughMotion)
+        private val contactGrain=sqrt(max(0f,grainMotion))*(if(held)
+            if(grain>0f) .10f*sourceGrain/grain else 0f else 1f)
+        private val period=if(heldFrames>0) heldFrames else (heldSeconds(m)*rate).toInt()
         private val player=Player(v,gesture,effort,m.getValue("LENGTH"),duration,held,period,rate)
         private val noise=Dsp.Noise(seed)
         private val periodicNoise=FloatArray(4096).also { b ->
@@ -276,20 +317,24 @@ object Embouchure {
             for(i in 0 until fade) { val a=smooth(i.toFloat()/fade); b[i]=b[i]*a+b[b.size-fade+i]*(1f-a) }
         }
         private var noiseLp=0f
-        private val noiseA=(1-exp(-2*PI*(hz*5).coerceAtMost(7000f)/rate)).toFloat()
-        private val offset=.52f+.20f*reed
+        private val noiseA=(1-exp(-2*PI*(hz*(5f+(if(held) 0f else 15f)*max(0f,grainMotion))).coerceAtMost(14000f)/rate)).toFloat()
+        private val offset=.52f+.20f*reed+(if(held) 0f else .035f)*reedMotion
         private val closing=(1f-offset)/.3f
         // Contact-dependent speaking threshold fitted by BORE's reed probes. Preserve a working
         // pressure window at tight contact and soft velocity rather than creating a silent knob end.
-        private val share=.60f+.63f*(offset-.50f)+.095f+.060f*effort
+        private val share=.60f+.63f*(offset-.50f)+.095f+.060f*effort+(if(held) 0f else .045f)*effortMotion
         private val pressure=closing*share*(.88f+.12f*sqrt(velocity))
-        private val cutoff=(hz*(3.2f+10f*v.brightness*(1f-.63f*shape)*(.65f+.35f*reed+.55f*effort))).coerceIn(hz*2.2f,14000f)
+        private val cutoff=(hz*(3.2f+10f*v.brightness*(1f-.63f*shape)*(.65f+.35f*reed+.55f*effort))*
+            exp(-(if(held) .30f else if(name==EmbouchureVoice.WHISTLE) .45f else 1.1f)*shapeMotion+
+                (if(held) 0f else .18f)*effortMotion+(if(held) .12f else .90f)*reedMotion)).coerceIn(hz*2.2f,14000f)
         private val dcHz=hz/35f
         // Bounded lip loading's phase is small and its compensation measured by held pitch matching.
         private val lip=Mode(hz*(4.5f+2.5f*reed),.004f+.009f*(1f-reed),rate)
         private val bore=if(v.driver!=EmbouchureDriver.BOW) Wave(hz,cutoff,rate,.95f,dcHz=dcHz) else null
-        private val beta=.133
-        private val bridgeCutoff=(hz*(7f+7f*reed+5f*effort)*(1f-.35f*shape)).coerceIn(1700f,6500f)
+        private val beta=.133+(if(held) 0.0 else .035)*shapeMotion+(if(held) 0.0 else .018)*reedMotion
+        private val bridgeCutoff=((hz*(7f+7f*reed+5f*effort)*(1f-.35f*shape)).coerceIn(1700f,6500f)*
+            exp((if(held) 0f else -1.05f)*shapeMotion+(if(held) 0f else .18f)*effortMotion+
+                (if(held) 0f else .85f)*reedMotion)).coerceIn(hz*2.2f,14000f)
         private val bridgeHz: Float = run {
             val first=Strings.tune(hz,bridgeCutoff,rate,roundTrip=beta)
             val tau=(rate/hz)*beta-.5-first.exact
@@ -297,8 +342,10 @@ object Embouchure {
         }
         private val bridge=if(v.driver==EmbouchureDriver.BOW) Wave(bridgeHz,bridgeCutoff,rate,-.95f,roundTrip=beta) else null
         private val nut=if(v.driver==EmbouchureDriver.BOW) Wave(hz,rate*.45f,rate,-1f,roundTrip=1-beta) else null
-        private val mode1=Mode((hz*(2.35f+.8f*shape)).coerceAtMost(11000f),.04f+.065f*shape,rate)
-        private val mode2=Mode((hz*(4.6f+1.1f*shape)).coerceAtMost(14000f),.026f+.04f*shape,rate)
+        private val mode1=Mode((hz*(2.35f+.8f*shape+.30f*shapeMotion)).coerceAtMost(11000f),
+            (.04f+.065f*shape)*exp(.35f*shapeMotion),rate)
+        private val mode2=Mode((hz*(4.6f+1.1f*shape+.30f*shapeMotion)).coerceAtMost(14000f),
+            (.026f+.04f*shape)*exp(.35f*shapeMotion),rate)
         private var outputDc=0f
         // BASS radiation drains the mouth-entry pressure and opens its upper root harmonics
         // under rough effort. This passive root-relative outlet keeps the long bass envelope
@@ -339,7 +386,7 @@ object Embouchure {
             // The clear whistle has less turbulent area; a held lip uses smaller source
             // fluctuations to stay in the captured periodic regime rather than a noisy flutter.
             val roughScale=(if(name==EmbouchureVoice.WHISTLE) .5f else 1f)*(if(held) .55f else 1f)
-            val texture=sourceGrain*(.045f+.19f*effort*effort)*noiseLp*playerNow*roughScale
+            val texture=sourceGrain*roughExpansion*(.045f+.19f*effort*effort)*noiseLp*playerNow*roughScale
             val s=sample-starterAt
             val starter=if(sourceOn && s in 0 until starterN)
                 starterAmp*velocity*playerNow*(.5f-.5f*cos(2*PI*s/starterN).toFloat())*sin(2*PI*hz*s/rate).toFloat() else 0f
@@ -349,12 +396,13 @@ object Embouchure {
                 val actual=rb+rn
                 returned=actual
                 val observed=if(probe.feedback) actual else 0f
-                val speed=((.070f+.080f*effort)*(.6f+.4f*sqrt(velocity))*playerNow*(1f+texture)).coerceIn(0f,.22f)
+                val speed=((.070f+.080f*effort)*exp((if(held) 0f else .30f)*effortMotion)*(.6f+.4f*sqrt(velocity))*playerNow*(1f+texture)).coerceIn(0f,.22f)
                 val dv=speed-observed
-                val slope=1.05f+.42f*(1f-reed)+.11f*shape
-                val rho=(.75f+slope*abs(dv)).pow(-4f).coerceAtMost(.995f)
+                val slope=(1.05f+.42f*(1f-reed)+.11f*shape)*exp((if(held) 0f else if(reedMotion>0f) .55f else .08f)*reedMotion)
+                val knee=.75f+(if(held) 0f else .035f)*reedMotion+(if(held) 0f else .08f)*contactGrain*noiseLp*roughScale*playerNow
+                val rho=(knee+slope*abs(dv)).pow(-4f).coerceAtMost(.995f)
                 val contact=smooth(playerNow*5f)
-                val frictionTexture=.22f*speed*tanhUnit(sourceGrain*(2f+12f*effort*effort)*noiseLp*roughScale)*contact
+                val frictionTexture=.22f*roughExpansion*speed*tanhUnit(sourceGrain*(2f+12f*effort*effort)*noiseLp*roughScale)*contact
                 val push=contact*dv*rho+frictionTexture+starter
                 playerNow=speed
                 driverNow=push
@@ -375,9 +423,22 @@ object Embouchure {
                 // gradient with that same scale, so a quiet player still reaches a speaking
                 // aperture rather than falling through a large numerical silence threshold.
                 val normalizedDp=if(sourceScale>0f) dp/sourceScale else dp
-                val lipA=if(v.driver==EmbouchureDriver.LIP) lip.step(normalizedDp) else 0f
-                val compliance=if(v.driver==EmbouchureDriver.LIP) .035f*(1.35f-.65f*reed)*tanhUnit(8f*lipA) else 0f
-                val reflection=(offset-.3f*normalizedDp+compliance).coerceIn(-.98f,.98f)
+                val lipA=lip.step(normalizedDp)
+                val compliance=if(v.driver==EmbouchureDriver.LIP)
+                    .035f*(1.35f-.65f*reed)*exp((if(held) 0f else -.75f)*reedMotion)*tanhUnit(8f*lipA)
+                    else (if(held) 0f else .035f)*reedMotion*tanhUnit(8f*lipA)
+                // Source-linked aperture irregularity changes the actual scattering contact.
+                // It contributes no work once the player stops; the reflection remains passive.
+                val baseReflection=(offset-.3f*normalizedDp+compliance).coerceIn(-.98f,.98f)
+                val mobility=(1f-(baseReflection/.98f).pow(2)).coerceAtLeast(0f)
+                val irregularity=when(name) {
+                    EmbouchureVoice.REED -> .30f
+                    EmbouchureVoice.BRASS -> .55f
+                    EmbouchureVoice.SOFT -> .70f
+                    EmbouchureVoice.WHISTLE -> 1f
+                    else -> 1.2f
+                }*contactGrain*mobility*noiseLp*roughScale*playerNow
+                val reflection=(baseReflection+irregularity).coerceIn(-.98f,.98f)
                 // Bounded turbulent FLOW through the currently open contact. Its energy source
                 // is P and it ends exactly with P; WHISTLE has a smaller calibrated noisy area.
                 val aperture=1f-reflection
@@ -388,7 +449,7 @@ object Embouchure {
                     else -> .18f
                 }*(if(held && (v.driver==EmbouchureDriver.LIP || name==EmbouchureVoice.REED || name==EmbouchureVoice.BASS))
                     .35f else if(held) .55f else 1f)
-                val turbulentFlow=flowBound*p*tanhUnit(sourceGrain*(2f+12f*effort*effort)*aperture*
+                val turbulentFlow=flowBound*flowExpansion*p*tanhUnit(sourceGrain*(2f+12f*effort*effort)*aperture*
                     (sqrt(abs(normalizedDp)+.0025f)-.05f)*noiseLp)
                 val y=p+dp*reflection+turbulentFlow+starter
                 driverNow=y-observed
@@ -397,7 +458,7 @@ object Embouchure {
                 out=actual
             }
             val b1=mode1.step(out); val b2=mode2.step(out)
-            val body=v.body*(.35f+1.6f*shape)*(1f+.35f*reed)
+            val body=v.body*(.35f+1.6f*shape)*(1f+.35f*reed)*exp(.65f*shapeMotion)
             val x=out+body*(b1-.58f*b2)
             outputDc=acousticZero(outputDc+outputDcA*(x-outputDc))
             val radiated=acousticZero(x-outputDc)
@@ -421,6 +482,19 @@ object Embouchure {
         return midi
     }
     internal fun play(voice: EmbouchureVoice, macros: Map<String,Float>, probe: Probe=Probe()): Played {
+        require(supportsModel(probe.model)) { "unsupported embouchure model ${probe.model}" }
+        if(probe.model==1) {
+            val p=EmbouchureV1.play(voice,macros,EmbouchureV1.Probe(
+                velocity=probe.velocity,feedback=probe.feedback,sourceStopSeconds=probe.sourceStopSeconds,
+                totalSeconds=probe.totalSeconds,rate=probe.rate,seed=probe.seed,midi=probe.midi,
+                gesture=probe.gesture,record=probe.record,traceHop=probe.traceHop,held=probe.held,
+                controlStride=probe.controlStride))
+            val t=Trace(p.trace.rate,p.trace.hop,p.trace.player.size)
+            p.trace.player.copyInto(t.player); p.trace.returning.copyInto(t.returning)
+            p.trace.injected.copyInto(t.injected); p.trace.driver.copyInto(t.driver); p.trace.energy.copyInto(t.energy)
+            t.maxEnergy=p.trace.maxEnergy; t.maxAbs=p.trace.maxAbs; t.finite=p.trace.finite
+            return Played(p.raw,t,p.hz,p.sourceEndSeconds,p.rate,p.seed,p.maxEnergy,p.maxAbs)
+        }
         require(probe.rate==Dsp.RATE || probe.rate==Dsp.RATE*2 || probe.rate==INTERNAL_RATE || probe.rate==INTERNAL_RATE*2)
         require(probe.traceHop>0 && probe.controlStride in 1..64)
         val m=settled(macros,voice)
@@ -480,14 +554,19 @@ object Embouchure {
      */
     internal fun renderLoopMeasured(voice: EmbouchureVoice, macros: Map<String,Float>, midi: Int=rootMidi(voice),
                                     velocity: Float=1f, gesture: EmbouchureGesture=gestureFor(voice),
-                                    normalize: Boolean=true): LoopRender {
+                                    normalize: Boolean=true, model: Int=MODEL_VERSION): LoopRender {
+        require(supportsModel(model)) { "unsupported embouchure model $model" }
+        if(model==1) {
+            val p=EmbouchureV1.renderLoopMeasured(voice,macros,midi,velocity,gesture,normalize)
+            return LoopRender(p.audio,p.loopStart,p.seam,p.settleSeconds,p.converged,p.stateError,p.hz,p.seed,p.rawRms)
+        }
         val m=settled(macros,voice)
         val note=effectiveMidi(voice,m,midi)
         val target=Keys.midiHz(note)
-        val cycles=ceil((1.65+.55*m.getValue("LENGTH"))*target).toInt()
+        val cycles=ceil(heldSeconds(m)*target).toInt()
         val frames=Math.round(cycles*Dsp.RATE.toDouble()/target).toInt()
         if(unit(velocity,1f)==0f) return LoopRender(FloatArray(frames*2),frames,0.0,0f,true,0.0,target,
-            Dsp.seedFor("EMBOUCHURE",MODEL_VERSION,voice,note),0.0)
+            seedFor(voice,note),0.0)
         val period=frames*Dsp.OVERSAMPLE
         var warmPeriods=if(voice==EmbouchureVoice.BOW) 3 else 2
         var tuned=target.toDouble()
@@ -525,7 +604,7 @@ object Embouchure {
                 stateError,tuned.toFloat(),e.seed,rms)
             if(best==null || (converged && !best.converged) || (converged==best.converged && seam<best.seam)) best=result
             if(converged && seam<3e-4 && abs(ratio-1.0)<2e-7) break
-            if(stateError>=.02 && warmPeriods<5) warmPeriods++
+            if(stateError>=.02 && warmPeriods<7) warmPeriods++
             tuned*=ratio
         }
         return best!!
@@ -546,15 +625,19 @@ object Embouchure {
         return 1.0-drift/(2*PI*cycles)
     }
     internal fun renderLoop(voice: EmbouchureVoice, macros: Map<String,Float>, midi: Int=rootMidi(voice),
-                            velocity: Float=1f, gesture: EmbouchureGesture=gestureFor(voice)): FloatArray {
-        val result=renderLoopMeasured(voice,macros,midi,velocity,gesture)
+                            velocity: Float=1f, gesture: EmbouchureGesture=gestureFor(voice), model: Int=MODEL_VERSION): FloatArray {
+        require(supportsModel(model)) { "unsupported embouchure model $model" }
+        if(model==1) return EmbouchureV1.renderLoop(voice,macros,midi,velocity,gesture)
+        val result=renderLoopMeasured(voice,macros,midi,velocity,gesture,model=model)
         check(result.converged) { "EMBOUCHURE $voice held state did not settle: seam=${result.seam}, state=${result.stateError}" }
         val one=result.samples
         val cut=Siren.bestCut(one,one.size)
         return one.copyOfRange(cut,one.size)+one.copyOfRange(0,cut)
     }
     fun render(voice: EmbouchureVoice, macros: Map<String,Float> = emptyMap(), midi: Int=rootMidi(voice),
-               velocity: Float=1f, gesture: EmbouchureGesture=gestureFor(voice)): Snip {
+               velocity: Float=1f, gesture: EmbouchureGesture=gestureFor(voice), model: Int=MODEL_VERSION): Snip {
+        require(supportsModel(model)) { "unsupported embouchure model $model" }
+        if(model==1) return EmbouchureV1.render(voice,macros,midi,velocity,gesture)
         val m=settled(macros,voice)
         if(isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice,m,midi,velocity,gesture),channels=1,sampleRate=Dsp.RATE)
         val played=play(voice,m,Probe(midi=midi,velocity=velocity,gesture=gesture,record=false))

@@ -1,10 +1,11 @@
 # EMBOUCHURE
 
 EMBOUCHURE is a dry, deterministic mono prototype of a virtual player supplying
-energy to one pitched resonator. Its first audition asks whether effort changes
-how the note speaks: contact, articulation and spectrum as well as level.
-It has not received the owner's sonic approval. Eight original presets are
-available; the proposed larger roster waits for that listening decision.
+energy to one pitched resonator. Model 2 widens contact, articulation and
+spectrum changes after the first audition found the controls too subtle.
+All six finite default voices remain sample-identical to model 1. Eight
+starting presets are available; the proposed larger roster waits for listening
+approval of the revised controls.
 
 The source brief is [Embouchure engine engineering specification](engineering/embouchure-engine-spec.md).
 That brief refers to a supplied edited Gyre integration contract, but no such
@@ -29,15 +30,27 @@ synthesis, with no VL1 algorithm or factory-data compatibility claim.
 
 The saved gesture is one of SOFT_ENTRY, LEANING_SWELL, OVERPRESSURE,
 PRESSURE_RELEASE or BOWED_CAPTURE. Named segment profiles are versioned with
-the renderer. Model version 1 pins driver, resonator, body, envelope and loop
-calibration; a change to those recipes needs an explicit model/version policy.
+the renderer. Model 1 is frozen, including its complete loop policy, so existing
+saved recipes retain their sound. New patches and factory presets use model 2.
+Both versions use the original voice/note seed for direct comparisons.
+
+Model 2 makes EFFORT change the player trajectory and capture speed as well as
+input work. REED changes the contact operating point and tuned loss; SHAPE
+changes resonator geometry, loss and body radiation. GRAIN adds bounded,
+player-linked flow or friction roughness before the pitched resonator. These
+are source and resonator changes rather than effects added to the output.
+LENGTH retains its finite gesture-duration role. HOLD uses narrower contact
+ranges to maintain capture, with bounded preroll extending to seven periods
+when necessary; the seam and full-state convergence limits are unchanged.
 
 ## Recipes and note semantics
 
 `EmbouchurePatch` stores the engine/version, name, voice, macro map, renderer
 model, MIDI base, velocity, fixed driver name and selected gesture. The macro map
 contains TUNE and the six musical controls. Defaults fill omitted macros;
-missing optional fields select the voice's initial configuration. Unknown
+missing optional fields select the voice's initial configuration. An absent or
+null renderer model in saved JSON selects model 1 for backward compatibility.
+Unknown
 renderer models, gestures, conflicting drivers and out-of-range macro or note
 values are rejected. Every render starts fresh and derives its seed from the
 voice/note infrastructure. `withMacros`, `Patches.edited`, `PadRecipe` and the
@@ -99,8 +112,14 @@ The pack lives under `testkit/embouchure-audition/`. Its manifest and patch JSON
 identify the actual note, velocity, macros and player profile; audio comparisons
 include raw and matched renders so loudness does not conceal excitation changes.
 The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
-hosts the complete first matrix and kit downloads; [pack notes](EMBOUCHURE_AUDITION.md)
+hosts the revised matrix, original/revised comparisons and kit downloads;
+[pack notes](EMBOUCHURE_AUDITION.md)
 describe the loudness rules, measurements and reproduction task.
+
+Selecting a macro value plays the take from its attack. A/B compares the voice
+baseline with that selection; Original/Revised compares the same note, velocity
+and settings across renderer models. Listening notes are stored separately for
+each model and loudness mode.
 
 Render factory presets through the normal CLI path:
 

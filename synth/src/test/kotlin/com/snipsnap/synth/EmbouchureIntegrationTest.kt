@@ -23,11 +23,11 @@ import kotlin.test.assertTrue
 class EmbouchureIntegrationTest {
     @Test
     fun `saved driver gesture note velocity and model regenerate exact audio through the dispatcher`() {
-        for (voice in EmbouchureVoice.entries) {
+        for (voice in EmbouchureVoice.entries) for (model in listOf(1, Embouchure.MODEL_VERSION)) {
             val patch = EmbouchurePatch("Saved effort", voice, Embouchure.defaults(voice) + mapOf(
                 "TUNE" to 0f, "EFFORT" to .62f, "REED" to .71f, "SHAPE" to .19f,
                 "GRAIN" to .64f, "LENGTH" to .23f), midi = Embouchure.rootMidi(voice) + 7,
-                velocity = .37f, gesture = EmbouchureGesture.PRESSURE_RELEASE)
+                velocity = .37f, model = model, gesture = EmbouchureGesture.PRESSURE_RELEASE)
             val restored = assertIs<EmbouchurePatch>(Patches.fromJsonText(patch.toJsonText()))
             assertEquals(patch, restored)
             val fields = patch.toJsonValue().entries
@@ -57,21 +57,27 @@ class EmbouchureIntegrationTest {
         }
         val baseline = EmbouchurePatch("Initial defaults", EmbouchureVoice.REED, Embouchure.defaults(EmbouchureVoice.REED))
         val older = JsonValue.Obj(baseline.toJsonValue().entries - setOf("midi", "velocity", "model", "driver", "gesture"))
-        assertEquals(baseline, Patches.fromJsonValue(older), "omitted new fields retain the initial renderer contract")
+        assertEquals(baseline.copy(model = 1), Patches.fromJsonValue(older), "omitted new fields retain the initial renderer contract")
+        val nullModel = JsonValue.Obj(baseline.toJsonValue().entries + ("model" to JsonValue.Null))
+        assertEquals(baseline.copy(model = 1), Patches.fromJsonValue(nullModel), "a null model retains the initial renderer contract")
         assertFailsWith<IllegalArgumentException> { baseline.copy(velocity = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { baseline.copy(midi = Embouchure.midiRange(baseline.voice).last + 1) }
     }
 
     @Test
     fun `the native velocity layer route retains gesture and controls`() {
-        val patch = EmbouchurePresets.all().first { it.name == "Short Overblow" }
-        assertContentEquals(patch.copy(velocity = .3f).render().samples, Velocity.atVelocity(patch, .3f).samples,
-            "native velocity must play the saved pressure gesture rather than substitute a low-pass treatment")
-        assertEquals(patch.macros, (Patches.fromJsonText(patch.toJsonText()) as EmbouchurePatch).macros)
-        val variants = Velocity.variantsAt(patch.render(), patch)
-        assertEquals(2, variants.size)
-        assertTrue(variants.all { it.sampleRate == Dsp.RATE && it.channels == 1 && it.samples.all { sample -> sample.isFinite() } })
-        assertTrue(!variants[0].samples.contentEquals(variants[1].samples), "velocity zones share the same take")
+        for (model in listOf(1, Embouchure.MODEL_VERSION)) {
+            val patch = EmbouchurePresets.all().first { it.name == "Short Overblow" }.copy(model = model)
+            assertContentEquals(patch.copy(velocity = .3f).render().samples, Velocity.atVelocity(patch, .3f).samples,
+                "model=$model native velocity must play the saved pressure gesture rather than substitute a low-pass treatment")
+            val restored = assertIs<EmbouchurePatch>(Patches.fromJsonText(patch.toJsonText()))
+            assertEquals(patch.macros, restored.macros)
+            assertEquals(model, restored.model)
+            val variants = Velocity.variantsAt(patch.render(), patch)
+            assertEquals(2, variants.size)
+            assertTrue(variants.all { it.sampleRate == Dsp.RATE && it.channels == 1 && it.samples.all { sample -> sample.isFinite() } })
+            assertTrue(!variants[0].samples.contentEquals(variants[1].samples), "velocity zones share the same take")
+        }
     }
 
     @Test

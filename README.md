@@ -284,8 +284,10 @@ are available in SYNTH, FRESH TAPE and the CLI. Run
 `./gradlew :synth:generateEmbouchureAudition` for the complete listening page,
 control matrix and MPC 2/3 kit under `testkit/embouchure-audition/`.
 The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
-contains 365 listening clips and the downloadable kit.
-The dry identity awaits owner listening approval before preset expansion;
+contains the revised control matrix, original/revised comparisons and the
+downloadable kit. Model 2 strengthens the controls while preserving all six
+default voices; saved model 1 recipes retain their original render.
+The revised controls await owner listening approval before preset expansion;
 [implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
 

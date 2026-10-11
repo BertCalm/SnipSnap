@@ -4,6 +4,7 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.FeatureExtractor
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Pitch
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
@@ -24,7 +25,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * Original dry Embouchure listening pack, rendered by the same patches the host uses.
+ * Dry Embouchure revision and frozen original references, rendered by the host patches.
  * Complete recipes travel beside every file. Numerical evidence does not supply a
  * listener's sonic approval; --quick deliberately omits the complete acceptance matrix.
  */
@@ -49,15 +50,32 @@ object EmbouchureAuditionGenerator {
         val comparisonFiles: Boolean = false,
         val sweep: Map<String, Any?>? = null,
         val grid: Map<String, Any?>? = null,
+        val comparison: Map<String, String>? = null,
+        val referenceId: String? = null,
     )
+
+    private data class ReferencePack(val directory: File, val manifest: Map<String, JsonValue>,
+                                     val clips: Map<String, Map<String, JsonValue>>)
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.count { !it.startsWith("--") } <= 1 && args.all { !it.startsWith("--") || it == "--quick" }) {
-            "Usage: EmbouchureAuditionGenerator [output-directory] [--quick]"
+        require(args.count { !it.startsWith("--") } <= 1 && args.all {
+            !it.startsWith("--") || it == "--quick" || it.startsWith("--reference-dir=")
+        } && args.count { it.startsWith("--reference-dir=") } <= 1) {
+            "Usage: EmbouchureAuditionGenerator [output-directory] [--quick] [--reference-dir=verified-model1-pack]"
         }
         val quick = "--quick" in args
-        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/embouchure-audition")
+        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/embouchure-audition-model2")
+        val reference = args.firstOrNull { it.startsWith("--reference-dir=") }?.substringAfter('=')?.let {
+            val directory = File(it)
+            require(directory.canonicalFile != root.canonicalFile) { "reference pack must differ from output directory" }
+            val manifest = Json.parse(File(directory, "manifest.json").readText()).obj()
+            require(manifest.getValue("modelVersion").int() == 1) { "reference pack must use model1" }
+            ReferencePack(directory, manifest, manifest.getValue("clips").arr().associate { clip ->
+                val row = clip.obj()
+                row.getValue("id").str() to row
+            })
+        }
         val audio = File(root, "audio").also { it.mkdirs() }
         // Only this generator's WAV namespace is replaced; the listening page is copied last.
         audio.listFiles()?.filter { it.isFile && it.extension == "wav" }?.forEach { it.delete() }
@@ -81,7 +99,7 @@ object EmbouchureAuditionGenerator {
                 feedback = feedback, comparisonFiles = comparisonFiles, sweep = sweep, grid = grid)
         }
 
-        group("PRESETS", "Eight starting gestures", "Original starting points for owner listening. Held Effort is a settled loop; the other presets play a finite gesture.")
+        group("PRESETS", "Eight starting gestures", "Eight dry starting points for owner listening. Held Effort is a settled loop; the other presets play a finite gesture.")
         EmbouchurePresets.all().forEach { p ->
             specs += Spec("preset_${slug(p.name)}", p.name, "PRESETS",
                 presetDescription(p.name), p, preset = p.name)
@@ -183,22 +201,50 @@ object EmbouchureAuditionGenerator {
             }
         }
 
+        // Pair the exact same stored controls, player and note across the frozen and revised models.
+        val referenceIndices = specs.indices.filter {
+            specs[it].group in setOf("PRESETS", "VOICES") || specs[it].sweep != null
+        }
+        val originals = referenceIndices.map { index ->
+            val revised = specs[index]
+            val originalId = "original_${revised.id}"
+            val comparison = linkedMapOf("originalId" to originalId, "revisedId" to revised.id)
+            specs[index] = revised.copy(comparison = comparison)
+            revised.copy(id = originalId, title = "Original · ${revised.title}", group = "ORIGINAL",
+                description = "Model1 reference at the same macros, note, velocity and gesture as the revised clip. ${revised.description}",
+                patch = revised.patch.copy(model = 1), preset = null, comparison = comparison,
+                referenceId = revised.id,
+                sweep = revised.sweep?.let { it + ("baseId" to "original_voice_${revised.patch.voice.name.lowercase()}") })
+        }
+        group("ORIGINAL", "Original model1 references",
+            "The original eight presets, six voice defaults and control sweeps preserve model1. Original and revised pairs use identical stored inputs and excitation seeds.")
+        specs += originals
+        if (!quick) require(specs.size == 529 && originals.size == 164) { "unexpected full model comparison matrix size" }
+        if (reference != null) originals.forEach { verifyOriginalInputs(it, reference) }
+
         require(specs.map { it.id }.toSet().size == specs.size) { "duplicate audition clip id" }
         val renderer = rendererFingerprint()
         val started = System.nanoTime()
         val rows = specs.mapIndexed { index, spec ->
             val row = render(root, spec, renderer.getValue("sha256") as String)
+            if (spec.referenceId != null && reference != null) verifyOriginal(root, row, spec, reference)
             println("[${index + 1}/${specs.size}] ${spec.id}")
             row
         }
         val kit = exportKit(root)
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "engine" to "Embouchure", "modelVersion" to Embouchure.MODEL_VERSION,
+            "models" to listOf(linkedMapOf("version" to 1, "label" to "Original"),
+                linkedMapOf("version" to Embouchure.MODEL_VERSION, "label" to "Revised")),
+            "originalReferences" to linkedMapOf("modelVersion" to 1, "clips" to originals.size,
+                "sameInputs" to true, "sameExcitationSeed" to true,
+                "verifiedWavHashes" to if (reference == null) 0 else originals.size,
+                "publishedRendererFingerprint" to reference?.manifest?.get("rendererFingerprint")),
             "rendererFingerprint" to renderer,
             "sampleRate" to Dsp.RATE, "channels" to 1, "format" to "PCM16", "quick" to quick,
             "completeMatrix" to !quick, "acceptance" to "Owner listening verdict pending",
             "sourceUrl" to "https://github.com/BertCalm/SnipSnap/tree/codex/embouchure-engine", "bundlePath" to "embouchure-audition.zip",
-            "bundleDescription" to "Curated starter pack: eight presets, six voices, selected held/velocity/feedback clips and the sixteen-pad MPC 2/3 kit",
+            "bundleDescription" to "Curated starter pack: eight revised presets, six revised voices, their fourteen original references, selected held/velocity/feedback clips and the sixteen-pad MPC 2/3 kit",
             "groups" to groups, "clips" to rows, "kit" to kit,
             "normalization" to linkedMapOf("default" to "shared-melodic", "sharedLoudnessTarget" to Dsp.MELODIC_LOUDNESS_TARGET,
                 "matchedLoudnessTarget" to .03f, "velocityGain" to "Production notes and held loops apply velocity^0.60 after forte-reference leveling",
@@ -218,7 +264,8 @@ object EmbouchureAuditionGenerator {
         val manifestText = Json.write(json(manifest))
         File(root, "manifest.json").writeText(manifestText + "\n")
         File(root, "measurements.json").writeText(Json.write(json(linkedMapOf(
-            "schemaVersion" to 1, "engine" to "EMBOUCHURE", "completeMatrix" to !quick,
+            "schemaVersion" to 1, "engine" to "EMBOUCHURE", "modelVersion" to Embouchure.MODEL_VERSION,
+            "completeMatrix" to !quick,
             "clips" to rows.size, "wavFiles" to audio.listFiles().orEmpty().count { it.extension == "wav" },
             "totalRenderMs" to (System.nanoTime() - started) / 1_000_000.0,
             "audioMeasure" to "Output-rate floats before PCM16 quantization; rawSourceMetrics precede the fixed raw export gain; mean and RMS use the whole buffer",
@@ -231,14 +278,15 @@ object EmbouchureAuditionGenerator {
         if (quick) println("Development pack only: run without --quick for the complete matrix.")
     }
 
-    private fun render(root: File, spec: Spec, fingerprint: String): Map<String, Any?> {
+    private fun render(root: File, spec: Spec, fingerprint: String): MutableMap<String, Any?> {
         val p = spec.patch
         val held = Embouchure.isLoop(p.macros.getValue("HOLD"))
         require(spec.feedback || !held) { "feedback ablation is a finite diagnostic" }
         val start = System.nanoTime()
         val played = if (spec.comparisonFiles || !spec.feedback) {
             Embouchure.play(p.voice, p.macros, Embouchure.Probe(
-                midi = p.midi, velocity = p.velocity, gesture = p.gesture, feedback = spec.feedback, record = false))
+                midi = p.midi, velocity = p.velocity, gesture = p.gesture, feedback = spec.feedback, record = false,
+                model = p.model))
         } else null
         val raw = played?.let { Snip(Embouchure.finish(it.raw, normalize = false, rate = it.rate), 1, Dsp.RATE) }
         val snip = if (spec.feedback) p.render() else {
@@ -254,17 +302,19 @@ object EmbouchureAuditionGenerator {
         val recipe = p.toJsonValue()
         val row = linkedMapOf<String, Any?>(
             "id" to spec.id, "title" to spec.title, "name" to spec.title, "group" to spec.group,
-            "description" to spec.description, "voice" to p.voice.name, "preset" to spec.preset,
+            "description" to spec.description, "voice" to p.voice.name, "modelVersion" to p.model,
             "path" to path, "frames" to snip.frameCount, "durationSeconds" to snip.durationSeconds,
             "midi" to effectiveMidi, "baseMidi" to p.midi, "note" to noteName(effectiveMidi), "velocity" to p.velocity,
             "loop" to held, "macros" to p.macros, "gesture" to p.gesture.name,
             "driver" to recipe.entries["driver"], "recipe" to recipe,
-            "seed" to Dsp.seedFor("EMBOUCHURE", p.model, p.voice, effectiveMidi),
+            "seed" to Embouchure.seedFor(p.voice, effectiveMidi),
             "render" to linkedMapOf("normalization" to "shared-melodic", "feedbackEnabled" to spec.feedback,
                 "oversampling" to Dsp.OVERSAMPLE, "effects" to emptyList<String>(), "rendererFingerprint" to fingerprint),
             "metrics" to metrics(snip, effectiveMidi), "waveform" to waveform(snip.samples),
             "renderMs" to (System.nanoTime() - start) / 1_000_000.0,
         )
+        spec.preset?.let { row["preset"] = it }
+        spec.comparison?.let { row["comparison"] = it }
         spec.sweep?.let { row["sweep"] = it }
         spec.grid?.let { row["grid"] = it }
         played?.let {
@@ -273,7 +323,7 @@ object EmbouchureAuditionGenerator {
         }
         if (held) {
             val measured = Embouchure.renderLoopMeasured(p.voice, p.macros,
-                midi = p.midi, velocity = p.velocity, gesture = p.gesture, normalize = true)
+                midi = p.midi, velocity = p.velocity, gesture = p.gesture, normalize = true, model = p.model)
             row["loopDiagnostics"] = linkedMapOf("seamError" to measured.seam,
                 "seamPass" to (measured.seam.isFinite() && measured.seam < 1e-3),
                 "measurementLoopStartFrame" to measured.loopStart, "settleSeconds" to measured.settleSeconds,
@@ -303,8 +353,35 @@ object EmbouchureAuditionGenerator {
         return row
     }
 
+    /** Optional historical pack evidence; frozen model1 remains renderable without these files. */
+    private fun verifyOriginalInputs(spec: Spec, reference: ReferencePack) {
+        val id = requireNotNull(spec.referenceId)
+        val old = requireNotNull(reference.clips[id]) { "missing original reference $id" }
+        val recipe = spec.patch.toJsonValue().entries
+        val oldRecipe = old.getValue("recipe").obj()
+        listOf("voice", "macros", "model", "midi", "velocity", "gesture").forEach { key ->
+            require(recipe[key] == oldRecipe[key]) { "$id: original reference input $key differs" }
+        }
+    }
+
+    private fun verifyOriginal(root: File, row: MutableMap<String, Any?>, spec: Spec, reference: ReferencePack) {
+        val id = requireNotNull(spec.referenceId)
+        val old = reference.clips.getValue(id)
+        val previous = File(reference.directory, old.getValue("path").str())
+        val generated = File(root, row.getValue("path") as String)
+        require(previous.isFile && sha256(previous) == sha256(generated)) { "$id: frozen model1 WAV differs from verified original" }
+        row["referenceVerification"] = linkedMapOf(
+            "id" to id, "audioSha256" to sha256(generated), "matchesPublishedModel1" to true,
+            "publishedRendererFingerprint" to reference.manifest.getValue("rendererFingerprint").obj().getValue("sha256"))
+    }
+
+    private fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+        .joinToString("") { String.format(Locale.ROOT, "%02x", it) }
+
     private fun measurementRow(row: Map<String, Any?>): Map<String, Any?> = linkedMapOf(
-        "id" to row["id"], "metrics" to row["metrics"], "loopDiagnostics" to row["loopDiagnostics"],
+        "id" to row["id"], "modelVersion" to row["modelVersion"], "comparison" to row["comparison"],
+        "referenceVerification" to row["referenceVerification"],
+        "metrics" to row["metrics"], "loopDiagnostics" to row["loopDiagnostics"],
         "rawExportGain" to row["rawExportGain"], "rawSourceMetrics" to row["rawSourceMetrics"],
         "rawMetrics" to row["rawMetrics"], "matchedMetrics" to row["matchedMetrics"],
     )
@@ -362,9 +439,10 @@ object EmbouchureAuditionGenerator {
             if (!classes.add(type)) return
             type.declaredClasses.forEach(::collect)
         }
-        listOf(Embouchure::class.java, EmbouchureVoice::class.java, EmbouchureGesture::class.java,
+        listOf(Embouchure::class.java, EmbouchureV1::class.java, EmbouchureVoice::class.java, EmbouchureGesture::class.java,
             EmbouchureDriver::class.java, Dsp::class.java, Keys::class.java, Bore::class.java,
-            Strings::class.java, Siren::class.java, Loudness::class.java).forEach(::collect)
+            Strings::class.java, Siren::class.java, Tide::class.java,
+            Resampler::class.java, Loudness::class.java).forEach(::collect)
         val digest = MessageDigest.getInstance("SHA-256")
         val names = classes.sortedBy { it.name }.map { type ->
             digest.update(type.name.toByteArray(Charsets.UTF_8))
@@ -446,13 +524,24 @@ object EmbouchureAuditionGenerator {
     private fun bundle(root: File, manifest: Map<String, Any?>, rows: List<Map<String, Any?>>) {
         val selectedIds = setOf("hold_reed_rough", "hold_bow_rough", "velocity_reed_v025",
             "velocity_reed_v060", "velocity_reed_v100", "feedback_reed_on", "feedback_reed_off")
-        val selected = rows.filter { it["group"] in setOf("PRESETS", "VOICES") || it["id"] in selectedIds }
+        val identityIds = rows.filter { it["group"] in setOf("PRESETS", "VOICES") }.map { "original_${it["id"]}" }.toSet()
+        val selected = rows.filter { it["group"] in setOf("PRESETS", "VOICES") || it["id"] in selectedIds || it["id"] in identityIds }
         val selectedGroups = selected.map { it["group"] }.toSet()
         val curated = LinkedHashMap(manifest).apply {
             this["clips"] = selected
             this["groups"] = (manifest.getValue("groups") as List<*>).filter {
                 (it as Map<*, *>)["id"] in selectedGroups
+            }.map {
+                if ((it as Map<*, *>)["id"] == "ORIGINAL") linkedMapOf(
+                    "id" to "ORIGINAL", "title" to "Original model1 references",
+                    "description" to "The original eight presets and six voice defaults preserve model1. The full original control sweep collection remains on the online page.",
+                ) else it
             }
+            @Suppress("UNCHECKED_CAST")
+            val referenceSummary = LinkedHashMap(manifest.getValue("originalReferences") as Map<String, Any?>)
+            referenceSummary["clips"] = selected.count { it["modelVersion"] == 1 }
+            referenceSummary["verifiedWavHashes"] = selected.count { it["referenceVerification"] != null }
+            this["originalReferences"] = referenceSummary
             this["quick"] = false
             this["completeMatrix"] = false
             this["curated"] = true
@@ -463,7 +552,8 @@ object EmbouchureAuditionGenerator {
         val curatedText = Json.write(json(curated))
         val includedAudio = selected.flatMap { row -> listOfNotNull(row["path"], row["rawPath"], row["matchedPath"]) }.toSet()
         val measurements = Json.write(json(linkedMapOf(
-            "schemaVersion" to 1, "engine" to "EMBOUCHURE", "curated" to true, "completeMatrix" to false,
+            "schemaVersion" to 1, "engine" to "EMBOUCHURE", "modelVersion" to Embouchure.MODEL_VERSION,
+            "curated" to true, "completeMatrix" to false,
             "clips" to selected.size, "auditionWavFiles" to includedAudio.size,
             "audioMeasure" to "Output-rate floats before PCM16 quantization; rawSourceMetrics precede the fixed raw export gain",
             "listeningVerdict" to "Owner listening verdict pending",

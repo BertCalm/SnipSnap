@@ -244,6 +244,12 @@ profile beside the macro map. TUNE spans 24 semitones above the saved base;
 both base and played note must fit the voice's calibrated register. CLI
 `--midi` selects the played note directly by resetting TUNE to zero.
 
+Model 2 widens the physical control response after feedback that the first
+controls were too subtle, while preserving all six finite default voices
+sample-for-sample. Model 1 is frozen for existing recipes, including JSON that
+omits its model field. The audition includes original/revised comparisons at
+identical settings and separate listening notes for each model.
+
 `SynthKits.embouchure()` carries eight REED pentatonic notes and the eight dry
 presets, all with recipes. The `embouchure` FRESH TAPE starter, normal SYNTH
 picker, user presets, native velocity variants, CLI rendering and host MPC

@@ -697,6 +697,7 @@ tasks.register<JavaExec>("generateEmbouchureAudition") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.EmbouchureAuditionGenerator")
     workingDir = projectDir
-    args("${rootDir}/testkit/embouchure-audition")
+    args(providers.gradleProperty("embouchureOutput").orNull ?: "${rootDir}/testkit/embouchure-audition")
     if (project.hasProperty("embouchureQuick")) args("--quick")
+    providers.gradleProperty("embouchureReference").orNull?.let { args("--reference-dir=$it") }
 }

@@ -41,11 +41,14 @@
             <label class="seek-label"><span class="sr-only">Playback position</span><input type="range" id="seek" min="0" max="1000" value="0" aria-label="Playback position" disabled></label>
             <div class="transport-bottom"><div class="timecode"><span id="current-time">0:00</span><span class="time-separator">/</span><span id="duration">0:00</span></div><label class="loop-control"><input id="loop-control" type="checkbox" disabled><span class="loop-symbol" aria-hidden="true">↻</span> Loop HOLD</label><a id="download-wav" class="download-audio" aria-disabled="true">WAV <span aria-hidden="true">↓</span></a></div>
             <div class="diagnostic-mode" id="diagnostic-mode" hidden><span>Listen to</span><div role="group" aria-label="Diagnostic audio comparison"><button data-audio-mode="production" class="active" aria-pressed="true">Production</button><button data-audio-mode="raw" aria-pressed="false" hidden>Raw</button><button data-audio-mode="matched" aria-pressed="false" hidden>Level matched</button></div></div>
+            <div class="diagnostic-mode" id="model-comparison" hidden><span>Compare versions</span><div role="group" aria-label="Play original and revised versions at the same settings"><button data-model-side="original" aria-pressed="false">Original</button><button data-model-side="revised" aria-pressed="false">Revised</button></div></div>
+            <p class="model-comparison-note" id="model-comparison-note" hidden>Same note and control values · both replay from the attack.</p>
             <p class="transport-error" id="audio-error" role="status" hidden></p>
           </section>
           <section class="control-panel" aria-labelledby="controls-title">
-            <div class="panel-heading"><div><p class="eyebrow">THE PLAYING INPUT</p><h3 id="controls-title">One control at a time.</h3></div><button class="text-button" id="reset-voice" disabled>Voice baseline <svg class="arrow-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M3 3h6v6"/></svg></button></div>
-            <p class="panel-description">Five points, five actual renders. Each sweep starts from the selected voice’s baseline; controls do not combine here.</p>
+            <div class="panel-heading"><div><p class="eyebrow">THE PLAYING INPUT</p><h3 id="controls-title">One control at a time.</h3></div></div>
+            <p class="panel-description">Five points, five actual renders. Choose a point to hear it from the start; other settings use the voice defaults. A and B replay from the attack.</p>
+            <div class="comparison-controls"><div class="comparison-buttons" role="group" aria-label="Replay baseline and chosen control point"><button id="reset-voice" class="outline-button" aria-keyshortcuts="A" disabled>A · Baseline</button><button id="replay-sweep" class="outline-button" aria-keyshortcuts="B" disabled>B · Chosen point</button></div><span class="comparison-context" id="comparison-context" role="status">Choose a control point to compare with the voice defaults.</span></div>
             <div class="macro-controls" id="macro-controls"></div>
             <div class="recipe-summary"><span id="gesture-label">Gesture —</span><button id="download-recipe" class="text-button" disabled>Download recipe <span aria-hidden="true">↓</span></button></div>
           </section>
@@ -61,7 +64,7 @@
     <div id="loading-error" class="loading-error" role="alert" hidden></div>
   </main>
   <footer class="site-footer wrap"><p><strong>EMBOUCHURE</strong><span>Original physical-modeling study for SnipSnap.</span></p><div><a href="manifest.json" download>Render manifest <span aria-hidden="true">↓</span></a><a href="embouchure-audition.zip" id="download-bundle" download hidden>Download curated pack <span aria-hidden="true">↓</span></a><a href="https://github.com/BertCalm/SnipSnap/tree/codex/embouchure-engine" target="_blank" rel="noopener">GitHub <svg class="arrow-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M3 3h6v6"/></svg></a></div></footer>
-  <div class="shortcut-hint wrap"><span><kbd>Space</kbd> play / pause</span><span><kbd>←</kbd> <kbd>→</kbd> browse collection</span><span>Headphones recommended · audio starts only when you press play</span></div>
+  <div class="shortcut-hint wrap"><span><kbd>Space</kbd> play / pause</span><span><kbd>←</kbd> <kbd>→</kbd> browse collection</span><span><kbd>A</kbd> baseline / <kbd>B</kbd> chosen point</span><span>Headphones recommended · choose a control point to play it</span></div>
   <audio id="audio" preload="metadata"></audio>
 </body>
 </html>
