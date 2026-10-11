@@ -184,6 +184,9 @@ import com.snipsnap.synth.UndertowVoice
 import com.snipsnap.synth.Suture
 import com.snipsnap.synth.SuturePatch
 import com.snipsnap.synth.SutureVoice
+import com.snipsnap.synth.Revel
+import com.snipsnap.synth.RevelVoice
+import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
@@ -236,7 +239,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL and RELAY, join it here.
+ * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, REVEL and RELAY, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -297,6 +300,7 @@ fun SynthScreen(
     }
     val macros = macrosByVoice.getValue(engine to voice)
     // Loaded patches may carry source schedules and velocity outside the macro map.
+    // REVEL retains its microphones and seed; RELAY retains generated sources and phrase schedules.
     // Keep that state through preview, editing, saving and placing.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
@@ -1082,6 +1086,7 @@ fun SynthScreen(
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.REVEL && spec.name == "HOLD" && Revel.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
@@ -1913,7 +1918,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, RELAY;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, RELAY;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1941,6 +1946,7 @@ private enum class Engine {
         UNDERTOW -> UndertowVoice.entries
         COROLLA -> CorollaVoice.entries
         SUTURE -> SutureVoice.entries
+        REVEL -> RevelVoice.entries
         TESSERA -> TesseraVoice.entries
         PITCHWHEEL -> PitchwheelVoice.entries
         RELAY -> RelayVoice.entries
@@ -1969,6 +1975,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
         COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
         SUTURE -> Suture.macrosFor(voice as SutureVoice)
+        REVEL -> Revel.macrosFor(voice as RevelVoice)
         TESSERA -> Tessera.macrosFor(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
@@ -1997,6 +2004,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
         COROLLA -> Corolla.defaults(voice as CorollaVoice)
         SUTURE -> Suture.defaults(voice as SutureVoice)
+        REVEL -> Revel.defaults(voice as RevelVoice)
         TESSERA -> Tessera.defaults(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
@@ -2025,6 +2033,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
         COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
         SUTURE -> Suture.scramble(voice as SutureVoice, random)
+        REVEL -> Revel.scramble(voice as RevelVoice, random)
         TESSERA -> Tessera.scramble(voice as TesseraVoice, random)
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
@@ -2058,6 +2067,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
         COROLLA -> Corolla.render(voice as CorollaVoice, macros)
         SUTURE -> Suture.render(voice as SutureVoice, macros)
+        REVEL -> Revel.render(voice as RevelVoice, macros)
         TESSERA -> Tessera.render(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
@@ -2092,6 +2102,7 @@ private enum class Engine {
         UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
         COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
         SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
+        REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         TESSERA -> Tessera.drumClassFor(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
@@ -2120,6 +2131,7 @@ private enum class Engine {
         UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
         COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
         SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
+        REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         TESSERA -> TesseraPatch(name, voice as TesseraVoice, macros)
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)

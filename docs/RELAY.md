@@ -45,7 +45,8 @@ through the shared resampler. Normal playback uses
 leveling cannot hide velocity response or unsafe gain.
 
 HOLD exports the loop region, without the initial note-on gesture. Relay's pad
-render path does not implement attack-plus-loop keygroup export. The generated sources retain their
+render path does not implement attack-plus-loop keygroup export. The generated
+sources retain their
 phase history, the loop has bounded preroll, and the wrap uses the pitched
 engine convention. Repeating an exported WAV at another pitch also changes its
 phrase timing; exported samples cannot remain locked to a host tempo.
@@ -66,6 +67,9 @@ voice contrasts and two held phrases. MPC export uses the
 existing kit pipeline and its one-shot drum-program convention.
 
 ## Audition and checks
+
+The [published Relay audition](https://snipsnap-relay-audition.bertcalm.chatgpt.site)
+is private to the owner's account and includes raw and matched WAV downloads.
 
 Run `./gradlew --no-daemon :synth:generateRelayAudition` to regenerate
 `testkit/relay-audition/`. The page and manifest travel with the raw and matched

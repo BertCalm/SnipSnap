@@ -10,6 +10,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
+import com.snipsnap.synth.RevelPatch
 import java.io.File
 import java.util.Locale
 
@@ -331,9 +332,10 @@ object UserPresets {
      * `p(voice, name, macros…)` helper every `<Engine>Presets.kt` has —
      * with every macro's exact value, so the promoted preset renders the
      * bytes the phone heard. Engine fields outside the macros travel too:
-     * CISTERN and PITCHWHEEL retain note/velocity, and RELAY retains its
-     * complete source and phrase schedules. Names and embedded JSON are
-     * escaped Kotlin string literals.
+     * CISTERN and PITCHWHEEL retain note/velocity and render-model state;
+     * REVEL retains microphones, phrase configuration and seed; RELAY
+     * retains its complete source and phrase schedules. Names and embedded
+     * JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -345,6 +347,18 @@ object UserPresets {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
                 ".let { RelayPatch.fromJsonText(\"$json\") }"
+            }
+            is RevelPatch -> {
+                val c = patch.configuration
+                fun values(items: List<*>, literal: (Any?) -> String): String =
+                    if (items.isEmpty()) "emptyList()" else items.joinToString(", ", "listOf(", ")", transform = literal)
+                val seed = if (c.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${c.seed}L"
+                ".copy(configuration = RevelConfig(" +
+                    "micCount = ${c.micCount}, phraseTempo = ${c.phraseTempo}f, phraseBeats = ${c.phraseBeats}, " +
+                    "trajectories = ${values(c.trajectories) { "RevelTrajectory.$it" }}, " +
+                    "phaseOffsets = ${values(c.phaseOffsets) { "${it}f" }}, " +
+                    "directions = ${values(c.directions) { it.toString() }}, " +
+                    "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
             }
             else -> ""
         }
