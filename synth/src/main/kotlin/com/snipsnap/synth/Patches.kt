@@ -78,6 +78,7 @@ object Patches {
             RevelPatch.ENGINE -> RevelPatch.fromJsonValue(value)
             TesseraPatch.ENGINE -> TesseraPatch.fromJsonValue(value)
             PitchwheelPatch.ENGINE -> PitchwheelPatch.fromJsonValue(value)
+            SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

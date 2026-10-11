@@ -8,6 +8,7 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RevelPatch
 import java.io.File
@@ -330,10 +331,10 @@ object UserPresets {
      * [patch] as the line its engine's table is written in — the same
      * `p(voice, name, macros…)` helper every `<Engine>Presets.kt` has —
      * with every macro's exact value, so the promoted preset renders the
-     * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
+     * bytes the phone heard. CISTERN, PITCHWHEEL and SKITTER also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well; REVEL retains the
-     * microphones, phrase configuration, seed and saved velocity. The name is a
+     * PITCHWHEEL keeps its render-model version and SKITTER its seed; REVEL
+     * retains microphones, phrase configuration, seed and saved velocity. The name is a
      * Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
@@ -354,6 +355,7 @@ object UserPresets {
                     "directions = ${values(c.directions) { it.toString() }}, " +
                     "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
             }
+            is SkitterPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"

@@ -7,6 +7,8 @@ import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.TideVoice
@@ -138,6 +140,7 @@ class UserPresetsTest {
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
+                "SKITTER" to SkitterVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -231,6 +234,28 @@ class UserPresetsTest {
                 )
                 assertEquals("PitchwheelPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
             }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved circuit retains root excitation velocity and noise seed when promoted`() {
+        val root = shelf()
+        try {
+            val source = SkitterPatch(
+                "LOW CIRCUIT", SkitterVoice.BASS,
+                linkedMapOf("AGITATE" to .73f, "STATIC" to .21f), midi = 36, velocity = .3f, seed = -927,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(SkitterVoice.BASS, \"LOW CIRCUIT\", \"AGITATE\" to 0.73f, \"STATIC\" to 0.21f).copy(midi = 36, velocity = 0.3f, seed = -927),",
+                line,
+            )
+            assertEquals("SkitterPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
         } finally {
             root.deleteRecursively()
         }

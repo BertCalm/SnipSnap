@@ -12,6 +12,9 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Revel
 import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.RevelVoice
+import com.snipsnap.synth.Skitter
+import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Tessera
 import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.TesseraVoice
@@ -140,6 +143,29 @@ class StarterKitsTest {
                 assertEquals(source.recipe, replayed.pad.recipe, "saved phrase and microphone state survive replay")
                 assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved ensemble regenerates exactly")
             }
+            if (starter.id == "skitter") {
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<SkitterPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: oscillator recovery and flutter come from the circuit")
+                    assertEquals(Skitter.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot, "${pad.displayName}: the pad plays its full finite or held buffer")
+                    patch
+                }
+                assertEquals(SkitterVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
+                assertTrue(model.kit.pads.take(14).all { it.drumClass == DrumClass.TONAL })
+                assertTrue(model.kit.pads.takeLast(2).all { it.drumClass == DrumClass.LOOP })
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "note, excitation velocity and seed survive replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved circuit regenerates exactly")
+            }
             assertEquals(starter, StarterKits.byId(starter.id))
         }
         assertEquals(null, StarterKits.byId("nope"))
@@ -165,7 +191,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "skitter", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -184,6 +210,10 @@ class StarterKitsTest {
         assertEquals("REVEL", revel.displayName)
         assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")
         assertEquals(KeySpec.parse("Cminpent"), revel.key)
+        val skitter = StarterKits.byId("skitter")!!
+        assertEquals("SKITTER", skitter.displayName)
+        assertFalse(skitter.seeded, "SKITTER is a fixed dry circuit kit")
+        assertEquals(KeySpec.parse("Cminpent"), skitter.key)
     }
 
     @Test

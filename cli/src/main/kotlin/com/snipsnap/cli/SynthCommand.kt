@@ -23,6 +23,8 @@ import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.Revel
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.Skitter
+import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.Tessera
 import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.Velocity
@@ -30,6 +32,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
 import java.util.Locale
+import kotlin.random.Random
 
 /**
  * `snipsnap synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>` — the
@@ -53,15 +56,17 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and REVEL) override
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and SKITTER) override
  * the preset's note and strike energy for a pad audition.
+ * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
+ * repeatable macro variation around the selected preset.
  */
 object SynthCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
             boolean = setOf("--all", "--instrument", "--drone"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -84,7 +89,8 @@ object SynthCommand {
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and REVEL, got $engine")
+                SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and SKITTER, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -95,6 +101,12 @@ object SynthCommand {
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
+        fun skitterSeed(flag: String): Int? = opts[flag]?.let { raw ->
+            if (engine != SkitterPatch.ENGINE) throw CliError("$flag is only supported by SKITTER, got $engine")
+            raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
+        }
+        val seedOverride = skitterSeed("--seed")
+        val scrambleRandom = skitterSeed("--scramble")?.let { Random(it) }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
@@ -126,7 +138,7 @@ object SynthCommand {
             }
             else -> listOf(presets.first())
         }).map { patch ->
-            if (noteFlags.isEmpty()) patch else when (patch) {
+            val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
@@ -135,11 +147,19 @@ object SynthCommand {
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
                     velocity = velocityOverride ?: patch.velocity,
                 )
+                is SkitterPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
                     macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
                 )
                 else -> patch
             }
+            if (withNote is SkitterPatch) {
+                val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
+                if (scrambleRandom == null) withSeed else withSeed.copy(
+                    name = "Scrambled ${withSeed.name}",
+                    macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
+                )
+            } else withNote
         }
 
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)

@@ -130,6 +130,10 @@ object Presets {
             val v = PitchwheelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             PitchwheelPresets.forVoice(v)
         }
+        SkitterPatch.ENGINE -> {
+            val v = SkitterVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            SkitterPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -162,5 +166,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all()
+            RevelPresets.all() + SkitterPresets.all()
 }
