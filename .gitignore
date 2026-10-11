@@ -160,3 +160,7 @@ testkit/SnipSnap Tessera Kit/
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
+
+# Alloy generated listening matrix, audio, recipes, and native MPC kit.
+testkit/alloy-audition/
+testkit/SnipSnap Alloy Kit/

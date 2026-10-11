@@ -261,7 +261,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 17 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 18 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -275,6 +275,17 @@ fixed until then.
 [The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
 six isolated catches and includes the previous defaults for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
+
+ALLOY is an original attack-driven four-operator PM engine: generated wood,
+tine/string and breath/contact attacks enter the tonal body through a bounded
+modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
+EDGE, BODY, LENGTH, TUNE and HOLD. Twelve provisional presets, saved operator and
+material recipes, native velocity and a dry sixteen-pad kit use the same renderer.
+Run `./gradlew :synth:generateAlloyAudition` for voice/register/velocity coverage,
+five-point sweeps, interactions, FUSE ablation and settled loop listening. The
+[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) awaits
+the owner's sonic verdict before expansion to the proposed 36 presets.
+[Implementation notes](docs/ALLOY.md) describe the render and export contracts.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum

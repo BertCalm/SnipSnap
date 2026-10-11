@@ -4,6 +4,7 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
@@ -331,8 +332,9 @@ object UserPresets {
      * with every macro's exact value, so the promoted preset renders the
      * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
-     * Kotlin string literal, escaped.
+     * PITCHWHEEL keeps its render-model version as well. ALLOY retains its
+     * generated materials, operator routing and held recipe alongside note and
+     * energy. The name is a Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -340,6 +342,10 @@ object UserPresets {
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is AlloyPatch -> {
+                val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
+            }
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"

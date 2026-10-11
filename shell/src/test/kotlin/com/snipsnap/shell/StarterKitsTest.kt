@@ -141,7 +141,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "tessera", "pitchwheel", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "tessera", "pitchwheel", "alloy", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -156,6 +156,10 @@ class StarterKitsTest {
         assertEquals("PITCHWHEEL", pitchwheel.displayName)
         assertFalse(pitchwheel.seeded, "PITCHWHEEL is a fixed dry audition kit")
         assertEquals(KeySpec.parse("Cminpent"), pitchwheel.key)
+        val alloy = StarterKits.byId("alloy")!!
+        assertEquals("ALLOY", alloy.displayName)
+        assertFalse(alloy.seeded, "ALLOY is a fixed dry audition kit")
+        assertEquals(KeySpec.parse("Cminpent"), alloy.key)
     }
 
     @Test

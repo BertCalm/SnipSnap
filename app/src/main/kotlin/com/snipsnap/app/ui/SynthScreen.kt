@@ -187,6 +187,9 @@ import com.snipsnap.synth.ForkVoice
 import com.snipsnap.synth.Circuit
 import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
+import com.snipsnap.synth.Alloy
+import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.AlloyVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -233,7 +236,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA and PITCHWHEEL, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA and PITCHWHEEL, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -293,8 +296,9 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN and PITCHWHEEL carry note and velocity outside the macro map.
-    // Keep that state through preview, editing, saving and placing.
+    // Engines such as ALLOY carry note, velocity and synthesis configuration
+    // outside the macro map. Keep that state through preview, editing, saving
+    // and placing by editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1070,6 +1074,7 @@ fun SynthScreen(
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.ALLOY && spec.name == "HOLD" && Alloy.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1909,7 +1914,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1931,6 +1936,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaVoice.entries
         CISTERN -> CisternVoice.entries
         CIRCUIT -> CircuitVoice.entries
+        ALLOY -> AlloyVoice.entries
         MURK -> MurkVoice.entries
         NIMBUS -> NimbusVoice.entries
         THAW -> ThawVoice.entries
@@ -1958,6 +1964,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         CISTERN -> Cistern.macrosFor(voice as CisternVoice)
         CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
+        ALLOY -> Alloy.macrosFor(voice as AlloyVoice)
         MURK -> Murk.macrosFor(voice as MurkVoice)
         NIMBUS -> Nimbus.macrosFor(voice as NimbusVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
@@ -1985,6 +1992,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         CISTERN -> Cistern.defaults(voice as CisternVoice)
         CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
+        ALLOY -> Alloy.defaults(voice as AlloyVoice)
         MURK -> Murk.defaults(voice as MurkVoice)
         NIMBUS -> Nimbus.defaults(voice as NimbusVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
@@ -2012,6 +2020,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         CISTERN -> Cistern.scramble(voice as CisternVoice, random)
         CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
+        ALLOY -> Alloy.scramble(voice as AlloyVoice, random)
         MURK -> Murk.scramble(voice as MurkVoice, random)
         NIMBUS -> Nimbus.scramble(voice as NimbusVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
@@ -2044,6 +2053,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.render(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
+        ALLOY -> Alloy.render(voice as AlloyVoice, macros)
         MURK -> Murk.render(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.render(voice as NimbusVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
@@ -2077,6 +2087,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.drumClassFor(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
+        ALLOY -> Alloy.drumClassFor(voice as AlloyVoice, macros)
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.drumClassFor(voice as NimbusVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
@@ -2104,6 +2115,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         CISTERN -> CisternPatch(name, voice as CisternVoice, macros)
         CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
+        ALLOY -> AlloyPatch(name, voice as AlloyVoice, macros)
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
         NIMBUS -> NimbusPatch(name, voice as NimbusVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
