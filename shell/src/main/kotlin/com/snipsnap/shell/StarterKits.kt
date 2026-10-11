@@ -143,6 +143,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.pitchwheel() },
         Starter(
+            "tangle", "TANGLE",
+            "Oscillators catch and escape in C minor pentatonic. Rooted bass, crawling pulses and metal.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.tangle() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

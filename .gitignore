@@ -160,3 +160,7 @@ testkit/SnipSnap Tessera Kit/
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
+
+# Tangle's regenerated audition WAVs, diagnostic manifest, page and kit audio.
+testkit/tangle-audition/
+testkit/SnipSnap Tangle Kit/
