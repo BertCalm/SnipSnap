@@ -23,11 +23,30 @@ device and can be exported as JSON.
 
 Generated WAVs, the manifest and the listening page live under
 `testkit/prism-audition/` and are ignored by Git. The source page and generator
-are tracked. The full pack contains 148 cases with raw/matched partners.
+are tracked. The current matrix contains 148 cases with raw/matched partners;
+nine comparison-only clips bring the GLASS revision pack to 157.
 Matched files use SnipSnap's shared audition target of .03 RMS over the loudest
 200 ms, distinct from the engine's melodic output target. The initial eight
 presets are an audition roster. The proposed
 36-preset expansion waits for the owner's approval of the dry sound.
+
+## GLASS listening revision
+
+The first listening verdict described GLASS as harsh and dissonant. The R2
+factory template puts its strongest eight partials on integer harmonics and
+tapers the higher partials, retaining a quiet quarter-harmonic shimmer. The
+five timbral controls and Small Prism's settings remain unchanged.
+
+The audition's GLASS comparison panel pairs R1 and R2 at the same settings:
+default notes and Small Prism at C4, C5 and C6, plus a held C5. Start with
+matched playback to judge the tonal change independently of output level.
+Reviews follow the audio revision, so earlier GLASS verdicts are retained
+separately from the revised sound.
+
+New factory GLASS patches store the complete calibrated ratios and amplitudes.
+The original empty BELL/RINGING template retains its meaning, and JSON decoding
+uses historical GLASS defaults for omitted template data. Existing saved
+recipes and explicit custom templates retain their original sound.
 
 ## Controls
 

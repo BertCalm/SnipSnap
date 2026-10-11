@@ -49,6 +49,77 @@ class PrismIntegrationTest {
     }
 
     @Test
+    fun `legacy glass missing null and empty templates retain the original model`() {
+        val legacy = PrismPatch("Legacy glass", PrismVoice.GLASS, Prism.defaults(PrismVoice.GLASS),
+            template = PrismTemplate(PrismSpectrum.BELL, PrismContour.RINGING))
+        val sparse = legacy.toJsonValue().entries - setOf("template", "velocity", "model")
+        val originalAudio = legacy.render().samples
+        val recipes = listOf(
+            JsonValue.Obj(sparse),
+            JsonValue.Obj(sparse + ("template" to JsonValue.Null)),
+            JsonValue.Obj(sparse + ("template" to JsonValue.Obj(emptyMap()))),
+        )
+        for (recipe in recipes) {
+            val reopened = assertIs<PrismPatch>(Patches.fromJsonValue(recipe))
+            assertEquals(legacy, reopened, "missing legacy data selects the original model-1 defaults")
+            assertContentEquals(originalAudio, reopened.render().samples,
+                "factory calibration never changes the replay of a legacy sparse recipe")
+        }
+    }
+
+    @Test
+    fun `sparse legacy glass templates preserve a custom harmonic spectrum`() {
+        for (spectrum in PrismSpectrum.entries.filter { it != PrismSpectrum.BELL }) {
+            val expected = PrismPatch("Custom glass", PrismVoice.GLASS, Prism.defaults(PrismVoice.GLASS),
+                template = PrismTemplate(spectrum, PrismContour.RINGING))
+            val fields = mapOf("spectralId" to JsonValue.Str(spectrum.name))
+            for (template in listOf(
+                JsonValue.Obj(fields),
+                JsonValue.Obj(fields + mapOf("ratioOverrides" to JsonValue.Null, "amplitudeOverrides" to JsonValue.Null)),
+            )) {
+                val recipe = JsonValue.Obj(expected.toJsonValue().entries + ("template" to template))
+                assertEquals(expected, Patches.fromJsonValue(recipe),
+                    "$spectrum uses its original harmonic ratios and weights when overrides are omitted")
+            }
+        }
+    }
+
+    @Test
+    fun `explicit empty legacy bell templates round trip and replay exactly`() {
+        for (hold in listOf(0f, 1f)) {
+            val original = PrismPatch("Original bell", PrismVoice.GLASS,
+                Prism.defaults(PrismVoice.GLASS) + ("HOLD" to hold), velocity = .65f,
+                template = PrismTemplate(PrismSpectrum.BELL, PrismContour.RINGING, loopSeconds = 1f))
+            val reopened = PrismPatch.fromJsonText(original.toJsonText())
+            assertEquals(original, reopened)
+            assertTrue(reopened.template.ratioOverrides.isEmpty())
+            assertTrue(reopened.template.amplitudeOverrides.isEmpty())
+            assertContentEquals(original.render().samples, reopened.render().samples,
+                "an explicit original BELL recipe replays exactly for HOLD $hold")
+        }
+    }
+
+    @Test
+    fun `calibrated glass saves its complete model through edits and reopening`() {
+        val patch = PrismPatch("Calibrated glass", PrismVoice.GLASS, Prism.defaults(PrismVoice.GLASS), velocity = .7f)
+        assertEquals(Prism.MODEL_VERSION, patch.model)
+        assertEquals(Prism.PARTIALS, patch.template.ratioOverrides.size)
+        assertEquals(Prism.PARTIALS, patch.template.amplitudeOverrides.size)
+        val reopened = PrismPatch.fromJsonText(patch.toJsonText())
+        assertEquals(patch, reopened)
+        assertContentEquals(patch.render().samples, reopened.render().samples)
+
+        val macros = patch.macros + ("SHAPE" to .72f)
+        val expected = patch.copy(name = "Edited glass", macros = macros)
+        val edited = assertIs<PrismPatch>(Patches.edited(reopened, expected.name, macros))
+        val restored = assertIs<PrismPatch>(PadRecipe.fromJsonText(PadRecipe(edited).toJsonText()).patch)
+        assertEquals(expected, edited)
+        assertEquals(expected, restored)
+        assertContentEquals(expected.render().samples, restored.render().samples,
+            "the calibrated ratios and weights remain explicit model-1 data after editing")
+    }
+
+    @Test
     fun `invalid saved identities and controls are refused before rendering`() {
         val patch = PrismPatch("Facets", PrismVoice.KEY, emptyMap())
         fun changed(key: String, value: JsonValue) = JsonValue.Obj(

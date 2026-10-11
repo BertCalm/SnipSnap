@@ -6,7 +6,9 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.security.MessageDigest
 import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.ln
@@ -42,6 +44,9 @@ object PrismAuditionGenerator {
     )
     private val NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private const val MATCHED_TARGET = 0.03
+    private const val AUDITION_REVISION = "r2"
+    private const val COMPARISON_GROUP = "glass-softening"
+    private val R1_TEMPLATE = PrismTemplate(PrismSpectrum.BELL, PrismContour.RINGING)
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -51,6 +56,33 @@ object PrismAuditionGenerator {
         val packStarted = System.nanoTime()
         val clips = mutableListOf<Map<String, Any?>>()
         val ids = mutableSetOf<String>()
+        val r1Text = requireNotNull(PrismAuditionGenerator::class.java.getResourceAsStream("/audition/prism-r1-glass.json")) {
+            "the original GLASS provenance fixture is missing"
+        }.bufferedReader().use { it.readText() }
+        val r1Manifest = fromJson(Json.parse(r1Text)) as Map<String, Any?>
+        val r1Rows = (r1Manifest.getValue("clips") as List<*>).map { it as Map<String, Any?> }.associateBy { it.getValue("id") as String }
+        val r1Revision = r1Manifest.getValue("sourceRevision") as String
+        restoreR1Archive(root, r1Rows)
+        File(root, "r1/manifest.json").apply { parentFile.mkdirs(); writeText(r1Text) }
+
+        fun comparison(variant: String, midi: Int, revision: String, only: Boolean, sourceId: String? = null): Map<String, Any?> {
+            val held = variant == "hold-default"
+            val title = when (variant) {
+                "default" -> "Default · ${noteName(midi)} · full velocity"
+                "small-prism" -> "Small Prism · ${noteName(midi)} · full velocity"
+                else -> "Default · ${noteName(midi)} · held loop"
+            }
+            return linkedMapOf(
+                "comparisonGroup" to COMPARISON_GROUP,
+                "comparisonPair" to "glass-$variant-${noteName(midi).lowercase()}",
+                "comparisonTitle" to title,
+                "comparisonLabel" to if (revision == "r1") "Original R1" else "Softer R2",
+                "comparisonOnly" to only,
+                "revision" to revision,
+                "sourceId" to sourceId,
+                "loopComparison" to held,
+            )
+        }
 
         fun clip(
             section: String,
@@ -63,6 +95,7 @@ object PrismAuditionGenerator {
             velocity: Float = 1f,
             template: PrismTemplate = Prism.templateFor(voice),
             extra: Map<String, Any?> = emptyMap(),
+            archived: Map<String, Any?>? = null,
         ) {
             require(ids.add(id)) { "duplicate audition clip $id" }
             val semitones = midi - Prism.rootMidi(voice)
@@ -84,14 +117,32 @@ object PrismAuditionGenerator {
             val pitchDeviationCents = 1200.0 * ln(probe.effectiveHz / nominalHz) / ln(2.0)
             val additivePeak = probe.raw.maxOfOrNull { abs(it.toDouble()) } ?: 0.0
             val matched = AuditionLevel.level(raw)
-            val rawPath = "raw/$section/$id.wav"
-            val matchedPath = "matched/$section/$id.wav"
+            val revision = extra["revision"] as? String ?: AUDITION_REVISION
+            val prefix = when {
+                revision == "r1" -> "r1/"
+                voice == PrismVoice.GLASS && revision == "r2" -> "r2/"
+                else -> ""
+            }
+            val rawPath = archived?.get("raw") as? String ?: "${prefix}raw/$section/$id.wav"
+            val matchedPath = archived?.get("matched") as? String ?: "${prefix}matched/$section/$id.wav"
             val sampler = SmplChunk(
                 rootNote = nominalMidi,
                 loop = if (loop) SmplChunk.Loop(0, raw.frameCount.toLong()) else null,
             )
-            WavWriter.write(File(root, rawPath), raw, WavWriter.BitDepth.PCM_24, smpl = sampler)
-            WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_24, smpl = sampler)
+            val rawBytes = wavBytes(raw, sampler)
+            val matchedBytes = wavBytes(matched, sampler)
+            val hashes = linkedMapOf("raw" to sha256(rawBytes), "matched" to sha256(matchedBytes))
+            if (archived != null) {
+                // An explicit legacy template must reproduce the original published
+                // PCM files exactly. Existing archived bytes are never overwritten.
+                val originalHashes = archived.getValue("sha256") as Map<*, *>
+                require(hashes == originalHashes) { "$id does not reproduce the original R1 WAVs: $hashes, expected $originalHashes" }
+                preserveWav(File(root, rawPath), rawBytes, hashes.getValue("raw"))
+                preserveWav(File(root, matchedPath), matchedBytes, hashes.getValue("matched"))
+            } else {
+                File(root, rawPath).apply { parentFile.mkdirs(); writeBytes(rawBytes) }
+                File(root, matchedPath).apply { parentFile.mkdirs(); writeBytes(matchedBytes) }
+            }
             val row = linkedMapOf<String, Any?>(
                 "id" to id,
                 "label" to label,
@@ -107,6 +158,7 @@ object PrismAuditionGenerator {
                 "loopCycleError" to cycleError,
                 "velocity" to velocity,
                 "macros" to macros,
+                "recipe" to PrismPatch(label, voice, macros, velocity, template).toJsonValue(),
                 "raw" to rawPath,
                 "matched" to matchedPath,
                 "loop" to loop,
@@ -117,7 +169,16 @@ object PrismAuditionGenerator {
                 "elapsedMs" to elapsedMs,
                 "msPerRenderedSecond" to elapsedMs / raw.durationSeconds,
                 "metrics" to linkedMapOf("raw" to metrics(raw, seam), "matched" to metrics(matched, seam)),
+                "sha256" to hashes,
+                "revision" to revision,
             )
+            if (voice == PrismVoice.GLASS) {
+                row["reviewKey"] = if (revision == "r2") "prism-r2:$id" else archived?.get("id") ?: id
+            }
+            if (revision == "r1") {
+                row["sourceRevision"] = r1Revision
+                row["baselineOrigin"] = if (archived != null) "Original published WAVs; legacy replay verified byte-identical" else "Original R1 template replay through the unchanged additive core"
+            }
             row.putAll(extra)
             clips += row
             println("[${clips.size}] $section/$id: ${raw.frameCount} frames, ${elapsedMs.roundToInt()} ms${if (loop) ", loop seam $seam" else ""}")
@@ -134,7 +195,8 @@ object PrismAuditionGenerator {
                         "${voice.name} ${noteName(midi)} · $touch",
                         "${VOICE_ROLES.getValue(voice)}. Default timbre at velocity ${fmt(velocity)}.",
                         voice, midi = midi, velocity = velocity,
-                        extra = mapOf("register" to register),
+                        extra = mapOf("register" to register) + if (voice == PrismVoice.GLASS && velocity == 1f)
+                            comparison("default", midi, "r2", false) else emptyMap(),
                     )
                 }
             }
@@ -150,7 +212,8 @@ object PrismAuditionGenerator {
                     "presets", "preset_${slug(patch.name)}", patch.name,
                     "${VOICE_ROLES.getValue(voice)}. ${macroLine(macros)}.",
                     voice, patch.macros, midi, patch.velocity, patch.template,
-                    extra = mapOf("patch" to patch.toJsonValue()),
+                    extra = mapOf("patch" to patch.toJsonValue()) + if (patch.name == "Small Prism")
+                        comparison("small-prism", midi, "r2", false) else emptyMap(),
                 )
             }
         }
@@ -198,7 +261,8 @@ object PrismAuditionGenerator {
             clip(
                 "hold", "${voice.name.lowercase()}_hold_default", "${voice.name} · held default",
                 "One seamless sustain region, default timbre, HOLD 1. The onset is excluded.",
-                voice, mapOf("HOLD" to 1f), extra = mapOf("variant" to "default"),
+                voice, mapOf("HOLD" to 1f), extra = mapOf("variant" to "default") + if (voice == PrismVoice.GLASS)
+                    comparison("hold-default", Prism.rootMidi(voice) + 12, "r2", false) else emptyMap(),
             )
             clip(
                 "hold", "${voice.name.lowercase()}_hold_extreme", "${voice.name} · held extreme",
@@ -219,6 +283,56 @@ object PrismAuditionGenerator {
 
         val presetCount = PrismVoice.entries.sumOf { PrismPresets.forVoice(it).size }
         check(clips.size == 140 + presetCount) { "incomplete audition matrix: ${clips.size} clips" }
+        val baseClipCount = clips.size
+
+        // Real R1 examples are retained from the first published pack. The
+        // unchanged original BELL template additionally supplies the two
+        // missing Small Prism registers, with the same controls as R2.
+        val glass = PrismVoice.GLASS
+        val smallSource = r1Rows.getValue("preset_small_prism")
+        val smallMacros = (smallSource.getValue("macros") as Map<*, *>).mapValues { (_, value) -> (value as Number).toFloat() }
+            .entries.associate { it.key as String to it.value }
+        for ((register, midi) in listOf("low" to 60, "middle" to 72, "high" to 84)) {
+            val originalId = "glass_${register}_loud"
+            val original = r1Rows.getValue(originalId)
+            val defaults = (original.getValue("macros") as Map<*, *>).entries.associate { it.key as String to (it.value as Number).toFloat() }
+            clip(
+                "voices", "glass_r1_default_${register}_loud", "R1 GLASS ${noteName(midi)} · original",
+                "Original published R1 default at full velocity; unchanged controls beside the softer R2 template.",
+                glass, defaults, midi = midi, template = R1_TEMPLATE,
+                extra = comparison("default", midi, "r1", true, originalId), archived = original,
+            )
+            val tune = (midi - Prism.rootMidi(glass)) / Prism.TUNE_SEMITONES.toFloat()
+            val controls = smallMacros + ("TUNE" to tune)
+            val savedSmall = if (midi == 72) smallSource else null
+            clip(
+                "presets", "glass_r1_small_prism_$register", "R1 Small Prism ${noteName(midi)} · original",
+                "Original R1 Small Prism controls and legacy BELL template, at ${noteName(midi)}.",
+                glass, controls, midi = midi, template = R1_TEMPLATE,
+                extra = comparison("small-prism", midi, "r1", true, if (midi == 72) "preset_small_prism" else null), archived = savedSmall,
+            )
+            if (midi != 72) {
+                clip(
+                    "presets", "glass_r2_small_prism_$register", "R2 Small Prism ${noteName(midi)} · softer",
+                    "The same R1 Small Prism controls through the refined harmonic GLASS template, at ${noteName(midi)}.",
+                    glass, controls, midi = midi,
+                    extra = comparison("small-prism", midi, "r2", true),
+                )
+            }
+        }
+        val heldSource = r1Rows.getValue("glass_hold_default")
+        val heldMacros = (heldSource.getValue("macros") as Map<*, *>).entries.associate { it.key as String to (it.value as Number).toFloat() }
+        clip(
+            "hold", "glass_r1_hold_default", "R1 GLASS C5 · original held loop",
+            "Original published R1 held default, with identical controls beside the softer R2 held region.",
+            glass, heldMacros, midi = 72, template = R1_TEMPLATE,
+            extra = comparison("hold-default", 72, "r1", true, "glass_hold_default"), archived = heldSource,
+        )
+        check(clips.size == baseClipCount + 9) { "incomplete GLASS revision comparison" }
+        check(clips.filter { it["comparisonGroup"] == COMPARISON_GROUP }.groupBy { it["comparisonPair"] }.values.all { pair ->
+            pair.size == 2 && pair.map { it["revision"] }.toSet() == setOf("r1", "r2") &&
+                pair[0]["note"] == pair[1]["note"] && pair[0]["macros"] == pair[1]["macros"]
+        }) { "GLASS comparisons must pair the same pitch and controls across R1/R2" }
         require(clips.size <= 160) { "audition matrix exceeds its 160-clip limit" }
         val sections = listOf(
             section("voices", "Voices", "Six identities across three registers, played softly and loudly."),
@@ -232,6 +346,8 @@ object PrismAuditionGenerator {
             "schemaVersion" to 1,
             "engine" to "PRISM",
             "modelVersion" to Prism.MODEL_VERSION,
+            "auditionRevision" to AUDITION_REVISION,
+            "revisionDescription" to "GLASS R2: softer harmonic template. Other voices and Small Prism controls are unchanged.",
             "generatedAt" to Instant.now().toString(),
             "sampleRate" to Dsp.RATE,
             "internalSampleRate" to Dsp.RATE * Dsp.OVERSAMPLE,
@@ -243,6 +359,11 @@ object PrismAuditionGenerator {
             "holdThreshold" to Prism.LOOP_THRESHOLD,
             "loopSeamThreshold" to Keys.MAX_SEAM_ERROR,
             "clipCount" to clips.size,
+            "baseClipCount" to baseClipCount,
+            "comparisonClipCount" to clips.count { it["comparisonGroup"] == COMPARISON_GROUP },
+            "r1ArchiveVerifiedClipCount" to r1Rows.size,
+            "r1ArchiveByteIdentical" to true,
+            "baselineProvenance" to r1Manifest.filterKeys { it != "clips" },
             "totalRenderMs" to clips.sumOf { it.getValue("elapsedMs") as Double },
             "elapsedPackMs" to (System.nanoTime() - packStarted) / 1_000_000.0,
             "sections" to sections,
@@ -266,6 +387,40 @@ object PrismAuditionGenerator {
     private fun fmt(value: Float) = "%.3f".format(java.util.Locale.ROOT, value).trimEnd('0').trimEnd('.')
 
     private fun macroLine(macros: Map<String, Float>) = TIMBRAL.joinToString(" · ") { "$it ${fmt(macros.getValue(it))}" }
+
+    private fun wavBytes(snip: Snip, sampler: SmplChunk): ByteArray = ByteArrayOutputStream().use { output ->
+        WavWriter.write(output, snip, WavWriter.BitDepth.PCM_24, smpl = sampler)
+        output.toByteArray()
+    }
+
+    private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private fun preserveWav(file: File, replay: ByteArray, expectedHash: String) {
+        if (file.exists()) require(sha256(file.readBytes()) == expectedHash) { "archived R1 audio changed: $file" }
+        else file.apply { parentFile.mkdirs(); writeBytes(replay) }
+    }
+
+    /** Restore a fresh checkout's real R1 archive only after matching published PCM fingerprints. */
+    private fun restoreR1Archive(root: File, rows: Map<String, Map<String, Any?>>) {
+        for ((id, row) in rows) {
+            val macros = (row.getValue("macros") as Map<*, *>).entries.associate { it.key as String to (it.value as Number).toFloat() }
+            val velocity = (row.getValue("velocity") as Number).toFloat()
+            val probe = Prism.probe(PrismVoice.GLASS, macros, velocity, R1_TEMPLATE, normalize = false)
+            val raw = Snip(probe.samples, channels = 1, sampleRate = Dsp.RATE)
+            val sampler = SmplChunk(
+                rootNote = Prism.midiFor(PrismVoice.GLASS, macros.getValue("TUNE")),
+                loop = if (Prism.isLoop(macros.getValue("HOLD"))) SmplChunk.Loop(0, raw.frameCount.toLong()) else null,
+            )
+            val originalHashes = row.getValue("sha256") as Map<*, *>
+            for ((mode, snip) in listOf("raw" to raw, "matched" to AuditionLevel.level(raw))) {
+                val bytes = wavBytes(snip, sampler)
+                val expected = originalHashes[mode] as? String ?: error("$id has no original $mode fingerprint")
+                require(sha256(bytes) == expected) { "$id $mode does not reproduce the original published R1 audio" }
+                preserveWav(File(root, row.getValue(mode) as String), bytes, expected)
+            }
+            println("[baseline] verified original R1 $id")
+        }
+    }
 
     /** Difference energy over signal energy across two independently rendered complete cycles. */
     private fun cycleError(previous: FloatArray, current: FloatArray): Double {
@@ -308,5 +463,14 @@ object PrismAuditionGenerator {
         is Map<*, *> -> JsonValue.Obj(value.entries.associate { it.key.toString() to json(it.value) })
         is Iterable<*> -> JsonValue.Arr(value.map { json(it) })
         else -> error("unsupported manifest value ${value::class}")
+    }
+
+    private fun fromJson(value: JsonValue): Any? = when (value) {
+        JsonValue.Null -> null
+        is JsonValue.Str -> value.value
+        is JsonValue.Bool -> value.value
+        is JsonValue.Num -> value.value
+        is JsonValue.Obj -> value.entries.mapValues { fromJson(it.value) }
+        is JsonValue.Arr -> value.items.map { fromJson(it) }
     }
 }

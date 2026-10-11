@@ -163,8 +163,37 @@ object Prism {
         PrismVoice.PLUCK -> PrismTemplate(PrismSpectrum.PLUCKED, PrismContour.PLUCKED)
         PrismVoice.ORGAN -> PrismTemplate(PrismSpectrum.DRAWBAR, PrismContour.HELD)
         PrismVoice.BASS -> PrismTemplate(PrismSpectrum.ROOTED, PrismContour.LOW)
-        PrismVoice.GLASS -> PrismTemplate(PrismSpectrum.BELL, PrismContour.RINGING)
+        PrismVoice.GLASS -> softGlassTemplate
         PrismVoice.VEIL -> PrismTemplate(PrismSpectrum.VEILED, PrismContour.BLOOM)
+    }
+
+    /**
+     * The factory glass carries a harmonic lower register and a quiet upper shimmer. The complete
+     * arrays are intentional: an empty BELL template keeps its original ratios and amplitudes, so
+     * saved/custom models and the first audition remain exactly reproducible after calibration.
+     */
+    private val softGlassTemplate: PrismTemplate by lazy {
+        val ratios = List(PARTIALS) { i ->
+            val harmonic = i + 1f
+            if (i < 8) harmonic else harmonic + when (i % 4) {
+                0 -> .25f
+                1 -> .50f
+                2 -> .75f
+                else -> 0f
+            }
+        }
+        val amplitudes = List(PARTIALS) { i ->
+            val harmonic = i + 1.0
+            val taper = when (i) {
+                0 -> 1.0
+                in 1..3 -> .92
+                in 4..7 -> .68
+                else -> .30 * exp(-.085 * (harmonic - 9.0))
+            }
+            (templateAmplitude(PrismSpectrum.BELL, i) * taper).toFloat()
+        }
+        PrismTemplate(PrismSpectrum.BELL, PrismContour.RINGING,
+            ratioOverrides = ratios, amplitudeOverrides = amplitudes)
     }
 
     fun drumClassFor(voice: PrismVoice, macros: Map<String, Float> = emptyMap()): DrumClass =

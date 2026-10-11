@@ -59,6 +59,12 @@ data class PrismPatch(
 
         private fun numbers(values: List<Float>) = JsonValue.Arr(values.map { JsonValue.Num(it.toDouble()) })
 
+        // Model-1 JSON predates the factory GLASS calibration. Missing saved data must retain
+        // the original BELL model; new patches serialize the calibrated factory arrays in full.
+        private fun savedTemplateFallback(voice: PrismVoice): PrismTemplate =
+            if (voice == PrismVoice.GLASS) PrismTemplate(PrismSpectrum.BELL, PrismContour.RINGING)
+            else Prism.templateFor(voice)
+
         private fun templateFrom(value: JsonValue, fallback: PrismTemplate): PrismTemplate {
             val obj = value.obj()
             fun optionalFloat(name: String): Float? = obj[name]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat()
@@ -98,8 +104,9 @@ data class PrismPatch(
             if (model != Prism.MODEL_VERSION) throw JsonException("unsupported prism model $model")
             val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
             return Patches.decode(value, ENGINE, { n -> PrismVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                val fallback = savedTemplateFallback(voice)
                 val template = obj["template"]?.takeUnless { it is JsonValue.Null }
-                    ?.let { templateFrom(it, Prism.templateFor(voice)) } ?: Prism.templateFor(voice)
+                    ?.let { templateFrom(it, fallback) } ?: fallback
                 PrismPatch(name, voice, macros, velocity, template, model)
             }
         }

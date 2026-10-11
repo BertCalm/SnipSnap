@@ -76,6 +76,63 @@ class PrismTest {
     /** L1 distance .04 requires at least 2% of power to move between audible bins. */
     private fun massDistance(a: DoubleArray, b: DoubleArray) = a.indices.sumOf { abs(a[it] - b[it]) }
 
+    private fun inharmonicFraction(spectrum: Spectrum, rootHz: Double): Double {
+        var total = 0.0
+        var inharmonic = 0.0
+        val harmonicWidth = maxOf(12.0, rootHz * .065)
+        for (k in 1 until spectrum.power.size) {
+            val hz = k * spectrum.binHz
+            if (hz < rootHz * .5) continue
+            total += spectrum.power[k]
+            val nearest = (hz / rootHz).roundToInt().coerceAtLeast(1) * rootHz
+            if (abs(hz - nearest) > harmonicWidth) inharmonic += spectrum.power[k]
+        }
+        return inharmonic / total
+    }
+
+    private fun highFrequencyFraction(spectrum: Spectrum, aboveHz: Double): Double {
+        val total = spectrum.power.drop(1).sum()
+        return spectrum.power.indices.filter { it * spectrum.binHz > aboveHz }.sumOf { spectrum.power[it] } / total
+    }
+
+    @Test
+    fun `factory glass lowers dissonant energy and high frequency bite across register and velocity`() {
+        // This is the exact R1 factory model: its unchanged empty BELL recipe preserves its seed,
+        // ratios, amplitudes and contours. R2 is compared through actual conditioned, unlevelled audio.
+        val firstAudition = PrismTemplate(PrismSpectrum.BELL, PrismContour.RINGING)
+        val softerGlass = Prism.templateFor(PrismVoice.GLASS)
+        for (tune in listOf(0f, .5f, 1f)) for (velocity in listOf(.35f, .9f)) {
+            val macros = mapOf("TUNE" to tune)
+            val before = Prism.probe(PrismVoice.GLASS, macros, velocity, firstAudition, seconds = .8f)
+            val after = Prism.probe(PrismVoice.GLASS, macros, velocity, softerGlass, seconds = .8f)
+            val beforeSpectrum = spectrum(before.samples, fromSeconds = .12, seconds = .4)
+            val afterSpectrum = spectrum(after.samples, fromSeconds = .12, seconds = .4)
+            val dissonanceBefore = inharmonicFraction(beforeSpectrum, before.effectiveHz)
+            val dissonanceAfter = inharmonicFraction(afterSpectrum, after.effectiveHz)
+            val biteBefore = highFrequencyFraction(beforeSpectrum, 4_000.0)
+            val biteAfter = highFrequencyFraction(afterSpectrum, 4_000.0)
+            val attackBiteBefore = highFrequencyFraction(spectrum(before.samples, fromSeconds = .01, seconds = .12), 4_000.0)
+            val attackBiteAfter = highFrequencyFraction(spectrum(after.samples, fromSeconds = .01, seconds = .12), 4_000.0)
+            // Fractions of measured power remove gain, so a quieter render alone cannot pass.
+            assertTrue(dissonanceAfter < dissonanceBefore * .35,
+                "GLASS tune $tune velocity $velocity retains too much inharmonic power: $dissonanceBefore -> $dissonanceAfter")
+            assertTrue(biteAfter < biteBefore * .80,
+                "GLASS tune $tune velocity $velocity retains high-frequency bite: $biteBefore -> $biteAfter")
+            assertTrue(attackBiteAfter < attackBiteBefore * .85,
+                "GLASS tune $tune velocity $velocity retains a harsh attack: $attackBiteBefore -> $attackBiteAfter")
+            fun partialDissonance(p: Prism.Probe): Double {
+                val energy = p.partialWeights.sumOf { it.toDouble() * it }
+                return p.partialHz.indices.filter { abs(p.partialHz[it] / p.effectiveHz -
+                    (p.partialHz[it] / p.effectiveHz).roundToInt()) > .065 }
+                    .sumOf { p.partialWeights[it].toDouble() * p.partialWeights[it] } / energy
+            }
+            assertTrue(partialDissonance(after) < partialDissonance(before) * .35,
+                "GLASS audio measurement is not backed by a lower inharmonic partial-energy budget")
+            assertHealthy("softer GLASS tune $tune velocity $velocity", after)
+            println("PRISM GLASS tune $tune velocity $velocity: inharmonic fraction $dissonanceBefore -> $dissonanceAfter; >4kHz fraction $biteBefore -> $biteAfter; attack >4kHz fraction $attackBiteBefore -> $attackBiteAfter")
+        }
+    }
+
     private fun relativeCycleError(previous: FloatArray, current: FloatArray): Double {
         assertEquals(previous.size, current.size, "the preceding cycle must be complete")
         var difference = 0.0

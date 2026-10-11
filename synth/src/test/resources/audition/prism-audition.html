@@ -37,6 +37,7 @@
     .hero-copy { max-width:410px; color:var(--muted); line-height:1.7; margin:0; }
     .hero-spec { display:flex; gap:17px; flex-wrap:wrap; margin-top:25px; color:var(--muted); font-size:9px; letter-spacing:.8px; }
     .hero-spec span+span::before { content:"/"; margin-right:17px; color:#a3a69c; }
+    .revision-jump { display:inline-flex; align-items:center; gap:10px; margin-top:20px; color:var(--orange); text-decoration:none; font-size:11px; border-bottom:1px solid #d6a88c; padding-bottom:4px; }
     .spectral { margin:0; position:relative; border:1px solid var(--line); border-radius:2px; padding:23px 25px 15px; background:linear-gradient(145deg,#eeece6,var(--paper) 68%); }
     .spectral-top { display:flex; justify-content:space-between; color:var(--muted); font-size:9px; letter-spacing:.8px; }
     .spectral svg { width:100%; height:auto; display:block; margin:13px 0 6px; }
@@ -56,6 +57,21 @@
     .segmented button { border:0; border-radius:3px; color:var(--muted); background:transparent; padding:7px 13px; font-size:11px; }
     .segmented button[aria-pressed="true"] { color:var(--ink); background:var(--surface); box-shadow:0 1px 3px #2221; }
     .level-help { color:var(--muted); font-size:11px; line-height:1.5; margin:0 0 22px; max-width:740px; }
+    .comparison { border:1px solid #d7cbbf; border-left:3px solid var(--orange); background:#f0ede5; padding:20px; margin:0 0 27px; border-radius:3px; }
+    .comparison-summary { display:flex; justify-content:space-between; align-items:center; gap:20px; cursor:pointer; list-style:none; }
+    .comparison-summary::-webkit-details-marker { display:none; }
+    .comparison-summary::after { content:"+"; font-size:20px; color:var(--orange); line-height:1; }
+    .comparison[open] .comparison-summary::after { content:"−"; }
+    .comparison-kicker { display:block; color:var(--orange); font-size:8px; margin-bottom:7px; }
+    .comparison-heading { font-family:Georgia,"Times New Roman",serif; font-size:23px; font-weight:400; line-height:1.2; letter-spacing:-.4px; }
+    .comparison-intro { display:flex; justify-content:space-between; align-items:flex-start; gap:25px; margin:13px 0 17px; }
+    .comparison-intro p { color:var(--muted); font-size:11px; line-height:1.6; margin:0; max-width:600px; }
+    .comparison-select { flex:none; width:225px; }
+    .comparison .comparison-select select { width:100%; }
+    .comparison-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+    .comparison-review-note { color:var(--muted); font-size:10px; line-height:1.5; margin:12px 0 0; }
+    .revision-tag { color:var(--violet); background:var(--violet-light); padding:1px 4px; border-radius:2px; }
+    .revision-tag.is-original { color:var(--orange); background:var(--orange-light); }
     .tabs { display:flex; border-bottom:1px solid var(--line); gap:27px; overflow:auto; scrollbar-width:thin; }
     .tab { position:relative; display:flex; align-items:center; gap:7px; background:none; border:0; border-bottom:2px solid transparent; padding:0 0 14px; white-space:nowrap; color:var(--muted); font-size:12px; }
     .tab[aria-selected="true"] { border-bottom-color:var(--orange); color:var(--ink); }
@@ -145,6 +161,7 @@
     @media (max-width:1000px) { .shell { width:calc(100% - 48px); } .hero { gap:30px; } .tabs { gap:22px; } .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .collection-top { align-items:flex-start; } .filters { flex-direction:column; gap:7px; } .filter-field input,.filter-field select { width:160px; } .player { grid-template-columns:35px minmax(100px,1fr) minmax(140px,1.1fr) auto; gap:12px; } .player-options { gap:12px; } }
     @media (max-width:650px) { .shell { width:calc(100% - 36px); } .masthead { min-height:67px; } .mast-meta { gap:0; } .mast-meta .room-label { display:none; } .mast-meta .caption { font-size:8px; } .hero { grid-template-columns:1fr; padding:33px 0 28px; gap:26px; } h1 { font-size:83px; letter-spacing:-5px; margin-bottom:16px; } .hero-tagline { font-size:27px; } .hero-copy { font-size:12px; max-width:400px; } .hero-spec { margin-top:20px; gap:11px; font-size:8px; } .hero-spec span+span::before { margin-right:11px; } .spectral { padding:17px 19px 13px; } .spectral svg { max-height:175px; margin-top:7px; } .room-top { padding:20px 0 15px; gap:10px; } .room-title { font-size:12px; } .level-control { gap:0; } .level-label { display:none; } .segmented button { padding:7px 9px; font-size:10px; } .level-help { font-size:10px; margin-bottom:18px; } .tabs { gap:22px; margin-right:-18px; padding-right:18px; } .tab { font-size:11px; padding-bottom:12px; } .collection-top { flex-direction:column; margin-top:23px; gap:17px; } h2 { font-size:23px; } .collection-desc { font-size:11px; } .filters { flex-direction:row; width:100%; } .filter-field { flex:1; min-width:0; } .filter-field:first-child { flex:.75; } .filter-field input,.filter-field select { width:100%; font-size:12px; height:37px; } .list-meta { font-size:8px; } .clip-grid { grid-template-columns:1fr; gap:10px; } .clip { padding:17px 16px 13px; } .clip-desc { min-height:0; } .macro { font-size:8px; } .macro-strip { gap:13px; } .verdict { padding:5px 9px; font-size:10px; min-height:33px; } .download { font-size:10px; } .clip-details summary { font-size:10px; } .clip-details textarea { font-size:12px; } .metric-table { font-size:9px; } .listen-note { align-items:flex-start; flex-direction:column; gap:13px; margin-top:22px; } .listen-note p { font-size:11px; } .guide { grid-template-columns:1fr; gap:20px; padding-top:20px; margin-top:15px; } footer { padding-bottom:154px; flex-direction:column; gap:7px; } .player-wrap { padding:13px 0 12px; } .player { grid-template-columns:32px minmax(0,1fr) auto; gap:11px; } .player .play { width:32px; height:32px; } .player-title { font-size:11px; } .player-state { font-size:8px; } .player-timeline { grid-row:2; grid-column:1/-1; gap:11px; } .player-options { gap:13px; } .loop-label { font-size:9px; } .player-download { font-size:9px; } .player-time { font-size:8px; } }
     @media (prefers-reduced-motion:reduce) { * { transition:none !important; scroll-behavior:auto !important; } }
+    @media (max-width:650px) { .comparison { padding:17px 14px; margin-bottom:23px; } .comparison-heading { font-size:22px; } .comparison-intro { flex-direction:column; gap:13px; } .comparison-select { width:100%; } .comparison-grid { grid-template-columns:1fr; gap:10px; } .comparison-review-note { font-size:10px; } }
   </style>
 </head>
 <body>
@@ -161,6 +178,7 @@
           <h1 id="prism-title">PRISM</h1>
           <p class="hero-tagline">Familiar notes.<br><em>Different lifetimes.</em></p>
           <p class="hero-copy">Keys, plucks, organs, and quiet textures. Built from harmonics that gather, separate, and fade in their own time. Listen to the dry engine, one note at a time.</p>
+          <a class="revision-jump" id="revision-jump" href="#glass-comparison" hidden>Listen to GLASS · original / softer revision <span aria-hidden="true">↗</span></a>
           <div class="hero-spec caption"><span>32 partials</span><span>6 voices</span><span id="format-label">Mono / 44.1 kHz</span></div>
         </div>
         <figure class="spectral">
@@ -185,6 +203,12 @@
           <div class="level-control"><span class="caption level-label">Playback level</span><div class="segmented" role="group" aria-label="Playback level"><button type="button" id="matched-mode" data-mode="matched" aria-pressed="true">Level matched</button><button type="button" id="raw-mode" data-mode="raw" aria-pressed="false">Raw</button></div></div>
         </div>
         <p class="level-help" id="level-help">Level matched uses SnipSnap’s shared audition target: 0.03 RMS in the loudest 200 ms, so timbre is easier to compare. Raw reveals the engine’s original level. These are separate rendered clips; changing mode keeps the same note and play position.</p>
+        <details class="comparison" id="glass-comparison" open hidden>
+          <summary class="comparison-summary"><span><span class="comparison-kicker caption" id="comparison-kicker">GLASS / Before & after</span><span class="comparison-heading">A softer harmonic revision.</span></span></summary>
+          <div class="comparison-intro"><p id="comparison-intro">Compare the original R1 sound with the revised R2 sound at the same note and settings. Start level matched to judge the upper harmonics, then try Raw to hear the original output levels.</p><div class="filter-field comparison-select"><label class="caption" for="comparison-select">Choose a comparison</label><select id="comparison-select"></select></div></div>
+          <div class="comparison-grid" id="comparison-grid" aria-label="GLASS original and revised clips"></div>
+          <p class="comparison-review-note">Reviews follow each audio revision. Your earlier GLASS verdicts are kept separately; the new sound starts with a fresh verdict. Reviews for unchanged voices are retained. Export also includes saved reviews for earlier clips that are not shown here.</p>
+        </details>
         <nav class="tabs" role="tablist" aria-label="Audition sections">
           <button type="button" class="tab" id="tab-voices" data-section="voices" role="tab" aria-selected="true" aria-controls="clip-panel" tabindex="0">Voices <span class="tab-count" data-count="voices">—</span></button>
           <button type="button" class="tab" id="tab-presets" data-section="presets" role="tab" aria-selected="false" aria-controls="clip-panel" tabindex="-1">Presets <span class="tab-count" data-count="presets">—</span></button>
@@ -233,7 +257,7 @@
     audio.preload = 'auto';
     audio.volume = 0.8;
     const storageKey = 'snipsnap.prism.verdicts.v1';
-    const state = { clips: [], section: 'voices', voice: 'all', search: '', mode: 'matched', current: null, reviews: {}, storageAvailable: true, loaded: false, request: 0, pendingPosition: null, loading: false };
+    const state = { clips: [], comparisons: [], comparison: null, auditionRevision: null, section: 'voices', voice: 'all', search: '', mode: 'matched', current: null, reviews: {}, storageAvailable: true, loaded: false, request: 0, pendingPosition: null, loading: false };
     const sections = {
       voices: ['01', 'Voices', 'Six voices. One harmonic engine.', 'Compare the fundamental characters across register and velocity. Listen for a stable pitched body and partials with their own lifetimes.'],
       presets: ['02', 'Presets', 'A small collection, carefully voiced.', 'Original dry patches for playable keys, rounded basses, clear plucks, and slowly separating textures. These are the curated starting points.'],
@@ -265,7 +289,12 @@
       $('#player-download').download = clip.id + '-' + state.mode + '.' + format.extension;
       $('#player-download').textContent = format.label + ' ↓';
     };
-    const getReview = (id) => state.reviews[id] || {};
+    const reviewIdentity = (id) => {
+      const clip = state.clips.find((item) => item.id === id);
+      return clip?.reviewKey || (clip?.voice === 'GLASS' && clip.revision !== 'r1' && state.auditionRevision === 'r2' ? 'prism-r2:' + id : id);
+    };
+    const getReview = (id) => state.reviews[reviewIdentity(id)] || {};
+    const revisionLabel = (clip) => clip.revision === 'r1' ? 'R1 · Original' : 'R2 · Softer harmonic revision';
     const announceStorage = (message) => { $('#storage-message').textContent = message; $('#storage-message').hidden = false; };
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
@@ -275,7 +304,8 @@
         }
       }
     } catch { state.storageAvailable = false; announceStorage('Device storage is unavailable. Your verdicts will stay in this tab; export them before closing it.'); }
-    const reviewCount = () => state.clips.filter((clip) => { const review = getReview(clip.id); return review.verdict || review.note?.trim(); }).length;
+    const hasReview = (review) => review.verdict || review.note?.trim();
+    const reviewCount = () => Object.values(state.reviews).filter(hasReview).length;
     const updateReviewCount = () => { const count = reviewCount(); $('#verdict-count').textContent = count; $('#export-verdicts').disabled = !count; };
     const saveReviews = () => {
       if (state.storageAvailable) {
@@ -297,6 +327,33 @@
       if (Number.isFinite(clip.rawAdditivePeak)) rows.push(['Core peak (4×)', clip.rawAdditivePeak]);
       return '<table class="metric-table"><caption class="sr-only">' + escapeHtml(state.mode) + ' audio measurements</caption><tbody>' + rows.map(([label,value]) => '<tr><th scope="row">' + label + '</th><td>' + formatNumber(value) + '</td></tr>').join('') + '</tbody></table><p class="metric-help">Linear measurements of the ' + (state.mode === 'matched' ? 'level matched' : 'raw') + ' render. Listening verdicts are your own.</p>';
     };
+    const clipHtml = (clip, comparison = false) => {
+      const review = getReview(clip.id);
+      const playing = state.current?.id === clip.id && !audio.paused;
+      const title = comparison ? revisionLabel(clip) : clip.label;
+      const playbackLabel = comparison ? title + ', ' + clip.label : clip.label;
+      let url,format;
+      try { url = clipPath(clip); format = clipFormat(clip); } catch { url = ''; }
+      const velocity = Number.isFinite(clip.velocity) ? Math.round(clip.velocity * 100) + '% vel' : '';
+      return '<article class="clip' + (state.current?.id === clip.id ? ' is-current' : '') + '" data-id="' + escapeHtml(clip.id) + '" data-comparison="' + comparison + '">' +
+        '<div class="clip-top"><button type="button" class="play clip-play" aria-label="' + (playing ? 'Pause ' : 'Play ') + escapeHtml(playbackLabel) + '">' + (playing ? pauseIcon : playIcon) + '</button><div class="clip-title"><h3>' + escapeHtml(title) + '</h3><div class="clip-caption caption"><span class="voice-tag">' + escapeHtml(clip.voice) + '</span><span>' + escapeHtml(clip.noteName || 'MIDI ' + clip.note) + '</span><span>' + velocity + '</span>' + (clip.revision && clip.voice === 'GLASS' && !comparison ? '<span class="revision-tag' + (clip.revision === 'r1' ? ' is-original' : '') + '">' + escapeHtml(clip.revision.toUpperCase()) + '</span>' : '') + (clip.loop ? '<span class="hold-tag">Loop</span>' : '') + (Number.isFinite(clip.seconds) ? '<span>' + clip.seconds.toFixed(1) + 's</span>' : '') + '</div></div></div>' +
+        '<p class="clip-desc">' + escapeHtml(clip.description) + '</p><div class="macro-strip" aria-label="Recorded macro settings">' + ['GRAIN','DRIFT','SHAPE','STRIKE','BODY'].map((macro) => {
+          const value = Number.isFinite(clip.macros?.[macro]) ? Math.max(0,Math.min(1,clip.macros[macro])) : 0;
+          return '<div class="macro"><div class="macro-label"><span>' + macro + '</span><span class="macro-value">' + value.toFixed(2).replace(/^0/,'') + '</span></div><div class="macro-track" aria-hidden="true"><span style="width:' + (value * 100) + '%"></span></div></div>';
+        }).join('') + '</div><div class="clip-footer"><div class="verdicts" role="group" aria-label="Listening verdict for ' + escapeHtml(clip.label) + '">' + [['yes','Yes'],['unsure','Unsure'],['no','No']].map(([value,label]) => '<button type="button" class="verdict" data-verdict="' + value + '" aria-pressed="' + (review.verdict === value) + '">' + label + '</button>').join('') + '</div>' + (url ? '<a class="download" href="' + escapeHtml(url) + '" download="' + escapeHtml(clip.id + '-' + state.mode + '.' + format.extension) + '" aria-label="Download ' + escapeHtml(clip.label) + ', ' + (state.mode === 'matched' ? 'level matched' : 'raw') + ' ' + format.label + '">' + downloadIcon + format.label + '</a>' : '<span class="metric-help">Audio unavailable</span>') + '</div>' +
+        '<details class="clip-details"><summary>' + (review.note?.trim() ? 'Your note · ' : '') + 'Notes & measurements</summary><label>Listening note<textarea class="listening-note" aria-label="Listening note for ' + escapeHtml(clip.label) + '" placeholder="What works? What needs another listen?" maxlength="5000">' + escapeHtml(review.note || '') + '</textarea></label>' + metricsHtml(clip) + '</details></article>';
+    };
+    const renderComparison = () => {
+      const available = state.comparisons.length > 0;
+      $('#glass-comparison').hidden = !available;
+      $('#revision-jump').hidden = !available;
+      if (!available) return;
+      $('#comparison-kicker').textContent = 'GLASS / Before & after · ' + state.comparisons.length + ' pairs';
+      $('#comparison-select').innerHTML = state.comparisons.map((pair) => '<option value="' + escapeHtml(pair.id) + '"' + (state.comparison === pair.id ? ' selected' : '') + '>' + escapeHtml(pair.title) + '</option>').join('');
+      const pair = state.comparisons.find((item) => item.id === state.comparison) || state.comparisons[0];
+      $('#comparison-intro').textContent = pair.original.loop && pair.revised.loop ? 'Compare the original R1 and revised R2 held regions, without their initial strikes. Enable Loop on either clip to hear several repetitions. Raw and level matched apply to both revisions.' : 'Compare the original R1 sound with the revised R2 sound at the same note and settings. Start level matched to judge the upper harmonics, then try Raw to hear the original output levels.';
+      $('#comparison-grid').innerHTML = [pair.original,pair.revised].map((clip) => clipHtml(clip,true)).join('');
+    };
     const render = () => {
       const info = sections[state.section];
       $('#section-number').textContent = 'Study ' + info[0] + ' / ' + info[1];
@@ -305,25 +362,13 @@
       $('#clip-panel').setAttribute('aria-labelledby', 'tab-' + state.section);
       for (const tab of $$('.tab')) { const selected = tab.dataset.section === state.section; tab.setAttribute('aria-selected', selected); tab.tabIndex = selected ? 0 : -1; }
       if (!state.loaded) return;
-      const sectionClips = state.clips.filter((clip) => clip.section === state.section);
+      renderComparison();
+      const sectionClips = state.clips.filter((clip) => clip.section === state.section && !clip.comparisonOnly);
       const filtered = sectionClips.filter((clip) => (state.voice === 'all' || clip.voice === state.voice) && (!state.search || [clip.label,clip.description,clip.voice,clip.noteName,clip.note,clip.macro, ...(clip.pair || [])].join(' ').toLowerCase().includes(state.search)));
       $('#clip-count').textContent = filtered.length + ' of ' + sectionClips.length + ' clips' + (state.voice === 'all' ? '' : ' / ' + state.voice);
       $('#clip-grid').setAttribute('aria-busy', 'false');
       if (!filtered.length) { $('#clip-grid').innerHTML = '<div class="empty"><strong>No clips match these filters.</strong>Choose another voice or clear the search to keep listening.</div>'; return; }
-      $('#clip-grid').innerHTML = filtered.map((clip) => {
-        const review = getReview(clip.id);
-        const playing = state.current?.id === clip.id && !audio.paused;
-        let url,format;
-        try { url = clipPath(clip); format = clipFormat(clip); } catch { url = ''; }
-        const velocity = Number.isFinite(clip.velocity) ? Math.round(clip.velocity * 100) + '% vel' : '';
-        return '<article class="clip' + (state.current?.id === clip.id ? ' is-current' : '') + '" data-id="' + escapeHtml(clip.id) + '">' +
-          '<div class="clip-top"><button type="button" class="play clip-play" aria-label="' + (playing ? 'Pause ' : 'Play ') + escapeHtml(clip.label) + '">' + (playing ? pauseIcon : playIcon) + '</button><div class="clip-title"><h3>' + escapeHtml(clip.label) + '</h3><div class="clip-caption caption"><span class="voice-tag">' + escapeHtml(clip.voice) + '</span><span>' + escapeHtml(clip.noteName || 'MIDI ' + clip.note) + '</span><span>' + velocity + '</span>' + (clip.loop ? '<span class="hold-tag">Loop</span>' : '') + (Number.isFinite(clip.seconds) ? '<span>' + clip.seconds.toFixed(1) + 's</span>' : '') + '</div></div></div>' +
-          '<p class="clip-desc">' + escapeHtml(clip.description) + '</p><div class="macro-strip" aria-label="Recorded macro settings">' + ['GRAIN','DRIFT','SHAPE','STRIKE','BODY'].map((macro) => {
-            const value = Number.isFinite(clip.macros?.[macro]) ? Math.max(0,Math.min(1,clip.macros[macro])) : 0;
-            return '<div class="macro"><div class="macro-label"><span>' + macro + '</span><span class="macro-value">' + value.toFixed(2).replace(/^0/,'') + '</span></div><div class="macro-track" aria-hidden="true"><span style="width:' + (value * 100) + '%"></span></div></div>';
-          }).join('') + '</div><div class="clip-footer"><div class="verdicts" role="group" aria-label="Listening verdict for ' + escapeHtml(clip.label) + '">' + [['yes','Yes'],['unsure','Unsure'],['no','No']].map(([value,label]) => '<button type="button" class="verdict" data-verdict="' + value + '" aria-pressed="' + (review.verdict === value) + '">' + label + '</button>').join('') + '</div>' + (url ? '<a class="download" href="' + escapeHtml(url) + '" download="' + escapeHtml(clip.id + '-' + state.mode + '.' + format.extension) + '" aria-label="Download ' + escapeHtml(clip.label) + ', ' + (state.mode === 'matched' ? 'level matched' : 'raw') + ' ' + format.label + '">' + downloadIcon + format.label + '</a>' : '<span class="metric-help">Audio unavailable</span>') + '</div>' +
-          '<details class="clip-details"><summary>' + (review.note?.trim() ? 'Your note · ' : '') + 'Notes & measurements</summary><label>Listening note<textarea class="listening-note" aria-label="Listening note for ' + escapeHtml(clip.label) + '" placeholder="What works? What needs another listen?" maxlength="5000">' + escapeHtml(review.note || '') + '</textarea></label>' + metricsHtml(clip) + '</details></article>';
-      }).join('');
+      $('#clip-grid').innerHTML = filtered.map((clip) => clipHtml(clip)).join('');
     };
     const updatePlayback = () => {
       const playing = !!state.current && !audio.paused;
@@ -336,7 +381,7 @@
         const clip = state.clips.find((item) => item.id === card.dataset.id);
         const button = card.querySelector('.clip-play');
         button.innerHTML = current && playing ? pauseIcon : playIcon;
-        button.setAttribute('aria-label', (current && playing ? 'Pause ' : 'Play ') + clip.label);
+        button.setAttribute('aria-label', (current && playing ? 'Pause ' : 'Play ') + (card.dataset.comparison === 'true' ? revisionLabel(clip) + ', ' : '') + clip.label);
       }
       const status = !state.current ? 'READY' : state.loading ? 'LOADING' : audio.ended ? 'FINISHED' : playing ? 'PLAYING' : 'PAUSED';
       $('#player-state').textContent = status + ' / ' + (state.mode === 'matched' ? 'LEVEL MATCHED' : 'RAW') + (audio.loop ? ' / LOOP' : '');
@@ -365,7 +410,7 @@
       audio.pause();
       state.current = clip;
       state.pendingPosition = null;
-      $('#player-title').textContent = clip.label;
+      $('#player-title').textContent = (clip.comparisonGroup ? revisionLabel(clip) + ' / ' : '') + clip.label;
       $('#loop').disabled = !clip.loop;
       $('#loop').checked = false;
       audio.loop = false;
@@ -421,9 +466,19 @@
           clipPath(clip, 'raw'); clipPath(clip, 'matched');
         }
         state.clips = manifest.clips;
+        state.auditionRevision = manifest.auditionRevision || null;
+        const pairs = new Map();
+        for (const clip of state.clips.filter((item) => item.comparisonGroup === 'glass-softening' && item.comparisonPair)) {
+          const pair = pairs.get(clip.comparisonPair) || { id:clip.comparisonPair, title:clip.comparisonTitle || clip.comparisonPair };
+          if (clip.revision === 'r1') pair.original = clip;
+          if (clip.revision === 'r2') pair.revised = clip;
+          pairs.set(pair.id,pair);
+        }
+        state.comparisons = [...pairs.values()].filter((pair) => pair.original && pair.revised);
+        state.comparison = (state.comparisons.find((pair) => pair.revised.section === 'voices' && pair.revised.note === 72) || state.comparisons[0])?.id || null;
         state.loaded = true;
         if (Number.isFinite(manifest.sampleRate)) $('#format-label').textContent = 'Mono / ' + (manifest.sampleRate / 1000).toFixed(1) + ' kHz';
-        for (const element of $$('[data-count]')) element.textContent = state.clips.filter((clip) => clip.section === element.dataset.count).length;
+        for (const element of $$('[data-count]')) element.textContent = state.clips.filter((clip) => clip.section === element.dataset.count && !clip.comparisonOnly).length;
         render(); updateReviewCount();
       } catch (error) {
         state.loaded = false;
@@ -450,8 +505,10 @@
     $$('[data-mode]').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
     $('#voice-filter').addEventListener('change', (event) => { state.voice = event.target.value; render(); });
     $('#search').addEventListener('input', (event) => { state.search = event.target.value.trim().toLowerCase(); render(); });
+    $('#comparison-select').addEventListener('change', (event) => { state.comparison = event.target.value; renderComparison(); });
+    $('#revision-jump').addEventListener('click', () => { $('#glass-comparison').open = true; });
     $('#retry-manifest').addEventListener('click', loadManifest);
-    $('#clip-grid').addEventListener('click', (event) => {
+    $('#listening-room').addEventListener('click', (event) => {
       const card = event.target.closest('.clip');
       if (!card) return;
       const clip = state.clips.find((item) => item.id === card.dataset.id);
@@ -460,17 +517,20 @@
       if (verdictButton) {
         const previous = getReview(clip.id);
         const verdict = previous.verdict === verdictButton.dataset.verdict ? null : verdictButton.dataset.verdict;
-        state.reviews[clip.id] = { ...previous, verdict, updatedAt: new Date().toISOString() };
-        for (const button of card.querySelectorAll('.verdict')) button.setAttribute('aria-pressed', button.dataset.verdict === verdict);
+        state.reviews[reviewIdentity(clip.id)] = { ...previous, verdict, updatedAt: new Date().toISOString() };
+        for (const matching of $$('.clip').filter((item) => item.dataset.id === clip.id)) for (const button of matching.querySelectorAll('.verdict')) button.setAttribute('aria-pressed', button.dataset.verdict === verdict);
         saveReviews();
       }
     });
-    $('#clip-grid').addEventListener('input', (event) => {
+    $('#listening-room').addEventListener('input', (event) => {
       if (!event.target.matches('.listening-note')) return;
       const card = event.target.closest('.clip');
       const previous = getReview(card.dataset.id);
-      state.reviews[card.dataset.id] = { ...previous, note: event.target.value, updatedAt: new Date().toISOString() };
-      card.querySelector('summary').textContent = (event.target.value.trim() ? 'Your note · ' : '') + 'Notes & measurements';
+      state.reviews[reviewIdentity(card.dataset.id)] = { ...previous, note: event.target.value, updatedAt: new Date().toISOString() };
+      for (const matching of $$('.clip').filter((item) => item.dataset.id === card.dataset.id)) {
+        matching.querySelector('summary').textContent = (event.target.value.trim() ? 'Your note · ' : '') + 'Notes & measurements';
+        if (matching !== card) matching.querySelector('textarea').value = event.target.value;
+      }
       saveReviews();
     });
     $('#player-toggle').addEventListener('click', () => { if (state.current) selectClip(state.current); });
@@ -502,8 +562,15 @@
     audio.addEventListener('waiting', () => { state.loading = true; updatePlayback(); });
     audio.addEventListener('error', () => { if (state.current) showAudioError('This audio file could not be loaded or decoded. Check your connection, try the other playback level, or use the download link.'); });
     $('#export-verdicts').addEventListener('click', () => {
-      const reviews = state.clips.filter((clip) => { const review = getReview(clip.id); return review.verdict || review.note?.trim(); }).map((clip) => ({ id:clip.id, label:clip.label, section:clip.section, voice:clip.voice, ...getReview(clip.id) }));
-      const exportData = { schemaVersion:1, engine:'PRISM', exportedAt:new Date().toISOString(), source:location.href, verdicts:reviews };
+      const reviews = state.clips.filter((clip) => hasReview(getReview(clip.id))).map((clip) => ({ id:clip.id, label:clip.label, section:clip.section, voice:clip.voice, reviewKey:reviewIdentity(clip.id), ...(clip.revision ? { revision:clip.revision } : {}), ...getReview(clip.id) }));
+      const representedKeys = new Set(state.clips.map((clip) => reviewIdentity(clip.id)));
+      const archivedVerdicts = Object.entries(state.reviews).filter(([key,review]) => !representedKeys.has(key) && hasReview(review)).map(([key,review]) => {
+        const versioned = key.startsWith('prism-r2:');
+        const id = versioned ? key.slice('prism-r2:'.length) : key;
+        const revision = versioned ? 'r2' : (id.startsWith('glass_') || id === 'preset_small_prism') ? 'r1' : null;
+        return { id, reviewKey:key, label:'Saved review for ' + id + ' (audio not listed in this audition)', archived:true, ...(revision ? { revision } : {}), ...review };
+      });
+      const exportData = { schemaVersion:1, engine:'PRISM', exportedAt:new Date().toISOString(), source:location.href, verdicts:reviews, archivedVerdicts };
       const url = URL.createObjectURL(new Blob([JSON.stringify(exportData,null,2) + '\n'], {type:'application/json'}));
       const link = document.createElement('a'); link.href = url; link.download = 'prism-listening-verdicts-' + new Date().toISOString().slice(0,10) + '.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
     });
