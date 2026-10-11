@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -39,6 +40,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.MidiInput
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
@@ -48,8 +50,10 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.StreamFacts
@@ -205,6 +209,26 @@ fun PlayScreen(
         player.allOff()
         voiceCount = allocator.activeCount
         for (slot in glow.keys) extinguish(slot)
+    }
+
+    // A MIDI keyboard on the pads: `:shell`'s MidiPads picks the slot
+    // (under the map the chip below sets) and the note goes through this
+    // screen's own `hit` and `release`, so a keyboard note chokes, steals
+    // and glows exactly as a finger does. A kit can change under an open
+    // screen (a re-read sidecar), so the handler is read through
+    // rememberUpdatedState rather than captured once by the effect.
+    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+    var midiDevices by remember(entry.dir) { mutableStateOf<List<String>>(emptyList()) }
+    val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
+        MidiPads.handle(event, midiMap, onHit = ::hit, onRelease = ::release, onPanic = ::panic)
+    })
+    DisposableEffect(entry.dir) {
+        val midi = MidiInput(engineContext)
+        midi.open(object : MidiInput.Listener {
+            override fun onEvent(event: MidiWire.Event) = onMidi(event)
+            override fun onDevicesChanged(names: List<String>) { midiDevices = names }
+        })
+        onDispose { midi.close() }
     }
 
     /** Which bank the in-window grid is drawing, 0-based. Bank A until asked otherwise. */
@@ -422,8 +446,32 @@ fun PlayScreen(
             }
         }
 
-        Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
-            TapeText("TAP = PLAY · PADS IN A GROUP CHOKE EACH OTHER", TapeType.pixelSmall, scheme.ink3.tape)
+        if (midiDevices.isEmpty()) {
+            Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
+                TapeText("TAP = PLAY · PADS IN A GROUP CHOKE EACH OTHER", TapeType.pixelSmall, scheme.ink3.tape)
+            }
+        } else {
+            // The keyboard line takes the hint's place while one is plugged
+            // in: its name, and the chip that decides which pad a note is.
+            // MPC NOTES is the hardware's own map (36 is A02, the kick);
+            // A01 = C1 walks the slots, for a kit that is a scale.
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .tapeClick(label = "MIDI MAP ${midiMap.label}") { midiMap = midiMap.next() }
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(midiMap.label, TapeType.pixel, scheme.ink2.tape)
+                }
+            }
         }
     }
 
