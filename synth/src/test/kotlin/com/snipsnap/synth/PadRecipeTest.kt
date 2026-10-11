@@ -48,6 +48,7 @@ class PadRecipeTest {
         UndertowPatch("Shell Test", UndertowVoice.KNOCK, mapOf("DRAW" to 0.4f)),
         SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
         PitchwheelPatch("Wheel Test", PitchwheelVoice.RECOIL, mapOf("ADHESION" to 0.8f), midi = 55, velocity = 0.6f),
+        MurmurPatch("Mouth Test", MurmurVoice.KEY, mapOf("MOUTH" to 0.7f), midi = 55, velocity = 0.6f),
     )
 
     @Test
