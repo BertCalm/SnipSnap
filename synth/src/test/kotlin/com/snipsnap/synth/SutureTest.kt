@@ -92,6 +92,23 @@ class SutureTest {
     private fun temporalChange(a: Shape, b: Shape): Double =
         a.envelope.indices.sumOf { abs(a.envelope[it] - b.envelope[it]) }
 
+    /** Energy weighting keeps a tiny, almost inaudible band from satisfying a range check. */
+    private fun spectralEnergyChange(a: Shape, b: Shape): Double =
+        a.bands.indices.sumOf { abs(a.bands[it] - b.bands[it]) }
+
+    private fun rangeShape(samples: FloatArray, seconds: Float): Shape {
+        val material = shape(samples, rate = Dsp.RATE, seconds = seconds)
+        // Fifty milliseconds averages about thirteen C4 carrier cycles. Include
+        // the attack and complete observation, but do not reward waveform phase.
+        val envelope = DoubleArray((seconds * 20).toInt()) { i ->
+            val level = rms(samples, rate = Dsp.RATE, from = i * .05f, to = (i + 1) * .05f)
+            level * level
+        }
+        val total = envelope.sum().coerceAtLeast(1e-30)
+        for (i in envelope.indices) envelope[i] /= total
+        return Shape(material.bands, envelope)
+    }
+
     /** Narrow comb lines distinguish a numerical tick from broadband wooden contact. */
     private fun cadenceShare(samples: FloatArray, cadence: Double): Double {
         var n = 1
@@ -243,6 +260,78 @@ class SutureTest {
             }
         }
         println("SUTURE least matched-level macro difference: $leastChange")
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
+    @Test
+    fun `every timbral range changes material or timing throughout its travel`() {
+        val failures = mutableListOf<String>()
+        val seconds = 3f
+        val values = listOf(0f, .25f, .5f, .75f, 1f)
+        for (voice in SutureVoice.entries) {
+            val companions = Suture.macrosFor(voice).associate { it.name to it.neutral }
+            val wanted = Suture.frequencyFor(voice, companions.getValue("TUNE"))
+            for (macro in timbral) {
+                val shapes = values.map { value ->
+                    val played = Suture.play(voice, companions + (macro to value),
+                        Suture.Probe(durationSeconds = seconds))
+                    val finished = Suture.finish(played.raw, normalize = false)
+                    val detected = Pitch.detect(Snip(finished, channels = 1, sampleRate = Dsp.RATE))
+                    val detectedCents = detected?.let { FineTuning.cents(it.hz.toDouble(), wanted.toDouble()) }
+                    if (detectedCents == null || !detectedCents.isFinite() || abs(detectedCents) >= 50.0)
+                        failures += "$voice $macro $value C4 detector lost the root: ${detected?.hz} for $wanted"
+                    rangeShape(finished, seconds)
+                }
+                val fullSpectral = spectralEnergyChange(shapes.first(), shapes.last())
+                val fullTemporal = temporalChange(shapes.first(), shapes.last())
+                // These are fixed design targets for useful range, rather than
+                // a claim that an objective descriptor proves audibility.
+                if (fullSpectral < .16 && fullTemporal < .45) failures +=
+                    "$voice $macro full range is too subtle: $fullSpectral spectral L1, $fullTemporal temporal L1"
+                val quarters = shapes.zipWithNext().map { (low, high) ->
+                    spectralEnergyChange(low, high) to temporalChange(low, high)
+                }
+                for ((i, changes) in quarters.withIndex()) {
+                    val (spectral, temporal) = changes
+                    if (spectral < .02 && temporal < .06) failures +=
+                        "$voice $macro ${values[i]}/${values[i + 1]} has ineffective travel: " +
+                            "$spectral spectral L1, $temporal temporal L1"
+                }
+                println("SUTURE $voice $macro full range: $fullSpectral spectral L1, $fullTemporal temporal L1; " +
+                    "quarter ranges $quarters")
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
+    @Test
+    fun `timbral endpoints retain requested roots at the register limits`() {
+        val failures = mutableListOf<String>()
+        var worstRootCents = 0.0
+        var worstDetectedCents = 0.0
+        for (voice in SutureVoice.entries) {
+            val companions = Suture.macrosFor(voice).associate { it.name to it.neutral }
+            for (macro in timbral) for (value in listOf(0f, 1f)) for (tune in listOf(0f, 1f)) {
+                val macros = companions + (macro to value) + ("TUNE" to tune)
+                val wanted = Suture.frequencyFor(voice, tune)
+                val rendered = Suture.render(voice, macros)
+                val rootCents = FineTuning.cents(
+                    FineTuning.measuredHz(rendered.samples, Dsp.RATE, wanted, .12f, .45f), wanted.toDouble())
+                worstRootCents = maxOf(worstRootCents, abs(rootCents))
+                if (!rootCents.isFinite() || abs(rootCents) > 10.0) failures +=
+                    "$voice $macro $value TUNE $tune root is $rootCents cents from $wanted Hz"
+                val detected = Pitch.detect(rendered)
+                if (detected == null) failures += "$voice $macro $value TUNE $tune has no detected pitch"
+                else {
+                    val detectedCents = FineTuning.cents(detected.hz.toDouble(), wanted.toDouble())
+                    worstDetectedCents = maxOf(worstDetectedCents, abs(detectedCents))
+                    if (!detectedCents.isFinite() || abs(detectedCents) >= 50.0) failures +=
+                        "$voice $macro $value TUNE $tune detector lost the root: ${detected.hz} for $wanted"
+                }
+            }
+        }
+        println("SUTURE endpoint pitch: worst requested-root $worstRootCents cents, " +
+            "worst detected $worstDetectedCents cents")
         assertTrue(failures.isEmpty(), failures.joinToString("\n"))
     }
 

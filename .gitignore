@@ -164,3 +164,6 @@ testkit/SnipSnap Pitchwheel Kit/
 # Stoop's generated audio, manifest and listening page.
 testkit/stoop-audition/
 testkit/SnipSnap Stoop Kit/
+# REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
+testkit/revel-audition/
+testkit/SnipSnap Revel Kit/

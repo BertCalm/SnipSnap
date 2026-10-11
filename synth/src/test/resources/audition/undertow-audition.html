@@ -32,7 +32,7 @@
 'use strict';
 const data=window.UNDERTOW_MANIFEST,player=document.querySelector('#player'),now=document.querySelector('#now'),repeat=document.querySelector('#repeat');
 let selected=null,request=0,cancelPending=null,notes={};
-const storageKey='snipsnap-undertow-listening-v1';
+const storageKey='snipsnap-undertow-listening-v'+(data.voiceRevision||1);
 try{notes=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch(_){}
 function el(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify(notes))}catch(_){}}
@@ -94,7 +94,7 @@ for(const section of data.sections){
 }
 document.querySelector('#search').addEventListener('input',event=>{const query=event.target.value.trim().toLowerCase();for(const card of allCards)card.hidden=!card.dataset.search.includes(query);for(const group of allGroups)group.hidden=!Array.from(group.querySelectorAll('.card')).some(c=>!c.hidden);for(const section of allSections){section.hidden=!Array.from(section.querySelectorAll('.group')).some(g=>!g.hidden);if(query&&!section.hidden)section.open=true}});
 document.querySelector('#expand').addEventListener('click',event=>{const open=event.target.textContent==='Open all';allSections.forEach(s=>{s.open=open});event.target.textContent=open?'Close all':'Open all'});
-document.querySelector('#export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:'UNDERTOW',quick:data.quick,savedAt:new Date().toISOString(),notes},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),node=el('a');node.href=url;node.download='undertow-listening-notes.json';node.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+document.querySelector('#export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:'UNDERTOW',voiceRevision:data.voiceRevision||1,voiceRevisionDescription:data.voiceRevisionDescription||'Initial voice audition.',quick:data.quick,savedAt:new Date().toISOString(),notes},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),node=el('a');node.href=url;node.download='undertow-listening-notes.json';node.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 })();
 </script>
 </body>

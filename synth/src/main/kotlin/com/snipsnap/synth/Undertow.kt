@@ -42,15 +42,39 @@ object Undertow {
     private data class Shape(
         val controls: FloatArray, val duration: Double, val contact: Double,
         val breath: Double, val flutter: Double, val seal: Double, val body: Double,
+        val tap: Double = .47, val onset: Double = .024, val capacity: Double = 1.0,
+        val rimDrive: Double = .14, val rimLoss: Double = 15.0, val rimUpper: Double = 2.0,
+        val reedLoss: Double = 9.0,
+        val partials: DoubleArray = doubleArrayOf(1.0, .17, .14, .12),
+        val turbulence: Double = 1.0, val roughness: Double = 0.0,
+        val mounting: Double = 1.0, val shellLoss: Double = 8.0,
+        val shellProjection: DoubleArray = doubleArrayOf(1.0, .5, .33),
+        val flex: Double = 0.0, val radiation: Double = 0.0,
+        val relief: Double = 0.0, val sealLag: Double = .012,
     )
 
     private fun shape(voice: UndertowVoice) = when (voice) {
-        UndertowVoice.KNOCK -> Shape(floatArrayOf(.45f, .30f, .60f, .35f, .55f), .55, 1.25, .60, .35, .10, .70)
-        UndertowVoice.BREATH -> Shape(floatArrayOf(.55f, .40f, .35f, .55f, .40f), 1.30, .65, 1.10, .25, .10, .85)
-        UndertowVoice.FLUTTER -> Shape(floatArrayOf(.60f, .80f, .40f, .50f, .35f), 1.30, .75, .90, 1.50, .30, .75)
-        UndertowVoice.SEAL -> Shape(floatArrayOf(.65f, .55f, .60f, .60f, .20f), 1.40, .90, .90, .85, .90, .90)
-        UndertowVoice.HOLLOW -> Shape(floatArrayOf(.50f, .45f, .65f, .85f, .35f), 1.10, .70, .85, .40, .20, 1.40)
-        UndertowVoice.SURGE -> Shape(floatArrayOf(.85f, .65f, .70f, .65f, .30f), 1.40, 1.05, 1.00, 1.20, .55, 1.00)
+        // These are different inlet/material designs, not six gain settings on one reed.
+        UndertowVoice.KNOCK -> Shape(floatArrayOf(.45f, .30f, .60f, .35f, .55f), .25, 1.25, .52, .35, .10, .70,
+            tap = .18, rimDrive = .22, rimLoss = 7.0, rimUpper = 3.0, reedLoss = 28.0,
+            partials = doubleArrayOf(1.0, .12, .34, .06), mounting = 3.0)
+        UndertowVoice.BREATH -> Shape(floatArrayOf(.55f, .40f, .35f, .55f, .40f), 1.30, .45, 1.10, .25, .10, .60,
+            onset = .065, rimDrive = .045, rimLoss = 32.0,
+            partials = doubleArrayOf(1.0, .035, .018, .01), turbulence = 24.0, shellLoss = 14.0)
+        UndertowVoice.FLUTTER -> Shape(floatArrayOf(.60f, .80f, .40f, .50f, .35f), 1.30, .75, .90, 1.50, -1.8, .75,
+            capacity = .72, rimDrive = .09, partials = doubleArrayOf(1.0, .38, .22, .12),
+            turbulence = 6.0, mounting = 3.0, flex = 1.0, radiation = .90)
+        UndertowVoice.SEAL -> Shape(floatArrayOf(.65f, .55f, .60f, .60f, .20f), 1.40, .90, .80, .85, 4.3, .90,
+            rimDrive = .14, partials = doubleArrayOf(1.0, .08, .50, .22), mounting = 5.0,
+            radiation = .85, relief = .92, sealLag = .065)
+        UndertowVoice.HOLLOW -> Shape(floatArrayOf(.50f, .45f, .65f, .85f, .35f), .75, .70, .55, .40, .20, 1.40,
+            rimDrive = .12, rimLoss = 12.0, reedLoss = 13.0,
+            partials = doubleArrayOf(1.0, .25, .06, .03), mounting = 30.0, shellLoss = .8,
+            shellProjection = doubleArrayOf(1.0, 1.1, .09))
+        UndertowVoice.SURGE -> Shape(floatArrayOf(.85f, .65f, .70f, .65f, .30f), 1.40, 1.05, 1.00, 1.20, .55, 1.00,
+            tap = .32, onset = .055, rimDrive = .10,
+            partials = doubleArrayOf(1.0, .62, .46, .34), turbulence = 10.0, roughness = .75,
+            mounting = 5.0, shellLoss = 6.0)
     }
 
     fun macrosFor(voice: UndertowVoice): List<MacroSpec> {
@@ -177,9 +201,12 @@ object Undertow {
         val refractory = DoubleArray(CHAMBERS)
         val contactPulse = DoubleArray(CHAMBERS)
         val pulseTarget = DoubleArray(CHAMBERS)
-        val tone = Array(CHAMBERS) { Mode(hz * (it + 1), 9.0 + 2.0 * it + 5.0 * leak) }
-        val rim = Array(CHAMBERS * 2) { j -> Mode(hz * (j / 2 + 1) * (if (j % 2 == 0) 1.0 else 2.0), 9 + 17.0 * (1 - weight) + 4 * (j % 2)) }
-        val body = Array(BODY) { j -> Mode(hz * (1 + j) * (1 + .10 * (1 - spiral) * j), 12 - 7 * spiral + 4 * j) }
+        val tone = Array(CHAMBERS) { Mode(hz * (it + 1), (if (held) minOf(9.0, sh.reedLoss) else sh.reedLoss) + 2.0 * it + 5.0 * leak) }
+        val rim = Array(CHAMBERS * 2) { j -> Mode(hz * (j / 2 + 1) * (if (j % 2 == 0) 1.0 else sh.rimUpper), sh.rimLoss + 10.0 * (1 - weight) + 4 * (j % 2)) }
+        val body = Array(BODY) { j -> Mode(hz * (1 + j) * (if (held) 1.0 else 1 + .10 * (1 - spiral) * j), sh.shellLoss + 4 * (1 - spiral) + 4 * j) }
+        // A pressure-powered leather flexure changes the opening itself. It is never
+        // mixed into the audio as an independent tremolo oscillator or noise source.
+        val flexure = Array(CHAMBERS) { j -> Mode((12 + 14 * flap) * (1 + .11 * j), 8.0) }
         val seed = Dsp.seedFor("UNDERTOW", voice, midiFor(voice, m.getValue("TUNE")), options.seedContext)
         val noise = Dsp.Noise(seed)
         val periodicNoise = if (held) FloatArray(cycleFrames * Dsp.OVERSAMPLE) { noise.next() } else FloatArray(0)
@@ -201,9 +228,10 @@ object Undertow {
         private fun drive(time: Double): Double {
             if (eventEnergy <= 0.0) return 0.0
             if (options.driveStopSeconds != null && time >= stop) return 0.0
-            val rise = smooth((time / (.012 + .018 * weight)).coerceIn(0.0, 1.0))
+            val rise = smooth((time / (sh.onset * (.65 + .7 * weight))).coerceIn(0.0, 1.0))
             val release = if (held) 1.0 else smooth(((stop - time) / .16).coerceIn(0.0, 1.0))
-            val capacity = (.30 + .75 * draw) * (.30 + .70 * eventEnergy)
+            val swelling = if (voice == UndertowVoice.SURGE && !held) .62 + .38 * smooth((time / (stop * .7)).coerceIn(0.0, 1.0)) else 1.0
+            val capacity = (.30 + .75 * draw) * (.30 + .70 * eventEnergy) * sh.capacity * swelling
             // HOLD's powered maintenance bypass preserves a pitched reed at soft/high-leak
             // corners. It scales to zero for zero event energy and adds no retriggered contact.
             val maintenance = if (held) (.27 + .08 * leak + .08 * draw) * minOf(1.0, eventEnergy / .15) else 0.0
@@ -229,7 +257,7 @@ object Undertow {
                 val k = stiffness * (1 + .12 * j)
                 val damping = 2 * sqrt(k * mass) * (.34 - .19 * flap + if (held) .55 else 0.0)
                 val flutter = if (held) 0.0 else 125 * flap * flap * sh.flutter * local[j] * area[j]
-                val boundary = .47 + .065 * j + .04 * weight
+                val boundary = sh.tap + .065 * j + .04 * weight
                 val penetration = max(0.0, x[j] - boundary)
                 val contactWindow = exp(-penetration * penetration / .0025)
                 // The ceramic passes a compliant rim before reaching the distant seal seat.
@@ -238,7 +266,10 @@ object Undertow {
                     (6500 * penetration + 20 * max(0.0, v[j])) * contactWindow else 0.0
                 // The distant compliant travel stop keeps seal-seat motion bounded.
                 val collision = 9000 * max(0.0, x[j] - (1.04 - .03 * j)) + 65 * max(0.0, v[j]) * smooth(((x[j] - .95) / .08).coerceIn(0.0, 1.0))
-                val force = 1450 * local[j] - k * x[j] - rimReaction - collision
+                // A sealed cavity equalizes across SEAL's compliant seat. Reducing the
+                // flap's pressure load lets its spring reopen it and redirects shared flow.
+                val pressureLoad = local[j] * (1 - (if (held) 0.0 else sh.relief) * sealMix[j])
+                val force = 1450 * pressureLoad - k * x[j] - rimReaction - collision
                 val trial = v[j] + dt * force / mass
                 // Implicit loss avoids explicit cubic-damping instability at high speed.
                 // The exponential gain is powered aerodynamic work, absent without pressure.
@@ -248,12 +279,17 @@ object Undertow {
                 // A reciprocal velocity exchange loads mechanics and lets shell vibration disturb a catch.
                 val b = body[j % BODY]
                 val mechanicalVelocity = v[j] * .008 * sqrt(mass)
-                val exchange = (mechanicalVelocity - b.im) * (.008 + .018 * spiral) * flap * controlFrames / CONTROL
-                v[j] -= exchange / (.008 * sqrt(mass))
-                b.im += exchange
+                if (!held) {
+                    // HOLLOW's mounting relaxes with the piston, isolating the stored
+                    // body ring from the damped flaps after its powered draw ends.
+                    val engagement = if (voice == UndertowVoice.HOLLOW) .035 + .965 * minOf(1.0, extraction / .15) else 1.0
+                    val exchange = (mechanicalVelocity - b.im) * (.008 + .018 * spiral) * flap * controlFrames / CONTROL * engagement
+                    v[j] -= exchange / (.008 * sqrt(mass))
+                    b.im += exchange
+                }
                 refractory[j] = max(0.0, refractory[j] - dt)
                 if (old < boundary && x[j] >= boundary && v[j] > 0 && refractory[j] <= 0.0) {
-                    val strength = (v[j] * sqrt(mass) * .011 * sh.contact).coerceIn(0.0, .16)
+                    val strength = (v[j] * sqrt(mass) * .011 * sh.contact).coerceIn(0.0, .06)
                     if (options.contactsEnabled) {
                         pulseTarget[j] += strength
                         if (options.recordDiagnostics && frame >= recordFrom) contacts += ContactEvent(time.toFloat(), j, strength.toFloat(), sealed[j])
@@ -264,9 +300,10 @@ object Undertow {
                 // a seal; elastic return reopens it as extraction/pressure relax, without chatter.
                 val closing = .97 - .12 * sh.seal + .015 * j
                 if (!sealed[j] && x[j] > closing) sealed[j] = true
-                if (sealed[j] && x[j] < closing - .15) sealed[j] = false
-                sealMix[j] += ((if (sealed[j]) .95 - .16 * leak else 0.0) - sealMix[j]) * (1 - exp(-dt / .012))
-                area[j] = (.16 + .84 * smooth((x[j] / .65).coerceIn(0.0, 1.0))) * (1 - sealMix[j])
+                if (sealed[j] && x[j] < closing - (if (sh.relief > 0 && !held) .25 else .15)) sealed[j] = false
+                sealMix[j] += ((if (sealed[j]) .95 - .16 * leak else 0.0) - sealMix[j]) * (1 - exp(-dt / sh.sealLag))
+                val flexOpening = if (held) 1.0 else 1 - sh.flex * .85 * smooth(((flexure[j].re + .24) / .48).coerceIn(0.0, 1.0))
+                area[j] = (.16 + .84 * smooth((x[j] / .65).coerceIn(0.0, 1.0))) * (1 - sealMix[j]) * flexOpening
                 // .018 is a documented imperfect-rim leak, in addition to reservoir bypass.
                 flows[j] = (.18 - .035 * spiral) * (area[j] + .018 + .04 * leak) * sqrt(local[j])
                 if (!x[j].isFinite() || !v[j].isFinite() || !local[j].isFinite()) { x[j] = 0.0; v[j] = 0.0; local[j] = 0.0; flows[j] = 0.0; sealed[j] = false }
@@ -293,7 +330,7 @@ object Undertow {
                 // Finite ~1 ms contact force, integrated into modes at the oversampled clock.
                 contactPulse[j] += (pulseTarget[j] - contactPulse[j]) * .025
                 pulseTarget[j] *= .975
-                val impulse = contactPulse[j] * .010
+                val impulse = contactPulse[j] * sh.rimDrive
                 for (r in 0..1) {
                     val mode = rim[2 * j + r]
                     mode.im += impulse * (if (r == 0) 1.0 else .32 * (1 - .45 * weight))
@@ -310,22 +347,43 @@ object Undertow {
                 val quietSeed = if (held && frame > INTERNAL_RATE) 0.0 else noiseLow * flow * .000045
                 t.im += quietSeed + impulse * .09
                 t.step(feedback)
-                airflowSample += t.re * sh.breath * (if (j == 0) 1.0 else .24 / sqrt((j + 1).toDouble()))
-                airflowSample += noiseLow * flow * (.025 + .04 * leak) / (j + 1)
+                // Moving leather also shutters radiation at the same opening. The
+                // resonator continues to ring; flow and radiation both follow its valve.
+                airflowSample += t.re * sh.breath * sh.partials[j] * (1 - sh.radiation + sh.radiation * area[j])
+                airflowSample += (noiseLow + sh.roughness * .32 * (texture - noiseLow)) * flow * (.025 + .04 * leak) * sh.turbulence / (j + 1)
+                if (sh.flex > 0 && !held) {
+                    val f = flexure[j]
+                    f.im += noiseLow * flow * .000015 + impulse * .005
+                    f.step(480 * flow * (.4 + flap))
+                }
                 // Reciprocal, norm-contracting exchanges connect every chamber to the shell.
                 val b = body[j % BODY]
-                val amount = (.20 + .65 * spiral) / INTERNAL_RATE
+                val engagement = if (voice == UndertowVoice.HOLLOW && !held) .035 + .965 * minOf(1.0, extraction / .15) else 1.0
+                // Settled HOLD uses harmonic mounts and isotropic exchange, without
+                // cross-register or slow-clock acoustic reaction that drifts free phase.
+                // One-shots retain detuned modes and the full mechanical reaction.
+                val amount = if (held && j >= BODY) 0.0 else (.20 + .65 * spiral) * sh.mounting * engagement / INTERNAL_RATE
                 val exchange = if (options.contactsEnabled) (rim[j * 2].im - b.im) * amount else 0.0
                 rim[j * 2].im -= exchange
                 b.im += exchange
+                if (held && options.contactsEnabled) {
+                    val displacement = (rim[j * 2].re - b.re) * amount
+                    rim[j * 2].re -= displacement
+                    b.re += displacement
+                }
                 // The same flow resonator is loaded by the shell, not a post-output echo.
                 val loading = (t.im - b.im) * amount * .25
                 t.im -= loading
                 b.im += loading
+                if (held) {
+                    val displacement = (t.re - b.re) * amount * .25
+                    t.re -= displacement
+                    b.re += displacement
+                }
             }
             for (j in body.indices) {
                 body[j].step()
-                shellSample += body[j].re * (1.0 + 1.5 * spiral) * sh.body / (j + 1)
+                shellSample += body[j].re * (1.0 + 1.5 * spiral) * sh.body * sh.shellProjection[j]
             }
             // Flow-derived texture may acquire a small finite-record bias. A linear 8 Hz
             // blocker on each pickup preserves the sum of raw stems and the pitched root.
@@ -354,13 +412,14 @@ object Undertow {
             for (mode in tone) e += mode.energy()
             for (mode in rim) e += mode.energy()
             for (mode in body) e += mode.energy()
+            for (mode in flexure) e += mode.energy()
             return e
         }
 
         fun stateGroups(): List<DoubleArray> = listOf(
             doubleArrayOf(suction) + isolated + local,
             x + v + area + flows + audibleFlow + sealMix + refractory + sealed.map { if (it) 1.0 else 0.0 }.toDoubleArray(),
-            (tone + rim + body).flatMap { listOf(it.re, it.im) }.toDoubleArray() + contactPulse + pulseTarget,
+            (tone + rim + body + flexure).flatMap { listOf(it.re, it.im) }.toDoubleArray() + contactPulse + pulseTarget,
             doubleArrayOf(noiseLow),
             dcInput + dcOutput,
         )

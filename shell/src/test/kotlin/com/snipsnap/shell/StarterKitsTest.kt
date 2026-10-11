@@ -12,6 +12,9 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.StoopVoice
+import com.snipsnap.synth.Revel
+import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.Tessera
 import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.TesseraVoice
@@ -146,6 +149,27 @@ class StarterKitsTest {
                 assertEquals(source.recipe, replayed.pad.recipe, "source, answer, chord and note survive replay")
                 assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved groove regenerates exactly")
             }
+            if (starter.id == "revel") {
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<RevelPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the ensemble supplies its own motion")
+                    assertEquals(Revel.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot)
+                    patch
+                }
+                assertEquals(RevelVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(DrumClass.LOOP, model.kit.pads.last().drumClass)
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "saved phrase and microphone state survive replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved ensemble regenerates exactly")
+            }
             assertEquals(starter, StarterKits.byId(starter.id))
         }
         assertEquals(null, StarterKits.byId("nope"))
@@ -171,7 +195,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "tessera", "pitchwheel", "stoop", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "stoop", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -190,6 +214,10 @@ class StarterKitsTest {
         assertEquals("STOOP", stoop.displayName)
         assertFalse(stoop.seeded, "STOOP is a fixed dry groove kit")
         assertEquals(KeySpec.parse("Cminpent"), stoop.key)
+        val revel = StarterKits.byId("revel")!!
+        assertEquals("REVEL", revel.displayName)
+        assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")
+        assertEquals(KeySpec.parse("Cminpent"), revel.key)
     }
 
     @Test

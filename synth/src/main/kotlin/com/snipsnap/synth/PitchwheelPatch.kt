@@ -8,6 +8,8 @@ import com.snipsnap.json.JsonValue
  * A saved wooden wheel. Each render rebuilds wheel, fingers, resin and thermal state
  * from the deterministic recipe. Root note, gesture velocity and model version
  * travel beside the macros; TUNE is a relative adjustment to the saved root.
+ * New recipes use the current model, while JSON without a model retains the
+ * original renderer so previously saved pads regenerate their original sound.
  */
 data class PitchwheelPatch(
     override val name: String,
@@ -23,12 +25,16 @@ data class PitchwheelPatch(
             "PITCHWHEEL midi out of ${Pitchwheel.MIDI_MIN}..${Pitchwheel.MIDI_MAX}: $midi"
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "PITCHWHEEL velocity out of 0..1: $velocity" }
-        require(model == Pitchwheel.MODEL_VERSION) { "unsupported pitchwheel model $model" }
+        require(model in LEGACY_MODEL..Pitchwheel.MODEL_VERSION) { "unsupported pitchwheel model $model" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Pitchwheel.render(voice, macros, midi, velocity)
+    override fun render() = if (model == LEGACY_MODEL) {
+        PitchwheelV1.render(voice, macros, midi, velocity)
+    } else {
+        Pitchwheel.render(voice, macros, midi, velocity)
+    }
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -42,11 +48,12 @@ data class PitchwheelPatch(
     companion object {
         const val ENGINE = "PITCHWHEEL"
         const val VERSION = Patches.VERSION
+        const val LEGACY_MODEL = 1
 
         fun fromJsonValue(value: JsonValue): Patch {
             val obj = value.obj()
-            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: Pitchwheel.MODEL_VERSION
-            if (model != Pitchwheel.MODEL_VERSION) throw JsonException("unsupported pitchwheel model $model")
+            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: LEGACY_MODEL
+            if (model !in LEGACY_MODEL..Pitchwheel.MODEL_VERSION) throw JsonException("unsupported pitchwheel model $model")
             val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Pitchwheel.DEFAULT_MIDI
             val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
             return Patches.decode(value, ENGINE, { n -> PitchwheelVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->

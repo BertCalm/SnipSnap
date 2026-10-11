@@ -232,6 +232,7 @@ object Velocity {
         is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
         is SuturePatch -> Suture.macrosFor(patch.voice)
+        is RevelPatch -> Revel.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
         is StoopPatch -> Stoop.macrosFor(patch.voice)
@@ -306,7 +307,7 @@ object Velocity {
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is StoopPatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is StoopPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -338,9 +339,10 @@ object Velocity {
                 is NimbusPatch -> Nimbus.render(patch.voice, patch.macros, velocity = v)
                 // COROLLA scales the pull and contact energy; PULL keeps the playing character.
                 is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
+                is RevelPatch -> Revel.render(patch.voice, patch.macros, velocity = v, configuration = patch.configuration)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
-                is PitchwheelPatch -> Pitchwheel.render(patch.voice, patch.macros, patch.midi, velocity = v)
+                is PitchwheelPatch -> patch.copy(velocity = v).render()
                 // Source registration, shadow gesture and chord voicing belong to this exact recipe.
                 is StoopPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)

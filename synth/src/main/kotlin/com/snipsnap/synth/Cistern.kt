@@ -68,6 +68,8 @@ object Cistern {
      * different. These are imagined instrument properties, not measured skins.
      * Radiation weights are separate from force projections: neither is a
      * post-render EQ, and wet modal mass/loss acts before either reaches audio.
+     * A small root-radiation lift keeps the played note clear; the brightest
+     * surfaces lose upper ringing slightly sooner without shortening the root.
      */
     private class Profile(
         val ratios: DoubleArray, val radiation: DoubleArray, val excitation: DoubleArray,
@@ -83,9 +85,9 @@ object Cistern {
         // A clear elastic note leads; the restrained field gives a few answers.
         CisternVoice.FIRST -> Profile(
             doubleArrayOf(1.0, 1.58, 2.34, 3.08, 4.18, 5.40, 6.68, 7.96, 9.30, 10.60),
-            doubleArrayOf(.94, .80, .90, .82, .77, .66, .61, .54, .45, .40),
+            doubleArrayOf(1.01, .80, .90, .82, .77, .66, .61, .54, .45, .40),
             doubleArrayOf(1.0, .98, 1.02, .90, .86, .80, .72, .64, .58, .52),
-            1.12, 1.48, .21, 1.20, 2.3, 0.0,
+            1.12, 1.62, .21, 1.20, 2.3, 0.0,
             1.12, .78, .82, .65, .075,
             .70, .07, .32, .025, 3.0, .68, .025,
             doubleArrayOf(.57, .94, 1.46), doubleArrayOf(.17, .12, .08), 12.0,
@@ -93,7 +95,7 @@ object Cistern {
         // Rounded, nearly harmonic drop notes outweigh the soft initiating hit.
         CisternVoice.DRIP -> Profile(
             doubleArrayOf(1.0, 2.02, 3.01, 4.12, 5.07, 6.16, 7.20, 8.28, 9.36, 10.45),
-            doubleArrayOf(.98, .78, .56, .47, .38, .31, .26, .21, .17, .14),
+            doubleArrayOf(1.05, .78, .56, .47, .38, .31, .26, .21, .17, .14),
             doubleArrayOf(1.0, 1.12, .98, .86, .74, .64, .56, .48, .42, .35),
             2.10, 2.40, .38, 1.10, 2.7, 0.0,
             .43, 1.22, 1.03, 1.15, .18,
@@ -103,9 +105,9 @@ object Cistern {
         // A coarse surface exposes unequal partials as the chain spreads.
         CisternVoice.CASCADE -> Profile(
             doubleArrayOf(1.0, 1.43, 2.07, 2.71, 3.46, 4.33, 5.36, 6.48, 7.76, 9.10),
-            doubleArrayOf(.92, .86, .74, .98, .83, .78, .69, .58, .51, .44),
+            doubleArrayOf(.99, .86, .74, .98, .83, .78, .69, .58, .51, .44),
             doubleArrayOf(1.0, 1.12, .91, 1.15, .94, .85, .78, .66, .60, .52),
-            1.45, 1.75, .24, 1.45, 3.0, 0.0,
+            1.45, 1.92, .24, 1.45, 3.0, 0.0,
             .91, 1.02, .80, .82, .11,
             1.0, .18, .72, .0, .95, 1.0, .012,
             doubleArrayOf(.48, .82, 1.31), doubleArrayOf(.23, .17, .12), 20.0,
@@ -113,7 +115,7 @@ object Cistern {
         // Nearby low modes and a broad wet contact give a heavy yielding skin.
         CisternVoice.POOL -> Profile(
             doubleArrayOf(1.0, 1.29, 1.84, 2.46, 3.14, 3.91, 4.77, 5.72, 6.78, 7.92),
-            doubleArrayOf(1.02, 1.22, .82, .58, .47, .37, .29, .24, .18, .14),
+            doubleArrayOf(1.06, 1.22, .82, .58, .47, .37, .29, .24, .18, .14),
             doubleArrayOf(1.0, 1.30, 1.10, .88, .74, .62, .52, .44, .36, .30),
             1.80, 2.10, .44, 2.35, 4.2, .20,
             .83, 1.15, 1.28, 1.40, .20,
@@ -123,7 +125,7 @@ object Cistern {
         // Light narrow impacts keep widely spaced high modes articulated.
         CisternVoice.RIPPLE -> Profile(
             doubleArrayOf(1.0, 1.88, 2.76, 3.99, 5.27, 6.65, 8.14, 9.73, 11.44, 13.25),
-            doubleArrayOf(.90, 1.02, .88, 1.10, .93, .85, .77, .66, .57, .48),
+            doubleArrayOf(1.15, 1.02, .88, 1.10, .93, .85, .77, .66, .57, .48),
             doubleArrayOf(1.0, 1.24, 1.08, 1.20, 1.10, .98, .87, .78, .68, .60),
             1.72, 2.30, .18, .90, 1.7, 0.0,
             .93, .86, .56, .44, .055,
@@ -133,7 +135,7 @@ object Cistern {
         // A loaded, dull onset gives way to clearer contacts as outlets empty.
         CisternVoice.RECOVERY -> Profile(
             doubleArrayOf(1.0, 1.70, 2.54, 3.41, 4.43, 5.61, 6.92, 8.34, 9.92, 11.65),
-            doubleArrayOf(.96, .86, .98, .87, .76, .68, .59, .52, .44, .37),
+            doubleArrayOf(1.03, .86, .98, .87, .76, .68, .59, .52, .44, .37),
             doubleArrayOf(1.0, 1.08, 1.12, 1.0, .90, .81, .72, .64, .55, .48),
             1.52, 1.72, .23, 1.70, 3.8, .13,
             .94, 1.10, .91, .88, .14,

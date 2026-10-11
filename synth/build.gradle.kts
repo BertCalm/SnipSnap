@@ -33,6 +33,8 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // Parallel oversampled drone renders exceed Gradle's 512 MiB worker default.
+    maxHeapSize = "2g"
     testLogging {
         events("passed", "failed", "skipped")
     }
@@ -46,6 +48,18 @@ tasks.register<JavaExec>("generateStoopAudition") {
     mainClass.set("com.snipsnap.synth.StoopAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/stoop-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
+/** REVEL's dry acceptance matrix and standalone listening page; -Pquick selects first-listen evidence. */
+tasks.register<JavaExec>("generateRevelAudition") {
+    group = "distribution"
+    description = "Render REVEL raw/matched WAVs, shared-performance mic/source taps, diagnostics and a standalone audition page under testkit/revel-audition/. -Pquick selects the smaller first-listen pack."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RevelAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/revel-audition")
     if (project.hasProperty("quick")) args("--quick")
 }
 
@@ -466,6 +480,7 @@ tasks.register<JavaExec>("generateSutureAudition") {
     args("${rootDir}/testkit/" + if (firstListen) "suture-first-listen" else "suture-audition")
     if (firstListen) args("--first-listen")
     (project.findProperty("sutureSections") as String?)?.let { args("--sections=$it") }
+    (project.findProperty("suturePrevious") as String?)?.let { args("--previous=$it") }
 }
 
 /** Export the sixteen dry THAW acceptance pads as an MPC program folder. */
