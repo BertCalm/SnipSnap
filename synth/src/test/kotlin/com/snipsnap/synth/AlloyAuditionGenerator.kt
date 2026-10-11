@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Loudness
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
@@ -365,7 +366,9 @@ object AlloyAuditionGenerator {
         }
         fun executableClasses(cls: Class<*>): List<Class<*>> =
             listOf(cls) + cls.declaredClasses.flatMap { executableClasses(it) }
-        val compiled = listOf(Alloy::class.java, AlloyConfig::class.java, AlloyAuditionGenerator::class.java)
+        // Include the shared stages that shape the rendered and written bytes, not only ALLOY's own classes.
+        val compiled = listOf(Alloy::class.java, AlloyConfig::class.java, AlloyAuditionGenerator::class.java,
+            Dsp::class.java, Tide::class.java, Resampler::class.java, AuditionLevel::class.java, WavWriter::class.java)
             .flatMap { executableClasses(it) }.distinctBy { it.name }.sortedBy { it.name }.map { cls ->
             val bytes = cls.getResourceAsStream("/${cls.name.replace('.', '/')}.class")?.use { it.readBytes() }
                 ?: error("cannot record compiled provenance for ${cls.name}")

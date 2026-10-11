@@ -365,8 +365,10 @@
 
   async function switchFusionClip(id) {
     const clip = clipById(id);
-    if (!clip || id === state.selected?.id) return;
+    if (!clip) return;
+    // Advance the token first so an A→B→A click sequence cancels B's pending load.
     const token = ++state.selectionToken;
+    if (id === state.selected?.id) return;
     try {
       if (state.playing) await ensureAudioContext().resume();
       const buffer = await getBuffer(clip, true);

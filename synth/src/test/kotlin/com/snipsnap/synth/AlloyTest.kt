@@ -13,12 +13,24 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** Dry numerical and causal gates; the generated audition remains the timbral approval gate. */
 class AlloyTest {
     private val drums = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
         DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
+
+    @Test
+    fun `an interrupted render stops instead of finishing beside its replacement`() {
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException> { Alloy.render(AlloyVoice.KEY) }
+        } finally {
+            Thread.interrupted()
+        }
+        assertTrue(Alloy.render(AlloyVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 
     @Test
     fun `six dry voices reproduce complete inputs and ignore macro insertion order`() {

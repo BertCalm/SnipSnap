@@ -269,7 +269,14 @@ object Alloy {
         fun diagnostics() = Diagnostics(peak, maxPm, maxProjection, hz, rate)
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the long loops stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("ALLOY render no longer wanted")
+    }
+
     private fun finish(raw: FloatArray, rate: Int): FloatArray {
+        stopIfUnwanted()
         Tide.bandLimit(raw, rate)
         val four = if (rate == INTERNAL_RATE) raw else Resampler.resample(Snip(raw, channels = 1, sampleRate = rate), INTERNAL_RATE).samples
         return Dsp.decimate(four, RATE)
@@ -303,7 +310,7 @@ object Alloy {
         if (held) {
             var before = engine.state()
             do {
-                repeat(period * oversample) { engine.tick() }
+                repeat(period * oversample) { if (it % 8192 == 0) stopIfUnwanted(); engine.tick() }
                 val after = engine.state()
                 stateError = after.indices.maxOf { abs(after[it] - before[it]) }
                 before = after; cycles++
@@ -317,6 +324,7 @@ object Alloy {
         val raw = FloatArray((frames + 256) * oversample)
         val body = FloatArray(raw.size); val direct = FloatArray(raw.size); val projection = FloatArray(raw.size)
         for (i in raw.indices) {
+            if (i % 8192 == 0) stopIfUnwanted()
             raw[i] = engine.tick(); body[i] = engine.bodySample; direct[i] = engine.directSample; projection[i] = engine.conditionedSample
         }
         val out = finish(raw, rate).copyOf(frames)
