@@ -21,6 +21,9 @@ import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.Prism
+import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.Revel
@@ -55,7 +58,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and MURMUR) override
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, MURMUR and PRISM) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -87,7 +90,12 @@ object SynthCommand {
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and MURMUR, got $engine")
+                PrismPatch.ENGINE -> {
+                    val prismVoice = PrismVoice.valueOf(voice)
+                    val root = Prism.rootMidi(prismVoice)
+                    root..(root + Prism.TUNE_SEMITONES)
+                }
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, MURMUR and PRISM, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -137,6 +145,11 @@ object SynthCommand {
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
+                is PrismPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (midiOverride - Prism.rootMidi(patch.voice)) / Prism.TUNE_SEMITONES.toFloat()),
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
