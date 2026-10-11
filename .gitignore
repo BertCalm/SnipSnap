@@ -160,3 +160,7 @@ testkit/SnipSnap Tessera Kit/
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
+
+# Embouchure dry clips, probes, loops and exports are reproduced by its audition task.
+testkit/embouchure-audition/
+testkit/SnipSnap Embouchure Kit/

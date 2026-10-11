@@ -261,7 +261,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 17 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 18 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -275,6 +275,17 @@ fixed until then.
 [The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
 six isolated catches and includes the previous defaults for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
+
+EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
+lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
+with relative TUNE, native velocity, saved playing gestures and settled HOLD
+loops. Eight dry starting presets and a sixteen-pad C minor pentatonic kit
+are available in SYNTH, FRESH TAPE and the CLI. Run
+`./gradlew :synth:generateEmbouchureAudition` for the complete listening page,
+control matrix and MPC 2/3 kit under `testkit/embouchure-audition/`.
+The dry identity awaits owner listening approval before preset expansion;
+[implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
+driver approximations, recipes and held-sample export limits.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum

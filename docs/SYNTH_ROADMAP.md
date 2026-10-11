@@ -227,6 +227,36 @@ that approval.
 Numerical verification, phone/MPC validation and release naming remain
 separate acceptance work.
 
+### EMBOUCHURE — effort changes how the note speaks
+
+A first dry prototype supplies a finite virtual-player gesture to one pitched
+resonator through a reed-like, lip-like or friction driver. REED, BRASS, BASS,
+WHISTLE, BOW and SOFT share EFFORT, REED, SHAPE, GRAIN and LENGTH; HOLD supplies
+continuing energy for a settled loop, and TUNE is the host note control.
+WHISTLE is explicitly a clear air/reed-derived approximation. Each independent
+mono render starts fresh; source power stops before a finite note's passive
+release. Velocity scales player input within the selected EFFORT character.
+
+The initial eight original presets are Leaning Reed, Muted Bell, Breath Pocket,
+Soft Entry, Short Overblow, Relaxed Bow, Narrow Air and Held Effort. They save
+MIDI base, velocity, renderer model, fixed driver and a named smooth player
+profile beside the macro map. TUNE spans 24 semitones above the saved base;
+both base and played note must fit the voice's calibrated register. CLI
+`--midi` selects the played note directly by resetting TUNE to zero.
+
+`SynthKits.embouchure()` carries eight REED pentatonic notes and the eight dry
+presets, all with recipes. The `embouchure` FRESH TAPE starter, normal SYNTH
+picker, user presets, native velocity variants, CLI rendering and host MPC
+export use the same source. Finite notes are TONAL, HOLD is LOOP.
+`./gradlew :synth:generateEmbouchureAudition` writes the listening pack under
+`testkit/embouchure-audition/`. [EMBOUCHURE](EMBOUCHURE.md) records configuration,
+routing and audition conventions; the attached brief is preserved under
+[engineering/embouchure-engine-spec.md](engineering/embouchure-engine-spec.md).
+The separate edited Gyre contract mentioned by that brief was not provided;
+current sibling APIs govern this port. **Owner sonic approval is outstanding**;
+expansion toward 36 presets, device checks and release naming wait for their
+respective acceptance decisions.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,

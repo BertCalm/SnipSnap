@@ -19,6 +19,9 @@ import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.Embouchure
+import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.Tessera
@@ -51,8 +54,9 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA and PITCHWHEEL) override
- * the preset's note and strike energy for a pad audition.
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and EMBOUCHURE) override
+ * the preset's note and strike energy for a pad audition. EMBOUCHURE's --midi
+ * chooses the played note directly by resetting the relative TUNE offset to zero.
  */
 object SynthCommand {
 
@@ -81,7 +85,8 @@ object SynthCommand {
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA and PITCHWHEEL, got $engine")
+                EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and EMBOUCHURE, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -127,6 +132,10 @@ object SynthCommand {
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is EmbouchurePatch -> patch.copy(
+                    midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity,
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
+                )
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
                     macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
                 )

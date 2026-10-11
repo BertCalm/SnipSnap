@@ -676,3 +676,15 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     args("${rootDir}/testkit/pitchwheel-audition")
     if (project.hasProperty("pitchwheelFull")) args("--full")
 }
+
+/** Render Embouchure's original dry gestures, control matrix and settled held loops. */
+tasks.register<JavaExec>("generateEmbouchureAudition") {
+    group = "distribution"
+    description = "Render EMBOUCHURE dry WAVs, complete recipes, numerical listening metadata and the audition page under testkit/embouchure-audition/. -PembouchureQuick renders a smaller development pack."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.EmbouchureAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/embouchure-audition")
+    if (project.hasProperty("embouchureQuick")) args("--quick")
+}

@@ -8,6 +8,7 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.Presets
 import java.io.File
 import java.util.Locale
@@ -331,7 +332,8 @@ object UserPresets {
      * with every macro's exact value, so the promoted preset renders the
      * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
+     * PITCHWHEEL keeps its render-model version as well. EMBOUCHURE retains its
+     * MIDI base, velocity, model and selected player gesture. The name is a
      * Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
@@ -340,6 +342,7 @@ object UserPresets {
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
