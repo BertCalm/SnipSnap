@@ -216,19 +216,23 @@ fun PlayScreen(
     // screen's own `hit` and `release`, so a keyboard note chokes, steals
     // and glows exactly as a finger does. A kit can change under an open
     // screen (a re-read sidecar), so the handler is read through
-    // rememberUpdatedState rather than captured once by the effect.
+    // rememberUpdatedState rather than captured once by the listener. The
+    // keyboard itself is opened and closed with the lifecycle, below, so
+    // no note can reach `hit` after ON_STOP's panic.
     var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
     var midiDevices by remember(entry.dir) { mutableStateOf<List<String>>(emptyList()) }
     val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
         MidiPads.handle(event, midiMap, onHit = ::hit, onRelease = ::release, onPanic = ::panic)
     })
-    DisposableEffect(entry.dir) {
-        val midi = MidiInput(engineContext)
-        midi.open(object : MidiInput.Listener {
+    val onPanic by rememberUpdatedState<() -> Unit>(::panic)
+    val midi = remember(entry.dir) { MidiInput(engineContext) }
+    val midiListener = remember(entry.dir) {
+        object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = onMidi(event)
             override fun onDevicesChanged(names: List<String>) { midiDevices = names }
-        })
-        onDispose { midi.close() }
+            // The cable is out: a gated pad it held would ring until PANIC.
+            override fun onDeviceRemoved() = onPanic()
+        }
     }
 
     /** Which bank the in-window grid is drawing, 0-based. Bank A until asked otherwise. */
@@ -271,13 +275,21 @@ fun PlayScreen(
     val audioVoice = remember(entry.dir) { object : AudioVoice { override fun silence() = panic() } }
     DisposableEffect(lifecycleOwner, entry.dir) {
         AudioFocus.acquire(audioVoice)
+        // The keyboard rides the same events as KEYS' does: open while
+        // the screen can make sound (addObserver replays ON_START), closed
+        // the moment it must not, the readout cleared on the way down.
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     panic()
                     AudioFocus.release(audioVoice)
+                    midi.close()
+                    midiDevices = emptyList()
                 }
-                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                Lifecycle.Event.ON_START -> {
+                    AudioFocus.acquire(audioVoice)
+                    midi.open(midiListener)
+                }
                 else -> {}
             }
         }
@@ -285,6 +297,7 @@ fun PlayScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
+            midi.close()
         }
     }
 
@@ -454,7 +467,9 @@ fun PlayScreen(
             // The keyboard line takes the hint's place while one is plugged
             // in: its name, and the chip that decides which pad a note is.
             // MPC NOTES is the hardware's own map (36 is A02, the kick);
-            // A01 = C1 walks the slots, for a kit that is a scale.
+            // A01 = C1 walks the slots, for a kit that is a scale. The flip
+            // silences first, as KEYS' OCT and LAYOUT do: a key held across
+            // it would let go on a different slot and leave a gate ringing.
             Row(
                 Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -465,7 +480,7 @@ fun PlayScreen(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
-                        .tapeClick(label = "MIDI MAP ${midiMap.label}") { midiMap = midiMap.next() }
+                        .tapeClick(label = "MIDI MAP ${midiMap.label}") { panic(); midiMap = midiMap.next() }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {

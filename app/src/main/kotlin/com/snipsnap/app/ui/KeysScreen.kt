@@ -105,16 +105,20 @@ fun KeysScreen(
     }
     fun silence() = midiKeys.allOff()
     // The LCD's readout: what is plugged in, by name. Empty when nothing
-    // is, and never shown at all on a phone that cannot do MIDI.
+    // is, and never shown at all on a phone that cannot do MIDI. The
+    // keyboard is opened and closed with the lifecycle, below, beside the
+    // audio focus: a note arriving while the app is backgrounded would
+    // otherwise restart the stream ON_STOP had just silenced.
     var midiDevices by remember(player) { mutableStateOf<List<String>>(emptyList()) }
     var midiSupported by remember(player) { mutableStateOf(false) }
-    DisposableEffect(player) {
-        val midi = MidiInput(context)
-        midiSupported = midi.open(object : MidiInput.Listener {
+    val midi = remember(player) { MidiInput(context) }
+    val midiListener = remember(player) {
+        object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = midiKeys.handle(event)
             override fun onDevicesChanged(names: List<String>) { midiDevices = names }
-        })
-        onDispose { midi.close() }
+            // The cable is out: its note-offs will never come.
+            override fun onDeviceRemoved() = midiKeys.allOff()
+        }
     }
 
     // ◄ SHELF's own path — shared by the chip and system Back so both
@@ -135,13 +139,23 @@ fun KeysScreen(
     val audioVoice = remember(player) { object : AudioVoice { override fun silence() = midiKeys.allOff() } }
     DisposableEffect(lifecycleOwner, player) {
         AudioFocus.acquire(audioVoice)
+        // The keyboard rides the same events: open while the screen can
+        // make sound (addObserver replays ON_START for a screen already
+        // up), closed the moment it must not. The readout is cleared on
+        // the way down so a device pulled while backgrounded is not still
+        // named when the screen comes back; reopening lists what is there.
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     silence()
                     AudioFocus.release(audioVoice)
+                    midi.close()
+                    midiDevices = emptyList()
                 }
-                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                Lifecycle.Event.ON_START -> {
+                    AudioFocus.acquire(audioVoice)
+                    midiSupported = midi.open(midiListener)
+                }
                 else -> {}
             }
         }
@@ -149,6 +163,7 @@ fun KeysScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
+            midi.close()
         }
     }
 

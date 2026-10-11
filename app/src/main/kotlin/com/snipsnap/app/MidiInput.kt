@@ -34,7 +34,10 @@ import com.snipsnap.kit.MidiWire
  * Nothing here decides what a note means - [Listener.onEvent] hands the
  * typed event to the screen, and `:shell`'s `MidiKeys` and `MidiPads`
  * are the tested rules. [Listener.onDevicesChanged] is for the LCD: the
- * names of what is connected, empty when nothing is.
+ * names of what is connected, empty when nothing is; and
+ * [Listener.onDeviceRemoved] is the cable coming out, which the screen
+ * answers by letting every note go, because the keyboard's own
+ * note-offs are never coming.
  *
  * Main thread only. [close] is idempotent, and a device that finishes
  * opening after it is closed again rather than kept.
@@ -44,6 +47,15 @@ class MidiInput(context: Context) {
     interface Listener {
         fun onEvent(event: MidiWire.Event)
         fun onDevicesChanged(names: List<String>)
+
+        /**
+         * A device went away - the cable was pulled. Its note-offs will
+         * never come, so whatever it had turned on is the screen's to
+         * silence now; [onDevicesChanged] follows with what is left. Any
+         * event of its still in flight to the main thread is dropped, so
+         * nothing it sent can replay a note after this.
+         */
+        fun onDeviceRemoved()
     }
 
     private val manager: MidiManager? =
@@ -56,7 +68,7 @@ class MidiInput(context: Context) {
     private var listener: Listener? = null
     private var callback: MidiManager.DeviceCallback? = null
 
-    private class Opened(val info: MidiDeviceInfo, val device: MidiDevice, val ports: List<Pair<MidiOutputPort, MidiReceiver>>)
+    private class Opened(val info: MidiDeviceInfo, val device: MidiDevice, val ports: List<Pair<MidiOutputPort, Receiver>>)
 
     private val opened = LinkedHashMap<Int, Opened>()
 
@@ -105,7 +117,7 @@ class MidiInput(context: Context) {
                 device.close()
                 return@openDevice
             }
-            val ports = ArrayList<Pair<MidiOutputPort, MidiReceiver>>()
+            val ports = ArrayList<Pair<MidiOutputPort, Receiver>>()
             for (p in 0 until info.outputPortCount) {
                 val port = runCatching { device.openOutputPort(p) }.getOrNull()
                 if (port == null) {
@@ -124,11 +136,20 @@ class MidiInput(context: Context) {
     private fun closeDevice(id: Int) {
         val gone = opened.remove(id) ?: return
         release(gone)
+        // The cable is out: every note it turned on is held by nothing
+        // now, and the screen must let them all go before it hears about
+        // the shorter list. In this order, so the readout never names a
+        // device whose notes are still sounding.
+        listener?.onDeviceRemoved()
         listener?.onDevicesChanged(deviceNames)
     }
 
     private fun release(it: Opened) {
         for ((port, receiver) in it.ports) {
+            // Dead first: a chunk the service thread already parsed and
+            // posted lands on the main thread after this, and must not
+            // start a note whose off will never come.
+            receiver.alive = false
             runCatching { port.disconnect(receiver) }
             runCatching { port.close() }
         }
@@ -147,14 +168,23 @@ class MidiInput(context: Context) {
         opened.clear()
     }
 
-    /** One port's bytes, parsed on the service's thread and posted whole to the main one. */
+    /**
+     * One port's bytes, parsed on the service's thread and posted whole to
+     * the main one. [alive] is flipped by [release] on the main thread and
+     * read there by the posted block, so an event already in flight when
+     * its device went is dropped rather than played.
+     */
     private inner class Receiver : MidiReceiver() {
         private val wire = MidiWire()
+
+        @Volatile
+        var alive = true
 
         override fun onSend(msg: ByteArray, offset: Int, count: Int, timestamp: Long) {
             val events = wire.feed(msg, offset, count)
             if (events.isEmpty()) return
             handler.post {
+                if (!alive) return@post
                 val l = listener ?: return@post
                 events.forEach(l::onEvent)
             }

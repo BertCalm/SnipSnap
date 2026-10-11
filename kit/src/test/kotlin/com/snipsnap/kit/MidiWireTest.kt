@@ -62,6 +62,19 @@ class MidiWireTest {
     }
 
     @Test
+    fun `a stray end-of-exclusive is system common too - it cancels running status and a half-built note`() {
+        val wire = MidiWire()
+        // Running status, then a bare 0xF7 with no 0xF0 before it: the data
+        // after it has no status to lean on, so it must not become a note.
+        assertEquals(listOf(Event.NoteOn(0, 60, 100 / 127f)), wire.feed(bytes(0x90, 60, 100)))
+        assertEquals(emptyList(), wire.feed(bytes(0xF7, 62, 100)), "running status is cancelled, not reused")
+        // Half a note, then the stray byte: the pending data byte is dropped
+        // with the status, so the next data byte cannot finish a stale note.
+        assertEquals(emptyList(), wire.feed(bytes(0x90, 64, 0xF7, 100)))
+        assertEquals(listOf(Event.NoteOn(0, 65, 100 / 127f)), wire.feed(bytes(0x90, 65, 100)), "a fresh status starts clean")
+    }
+
+    @Test
     fun `one-byte and three-byte messages nothing here plays keep the stream in step`() {
         val wire = MidiWire()
         // Program change (1 data byte), pitch bend (2), aftertouch (1), poly pressure (2), then a note.

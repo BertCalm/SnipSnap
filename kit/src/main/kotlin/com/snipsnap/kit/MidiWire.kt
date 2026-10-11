@@ -75,12 +75,15 @@ class MidiWire {
             when {
                 // Real-time: one byte, anywhere, changes nothing around it.
                 b >= 0xF8 -> {}
-                b == SYSEX_END -> inSysEx = false
                 b >= 0xF0 -> {
                     // System common cancels running status and whatever was
-                    // half-built; a SysEx swallows everything to its end.
+                    // half-built; a SysEx swallows everything to its end,
+                    // and its end byte is itself system common - a stray
+                    // 0xF7 with no 0xF0 before it cancels exactly the same.
                     runningStatus = 0
                     status = 0
+                    data0 = -1
+                    needed = 0
                     inSysEx = b == SYSEX_START
                 }
                 inSysEx -> {}
