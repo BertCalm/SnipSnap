@@ -15,9 +15,10 @@ target and retains playing dynamics after excitation changes.
 
 Each offline mono render creates a fresh voice. Four operators use phase
 modulation with indices in radians and acyclic routing; no feedback is enabled.
-The band-limited root excitation and a direct tonal anchor feed five TPT
-bandpasses. MOUTH interpolates original spectral targets in logarithmic frequency
-and bandwidth. BREATH and finite onset noise drive those same bands. BODY changes
+The band-limited voiced excitation and noise feed five TPT bandpasses, whose
+output is mixed with a direct tonal anchor. MOUTH interpolates original spectral
+targets in logarithmic frequency and bandwidth. BREATH and finite onset noise
+drive those same bands. BODY changes
 direct support, lower-band width and upper damping. MOTION changes the mouth
 trajectory and its source balance, rather than applying output tremolo.
 
