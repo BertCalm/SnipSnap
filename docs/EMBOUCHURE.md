@@ -98,6 +98,9 @@ Generate the listening pack with:
 The pack lives under `testkit/embouchure-audition/`. Its manifest and patch JSON
 identify the actual note, velocity, macros and player profile; audio comparisons
 include raw and matched renders so loudness does not conceal excitation changes.
+The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
+hosts the complete first matrix and kit downloads; [pack notes](EMBOUCHURE_AUDITION.md)
+describe the loudness rules, measurements and reproduction task.
 
 Render factory presets through the normal CLI path:
 

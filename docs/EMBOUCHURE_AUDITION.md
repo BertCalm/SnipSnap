@@ -1,5 +1,12 @@
 # Embouchure audition pack
 
+The [published listening page](https://embouchure-audition.bertcalm.chatgpt.site)
+is private to the owner. It contains the complete first listening matrix:
+365 clips, 395 audition WAVs, and sixteen PCM24 kit samples. The curated
+starter ZIP is 9.523 MiB. Full Chromium checks cover every decoded WAV,
+all 150 macro selections, nine held loops, diagnostic modes, downloads,
+saved notes, and desktop/mobile layout. Owner sonic approval remains pending.
+
 Generate the complete dry listening pack from the production Kotlin engine:
 
 ```sh
@@ -37,9 +44,14 @@ ablations, and raw/shared-normalized/matched velocity comparisons. Every auditio
 mono 44.1 kHz PCM16 with no rack effects.
 
 The default `path` is the host's shared melodic forte reference followed by its
-expressive velocity gain (`velocity^0.60`) for both finite notes and held loops. `rawPath` preserves
-the generated amplitude after output conditioning, and `matchedPath` uses the
-quieter common audition target of 0.03. These extra paths appear on velocity and
+expressive velocity gain (`velocity^0.60`) for both finite notes and held loops.
+Every `rawPath` uses one fixed export gain of 0.5 (−6.02 dB) after output conditioning,
+preserving relative source amplitudes across all raw files without per-clip leveling.
+The unscaled BRASS forte diagnostic peaks slightly above one in the model's acoustic
+units; the common gain gives PCM headroom without encoding clamps. `rawSourceMetrics`
+records the unscaled conditioned source, `rawMetrics` describes the exported floats,
+and `rawExportGain` records that relationship. `matchedPath` uses the quieter common
+audition target of 0.03. These extra paths appear on velocity and
 feedback diagnostics. Compare versions using the same loudness rule; a change in
 gain alone does not establish a change in the modeled playing interaction.
 

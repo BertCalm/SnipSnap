@@ -30,10 +30,19 @@
   function voiceName(voice) { return String(voice || 'ENGINE').toUpperCase(); }
   function pretty(text) { return String(text || '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase()); }
   function noteName(clip) { return clip.note || (clip.midi !== undefined ? `MIDI ${clip.midi}` : ''); }
+  function velocityLabel(value) { const n = numeric(value); return n <= 1 ? n.toFixed(2) : String(Math.round(n)); }
   function duration(clip) { return numeric(clip.durationSeconds, numeric(clip.frames) / numeric(state.manifest?.sampleRate, 44100)); }
   function time(seconds) { const value = Math.max(0, numeric(seconds)); return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`; }
   function pathFor(clip, mode = state.mode) { return mode === 'raw' && clip.rawPath ? clip.rawPath : mode === 'matched' && clip.matchedPath ? clip.matchedPath : clip.path; }
   function valueLabel(value) { return numeric(value).toFixed(2).replace(/^0\./, '.'); }
+  function rawModeLabel(clip, detailed = false) {
+    const gain = numeric(clip.rawExportGain, 1);
+    if (gain > 0 && gain !== 1) {
+      const db = Math.round(20 * Math.log10(gain));
+      return detailed ? `raw, fixed ${db} dB export` : `Raw ${db} dB`;
+    }
+    return detailed ? 'raw level' : 'Raw';
+  }
   function groupName(id) { return state.manifest?.groups?.find((group) => group.id === id)?.title || pretty(id); }
   function downloadable(data, filename) {
     const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
@@ -133,7 +142,7 @@
     $('audio-error').hidden = true;
     $('clip-label').textContent = `${voiceName(clip.voice)} / ${groupName(clip.group)}`;
     $('clip-title').textContent = clipName(clip);
-    $('clip-subtitle').textContent = [noteName(clip), clip.velocity !== undefined ? `velocity ${clip.velocity}` : '', clip.loop ? 'HOLD render' : 'finite gesture', state.mode === 'production' ? 'host normalized' : state.mode === 'raw' ? 'raw level' : 'equal audition loudness'].filter(Boolean).join(' · ');
+    $('clip-subtitle').textContent = [noteName(clip), clip.velocity !== undefined ? `velocity ${velocityLabel(clip.velocity)}` : '', clip.loop ? 'HOLD render' : 'finite gesture', state.mode === 'production' ? 'host normalized' : state.mode === 'raw' ? rawModeLabel(clip, true) : 'equal audition loudness'].filter(Boolean).join(' · ');
     const path = pathFor(clip);
     $('download-wav').href = path;
     $('download-wav').download = path.split('/').pop();
@@ -146,6 +155,7 @@
     const modeBox = $('diagnostic-mode'); modeBox.hidden = !clip.rawPath && !clip.matchedPath;
     modeBox.querySelectorAll('button').forEach((button) => {
       const mode = button.dataset.audioMode;
+      if (mode === 'raw') { button.textContent = rawModeLabel(clip); button.title = clip.rawExportGain ? 'Raw diagnostic with the same fixed headroom gain on every raw file; relative source amplitudes are preserved.' : 'Raw diagnostic audio.'; }
       button.hidden = mode === 'raw' ? !clip.rawPath : mode === 'matched' ? !clip.matchedPath : false;
       button.classList.toggle('active', mode === state.mode); button.setAttribute('aria-pressed', String(mode === state.mode));
     });
@@ -249,12 +259,12 @@
     $('diagnostic-mode').querySelectorAll('button').forEach((button) => button.addEventListener('click', () => { state.mode = button.dataset.audioMode; selectClip(state.selected, true); }));
     $('download-recipe').addEventListener('click', () => {
       if (!state.selected) return;
-      downloadable({ schemaVersion: 1, engine: state.manifest.engine, sampleRate: state.manifest.sampleRate, clipId: state.selected.id, audioMode: state.mode, path: pathFor(state.selected), midi: state.selected.midi, note: state.selected.note, velocity: state.selected.velocity, macros: state.selected.macros, driver: state.selected.driver, gesture: state.selected.gesture, loop: state.selected.loop, recipe: state.selected.recipe, render: state.selected.render, metrics: state.selected.metrics, metricsAudioPath: state.selected.path }, `${state.selected.id}-${state.mode}-recipe.json`);
+      downloadable({ schemaVersion: 1, engine: state.manifest.engine, sampleRate: state.manifest.sampleRate, clipId: state.selected.id, audioMode: state.mode, path: pathFor(state.selected), midi: state.selected.midi, note: state.selected.note, velocity: state.selected.velocity, macros: state.selected.macros, driver: state.selected.driver, gesture: state.selected.gesture, loop: state.selected.loop, recipe: state.selected.recipe, render: state.selected.render, metrics: state.selected.metrics, metricsAudioPath: state.selected.path, rawExportGain: state.selected.rawExportGain, rawSourceMetrics: state.selected.rawSourceMetrics, rawMetrics: state.selected.rawMetrics, rawMetricsAudioPath: state.selected.rawPath }, `${state.selected.id}-${state.mode}-recipe.json`);
     });
     $('note-text').addEventListener('input', saveNote); $('note-verdict').addEventListener('change', saveNote);
     $('export-notes').addEventListener('click', () => {
       saveNote();
-      downloadable({ schemaVersion: 1, engine: state.manifest?.engine || 'Embouchure', exportedAt: new Date().toISOString(), acceptance: state.manifest?.acceptance, manifest: 'manifest.json', notes: Object.values(state.notes).map((note) => { const clip = state.clips.find((item) => item.id === note.clipId); return { ...note, audioPath: clip ? pathFor(clip, note.audioMode) : null, midi: clip?.midi, velocity: clip?.velocity, macros: clip?.macros, recipe: clip?.recipe }; }) }, `embouchure-listening-notes-${new Date().toISOString().slice(0, 10)}.json`);
+      downloadable({ schemaVersion: 1, engine: state.manifest?.engine || 'Embouchure', exportedAt: new Date().toISOString(), acceptance: state.manifest?.acceptance, manifest: 'manifest.json', notes: Object.values(state.notes).map((note) => { const clip = state.clips.find((item) => item.id === note.clipId); return { ...note, audioPath: clip ? pathFor(clip, note.audioMode) : null, rawExportGain: clip?.rawExportGain, midi: clip?.midi, velocity: clip?.velocity, macros: clip?.macros, recipe: clip?.recipe }; }) }, `embouchure-listening-notes-${new Date().toISOString().slice(0, 10)}.json`);
     });
     audio.addEventListener('play', () => { $('play-button').classList.add('playing'); $('play-button').setAttribute('aria-label', 'Pause selected clip'); cancelAnimationFrame(state.frame); animate(); });
     audio.addEventListener('pause', () => { $('play-button').classList.remove('playing'); $('play-button').setAttribute('aria-label', 'Play selected clip'); cancelAnimationFrame(state.frame); updatePlayback(); });
@@ -317,6 +327,8 @@
       const details = $('render-details'); details.replaceChildren();
       details.append(element('p', '', `${state.manifest.engine || 'Embouchure'} · ${numeric(state.manifest.sampleRate, 44100).toLocaleString()} Hz · ${state.manifest.channels || 1} channel · ${state.manifest.format || 'PCM WAV'}. ${state.manifest.acceptance || 'Owner listening verdict pending.'}`));
       if (state.manifest.caveats?.length) { const list = element('ul'); state.manifest.caveats.forEach((caveat) => list.append(element('li', '', typeof caveat === 'string' ? caveat : JSON.stringify(caveat)))); details.append(list); }
+      const rawGain = state.clips.find((clip) => clip.rawExportGain !== undefined)?.rawExportGain;
+      if (rawGain > 0 && rawGain !== 1) details.append(element('p', '', `Every raw diagnostic WAV uses the same fixed ${(20 * Math.log10(rawGain)).toFixed(2)} dB export gain (${rawGain}), preserving relative source amplitudes. Recipe downloads include this gain, untouched source metrics, and exported raw metrics. The gain is identical for every clip.`));
       if (state.manifest.bundlePath) details.append(element('p', '', 'The curated download contains a smaller listening collection and a 16-pad MPC kit. The full probe and sweep matrix stays on this page.'));
       details.append(element('p', '', 'Production audio is host normalized with expressive velocity gain. Raw and equal-audition-loudness modes appear only where diagnostic companion renders exist. Waveforms show actual rendered audio, scaled visually to the clip peak. HOLD looping repeats the supplied loop file; the page adds no synthesis, effects, or crossfade.'));
       renderVoiceFilters(); renderLibrary();

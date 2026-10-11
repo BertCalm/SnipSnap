@@ -29,6 +29,9 @@ import kotlin.math.sqrt
  * listener's sonic approval; --quick deliberately omits the complete acceptance matrix.
  */
 object EmbouchureAuditionGenerator {
+    // One declared PCM headroom gain preserves relative raw amplitudes across every diagnostic.
+    // Acoustic pressure units are not PCM units: the finite BRASS forte source peaks at 1.002.
+    private const val RAW_EXPORT_GAIN = .5f
     private val controls = listOf("EFFORT", "REED", "SHAPE", "GRAIN", "LENGTH")
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val interactionPairs = listOf(
@@ -170,7 +173,7 @@ object EmbouchureAuditionGenerator {
             }
         }
 
-        group("VELOCITY", "Energy before and after leveling", "Raw WAVs preserve generated amplitude. Shared-normalized WAVs use the host melodic target; matched WAVs use the quieter audition comparison target.")
+        group("VELOCITY", "Energy before and after leveling", "Raw WAVs preserve relative generated amplitudes through one fixed −6.02 dB PCM export gain. Production-normalized WAVs use the host melodic target; matched WAVs use the quieter audition comparison target.")
         (if (quick) listOf(EmbouchureVoice.REED) else listOf(EmbouchureVoice.REED, EmbouchureVoice.BRASS, EmbouchureVoice.BOW)).forEach { voice ->
             listOf(.25f, .6f, 1f).forEach { velocity ->
                 add("VELOCITY", "velocity_${voice.name.lowercase()}_v${tag(velocity)}",
@@ -199,6 +202,8 @@ object EmbouchureAuditionGenerator {
             "groups" to groups, "clips" to rows, "kit" to kit,
             "normalization" to linkedMapOf("default" to "shared-melodic", "sharedLoudnessTarget" to Dsp.MELODIC_LOUDNESS_TARGET,
                 "matchedLoudnessTarget" to .03f, "velocityGain" to "Production notes and held loops apply velocity^0.60 after forte-reference leveling",
+                "rawExportGain" to RAW_EXPORT_GAIN, "rawExportGainDb" to -6.020599913279624,
+                "rawExport" to "Every raw diagnostic uses one fixed gain of 0.5 for PCM headroom, without per-clip leveling; rawSourceMetrics retain the unscaled conditioned source",
                 "measure" to "Loudest 200 ms RMS with gentle 120 Hz low cut; peak guard applied"),
             "caveats" to listOf(
                 "Original simplified drivers and gestures; no Yamaha algorithms, factory data or sampled instruments.",
@@ -216,9 +221,9 @@ object EmbouchureAuditionGenerator {
             "schemaVersion" to 1, "engine" to "EMBOUCHURE", "completeMatrix" to !quick,
             "clips" to rows.size, "wavFiles" to audio.listFiles().orEmpty().count { it.extension == "wav" },
             "totalRenderMs" to (System.nanoTime() - started) / 1_000_000.0,
-            "audioMeasure" to "Output-rate floats before PCM16 quantization; mean and RMS use the whole buffer",
+            "audioMeasure" to "Output-rate floats before PCM16 quantization; rawSourceMetrics precede the fixed raw export gain; mean and RMS use the whole buffer",
             "listeningVerdict" to "Owner listening verdict pending",
-            "rows" to rows.map { row -> linkedMapOf("id" to row["id"], "metrics" to row["metrics"], "loopDiagnostics" to row["loopDiagnostics"]) },
+            "rows" to rows.map(::measurementRow),
         ))) + "\n")
         copyPage(root, manifestText)
         bundle(root, manifest, rows)
@@ -278,20 +283,31 @@ object EmbouchureAuditionGenerator {
                 "format" to "One settled loop, finite attack omitted")
         }
         if (spec.comparisonFiles) {
-            val rawSnip = requireNotNull(raw)
-            require(rawSnip.samples.all { it.isFinite() } && rawSnip.peak() <= 1f) { "${spec.id}: raw output would clip PCM16" }
+            val rawSource = requireNotNull(raw)
+            require(rawSource.samples.all { it.isFinite() }) { "${spec.id}: non-finite raw source" }
+            val rawSnip = Snip(FloatArray(rawSource.samples.size) { rawSource.samples[it] * RAW_EXPORT_GAIN }, 1, Dsp.RATE)
+            require(rawSnip.peak() <= 1f) { "${spec.id}: raw export would clip PCM16 at the declared fixed gain" }
             val matched = AuditionLevel.level(snip)
+            require(matched.samples.all { it.isFinite() } && matched.peak() <= 1f) { "${spec.id}: matched output would clip PCM16" }
             val rawPath = "audio/${spec.id}-raw.wav"
             val matchedPath = "audio/${spec.id}-matched.wav"
             WavWriter.write(File(root, rawPath), rawSnip, WavWriter.BitDepth.PCM_16)
             WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_16)
             row["rawPath"] = rawPath
             row["matchedPath"] = matchedPath
+            row["rawExportGain"] = RAW_EXPORT_GAIN
+            row["rawSourceMetrics"] = amplitudeStats(rawSource)
             row["rawMetrics"] = amplitudeStats(rawSnip)
             row["matchedMetrics"] = amplitudeStats(matched)
         }
         return row
     }
+
+    private fun measurementRow(row: Map<String, Any?>): Map<String, Any?> = linkedMapOf(
+        "id" to row["id"], "metrics" to row["metrics"], "loopDiagnostics" to row["loopDiagnostics"],
+        "rawExportGain" to row["rawExportGain"], "rawSourceMetrics" to row["rawSourceMetrics"],
+        "rawMetrics" to row["rawMetrics"], "matchedMetrics" to row["matchedMetrics"],
+    )
 
     private fun amplitudeStats(snip: Snip): Map<String, Any?> {
         var peak = 0.0
@@ -449,9 +465,9 @@ object EmbouchureAuditionGenerator {
         val measurements = Json.write(json(linkedMapOf(
             "schemaVersion" to 1, "engine" to "EMBOUCHURE", "curated" to true, "completeMatrix" to false,
             "clips" to selected.size, "auditionWavFiles" to includedAudio.size,
-            "audioMeasure" to "Output-rate floats before PCM16 quantization",
+            "audioMeasure" to "Output-rate floats before PCM16 quantization; rawSourceMetrics precede the fixed raw export gain",
             "listeningVerdict" to "Owner listening verdict pending",
-            "rows" to selected.map { linkedMapOf("id" to it["id"], "metrics" to it["metrics"], "loopDiagnostics" to it["loopDiagnostics"]) },
+            "rows" to selected.map(::measurementRow),
         )))
         val destination = File(root, "embouchure-audition.zip")
         ZipOutputStream(destination.outputStream().buffered()).use { zip ->
