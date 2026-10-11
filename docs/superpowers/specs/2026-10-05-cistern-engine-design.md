@@ -316,6 +316,16 @@ not establish musical acceptance. The hosted audition preserves original
 clips for direct before/after listening and identifies the revision in
 exported notes; patch model 1 remains the provisional causal architecture.
 
+Audition revision `musicality-3` makes a restrained tonal refinement after the
+owner reported stronger distinction and requested clearer pitch and smoother
+decays. Each surface radiates its existing root slightly more clearly, most
+noticeably RIPPLE, and FIRST and CASCADE lose upper ringing slightly
+sooner. Modal ratios, root loss, contact projections, wet loading and the
+circulation clock remain the same. The root-balance screen requires at least
+30% of RIPPLE's default C4 spectral energy in the played-root band, while the
+existing body and pairwise-contrast floors still apply. The before/after audition
+uses the prior `voice-contrast-2` audio; listening remains the acceptance check.
+
 The material/release clock advances every 176 internal samples, approximately
 1002.27 Hz. A smoothed local modal-energy envelope acts on a decaying release
 field. Threshold crossings spend a slot once, bounded propagation reaches
