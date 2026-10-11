@@ -391,6 +391,34 @@ tasks.register<JavaExec>("decodeArcoBodyGate") {
     (project.findProperty("gateVerdicts") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.forEach { args(it) }
 }
 
+/**
+ * Render the ARCO R1j bell gate clips, manifest and page under testkit/arco-bell-gate/ and the key beside it. See ArcoBellGateGenerator. The full run refuses a missing or placeholder page;
+ * `-PclipsOnly` is the development mode (clips, manifest and key, no index.html).
+ */
+tasks.register<JavaExec>("generateArcoBellGate") {
+    group = "distribution"
+    description = "Render the ARCO R1j bell gate clips, manifest and listening page under testkit/arco-bell-gate/ and the key to it beside the folder as testkit/arco-bell-gate-key.json. -PclipsOnly skips the page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoBellGateGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-bell-gate")
+    if (project.hasProperty("clipsOnly")) args("--clips-only")
+}
+
+/**
+ * Read the saved verdicts of the ARCO R1j bell gate page and print the pre-written reading rules, each comparison, the keep answers, the verdicts and the build map's case line, using the key
+ * testkit/arco-bell-gate-key.json. `-PgateVerdicts=<folder or file>[,<folder or file>...]` names what to read (none: only the rules and the decoder's self-check on invented answers). See ArcoBellGateDecoder.
+ */
+tasks.register<JavaExec>("decodeArcoBellGate") {
+    group = "distribution"
+    description = "Decode the saved verdicts of the ARCO R1j bell gate page (-PgateVerdicts=<folder or file>[,<folder or file>...]) against testkit/arco-bell-gate-key.json."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoBellGateDecoder")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-bell-gate-key.json")
+    (project.findProperty("gateVerdicts") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.forEach { args(it) }
+}
+
 tasks.register<JavaExec>("generateMercuryKit") {
     group = "distribution"
     description = "Render the MERCURY modal-glass acceptance kit under testkit/."

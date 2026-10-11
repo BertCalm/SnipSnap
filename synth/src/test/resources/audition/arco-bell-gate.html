@@ -1,0 +1,1365 @@
+<title>Arco Low Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
+<style>
+  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md,
+     the same page the other ARCO auditions wear. The scheme is dark by design
+     (light shells were cut), so this page commits to one look, defines every
+     colour as a token on :root and paints every surface explicitly.
+     Sizes are written for the default sizing model: no element is given a width
+     together with padding or a border, so a 320 px screen has nothing to push past. */
+  :root {
+    --desk1: #0C0618;
+    --desk2: #140B24;
+    --desk-glow: #2A1050;
+    --win: #1A1424;
+    --win2: #120E1A;
+    --field: #161020;
+    --field-border: #34285A;
+    --raised1: #221A34;
+    --raised2: #161020;
+    --lcd: #0A0714;
+    --lcd-ink: #C8B2F8;
+    --lcd-glow: rgba(154, 108, 240, .9);
+    --cyan: #40E0E8;
+    --cyan-glow: rgba(64, 224, 232, .8);
+    --warn: #FFB000;
+    --warn-glow: rgba(255, 176, 0, .6);
+    --ink: #C8B2F8;
+    --ink2: #8D80AE;
+    --ink3: #584A80;
+    --title-ink: #FFFFFF;
+    --accent: #E040C8;
+    --oil: conic-gradient(from 210deg at 50% 40%, #5A2AE0, #E040C8 25%, #40E0E8 50%, #8A5AF0 75%, #5A2AE0);
+    --f-lcd: "VT323", "Courier New", monospace;
+    --f-pixel: "Silkscreen", "Courier New", monospace;
+    --f-display: "Michroma", "Arial Black", sans-serif;
+    --f-marker: "Rock Salt", "Comic Sans MS", cursive;
+    color-scheme: dark;
+  }
+
+  /* A hidden element stays hidden whatever display a rule below gives its class. */
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    padding-block: 16px 48px;
+    padding-inline: 16px;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 50% 110%, var(--desk-glow) 0%, transparent 60%),
+      linear-gradient(90deg, rgba(90, 42, 224, .12) 1px, transparent 1px) 0 0 / 22px 22px,
+      linear-gradient(0deg, rgba(224, 64, 200, .08) 1px, transparent 1px) 0 0 / 22px 22px,
+      conic-gradient(var(--desk1) 0 25%, var(--desk2) 0 50%, var(--desk1) 0 75%, var(--desk2) 0) 0 0 / 6px 6px;
+    background-color: var(--desk1);
+    font-family: var(--f-lcd);
+    font-size: 17px;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* The window: an outer ring that wears the oil colours and an inner face. */
+  .win {
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 3px;
+    border-radius: 8px;
+    background: var(--oil);
+  }
+  .face {
+    border-radius: 5px;
+    background: linear-gradient(var(--win), var(--win2));
+  }
+
+  .titlebar {
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 12px;
+    min-height: 34px;
+    padding-inline: 12px;
+    background: linear-gradient(90deg, #5A2AE0, #E040C8);
+    color: var(--title-ink);
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .titlebar span { min-width: 0; overflow-wrap: anywhere; }
+  .titlebar .tag {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    opacity: .85;
+    text-align: right;
+  }
+
+  .lcd {
+    position: relative;
+    background: var(--lcd);
+    color: var(--lcd-ink);
+    text-shadow: 0 0 6px var(--lcd-glow);
+  }
+  .lcd::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(rgba(0, 0, 0, .3) 1px, transparent 1px) 0 0 / 100% 3px;
+  }
+  .lcd > * { position: relative; z-index: 1; }
+
+  /* The strip that stays on screen: what is sounding and how many
+     required questions are still open. */
+  .transport {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    display: grid;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--field-border);
+  }
+  .transport > div { min-width: 0; }
+  .transport .label {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    text-shadow: none;
+  }
+  /* The words say what sounds and the last of them is the one that matters: they wrap
+     instead of ending in an ellipsis. Two lines are always reserved, so the page below
+     does not jump when a clip starts or stops. */
+  .transport .now {
+    display: flex;
+    align-items: center;
+    min-height: 2.1em;
+    font-size: 20px;
+    line-height: 1.05;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .transport .now.idle { color: var(--lcd-ink); text-shadow: 0 0 6px var(--lcd-glow); }
+
+  .counter {
+    appearance: none;
+    min-height: 34px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4px 8px;
+    border: 1px dashed var(--field-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--warn);
+    text-shadow: none;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .counter.done { color: var(--cyan); border-style: solid; cursor: default; }
+  .counter:disabled { opacity: 1; }
+
+  .raised {
+    appearance: none;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible, .counter:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  .guide {
+    margin: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .guide p { margin: 0; }
+  .guide p + p { margin-top: 6px; }
+  .guide .hd {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+    margin-bottom: 6px;
+  }
+
+  .voice {
+    margin: 0 12px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+    /* The rounded corners without a scroll container: overflow hidden would make each card one, and a
+       scroll-margin on its first child would then be ignored (the counter's jump hid the first question).
+       A browser that does not know clip keeps hidden. */
+    overflow: hidden;
+    overflow: clip;
+  }
+  .voice.first { margin-top: 12px; }
+  .voice-hd {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--field-border);
+    background: linear-gradient(var(--raised1), var(--field));
+  }
+  .voice-hd h2 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 400;
+    color: var(--title-ink);
+    text-wrap: balance;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .voice-hd .lead {
+    font-size: 17px;
+    color: var(--ink2);
+  }
+  .req {
+    justify-self: end;
+    align-self: center;
+    padding: 3px 6px 2px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* The play pads: one per clip in a keep question. */
+  .pad {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+  .pad .ico { display: block; width: 14px; height: 14px; }
+  .ico path, .ico rect { fill: currentColor; }
+  .raised .stop { display: none; }
+  .raised[aria-pressed="true"] .play { display: none; }
+  .raised[aria-pressed="true"] .stop { display: block; }
+  .raised[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+  }
+
+  /* One row of a keep question: the pad, then the clip's name (the reference) or the button that picks it. */
+  .krow {
+    scroll-margin-top: 130px;
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 2px 10px;
+    align-items: center;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .krow.playing { background: rgba(64, 224, 232, .06); }
+  .krow .meta { display: grid; gap: 2px; min-width: 0; }
+  .krow .name { font-size: 18px; color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
+  .krow .desc { font-size: 15px; color: var(--ink2); line-height: 1.2; }
+  .ref {
+    justify-self: start;
+    padding: 5px 8px 4px;
+    border: 1px dashed var(--field-border);
+    border-radius: 4px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    user-select: none;
+  }
+
+  /* The questions. */
+  .q { padding: 10px 12px 8px; display: grid; gap: 8px; min-width: 0; scroll-margin-top: 130px; }
+  .q + .q { border-top: 1px dashed var(--field-border); }
+  .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
+  .qhd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .qhd .where { font-family: var(--f-pixel); font-size: 8px; letter-spacing: .5px; color: var(--accent); min-width: 0; overflow-wrap: anywhere; }
+  .opts { display: grid; gap: 8px; grid-template-columns: 1fr; }
+  .opts.row2 { grid-template-columns: 1fr 1fr; }
+  .opts.row3 { grid-template-columns: 1fr 1fr 1fr; }
+  .locktext { font-size: 15px; line-height: 1.15; color: var(--ink2); min-width: 0; overflow-wrap: anywhere; }
+  .locktext.open { color: var(--ink); }
+
+  /* The play buttons of a pair: the run (A, then B) and each clip alone. */
+  .runbtn, .solobtn {
+    min-width: 44px;
+    min-height: 42px;
+    padding: 0 10px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .runbtn .ico, .solobtn .ico { flex: none; width: 14px; height: 14px; }
+
+  /* Every answer button wears the same colours: nothing about a button leans toward an answer. */
+  .chip {
+    appearance: none;
+    min-width: 0;
+    min-height: 34px;
+    padding: 4px 6px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink2);
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .chip .tx { min-width: 0; overflow-wrap: anywhere; }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--title-ink);
+  }
+  .chip:disabled { opacity: .5; cursor: default; }
+
+  .notes { padding: 10px 12px 12px; display: grid; gap: 6px; }
+  .notes label { font-family: var(--f-marker); font-size: 13px; color: var(--ink); line-height: 1.5; }
+  textarea {
+    display: block;
+    width: calc(100% - 22px);
+    min-height: 64px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--lcd);
+    color: var(--lcd-ink);
+    font-family: var(--f-lcd);
+    font-size: 19px;
+    line-height: 1.25;
+    caret-color: var(--cyan);
+  }
+  textarea::placeholder { color: var(--ink3); }
+
+  .verdict { margin: 0 12px 12px; }
+  .actions {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--field-border);
+  }
+  /* The save button: a ring in the oil colours around a dark face. */
+  .ring {
+    display: grid;
+    padding: 2px;
+    border-radius: 6px;
+    background: var(--oil);
+  }
+  .primary {
+    appearance: none;
+    min-height: 48px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 4px;
+    background: linear-gradient(#0C2426, #081418);
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    line-height: 1.3;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .primary:disabled { opacity: .6; cursor: default; }
+  .unsent {
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px dashed var(--warn);
+    border-radius: 6px;
+    font-size: 17px;
+    line-height: 1.2;
+    color: var(--warn);
+  }
+  .status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .status .k { font-family: var(--f-pixel); font-size: 8px; letter-spacing: .5px; color: var(--ink2); text-shadow: none; align-self: center; }
+  .status .v { min-width: 0; overflow-wrap: anywhere; text-align: right; }
+  .status.warn .v { color: var(--warn); text-shadow: 0 0 8px var(--warn-glow); }
+  .status.ok .v { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .raised[aria-pressed="true"] { animation: breathe 1.2s ease-in-out infinite; }
+    @keyframes breathe {
+      0%, 100% { border-color: var(--cyan); }
+      50% { border-color: rgba(64, 224, 232, .35); }
+    }
+  }
+</style>
+
+<div class="win">
+  <div class="face">
+    <div class="titlebar">
+      <span>Arco Low Notes</span>
+      <span class="tag">TWO LOW NOTES, BY EAR</span>
+    </div>
+
+    <div class="transport lcd">
+      <div>
+        <div class="label">NOW PLAYING</div>
+        <div class="now idle" id="now">TAP A PLAY BUTTON TO LISTEN</div>
+      </div>
+      <button class="counter" id="counter" type="button" hidden></button>
+    </div>
+
+    <div id="intro"></div>
+    <div id="devicehost"></div>
+
+    <div id="sections"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
+
+    <div class="voice verdict" id="verdict" hidden>
+      <div class="voice-hd">
+        <h2>Verdict</h2>
+        <div class="lead">ANYTHING ELSE, THEN SAVE</div>
+      </div>
+      <div class="notes" id="notehost"></div>
+      <div class="actions">
+        <p class="unsent" id="unsent" role="status" hidden></p>
+        <div class="ring"><button class="primary" id="save" type="button">Save verdict</button></div>
+        <div class="status lcd" id="status" role="status" aria-live="polite"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Non-ASCII glyphs are escaped so the page reads the same whatever
+  // charset a host serves it under.
+  var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
+
+  // This round's names. The manifest has to say the same, or the page refuses it:
+  // a manifest left over from another round must not be shown under these questions.
+  var PHASE = 'arco_r1j';
+  var LOCAL_PREFIX = 'arco-bell-gate:';
+  // The name of the shared store, spelled by code points: the words law covers this whole file, comments included,
+  // and the store's own name is on its list. Every answer and every play count is one document in that store.
+  var STORE_NAME = String.fromCharCode(0x64, 0x62);
+
+  // The clip list and every word of every question is the generator's
+  // manifest.json, published beside this page: one list, written where the clips
+  // are rendered. The page does not count the clips or name a letter: it shows
+  // however many groups, pairs and keep questions the manifest lists, in its order.
+  var GROUPS = [];                     // the manifest's groups, in the page's order
+  var Q = null;                        // the manifest's questions
+  var KEY = '';                        // the document's key
+  var CLIPS = {};                      // clip id -> { group, name, desc, plain }
+  var PAIRS = {};                      // pair question id -> its manifest entry
+  var CHOICES = {};                    // question id -> the values it accepts
+  var QUESTIONS = [];                  // every answer of the document, in the page's order
+  var REQUIRED = [];
+
+  function isPlain(fid) { return /_plain$/.test(fid); }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  function str(x) { return typeof x === 'string' ? x : ''; }
+  // the members of a list that pass a test
+  function only(list, test) {
+    var out = [];
+    for (var i = 0; i < list.length; i++) if (test(list[i], i)) out.push(list[i]);
+    return out;
+  }
+
+  // ---------- state ----------
+  // The answers are strings, one per question. The plays are counts: of each clip started,
+  // and of each pair question's own PLAY A, THEN B run that reached its end.
+  var state = { answers: {}, plays: {} };
+
+  var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
+                 '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
+
+  // ---------- the manifest ----------
+  function bad(why) { throw new Error('bad manifest: ' + why); }
+
+  function optionsOk(list) {
+    return Array.isArray(list) && list.length > 0 && list.every(function (o) {
+      return o && typeof o.v === 'string' && o.v !== '' && typeof o.t === 'string' && o.t !== '';
+    });
+  }
+
+  // Reads the manifest into the lookups the page uses. A manifest from another round, without
+  // the question list, with an id twice or with a clip that is not where it says, is a bad
+  // manifest: it throws here and the page says so instead of showing half a page.
+  function setup(m) {
+    if (!m || typeof m !== 'object') bad('not an object');
+    if (m.phase !== PHASE) bad('phase');
+    if (m.storagePrefix !== LOCAL_PREFIX) bad('storage prefix');
+    if (!m.docs || m.docs.prefix !== 'verdicts/' + PHASE + '_' || !/^[a-z0-9_]+$/.test(str(m.docs.overallKey))) bad('docs');
+    KEY = m.docs.overallKey;
+    if (!Array.isArray(m.intro) || !m.intro.every(function (s) { return typeof s === 'string'; })) bad('intro');
+
+    if (!Array.isArray(m.groups) || !m.groups.length) bad('no groups');
+    GROUPS = m.groups;
+    CLIPS = {};
+    var seenGroups = {};
+    GROUPS.forEach(function (g) {
+      if (!g || typeof g.id !== 'string' || !g.id || seenGroups[g.id]) bad('group id');
+      seenGroups[g.id] = true;
+      if (typeof g.voice !== 'string' || !g.voice || typeof g.note !== 'string' || typeof g.label !== 'string' || typeof g.body !== 'string' || !Array.isArray(g.clips)) bad('group ' + g.id);
+      var plains = 0;
+      g.clips.forEach(function (c) {
+        if (!Array.isArray(c) || typeof c[0] !== 'string' || !c[0] || typeof c[1] !== 'string') bad('clip in ' + g.id);
+        if (CLIPS[c[0]]) bad('clip id twice: ' + c[0]);
+        CLIPS[c[0]] = { group: g, name: c[1], desc: str(c[2]), plain: isPlain(c[0]) };
+        if (isPlain(c[0])) plains++;
+      });
+      if (plains !== 1) bad(g.id + ' has ' + plains + ' reference clips');
+    });
+
+    var q = m.questions;
+    if (!q || typeof q !== 'object') bad('no questions');
+    var d = q.device;
+    if (!d || typeof d.id !== 'string' || !d.id || d.first !== true || d.required !== true || typeof d.text !== 'string' || !optionsOk(d.options)) bad('device question');
+    if (!q.pair || q.pair.gate !== 'pairRun' || typeof q.pair.text !== 'string' || typeof q.pair.lockedText !== 'string' || !optionsOk(q.pair.options)) bad('pair question');
+    ['counter', 'save'].forEach(function (name) {
+      var t = q[name];
+      if (!t || typeof t.some !== 'string' || typeof t.one !== 'string' || typeof t.none !== 'string') bad(name + ' text');
+    });
+    if (!q.note || typeof q.note.id !== 'string' || !q.note.id || typeof q.note.text !== 'string') bad('note');
+    Q = q;
+
+    var ids = {};
+    function claim(id) {
+      if (typeof id !== 'string' || !id || ids[id]) bad('question id twice or empty: ' + id);
+      ids[id] = true;
+      QUESTIONS.push(id);
+    }
+    QUESTIONS = [];
+    claim(d.id);
+    CHOICES = {};
+    CHOICES[d.id] = d.options.map(function (o) { return o.v; });
+
+    PAIRS = {};
+    if (!Array.isArray(q.pairs) || !q.pairs.length) bad('no pairs');
+    q.pairs.forEach(function (p) {
+      var a = p && CLIPS[p.a], b = p && CLIPS[p.b];
+      if (!a || !b || p.a === p.b) bad('a pair plays clips the manifest does not list');
+      if (a.group.id !== p.group || b.group.id !== p.group) bad('a pair plays a clip outside its group');
+      claim(p.id);
+      PAIRS[p.id] = p;
+      CHOICES[p.id] = q.pair.options.map(function (o) { return o.v; });
+    });
+
+    if (!Array.isArray(q.keep) || !q.keep.length) bad('no keep questions');
+    q.keep.forEach(function (k) {
+      if (!k || typeof k.text !== 'string' || !Array.isArray(k.clips) || !k.clips.length || !optionsOk(k.extra)) bad('keep question');
+      var g = seenGroups[k.group] && only(GROUPS, function (x) { return x.id === k.group; })[0];
+      if (!g) bad('a keep question for a group the manifest does not list');
+      k.clips.forEach(function (fid, i) {
+        if (!CLIPS[fid] || CLIPS[fid].group !== g) bad('a keep clip outside its group');
+        if (CLIPS[fid].plain !== (i === 0)) bad('the reference clip is not first in a keep question');
+      });
+      claim(k.id);
+      CHOICES[k.id] = only(k.clips, function (fid) { return !CLIPS[fid].plain; }).concat(k.extra.map(function (o) { return o.v; }));
+    });
+    claim(q.note.id);
+
+    if (!Array.isArray(q.required) || q.required.indexOf(d.id) < 0 ||
+        !q.required.every(function (id, i) { return ids[id] === true && id !== q.note.id && q.required.indexOf(id) === i; })) bad('required list');
+    REQUIRED = q.required.slice();
+    QUESTIONS.forEach(function (k) { state.answers[k] = ''; });
+  }
+
+  function played(fid) { return (state.plays[fid] || 0) >= 1; }
+
+  // A pair widget's own PLAY A, THEN B has run to its end (both clips, in that order).
+  // The run is counted in the plays under the widget's id, so it is saved, restored and
+  // merged with the clip plays by the same logic.
+  function pairRun(qid) { return (state.plays[qid] || 0) >= 1; }
+
+  // Which questions are open to answer. A pair opens when its own PLAY A, THEN B has
+  // run to its end (which also means both its clips have been played).
+  function gateOpen(qid) {
+    var p = PAIRS[qid];
+    return p ? played(p.a) && played(p.b) && pairRun(qid) : true;
+  }
+
+  // ---------- build ----------
+  function buildIntro(lines) {
+    var host = $('intro');
+    host.textContent = '';
+    if (!lines.length) return;
+    var card = el('div', 'guide lcd');
+    card.appendChild(el('div', 'hd', 'BEFORE YOU START'));
+    lines.forEach(function (text) { card.appendChild(el('p', null, text)); });
+    host.appendChild(card);
+  }
+
+  function reqTag(qid) {
+    return REQUIRED.indexOf(qid) < 0 ? null : el('span', 'req', 'REQUIRED');
+  }
+
+  // One answer button. Every button is a toggle: a second tap on the chosen one clears the answer.
+  function chip(qid, value, text, label) {
+    var b = el('button', 'chip opt');
+    b.type = 'button';
+    b.id = 'opt-' + qid + '-' + value;
+    b.setAttribute('aria-pressed', 'false');
+    b.setAttribute('aria-label', label);
+    b.appendChild(el('span', 'tx', text));
+    b.addEventListener('click', function () { choose(qid, value); });
+    return b;
+  }
+
+  // A group of answer buttons for one question.
+  function choiceGroup(qid, options, label, cls) {
+    var g = el('div', 'opts' + (cls ? ' ' + cls : ''));
+    g.setAttribute('role', 'group');
+    g.setAttribute('aria-label', label);
+    options.forEach(function (o) { g.appendChild(chip(qid, o.v, o.t, label + ': ' + o.t)); });
+    return g;
+  }
+
+  // The first question: what the listening is done on.
+  function buildDevice() {
+    var host = $('devicehost');
+    host.textContent = '';
+    var d = Q.device;
+    var card = el('section', 'voice first');
+    var w = el('div', 'q');
+    w.id = 'q-' + d.id;
+    var hd = el('div', 'qhd');
+    hd.appendChild(el('span', 'where', 'FIRST QUESTION'));
+    var rt = reqTag(d.id);
+    if (rt) hd.appendChild(rt);
+    w.appendChild(hd);
+    w.appendChild(el('span', 'ask', d.text));
+    w.appendChild(choiceGroup(d.id, d.options, d.text));
+    card.appendChild(w);
+    host.appendChild(card);
+  }
+
+  // One pair question: the run (A, then B), each clip alone, and the answer, which stays shut until the run has ended.
+  function buildPair(card, g, p) {
+    var where = g.voice + DOT + g.note;
+    var w = el('div', 'q');
+    w.id = 'q-' + p.id;
+    var qhd = el('div', 'qhd');
+    qhd.appendChild(el('span', 'where', where));
+    var rt = reqTag(p.id);
+    if (rt) qhd.appendChild(rt);
+    w.appendChild(qhd);
+    w.appendChild(el('span', 'ask', Q.pair.text));
+    // only A and B: a clip's letter is never shown here, so an answer cannot be carried from one
+    // widget to another by the letter (the same two clips come back in the other order)
+    var run = el('button', 'raised runbtn');
+    run.type = 'button';
+    run.id = 'run-' + p.id;
+    run.setAttribute('aria-pressed', 'false');
+    run.setAttribute('aria-label', 'Play ' + where + ': clip A, then clip B');
+    run.innerHTML = PLAY_SVG + '<span class="lbl">PLAY A, THEN B</span>';
+    run.addEventListener('click', function () { tapRun(g, p, run); });
+    w.appendChild(run);
+    var solo = el('div', 'opts row2');
+    [['A', p.a], ['B', p.b]].forEach(function (x) {
+      var b = el('button', 'raised solobtn');
+      b.type = 'button';
+      b.id = 'solo-' + p.id + '-' + x[0];
+      b.setAttribute('aria-pressed', 'false');
+      b.setAttribute('aria-label', 'Play ' + where + ': clip ' + x[0] + ' alone');
+      b.innerHTML = PLAY_SVG + '<span class="lbl">PLAY ' + x[0] + '</span>';
+      b.addEventListener('click', function () { tapPad(g, x[1], where + DOT + x[0], b, null); });
+      solo.appendChild(b);
+    });
+    w.appendChild(solo);
+    var lock = el('div', 'locktext', '');
+    lock.id = 'lock-' + p.id;
+    lock.setAttribute('role', 'status');
+    w.appendChild(lock);
+    w.appendChild(choiceGroup(p.id, Q.pair.options, where + ', clip A then clip B: ' + Q.pair.text, 'row3'));
+    card.appendChild(w);
+  }
+
+  // One keep question: THE PLAIN ONE as the reference, then the lettered clips, each with a pad
+  // to play it and a button to pick it, and the answers besides a letter.
+  function buildKeep(card, g, k) {
+    var where = g.voice + DOT + g.note;
+    var w = el('div', 'q');
+    w.id = 'q-' + k.id;
+    var qhd = el('div', 'qhd');
+    qhd.appendChild(el('span', 'where', where));
+    var rt = reqTag(k.id);
+    if (rt) qhd.appendChild(rt);
+    w.appendChild(qhd);
+    w.appendChild(el('span', 'ask', k.text));
+    k.clips.forEach(function (fid) {
+      var info = CLIPS[fid];
+      var row = el('div', 'krow');
+      row.id = 'clip-' + fid;
+      var pad = el('button', 'raised pad');
+      pad.type = 'button';
+      pad.id = 'pad-' + fid;
+      pad.setAttribute('aria-pressed', 'false');
+      pad.setAttribute('aria-label', 'Play ' + where + ' ' + info.name);
+      pad.innerHTML = PLAY_SVG;
+      pad.addEventListener('click', function () { tapPad(g, fid, where + DOT + info.name, pad, row); });
+      row.appendChild(pad);
+      if (info.plain) {
+        // the reference: nothing to answer
+        var meta = el('div', 'meta');
+        meta.appendChild(el('span', 'name', info.name));
+        if (info.desc) meta.appendChild(el('span', 'desc', info.desc));
+        meta.appendChild(el('span', 'ref', 'THE REFERENCE'));
+        row.appendChild(meta);
+      } else {
+        row.appendChild(chip(k.id, fid, info.name, where + ': ' + k.text + ' ' + info.name));
+      }
+      w.appendChild(row);
+    });
+    w.appendChild(choiceGroup(k.id, k.extra, where + ': ' + k.text));
+    card.appendChild(w);
+  }
+
+  // The sections: for each group its label, its pair questions in the manifest's order, then its keep question.
+  function buildSections() {
+    var host = $('sections');
+    host.textContent = '';
+    GROUPS.forEach(function (g) {
+      var card = el('section', 'voice');
+      card.id = 'group-' + g.id;
+      var hd = el('div', 'voice-hd');
+      hd.appendChild(el('h2', null, g.label));
+      hd.appendChild(el('div', 'lead', g.body));
+      card.appendChild(hd);
+      only(Q.pairs, function (p) { return p.group === g.id; }).forEach(function (p) { buildPair(card, g, p); });
+      only(Q.keep, function (k) { return k.group === g.id; }).forEach(function (k) { buildKeep(card, g, k); });
+      host.appendChild(card);
+    });
+  }
+
+  // The free note and the verdict's save button.
+  function buildNote() {
+    var host = $('notehost');
+    host.textContent = '';
+    $('verdict').hidden = false;
+    var n = Q.note;
+    var lab = el('label', null, n.text);
+    var ta = el('textarea');
+    ta.id = n.id;
+    ta.placeholder = String.fromCharCode(0x2026);
+    lab.htmlFor = ta.id;
+    ta.addEventListener('input', function () { setAnswer(n.id, ta.value); });
+    host.appendChild(lab);
+    host.appendChild(ta);
+  }
+
+  // ---------- audio: one sequence at a time ----------
+  // A sequence is one play of a single clip (a keep pad, or A or B alone) or one PLAY A, THEN B
+  // start (the two clips of a pair question). It owns an Audio element made in the tap, and
+  // the second clip of a pair reuses that element, so a phone that allowed the tap lets the
+  // second clip play without another one. Every callback a sequence leaves behind (an ended,
+  // a rejected play(), an error, the gap timer) checks that its sequence is still the current
+  // one: a stopped or replaced sequence can no longer touch the page. current is the token.
+  var current = null;
+  var nowEl = $('now');
+  var IDLE_TEXT = 'TAP A PLAY BUTTON TO LISTEN';
+  // the pause between the two clips of a pair (a listening value, four tenths of a second)
+  var GAP_MS = 400;
+
+  function srcOf(g, fid) { return g.voice + '/' + fid + '.wav'; }
+
+  // the row that sounds now (none during the gap, and none for a pair)
+  function light(seq, row) {
+    if (seq.lit) seq.lit.classList.remove('playing');
+    seq.lit = row || null;
+    if (seq.lit) seq.lit.classList.add('playing');
+  }
+
+  function mark(seq, on) {
+    seq.btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (!on) light(seq, null);
+  }
+
+  // silence a sequence: no sound, no pending gap timer
+  function silence(seq) {
+    clearTimeout(seq.timer);
+    seq.timer = null;
+    seq.waiting = false;
+    var a = seq.audio;
+    seq.audio = null;
+    if (a) { try { a.pause(); } catch (e) { /* nothing to stop */ } }
+  }
+
+  function setPlaying(next) {
+    var old = current;
+    current = next;
+    if (old) { silence(old); mark(old, false); }
+    if (next) {
+      mark(next, true);
+      nowEl.textContent = next.label;
+      nowEl.classList.remove('idle');
+    } else {
+      nowEl.textContent = IDLE_TEXT;
+      nowEl.classList.add('idle');
+    }
+  }
+
+  // A play counts when the browser says the clip has started, and only if the
+  // sequence that asked for it is still sounding that very step: a tap that was
+  // stopped at once, or a clip that could not load, is not a play.
+  function markPlayed(seq, a, st) {
+    if (current === seq && seq.audio === a && seq.steps[seq.step] === st) {
+      st.started = true;               // this step really sounded: a pair's run may count at its end
+      countPlay(st.fid);
+    }
+  }
+
+  // What the strip says when a clip stops for a reason the owner should know. Short on purpose:
+  // the strip must not grow on a narrow phone.
+  var MSG_LOAD = 'CLIP DID NOT LOAD';
+  var MSG_START = 'NOT STARTED. TAP AGAIN.';
+  var MSG_CUT = 'STOPPED. TAP IT AGAIN.';
+
+  function say(text) {
+    nowEl.textContent = text;
+    nowEl.classList.remove('idle');
+  }
+
+  // A rejected play() (a src change makes the browser reject the previous one
+  // with an AbortError, and that rejection arrives after a newer sequence was
+  // selected): only the sequence that asked may be cleared. A refusal the browser
+  // gives the sequence that is sounding now (a phone that will not start the second
+  // clip, a clip it cannot play) is said in the strip, and an AbortError, which a
+  // newer play or a stop causes, is not.
+  function start(seq, a, st) {
+    var p = a.play();
+    if (p && typeof p.then === 'function') {
+      p.then(function () { markPlayed(seq, a, st); }, function (e) {
+        if (current !== seq) return;
+        setPlaying(null);
+        if (e && e.name === 'NotSupportedError') say(MSG_LOAD);
+        else if (!e || e.name !== 'AbortError') say(MSG_START);
+      });
+    } else {
+      markPlayed(seq, a, st);
+    }
+  }
+
+  function playStep(seq, i) {
+    var a = seq.audio;
+    if (current !== seq || !a) return;
+    seq.step = i;
+    seq.waiting = false;
+    var st = seq.steps[i];
+    light(seq, st.row);
+    st.started = false;
+    a.src = st.src;
+    start(seq, a, st);
+  }
+
+  function onEnded(seq) {
+    // an old sequence's, or a second 'ended' while the gap is already running
+    if (current !== seq || seq.waiting) return;
+    if (seq.step < seq.steps.length - 1) {
+      // the first clip is over: a short gap, then the next
+      light(seq, null);
+      seq.waiting = true;
+      var next = seq.step + 1;
+      seq.timer = setTimeout(function () {
+        if (current === seq) playStep(seq, next);
+      }, GAP_MS);
+      return;
+    }
+    // the last clip has played to its end. A pair question's own run (A, then B) counts now.
+    if (seq.pw && seq.steps[seq.step].started) countPlay(seq.pw);
+    setPlaying(null);
+  }
+
+  function begin(seq) {
+    setPlaying(seq);                   // stops what sounded or waited before
+    var a = new Audio();
+    a.preload = 'auto';
+    seq.audio = a;
+    a.addEventListener('ended', function () { onEnded(seq); });
+    a.addEventListener('error', function () {
+      if (current !== seq) return;
+      setPlaying(null);
+      say(MSG_LOAD);
+    });
+    // Something outside the page paused the clip (a phone call, the lock screen, headphones
+    // pulled out). The browser also fires 'pause' at the natural end of a clip, just before
+    // 'ended' (a.ended is true then), and the page's own silence() lets go of the element
+    // first (seq.audio is no longer a): neither is an interruption. A 'pause' that arrives
+    // while the element is playing again is an old one.
+    a.addEventListener('pause', function () {
+      if (current !== seq || seq.audio !== a || a.ended || seq.waiting || !a.paused) return;
+      setPlaying(null);
+      say(MSG_CUT);
+    });
+    playStep(seq, 0);
+  }
+
+  // One clip: a pad in a keep question, or A or B alone in a pair. A second tap on the same
+  // button stops it; any other button stops it and starts its own.
+  function tapPad(g, fid, label, btn, row) {
+    if (current && current.btn === btn) { setPlaying(null); return; }
+    begin({ btn: btn, pw: null, audio: null, step: 0, waiting: false, timer: null, lit: null, label: label,
+            steps: [{ fid: fid, src: srcOf(g, fid), row: row }] });
+  }
+
+  // The first clip of a pair question, then (after GAP_MS) the second. The strip says only A, then B.
+  // When the second clip has played to its end, the run counts (pw is the widget's id).
+  function tapRun(g, p, btn) {
+    if (current && current.btn === btn) { setPlaying(null); return; }
+    begin({ btn: btn, pw: p.id, audio: null, step: 0, waiting: false, timer: null, lit: null,
+            label: g.voice + DOT + g.note + DOT + 'A, THEN B',
+            steps: [{ fid: p.a, src: srcOf(g, p.a), row: null },
+                    { fid: p.b, src: srcOf(g, p.b), row: null }] });
+  }
+
+  // How often each clip was started, and each pair question's runs. Plays are not answers: this
+  // sets playsPending and never pending, so a play before the store's first read cannot make the
+  // stored answers be skipped. The store is written only once the document has been reconciled.
+  function countPlay(id) {
+    state.plays[id] = (state.plays[id] || 0) + 1;
+    if (!reconciled) earlyPlays[id] = (earlyPlays[id] || 0) + 1;
+    playsPending = true;
+    playsVer++;
+    saveLocal();
+    debounce(function () { if (reconciled) persist(); });
+    refresh();                         // the answers that wait for this play open now
+  }
+
+  // ---------- answers ----------
+  // The answers are strings in the one document. They stay a draft on this phone (pending,
+  // saved locally); only SAVE VERDICT writes them to the shared store.
+  function setAnswer(k, val) {
+    state.answers[k] = val;
+    pending = true;
+    ver++;
+    saveLocal();
+    refresh();
+  }
+
+  function choose(qid, value) {
+    if (!gateOpen(qid)) return;
+    setAnswer(qid, state.answers[qid] === value ? '' : value);
+  }
+
+  // ---------- painting ----------
+  function paintChoices() {
+    Object.keys(CHOICES).forEach(function (qid) {
+      var cur = state.answers[qid];
+      var open = gateOpen(qid);
+      CHOICES[qid].forEach(function (v) {
+        var b = $('opt-' + qid + '-' + v);
+        if (!b) return;
+        b.setAttribute('aria-pressed', cur === v ? 'true' : 'false');
+        b.disabled = !open;
+      });
+      var lock = $('lock-' + qid);
+      if (lock) {
+        lock.textContent = open ? 'YOU HAVE HEARD A, THEN B. TAP YOUR ANSWER.' : Q.pair.lockedText;
+        lock.classList.toggle('open', open);
+      }
+    });
+  }
+
+  function answered(id) {
+    var val = state.answers[id];
+    if (!val) return false;
+    if (CHOICES[id] && CHOICES[id].indexOf(val) < 0) return false;
+    return gateOpen(id);
+  }
+
+  function unanswered() { return only(REQUIRED, function (id) { return !answered(id); }); }
+
+  function fill(text, n) { return text.replace('{n}', String(n)); }
+
+  // Answers that this phone holds and the shared store has not accepted: a draft no SAVE
+  // VERDICT has sent, or a SAVE whose write has not gone through (yet). The strip points at
+  // the save button for as long as this is so.
+  function unsentToStore() { return pending; }
+
+  // The strip's counter says what is left of the required questions (or, when they are all
+  // answered but not yet sent, says so and says where to tap). Tapping it goes to the first
+  // thing that is open: a required question, then the save button.
+  function counterTarget() {
+    var left = unanswered();
+    if (left.length) return $('q-' + left[0]);
+    if (unsentToStore()) return $('save');
+    return null;
+  }
+
+  function paintCounter() {
+    var n = unanswered().length;
+    var c = $('counter');
+    var line = n === 0 ? (unsentToStore() && Q.counter.unsent ? Q.counter.unsent : Q.counter.none) : n === 1 ? Q.counter.one : fill(Q.counter.some, n);
+    c.hidden = false;
+    c.textContent = line;
+    var done = n === 0 && !unsentToStore();
+    c.classList.toggle('done', done);
+    c.disabled = done;
+    $('save').textContent = n === 0 ? Q.save.none : n === 1 ? Q.save.one : fill(Q.save.some, n);
+  }
+
+  // The answers are on this phone only until SAVE VERDICT writes them.
+  function paintUnsent() {
+    var e = $('unsent');
+    var owed = pending && !submit;
+    e.hidden = !owed;
+    e.textContent = owed ? 'YOUR ANSWERS ARE ON THIS PHONE ONLY. TAP SAVE VERDICT TO SEND THEM.' : '';
+  }
+
+  // The note field: what is typed into it wins over anything arriving from the store.
+  function paintNote() {
+    var n = Q.note.id, ta = $(n);
+    if (!ta) return;
+    if (ta === document.activeElement && pending) { state.answers[n] = ta.value; }
+    else if (ta.value !== state.answers[n]) { ta.value = state.answers[n]; }
+  }
+
+  function refresh() {
+    if (!Q) return;
+    paintChoices();
+    paintCounter();
+    paintUnsent();
+  }
+
+  function paintAll() { paintNote(); refresh(); }
+
+  // Tap the counter: the first thing still open comes into view (the save button in the middle
+  // of the screen, a question at the top, under the strip).
+  $('counter').addEventListener('click', function () {
+    var t = counterTarget();
+    if (t) t.scrollIntoView({ block: t === $('save') ? 'center' : 'start', behavior: 'smooth' });
+  });
+
+  $('save').addEventListener('click', function () {
+    pending = true;
+    submit = true;
+    submitVer++;
+    persist();
+    refresh();
+  });
+
+  // ---------- persistence ----------
+  var store = null;
+  var statusEl = $('status'), statusV = $('statusv');
+  var timers = {};
+  var queue = Promise.resolve();
+  // The page is usable before the shared store has answered, and a reload must
+  // not forget what the store never got. So these flags say what this phone holds
+  // that the store may not. They live here and in the local record beside the content,
+  // and are never sent to the store.
+  //   pending       answers changed since the last successful store write (a draft,
+  //                 until SAVE VERDICT)
+  //   playsPending  the play counts changed since the last successful write
+  //   submit        SAVE VERDICT was pressed and has not been written yet
+  // Plays are not answers: a play sets playsPending and never pending. They save on their
+  // own; the answers go with them only when SAVE VERDICT sent them. Until then the document
+  // carries the answers the store already had (sent), so a play never writes a draft.
+  var pending = false, playsPending = false, submit = false;
+  // ver is bumped on every change of the answers, playsVer on every play, submitVer on every
+  // SAVE. A write clears a flag only if its counter has not moved since the write began,
+  // and only after the store accepted it. busy counts the writes in flight.
+  var ver = 0, playsVer = 0, submitVer = 0, busy = 0;
+  // storeState: 'pending' (the store has not answered), 'ready' or 'off' (none).
+  // reconciled: the first store read was applied or skipped. Nothing is written to the
+  // store before that, or an early tap or play would write blank answers over a verdict
+  // the store holds. unread: that read failed. earlyPlays: plays counted before the read,
+  // certainly not in the store, which are added to its count and not merged into it as a
+  // maximum. sent: the answers the store holds (null while that is not known).
+  var storeState = 'pending', reconciled = false, unread = false, earlyPlays = {}, sent = null;
+  var started = false;
+
+  function setStatus(kind, text) {
+    statusEl.classList.remove('warn', 'ok');
+    if (kind) statusEl.classList.add(kind);
+    statusV.textContent = text;
+  }
+
+  function debounce(fn) {
+    clearTimeout(timers.debounce);
+    timers.debounce = setTimeout(fn, 700);
+  }
+
+  // What the store holds: the answers (the draft when a SAVE sends it, else the ones it already
+  // had), the plays and a time, and nothing else (the flags are never sent).
+  function snapshotOf(draft) {
+    var from = draft ? state.answers : (sent || {});
+    var data = {};
+    QUESTIONS.forEach(function (k) { data[k] = typeof from[k] === 'string' ? from[k] : ''; });
+    data.plays = Object.assign({}, state.plays);
+    data.savedAt = new Date().toISOString();
+    return data;
+  }
+
+  // What this phone keeps: the draft and the plays, and the flags beside them.
+  function localOf() {
+    var data = snapshotOf(true);
+    data.pending = pending;
+    data.playsPending = playsPending;
+    data.submit = submit;
+    return data;
+  }
+
+  // Every round's verdicts live under their own prefix, so a later round's
+  // page never opens pre-filled with this one's answers and saves over them.
+  // This round starts clean.
+  function docPath() { return 'verdicts/' + PHASE + '_' + KEY; }
+  function localName() { return LOCAL_PREFIX + PHASE + ':' + KEY; }
+
+  function saveLocal() {
+    try { localStorage.setItem(localName(), JSON.stringify(localOf())); } catch (e) { /* private mode: fine */ }
+  }
+
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(localName());
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  // plays: an object of numbers; anything else is ignored
+  function cleanPlays(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    var plays = {};
+    Object.keys(obj).forEach(function (id) {
+      var n = obj[id];
+      if (typeof n === 'number' && isFinite(n) && n >= 0) plays[id] = n;
+    });
+    return plays;
+  }
+
+  // One answer, kept only when it is one the manifest allows: a choice is one of its values,
+  // the note is any text. Anything else comes back empty (not answered).
+  function cleanAnswer(k, s) {
+    if (typeof s !== 'string') return null;
+    if (CHOICES[k]) return CHOICES[k].indexOf(s) >= 0 ? s : '';
+    return s;
+  }
+
+  function takeAnswers(data) {
+    QUESTIONS.forEach(function (k) {
+      var a = cleanAnswer(k, data[k]);
+      if (a !== null) state.answers[k] = a;
+    });
+  }
+
+  // The answers a document holds, as the page would keep them (empty where it holds none).
+  function answersOf(data) {
+    var out = {};
+    QUESTIONS.forEach(function (k) {
+      var a = cleanAnswer(k, data[k]);
+      out[k] = a === null ? '' : a;
+    });
+    return out;
+  }
+
+  // The record kept on this phone is applied first, so the page is never empty,
+  // and its flags are restored: a reload does not forget unsynced work. A record
+  // without flags counts as synced.
+  function applyLocal(data) {
+    if (!data || typeof data !== 'object') return;
+    takeAnswers(data);
+    var plays = cleanPlays(data.plays);
+    if (plays) state.plays = plays;
+    submit = data.submit === true;
+    pending = data.pending === true;
+    playsPending = data.playsPending === true;
+    paintAll();
+  }
+
+  // The store's first answer (snap), or none: no doc, or the read failed. What this phone
+  // holds that the store lacks is kept, not replaced:
+  //   answers: pending (a draft) keeps the draft, otherwise the store's answers are applied
+  //   plays: the larger count per id, plus the plays counted before this answer (those are
+  //   certainly not in the store)
+  // The store then counts as reconciled, and connect writes what is due.
+  function reconcile(snap, failed) {
+    try {
+      var S = snap && snap.exists ? snap.data() : null;
+      if (!S || typeof S !== 'object') S = null;
+      if (S) {
+        sent = answersOf(S);
+        if (!pending) takeAnswers(S);
+      } else if (!failed) {
+        sent = answersOf({});          // nothing is stored: the store holds no answers
+      }
+      var stored = S && cleanPlays(S.plays);
+      if (stored) {
+        var merged = {};
+        Object.keys(state.plays).concat(Object.keys(stored)).forEach(function (id) {
+          var early = earlyPlays[id] || 0;
+          merged[id] = Math.max(stored[id] || 0, (state.plays[id] || 0) - early) + early;
+        });
+        state.plays = merged;
+      }
+      paintAll();
+      if (S) saveLocal();
+    } catch (e) { failed = true; /* keep this phone's answers */ }
+    earlyPlays = {};
+    unread = !!failed;
+    if (unread) sent = null;
+    reconciled = true;
+    refresh();
+  }
+
+  // Is there anything to write? A SAVE not yet written, or plays not yet written (not when the
+  // read failed: a document of plays alone would write blank answers over what could not be
+  // read). A draft stays on this phone until SAVE VERDICT.
+  function due() { return submit || (playsPending && !unread); }
+
+  function clock() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  // One write. The flags are cleared only after the store accepted it, and only
+  // if nothing changed since it began (a newer persist follows in that case);
+  // a failed write leaves every flag set, for the next persist or connect.
+  function write() {
+    var draft = submit;
+    var data = snapshotOf(draft), at = ver, sat = submitVer, pat = playsVer;
+    busy++;
+    setStatus(null, 'SAVING...');
+    queue = queue
+      .then(function () { return store.doc(docPath()).set(data); })
+      .then(function () {
+        busy--;
+        if (draft) {
+          sent = answersOf(data);
+          if (ver === at && submitVer === sat) pending = false;
+          if (submitVer === sat) submit = false;
+        }
+        if (playsVer === pat) playsPending = false;
+        saveLocal();
+        refresh();
+        // SAVED only when nothing else is still owed
+        if (due() && !busy) setStatus('warn', 'NOT ALL SAVED' + DOT + 'TRYING AGAIN');
+        else setStatus('ok', (!draft && pending ? 'PLAYS SAVED ' : 'SAVED ') + clock());
+      }, function (e) {
+        busy--;
+        setStatus('warn', 'SAVE FAILED' + DOT + String((e && e.code) || 'unavailable').toUpperCase());
+        // one retry every ten seconds while something is still owed, so a dropped connection mends itself
+        clearTimeout(timers.retry);
+        timers.retry = setTimeout(function () { if (due() && !busy) write(); }, 10000);
+      });
+  }
+
+  // A change to keep. The local record first, with its flags; the store only when
+  // it is ready and has been reconciled, and only if something is due.
+  function persist() {
+    saveLocal();
+    if (storeState !== 'ready' || !reconciled) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    if (due()) write();
+  }
+
+  function connect() {
+    if (started) return;
+    started = true;
+    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use(STORE_NAME) : Promise.resolve(null);
+    Promise.resolve(use).then(function (ns) { store = ns || null; return store; }, function () { store = null; return null; })
+      .then(function (ns) {
+        if (!ns) { storeState = 'off'; setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
+        storeState = 'ready';
+        // the first read is applied or skipped (reconcile) before anything is written
+        return new Promise(function (res) { res(ns.doc(docPath()).get()); })
+          .then(function (snap) { reconcile(snap, false); }, function () { reconcile(null, true); })
+          .then(function () {
+            setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE');
+            // what this phone holds that the store lacks (a write already in flight carries it)
+            if (due() && !busy) write();
+          });
+      })
+      .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
+  }
+
+  // A page that could not be built is taken down whole: a half page (clips without their
+  // questions, or without the save button) is worse than one plain message. The shared store
+  // is not connected: there is nothing on the page to save.
+  function failPage(e) {
+    if (window.console && console.error) console.error(e);
+    ['devicehost', 'intro', 'sections'].forEach(function (id) { $(id).textContent = ''; });
+    $('verdict').hidden = true;
+    $('counter').hidden = true;
+    var card = el('div', 'guide lcd');
+    card.id = 'loading';
+    card.appendChild(el('p', null, 'COULD NOT LOAD THE CLIPS. RELOAD THE PAGE. IF IT STAYS LIKE THIS, TELL ME IN CHAT.'));
+    $('sections').appendChild(card);
+  }
+
+  // The manifest first, then the local record (and its flags) so the page is
+  // never empty, then the shared store, reconciled.
+  fetch('manifest.json')
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (m) {
+      try {
+        setup(m);
+        buildIntro(m.intro);
+        buildDevice();
+        buildSections();
+        buildNote();
+      } catch (e) {
+        failPage(e);
+        return;
+      }
+      try {
+        applyLocal(loadLocal());
+        refresh();
+      } catch (e) {
+        if (window.console && console.error) console.error(e);
+      }
+      try { connect(); } catch (e) { if (window.console && console.error) console.error(e); }
+    })
+    .catch(failPage);
+})();
+</script>
