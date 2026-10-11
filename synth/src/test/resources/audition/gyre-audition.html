@@ -441,7 +441,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Gyre Audition</span>
-    <span class="tag">ROUND 1 GATE &middot; STRINGS THAT PLAY EACH OTHER</span>
+    <span class="tag">ROUND 2 GATE &middot; A BOW ON THE STRINGS</span>
   </div>
 
   <div class="transport lcd">
@@ -456,9 +456,10 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>GYRE is four plucked strings that share one bridge. The bridge sits on a small membrane, so what one string does reaches the others and comes back: pluck one and the rest answer. Eight more strings that nobody plucks (the sympathetic strings) listen to the bridge and ring with whatever reaches them. Everything leaves through a box under the strings, which BODY sizes. A rotor turns inside the instrument, moving which of the upper strings is loudest, which of the box's resonances swells, how strongly the strings are coupled and which sympathetic string answers. It never touches the overall volume. There is no sample underneath: everything comes out of the same coupled strings.</p>
-    <p><b>Round 1c: HOLD refitted after your second listen.</b> BODY and SPIN passed ("Yes better", "Better") and are unchanged. HOLD did nothing you could hear because the notes had already died away before the hand landed: on FLICK the hand landed 50 dB down at HOLD 0.5 and 108 dB down at 0.95. HOLD now runs from choked to open, as you asked. At 0 the hand stops the note 0.04 s after the pluck; at the top it lands only once the note has rung out on its own, so it stops nothing. How long "rung out" takes follows SYMPATHY, since the sympathetic strings carry most of a long note. Measured, each step's hand now lands about 10 dB lower than the one before. The voices' default HOLD sits near the open end, where you approved them, so they should sound as they did.</p>
-    <p>First the two voices at three notes each. Then the round's own claim as sound: one string plucked with its neighbours answering, and the same pluck with the bridge switched off. Then each knob at five settings, the sympathetic strings on their own, the rotor beside a tremolo of the same depth, the knobs together, and the edges. Mark each KEEP, MEH or CUT. A CUT on a knob setting means it goes too far.</p>
+    <p>GYRE is four strings that share one bridge. The bridge sits on a membrane, so what one string does reaches the others and comes back. Eight more strings that nobody plays (the sympathetic strings) listen to the bridge and ring with whatever reaches them. Everything leaves through a box under the strings, which BODY sizes. A rotor turns inside the instrument and never touches the overall volume. There is no sample underneath: everything comes out of the same coupled strings.</p>
+    <p><b>Round 2: a bow, and two new voices.</b> TOUCH lowers a bow onto the strings. At 0 they are plucked, exactly as before (FLICK and HALO should sound as they did in round 1c); at 1 they are bowed and the pluck is gone; between, the pluck dies away as the bow takes hold. The bow does not switch on: it catches, somewhere around the middle, and from there the note is drawn. HOLD on a bowed note is the stroke: how long the bow stays down before the hand lifts it. SPIN also moves how hard each upper string is bowed. Two new voices start bowed: DRAWN (a bowed string with a pluck's attack in it, TOUCH .85) and BOURDON (a low drone on a large body, TOUCH .9). Their settings are first shapes from the source document, for you to correct.</p>
+    <p>First the four voices at three notes each. Then TOUCH at five points on FLICK and DRAWN. Then the question the round is for: TOUCH .5 beside the two ends and a plain 50/50 mix of them, so you can hear whether the middle is one string changing, or two sounds at once. Then FLICK and HALO from round one beside the new engine at TOUCH 0, HOLD and SPIN on the bowed voices, the knobs together, and the edges. Mark each KEEP, MEH or CUT. A CUT on a knob setting means it goes too far.</p>
+    <p><b>Known, and written down.</b> Just after the bow catches (about TOUCH .4 to .65) it is raucous, as a real bow is just over its minimum force; the pitch detector sometimes reads a higher partial there. BOURDON's lowest notes at the largest BODY sit on the membrane's lowest mode and can be out of tune (24 cents at worst). And once the bow has caught, it is 14 to 26 dB louder than the pluck's own attack, so in the middle of TOUCH the pluck is a small tick on a bowed note: listen for that first in THE PLUCK THE BOW CATCHES. Tell me if any of these is worse than that sounds like.</p>
   </div>
 
   <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
@@ -469,16 +470,16 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <label class="ask" for="q_voices">1 &middot; HOLD: does it now run from short and choked (0) to fully open (.95)? Can you hear each step, and does any step sound wrong (0 too clipped, the top still cut)?</label>
-      <textarea id="q_voices" placeholder="&hellip;"></textarea>
+      <label class="ask" for="q_touch">1 &middot; TOUCH: in THE PLUCK THE BOW CATCHES, does TOUCH .5 sound like one string changing, or like the 50/50 MIX of the two ends? And does TOUCH, turned from 0 to 1 on FLICK and DRAWN, feel like lowering a bow, or like fading between two instruments?</label>
+      <textarea id="q_touch" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_knobs">2 &middot; The voices: do FLICK and HALO at their defaults still sound as they did in round 1b? (HOLD's default moved to keep them near open; HALO's note is a little shorter.)</label>
-      <textarea id="q_knobs" placeholder="&hellip;"></textarea>
+      <label class="ask" for="q_samples">2 &middot; Samples: could FLICK and DRAWN make useful samples as they are, with no effects? Which TOUCH settings would you actually keep, and which sound wrong (the raucous catch, a bow that is too loud against the pluck, a note that stops too soon)?</label>
+      <textarea id="q_samples" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_landing">3 &middot; Anything in the other sections that sounds worse than round 1b? (Nothing else changed, so a quick skim is enough.)</label>
-      <textarea id="q_landing" placeholder="&hellip;"></textarea>
+      <label class="ask" for="q_round1">3 &middot; Round one: in TOUCH 0 IS ROUND ONE, do the pairs sound the same? Do FLICK and HALO still sound as you approved them? (They are not bit for bit: the strings are bows now, and the difference is about 50 dB down.)</label>
+      <textarea id="q_round1" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <label class="ask" for="q_else">Anything else</label>
@@ -492,7 +493,7 @@
 
   <div class="foot">
     RENDERED BY generateGyreAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
-    ROUND 1C &middot; HOLD REFITTED &middot;
+    ROUND 2 &middot; A BOW, AND TWO VOICES &middot;
     CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
@@ -515,7 +516,7 @@
     { v: 'cut',  cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'CUT' }
   ];
 
-  var QUESTIONS = ['q_voices', 'q_knobs', 'q_landing', 'q_else'];
+  var QUESTIONS = ['q_touch', 'q_samples', 'q_round1', 'q_else'];
 
   var $ = function (id) { return document.getElementById(id); };
   var el = function (tag, cls, text) {
@@ -526,7 +527,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_voices: '', q_knobs: '', q_landing: '', q_else: '' } };
+  var state = { overall: { q_touch: '', q_samples: '', q_round1: '', q_else: '' } };
 
   // ---------- build ----------
   var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
@@ -746,7 +747,7 @@
 
   // Every round's verdicts live under their own prefix, so a later round's
   // page never opens pre-filled with this one's notes and saves over them.
-  var PHASE = 'gyre_r1c';
+  var PHASE = 'gyre_r2';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {

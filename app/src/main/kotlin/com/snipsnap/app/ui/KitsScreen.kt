@@ -83,7 +83,7 @@ private const val EMPTY_ROOMS_BIN_ARM_MS = 3_000L
 /**
  * The tape shelf: every kit folder on the device, plus the NEW KIT ▸ PICK
  * A STARTER menu (the cold-start answer — the shelf is never uselessly
- * empty when the starter kits are one tap away).
+ * empty when starter kits are one tap away).
  */
 @Composable
 fun KitsScreen(
@@ -484,7 +484,7 @@ fun KitsScreen(
                             InstrumentRow(entry, onOpenInstrument)
                         }
                     }
-                    // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through MUTATE ▸ ROOM.
+                    // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
                             TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)

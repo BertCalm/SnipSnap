@@ -358,6 +358,29 @@ object SynthKits {
     }
 
     /**
+     * The second MERCURY kit (R2c): the three voices the first kit does not carry, as their own presets, none of them
+     * at the default TUNE. EDDY five (A01-A05), VESSEL five (A06-A10), SHARD six (A11-A16), each a one-shot pad, dry, filed
+     * by [Mercury.drumClassFor] (LOOP by length, like the first). The first kit stays as the owner heard it, the pentatonic
+     * row included; this one is the audition's way to hear the three on the MPC. Provisional until their audition.
+     */
+    fun mercury2(): List<ArrangedPad?> {
+        fun preset(voice: MercuryVoice, name: String) = MercuryPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Mercury.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            preset(MercuryVoice.EDDY, "HEARTH HUM"), preset(MercuryVoice.EDDY, "TWIN BEATING"),               // A01 A02
+            preset(MercuryVoice.EDDY, "SLOW SWIRL"), preset(MercuryVoice.EDDY, "RIM WAVER"),                  // A03 A04
+            preset(MercuryVoice.EDDY, "STRUCK BOWL"),                                                         // A05
+            preset(MercuryVoice.VESSEL, "CISTERN"), preset(MercuryVoice.VESSEL, "DRAIN PIPE"),                // A06 A07
+            preset(MercuryVoice.VESSEL, "BOILER HUM"), preset(MercuryVoice.VESSEL, "WATER TOWER"),            // A08 A09
+            preset(MercuryVoice.VESSEL, "TWIN PIPES"),                                                        // A10
+            preset(MercuryVoice.SHARD, "BROKEN PANE"), preset(MercuryVoice.SHARD, "SPLINTER"),                // A11 A12
+            preset(MercuryVoice.SHARD, "SKITTER"), preset(MercuryVoice.SHARD, "HAIRLINE"),                    // A13 A14
+            preset(MercuryVoice.SHARD, "FRAYED EDGE"), preset(MercuryVoice.SHARD, "TIN SKY"),                 // A15 A16
+        )
+    }
+
+    /**
      * The LEAD family's amp (shape), written in the kit: DRIVE 0.78 is gain 37 on VALVE's law, a
      * cooler drive than CHUG's landing (DRIVE 0.85, gain 106; it was hotter than the first build's
      * gain 13), with SAG and CAB as CHUG's and TONE 0.5 (flat) against CHUG's 0.3. The owner heard
@@ -454,6 +477,30 @@ object SynthKits {
     }
 
     /**
+     * A01–A08 walk C minor pentatonic from C4 with all six surface profiles:
+     * clear strike, delayed rain, spreading cascade, wet basin, thin ripple,
+     * draining return, soft skin and an isolated heavy answer. A09–A16 add
+     * low-register landings and sustained liquid, high-register articulation,
+     * and a settled held circle. All twelve presets appear, with deliberate
+     * register repeats; every recipe is dry and stores its exact MIDI pitch.
+     */
+    fun cistern(): List<ArrangedPad?> {
+        fun preset(name: String, midi: Int) =
+            CisternPresets.all().first { it.name == name }.copy(midi = midi)
+                .let { pad(it, Cistern.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            preset("First Drop", 60), preset("Hanging Rain", 63),
+            preset("Wide Cascade", 65), preset("Wet Basin", 67),
+            preset("Thin Ripple", 70), preset("Clear Return", 72),
+            preset("Soft Skin", 75), preset("Quiet Reservoir", 77),
+            preset("Heavy Landing", 48), preset("Slow Drain", 55),
+            preset("Dense Surface", 63), preset("Hanging Rain", 67),
+            preset("Wet Basin", 48), preset("Thin Ripple", 75),
+            preset("Clear Return", 70), preset("Replenished Circle", 60),
+        )
+    }
+
+    /**
      * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
      * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
      * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).
@@ -521,6 +568,82 @@ object SynthKits {
     }
 
     /**
+     * The dry NIMBUS kit. A01–A08 walk RING up C minor pentatonic from C3. The top half
+     * explores shimmer, stack restoration, chamber geometry and rim contact, then holds metal.
+     * Each pad keeps its full recipe and the engine's pitched routing.
+     */
+    fun nimbus(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = NimbusPatch(
+            "Metal $n", NimbusVoice.RING,
+            Nimbus.defaults(NimbusVoice.RING) + ("TUNE" to semitone / Nimbus.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Nimbus.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = NimbusPresets.all().first { it.name == name }
+            .let { pad(it, Nimbus.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("THIN CROWN"), preset("GATHERING STACK"), preset("NARROW THROAT"), preset("WIDE MOUTH"),
+            preset("DARK PLATE"), preset("SOFT FIELD"), preset("RIM KISS"), preset("HELD METAL"),
+        )
+    }
+
+    /**
+     * TESSERA's dry pitched kit. A01–A08 walk WOOD up C minor pentatonic from C3; A09–A16
+     * contain the eight named material and chamber recipes, ending with settled held material.
+     * Every pad stores its complete recipe. Frame transfers and chamber answers come from the
+     * engine, with no external effect, mute group or shared state between independently rendered pads.
+     */
+    fun tessera(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = TesseraPatch(
+            "Tessera $n", TesseraVoice.WOOD,
+            Tessera.defaults(TesseraVoice.WOOD) + ("TUNE" to semitone / Tessera.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Tessera.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            TesseraPresets.all().map { pad(it, Tessera.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
+     * A dry pitched wheel kit for the first audition. A01–A08 walk CLUNK up C minor
+     * pentatonic from C3. A09–A14 contain the six voice defaults, A15 adds the next
+     * scale note, and A16 is the settled held TURN. Each pad has a fresh independent
+     * object and an editable recipe with its exact root; finite gestures use TONAL
+     * routing and HOLD uses LOOP, preserving the instrument's pitched identity.
+     */
+    fun pitchwheel(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = PitchwheelPatch(
+            "Wheel $n", PitchwheelVoice.CLUNK, Pitchwheel.defaults(PitchwheelVoice.CLUNK),
+            midi = Pitchwheel.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Pitchwheel.drumClassFor(it.voice, it.macros)) }
+        val defaults = PitchwheelPresets.all().filterNot { Pitchwheel.isLoop(it.macros.getValue("HOLD")) }
+        val held = PitchwheelPresets.all().single { Pitchwheel.isLoop(it.macros.getValue("HOLD")) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            defaults.map { pad(it, Pitchwheel.drumClassFor(it.voice, it.macros)) } +
+            listOf(note(9, PENTATONIC[8]), pad(held, Pitchwheel.drumClassFor(held.voice, held.macros)))
+    }
+
+    /**
+     * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
+     * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
+     * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
+     * material suitable for repeated playback. The engine's pitched identity takes precedence
+     * over the generic classifier's length-based LOOP bucket.
+     */
+    fun corolla(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = CorollaPatch(
+            "Petal $n", CorollaVoice.TONGUE,
+            Corolla.defaults(CorollaVoice.TONGUE) + ("TUNE" to semitone / Corolla.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = CorollaPresets.all().first { it.name == name }
+            .let { pad(it, Corolla.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("OPENING BELL"), preset("FOLDED CHAMBER"), preset("MAGNETIC CHOIR"), preset("QUIET CHATTER"),
+            preset("FAST ORBIT"), preset("HOLLOW HUSK"), preset("PETAL CLOUD"), preset("CLOSED CIRCUIT"),
+        )
+    }
+
+    /**
      * The THAW kit. A01–A08 walk C minor pentatonic from C3 on BRITTLE. A09–A14 explore the
      * warming runner, melt, channels, frozen bridges, heavy sheet and returning frost; A15–A16
      * are settled held material. Each dry pad carries its full recipe and uses THAW's pitched
@@ -540,6 +663,62 @@ object SynthKits {
             note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
             preset("COPPER RUNNER"), preset("SOFT MELT"), preset("CLEAR CHANNEL"), preset("FROZEN BRIDGE"),
             preset("SLOW SHEET"), preset("RETURNING FROST"), preset("COLD CHOIR"), preset("THERMAL CYCLE"),
+        )
+    }
+
+    /**
+     * A01–A08 walk C minor pentatonic on KNOCK. The upper eight pads explore every aperture
+     * character and end with settled powered suction. All pads land dry with recipes that
+     * regenerate the same coupled shell; the held pad contains its loop without the first catch.
+     */
+    fun undertow(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = UndertowPatch(
+            "Inlet $n", UndertowVoice.KNOCK,
+            Undertow.defaults(UndertowVoice.KNOCK) + ("TUNE" to semitone / Undertow.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Undertow.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = UndertowPresets.all().first { it.name == name }
+            .let { pad(it, Undertow.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("SOFT INLET"), preset("FLUTTER CHAMBER"), preset("ALTERNATING SEAL"), preset("DEEP SPIRAL"),
+            preset("HEAVY CATCH"), preset("RETURNING AIR"), preset("GENTLE BYPASS"), preset("HELD SUCTION"),
+        )
+    }
+
+    /**
+     * A dry vessel kit: A01–A08 walk C minor pentatonic from C3 on BLOOM, A09–A14
+     * explore the threaded, closing, murmuring, strained and deep bodies, and A15–A16
+     * contain settled powered loops. Every pad carries its complete regenerable recipe.
+     */
+    fun suture(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = SuturePatch(
+            "Bronze $n", SutureVoice.BLOOM,
+            Suture.defaults(SutureVoice.BLOOM) + ("TUNE" to semitone / Suture.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Suture.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = SuturePresets.all().first { it.name == name }
+            .let { pad(it, Suture.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("WOODEN EYE"), preset("SLOW TAKE-UP"), preset("CLOSING SHELL"), preset("FINE SEAM"),
+            preset("RESISTED STITCH"), preset("DEEP VESSEL"), preset("QUIET MURMUR"), preset("RETURNING GAP"),
+        )
+    }
+
+    /** Eight C minor pentatonic roots and eight dry ensemble perspectives, with full recipes. */
+    fun revel(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = RevelPatch(
+            "Circle $n", RevelVoice.CIRCLE,
+            Revel.defaults(RevelVoice.CIRCLE) + ("TUNE" to semitone / Revel.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Revel.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = RevelPresets.all().first { it.name == name }
+            .let { pad(it, Revel.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("Skin Conversation"), preset("Close Pass"), preset("Two Directions"), preset("Three Listeners"),
+            preset("Flower Path"), preset("Elastic Answer"), preset("Rolling Floor"), preset("Held Revel"),
         )
     }
 }

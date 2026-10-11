@@ -1058,3 +1058,103 @@ path (R1.1 item 6 above).
 
 **Next.** R2c: EDDY, VESSEL and SHARD.
 
+**Merged (PR #452, 2026-10-04).** The held-instrument path in the app is still R1.1 item 6.
+
+## R2c, as built — 2026-10-04: EDDY, VESSEL and SHARD
+
+Decision 5 (voices at R2 only if R1's gate passed) is met: three voices more, the same seven knobs, the owner's
+defaults for the five sound macros, each its own object. EDDY is the external spec's TIDE, renamed since TIDE is an
+engine here (decision 6).
+
+**One architecture, three objects (`MercuryGeometry.kt`).** `Mercury.sound` asked `isRing(voice)` in three places and
+held the vessel, BEND, contact, pickup and load laws as globals. They are one `Geometry` per object now: the mode
+table, which primary each vessel hangs from and how far from it, its springs and its t60, the contact's and the
+pickup's shape per mode, the load per mode and its weight, the fundamental's mean load (the anchor's), BEND's
+coefficients, the excursion, the strike pulse and WATER's curve. `RingGeometry` (PING, SING) and `BeamGeometry` (BLADE)
+say only what they differ from the defaults in. **The gate was that the three shipped voices do not move one sample:**
+a hash of 39 renders (every voice at the defaults, TUNE 0 and 1, BEND 0 and 1, WATER 1, COUPLE 1 at GLASS 0, RUB 0, a
+long hold, the LOOP and its hard corner, a soft velocity, a pad zone) is identical before and after the refactor, and
+again after the last change to the engine. It was a one-time gate; what stays in the suite is `MercuryTest`'s golden
+values (length, RMS and six samples of each shipped voice's defaults and its loop, to 1e-4).
+
+| Voice | Object | Table | Root | Default (BEND/RUB/WATER/GLASS/COUPLE, HOLD) |
+|---|---|---|---|---|
+| EDDY | a rubbed singing bowl: six families of doublets | **measured**: Inácio, Henrique and Antunes (2006), Table I, bowl 1 | A2 (45), A2-A4 | .50/.70/.65/.65/.60, HOLD .75 |
+| VESSEL | a thin steel cylindrical shell, a pipe or a tank | **derived**: Love/Sanders, L/R 6, h/R .04, ν .3, one axial half-wave at n = 0 to 11, recomputed by `MercuryGeometryTest` | A2 (45), A2-A4 | .40/.30/.40/.40/.65, HOLD .45 |
+| SHARD | a free rectangular plate, a/b 1.13, ν .33 | **converged Rayleigh-Ritz** (Legendre), which reproduces the published free-square values (Narita 2022; Leissa 1969 tabulates slightly higher upper-bound values) | C4 (60), C4-C6 | .75/.45/.75/.80/.75, HOLD .45 |
+
+All tables are *designed* in decision 9's sense, frozen as numbers with their sources named. The research record is in
+the session that built this (three geometry proposals, each recomputed and challenged by an independent reviewer).
+
+**EDDY** has six doublets, a lower and an upper member each, split by 0.02 to 0.5%. The vessels hang from the *lower*
+member of the first four families by one spring each (hosted by both, the anchor fix calibrates the wrong normal mode and
+the note comes out 60 cents sharp), and the first sits 4.05% above its host, not 3.5, since the host's upper member
+is 0.455% above it. A doublet's two members are loaded by the mass in antiphase (their loads always sum to one, each a half plus or
+minus the swing; the pair's mean never moves), share their BEND (the fundamental pair is pinned) and are told apart by the
+pickup's angle. **Friction locks a doublet to one winner**, so a rubbed EDDY does not beat steadily: no loop-safe way to
+make it was found (a weak partner contact or a spinning contact both failed the seam bar at COUPLE .6). It drifts and
+swells as the water moves, and a struck one beats in its tail at a rate COUPLE sets through the vessel: the split goes
+from the bowl's 0.455% at COUPLE 0 to about 2% at COUPLE 1.
+
+**VESSEL** has twelve primaries that are the cos(nθ) modes sorted by frequency (n = 2, 3, 1, 4, 5, 6, 7, 8, 9, 0, 10, 11:
+the ring modes, the tube's own flexure at n = 1, the breathing mode at n = 0), and four vessels that are the
+sin(nθ) quadrature partners of the first four: a strike at θ = 0 drives only the cos member, so COUPLE is the one way
+the partner is fed. The water's added mass falls as about 1/n, scaled to .75 at the fundamental; the first three
+partials come out near 4:6:9 (a hollow, third-less sus voicing). Two departures from the other voices, both for the
+loop: the vessels sit **5.25, 6.75, 8.25 and 9.75%** above their partners (the others' 3.5 to 7%), because at 3.5 to 6.5%
+the rub sustained the fundamental and the hybrid together at the four lowest keys (seams of 3 to 5; 1.5 times the
+old gaps closed them, the 25 keys of the defaults all under 1e-3 and un-nudged), and a vessel rings as long as its partner (a lossier one was a damper, and failed the loop sooner).
+
+**SHARD** has a loose skeleton of near-harmonics (the (0,2) mode 43 cents under an octave, the 12th ratio 7.996) over
+a dense cluster, the smallest gap 3.97%. Its contact is a finger pad near the corner (grip falls as ratio⁻¹, not the
+line patch's ratio⁻⁰·⁵), its pickup an accelerometer on the right edge (acceleration is ω² times displacement), the
+strike pulse is shorter (0.10 to 0.50 ms against 0.4 to 1.2) and the excursion is four semitones, not two (the external
+spec allows a stronger SHARD excursion if separately capped; documented here). **Known:** the third vessel (hung on the
+sixth primary, and so sharing its BEND) closes on the seventh from about BEND .75 (4.0% apart, 2.9% at .8) and crosses it at
+BEND .94, a BEND × COUPLE capture. SHARD's presets keep BEND at .78 and under (SKITTER and SHARP GLASS are the highest, at .78, where the gap is still about 3.3%); the other voices' BEND laws have no such
+crossing (their smallest gaps are in the table below), so EDDY RIM WAVER (.82) and VESSEL TAUT TANK (.9) are not affected.
+
+**Decisions taken (the owner can overrule any, by ear):**
+1. **Roots:** EDDY and VESSEL at A2, not F2 as first proposed: at F2 the rub sat 5.3 cents sharp at GLASS 0 and COUPLE 1
+   (the lock bar is 4), at A2 3.3 on the model and under 2 as built; and the default note stays above the classifier's
+   200 Hz low band. SHARD shares PING's C4.
+2. **Velocity (a `Mercury.VelocityKind` per voice):** VESSEL and SHARD, whose defaults are mostly a tap (the tap's
+   weight at the default RUB: .89 and .76), take velocity as GLASS, like PING; EDDY (.45), like SING and BLADE (.23 and
+   .31), as the touch. VESSEL's onset brightens only +10% (317 to 349 Hz) against PING's +31% and SHARD's +83%: it is a
+   monotone sweep and the bar for it is 8%, not PING's 15%; SHARD's bar is 50%, a third under what it measures.
+3. **EDDY's pair swing .45 and its WATER curve .04.** At swing .6 the loop missed the bar at five scattered keys, at .5
+   at one or two (chaotically, with the curve), at .45 it closes all 25; and the pair's centre never moves, so the cents
+   WATER adds come only from the members hopping, which needs the steeper curve (0.25 gave 6 cents at WATER .05, the
+   bar is 8; .04 gives 9.2).
+4. **The anchor for VESSEL and SHARD is solved where the water leaves the bank on average** (`anchorAtMeanWater`: every
+   mode at its mean load, every spring lifted by its mean). The dry anchor is right with WATER still and was 6 to 9
+   cents flat at the defaults (VESSEL -9, SHARD -7), where COUPLE is .65 and .75 and WATER .4 and .75; now -0.3 to -1.6
+   and -1.7 to -3.8.
+5. **Lengths:** no per-voice HOLD or tail clamp. EDDY at its default is 4.6 s, VESSEL 3.15 s, SHARD 3.49 s, the longest
+   one-shot about 6.4 s, inside the external spec's 3 to 8 s for the first two and past its 1 to 4 s for SHARD at the
+   top; every preset is past the classifier's 1.5 s line, so every pad is filed LOOP and none reaches its SNARE rule.
+6. **The held instruments for the three are not committed.** `Keys.mercuryPad` and `MercuryHeldTest` read all six
+   voices (54 zones), and the audition's HELD KEYS group plays them, but each instrument is 6 to 9 MB of WAV and a
+   zip entry: they are made once their sound has been approved (`InstrumentSuite.MERCURY_INSTRUMENT_VOICES` is the
+   three whose loops the owner heard and approved in round 5; their keys await round 6).
+7. **A second kit,** `SynthKits.mercury2()` ("SnipSnap Mercury Kit 2": EDDY five pads, VESSEL five, SHARD six),
+   and the first stays exactly as it was heard, the pentatonic row included.
+
+**Measured** (`MercuryTest`, `MercuryLoopTest`, `MercuryHeldTest`, `MercuryGeometryTest`; the 25-key row is `MercuryLoopTest`'s
+sweep of the three new voices, the mean-pitch row is the R2c probe's signed ranges, which `MercuryHeldTest` bounds by the
+absolute 6 cents):
+
+| Claim | EDDY | VESSEL | SHARD |
+|---|---|---|---|
+| In tune, BEND centred, WATER 0, TUNE 0, .5, 1 (bar 3 cents) | all six voices within 0.79 | | |
+| The rub locks at the bottom of the range, GLASS 0 and 1, COUPLE 1 (bar 4 cents) | 1.9 / -0.7 | -1.7 / -0.7 | -1.1 / -0.7 |
+| WATER .05 adds, cents and dB (bars 8 and 1.2) | 9.2, 3.4 | 9.5, 3.0 | 13.0, 3.5 |
+| The bend gesture, early / late (late bar 3 cents) | 177 / 1.6 | 137 / 1.9 | 200 / 0.5 |
+| The defaults' loop closes un-nudged at all 25 keys (bar 1e-3) | worst 2e-4 | worst 1e-5 | worst 2e-4 |
+| Pitch drift inside the loop at WATER .5 (bar 8) | 22 | 13 | 26 |
+| Mean pitch at the defaults over the loop, all nine zones (bar 6) | -0.3 to -2.7 | -0.3 to -1.6 | -1.7 to -3.8 |
+| Smallest primary gap over the whole BEND knob | 16.5% | 6.3% | 3.0% |
+
+**Not done in R2c:** the picker and the app's MAKE INSTRUMENT path (R1.1, which now picks the six voices up for free
+through `MercuryVoice.entries`), and the instruments above.
+

@@ -33,9 +33,23 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // Parallel oversampled drone renders exceed Gradle's 512 MiB worker default.
+    maxHeapSize = "2g"
     testLogging {
         events("passed", "failed", "skipped")
     }
+}
+
+/** REVEL's dry acceptance matrix and standalone listening page; -Pquick selects first-listen evidence. */
+tasks.register<JavaExec>("generateRevelAudition") {
+    group = "distribution"
+    description = "Render REVEL raw/matched WAVs, shared-performance mic/source taps, diagnostics and a standalone audition page under testkit/revel-audition/. -Pquick selects the smaller first-listen pack."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RevelAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/revel-audition")
+    if (project.hasProperty("quick")) args("--quick")
 }
 
 /** CIRCUIT's complete listener pack; -Pquick renders its smaller development pack. */
@@ -421,7 +435,7 @@ tasks.register<JavaExec>("decodeArcoBellGate") {
 
 tasks.register<JavaExec>("generateMercuryKit") {
     group = "distribution"
-    description = "Render the MERCURY modal-glass acceptance kit under testkit/."
+    description = "Render the MERCURY modal-glass acceptance kits (SnipSnap Mercury Kit and Kit 2) under testkit/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.MercuryKitGenerator")
     workingDir = projectDir
@@ -469,6 +483,21 @@ tasks.register<JavaExec>("generateThawAudition") {
     args("${rootDir}/testkit/" + if (firstListen) "thaw-first-listen" else "thaw-audition")
     if (firstListen) args("--first-listen")
     (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
+}
+
+/** Render SUTURE's raw/matched mechanical and listening evidence locally. */
+tasks.register<JavaExec>("generateSutureAudition") {
+    group = "distribution"
+    description = "Render SUTURE's voices, macro sweeps, interaction grids, mechanical diagnostics and held loops with a local listening page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SutureAuditionGenerator")
+    workingDir = projectDir
+    val firstListen = project.hasProperty("sutureFirstListen")
+    args("${rootDir}/testkit/" + if (firstListen) "suture-first-listen" else "suture-audition")
+    if (firstListen) args("--first-listen")
+    (project.findProperty("sutureSections") as String?)?.let { args("--sections=$it") }
+    (project.findProperty("suturePrevious") as String?)?.let { args("--previous=$it") }
 }
 
 /** Export the sixteen dry THAW acceptance pads as an MPC program folder. */
@@ -588,6 +617,16 @@ tasks.register<JavaExec>("generateFlotillaAudition") {
     args("${rootDir}/testkit/flotilla-audition")
 }
 
+/** Render CISTERN's raw/matched listening matrix and diagnostics under testkit/cistern-audition/. */
+tasks.register<JavaExec>("generateCisternAudition") {
+    group = "distribution"
+    description = "Render the CISTERN raw/matched clips, causal diagnostics, manifest and local listening page under testkit/cistern-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CisternAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/cistern-audition")
+}
+
 tasks.register<JavaExec>("generateFlotillaComparison") {
     group = "distribution"
     description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
@@ -612,4 +651,68 @@ tasks.register<JavaExec>("generateMurkAudition") {
         providers.gradleProperty("murkBaselineDir").orNull?.let { args("--baseline-dir=$it") }
         providers.gradleProperty("murkBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
     }
+}
+
+/** Render Undertow's raw/matched section-18 roster and offline evidence page. */
+tasks.register<JavaExec>("generateUndertowAudition") {
+    group = "distribution"
+    description = "Render UNDERTOW audition WAVs, mechanics CSVs, manifest and accessible listening page under testkit/undertow-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UndertowAuditionGenerator")
+    // Keep sequential full-roster rendering within a bounded JVM heap.
+    maxHeapSize = "512m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/undertow-audition")
+    if (providers.gradleProperty("undertowQuick").orNull == "true") args("--quick")
+}
+
+/** Render Corolla's pitch/velocity, macro, interaction and loop listening matrix. */
+tasks.register<JavaExec>("generateCorollaAudition") {
+    group = "distribution"
+    description = "Render COROLLA native/matched clips, metrics and an offline listening page under testkit/corolla-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CorollaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/corolla-audition")
+    if (project.hasProperty("corollaQuick")) args("--quick")
+}
+
+/** Render Nimbus's six same-note identities, interaction grids and powered HOLD listening pack. */
+tasks.register<JavaExec>("generateNimbusAudition") {
+    group = "distribution"
+    description = "Render NIMBUS dry audition WAVs, mechanical evidence and an accessible page under testkit/nimbus-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NimbusAuditionGenerator")
+    maxHeapSize = "512m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/nimbus-audition")
+    if (providers.gradleProperty("nimbusRefreshPage").orNull == "true") args("--refresh-page")
+    if (providers.gradleProperty("nimbusQuick").orNull == "true") args("--quick")
+    providers.gradleProperty("nimbusBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("nimbusBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
+    if (providers.gradleProperty("nimbusCompareHold").orNull == "true") args("--compare-hold")
+}
+
+/** Render Tessera's dry materials, moving paths, causal probes and settled loops. */
+tasks.register<JavaExec>("generateTesseraAudition") {
+    group = "distribution"
+    description = "Render TESSERA raw/matched WAVs, traces, manifest and listening page under testkit/tessera-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TesseraAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tessera-audition")
+    if (project.hasProperty("tesseraRefreshPage")) args("--refresh-page")
+    else if (project.hasProperty("tesseraQuick")) args("--quick")
+}
+
+/** Render Pitchwheel's provisional dry voices, causal probes and settled held loops. */
+tasks.register<JavaExec>("generatePitchwheelAudition") {
+    group = "distribution"
+    description = "Render PITCHWHEEL raw/matched WAVs, mechanical traces, a manifest and a local listening page under testkit/pitchwheel-audition/. -PpitchwheelFull adds complete sweeps and interaction grids."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PitchwheelAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pitchwheel-audition")
+    if (project.hasProperty("pitchwheelFull")) args("--full")
 }

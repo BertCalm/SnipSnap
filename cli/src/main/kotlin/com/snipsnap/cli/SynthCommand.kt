@@ -10,11 +10,22 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.synth.Cistern
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.Flotilla
+import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Revel
+import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.Tessera
+import com.snipsnap.synth.TesseraPatch
+import com.snipsnap.synth.Velocity
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
@@ -41,13 +52,16 @@ import java.util.Locale
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
+ *
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and REVEL) override
+ * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
             boolean = setOf("--all", "--instrument", "--drone"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -60,6 +74,27 @@ object SynthCommand {
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
 
         val instrument = opts.has("--instrument")
+        val drone = opts.has("--drone")
+        val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
+        val noteRange = if (noteFlags.isEmpty()) null else {
+            if (instrument || drone) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            when (engine) {
+                CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
+                FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
+                TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
+                PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
+                RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and REVEL, got $engine")
+            }
+        }
+        val midiOverride = opts["--midi"]?.let { raw ->
+            raw.toIntOrNull()?.takeIf { it in noteRange!! }
+                ?: throw CliError("--midi for $engine is ${noteRange!!.first}..${noteRange.last}, got '$raw'")
+        }
+        val velocityOverride = opts["--velocity"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
+                ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
+        }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
@@ -67,7 +102,6 @@ object SynthCommand {
             if (engine != "RESIN") throw CliError("only RESIN exports a keys instrument here - try snipsnap synth RESIN BRASS --instrument")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
         }
-        val drone = opts.has("--drone")
         val droneFlags = listOf("--root", "--motion", "--rate", "--bpm", "--bars", "--loop").filter { opts[it] != null }
         if (!drone && droneFlags.isNotEmpty()) {
             throw CliError("${droneFlags.joinToString()} shape a drone - add --drone")
@@ -82,7 +116,7 @@ object SynthCommand {
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
 
-        val chosen: List<Patch> = when {
+        val chosen: List<Patch> = (when {
             opts.has("--all") -> presets
             opts["--preset"] != null -> {
                 val n = opts["--preset"]!!.toIntOrNull()
@@ -91,6 +125,21 @@ object SynthCommand {
                 listOf(presets[n - 1])
             }
             else -> listOf(presets.first())
+        }).map { patch ->
+            if (noteFlags.isEmpty()) patch else when (patch) {
+                is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is RevelPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
+                is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
+                    macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
+                )
+                else -> patch
+            }
         }
 
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
@@ -99,7 +148,10 @@ object SynthCommand {
         for ((i, patch) in chosen.withIndex()) {
             // What SEND TO PAD would make: the string machines take their ENSEMBLE, so the file you audition is the pad you would get.
             val landing = Presets.landingFor(engine, voice, patch.macros)
-            val snip = if (landing == null) patch.render() else PadRecipe(patch, landing).render()
+            val snip = if (patch is TesseraPatch && velocityOverride != null) {
+                val dry = Velocity.atVelocity(patch, velocityOverride)
+                landing?.process(dry) ?: dry
+            } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
             FileOutputStream(file).use { WavWriter.write(it, snip) }

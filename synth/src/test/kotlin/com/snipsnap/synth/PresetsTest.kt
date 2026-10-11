@@ -5,8 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The cross-engine [Presets] dispatcher, now that all seven registered
- * engines sit behind it (THUMP first, PR #189; the other six join here).
+ * The cross-engine [Presets] dispatcher for every registered preset roster.
  * Each `<Engine>PresetsTest` covers its own engine's content — identity/
  * sanity/round-trip/names/blocklist; this file covers only the
  * dispatcher's own routing.
@@ -33,10 +32,17 @@ class PresetsTest {
         assertEquals(ArcoPresets.forVoice(ArcoVoice.ERHU), Presets.forVoice("ARCO", "ERHU"))
         for (voice in MercuryVoice.entries) assertEquals(MercuryPresets.forVoice(voice), Presets.forVoice("MERCURY", voice.name))
         for (voice in FlotillaVoice.entries) assertEquals(FlotillaPresets.forVoice(voice), Presets.forVoice("FLOTILLA", voice.name))
+        for (voice in CisternVoice.entries) assertEquals(CisternPresets.forVoice(voice), Presets.forVoice("CISTERN", voice.name))
         for (voice in TremorVoice.entries) assertEquals(TremorPresets.forVoice(voice), Presets.forVoice("TREMOR", voice.name))
         for (voice in CircuitVoice.entries) assertEquals(CircuitPresets.forVoice(voice), Presets.forVoice("CIRCUIT", voice.name))
         for (voice in MurkVoice.entries) assertEquals(MurkPresets.forVoice(voice), Presets.forVoice("MURK", voice.name))
         for (voice in ThawVoice.entries) assertEquals(ThawPresets.forVoice(voice), Presets.forVoice("THAW", voice.name))
+        for (voice in UndertowVoice.entries) assertEquals(UndertowPresets.forVoice(voice), Presets.forVoice("UNDERTOW", voice.name))
+        for (voice in SutureVoice.entries) assertEquals(SuturePresets.forVoice(voice), Presets.forVoice("SUTURE", voice.name))
+        for (voice in CorollaVoice.entries) assertEquals(CorollaPresets.forVoice(voice), Presets.forVoice("COROLLA", voice.name))
+        for (voice in TesseraVoice.entries) assertEquals(TesseraPresets.forVoice(voice), Presets.forVoice("TESSERA", voice.name))
+        for (voice in PitchwheelVoice.entries) assertEquals(PitchwheelPresets.forVoice(voice), Presets.forVoice("PITCHWHEEL", voice.name))
+        for (voice in RevelVoice.entries) assertEquals(RevelPresets.forVoice(voice), Presets.forVoice("REVEL", voice.name))
     }
 
     @Test
@@ -58,7 +64,9 @@ class PresetsTest {
             SkinPresets.all() + ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
-            CircuitPresets.all() + ThawPresets.all() + MurkPresets.all()
+            CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
+            MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

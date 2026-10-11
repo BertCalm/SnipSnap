@@ -113,10 +113,52 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.thaw() },
         Starter(
+            "nimbus", "NIMBUS",
+            "Six metal plates spread and gather in C minor pentatonic. Rings, shimmer and held suspension.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.nimbus() },
+        Starter(
+            "undertow", "UNDERTOW",
+            "Weighted ceramic flaps and hollow breath in C minor pentatonic. One draw wakes the shell.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.undertow() },
+        Starter(
+            "suture", "SUTURE",
+            "Bronze vessels and sliding cords in C minor pentatonic. Open bloom closes into a seam murmur.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.suture() },
+        Starter(
+            "revel", "REVEL",
+            "Interlocking skins and friction in C minor pentatonic, heard by moving microphones.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.revel() },
+        Starter(
+            "tessera", "TESSERA",
+            "Wood, paired wire and metal answer through a moving chamber in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.tessera() },
+        Starter(
+            "pitchwheel", "PITCHWHEEL",
+            "Wooden teeth and stretching resin in C minor pentatonic. Push, catch, pluck and recoil.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.pitchwheel() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,
         ) { SkinKits.classic() },
+        Starter(
+            "cistern", "CISTERN",
+            "Drops answer a struck skin. Wet melodic surfaces in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.cistern() },
         Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",

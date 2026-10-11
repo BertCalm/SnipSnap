@@ -67,6 +67,17 @@ object Mutate {
     data class Pick(val label: String, val file: File, val distance: Float)
 
     /**
+     * Why [roulette] dealt nothing: [Kind.EMPTY], no other sound under the
+     * root, or [Kind.ONLY_COPIES], every other sound a double of this pad.
+     * An [IllegalArgumentException] with the messages the CLI has always
+     * printed, so every existing catch and test still holds; the phone
+     * reads [kind] instead of guessing from the type.
+     */
+    class RouletteRefused(val kind: Kind, message: String) : IllegalArgumentException(message) {
+        enum class Kind { EMPTY, ONLY_COPIES }
+    }
+
+    /**
      * The crate picks the partner (LL2): guided by default — [Similar]'s
      * distance ranks every pad under [root], dupes are excluded (a copy
      * isn't a partner), and a seeded spin lands on one of the
@@ -86,7 +97,7 @@ object Mutate {
         val candidates = index.entries.filter { e ->
             File(root, e.file).canonicalPath != self
         }
-        require(candidates.isNotEmpty()) { "the crate under $root has nothing to spin for" }
+        if (candidates.isEmpty()) throw RouletteRefused(RouletteRefused.Kind.EMPTY, "the crate under $root has nothing to spin for")
 
         val rng = java.util.Random(seed.toLong())
         val chosen = if (wild) {
@@ -98,8 +109,8 @@ object Mutate {
             val ranked = candidates.map { it to Crate.distance(target, it.vector) }
                 .filter { it.second > Crate.DUPE_DISTANCE }
                 .sortedWith(compareBy({ it.second }, { it.first.file }))
-            require(ranked.isNotEmpty()) {
-                "every sound in the crate is this pad's double - spin --wild instead"
+            if (ranked.isEmpty()) {
+                throw RouletteRefused(RouletteRefused.Kind.ONLY_COPIES, "every sound in the crate is this pad's double - spin --wild instead")
             }
             val window = ranked.take(ROULETTE_WINDOW)
             window[rng.nextInt(window.size)]

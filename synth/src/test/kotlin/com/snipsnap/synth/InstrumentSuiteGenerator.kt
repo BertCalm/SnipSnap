@@ -36,7 +36,7 @@ object InstrumentSuiteGenerator {
             "SnipSnap Music Box" to InstrumentSuite::renderMusicBox,
             "SnipSnap Resin Pad" to InstrumentSuite::renderResinPad,
             "SnipSnap Fork" to InstrumentSuite::renderFork,
-        ) + MercuryVoice.entries.map { voice -> InstrumentSuite.mercuryName(voice) to { dir: File -> InstrumentSuite.renderMercury(voice, dir) } }
+        ) + InstrumentSuite.MERCURY_INSTRUMENT_VOICES.map { voice -> InstrumentSuite.mercuryName(voice) to { dir: File -> InstrumentSuite.renderMercury(voice, dir) } }
 
         var samples = 0
         val programs = mutableListOf<KeygroupProgram>()

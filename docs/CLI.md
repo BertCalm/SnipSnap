@@ -577,10 +577,13 @@ dealt. Deterministic per (crate, seed); combines with `--splice` and
 `--split` like any parent.
 
 On the phone the same verb is the PAD SHEET's MUTATE card: the six
-moves, a partner tapped off the kit's own grid or dealt by ROULETTE
-from the shelf, the move's one knob (AT · HZ · MIX · WET · BANDS), MORPH's second
-knob BECOME (how long the hit takes to turn into the blend), MUTATE and
-UNDO — the same recipe, provenance and bin as the terminal.
+moves, each with a line saying what it does, a partner tapped off the
+kit's own grid or picked by ROULETTE from the shelf, the move's one knob
+(AT · HZ · MIX · WET · BANDS) with its meaning under it, MORPH's second knob
+BECOME (how long the hit takes to turn into the blend), ▶ HEAR THE
+RESULT, KEEP, DRIFT · BLEND & SAVE and UNDO — the same recipe,
+provenance and bin as the terminal. The card's one word for the second
+sound is PARTNER; the terminal keeps `--with` and `--roulette`.
 
 ### `retime <wav> --to BPM` — the other tempo move
 

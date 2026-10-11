@@ -229,8 +229,9 @@ Quick looks, each a minute:
   through the pedal.
 - KEEP ROOM, then the ROOMS section on THE SHELF: hold a row to bin it,
   RESTORE from the bin list.
-- MUTATE ▸ ANOTHER KIT and ▸ A FILE: both should name the partner in the
-  child's lineage. UNDO puts the parent back byte for byte.
+- KEEP with a partner from ANOTHER KIT, and with one from A FILE: both
+  should name the partner in the child's lineage. UNDO puts the pad back
+  byte for byte.
 
 →
 

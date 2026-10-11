@@ -220,6 +220,75 @@ and a listening page under `testkit/thaw-audition/`. The sound still awaits
 the owner's listening verdict; [implementation notes](docs/THAW.md) describe
 the model and its limits.
 
+UNDERTOW is a pitched suction-shell engine: four weighted leather flaps
+share one piston-driven reservoir, so an opening or seal changes the air
+available to its neighbors. Ceramic rim catches excite the same hollow
+object as the tuned breath. KNOCK, BREATH, FLUTTER, SEAL, HOLLOW and SURGE
+share TUNE (C3–C5), DRAW, FLAP, WEIGHT, SPIRAL, LEAK and HOLD. Twelve presets
+and `SynthKits.undertow()` use the deterministic dry engine; HOLD's top step
+returns settled powered suction material. Run
+`./gradlew :synth:generateUndertowAudition` for raw and matched clips,
+pressure/contact diagnostics and a listening page under
+`testkit/undertow-audition/`. The owner's sonic verdict remains pending;
+[implementation notes](docs/UNDERTOW.md) describe the model, probes and limits.
+
+SUTURE is a pitched bronze vessel whose opening ring stretches elastic cords
+through wooden eyelets. Bounded stitchers close the gaps against vibration,
+changing the cavity loading and bringing the seams into contact. BLOOM,
+THREAD, CLOSE, MURMUR, STRAIN and SHELL share TUNE (C3–C5), GAP, STITCH, CORD,
+SEAM, CAVITY and HOLD. Twelve presets, a dry sixteen-pad kit, FRESH TAPE and
+the synth picker use the same deterministic renderer. Run
+`./gradlew :synth:generateSutureAudition -PsutureFirstListen` for the smaller
+listening set, or omit the property for the full raw/matched and diagnostic
+gate. [Implementation notes](docs/SUTURE.md) explain the model and HOLD's
+settled-loop format. The sound awaits the owner's listening verdict.
+
+TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
+and tubes share a frame inside a chamber whose returning paths change with
+the gesture. Six voices, eight presets and a dry sixteen-pad kit use MATERIAL,
+HAMMER, SCALE, FOLD and MOTION, with C3–C5 TUNE and settled HOLD loops. Run
+`./gradlew :synth:generateTesseraAudition` for its raw/matched listening page
+and causal probes under `testkit/tessera-audition/`. The
+[private audition](https://tessera-snipsnap-audition.bertcalm.chatgpt.site)
+contains 297 dry clips and diagnostics. The sound awaits the owner's listening
+verdict; [implementation notes](docs/TESSERA.md) describe the render, saving
+and export contracts.
+
+PITCHWHEEL is a pitched wooden wheel whose teeth catch flexible fingers while
+resin filaments stretch, bow and release. CLUNK, PLUCK, DRAW, RECOIL, THAWED
+and TURN share PUSH, TOOTH, ADHESION, HEAT, BODY and HOLD. Patches retain an
+explicit MIDI root (24–96), strike velocity and model version; TUNE is a
+relative ±12-semitone offset, neutral at 0.5, so the effective note spans
+12–108 without clamping back to the saved-root range. Seven provisional presets
+and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
+FRESH TAPE's 17 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+for the compact first listening set, or add `-PpitchwheelFull` for the broader
+dry probes. HOLD's top step returns settled loop-only material with a
+deterministic attachment cycle and capped adhesion. The owner heard R1 as six
+similar struck sounds distinguished mainly by rhythm. The model 2 prototype
+strengthens wooden body and TOOTH character, shapes contact rise, and gives
+finger friction and filament slip separate transfers into the same resonator.
+New patches use model 2; saved model 1 patches, including JSON with an absent
+or null model, retain the original renderer. Velocity variants preserve that
+choice. The revised dry audition awaits approval; the seven-preset scope stays
+fixed until then.
+[The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
+six isolated catches and includes the previous defaults for comparison.
+[Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
+
+REVEL is a pitched circular ensemble: friction gestures, pressure-bent
+articulation, alternating rolls and broad pulses share a passive floor. One
+to three moving microphones hear the same performance through distinct
+bounded acoustic paths, summed to mono. PLAY, SKIN, ORBIT, WEAVE and REACH
+shape the ensemble; the host TUNE control spans C3–C5 and HOLD exports settled
+loop material. Ten provisional presets and a dry sixteen-pad kit retain
+microphone configuration, phrase timing, seed and velocity in their recipes.
+Run `./gradlew :synth:generateRevelAudition` for the complete raw/matched
+listening matrix, or add `-Pquick` for a first listening set. The
+[private audition](https://snipsnap-revel-audition.bertcalm.chatgpt.site)
+is the owner's sonic acceptance gate;
+[implementation notes](docs/REVEL.md) describe the model and validation limits.
+
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
 decaying sine partials at inharmonic ratios, the textbook recipe for a
@@ -366,6 +435,21 @@ the top is a stationary loop (the slider reads LOOP), not a claim the
 hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
 `docs/superpowers/specs/2026-10-04-flotilla-engine-design.md`.
 
+CISTERN is a pitched membrane below a finite suspended droplet field:
+FIRST, DRIP, CASCADE, POOL, RIPPLE and RECOVERY. The strike releases
+droplets; their delayed landings excite that same surface, add local wet
+load, and can release further droplets. STRIKE, SUSPENSION, DROP, SKIN
+and DRAIN shape the gesture; HOLD supplies explicit powered circulation.
+MIDI 36–84 is a separate note parameter, and velocity is strike energy.
+Twelve provisional presets and `SynthKits.cistern()` provide sixteen dry
+pads. Run `./gradlew :synth:generateCisternAudition` and open
+`testkit/cistern-audition/index.html` for raw and matched listening clips,
+macro sweeps, interaction grids and causal diagnostics. Listening and
+release naming checks are pending. Design and implementation notes:
+[`docs/superpowers/specs/2026-10-05-cistern-engine-design.md`](docs/superpowers/specs/2026-10-05-cistern-engine-design.md).
+The [published audition](https://cistern-snipsnap-audition.bertcalm.chatgpt.site)
+includes the full matrix and before/after comparisons for the revised voices.
+
 CIRCUIT is an invented moving ensemble: three rooted breath resonators,
 stone rattle, paired wood, clay vessel and synthesized coordination voice.
 The current listening candidate gives them one authored four-pulse figure,
@@ -392,6 +476,35 @@ sixteen-pad pitched kit. The accessible listening page starts silent and
 is regenerated with `./gradlew :synth:generateMurkAudition`; see
 [`docs/MURK.md`](docs/MURK.md). Listening and device acceptance remain open.
 
+NIMBUS is a pitched stack of six suspended cymbals: Body, Bell, Paper, Dark,
+Flex and Wire answer at the same requested root. RING, SHIMMER, GATHER,
+THROAT, CONTACT and SUSPEND change the initial excitation and response while
+retaining the full stack. EXCITE, SPACING, HEIGHT, FIELD and FUNNEL shape
+contact, sympathetic transfer, motion and chamber loading; HOLD supplies
+explicit powered sustain. Nine dry presets, a sixteen-pad pitched kit and
+physical velocity join the existing patch and recipe pipeline. Audition:
+`./gradlew :synth:generateNimbusAudition`. The
+[published listening page](https://snipsnap-nimbus-audition.bertcalm.chatgpt.site)
+compares voices, notes, velocities, controls, isolated cymbals and held loops.
+The first C4 defaults concentrated nearly all early/body energy in their
+shared root. Revised sixteen-mode cymbals change excitation and upper-mode
+losses to expose rounded rings, thin shimmer, wavering metal, dark chamber
+tone, rim contact and supported sustain. Optional preserved-source pairs
+support direct listening comparisons; normal regeneration remains 323 clips.
+See [NIMBUS](docs/NIMBUS.md) for the contract, comparison command and
+listening procedure.
+Listening and device acceptance remain open.
+
+COROLLA is a mechanical flower of coupled metal petals around a powered
+magnetic core and a shared chamber. TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT
+and HUSK share TUNE, PULL, BLOOM, FIELD, CONTACT, CHAMBER and HOLD. It
+renders dry; finite notes route as TONAL for IN KEY, and HOLD's top step
+returns settled LOOP material. Twelve
+presets and `SynthKits.corolla()` expose the first implementation, awaiting
+the owner's listening review. Audition: `./gradlew :synth:generateCorollaAudition`.
+Individual presets can also be rendered with
+`./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -399,8 +512,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, CIRCUIT, THAW, MURK and GRAINS round out the lineup.
-GRAINS is a separate processor outside the `Engine` picker's scope
+VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
+TESSERA, PITCHWHEEL, REVEL and GRAINS round out the lineup —
+twenty-five engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -582,9 +696,12 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, CIRCUIT, THAW, MURK, plus GRAINS, SNAP and DRAW, which sit beside the
+GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
+SUTURE, TESSERA, PITCHWHEEL, REVEL, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
+CISTERN, PITCHWHEEL and REVEL are also in the picker, preset roster and starter kits;
+the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
 

@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -1189,7 +1190,7 @@ fun PadSheetScreen(
     // third kind of parent. Read off the shelf once per sheet and again
     // after a keep; the shelf is the kit folder's parent, as ROULETTE has it.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
-    // The other kits on the shelf, for the picker (the crate with intent);
+    // The other kits on the shelf, for the picker (the shelf with intent);
     // the picked kit's pads load when one is picked.
     var otherKits by remember { mutableStateOf<List<MutateSheet.OtherKit>>(emptyList()) }
     var pickedKit by remember(slot) { mutableStateOf<MutateSheet.OtherKit?>(null) }
@@ -1251,19 +1252,23 @@ fun PadSheetScreen(
     var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }
 
     /**
-     * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
-     * case gets its own line first because it's the one a thumb causes.
+     * KEEP, the card's commit (it read `MUTATE ▸` before the redesign). The
+     * card checks the pad before anything launches
+     * ([MutateSheet.refusalBefore]): a layered pad, a chained one, then no
+     * partner, each said in its own words, never a silent return. After the
+     * write the result plays ([auditionOnRefresh], as SMEAR's does), and
+     * the toast names a STACK flip and a length change worth saying.
      *
-     * Runs against a FRESH model via [withFreshKit] — the pre-lock GHOSTS
-     * refusal above is a cheap read (no DSP), so it's simply re-checked
-     * against the fresh pad inside the lock too, alongside the sampleFile
-     * identity check every converted sibling uses. [MutateSheet.apply]
-     * itself is the DSP; there's nothing to hoist ahead of the lock the way
-     * [onOutside]'s mic capture is — the transform needs the model it's
-     * writing into. [model] is swapped to the fresh instance on success, so
-     * (like [applySmear]/[applyTreatment]) this does not audition the
-     * result immediately — see [applySmear]'s KDoc for why that write would
-     * target an already-orphaned `remember(model)` state slot.
+     * Runs against a FRESH model via [withFreshKit] — the pre-check above is
+     * a cheap read (no DSP), and its layers half is re-checked against the
+     * fresh pad inside the lock too, alongside the sampleFile identity check
+     * every converted sibling uses. [MutateSheet.apply] itself is the DSP;
+     * there's nothing to hoist ahead of the lock the way [onOutside]'s mic
+     * capture is — the transform needs the model it's writing into. [model]
+     * is swapped to the fresh instance on success, and the play rides
+     * [auditionOnRefresh], which plays the new file once the fresh model has
+     * decoded it: never an immediate audition, which would target an
+     * already-orphaned `remember(model)` state slot (see [applySmear]'s KDoc).
      *
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc. `MutateSheet.apply` is a
@@ -1273,10 +1278,11 @@ fun PadSheetScreen(
     fun onMutate() {
         if (busy) return
         val m = model ?: return
-        val who = partner ?: return
         val p = m.kit.pad(slot) ?: return
-        if (p.velocityLayers.isNotEmpty()) {
-            onToast(Copy.MUTATE_NEEDS_ONE)
+        val who = partner
+        val refused = MutateSheet.refusalBefore(p, who, needsPartner = true)
+        if (refused != null || who == null) {
+            onToast((refused ?: MutateSheet.Refusal.NoPartner).line)
             return
         }
         val padName = p.displayName
@@ -1290,25 +1296,44 @@ fun PadSheetScreen(
             busy = true
             try {
                 var applied = false
+                var flipped = false
+                var beforeMs = 0
+                var afterMs = 0
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
-                        MutateSheet.apply(f, slot, who, move, fraction, becomeFraction)
+                        beforeMs = MutateSheet.lengthMs(f, slot)
+                        flipped = MutateSheet.apply(f, slot, who, move, fraction, becomeFraction).flipped.isNotEmpty()
+                        // The length line is optional: a write that landed must be saved and reported,
+                        // so a failed re-read here falls back to the before length (no length line).
+                        afterMs = runCatching { MutateSheet.lengthMs(f, slot) }.getOrDefault(beforeMs)
                         applied = true
                     }
                 }
+                if (applied) auditionOnRefresh = true
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
                 if (applied) {
-                    onToast(Copy.mutated(mutateMode, padName, MutateSheet.name(who)))
+                    // The partner as the card spells it (SOUL A03, CLAP.WAV), not its raw label.
+                    val name = MutateSheet.partnerShort(who)
+                    onToast(
+                        Copy.mutated(
+                            mutateMode,
+                            padName,
+                            name,
+                            flipped = if (flipped) listOf(name) else emptyList(),
+                            lengthNote = Copy.lengthNote(beforeMs, afterMs),
+                        ),
+                    )
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("MUTATE", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("KEEP", e)
             } finally {
                 busy = false
             }
@@ -1318,17 +1343,18 @@ fun PadSheetScreen(
     /**
      * HEAR: what MUTATE would write, played without writing it — through
      * [MutateSheet.preview], which reads [slot] and [partner] exactly as
-     * [onMutate] does and refuses exactly what it refuses (own-parent,
-     * GHOSTS, chained — `MutateSheetTest` asserts the SAME words), so
-     * nothing a player hears here is a promise KEEP can't keep.
+     * [onMutate] does and refuses exactly what it refuses (layered (SOFT
+     * HITS), chained, no partner — `MutateSheetTest` asserts the SAME
+     * words), so nothing a player hears here is a promise KEEP can't keep.
      *
      * Runs against the live [model], not a fresh one under [withFreshKit]:
      * nothing is written, so there is nothing to serialise against a
-     * concurrent save — the same posture [onRoulette] takes. The GHOSTS
-     * pre-check is copied from [onMutate] rather than left to
-     * [MutateSheet.preview]'s own refusal, so a thumb sees the same
-     * friendly line before AND after committing, not a generic failure
-     * toast on the way there.
+     * concurrent save — the same posture [onRoulette] takes. It runs the
+     * same pre-check as [onMutate] ([MutateSheet.refusalBefore]) rather
+     * than leaving it to [MutateSheet.preview]'s own refusal, so a thumb
+     * sees the same line before AND after committing, not a generic
+     * failure toast on the way there. When the move changes the pad's
+     * length, it says so after the play.
      *
      * Auditioned through [audition]'s own `shape` parameter, like every
      * other play on this screen — a mutate replaces the pad's AUDIO, not
@@ -1338,10 +1364,11 @@ fun PadSheetScreen(
     fun onHear() {
         if (busy) return
         val m = model ?: return
-        val who = partner ?: return
         val p = m.kit.pad(slot) ?: return
-        if (p.velocityLayers.isNotEmpty()) {
-            onToast(Copy.MUTATE_NEEDS_ONE)
+        val who = partner
+        val refused = MutateSheet.refusalBefore(p, who, needsPartner = true)
+        if (refused != null || who == null) {
+            onToast((refused ?: MutateSheet.Refusal.NoPartner).line)
             return
         }
         val move = MutateSheet.modeFor(mutateMode)
@@ -1350,27 +1377,54 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) }
+                val (rendered, padMs) = withContext(Dispatchers.IO) {
+                    MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) to MutateSheet.lengthMs(m, slot)
+                }
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                     audition(rendered, p.level, p)
+                    // A move can change the pad's length (STACK, SPLIT or SPLICE onto a longer
+                    // partner, ROOM's tail); the play says so only when it does, and only when
+                    // it happened: a decode that lands after ON_STOP plays nothing, so says nothing.
+                    val note = Copy.lengthNote(padMs, MutateSheet.lengthMs(rendered))
+                    if (note.isNotEmpty()) onToast(note)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("HEAR", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("HEAR", e)
             } finally {
                 busy = false
             }
         }
     }
 
+    /**
+     * UNDO. With nothing to undo (no mutate on the pad, or no earlier take
+     * of it in the bin) the button is dimmed, not disabled, and a tap says
+     * which ([MutateSheet.undoRefusal]): the house's "the toast explains",
+     * where a grey button used to say nothing.
+     */
     fun onUnmutate() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = MutateSheet.undoRefusal(MutateSheet.read(p.recipe), binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
         commitPadEditNow("UNDO", onSuccess = { onToast(Copy.UNMUTATED) }) { mm -> MutateSheet.undo(mm, slot) }
     }
 
-    /** ROULETTE: the shelf (the kit folder's parent) is the crate; the deal becomes the partner. */
+    /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
     fun onRoulette() {
         if (busy) return
         val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val refused = MutateSheet.refusalBefore(p, partner, needsPartner = false)
+        if (refused != null) {
+            onToast(refused.line)
+            return
+        }
         val root = entry.dir.parentFile ?: entry.dir
         val seed = spins
         scope.launch {
@@ -1381,7 +1435,8 @@ fun PadSheetScreen(
                 partner = deal
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("ROULETTE", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("ROULETTE", e)
             } finally {
                 busy = false
             }
@@ -1389,19 +1444,21 @@ fun PadSheetScreen(
     }
 
     /**
-     * DRIFT: one tap — the shelf deals the neighbour and MORPH blends toward
+     * DRIFT: one tap — the shelf picks the partner and MORPH blends toward
      * it, MIX how far. The card flips to MORPH so the knob it read is the
      * knob on screen; each tap is a new seed, like ROULETTE.
      *
      * Runs against a FRESH model via [withFreshKit] — same shape as
-     * [onMutate] above, GHOSTS refusal re-checked on the fresh pad, sample
-     * identity re-checked before [MutateSheet.drift] (which deals AND
-     * mutates — both need the model this lock actually opened) ever runs.
-     * A crate-empty [IllegalArgumentException] from the roulette still
-     * escapes [withFreshKit] undirtied and untouched by the identity check
-     * — nothing was applied, nothing to save, same refusal as before. On
-     * success [model] swaps to the fresh instance; no immediate audition,
-     * same trade as [applySmear]/[onMutate] for the same reason.
+     * [onMutate] above: the pre-check ([MutateSheet.refusalBefore]) runs
+     * before anything launches, its layers half re-checked on the fresh
+     * pad, and sample identity re-checked before [MutateSheet.drift] (which
+     * picks AND mutates — both need the model this lock actually opened)
+     * ever runs. A [Mutate.RouletteRefused] from the roulette (an empty
+     * shelf, or only doubles of this pad) still escapes [withFreshKit]
+     * undirtied and untouched by the identity check — nothing was applied,
+     * nothing to save — and [MutateSheet.refusalOf] says which. On success
+     * [model] swaps to the fresh instance and the result plays once the
+     * fresh model has decoded it ([auditionOnRefresh]), as [onMutate]'s does.
      *
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc. `MutateSheet.drift`'s write
@@ -1412,8 +1469,10 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (p.velocityLayers.isNotEmpty()) {
-            onToast(Copy.MUTATE_NEEDS_ONE)
+        // A chained pad used to reach the "nothing on the shelf" line; the pre-check says what is true.
+        val refused = MutateSheet.refusalBefore(p, partner, needsPartner = false)
+        if (refused != null) {
+            onToast(refused.line)
             return
         }
         val root = entry.dir.parentFile ?: entry.dir
@@ -1466,13 +1525,20 @@ fun PadSheetScreen(
             busy = true
             try {
                 var drifted: Mutate.Drifted? = null
+                var beforeMs = 0
+                var afterMs = 0
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        beforeMs = MutateSheet.lengthMs(f, slot)
                         drifted = MutateSheet.drift(f, slot, root, seed, fraction)
+                        // The length line is optional: a write that landed must be saved and reported,
+                        // so a failed re-read here falls back to the before length (no length line).
+                        afterMs = runCatching { MutateSheet.lengthMs(f, slot) }.getOrDefault(beforeMs)
                     }
                 }
+                if (drifted != null) auditionOnRefresh = true
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
@@ -1480,13 +1546,16 @@ fun PadSheetScreen(
                 if (d != null) {
                     spins = seed + 1
                     partner = MutateSheet.Partner.Deal(d.pick.label, d.pick.file, seed)
-                    onToast(Copy.drifted(padName, d.pick.label))
+                    // Copy.drifted is unchanged; the length line is a second sentence after it.
+                    val note = Copy.lengthNote(beforeMs, afterMs)
+                    onToast(Copy.drifted(padName, d.pick.label) + if (note.isEmpty()) "" else " $note")
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException) onToast(Copy.CRATE_EMPTY) else failure("DRIFT", e)
+                val why = MutateSheet.refusalOf(e)
+                if (why != null) onToast(why.line) else failure("DRIFT", e)
             } finally {
                 busy = false
             }
@@ -2562,12 +2631,16 @@ fun PadSheetScreen(
                 onToggle = { tapBox(PadSheetBoxes.Box.MUTATE) },
                 scheme = scheme,
             ) {
+            // The partner as the pairing line names it: a pad on this kit by its tag and name.
+            val partnerName = partner?.let { p -> MutateSheet.partnerName(p) { s -> kit.pad(s)?.displayName } }
             MutateCard(
                 modes = MutateSheet.MODES,
                 mode = mutateMode,
                 onMode = { mutateMode = it },
                 partners = MutateSheet.partners(kit, slot).map { it.slot },
                 partner = partner,
+                pairLine = MutateSheet.pairLine(MutateSheet.padTag(slot), pad.displayName, partnerName),
+                pairSpoken = MutateSheet.pairSpoken(MutateSheet.padTag(slot), pad.displayName, partnerName),
                 onPartner = { partner = MutateSheet.Partner.Pad(it) },
                 rooms = rooms.map { it.name },
                 onRoom = { name -> rooms.firstOrNull { it.name == name }?.let { partner = Rooms.partner(it) } },
@@ -3181,6 +3254,65 @@ internal fun StepperSlider(
     }
 }
 
+// ---------- knob row (MUTATE) ----------
+
+/**
+ * One knob row of the MUTATE card, drawn on every move so the card never
+ * changes height.
+ *
+ * Live ([deadText] null): the shared [StepperSlider], unchanged, at its
+ * full width, with the knob's [meaning] on a caption line under the bar
+ * (the owner's CAPTION, Decision 16). Dead: the label column ([label]:
+ * blank for STACK's knob, `BECOME` for BECOME) and [deadText] where the
+ * bar would be, at the bar's own height, over a blank caption line, so
+ * every row is one height. A dead row is not a control: TalkBack reads
+ * its words once and offers no adjustment, where a bare `—` used to be
+ * read out twice.
+ */
+@Composable
+private fun KnobRow(
+    label: String,
+    meaning: String?,
+    fraction: Float,
+    valueText: String,
+    deadText: String?,
+    enabled: Boolean,
+    fillColor: Color,
+    scheme: Scheme,
+    onChange: (Float) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        if (deadText != null) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .clearAndSetSemantics { contentDescription = if (label.isEmpty()) deadText else "$label, $deadText" },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // The same 44 dp label column StepperSlider draws, so the words start where the bar would.
+                TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(44.dp))
+                TapeText(deadText, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            }
+        } else {
+            StepperSlider(
+                label = label,
+                fraction = fraction,
+                valueText = valueText,
+                fillColor = fillColor,
+                scheme = scheme,
+                enabled = enabled,
+                onFractionChange = onChange,
+                onFractionCommit = {},
+            )
+        }
+        // The caption line, from the label column's right edge (44 dp and its 8 dp gap), on every row
+        // alike (blank on a dead row), so every row is one height.
+        TapeText(if (deadText == null) meaning ?: "" else "", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(start = 52.dp), maxLines = 1)
+    }
+}
+
 // ---------- toggles ----------
 
 @Composable
@@ -3492,19 +3624,26 @@ private fun ShapeCard(
 // ---------- mutate card ----------
 
 /**
- * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
- * MORPH · ROOM · TRANSPLANT), a partner — a pad on this kit from the
- * mini grid, or the deal ROULETTE spins off the shelf — the move's one
- * knob when it has one, and under it MORPH's second, BECOME (how long
- * the hit takes to turn from the pad into the blend; a disabled `—`
- * row on every other move, so the card never jumps), then HEAR or
- * MUTATE. The line under the title says what the pad already is
- * ("SPLICE: Kit:A02") so a mutated pad never reads as an original;
- * UNDO pulls the pre-mutation sound back out of the bin.
+ * MUTATE: one hit from the pad and a partner. Under the title, the
+ * pairing line names the pad and the pending partner
+ * (`A02 SNARE × B07 KICK`, or `× ?  — PICK A PARTNER`); what the pad
+ * already carries stays on the box's strip. Then a move (STACK · SPLICE ·
+ * SPLIT · MORPH · ROOM · TRANSPLANT) and the line saying what it does;
+ * under it the move's knob, its meaning on a caption line under the bar, and
+ * MORPH's second, BECOME. Both knob rows are drawn on every move, in words
+ * where there is nothing to dial, so the card never jumps ([KnobRow]). Then
+ * the partner: a pad on this kit, a room, another kit's pad, a file, or
+ * ROULETTE's pick off the shelf. Then ▶ HEAR THE RESULT, the line
+ * saying nothing changes until KEEP, and KEEP beside DRIFT · BLEND & SAVE.
+ * UNDO pulls the take before the last mutate back out of the bin.
  * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
- * same recipe, same provenance, same bin.
+ * same recipe, same provenance, same bin — and every word is
+ * MutateSheet's or Copy's, where MutateWordsTest holds it.
  *
- * HEAR plays [MutateSheet.preview] — exactly what MUTATE would write,
+ * Nothing is greyed without a reason: only `busy` disables a control.
+ * HEAR, KEEP and UNDO are dimmed when they cannot act, and a tap says why.
+ *
+ * HEAR plays [MutateSheet.preview] — exactly what KEEP would write,
  * heard without writing it. Before it existed, using this card was pick
  * a move, pick a partner, commit a file write, listen, undo: every
  * iteration cost a rewrite (design/mutate-v2 has the argument in full).
@@ -3516,6 +3655,8 @@ private fun MutateCard(
     onMode: (String) -> Unit,
     partners: List<Int>,
     partner: MutateSheet.Partner?,
+    pairLine: String,
+    pairSpoken: String,
     onPartner: (Int) -> Unit,
     rooms: List<String>,
     onRoom: (String) -> Unit,
@@ -3544,15 +3685,21 @@ private fun MutateCard(
     scheme: Scheme,
     busy: Boolean,
 ) {
+    // The move as the verb knows it: the card's words are MutateSheet's, keyed on it.
+    val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
-            ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
+            // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
+            ActionButton("UNDO", scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
+        // The pending pair, so the card names the partner before anything is
+        // kept. TalkBack reads it uncut.
         TapeText(
-            mutated?.let { "${it.word}: ${it.parents.joinToString(", ")}" } ?: "PICK A MOVE AND A PARENT",
+            pairLine,
             TapeType.pixelSmall,
             scheme.ink2.tape,
+            Modifier.clearAndSetSemantics { contentDescription = pairSpoken },
             maxLines = 1,
         )
 
@@ -3568,7 +3715,8 @@ private fun MutateCard(
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
                             // Always clickable, `!busy` forwarded rather
                             // than dropped (accessibility audit finding 12).
-                            .tapeClick(label = m, enabled = !busy) { onMode(m) }
+                            // The selected move says so: the bevel's fill alone was invisible to TalkBack.
+                            .tapeClick(label = if (selected) "$m, SELECTED" else m, enabled = !busy) { onMode(m) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -3579,7 +3727,42 @@ private fun MutateCard(
             }
         }
 
-        // The partner: this kit's other pads, four to a row, then the crate.
+        // What the move does, in the house's own copy (design/mutate-v2's
+        // Moves board), and on MORPH with BECOME above OFF, that the hit
+        // turns: the line always describes what HEAR would play.
+        TapeText(MutateSheet.outcomeLine(move, becomeFraction), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        // The move's knob, under its line, its meaning on a caption line under the bar.
+        // STACK has no knob, so its row says so in words. Both rows are drawn on
+        // every move, at one height, so the card never jumps.
+        KnobRow(
+            label = knobLabel ?: "",
+            meaning = MutateSheet.knobMeaning(move),
+            fraction = if (knobLabel == null) 0f else knobFraction,
+            valueText = knobText,
+            deadText = if (knobLabel == null) MutateSheet.deadKnobLine else null,
+            enabled = !busy && knobLabel != null,
+            fillColor = padColor,
+            scheme = scheme,
+            onChange = onKnobChange,
+        )
+        // MORPH's second knob, BECOME: how long the hit takes to turn from
+        // the pad into the MIX blend, OFF at 0. On every other move the row
+        // reads BECOME and ONLY MORPH TURNS OVER TIME. It is enabled on
+        // BECOME's own label, not on `knobLabel`: SPLICE, SPLIT, ROOM and
+        // TRANSPLANT have a first knob and no BECOME.
+        KnobRow(
+            label = MutateSheet.BECOME.label,
+            meaning = if (becomeLabel == null) null else MutateSheet.becomeMeaning(move),
+            fraction = if (becomeLabel == null) 0f else becomeFraction,
+            valueText = becomeText,
+            deadText = if (becomeLabel == null) MutateSheet.becomeMeaning(move) else null,
+            enabled = !busy && becomeLabel != null,
+            fillColor = padColor,
+            scheme = scheme,
+            onChange = onBecomeChange,
+        )
+
+        // The partner: this kit's other pads, four to a row, then the shelf's other kits.
         val chosenSlot = (partner as? MutateSheet.Partner.Pad)?.slot
         for (row in partners.chunked(4)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -3641,8 +3824,8 @@ private fun MutateCard(
             }
         }
         // Another kit, picked: its name among the shelf's kits (two to a row),
-        // then its pads (four to a row) - the crate with intent, where
-        // ROULETTE below is the crate by chance. Absent on a one-kit shelf.
+        // then its pads (four to a row) - the shelf with intent, where
+        // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
             TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             for (row in otherKits.chunked(2)) {
@@ -3709,91 +3892,50 @@ private fun MutateCard(
             held?.let { "A FILE ▸ ${it.label.uppercase(java.util.Locale.ROOT)}" } ?: "A FILE ▸ PICK ONE OFF THE PHONE",
             scheme,
             enabled = !busy,
-            dimmed = held == null,
             modifier = Modifier.fillMaxWidth(),
             onClick = onPickFile,
         )
         val deal = partner as? MutateSheet.Partner.Deal
-        // Both labels were 29 characters at rest ("ROULETTE ▸ LET THE CRATE
-        // DEAL" / "DRIFT ▸ DEALS & SAVES A BLEND"), so ROULETTE's old
-        // weight(2f) against DRIFT's weight(1f) gave the wider share to no
-        // more text — backwards, not proportional (truncation pass).
-        // Equalizing the weight wasn't enough on its own — confirmed by
-        // screenshot inside this MUTATE box's own 10dp side padding
-        // (`GroupBox`'s content `Column`), both halves still ellipsized —
-        // so both are shortened too: "LET THE" and the article "A" were
-        // pure filler around the words that carry meaning (CRATE DEAL,
-        // DEALS & SAVES). Neither keeps its ▸: `onRoulette` deals a
-        // partner and `onDrift` deals AND mutates, both right here on this
-        // card with a toast, never navigating or opening a panel — the
-        // same "no ▸" rule RESET/UNDO on this same screen already follow.
-        // "·" replaces it, same neutral separator "REMIX BANK B · REROLL"
-        // (`KitScreen.kt`) uses for the same reason.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            ActionButton(
-                deal?.let { "ROULETTE · ${it.label}" } ?: "ROULETTE · CRATE DEAL",
-                scheme,
-                enabled = !busy,
-                dimmed = deal == null,
-                modifier = Modifier.weight(1f),
-                onClick = onRoulette,
-            )
-            // DRIFT: the deal and the morph in one tap, MIX how far.
-            // "SAVES" stays — it's the one word that says DRIFT commits
-            // the blend, unlike ROULETTE's preview-only deal — but the
-            // article "A" and "BLEND" (already this GroupBox's own legend,
-            // "MUTATE · ONE HIT FROM TWO", right above) don't need to be
-            // said again in a label that must also fit half this row.
-            ActionButton("DRIFT · DEALS & SAVES", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
-        }
-
-        // The move's knob, when it has one; STACK's row stays so the card never jumps.
-        StepperSlider(
-            label = knobLabel ?: "—",
-            fraction = if (knobLabel == null) 0f else knobFraction,
-            valueText = knobText,
-            fillColor = padColor,
-            scheme = scheme,
-            enabled = !busy && knobLabel != null,
-            onFractionChange = onKnobChange,
-            onFractionCommit = {},
-        )
-
-        // MORPH's second knob, BECOME: how long the hit takes to turn from
-        // the pad into the MIX blend, OFF at 0. Every other move draws the
-        // same disabled "—" row STACK's knob shows above, so the card never
-        // jumps. It is enabled on BECOME's own label, not on `knobLabel`:
-        // SPLICE, SPLIT, ROOM and TRANSPLANT have a first knob and no BECOME.
-        StepperSlider(
-            label = becomeLabel ?: "—",
-            fraction = if (becomeLabel == null) 0f else becomeFraction,
-            valueText = becomeText,
-            fillColor = padColor,
-            scheme = scheme,
-            enabled = !busy && becomeLabel != null,
-            onFractionChange = onBecomeChange,
-            onFractionCommit = {},
-        )
-
-        // What MUTATE would write, played without writing it — the
-        // whole reason the card kept feeling like a gamble (design/
-        // mutate-v2): every move used to be pick, commit, listen, undo.
-        // Same enablement as MUTATE, since nothing to preview is nothing
-        // to keep either.
+        // ROULETTE only picks a partner and writes nothing, so it stays with
+        // the partner sources, on a full row, its resting label saying what
+        // it does and, once it has picked, naming the pick. DRIFT, which
+        // writes, moved down beside KEEP. Neither carries a ▸: both act
+        // right here with a toast, never navigating or opening a panel.
         ActionButton(
-            "▶ HEAR",
+            deal?.let { "ROULETTE · ${MutateSheet.partnerName(it)}" } ?: MutateSheet.ROULETTE_LABEL,
             scheme,
-            enabled = !busy && partner != null,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onRoulette,
+        )
+
+        // What KEEP would write, played without writing it — the whole
+        // reason the card kept feeling like a gamble (design/mutate-v2):
+        // every move used to be pick, commit, listen, undo. With no partner
+        // it is dimmed, not disabled, and a tap says PICK A PARTNER FIRST.
+        ActionButton(
+            MutateSheet.HEAR_LABEL,
+            scheme,
+            enabled = !busy,
+            dimmed = partner == null,
             modifier = Modifier.fillMaxWidth(),
             onClick = onHear,
         )
-        ActionButton(
-            "MUTATE ▸",
-            scheme,
-            enabled = !busy && partner != null,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onMutate,
-        )
+        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        // KEEP writes the move in place (no ▸, which means "goes
+        // somewhere"); DRIFT beside it is the card's one-tap blend and save,
+        // and says it saves. Each half row holds DRIFT's 20 characters.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ActionButton(
+                MutateSheet.KEEP_LABEL,
+                scheme,
+                enabled = !busy,
+                dimmed = partner == null,
+                modifier = Modifier.weight(1f),
+                onClick = onMutate,
+            )
+            ActionButton(MutateSheet.DRIFT_LABEL, scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
+        }
     }
 }
 

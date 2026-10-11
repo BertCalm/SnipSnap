@@ -309,7 +309,7 @@ object Keys {
 
     /**
      * The nine MERCURY pad zones: every minor third across the two-octave TUNE range from [Mercury.rootMidi],
-     * per voice (PING's root is C4, SING's and BLADE's G3).
+     * per voice (PING's and SHARD's root is C4, SING's and BLADE's G3, EDDY's and VESSEL's A2: [Mercury.rootMidi]).
      */
     fun mercuryPadMidis(voice: MercuryVoice): List<Int> =
         (0..Mercury.TUNE_SEMITONES step 3).map { Mercury.rootMidi(voice) + it }

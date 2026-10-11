@@ -1,14 +1,28 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.Revel
+import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.RevelVoice
+import com.snipsnap.synth.Tessera
+import com.snipsnap.synth.TesseraPatch
+import com.snipsnap.synth.TesseraVoice
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class StarterKitsTest {
@@ -38,6 +52,94 @@ class StarterKitsTest {
                 // carry recipes (not all — some treatments are render-only).
                 assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
             }
+            if (starter.id == "cistern") {
+                // Reuse this rendered kit to exercise its saved recipes through
+                // the editing door, rather than rendering the whole kit twice.
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                val drumClasses = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
+                val voices = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<CisternPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the wet surface is the engine itself")
+                    assertTrue(pad.drumClass !in drumClasses, "${pad.displayName}: ${pad.drumClass}")
+                    assertTrue(pad.oneShot, "${pad.displayName}: starter pads play their complete rendered surface")
+                    patch.voice
+                }
+                assertEquals(CisternVoice.entries.toSet(), voices.toSet(), "all six surfaces are reachable")
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "pitch and velocity survive replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved surface regenerates exactly")
+            }
+            if (starter.id == "tessera") {
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<TesseraPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the chamber is inside the instrument")
+                    assertEquals(Tessera.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot, "${pad.displayName}: the pad plays its complete finite or settled buffer")
+                    patch
+                }
+                assertEquals(TesseraVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { Tessera.midiFor(it.voice, it.macros.getValue("TUNE")) })
+                assertEquals(DrumClass.LOOP, model.kit.pads.last().drumClass)
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "the material and chamber recipe survive replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved object regenerates exactly")
+            }
+            if (starter.id == "pitchwheel") {
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<PitchwheelPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: wheel and resin establish their sound dry")
+                    assertEquals(Pitchwheel.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot, "${pad.displayName}: the pad plays its finite gesture or settled buffer")
+                    patch
+                }
+                assertEquals(PitchwheelVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
+                assertTrue(model.kit.pads.dropLast(1).all { it.drumClass == DrumClass.TONAL })
+                assertEquals(DrumClass.LOOP, model.kit.pads.last().drumClass)
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "the complete wheel recipe survives replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved wheel regenerates exactly")
+            }
+            if (starter.id == "revel") {
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<RevelPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the ensemble supplies its own motion")
+                    assertEquals(Revel.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot)
+                    patch
+                }
+                assertEquals(RevelVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(DrumClass.LOOP, model.kit.pads.last().drumClass)
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "saved phrase and microphone state survive replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved ensemble regenerates exactly")
+            }
             assertEquals(starter, StarterKits.byId(starter.id))
         }
         assertEquals(null, StarterKits.byId("nope"))
@@ -61,11 +163,27 @@ class StarterKitsTest {
     }
 
     @Test
-    fun `eleven starters, and blank leads them`() {
+    fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "skin", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
+        val cistern = StarterKits.byId("cistern")!!
+        assertEquals("CISTERN", cistern.displayName)
+        assertFalse(cistern.seeded, "CISTERN is a fixed authored kit")
+        assertEquals(KeySpec.parse("Cminpent"), cistern.key)
+        val tessera = StarterKits.byId("tessera")!!
+        assertEquals("TESSERA", tessera.displayName)
+        assertFalse(tessera.seeded, "TESSERA is a fixed authored kit")
+        assertEquals(KeySpec.parse("Cminpent"), tessera.key)
+        val pitchwheel = StarterKits.byId("pitchwheel")!!
+        assertEquals("PITCHWHEEL", pitchwheel.displayName)
+        assertFalse(pitchwheel.seeded, "PITCHWHEEL is a fixed dry audition kit")
+        assertEquals(KeySpec.parse("Cminpent"), pitchwheel.key)
+        val revel = StarterKits.byId("revel")!!
+        assertEquals("REVEL", revel.displayName)
+        assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")
+        assertEquals(KeySpec.parse("Cminpent"), revel.key)
     }
 
     @Test

@@ -4,9 +4,12 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RevelPatch
 import java.io.File
 import java.util.Locale
 
@@ -115,12 +118,16 @@ object UserPresets {
     /** A name as it is kept: trimmed, every run of whitespace one space, uppercase. */
     fun normalize(raw: String): String = raw.trim().replace(Regex("\\s+"), " ").uppercase(Locale.ROOT)
 
+    /** Factory labels reserve the same normalized names used for saved presets. */
+    private fun factoryNameTaken(engine: String, voice: String, normalizedName: String): Boolean =
+        Presets.forVoice(engine, voice).any { normalize(it.name) == normalizedName }
+
     /** The rules a name has to pass, and which of the two saves it would be. */
     fun check(raw: String, engine: String, voice: String, saved: List<Saved>): Check {
         val name = normalize(raw)
         if (name.isEmpty()) return Check.Blank
         if (name.length > MAX_NAME) return Check.TooLong(name)
-        if (Presets.byName(engine, voice, name) != null) return Check.Factory(name)
+        if (factoryNameTaken(engine, voice, name)) return Check.Factory(name)
         return if (forVoice(saved, engine, voice).any { it.name == name }) Check.Replaces(name) else Check.Fresh(name)
     }
 
@@ -136,7 +143,7 @@ object UserPresets {
         var n = 1
         while (true) {
             val candidate = "$base $n"
-            val taken = Presets.byName(engine, voice, candidate) != null || forVoice(saved, engine, voice).any { it.name == candidate }
+            val taken = factoryNameTaken(engine, voice, normalize(candidate)) || forVoice(saved, engine, voice).any { it.name == candidate }
             if (!taken) return candidate
             n++
         }
@@ -166,7 +173,7 @@ object UserPresets {
         val name = patch.name
         require(name == normalize(name) && name.isNotEmpty()) { "a preset name is trimmed and uppercase: '$name'" }
         require(name.length <= MAX_NAME) { "a preset name is at most $MAX_NAME letters: '$name'" }
-        require(Presets.byName(patch.engine, patch.voiceName, name) == null) { "the factory already has $name on ${patch.engine} ${patch.voiceName}" }
+        require(!factoryNameTaken(patch.engine, patch.voiceName, name)) { "the factory already has $name on ${patch.engine} ${patch.voiceName}" }
         val target = file(shelfRoot)
         val store = readStore(target)
         val entry = Saved(patch, nowMillis)
@@ -323,12 +330,33 @@ object UserPresets {
      * [patch] as the line its engine's table is written in — the same
      * `p(voice, name, macros…)` helper every `<Engine>Presets.kt` has —
      * with every macro's exact value, so the promoted preset renders the
-     * bytes the phone heard. The name is a Kotlin string literal, escaped.
+     * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
+     * note and strike velocity, which live outside the macro map.
+     * PITCHWHEEL keeps its render-model version as well; REVEL retains the
+     * microphones, phrase configuration, seed and saved velocity. The name is a
+     * Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
-        return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros),"
+        val state = when (patch) {
+            is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is RevelPatch -> {
+                val c = patch.configuration
+                fun values(items: List<*>, literal: (Any?) -> String): String =
+                    if (items.isEmpty()) "emptyList()" else items.joinToString(", ", "listOf(", ")", transform = literal)
+                val seed = if (c.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${c.seed}L"
+                ".copy(configuration = RevelConfig(" +
+                    "micCount = ${c.micCount}, phraseTempo = ${c.phraseTempo}f, phraseBeats = ${c.phraseBeats}, " +
+                    "trajectories = ${values(c.trajectories) { "RevelTrajectory.$it" }}, " +
+                    "phaseOffsets = ${values(c.phaseOffsets) { "${it}f" }}, " +
+                    "directions = ${values(c.directions) { it.toString() }}, " +
+                    "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
+            }
+            else -> ""
+        }
+        return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
     }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */
