@@ -14,6 +14,19 @@ The dominant chamber carries the requested root; the responding chambers use
 ratios 2, 3 and 4 at lower levels. Twelve initial presets range from First Draw
 and Ceramic Rim to Alternating Seal and Held Suction.
 
+| Voice | Intrinsic character |
+| --- | --- |
+| KNOCK | An early ceramic catch, prominent rim modes and a short, lossy breath response |
+| BREATH | A softer onset, restrained rim contact and smooth airflow centered on the root |
+| FLUTTER | Pressure-powered leather flexure changes aperture, flow and radiation of the pitched breath |
+| SEAL | A lower seat, pressure-load relief and hysteresis allow closing and reopening to redirect shared flow and breath |
+| HOLLOW | Strong reciprocal mounting loads the shell during the draw, then relaxes as the piston releases to preserve its low-loss ring |
+| SURGE | Swelling piston extraction, stronger responding partials and flow-derived turbulence produce a rougher draw |
+
+These differences belong to the inlet, ceramic, reed and shell model. The
+voices use different tapping geometry, rim excitation and loss, reed loss,
+partial participation and turbulence while sharing the same pressure network.
+
 | Control | Behavior |
 | --- | --- |
 | TUNE | Requested root, snapped in semitones from C3 to C5 |
@@ -57,17 +70,32 @@ Seal hysteresis prevents sample-by-sample threshold chatter. Weight changes
 mechanics before audio level. A contact can leave a partly open inlet, and
 closure can retain pressure until release or leakage relaxes it.
 
-V1 represents leather motion with one gross flap coordinate. Flutter is a
-pressure-fed change in that coordinate's damping, bounded by mechanical
-losses and travel. A separate fast flexural leather mode remains deferred;
-the tuned airflow resonator runs at the acoustic clock.
+Leather motion combines a gross flap coordinate with a faster flexural state.
+Gross motion can receive pressure-fed aerodynamic work through its damping;
+FLUTTER also excites a lossy flexural mode from the same inward flow and
+contact. That state changes aperture area before flow and acoustic excitation
+are computed. Its motion is not mixed directly into the audio. SEAL's finite
+draws use a lower closing seat and wider opening/closing hysteresis. Its
+compliant seat reduces the pressure force on a closed flap, allowing elastic
+return to reopen it. The resulting change in demand reaches the other inlets
+through the shared reservoir.
 
 Each chamber has a tuned nonlinear airflow resonator. Flow and aperture
 control its excitation and losses, while flap movement disturbs the same
 resonator. Closing an inlet cuts its powered excitation and leaves passive
 ringing. Ceramic, airflow and shell contributions share the requested root
-and its responding ratios. SPIRAL changes internal loading and shell color
-before the final sum.
+and its responding ratios. Voice-specific reed losses and participation of
+the responding chambers shape the pitched breath, while turbulence follows
+actual flow. FLUTTER and SEAL also shutter the airflow resonator's radiation
+through the modeled aperture; the resonator continues to ring while its
+opening changes both flow and the audible pitched breath.
+
+HOLLOW strengthens reciprocal mounting into a less lossy shell during the
+draw. That mounting relaxes as extraction ends, reducing the stored shell
+ring's loading by the damped flaps and chambers. Its base shell-loss setting
+is 0.8 before SPIRAL and per-mode losses. SURGE swells piston extraction and
+increases flow-derived roughness. SPIRAL changes internal loading and shell
+color before the final sum.
 
 The piston supplies sustained work explicitly. When extraction ends,
 pressure and passive mechanics relax. A baseline relaxation path keeps a
@@ -76,10 +104,10 @@ actual flow. Low-DRAW and high-LEAK settings retain a playable response.
 
 Gross pressure and flap mechanics update near 1 kHz. The update order uses
 previous flow to advance the reservoir, then local compliance, flap motion
-and the aperture. The shell's prior acoustic state supplies a lagged reaction.
-Flow is smoothed before it controls nonlinear acoustic feedback. Acoustic
-rotations and finite ceramic force pulses run on the existing 4× internal
-path, followed by band-limited decimation to 44.1 kHz mono and
+and the aperture. In finite draws, the shell's prior acoustic state supplies
+a lagged reaction. Flow is smoothed before it controls nonlinear acoustic
+feedback. Acoustic rotations, leather flexure and finite ceramic force pulses run on the existing
+4× internal path, followed by band-limited decimation to 44.1 kHz mono and
 `MELODIC_LOUDNESS_TARGET`. Normal finite renders are bounded by six seconds.
 Seed context reaches breath texture; identical voice, note, macros, event
 energy and seed context reproduce the same samples and mechanical events.
@@ -88,11 +116,22 @@ HOLD selects settled powered material after bounded preroll. Its approximately
 1.6-second cycle aligns the slow clock and a repeatable seeded texture buffer.
 The acoustic root fits a whole number of periods into that cycle with a small
 tuning adjustment. HOLD increases flap damping and uses continuous extraction
-to favor useful stationary flow; it does not promise the same irregular
-flutter cycle as a finite draw. Preroll compares successive complete states
-before capture, with a twelve-cycle upper bound. Loop evidence includes both
+to favor settled flow. It deliberately disables powered flexural aperture
+cycles and the SEAL seat's pressure-load relief, while retaining the voice's
+modal and airflow character. Held reed losses also favor sustained pitched
+material; the finite draw's repeated flutter and reopening are not carried
+into the loop. Held shell modes use exact harmonic ratios, and reciprocal
+mounts exchange both modal coordinates equally. The slow reciprocal exchange
+between shell and gross flap and the fourth chamber's cross-register
+connection to the root shell mode are omitted in HOLD to preserve stationary
+phase relationships. Finite
+draws retain their detuned shell modes and full mechanical reaction.
+
+Preroll compares successive complete states before capture, with a twelve-cycle
+upper bound. Loop evidence includes both
 `Keys.seamError < 1e-3` and compatible reservoir, local pressure, flap, seal,
-flow smoothing and resonator state across cycles. A small audio seam alone
+flow smoothing, resonator and full flexural state across cycles. Stored-energy
+diagnostics also include the flexural mode. A small audio seam alone
 does not establish mechanical continuity. Inspect repeated contact and breath
 at the wrap as part of listening acceptance.
 

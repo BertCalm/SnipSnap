@@ -17,6 +17,16 @@ import kotlin.test.assertTrue
 class CisternVoiceContrastTest {
 
     @Test
+    fun `ripple retains a clear played root beneath its bright surface`() {
+        val rootShare = spectrum(CisternVoice.RIPPLE)[ROOT_BAND]
+        // The earlier distinct voicing left only about 22% at the played root;
+        // its near-octave mode could obscure which note had been requested.
+        // Keep a tonal centre without erasing RIPPLE's separate surface body.
+        assertTrue(rootShare >= .30,
+            "RIPPLE leaves only ${rootShare * 100}% of spectral energy at the played root")
+    }
+
+    @Test
     fun `default voices leave audible energy for their surface body`() {
         for (voice in CisternVoice.entries) {
             val spectrum = spectrum(voice)

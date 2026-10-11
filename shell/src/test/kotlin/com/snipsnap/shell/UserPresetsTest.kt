@@ -216,19 +216,21 @@ class UserPresetsTest {
     fun `a saved wheel retains root gesture velocity and model when promoted`() {
         val root = shelf()
         try {
-            val source = PitchwheelPatch(
-                "LOW WHEEL", PitchwheelVoice.RECOIL,
-                linkedMapOf("ADHESION" to .83f, "HEAT" to .21f), midi = 36, velocity = .3f,
-            )
-            UserPresets.save(root, source, 1L)
-            val saved = UserPresets.read(root).single()
-            assertEquals(source, saved.patch)
-            val line = UserPresets.rosterLine(saved.patch)
-            assertEquals(
-                "p(PitchwheelVoice.RECOIL, \"LOW WHEEL\", \"ADHESION\" to 0.83f, \"HEAT\" to 0.21f).copy(midi = 36, velocity = 0.3f, model = 1),",
-                line,
-            )
-            assertEquals("PitchwheelPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            for (model in listOf(1, 2)) {
+                val source = PitchwheelPatch(
+                    "LOW WHEEL", PitchwheelVoice.RECOIL,
+                    linkedMapOf("ADHESION" to .83f, "HEAT" to .21f), midi = 36, velocity = .3f, model = model,
+                )
+                UserPresets.save(root, source, 1L)
+                val saved = UserPresets.read(root).single()
+                assertEquals(source, saved.patch)
+                val line = UserPresets.rosterLine(saved.patch)
+                assertEquals(
+                    "p(PitchwheelVoice.RECOIL, \"LOW WHEEL\", \"ADHESION\" to 0.83f, \"HEAT\" to 0.21f).copy(midi = 36, velocity = 0.3f, model = $model),",
+                    line,
+                )
+                assertEquals("PitchwheelPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            }
         } finally {
             root.deleteRecursively()
         }

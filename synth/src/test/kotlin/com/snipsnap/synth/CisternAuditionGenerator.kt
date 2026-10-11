@@ -307,7 +307,7 @@ object CisternAuditionGenerator {
             val groups = s.groups.joinToString(",") { g -> "{\"label\":${q(g.label)},\"clips\":[${g.clips.joinToString(",") { it.json }}]}" }
             "{\"id\":${q(s.id)},\"display\":${q(s.display)},\"body\":${q(s.body)},\"groups\":[$groups]}"
         }
-        val manifest = "{\"engine\":\"CISTERN\",\"auditionRevision\":\"voice-contrast-2\",\"provisional\":true,\"listening\":\"pending\",\"gestures\":$gestures," +
+        val manifest = "{\"engine\":\"CISTERN\",\"auditionRevision\":\"musicality-3\",\"provisional\":true,\"listening\":\"pending\",\"gestures\":$gestures," +
             "\"wavFiles\":${gestures * 2},\"renderMillis\":${renderNanos / 1e6},\"maxBufferBytes\":$maxBufferBytes," +
             "\"holdValidation\":{\"sourceSeamLimit\":${Keys.MAX_SEAM_ERROR},\"cycleDifferenceLimit\":$MAX_CYCLE_DIFFERENCE," +
             "\"relativeCycleDifferenceLimit\":$MAX_RELATIVE_CYCLE_DIFFERENCE,\"carriedBoundaryErrorLimit\":$MAX_CARRIED_BOUNDARY_ERROR," +

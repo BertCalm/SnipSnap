@@ -341,7 +341,7 @@ object Velocity {
                 is RevelPatch -> Revel.render(patch.voice, patch.macros, velocity = v, configuration = patch.configuration)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
-                is PitchwheelPatch -> Pitchwheel.render(patch.voice, patch.macros, patch.midi, velocity = v)
+                is PitchwheelPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")

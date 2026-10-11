@@ -33,6 +33,8 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // Parallel oversampled drone renders exceed Gradle's 512 MiB worker default.
+    maxHeapSize = "2g"
     testLogging {
         events("passed", "failed", "skipped")
     }
@@ -467,6 +469,7 @@ tasks.register<JavaExec>("generateSutureAudition") {
     args("${rootDir}/testkit/" + if (firstListen) "suture-first-listen" else "suture-audition")
     if (firstListen) args("--first-listen")
     (project.findProperty("sutureSections") as String?)?.let { args("--sections=$it") }
+    (project.findProperty("suturePrevious") as String?)?.let { args("--previous=$it") }
 }
 
 /** Export the sixteen dry THAW acceptance pads as an MPC program folder. */

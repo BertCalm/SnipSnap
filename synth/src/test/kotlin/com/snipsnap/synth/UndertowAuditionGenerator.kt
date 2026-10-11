@@ -136,6 +136,8 @@ object UndertowAuditionGenerator {
 
         val manifest = Json.write(value(linkedMapOf(
             "engine" to "UNDERTOW", "quick" to quick,
+            "voiceRevision" to 2,
+            "voiceRevisionDescription" to "Revised ceramic articulation, airflow movement and shell-body balance for clearer contrast among the six voices.",
             "coverage" to if (quick) "Representative development subset; regenerate without -PundertowQuick for the complete acceptance roster." else "Complete section-18 audition roster.",
             "renderCount" to cases.size, "caseCount" to sections.values.sumOf { it.size },
             "wavCount" to wavs, "sampleRate" to Dsp.RATE, "bitDepth" to 24,
@@ -144,6 +146,7 @@ object UndertowAuditionGenerator {
             "matchedMeaning" to "The same render at AuditionLevel's shared loudest-200ms RMS target, with its peak guard.",
             "memoryMeaning" to "JVM used-heap readings immediately before/after each probe; delta includes unrelated allocation and garbage collection and is not an allocation profiler.",
             "listeningVerdict" to "Pending owner review. Numeric evidence does not establish convincing identity, useful macros or seam quality.",
+            "voiceIdentities" to UndertowVoice.entries.associate { it.name to identity(it) },
             "sections" to descriptions.filterKeys { sections.getValue(it).isNotEmpty() }.map { (id, description) ->
                 mapOf("id" to id, "description" to description, "cases" to sections.getValue(id))
             },
@@ -172,7 +175,7 @@ object UndertowAuditionGenerator {
             val neutral = neutral(voice)
             for ((tune, note) in notes) for ((energy, name) in energies) {
                 add(Case("VOICES", voice.name, "${tag}_${note.lowercase()}_${name.lowercase()}", "$note $name",
-                    "${voice.name} defaults; event energy ${fmt(energy)}.", voice,
+                    "Listen for ${identity(voice)} ${voice.name} defaults; event energy ${fmt(energy)}.", voice,
                     defaults + ("TUNE" to tune), energy = energy))
             }
             for (macro in timbral) for (step in steps) {
@@ -313,6 +316,14 @@ object UndertowAuditionGenerator {
         return finite(sqrt(difference / max(1e-18, power)))
     }
     private fun neutral(voice: UndertowVoice) = Undertow.macrosFor(voice).associate { it.name to it.neutral } + mapOf("TUNE" to .5f, "HOLD" to 0f)
+    private fun identity(voice: UndertowVoice): String = when (voice) {
+        UndertowVoice.KNOCK -> "a rounded ceramic catch and short breath tail."
+        UndertowVoice.BREATH -> "smooth hollow airflow with restrained contact."
+        UndertowVoice.FLUTTER -> "a flickering aperture and repeated breath articulation."
+        UndertowVoice.SEAL -> "opening and closure that redirect the shared draw."
+        UndertowVoice.HOLLOW -> "a deep shell body behind a softer catch."
+        UndertowVoice.SURGE -> "a forceful draw with rougher breath and loaded contacts."
+    }
     private fun usedHeap() = Runtime.getRuntime().let { it.totalMemory() - it.freeMemory() }
     private fun finite(v: Double): Double? = v.takeIf { it.isFinite() }
     private fun code(v: Float) = (v * 100).roundToInt().toString().padStart(3, '0')

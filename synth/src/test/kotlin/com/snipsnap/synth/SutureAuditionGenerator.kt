@@ -20,6 +20,8 @@ import kotlin.math.sqrt
  * Run `./gradlew :synth:generateSutureAudition`, then open index.html directly.
  * `-PsutureFirstListen` selects six neutral voices and the twelve factory patches;
  * `-PsutureSections=DIAGNOSTICS,PASSIVE,HOLD` selects full-roster sections.
+ * `--previous=/path/to/preserved/audition` adds unchanged earlier sweep clips
+ * to the focused parameter comparison, only when their input recipes match.
  *
  * RAW is band-limited/DC-cleaned audio before loudness targeting. MATCHED uses
  * [AuditionLevel] on that same render. Neither applies a rack or clips an unsafe
@@ -62,6 +64,22 @@ object SutureAuditionGenerator {
             File("synth/src/main/kotlin/com/snipsnap/synth/Suture.kt")).firstOrNull { it.isFile }
             ?: error("run SUTURE auditions from the repository root or synth directory so DSP source provenance is available")
         val dspSourceHash = sourceHash(source)
+        val previousRoot = args.drop(1).firstOrNull { it.startsWith("--previous=") }
+            ?.substringAfter('=')?.let(::File)?.canonicalFile
+        val previousManifest = previousRoot?.let { preserved ->
+            require(preserved != root.canonicalFile) { "preserve the previous audition in a separate directory" }
+            Json.parse(File(preserved, "manifest.json").readText()).obj().also { old ->
+                require(old.getValue("engine").str() == "SUTURE" &&
+                    old.getValue("sampleRate").num() == Dsp.RATE.toDouble() &&
+                    old.getValue("bitDepth").num() == 24.0) { "previous audition must be SUTURE PCM-24 at ${Dsp.RATE} Hz" }
+                require(old.getValue("dspSourceSha256").str() != dspSourceHash) { "previous audition uses the current DSP source" }
+            }
+        }
+        val previousSweeps = previousManifest?.getValue("sections")?.arr()
+            ?.firstOrNull { it.obj().getValue("id").str() == "SWEEPS" }
+            ?.obj()?.getValue("cases")?.arr()?.associate { row ->
+                row.obj().getValue("id").str() to row.obj()
+            } ?: emptyMap()
         val selected = args.drop(1).firstOrNull { it.startsWith("--sections=") }
             ?.substringAfter('=')?.split(',')?.map { it.trim().uppercase(Locale.ROOT) }?.toSet()
         require(selected == null || selected.isNotEmpty() && selected.all { it in descriptions }) {
@@ -77,6 +95,7 @@ object SutureAuditionGenerator {
         val started = System.nanoTime()
         var rendered = 0
         var wavs = 0
+        var previousCases = 0
 
         fun writeCase(c: Case, samples: FloatArray, cost: Map<String, Any?>, extra: Map<String, Any?> = emptyMap()) {
             require(samples.isNotEmpty() && samples.all { it.isFinite() }) { "${c.id}: invalid raw audio" }
@@ -88,13 +107,35 @@ object SutureAuditionGenerator {
             WavWriter.write(File(root, "${stem}_raw.wav"), raw, WavWriter.BitDepth.PCM_24)
             WavWriter.write(File(root, "${stem}_matched.wav"), matched, WavWriter.BitDepth.PCM_24)
             wavs += 2
-            sections.getValue(c.section) += linkedMapOf<String, Any?>(
+            val row = linkedMapOf<String, Any?>(
                 "id" to c.id, "group" to c.group, "label" to c.label, "description" to c.description,
                 "voice" to c.voice.name, "macros" to c.macros, "velocity" to c.velocity,
                 "raw" to "${stem}_raw.wav", "matched" to "${stem}_matched.wav",
                 "rawMetrics" to metrics(raw), "matchedMetrics" to metrics(matched),
                 "cost" to cost, "loop" to c.loop,
             ) + extra
+            val comparison = if (previousManifest != null && c.section == "SWEEPS") {
+                val old = previousSweeps[c.id] ?: error("previous audition has no sweep ${c.id}")
+                for (field in listOf("voice", "macros", "velocity", "loop", "probe")) {
+                    require(old[field] == value(row[field])) { "${c.id}: previous $field differs; compare identical input recipes" }
+                }
+                fun copyClip(variant: String): String {
+                    val relative = old.getValue(variant).str()
+                    require(relative.endsWith(".wav")) { "preserve original WAV auditions before hosting compression" }
+                    val input = File(requireNotNull(previousRoot), relative).canonicalFile
+                    require(input.toPath().startsWith(previousRoot.toPath()) && input.isFile) {
+                        "previous clip is missing or outside the preserved audition: $relative"
+                    }
+                    val path = "previous/${c.id}_${variant}.wav"
+                    File(root, path).also { it.parentFile.mkdirs(); input.copyTo(it, overwrite = true) }
+                    return path
+                }
+                previousCases++
+                wavs += 2
+                mapOf("raw" to copyClip("raw"), "matched" to copyClip("matched"),
+                    "rawMetrics" to old.getValue("rawMetrics"), "matchedMetrics" to old.getValue("matchedMetrics"))
+            } else null
+            sections.getValue(c.section) += row + (comparison?.let { mapOf("previous" to it) } ?: emptyMap())
         }
 
         for (c in cases) {
@@ -169,14 +210,24 @@ object SutureAuditionGenerator {
             "Six voices at C4 and strong gesture energy with all timbral controls at their declared neutral values.") else descriptions
         require(sourceHash(source) == dspSourceHash) { "Suture.kt changed during rendering; regenerate from a stable DSP snapshot" }
         val caseInputs = sections.values.flatten().map { c -> c.filterKeys { it in setOf("id", "voice", "macros", "velocity", "probe", "loop", "tapOf") } }
+        val previousVersion = if (previousCases > 0) mapOf(
+            "dspSourceSha256" to previousManifest!!.getValue("dspSourceSha256"),
+            "modelVersion" to previousManifest.getValue("modelVersion"),
+            "listeningRound" to previousManifest["listeningRound"],
+            "sourceManifestSha256" to sourceHash(File(previousRoot, "manifest.json")),
+            "caseCount" to previousCases, "clipCount" to previousCases * 2,
+            "meaning" to "Unchanged earlier RAW and MATCHED sweep clips with exactly matching input recipes; no audio is rerendered or rematched.",
+        ) else null
         // Saved listening notes are keyed on everything that decides what is heard: the model,
         // the DSP source and every case's recipe. A preset or case edit alone changes the audio
         // under the same clip ids, so it must open a fresh round rather than inherit old verdicts.
-        val listeningRound = sha256("${Suture.MODEL_VERSION}\n$dspSourceHash\n${Json.write(value(caseInputs))}".toByteArray())
+        val comparisonProvenance = previousVersion?.let { "\n${Json.write(value(it))}" } ?: ""
+        val listeningRound = sha256("${Suture.MODEL_VERSION}\n$dspSourceHash\n${Json.write(value(caseInputs))}$comparisonProvenance".toByteArray())
         val manifestData = linkedMapOf<String, Any?>(
             "engine" to "SUTURE", "modelVersion" to Suture.MODEL_VERSION,
             "dspSource" to "synth/src/main/kotlin/com/snipsnap/synth/Suture.kt", "dspSourceSha256" to dspSourceHash,
             "listeningRound" to listeningRound,
+            "previousVersion" to previousVersion,
             "firstListen" to firstListen, "renderCount" to rendered,
             "caseCount" to sections.values.sumOf { it.size }, "wavCount" to wavs,
             "sampleRate" to Dsp.RATE, "internalSampleRate" to Dsp.RATE * Dsp.OVERSAMPLE, "bitDepth" to 24,
@@ -202,13 +253,15 @@ object SutureAuditionGenerator {
         File(root, "index.html").writeText(page(manifest))
         val key = mapOf("engine" to "SUTURE", "modelVersion" to Suture.MODEL_VERSION,
             "dspSourceSha256" to dspSourceHash, "listeningRound" to listeningRound, "firstListen" to firstListen,
+            "previousVersion" to previousVersion,
             "reviewStatus" to "Owner listening required",
             "cases" to caseInputs)
         File(root, "key.json").writeText(Json.write(value(key)) + "\n")
         File(root, "README.txt").writeText(
             "SUTURE audition\nRegenerate: ./gradlew :synth:generateSutureAudition" +
                 (if (firstListen) " -PsutureFirstListen" else "") +
-                (selected?.let { " -PsutureSections=${it.joinToString(",")}" } ?: "") + "\n" +
+                (selected?.let { " -PsutureSections=${it.joinToString(",")}" } ?: "") +
+                (if (previousCases > 0) " -PsuturePrevious=/path/to/preserved/suture-audition" else "") + "\n" +
                 "$rendered renders, ${sections.values.sumOf { it.size }} listening cases, $wavs PCM-24 WAVs.\n" +
                 "DSP model ${Suture.MODEL_VERSION}; Suture.kt SHA-256 $dspSourceHash.\n" +
                 "Open index.html directly. RAW and MATCHED share the same dry engine render.\n" +
@@ -403,6 +456,7 @@ object SutureAuditionGenerator {
     private fun line(macros: Map<String, Float>) = macros.entries.joinToString(" · ") { "${it.key} ${fmt(it.value)}" }
     private fun value(v: Any?): JsonValue = when (v) {
         null -> JsonValue.Null
+        is JsonValue -> v
         is String -> JsonValue.Str(v)
         is Boolean -> JsonValue.Bool(v)
         is Number -> v.toDouble().let { require(it.isFinite()) { "non-finite diagnostic value" }; JsonValue.Num(it) }
@@ -427,12 +481,20 @@ button{padding:7px 12px;cursor:pointer}button:hover,button:focus-visible{border-
 .section{border:1px solid var(--line);border-radius:7px;margin:12px 0;background:var(--panel)}.section>summary{padding:14px 16px;cursor:pointer;font-weight:700}.body{padding:0 16px 16px}.cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr))}
 .card{padding:14px;border:1px solid #4c3728;border-radius:5px;background:#1b1510}.card p{font-size:13px;color:var(--muted);margin:8px 0}.buttons{display:flex;gap:8px;margin:12px 0}.card details{font-size:12px;margin-top:10px}.card summary{cursor:pointer;color:var(--muted)}
 .readout{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}canvas{display:block;width:100%;height:105px;background:#100d0a;margin-top:8px;border-radius:4px}.legend{font-size:11px;color:var(--muted)}textarea{width:100%;padding:8px;min-height:70px;resize:vertical}select{width:100%;padding:6px;margin:8px 0}[hidden]{display:none!important}
+.range{padding:16px;margin:20px 0;border:1px solid var(--line);border-radius:7px;background:var(--panel)}.range h2{margin-top:0}.range .row label{flex:1;min-width:130px}.range select{margin:4px 0}.range-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}.range-steps button{padding:12px 0}.range .buttons{flex-wrap:wrap}.range p{margin:8px 0}.range .provenance{font:11px/1.6 ui-monospace,monospace;overflow-wrap:anywhere}.range textarea{margin-top:8px}
 </style></head><body><main>
 <h1>SUTURE</h1><p class="muted">An evolving bronze vessel · engineering audition</p>
 <p>Bronze bloom → sliding cords → resisted closure → enclosed resonance → seam murmur. Listen for one connected object whose closure is shaped by the vibration it contains.</p>
 <p class="muted">RAW retains the engine's amplitude before melodic loudness targeting. MATCHED brings the same render to the shared audition level. No rack effects are applied. Mechanical evidence helps explain the gesture; the owner's sonic verdict remains pending.</p>
 <p id="counts" class="muted"></p>
 <div class="transport"><div class="row"><span id="now" role="status" aria-live="polite">Choose a clip</span><label><input id="repeat" type="checkbox"> Repeat</label><button id="stop" type="button">Stop</button></div><audio id="player" controls preload="none"></audio></div>
+<section id="range" class="range" hidden aria-labelledby="range-title"><h2 id="range-title">Compare a parameter</h2>
+<p class="muted">Keep the voice fixed and hear five steps from minimum to maximum. MATCHED makes changes in colour, motion and decay easier to compare at a shared listening level.</p>
+<div class="row"><label>Voice<select id="range-voice"></select></label><label>Control<select id="range-control"></select></label><label>Level<select id="range-level"><option value="matched">MATCHED</option><option value="raw">RAW</option></select></label><label id="range-version-label" hidden>Version<select id="range-version"><option value="current">Current</option><option value="previous">Previous</option></select></label></div>
+<div id="range-steps" class="range-steps" role="group" aria-label="Parameter values"></div>
+<div class="buttons"><button id="range-sequence" type="button">Play 0 → 1</button><button id="range-endpoints" type="button">Compare 0 and 1</button><button id="range-versions" type="button" hidden>Previous → current</button></div>
+<p id="range-context" class="muted"></p><details><summary>Version provenance</summary><p id="range-provenance" class="provenance muted"></p></details>
+<details><summary>Notes for this control range</summary><textarea id="range-notes" aria-label="Notes for the selected voice, control and version" placeholder="What changes across the range? Where should the effect be stronger?"></textarea></details></section>
 <div class="toolbar"><input id="search" type="search" aria-label="Filter listening cases" placeholder="Filter by voice, control or diagnostic…"><button id="expand" type="button">Open all</button><button id="export" type="button">Save listening notes</button><a href="manifest.json" download>Manifest</a><a href="key.json" download>Case key</a></div>
 <div id="sections"></div><p class="muted">HOLD contains settled powered material; the initial spread/release is absent from this loop-buffer format. Enable Repeat for several wraps. Listen for chirp doubling, pumping, changes in shape and audible seams. Browser notes stay local until you save them.</p>
 </main><script>
@@ -440,25 +502,57 @@ button{padding:7px 12px;cursor:pointer}button:hover,button:focus-visible{border-
 (() => {
 'use strict';
 const data=window.SUTURE_MANIFEST, player=document.querySelector('#player'), now=document.querySelector('#now'), repeat=document.querySelector('#repeat');
-const storageKey='snipsnap-suture-listening-'+data.listeningRound;let notes={},selected=null,request=0,cancelPending=null;
+const storageKey='snipsnap-suture-listening-'+data.listeningRound;let notes={},selected=null,request=0,cancelPending=null,sequence=null;
 try{notes=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch(_){}
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
 function n(v,p=4){return v===null||v===undefined?'undefined':Number(v).toFixed(p)}
 function scientific(v){return v===null||v===undefined?'undefined':Number(v).toExponential(3)}
 function metric(label,m){return label+': peak '+n(m.peak)+' · RMS '+n(m.rms)+' · DC '+scientific(m.dc)+' · window RMS '+n(m.loudness)}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify(notes))}catch(_){}}
-function play(c,variant,button){
- const token=++request,position=selected&&selected.id===c.id&&!player.ended?(selected.waiting?selected.position:player.currentTime):0;
- if(cancelPending)cancelPending();player.pause();document.querySelectorAll('.buttons button.active').forEach(b=>b.classList.remove('active'));button.classList.add('active');
- selected={id:c.id,position,waiting:true};now.textContent=c.voice+' · '+c.label+' · '+variant.toUpperCase();player.loop=repeat.checked;player.preload='auto';
+function play(c,variant,button,version='current',sequenced=false){
+ if(!sequenced)sequence=null;
+ const token=++request,position=!sequenced&&selected&&selected.id===c.id&&selected.version===version&&!player.ended?(selected.waiting?selected.position:player.currentTime):0;
+ if(cancelPending)cancelPending();player.pause();document.querySelectorAll('.buttons button.active,.range-steps button.active').forEach(b=>b.classList.remove('active'));if(button)button.classList.add('active');
+ const source=version==='previous'?c.previous:c;
+ selected={id:c.id,version,position,waiting:true};now.textContent=c.voice+' · '+c.label+' · '+variant.toUpperCase()+(data.previousVersion?' · '+version.toUpperCase():'');player.loop=repeat.checked&&!sequence;player.preload='auto';
  function ready(){if(token!==request)return;player.currentTime=position<player.duration?position:0;selected.waiting=false}
- function error(){if(token===request)now.textContent='Audio could not load. Check that the WAV remains beside this page, or try another browser.'}
+ function error(){if(token===request){sequence=null;now.textContent='Audio could not load. Check that the audio file remains beside this page, or try another browser.'}}
  player.addEventListener('canplay',ready,{once:true});player.addEventListener('error',error);
  cancelPending=()=>{player.removeEventListener('canplay',ready);player.removeEventListener('error',error);cancelPending=null};
- player.src=c[variant];player.load();try{const p=player.play();if(p)p.catch(e=>{if(token===request&&e.name!=='AbortError')now.textContent='Use the audio player’s Play button to start.'})}catch(e){error()}
+ player.src=source[variant];player.load();try{const p=player.play();if(p)p.catch(e=>{if(token===request&&e.name!=='AbortError')now.textContent='Use the audio player’s Play button to start.'})}catch(e){error()}
 }
-repeat.addEventListener('change',()=>player.loop=repeat.checked);document.querySelector('#stop').addEventListener('click',()=>{++request;if(cancelPending)cancelPending();player.pause();player.currentTime=0;if(selected){selected.position=0;selected.waiting=false}});
+repeat.addEventListener('change',()=>player.loop=repeat.checked&&!sequence);document.querySelector('#stop').addEventListener('click',()=>{sequence=null;player.loop=repeat.checked;++request;if(cancelPending)cancelPending();player.pause();player.currentTime=0;if(selected){selected.position=0;selected.waiting=false}});
 document.querySelector('#counts').textContent=data.renderCount+' renders · '+data.caseCount+' listening cases · '+data.wavCount+' PCM-'+data.bitDepth+' WAVs · '+data.sampleRate.toLocaleString()+' Hz';
+const sweeps=data.sections.find(s=>s.id==='SWEEPS'),rangeVoice=document.querySelector('#range-voice'),rangeControl=document.querySelector('#range-control'),rangeLevel=document.querySelector('#range-level'),rangeVersion=document.querySelector('#range-version'),rangeNotes=document.querySelector('#range-notes'),rangeButtons=new Map();let rangeValue=.5;
+function rangeCases(){return sweeps.cases.filter(c=>c.voice===rangeVoice.value&&c.group===rangeVoice.value+' / '+rangeControl.value).sort((a,b)=>a.macros[rangeControl.value]-b.macros[rangeControl.value])}
+function rangeNoteKey(){const sha=rangeVersion.value==='previous'?data.previousVersion.dspSourceSha256:data.dspSourceSha256;return 'range:'+sha+':'+rangeVoice.value+':'+rangeControl.value}
+function refreshRange(){
+ sequence=null;player.loop=repeat.checked;
+ const cases=rangeCases(),hasPrevious=cases.length===5&&cases.every(c=>c.previous);
+ if(!hasPrevious)rangeVersion.value='current';document.querySelector('#range-version-label').hidden=!hasPrevious;document.querySelector('#range-versions').hidden=!hasPrevious;
+ document.querySelector('#range-context').textContent='C4 · strong gesture · other controls at neutral · HOLD off. '+rangeVoice.value+' / '+rangeControl.value+' · '+rangeVersion.value.toUpperCase()+'. Enable Repeat to cycle a comparison.';
+ document.querySelector('#range-provenance').textContent='Current DSP SHA-256: '+data.dspSourceSha256+(hasPrevious?'\nPrevious DSP SHA-256: '+data.previousVersion.dspSourceSha256:'');
+ rangeNotes.value=(notes[rangeNoteKey()]||{}).note||'';
+ for(const[value,b]of rangeButtons){b.classList.remove('active');b.setAttribute('aria-label',rangeVoice.value+' '+rangeControl.value+' '+value+', '+rangeLevel.value+', '+rangeVersion.value)}
+}
+function advanceSequence(){
+ if(!sequence)return;
+ if(sequence.index===sequence.steps.length){if(repeat.checked)sequence.index=0;else{sequence=null;player.loop=repeat.checked;return}}
+ const step=sequence.steps[sequence.index++];rangeValue=step.c.macros[rangeControl.value];play(step.c,sequence.variant,rangeButtons.get(rangeValue),step.version,true);
+}
+function startSequence(steps){sequence={steps,index:0,variant:rangeLevel.value};advanceSequence()}
+player.addEventListener('ended',advanceSequence);
+if(sweeps){
+ document.querySelector('#range').hidden=false;
+ for(const voice of[...new Set(sweeps.cases.map(c=>c.voice))]){const o=el('option',voice);o.value=voice;rangeVoice.append(o)}
+ for(const control of['GAP','STITCH','CORD','SEAM','CAVITY']){const o=el('option',control);o.value=control;rangeControl.append(o)}
+ for(const value of[0,.25,.5,.75,1]){const b=el('button',String(value));b.type='button';b.addEventListener('click',()=>{rangeValue=value;play(rangeCases().find(c=>c.macros[rangeControl.value]===value),rangeLevel.value,b,rangeVersion.value)});document.querySelector('#range-steps').append(b);rangeButtons.set(value,b)}
+ for(const input of[rangeVoice,rangeControl,rangeLevel,rangeVersion])input.addEventListener('change',refreshRange);
+ document.querySelector('#range-sequence').addEventListener('click',()=>startSequence(rangeCases().map(c=>({c,version:rangeVersion.value}))));
+ document.querySelector('#range-endpoints').addEventListener('click',()=>{const cases=rangeCases();startSequence([cases[0],cases.at(-1)].map(c=>({c,version:rangeVersion.value})))});
+ document.querySelector('#range-versions').addEventListener('click',()=>{const c=rangeCases().find(c=>c.macros[rangeControl.value]===rangeValue);startSequence([{c,version:'previous'},{c,version:'current'}])});
+ rangeNotes.addEventListener('input',()=>{const previous=rangeVersion.value==='previous';notes[rangeNoteKey()]={voice:rangeVoice.value,control:rangeControl.value,version:rangeVersion.value,dspSourceSha256:previous?data.previousVersion.dspSourceSha256:data.dspSourceSha256,note:rangeNotes.value};persist()});refreshRange();
+}
 function draw(canvas,curves,series=[['gap','#f8b773'],['tension','#92caba'],['energy','#c79be3']],shared=false){
  const ctx=canvas.getContext('2d'),w=canvas.width=600,h=canvas.height=180,left=40,right=w-10,top=12,bottom=h-28;
  ctx.font='17px system-ui';ctx.fillStyle='#c0a890';ctx.strokeStyle='#493729';
@@ -491,7 +585,7 @@ for(const s of data.sections){
 }
 document.querySelector('#search').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();for(const c of cards)c.hidden=!c.dataset.search.includes(q);for(const g of groups)g.hidden=!Array.from(g.querySelectorAll('.card')).some(c=>!c.hidden);for(const s of sections){s.hidden=!Array.from(s.querySelectorAll('.card')).some(c=>!c.hidden);if(q&&!s.hidden)s.open=true}});
 document.querySelector('#expand').addEventListener('click',()=>sections.forEach(s=>s.open=true));
-document.querySelector('#export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:'SUTURE',modelVersion:data.modelVersion,dspSourceSha256:data.dspSourceSha256,firstListen:data.firstListen,savedAt:new Date().toISOString(),notes},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='suture-listening-notes.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+document.querySelector('#export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:'SUTURE',modelVersion:data.modelVersion,dspSourceSha256:data.dspSourceSha256,listeningRound:data.listeningRound,previousVersion:data.previousVersion,firstListen:data.firstListen,savedAt:new Date().toISOString(),notes},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='suture-listening-notes.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 })();
 </script></body></html>
 """.trimIndent()
