@@ -44,8 +44,8 @@ through the shared resampler. Normal playback uses
 `Dsp.MELODIC_LOUDNESS_TARGET`; auditions also retain unnormalized output so
 leveling cannot hide velocity response or unsafe gain.
 
-HOLD exports the loop region, without the initial note-on gesture. SnipSnap's
-sample API has no attack-plus-loop region. The generated sources retain their
+HOLD exports the loop region, without the initial note-on gesture. Relay's pad
+render path does not implement attack-plus-loop keygroup export. The generated sources retain their
 phase history, the loop has bounded preroll, and the wrap uses the pitched
 engine convention. Repeating an exported WAV at another pitch also changes its
 phrase timing; exported samples cannot remain locked to a host tempo.
@@ -62,7 +62,7 @@ Finite Relay pads route as TONAL and held pads as LOOP. Neither receives a drum
 choke group. `Patches`, `Presets`, `Velocity`, recipe replay, `FxChain`, the phone
 picker, FRESH TAPE starter and generic CLI all use the same engine path.
 `SynthKits.relay()` supplies a sixteen-pad dry kit, including scale notes,
-voice contrasts and explicit held/interaction probes. MPC export uses the
+voice contrasts and two held phrases. MPC export uses the
 existing kit pipeline and its one-shot drum-program convention.
 
 ## Audition and checks
