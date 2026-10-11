@@ -12,6 +12,17 @@ class StoopEngineTest {
         StoopPatch("Test", voice, Stoop.defaults(voice) + macros)
     private fun rms(samples: FloatArray) = sqrt(samples.sumOf { it.toDouble() * it } / samples.size.coerceAtLeast(1))
 
+    @Test fun `an interrupted render stops instead of finishing beside its replacement`() {
+        // SynthScreen's preview runs inside runInterruptible: a slider or engine change interrupts the thread.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException> { Stoop.render(StoopVoice.entries.first()) }
+        } finally {
+            Thread.interrupted()
+        }
+        assertTrue(Stoop.render(StoopVoice.entries.first()).samples.any { it != 0f }, "an uninterrupted render still completes")
+    }
+
     @Test fun `source rejects invalid independent configurations`() {
         assertFailsWith<IllegalArgumentException> { StoopSource(fmRatio = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { StoopSource(sub = 1.01f) }

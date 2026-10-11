@@ -309,7 +309,17 @@ object Stoop {
         return body + sub + twin
     }
 
+    /**
+     * SynthScreen previews inside `runInterruptible`, which interrupts this thread when a slider or
+     * engine change makes the render stale. Without a check the multi-million-frame passes ran to the end
+     * beside their replacement.
+     */
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("STOOP render no longer wanted")
+    }
+
     private fun condition(raw: FloatArray): FloatArray {
+        stopIfUnwanted()
         Tide.bandLimit(raw, INTERNAL_RATE)
         val out = Dsp.decimate(raw, RATE)
         // Causal DC removal keeps continuous held-state history measurable.
@@ -331,6 +341,7 @@ object Stoop {
         // at full WEAR, runs on the oversampled clock and is low-passed before
         // output decimation. StoopEngineTest compares 4x to a 16x reference.
         for (i in raw.indices) {
+            if (i % 8192 == 0) stopIfUnwanted()
             val rounded = lp2.lp(lp1.lp(raw[i], cutoff), cutoff)
             val saturated = tanh(rounded * drive) / makeup
             val colored = (1.0 - .70 * wear) * raw[i] + .70 * wear * saturated
@@ -370,6 +381,7 @@ object Stoop {
             var cutoff = cutoffBase
             var transient = 0.0
             for (i in startFrame until end) {
+                if ((i - startFrame) % 8192 == 0) stopIfUnwanted()
                 val seconds = i.toDouble() / INTERNAL_RATE
                 val age = seconds - g.start
                 if (i % 32 == 0 || i == startFrame) {

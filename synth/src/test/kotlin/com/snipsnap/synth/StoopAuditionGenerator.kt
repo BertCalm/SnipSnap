@@ -109,7 +109,7 @@ object StoopAuditionGenerator {
                 "chordIntervals" to patch.chordIntervals, "level" to level,
                 "loop" to false, "durationSeconds" to output.durationSeconds,
                 "rawPeak" to rendered.peak(), "rawLoudness" to Loudness.of(rendered),
-                "rawRms" to rms(rendered.samples), "rawDc" to rendered.samples.map { it.toDouble() }.average(),
+                "rawRms" to rms(rendered.samples), "rawDc" to rendered.samples.average(),
                 "exportPeak" to output.peak(), "exportLoudness" to Loudness.of(output),
                 "sha256" to sha256(file.readBytes()), "bytes" to file.length(),
             )
