@@ -1034,9 +1034,15 @@ object Bore {
         val correlation: Double,
         /** The quietest 50 ms level inside the blend minus the median 50 ms level outside it, in dB: 0 is no dip, a negative number is a dip. */
         val blendDipDb: Double,
-        /** The step across the wrap (the last sample to the first), in the loop's levelled units. */
-        val wrapStep: Double,
-        /** The 99.9th percentile of the steps inside the loop, in the same units: what the wrap step is judged against. */
+        /**
+         * Where the stretch's own start sits in the returned loop, which is rotated onto a zero crossing: the blend closes the
+         * loop at this frame, so this is where its join is (the step into the frame from the one before it), and not at the
+         * loop's own wrap, which the rotation put at a quiet crossing.
+         */
+        val junctionFrames: Int,
+        /** The step across the join, from the frame before [junctionFrames] to it, in the loop's levelled units. */
+        val junctionStep: Double,
+        /** The 99.9th percentile of the steps inside the loop, in the same units: what the join's step is judged against. */
         val steepestStep: Double,
     )
 
@@ -1067,12 +1073,7 @@ object Bore {
         val lengthLow = ((LOOP_SECONDS - LOOP_SLACK_SECONDS) * RATE).toInt()
         val lengthHigh = ((LOOP_SECONDS + LOOP_SLACK_SECONDS) * RATE).toInt()
 
-        val settledAt = settledFrame(x, usableEnd)
-        require(settledAt >= 0) { "$name: the held note's level never settles, so there is no steady stretch to cut a loop from" }
-        val start = max(settledAt, (LOOP_START_SECONDS * RATE).toInt())
-        require(start + lengthHigh + blend <= usableEnd) {
-            "$name: the held note settles too late (%.2f s) to cut a loop from it".format(java.util.Locale.ROOT, start.toDouble() / RATE)
-        }
+        val (start, settledAt) = loopStart(x, usableEnd, lengthHigh, blend, name)
 
         val (length, correlation) = bestLength(x, start, blend, lengthLow, lengthHigh)
         val loop = assembleLoop(x, start, length, blend, correlation)
@@ -1082,6 +1083,8 @@ object Bore {
         val rotated = loop.copyOfRange(cut, length) + loop.copyOfRange(0, cut)
         Dsp.levelTo(rotated, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
 
+        val junction = if (cut == 0) 0 else length - cut
+        val junctionStep = abs(rotated[junction] - rotated[(junction - 1 + length) % length]).toDouble()
         val steps = FloatArray(length - 1) { abs(rotated[it + 1] - rotated[it]) }
         steps.sort()
         val join = LoopJoin(
@@ -1090,7 +1093,8 @@ object Bore {
             settledFrames = settledAt,
             correlation = correlation,
             blendDipDb = dip,
-            wrapStep = abs(rotated[0] - rotated[length - 1]).toDouble(),
+            junctionFrames = junction,
+            junctionStep = junctionStep,
             steepestStep = steps[((steps.size - 1) * 0.999).toInt()].toDouble(),
         )
         return LoopRender(rotated, join)
@@ -1163,6 +1167,21 @@ object Bore {
             first = k
         }
         return if (first < level.size) starts[first] else -1
+    }
+
+    /**
+     * The frame a stretch starts at, and the frame the note settled at: the later of [settledFrame] and [LOOP_START_SECONDS],
+     * with room left before [usableEnd] for the longest length ([lengthHigh]) and the [blend] after it. Throws, naming [name],
+     * if the note never settles (it is still swelling or dying at the end) or settles too late to leave that room.
+     */
+    internal fun loopStart(x: FloatArray, usableEnd: Int, lengthHigh: Int, blend: Int, name: String): Pair<Int, Int> {
+        val settledAt = settledFrame(x, usableEnd)
+        require(settledAt >= 0) { "$name: the held note's level never settles, so there is no steady stretch to cut a loop from" }
+        val start = max(settledAt, (LOOP_START_SECONDS * RATE).toInt())
+        require(start + lengthHigh + blend <= usableEnd) {
+            "$name: the held note settles too late (%.2f s) to cut a loop from it".format(java.util.Locale.ROOT, start.toDouble() / RATE)
+        }
+        return start to settledAt
     }
 
     /**

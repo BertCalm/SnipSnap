@@ -514,12 +514,15 @@ class BoreTest {
         return Bore.condition(raw, rate, Bore.biteBoostDb(voice, m.getValue("LIP")), Bore.raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH")), Bore.voicingFor(voice))
     }
 
-    /** The step across a loop's wrap over the 99.9th percentile of its steps, from the samples alone (not the join the engine reports). */
-    private fun wrapOverSteepest(loop: FloatArray): Double {
+    /** The step into frame [at] of a loop over the 99.9th percentile of its steps, from the samples alone (not from what the engine reports). */
+    private fun stepOverSteepest(loop: FloatArray, at: Int): Double {
         val steps = FloatArray(loop.size - 1) { abs(loop[it + 1] - loop[it]) }
         steps.sort()
-        return abs(loop[0] - loop[loop.size - 1]).toDouble() / steps[((steps.size - 1) * 0.999).toInt()]
+        return abs(loop[at] - loop[(at - 1 + loop.size) % loop.size]).toDouble() / steps[((steps.size - 1) * 0.999).toInt()]
     }
+
+    /** The step across a loop's wrap: from its last frame to its first. */
+    private fun wrapOverSteepest(loop: FloatArray) = stepOverSteepest(loop, 0)
 
     private fun centsSpread(x: FloatArray, hz: Float, from: Float, to: Float): Pair<Double, Double> {
         val track = BoreMeasure.centsTrack(x, hz, from, to, Dsp.RATE)
@@ -528,7 +531,7 @@ class BoreTest {
     }
 
     @Test
-    fun `a LOOP closes by a blend - no step at the wrap, no dip in it - across the range, the corners the periodic loop could not close included`() {
+    fun `a LOOP closes by a blend - no step at its join, no dip in it - across the range, the corners the periodic loop could not close included`() {
         // The periodic loop of Rounds 1.2 to 1.6 refused four SAX corners (TUNE, LIP, BREATH below); a loop cut from a held
         // note and blended takes them. Each loop is read from its samples alone: the step across the wrap against the steepest
         // ordinary step, the length, the first sample on a zero crossing (a pad plays it once through), the level.
@@ -536,12 +539,20 @@ class BoreTest {
         val corners = ArrayList<Triple<BoreVoice, Float, Pair<Float, Float>>>() // voice, tune, lip to breath
         for (voice in BoreVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) for (pair in listOf(0.5f to 0.6f, 0f to 1f, 1f to 0f)) corners.add(Triple(voice, tune, pair))
         for ((tune, lip, breath) in unclosable) corners.add(Triple(BoreVoice.SAX, tune, lip to breath))
+        // The weakest join of the 252 corners measured (the head and the continuation correlate 0.62): the one a missing or
+        // wrong blend shows at, where at the others the length search alone lands the wrap on a matching wave.
+        corners.add(Triple(BoreVoice.SAX, 0f, 0f to 0.5f))
         for ((voice, tune, pair) in corners) {
             val (lip, breath) = pair
             val label = "$voice TUNE $tune LIP $lip BREATH $breath"
             val r = Bore.renderLoopMeasured(voice, macros(voice, tune, breath, lip, hold = 1f))
             val j = r.join
             Bore.checkJoin(label, j)
+            // The loop is rotated onto a zero crossing, so the blend's join is inside it, at junctionFrames; the loop's own wrap is
+            // a quiet crossing. Both are read from the samples, and what the engine reports of the join is checked against them.
+            val atJoin = stepOverSteepest(r.loop, j.junctionFrames)
+            assertTrue(atJoin <= 1.1, "$label: the step across the join, at frame ${j.junctionFrames}, is $atJoin times the steepest ordinary step")
+            assertEquals(abs(r.loop[j.junctionFrames] - r.loop[(j.junctionFrames - 1 + r.loop.size) % r.loop.size]).toDouble(), j.junctionStep, 1e-9, "$label: the join step the engine reports is not the one in the samples")
             assertTrue(wrapOverSteepest(r.loop) <= 1.1, "$label: the step across the wrap is ${wrapOverSteepest(r.loop)} times the steepest ordinary step")
             assertTrue(r.loop.size in (1.9f * Dsp.RATE).toInt()..(2.15f * Dsp.RATE).toInt(), "$label: the loop is ${r.loop.size.toFloat() / Dsp.RATE} s long")
             assertTrue(j.startFrames >= (Bore.LOOP_START_SECONDS * Dsp.RATE).toInt() && j.startFrames >= j.settledFrames, "$label: the stretch starts at ${j.startFrames} before the note settled (${j.settledFrames})")
@@ -551,12 +562,17 @@ class BoreTest {
             val loudness = Loudness.of(Snip(r.loop, channels = 1, sampleRate = Dsp.RATE))
             assertTrue(loudness >= 0.9f * Dsp.MELODIC_LOUDNESS_TARGET || r.loop.maxOf { abs(it) } >= 0.95f, "$label: the loop is at $loudness, under the loudness target")
         }
-        // The check can fail: the same loop cut short so that it ends on its own largest peak (the loop starts on a zero
-        // crossing) has a step of the whole amplitude at its wrap.
+        // The checks can fail: the same loop cut short so that it ends on its own largest peak (the loop starts on a zero
+        // crossing) has a step of the whole amplitude at its wrap, and the same loop with 777 frames taken out where the two
+        // sides differ most has one at the place they are joined.
         val loop = Bore.renderLoopMeasured(BoreVoice.SAX, macros(BoreVoice.SAX, hold = 1f)).loop
         val peak = (loop.size / 2 until loop.size).maxByOrNull { abs(loop[it]) }!!
         val ratio = wrapOverSteepest(loop.copyOf(peak + 1))
         assertTrue(ratio > 2.0, "the loop cut short to end on its peak still reads $ratio times the steepest step at its wrap, so the wrap check cannot fail")
+        val at = (1_000 until loop.size - 2_000).maxByOrNull { abs(loop[it - 1] - loop[it + 777]) }!!
+        val spliced = loop.copyOfRange(0, at) + loop.copyOfRange(at + 777, loop.size)
+        val atSplice = stepOverSteepest(spliced, at)
+        assertTrue(atSplice > 2.0, "a loop joined where its sides differ most still reads $atSplice times the steepest step there, so the join check cannot fail")
     }
 
     @Test
@@ -692,11 +708,39 @@ class BoreTest {
     }
 
     @Test
+    fun `the stretch starts after the floor and the settle, and a note that never settles or settles too late is refused by name`() {
+        val rate = Dsp.RATE
+        val blend = (Bore.LOOP_BLEND_SECONDS * rate).toInt()
+        val lengthHigh = ((Bore.LOOP_SECONDS + Bore.LOOP_SLACK_SECONDS) * rate).toInt()
+        val end = (4.4 * rate).toInt()
+        fun tone(seconds: Double, level: (Double) -> Double) = FloatArray((seconds * rate).toInt()) { i ->
+            val t = i.toDouble() / rate
+            (level(t) * kotlin.math.sin(2 * Math.PI * 220 * t)).toFloat()
+        }
+        // Settled at 0.2 s: the stretch still waits for the floor (the overshoot and the vibrato's rise are not in the level).
+        val early = tone(4.5, { minOf(1.0, it / 0.2) })
+        val (start, settledAt) = Bore.loopStart(early, end, lengthHigh, blend, "early")
+        assertEquals((Bore.LOOP_START_SECONDS * rate).toInt(), start, "a note settled at ${settledAt.toDouble() / rate} s did not wait for the floor")
+        // Settled at 1.2 s: the stretch waits for that.
+        val slow = tone(4.5, { minOf(1.0, it / 1.2) })
+        val (slowStart, slowSettled) = Bore.loopStart(slow, end, lengthHigh, blend, "slow")
+        assertTrue(slowStart == slowSettled && slowStart.toDouble() / rate in 0.9..1.25, "a note that settles at 1.2 s started at ${slowStart.toDouble() / rate} s")
+        // Still swelling at the end: never settles.
+        val swell = tone(4.5, { it / 4.5 })
+        val never = kotlin.test.assertFailsWith<IllegalArgumentException> { Bore.loopStart(swell, end, lengthHigh, blend, "BORE SAX 48") }
+        assertTrue(never.message!!.contains("BORE SAX 48") && never.message!!.contains("never settles"), "the refusal does not name the note and the fault: ${never.message}")
+        // Settles at 2.7 s of a note held 4.4 s: no room left for 2.12 s and a 0.3 s blend.
+        val late = tone(4.5, { if (it < 2.7) it / 2.7 * 0.5 else 1.0 })
+        val tooLate = kotlin.test.assertFailsWith<IllegalArgumentException> { Bore.loopStart(late, end, lengthHigh, blend, "BORE FLUTE 72") }
+        assertTrue(tooLate.message!!.contains("BORE FLUTE 72") && tooLate.message!!.contains("too late"), "the refusal does not name the note and the fault: ${tooLate.message}")
+    }
+
+    @Test
     fun `a join that does not hold is refused by name, one that does is not`() {
-        val good = Bore.LoopJoin(startFrames = 28_665, lengthFrames = 93_000, settledFrames = 4_000, correlation = 0.99, blendDipDb = -0.1, wrapStep = 0.01, steepestStep = 0.03)
+        val good = Bore.LoopJoin(startFrames = 28_665, lengthFrames = 93_000, settledFrames = 4_000, correlation = 0.99, blendDipDb = -0.1, junctionFrames = 5_000, junctionStep = 0.01, steepestStep = 0.03)
         Bore.checkJoin("a good one", good)
-        val weak = Bore.LoopJoin(good.startFrames, good.lengthFrames, good.settledFrames, correlation = 0.3, blendDipDb = -0.1, wrapStep = 0.01, steepestStep = 0.03)
-        val dips = Bore.LoopJoin(good.startFrames, good.lengthFrames, good.settledFrames, correlation = 0.99, blendDipDb = -3.0, wrapStep = 0.01, steepestStep = 0.03)
+        val weak = Bore.LoopJoin(good.startFrames, good.lengthFrames, good.settledFrames, correlation = 0.3, blendDipDb = -0.1, junctionFrames = 5_000, junctionStep = 0.01, steepestStep = 0.03)
+        val dips = Bore.LoopJoin(good.startFrames, good.lengthFrames, good.settledFrames, correlation = 0.99, blendDipDb = -3.0, junctionFrames = 5_000, junctionStep = 0.01, steepestStep = 0.03)
         for ((join, word) in listOf(weak to "correlate", dips to "dips")) {
             val e = kotlin.test.assertFailsWith<IllegalArgumentException> { Bore.checkJoin("BORE SAX 48", join) }
             assertTrue(e.message!!.contains("BORE SAX 48") && e.message!!.contains(word), "the refusal does not name the loop and the fault: ${e.message}")

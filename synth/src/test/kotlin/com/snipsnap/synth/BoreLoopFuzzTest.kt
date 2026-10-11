@@ -33,18 +33,18 @@ class BoreLoopFuzzTest {
                 val where = "$voice step $step $macros"
                 worstCorrelation = minOf(worstCorrelation, j.correlation)
                 worstDip = minOf(worstDip, j.blendDipDb)
-                worstWrap = maxOf(worstWrap, j.wrapStep / j.steepestStep)
+                worstWrap = maxOf(worstWrap, j.junctionStep / j.steepestStep)
                 assertTrue(j.correlation >= Bore.LOOP_MIN_CORRELATION, "$where: the blended waves correlate only ${j.correlation}")
                 assertTrue(j.blendDipDb >= -Bore.LOOP_MAX_DIP_DB, "$where: the loop dips ${j.blendDipDb} dB inside its blend")
-                assertTrue(j.wrapStep <= WRAP_OVER_STEEPEST * j.steepestStep, "$where: the step across the wrap is ${j.wrapStep / j.steepestStep} times the steepest ordinary step")
+                assertTrue(j.junctionStep <= WRAP_OVER_STEEPEST * j.steepestStep, "$where: the step across the join is ${j.junctionStep / j.steepestStep} times the steepest ordinary step")
                 assertTrue(r.loop.all { it.isFinite() && it in -1f..1f }, "$where: the loop clips or is not finite")
             }
         }
-        println("BORE loop fuzz: 100 loops, worst correlation %.4f, deepest dip %.2f dB, widest wrap %.2fx the steepest step".format(java.util.Locale.ROOT, worstCorrelation, worstDip, worstWrap))
+        println("BORE loop fuzz: 100 loops, worst correlation %.4f, deepest dip %.2f dB, widest join step %.2fx the steepest step".format(java.util.Locale.ROOT, worstCorrelation, worstDip, worstWrap))
     }
 
     private companion object {
-        /** A wrap step is a sample step: it must be no larger than the loop's own steepest ordinary one. */
-        const val WRAP_OVER_STEEPEST = 1.0
+        /** The join is a sample step like any other: it must be no larger than the loop's own steepest ordinary one (a tenth over, for the 99.9th percentile). */
+        const val WRAP_OVER_STEEPEST = 1.1
     }
 }

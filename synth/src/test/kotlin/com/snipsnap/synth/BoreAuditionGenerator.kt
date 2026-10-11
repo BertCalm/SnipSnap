@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
  * one-shot of the same note was good): the SOLO LOOP, the PAD REED, the flute's STEADY LOOP and the defaults at three notes, each
  * as the loop now is - cut from the held middle of a long one-shot and closed by a blend - once, three passes end to end (so the
  * wrap is heard without the page's REPEAT), and the one-shot of the same note the loop is cut from, as the reference. Each loop's
- * description carries what was measured on that very render: its length, the step across the wrap against the steepest ordinary
+ * description carries what was measured on that very render: its length, the step across its join against the steepest ordinary
  * step, the level inside the blend against outside it, and how alike the two blended waves are.
  *
  * The second section is the reed's attack (round 1.4, after the voicing: "let's fix the attack speed next"): the same
@@ -80,8 +80,8 @@ object BoreAuditionGenerator {
                 count++
             }
             fun bite(s: Snip) = if (voice == BoreVoice.SAX) ", bite %+.1f dB".format(java.util.Locale.ROOT, BoreMeasure.biteDb(s, hz, fromSec = 0.5f)) else ""
-            val measured = "%.2f s, wrap step %.1fx the steepest ordinary step, level in the blend %+.2f dB, the blended waves correlate %.3f%s".format(
-                java.util.Locale.ROOT, j.lengthFrames.toDouble() / Dsp.RATE, j.wrapStep / j.steepestStep, j.blendDipDb, j.correlation, bite(loop),
+            val measured = "%.2f s, step across the join %.1fx the steepest ordinary step, level in the blend %+.2f dB, the blended waves correlate %.3f%s".format(
+                java.util.Locale.ROOT, j.lengthFrames.toDouble() / Dsp.RATE, j.junctionStep / j.steepestStep, j.blendDipDb, j.correlation, bite(loop),
             )
             return listOf(
                 Clip("${tag}_0_loop", "$name LOOP", "cut from a held one-shot and closed by a blend: $measured"),
