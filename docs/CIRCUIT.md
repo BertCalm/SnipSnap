@@ -12,9 +12,11 @@ the parts, but described the vocal as honking and the ensemble as chaotic and
 abrupt. The owner then described R3 as stilted and driven by forced randomness.
 R4 introduced a shared breath and an authored four-pulse figure. The owner next
 reported that stone, wood and breath overpowered the sound and felt like separate
-voices. The current R5 candidate retains that figure while lowering surrounding
-radiation and shaping each gesture's excitation with the continuing shared effort.
-Its aim is one imagined instrument whose materials articulate its sound.
+voices. R5 retained that figure while lowering surrounding radiation and shaping
+each gesture's excitation with the continuing shared effort. The owner then said,
+“I think it's still a bit too abrupt.” The current R6 candidate eases force
+onset and release and gives resonant states a freer passive response. Its aim
+remains one imagined instrument whose materials articulate its sound.
 Owner listening acceptance remains pending. Numerical checks and patch
 round-trips do not establish that its sound is useful. Vocal integration,
 phrasing, mono movement and the feeling of shared intention still need listening.
@@ -114,7 +116,7 @@ uses 10 ms RMS envelopes above 10% of each source's own peak. They describe the
 ### R4: one shared figure
 
 R4 introduced `CircuitPhrase`, which supplies one repeating four-pulse figure
-retained by R5.
+retained by R5 and R6.
 An opening wood/pulse accent, weaker support, a vocal affirmation and a clay
 settling gesture share the same smooth effort profile. Quiet rattle and wood
 support can overlap the vocal. The source's own occupied interval protects a
@@ -178,7 +180,7 @@ existing states retain their passive response after excitation stops. The power
 cutoff still ends input at the same relative frame, and stable source identities
 and oscillation clocks are retained.
 
-Stone contacts now span `.75–1.35 ms`, capped at `.9 / (4.5 * rootHz)` to preserve
+R5 widened stone contacts to `.75–1.35 ms`, capped at `.9 / (4.5 * rootHz)` to preserve
 their main pitched modes in the upper register. The `7.07×`, `10.6×` and `15.2×`
 mode weights fall from `.033/.022/.013` to `.024/.014/.007`; the cavity and main
 `3×/4.5×` modes remain. Wood's nominal contacts widen to `3.2/3.8 ms`, retaining
@@ -188,13 +190,50 @@ These changes soften material edges before propagation. Direct paths, wall
 images, facing, distance losses and separate performer-listening arrivals remain
 part of the same causal geometry.
 
+R5's audition used matching R4 defaults as the preceding revision. Its seven
+source examples use one gain derived from the full default VOICED mix, so a
+quiet articulation stays quiet when isolated. R6 retains those actual mix levels
+and the shared-gain diagnostic rather than independently matching solo loudness.
+
+### R6: gentler force and passive release
+
+R6 keeps R5's radiation trims, shared effort, score, source identities and
+geometry. Finite tube pressure now eases in over `.18 s` and releases over
+`.55 s`, replacing `.12/.44 s`. Tube accents rise over `.050 s` and use a
+`.15 s` end taper, replacing `.035/.12 s`; their `.42 s` support and `.14 s`
+decay remain. These transitions shape pressure before the resonators, while
+held rendering retains its periodic pressure and settled-state calculation.
+
+Vocal syllable attacks change from `.036/.042 s` to `.048/.055 s`, and releases
+from `.065/.075 s` to `.085/.095 s`. The voiced gate's rise changes from
+`.036 s` to `.045 s` and its closure from `.070 s` to `.090 s`. The syllable
+envelope and first uh-huh syllable's `.84` factor now shape glottal, prefilter-air
+and chest excitation instead of multiplying tract output. Filtered air already
+in the system can continue its passive decay into the tract after external
+forcing ends. The tract and chest states are not cut by the syllable envelope.
+The grunt/uh-huh start times, syllable durations, two-part identity and overall
+`.28/.58 s` buffers remain. A power cutoff still ends new excitation; the
+remaining response comes from previously excited states.
+
+Quiet material bodies also decay a little longer. Stone's `1.5×/3×/4.5×` mode
+decays change from `.027/.020/.015 s` to `.034/.025/.019 s`. Wood's first pair
+of main decays changes from `.030/.020 s` to `.036/.024 s`, the second from
+`.034/.023 s` to `.042/.028 s`, and its mounting cavity from `.060/.045 s`
+to `.075/.055 s`. Wood's second contact uses `.84×` its former force, making
+the paired knock a quieter follow-through while retaining both arm modes.
+Clay's contact interval changes from `.005–.008 s` to `.010–.014 s`, with its
+existing `1.25 / rootHz` pitch cap. Its upper mode
+weights at `2.76×/4.07×` decrease from `.031/.018` to `.026/.012`; membrane
+frequencies and decays remain. This rounds the settling contact, which produced
+the largest 20 ms level rises in R5's six default clips. The pitched contact
+caps and wood's two-knock gap remain. These are dry synthesis changes; the shared
+final-buffer fade and canyon model are retained.
+
 The [private Circuit audition](https://circuit-snipsnap-audition.bertcalm.chatgpt.site/#comparison)
-uses matching R4 defaults as the preceding revision for R5 comparisons. Each
+uses matching R5 defaults as the preceding revision for R6 comparisons. Each
 pair retains identical macros and performer energy. Earlier revision evidence
-remains available separately. The seven source examples now use one gain
-derived from the full default VOICED mix, so a quiet articulation stays quiet
-when isolated. This is a diagnostic of its actual mix level, not independent
-solo loudness matching. Owner listening acceptance of R5 remains pending.
+remains available separately. R6 calibration and verification are in progress;
+owner listening acceptance remains pending.
 
 ## Host contract
 
@@ -393,8 +432,10 @@ was rejected; a verdict on the revised candidate remains pending.
 
 ## Build and runtime evidence
 
-The following completed-pack and build evidence is historical R4 evidence;
-R5 requires its own verification and owner listening verdict.
+The following completed-pack and build evidence describes earlier revisions.
+R4 measurements and R5 behavior or audition evidence are historical; they do
+not verify R6. The current R6 candidate requires its own verification and owner
+listening verdict.
 
 The completed R4 pack contains 370 variants and 740 raw/matched PCM24 WAVs.
 All 360 full-mix classifier guards pass, with zero numerical recoveries. Eleven

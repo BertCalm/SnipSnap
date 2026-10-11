@@ -336,8 +336,8 @@ object Circuit {
                 val t = i.toDouble() / INTERNAL_RATE
                 val release = min(p.phraseSeconds, probe.inputOffSeconds ?: Double.POSITIVE_INFINITY)
                 val envelope = if (p.held && probe.inputOffSeconds == null) 1.0 else {
-                    val attack = smooth(t / .12)
-                    val end = smooth((release - t) / .44)
+                    val attack = smooth(t / .18)
+                    val end = smooth((release - t) / .55)
                     attack * end
                 }
                 val effort = phrase.effort(t)
@@ -357,7 +357,7 @@ object Circuit {
                         val event = accents[at]
                         val age = t - event.timeSeconds + if (t < event.timeSeconds && p.held) p.rates.loopSeconds else 0.0
                         if (age < 0 || age >= .42) break
-                        accent += event.energy / velocity * smooth(age / .035) * exp(-age / .14) * smooth((.42 - age) / .12)
+                        accent += event.energy / velocity * smooth(age / .050) * exp(-age / .14) * smooth((.42 - age) / .15)
                         at--
                         visited++
                     }

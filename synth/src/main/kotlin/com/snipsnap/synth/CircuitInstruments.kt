@@ -126,9 +126,9 @@ internal object CircuitInstruments {
             contact(force, rate, at, width, strength, poweredFrames, excitationAtSeconds)
         }
         modes(output, force, root, rate, arrayOf(
-            Mode(1.5, .027, .035), // hollow cavity; pitched below the granular mineral surface
-            Mode(3.0, .020, .055),
-            Mode(4.5, .015, .052),
+            Mode(1.5, .034, .035), // hollow cavity; pitched below the granular mineral surface
+            Mode(3.0, .025, .055),
+            Mode(4.5, .019, .052),
             Mode(7.07, .009, .024),
             Mode(10.6, .006, .014),
             Mode(15.2, .004, .007),
@@ -144,18 +144,19 @@ internal object CircuitInstruments {
         val firstWidth = min(.0032, 1.25 / (2.0 * root))
         val secondWidth = min(.0038, 1.25 / (3.0 * root))
         contact(first, rate, .003, firstWidth, random.nextDouble(.85, 1.0), poweredFrames, excitationAtSeconds)
-        contact(second, rate, random.nextDouble(.046, .057), secondWidth, random.nextDouble(.82, 1.0), poweredFrames, excitationAtSeconds)
+        // The second arm answers the strike with a quieter follow-through.
+        contact(second, rate, random.nextDouble(.046, .057), secondWidth, random.nextDouble(.82, 1.0) * .84, poweredFrames, excitationAtSeconds)
         modes(output, first, root, rate, arrayOf(
-            Mode(2.0, .030, .080), Mode(3.0, .020, .044), Mode(5.08, .008, .010),
+            Mode(2.0, .036, .080), Mode(3.0, .024, .044), Mode(5.08, .008, .010),
         ))
         modes(output, second, root, rate, arrayOf(
             // Its higher main mode loses more energy through the wider contact;
             // this weight keeps the pair balanced without restoring the bright spikes.
-            Mode(3.0, .034, .200), Mode(4.5, .023, .044), Mode(7.63, .008, .008),
+            Mode(3.0, .042, .200), Mode(4.5, .028, .044), Mode(7.63, .008, .008),
         ))
         // Both arms transfer force to the same mounting cavity, rather than two unrelated hits.
         for (i in first.indices) first[i] += second[i]
-        modes(output, first, root, rate, arrayOf(Mode(1.0, .060, .018), Mode(1.5, .045, .008)))
+        modes(output, first, root, rate, arrayOf(Mode(1.0, .075, .018), Mode(1.5, .055, .008)))
     }
 
     private fun clay(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int,
@@ -163,12 +164,12 @@ internal object CircuitInstruments {
         val force = FloatArray(output.size)
         // Keep rounded force below the membrane's second contact-spectrum null
         // at upper roots, where a fixed long contact would cancel the pitched mode.
-        val contactWidth = min(random.nextDouble(.005, .008), 1.25 / root)
+        val contactWidth = min(random.nextDouble(.010, .014), 1.25 / root)
         contact(force, rate, .002, contactWidth, random.nextDouble(.90, 1.0), poweredFrames, excitationAtSeconds)
         // A membrane and vessel, with no kick-style descending oscillator or sub-bass boost.
         modes(output, force, root, rate, arrayOf(
             Mode(1.0, .073, .145), Mode(1.5, .060, .095),
-            Mode(2.0, .042, .054), Mode(2.76, .029, .031), Mode(4.07, .014, .018),
+            Mode(2.0, .042, .054), Mode(2.76, .029, .026), Mode(4.07, .014, .012),
         ))
     }
 
@@ -200,7 +201,8 @@ internal object CircuitInstruments {
             val duration = if (two) { if (second) .225 else .155 } else .218
             val progress = ((time - start) / duration).coerceIn(0.0, 1.0)
             val localTime = time - start
-            val envelope = syllable(localTime, duration, if (second) .042 else .036, if (second) .075 else .065)
+            val envelope = syllable(localTime, duration, if (second) .055 else .048, if (second) .095 else .085)
+            val syllableForce = envelope * if (two && !second) .84 else 1.0
             val mouth = smooth(progress)
             if (i % update == 0) {
                 // Broad, moving vowel regions avoid locking a tight low cavity onto one partial.
@@ -220,7 +222,7 @@ internal object CircuitInstruments {
             var hc = c
             var glottal = 0.0
             val powered = i < poweredFrames && envelope > 0.0
-            val effort = if (powered) excitation(excitationAtSeconds, time) else 0.0
+            val effort = if (powered) excitation(excitationAtSeconds, time) * syllableForce else 0.0
             // An asymmetric glottal flow derivative synthesized from a bounded harmonic series.
             // Recurrence avoids a separate transcendental oscillator for every partial.
             if (powered) {
@@ -235,13 +237,15 @@ internal object CircuitInstruments {
             airLow += airLowCoefficient * (noise - airLow)
             airBase += airHighCoefficient * (airLow - airBase)
             // Air precedes voicing, especially at the second "h"; both soften before closure.
-            val voicedGate = smooth((localTime - if (second) .016 else .006) / .036) * smooth((duration - localTime) / .070)
+            val voicedGate = smooth((localTime - if (second) .016 else .006) / .045) * smooth((duration - localTime) / .090)
             val air = (airLow - airBase) * (.060 + breath * .110)
-            val source = if (powered) .82 * glottal * voicedGate * effort + air else 0.0
+            val source = .82 * glottal * voicedGate * effort + air
             val throat = .48 * formants[0].process(source) + .42 * formants[1].process(source) + .20 * formants[2].process(source)
             val chestInput = if (powered) .025 * s * voicedGate * effort else 0.0
             chest += chestCoefficient * (chestInput - chest)
-            output[i] = (.55 * envelope * (throat + chest + .25 * air) * if (two && !second) .84 else 1.0).toFloat()
+            // The syllable closes its air supply; it does not close a gate on
+            // the radiated throat. Existing tract and chest states ring freely.
+            output[i] = (.55 * (throat + chest + .25 * air)).toFloat()
         }
     }
 
