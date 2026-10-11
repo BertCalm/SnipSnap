@@ -261,19 +261,27 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 17 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 18 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
-similar struck sounds distinguished mainly by rhythm. The model 2 prototype
-strengthens wooden body and TOOTH character, shapes contact rise, and gives
-finger friction and filament slip separate transfers into the same resonator.
-New patches use model 2; saved model 1 patches, including JSON with an absent
-or null model, retain the original renderer. Velocity variants preserve that
-choice. The revised dry audition awaits approval; the seven-preset scope stays
-fixed until then.
+similar struck sounds distinguished mainly by rhythm. Model 2 strengthened
+wooden body and TOOTH character, shaped contact rise, and gave finger friction
+and filament slip separate transfers into the same resonator. The owner's
+v2 review marked five voices Revise and found PLUCK most different; no voice
+received Keep. Provisional model 3 changes contact projections and individual
+mode losses to retain different body colours through decay. DRAW and THAWED
+have slower contact rise; THAWED's release balance follows temperature. PLUCK
+retains its model-2 release calibration. The new audition includes actual
+bowing, reverse encounters, warming and powered-loop probes alongside the
+release-only hits.
+New patches use model 3; saved models 1 and 2 retain their respective V1 and
+V2 renderers. JSON with an absent or null model selects V1. Velocity variants
+preserve the stored model. The revised dry audition awaits approval; the
+seven-preset scope stays fixed until then.
 [The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
-six isolated catches and includes the previous defaults for comparison.
+six release-only resonator hits and includes the real moving mechanisms and
+preserved models 1 and 2 for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent

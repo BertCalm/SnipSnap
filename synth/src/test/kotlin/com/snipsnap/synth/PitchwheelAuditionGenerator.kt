@@ -43,6 +43,8 @@ object PitchwheelAuditionGenerator {
         val modelVersion: Int = Pitchwheel.MODEL_VERSION,
         val isolatedKind: Pitchwheel.EventKind? = null,
         val direction: Int = 1,
+        val mechanismFocus: String? = null,
+        val comparisonGroup: String? = null,
     )
 
     private data class Metrics(
@@ -73,9 +75,11 @@ object PitchwheelAuditionGenerator {
         check(cases.map { it.id }.distinct().size == cases.size) { "Duplicate Pitchwheel audition IDs" }
         check(root.isDirectory || root.mkdirs()) { "Could not create ${root.absolutePath}" }
         val sourceFiles = mapOf(Pitchwheel.MODEL_VERSION to sourceFile("Pitchwheel.kt"),
+            PitchwheelV2.MODEL_VERSION to sourceFile("PitchwheelV2.kt"),
             PitchwheelV1.MODEL_VERSION to sourceFile("PitchwheelV1.kt"))
         val sourceHashes = sourceFiles.mapValues { sha256(it.value.readBytes()) }
         val compiledHashes = mapOf(Pitchwheel.MODEL_VERSION to compiledHash("Pitchwheel"),
+            PitchwheelV2.MODEL_VERSION to compiledHash("PitchwheelV2"),
             PitchwheelV1.MODEL_VERSION to compiledHash("PitchwheelV1"))
         val sourceHash = sourceHashes.getValue(Pitchwheel.MODEL_VERSION)
         val compiledHash = compiledHashes.getValue(Pitchwheel.MODEL_VERSION)
@@ -83,7 +87,8 @@ object PitchwheelAuditionGenerator {
             val macros = caseMacros(case).toSortedMap()
             "${case.id}|${case.voice}|${macroJson(macros)}|${case.midi}|${case.velocity}|${case.seconds}|" +
                 "${case.contacts}|${case.resin}|${case.bowSound}|${case.snapSound}|${case.solverRate}|" +
-                "${case.modelVersion}|${case.isolatedKind}|${case.direction}"
+                "${case.modelVersion}|${case.isolatedKind}|${case.direction}|" +
+                "${case.mechanismFocus}|${case.comparisonGroup}"
         }.toByteArray(Charsets.UTF_8))
         val listeningRound = "pitchwheel-v${Pitchwheel.MODEL_VERSION}-${sourceHash.take(12)}-${recipeHash.take(12)}"
 
@@ -103,6 +108,12 @@ object PitchwheelAuditionGenerator {
                     resin = case.resin, bowSound = case.bowSound, snapSound = case.snapSound,
                     solverRate = case.solverRate,
                 ))
+                case.modelVersion == PitchwheelV2.MODEL_VERSION -> legacyProbe(PitchwheelV2.renderProbe(
+                    case.voice, macros, case.midi, case.velocity,
+                    seconds = case.seconds, normalize = false, contacts = case.contacts,
+                    resin = case.resin, bowSound = case.bowSound, snapSound = case.snapSound,
+                    solverRate = case.solverRate,
+                ))
                 else -> Pitchwheel.renderProbe(
                     case.voice, macros, case.midi, case.velocity,
                     seconds = case.seconds, normalize = false, contacts = case.contacts,
@@ -110,8 +121,13 @@ object PitchwheelAuditionGenerator {
                     solverRate = case.solverRate,
                 )
             }
-            val raw = probe?.samples ?: Pitchwheel.acousticProbe(case.voice, macros, case.midi,
-                kind = case.isolatedKind!!, direction = case.direction, seconds = case.seconds!!.toDouble())
+            val raw = probe?.samples ?: when (case.modelVersion) {
+                PitchwheelV2.MODEL_VERSION -> PitchwheelV2.acousticProbe(case.voice, macros, case.midi,
+                    kind = PitchwheelV2.EventKind.valueOf(case.isolatedKind!!.name),
+                    direction = case.direction, seconds = case.seconds!!.toDouble())
+                else -> Pitchwheel.acousticProbe(case.voice, macros, case.midi,
+                    kind = case.isolatedKind!!, direction = case.direction, seconds = case.seconds!!.toDouble())
+            }
             val renderMs = (System.nanoTime() - before) / 1_000_000.0
             require(raw.isNotEmpty() && raw.all { it.isFinite() }) { "Empty or non-finite clip: ${case.id}" }
             val native = Snip(raw, channels = 1, sampleRate = Dsp.RATE)
@@ -131,24 +147,37 @@ object PitchwheelAuditionGenerator {
             writeDiagnostics(root, eventsPath, tracePath, probe)
             val d = probe?.diagnostics
             val counts = d?.events?.groupingBy { it.kind.name }?.eachCount().orEmpty()
+            val temperature = d?.trace?.takeIf { it.isNotEmpty() }?.let { trace ->
+                "{\"initial\":${n(trace.first().temperature)},\"final\":${n(trace.last().temperature)}," +
+                    "\"min\":${n(trace.minOf { it.temperature })},\"max\":${n(trace.maxOf { it.temperature })}}"
+            } ?: "null"
+            val encounters = if (case.mechanismFocus == "recoil") d?.events.orEmpty()
+                .filter { it.kind == Pitchwheel.EventKind.RELEASE }.joinToString(",", "[", "]") {
+                    "{\"time\":${n(it.time)},\"tooth\":${it.tooth},\"direction\":${it.direction},\"energy\":${n(it.energy)}}"
+                } else "null"
             val diagnostics = if (d == null) "null" else "{\"initialEnergy\":${n(d.initialEnergy)},\"inputWork\":${n(d.inputWork)}," +
                 "\"dissipated\":${n(d.dissipated)},\"passiveCorrection\":${n(d.passiveCorrection)}," +
                 "\"maxEnergyError\":${n(d.maxEnergyError)},\"finalEnergy\":${n(d.finalEnergy)}," +
                 "\"releasedEnergy\":${n(d.releasedEnergy)},\"bowedEnergy\":${n(d.bowedEnergy)}," +
                 "\"snappedEnergy\":${n(d.snappedEnergy)},\"maxAttachments\":${d.maxAttachments}," +
                 "\"eventCounts\":${counts.entries.joinToString(",", "{", "}") { "${q(it.key)}:${it.value}" }}," +
+                "\"forwardReleases\":${d.events.count { it.kind.name == "RELEASE" && it.direction > 0 }}," +
                 "\"reverseReleases\":${d.events.count { it.kind.name == "RELEASE" && it.direction < 0 }}," +
+                "\"releaseEncounters\":$encounters,\"temperature\":$temperature," +
                 "\"traceFrames\":${d.trace.size}}"
             clips += "{\"id\":${q(case.id)},\"section\":${q(case.section)},\"voice\":${q(case.voice.name)}," +
                 "\"label\":${q(case.label)},\"description\":${q(case.description)}," +
                 "\"modelVersion\":${case.modelVersion},\"dspSourceSha256\":${q(sourceHashes.getValue(case.modelVersion))}," +
                 "\"compiledClassSha256\":${q(compiledHashes.getValue(case.modelVersion))}," +
                 "\"isolatedKind\":${case.isolatedKind?.name?.let(::q) ?: "null"},\"direction\":${case.direction}," +
+                "\"mechanismFocus\":${case.mechanismFocus?.let(::q) ?: "null"}," +
+                "\"comparisonGroup\":${case.comparisonGroup?.let(::q) ?: "null"}," +
                 "\"recipeStatus\":\"provisional; owner listening pending\",\"macros\":${macroJson(macros)}," +
                 "\"midi\":${case.midi},\"requestedMidi\":${Pitchwheel.midiFor(case.voice, macros.getValue("TUNE"), case.midi)}," +
                 "\"requestedHz\":${Pitchwheel.frequencyFor(case.voice, macros.getValue("TUNE"), case.midi)}," +
                 "\"velocity\":${case.velocity},\"held\":$held,\"loop\":$loop,\"requestedSeconds\":${case.seconds}," +
-                "\"probe\":{\"contacts\":${case.contacts},\"resin\":${case.resin},\"bowSound\":${case.bowSound}," +
+                "\"probe\":{\"mode\":${q(if (case.isolatedKind == null) "moving wheel" else "release-only resonator")}," +
+                "\"contacts\":${case.contacts},\"resin\":${case.resin},\"bowSound\":${case.bowSound}," +
                 "\"snapSound\":${case.snapSound},\"solverRate\":${case.solverRate}}," +
                 "\"frames\":${raw.size},\"seconds\":${raw.size.toDouble() / Dsp.RATE}," +
                 "\"renderMs\":$renderMs,\"renderMsPerAudioSecond\":${renderMs / (raw.size.toDouble() / Dsp.RATE)}," +
@@ -174,6 +203,7 @@ object PitchwheelAuditionGenerator {
             "\"recipeSha256\":${q(recipeHash)},\"listeningRound\":${q(listeningRound)}," +
             "\"sampleRate\":${Dsp.RATE},\"bitDepth\":24,\"full\":$full," +
             "\"sonicAcceptance\":\"pending owner listening; recipes and presets are provisional\"," +
+            "\"previousFeedback\":${q(PREVIOUS_FEEDBACK)}," +
             "\"metricNotes\":${q(METRIC_NOTES)},\"clips\":[\n${clips.joinToString(",\n")}\n]}\n"
         prunePreviousClips(root, cases)
         File(root, "manifest.json").writeText(manifest)
@@ -185,14 +215,26 @@ object PitchwheelAuditionGenerator {
 
     private fun compactCases(): List<Case> = buildList {
         for (voice in PitchwheelVoice.entries) {
-            add(case("Isolated attacks", voice, "isolated_release", "${voice.name} · one catch",
-                "One diagnostic release at C3, with no wheel trajectory or repeated hits. Compare matched clips to hear attack colour and decay alone.")
-                .copy(seconds = .75f, isolatedKind = Pitchwheel.EventKind.RELEASE))
+            add(case("Isolated attacks", voice, "isolated_release", "${voice.name} · release-only hit",
+                "One equal-work release into this voice's resonator at C3. No wheel, resin bowing, recoil or warming is exercised. Compare matched clips for body colour and decay; use Real mechanisms for the moving instrument.")
+                .copy(seconds = .75f, isolatedKind = Pitchwheel.EventKind.RELEASE,
+                    comparisonGroup = "${voice.name.lowercase(Locale.ROOT)}_release_character"))
         }
         for (voice in PitchwheelVoice.entries) {
+            add(case("Previous model 2 hits", voice, "previous_v2_release", "${voice.name} · previous model 2 release-only hit",
+                "The preserved 0.75-second, equal-work model-2 resonator hit from the preceding audition. No moving-wheel mechanisms are exercised. Compare matched audio directly with the current release-only hit.")
+                .copy(seconds = .75f, modelVersion = PitchwheelV2.MODEL_VERSION,
+                    isolatedKind = Pitchwheel.EventKind.RELEASE,
+                    comparisonGroup = "${voice.name.lowercase(Locale.ROOT)}_release_character"))
+        }
+        addAll(realMechanismCases())
+        for (voice in PitchwheelVoice.entries) {
             add(case("Defaults", voice, "default", "${voice.name} default", "All controls at this voice's provisional defaults. Dry mechanism, with no rack effects."))
-            add(case("Previous defaults", voice, "previous_default", "${voice.name} · previous model 1",
-                "Preserved audio from model 1, before the timbre revision. Compare the new default at matched level and the same C3 root.")
+            add(case("Previous model 2", voice, "previous_v2_default", "${voice.name} · previous model 2",
+                "Preserved model-2 default from the preceding listening round. Compare at matched level and the same C3 root; the frozen renderer retains the previous sound.")
+                .copy(modelVersion = PitchwheelV2.MODEL_VERSION))
+            add(case("Previous model 1", voice, "previous_default", "${voice.name} · previous model 1",
+                "Preserved model-1 default from the first listening round. Compare at matched level and the same C3 root; the frozen renderer retains the original sound.")
                 .copy(modelVersion = PitchwheelV1.MODEL_VERSION))
             for (midi in listOf(36, 60)) add(case("Pitch and velocity", voice, "midi_$midi", "${voice.name} · ${noteName(midi)}",
                 "Same gesture and velocity; only the requested root changes.").copy(midi = midi))
@@ -213,6 +255,29 @@ object PitchwheelAuditionGenerator {
         add(case("Mechanism isolation", PitchwheelVoice.RECOIL, "snap_off", "RECOIL · snap sound disabled",
             "Compare RECOIL default. Attachments and mechanical releases remain; snap acoustic transfer is disabled.").copy(snapSound = false))
         add(case("Edges", PitchwheelVoice.PLUCK, "velocity_zero", "PLUCK · zero velocity", "Exact silence control; matched export must also remain silent.").copy(velocity = 0f))
+    }
+
+    /** These are complete moving-wheel probes, not isolated or reconstructed contact sounds. */
+    private fun realMechanismCases(): List<Case> = buildList {
+        val draw = mapOf("PUSH" to .7f, "ADHESION" to .8f, "HEAT" to .35f)
+        add(case("Real mechanisms", PitchwheelVoice.DRAW, "mechanism_bow", "DRAW · funded resin bowing",
+            "Three seconds of the actual moving wheel with sticky resin. Compare the bow-muted partner at the same controls; inspect bowed work and attachment events in the diagnostics.", draw)
+            .copy(seconds = 3f, mechanismFocus = "bow", comparisonGroup = "draw_bow"))
+        add(case("Real mechanisms", PitchwheelVoice.DRAW, "mechanism_bow_muted", "DRAW · bow transfer muted",
+            "Same controls and duration as the funded-bowing probe. Resin resistance and contacts remain active; continuous resin-to-sound transfer is muted.", draw)
+            .copy(seconds = 3f, bowSound = false, mechanismFocus = "bow", comparisonGroup = "draw_bow"))
+        add(case("Real mechanisms", PitchwheelVoice.RECOIL, "mechanism_reverse", "RECOIL · real forward and reverse encounters",
+            "Five seconds of the actual default gesture. Release metadata identifies each heard tooth, time and direction; listen for the wheel returning to a tooth from the reverse side.")
+            .copy(seconds = 5f, mechanismFocus = "recoil"))
+        val thawed = mapOf("PUSH" to .7f, "ADHESION" to .65f)
+        for ((suffix, heat) in listOf("cold" to .05f, "warm" to .9f)) {
+            add(case("Real mechanisms", PitchwheelVoice.THAWED, "mechanism_$suffix", "THAWED · $suffix resin",
+                "Six seconds of the moving wheel, HEAT ${fmt(heat)}. The cold/warm pair shares every other control. Compare resistance and sound over time with the measured temperature range and State CSV.", thawed + ("HEAT" to heat))
+                .copy(seconds = 6f, mechanismFocus = "thermal", comparisonGroup = "thawed_heat"))
+        }
+        add(case("Real mechanisms", PitchwheelVoice.TURN, "mechanism_hold", "TURN · settled powered orbit",
+            "One settled revolution of the actual powered wheel. Enable Repeat held loops to hear several cycles; diagnostics include preroll and the measured cycle, and the asset is not a concatenated simulation.", mapOf("HOLD" to 1f))
+            .copy(mechanismFocus = "hold"))
     }
 
     private fun fullCases(): List<Case> = buildList {
@@ -281,11 +346,27 @@ object PitchwheelAuditionGenerator {
         }
     }
 
-    private fun caseMacros(case: Case) = (if (case.modelVersion == PitchwheelV1.MODEL_VERSION)
-        PitchwheelV1.defaults(case.voice) else Pitchwheel.defaults(case.voice)) + case.macros
+    private fun caseMacros(case: Case) = when (case.modelVersion) {
+        PitchwheelV1.MODEL_VERSION -> PitchwheelV1.defaults(case.voice)
+        PitchwheelV2.MODEL_VERSION -> PitchwheelV2.defaults(case.voice)
+        else -> Pitchwheel.defaults(case.voice)
+    } + case.macros
 
     /** Adapt immutable model-1 diagnostic records; its samples are never re-rendered by model 2. */
     private fun legacyProbe(p: PitchwheelV1.Probe): Pitchwheel.Probe {
+        val d = p.diagnostics
+        val events = d.events.map { Pitchwheel.Event(it.time, Pitchwheel.EventKind.valueOf(it.kind.name),
+            it.tooth, it.direction, it.energy, it.finger) }
+        val trace = d.trace.map { Pitchwheel.Trace(it.time, it.angle, it.speed, it.temperature,
+            it.mechanicalEnergy, it.acousticEnergy, it.inputWork, it.dissipated, it.attachments) }
+        return Pitchwheel.Probe(p.samples, Pitchwheel.Diagnostics(events, trace, d.initialEnergy,
+            d.inputWork, d.dissipated, d.maxEnergyError, d.finalEnergy, d.maxAttachments,
+            d.passiveCorrection, d.bowedEnergy, d.snappedEnergy, d.releasedEnergy),
+            p.previousCycle, p.seamError, p.stateError, p.prerollCycles)
+    }
+
+    /** Preserve model-2 sample data while translating only the diagnostic record types. */
+    private fun legacyProbe(p: PitchwheelV2.Probe): Pitchwheel.Probe {
         val d = p.diagnostics
         val events = d.events.map { Pitchwheel.Event(it.time, Pitchwheel.EventKind.valueOf(it.kind.name),
             it.tooth, it.direction, it.energy, it.finger) }
@@ -349,7 +430,9 @@ object PitchwheelAuditionGenerator {
     private fun q(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
         .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
 
-    private const val METRIC_NOTES = "All audio is dry, mono, 44.1 kHz. Isolated attacks feed one fixed-energy release into the shared resonator with no wheel simulation; their diagnostics are intentionally null and their CSVs contain headers only. Gesture clips use renderProbe with normalization disabled and retain the unfaded finite tail. Previous defaults use the preserved model-1 renderer; every clip records its model and source/compiled-class fingerprints. Matched clips use the shared AuditionLevel target measured on the loudest 200 ms RMS window. rawExportGain records PCM safety attenuation only; rawMetrics describe the unattenuated floating-point source. HOLD clips with no requested duration contain settled loop-only material; the continuous powered-startup diagnostic is not a loop. seamError is the engine's Keys seam measurement with its real previous cycle. stateError checks the mechanical, thermal and acoustic orbit independently of the audio seam. wrapStep includes normal waveform slope; wrapSlope compares endpoint slopes. Energy values and event excitation are internal simulation units, not audio RMS. passiveCorrection is numerical energy removal, separate from dissipated physical work. Trace CSVs sample state at 100 Hz; event CSVs preserve each event. Held diagnostics may include preroll, so their time origin need not equal the exported loop start. Other null numeric values indicate an unavailable or non-finite measurement and require investigation. Render time includes simulation and final-rate processing, but excludes WAV/CSV encoding and depends on JIT/hardware. Metrics do not establish sonic acceptance."
+    private const val PREVIOUS_FEEDBACK = "Previous round: DRAW, RECOIL and TURN sounded alike; CLUNK and THAWED formed a second pair. PLUCK was “most different,” with no Keep verdict. This round starts with fresh votes."
+
+    private const val METRIC_NOTES = "All audio is dry, mono, 44.1 kHz. Isolated attacks and Previous model 2 hits are equal-work, release-only resonator hits, each 0.75 seconds long. Previous hits use the frozen model-2 acoustic renderer and retain the preceding audition's sound. They do not exercise wheel motion, resin bowing, recoil or warming; their diagnostics are intentionally null and their CSVs contain headers only. Real mechanisms use complete moving-wheel renderProbe simulations. Their release directions, temperature range and funded bowed work describe the recorded simulation, not the isolated hits. Previous model 2 and Previous model 1 defaults use their frozen renderers; every clip records its model and source/compiled-class fingerprints. Gesture clips disable normalization and retain the unfaded finite tail. Matched clips use the shared AuditionLevel target measured on the loudest 200 ms RMS window. rawExportGain records PCM safety attenuation only; rawMetrics describe the unattenuated floating-point source. HOLD clips with no requested duration contain one settled revolution; enable the native player's Repeat held loops to hear several revolutions. The asset is not a concatenated multi-cycle simulation. The continuous powered-startup diagnostic is not a loop. seamError is the engine's Keys seam measurement with its real previous cycle. stateError checks the mechanical, thermal and acoustic orbit independently of the audio seam. wrapStep includes normal waveform slope; wrapSlope compares endpoint slopes. Energy values and event excitation are internal simulation units, not audio RMS. passiveCorrection is numerical energy removal, separate from dissipated physical work. Trace CSVs sample state at 100 Hz; event CSVs preserve each event. Held diagnostics may include preroll, so their time origin need not equal the exported loop start. Temperature is the model's normalized thermal state, not a measured material temperature. Other null numeric values indicate an unavailable or non-finite measurement and require investigation. Render time includes simulation and final-rate processing, but excludes WAV/CSV encoding and depends on JIT/hardware. Metrics do not establish sonic acceptance."
 
     private fun readme(count: Int, full: Boolean, listeningRound: String) = """
         # Pitchwheel audition
@@ -361,9 +444,13 @@ object PitchwheelAuditionGenerator {
         are recorded in the manifest. Rendering refuses a source change during the run.
 
         Open `index.html` directly in a browser. The page embeds its manifest and uses no external
-        assets. Start with the six isolated attacks at C3 and matched level: each is one diagnostic
-        catch with no wheel trajectory, so rhythm cannot conceal similar attack colour. Then compare
-        Defaults with Previous defaults, which preserve model 1 at the same root. Compare raw clips
+        assets. Start with six equal-work, release-only resonator hits at C3 and matched level. These
+        do not exercise the moving wheel, resin bowing, recoil or warming. Each current hit card has
+        a Play previous model 2 matched button for direct comparison with the preserved 0.75-second
+        prior hit. Use Real mechanisms for
+        DRAW's funded bow/muted pair, RECOIL's recorded forward/reverse encounters, THAWED's same-control
+        cold/warm pair and TURN's settled powered orbit. Then compare Defaults with Previous model 2
+        and Previous model 1, which preserve their original renderers at the same root. Compare raw clips
         for gesture level and matched clips for timbre. Continue with macro contrasts, pitch/velocity,
         mechanism isolation and held loops. Listen
         for push, catch, pitched release, stretching resin, hesitation and a real reverse encounter.
@@ -381,6 +468,8 @@ object PitchwheelAuditionGenerator {
         contain event direction/energy and the mechanical, acoustic and thermal state trajectory.
         Isolated attacks have intentionally null diagnostics and header-only CSVs.
 
+        $PREVIOUS_FEEDBACK
+
         $METRIC_NOTES
 
         Generated audio, CSVs and pages are listening artifacts under testkit/ and should not be committed.
@@ -388,7 +477,7 @@ object PitchwheelAuditionGenerator {
 
     private val PAGE = """
         <!doctype html>
-        <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Hear Pitchwheel's revised dry voices in SnipSnap: isolated attacks, full gestures and preserved previous defaults.">
+        <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Hear Pitchwheel's revised wooden voices in SnipSnap: release-only hits, actual resin and recoil mechanisms, and preserved previous models.">
         <title>Pitchwheel · SnipSnap audition</title>
         <style>
         :root{color-scheme:dark;--bg:#10130e;--panel:#1d221a;--line:#4c5940;--ink:#ece8d5;--muted:#b0b7a3;--accent:#d1e591}*{box-sizing:border-box}
@@ -400,8 +489,9 @@ object PitchwheelAuditionGenerator {
         </style><main>
         <div class="badge">SNIPSNAP / DRY ENGINE LISTENING</div><h1>PITCHWHEEL</h1>
         <p>A resonant wooden wheel turns through resin. Teeth catch and release flexible fingers; filaments stretch, bow, snap and sometimes pull the wheel backward.</p>
-        <p class="notice">Start with one catch from each voice, all at C3, dry and at matched level. These isolated attacks let you compare colour and decay without a rhythmic pattern. Then compare Defaults for the full gesture and Previous defaults for the preserved model 1. Recipes and presets remain provisional pending listening approval. Repeat settled HOLD clips through several wraps.</p>
-        <div class="row"><button data-section="Isolated attacks">One catch</button><button data-section="Defaults">Full gestures</button><button data-section="Previous defaults">Previous defaults</button><button data-section="">Full matrix</button></div>
+        <p class="notice">Start with one equal-work, release-only resonator hit from each voice, all at C3, dry and at matched level. Use each card's previous-model button for direct comparison with the earlier hit at the same 0.75-second duration. These hits compare body colour and decay; they do not exercise wheel motion, resin bowing, recoil or warming. Use Real mechanisms to hear those processes and full gestures to hear the complete instrument. Recipes and presets remain provisional pending listening approval.</p>
+        <p id="previousFeedback"></p>
+        <div class="row"><button data-section="Isolated attacks">Release-only hits</button><button data-section="Previous model 2 hits">Previous model 2 hits</button><button data-section="Real mechanisms">Real mechanisms</button><button data-section="Defaults">Full gestures</button><button data-section="Previous model 2">Previous model 2 defaults</button><button data-section="Previous model 1">Previous model 1 defaults</button><button data-section="">Full matrix</button></div>
         <div class="controls"><select id="voice" aria-label="Filter voices"><option value="">All voices</option></select><select id="section" aria-label="Filter sections"><option value="">All sections</option></select><input id="search" type="search" aria-label="Search clips" placeholder="Find a voice, macro, note or mechanism"><button id="export">Export listening notes</button></div>
         <div id="count" class="count" role="status"></div><div id="clips"></div>
         <details><summary>How to read the measurements</summary><p id="metricNotes"></p></details></main>
@@ -415,7 +505,8 @@ object PitchwheelAuditionGenerator {
         function save(){try{localStorage.setItem(storageKey,JSON.stringify(verdicts))}catch(e){document.getElementById('count').textContent='Browser storage unavailable; export your notes before closing.'}}
         function options(select,values){for(const value of [...new Set(values)]){const o=el('option',value);o.value=value;select.append(o)}}
         function num(v){return typeof v==='number'&&Number.isFinite(v)?v.toExponential(3):'unavailable'}
-        options(voice,clips.map(c=>c.voice));options(section,clips.map(c=>c.section));if(clips.some(c=>c.section==='Isolated attacks'))section.value='Isolated attacks';document.getElementById('metricNotes').textContent=manifest.metricNotes;
+        function evidence(c){const d=c.diagnostics;if(!d)return '\nOne equal-work, release-only resonator hit. No wheel trajectory, resin bowing, recoil, warming or mechanical energy ledger; CSVs contain headers only.';let text='\nEvents '+JSON.stringify(d.eventCounts)+' · forward releases '+d.forwardReleases+' · reverse releases '+d.reverseReleases+'\nInitial energy '+num(d.initialEnergy)+' / input work '+num(d.inputWork)+'\nDissipated '+num(d.dissipated)+' / numerical removal '+num(d.passiveCorrection)+'\nMaximum energy error '+num(d.maxEnergyError)+' / final energy '+num(d.finalEnergy)+'\nReleased '+num(d.releasedEnergy)+' / bowed '+num(d.bowedEnergy)+' / snapped '+num(d.snappedEnergy)+'\nMaximum attachments '+d.maxAttachments+' · solver '+c.probe.solverRate+' Hz';if(d.temperature)text+='\nTemperature: initial '+num(d.temperature.initial)+' / final '+num(d.temperature.final)+' / min '+num(d.temperature.min)+' / max '+num(d.temperature.max);if(d.releaseEncounters)text+='\nActual release encounters\n'+d.releaseEncounters.map(e=>e.time.toFixed(4)+' s · tooth '+e.tooth+' · '+(e.direction>0?'forward':'reverse')+' · work '+num(e.energy)).join('\n');return text}
+        options(voice,clips.map(c=>c.voice));options(section,clips.map(c=>c.section));if(clips.some(c=>c.section==='Isolated attacks'))section.value='Isolated attacks';document.getElementById('metricNotes').textContent=manifest.metricNotes;document.getElementById('previousFeedback').textContent=manifest.previousFeedback;
         function play(c,mode){const request=++playRequest;current=c;audio.pause();audio.src=c[mode+'Path']+'?round='+encodeURIComponent(manifest.listeningRound);audio.loop=c.loop&&repeat.checked;document.getElementById('now').textContent=c.label+' · '+mode+(c.loop?' · settled loop':'');for(const card of document.querySelectorAll('.card'))card.classList.toggle('playing',card.dataset.id===c.id);audio.play().catch(e=>{if(request!==playRequest||e.name==='AbortError')return;document.getElementById('now').textContent='Playback unavailable: '+e.message})}
         function display(){
           const query=search.value.toLowerCase(),selected=clips.filter(c=>(!voice.value||voice.value===c.voice)&&(!section.value||section.value===c.section)&&(!query||(c.label+' '+c.description+' '+c.section).toLowerCase().includes(query)));
@@ -425,10 +516,11 @@ object PitchwheelAuditionGenerator {
             const group=el('section'),grid=el('div',undefined,'grid');group.append(el('h2',name),grid);host.append(group);
             for(const c of selected.filter(c=>c.section===name)){
               const card=el('article',undefined,'card');card.dataset.id=c.id;card.classList.toggle('playing',current?.id===c.id);grid.append(card);
-              card.append(el('div',c.voice+' / MODEL '+c.modelVersion+' / '+(c.isolatedKind?'ONE CATCH':c.loop?'SETTLED LOOP':c.held?'POWERED DIAGNOSTIC':'FINITE'),'badge'),el('h3',c.label),el('p',c.description));
+              card.append(el('div',c.voice+' / MODEL '+c.modelVersion+' / '+(c.isolatedKind?'RELEASE ONLY':c.loop?'SETTLED LOOP':c.held?'POWERED DIAGNOSTIC':'FINITE'),'badge'),el('h3',c.label),el('p',c.description));
               const row=el('div',undefined,'row');for(const mode of ['matched','raw']){const b=el('button','Play '+mode);b.addEventListener('click',()=>play(c,mode));row.append(b)}card.append(row);
+              if(c.isolatedKind&&c.modelVersion===manifest.modelVersion){const previous=clips.find(p=>p.id===c.voice.toLowerCase()+'_previous_v2_release');if(previous){const b=el('button','Play previous model 2 matched');b.addEventListener('click',()=>play(previous,'matched'));row.append(b)}}
               const details=el('details');details.append(el('summary',c.seconds.toFixed(2)+' s · raw peak '+c.rawMetrics.peak.toFixed(3)+' · '+c.renderMs.toFixed(0)+' ms render'));
-              const d=c.diagnostics;details.append(el('pre',Object.entries(c.macros).map(([k,v])=>k+' '+v.toFixed(2)).join('  ')+'\nModel '+c.modelVersion+' · requested MIDI '+c.requestedMidi+' / '+c.requestedHz.toFixed(2)+' Hz · velocity '+c.velocity+'\nRaw RMS '+num(c.rawMetrics.rms)+' / DC '+num(c.rawMetrics.dc)+'\nMatched RMS '+num(c.matchedMetrics.rms)+' / peak '+c.matchedMetrics.peak.toFixed(3)+'\nRaw export gain '+c.rawExportGain+(d?'\nEvents '+JSON.stringify(d.eventCounts)+' · reverse releases '+d.reverseReleases+'\nInitial energy '+num(d.initialEnergy)+' / input work '+num(d.inputWork)+'\nDissipated '+num(d.dissipated)+' / numerical removal '+num(d.passiveCorrection)+'\nMaximum energy error '+num(d.maxEnergyError)+' / final energy '+num(d.finalEnergy)+'\nReleased '+num(d.releasedEnergy)+' / bowed '+num(d.bowedEnergy)+' / snapped '+num(d.snappedEnergy)+'\nMaximum attachments '+d.maxAttachments+' · solver '+c.probe.solverRate+' Hz':'\nOne fixed-energy diagnostic '+c.isolatedKind.toLowerCase()+'. No wheel trajectory or mechanical energy ledger; CSVs contain headers only.')+(c.loop?'\nKeys seam '+num(c.seamError)+' / state error '+num(c.stateError)+'\nPreroll cycles '+c.prerollCycles+' / previous cycle frames '+c.previousCycleFrames+'\nWrap step '+num(c.rawMetrics.wrapStep)+' / slope '+num(c.rawMetrics.wrapSlope):'')+'\nDSP source '+c.dspSourceSha256+'\nCompiled class '+c.compiledClassSha256));
+              details.append(el('pre',Object.entries(c.macros).map(([k,v])=>k+' '+v.toFixed(2)).join('  ')+'\nModel '+c.modelVersion+' · requested MIDI '+c.requestedMidi+' / '+c.requestedHz.toFixed(2)+' Hz · velocity '+c.velocity+'\nRaw RMS '+num(c.rawMetrics.rms)+' / DC '+num(c.rawMetrics.dc)+'\nMatched RMS '+num(c.matchedMetrics.rms)+' / peak '+c.matchedMetrics.peak.toFixed(3)+'\nRaw export gain '+c.rawExportGain+evidence(c)+(c.loop?'\nOne settled revolution; enable Repeat held loops for several wraps.\nKeys seam '+num(c.seamError)+' / state error '+num(c.stateError)+'\nPreroll cycles '+c.prerollCycles+' / previous cycle frames '+c.previousCycleFrames+'\nWrap step '+num(c.rawMetrics.wrapStep)+' / slope '+num(c.rawMetrics.wrapSlope):'')+'\nDSP source '+c.dspSourceSha256+'\nCompiled class '+c.compiledClassSha256));
               const links=el('div',undefined,'row');for(const [path,label] of [['eventsPath','Event CSV'],['tracePath','State CSV']]){const a=el('a',label);a.href=c[path];a.download='';links.append(a)}details.append(links);card.append(details);
               const votes=el('div',undefined,'row');for(const choice of ['Keep','Revise','Unsure']){const b=el('button',choice);b.classList.toggle('active',verdicts[c.id]?.verdict===choice);b.setAttribute('aria-pressed',String(verdicts[c.id]?.verdict===choice));b.addEventListener('click',()=>{verdicts[c.id]={...(verdicts[c.id]||{}),verdict:choice};save();for(const v of votes.children){v.classList.toggle('active',v.textContent===choice);v.setAttribute('aria-pressed',String(v.textContent===choice))}});votes.append(b)}card.append(votes);
               const note=el('textarea');note.placeholder='Pitch, catch, strain, recoil, tail, seam…';note.setAttribute('aria-label','Listening notes for '+c.label);note.value=verdicts[c.id]?.note||'';note.addEventListener('input',()=>{verdicts[c.id]={...(verdicts[c.id]||{}),note:note.value};save()});card.append(note);
@@ -438,7 +530,7 @@ object PitchwheelAuditionGenerator {
         for(const control of [voice,section,search])control.addEventListener('input',display);
         for(const button of document.querySelectorAll('[data-section]')){button.hidden=Boolean(button.dataset.section&&!clips.some(c=>c.section===button.dataset.section));button.addEventListener('click',()=>{section.value=button.dataset.section;search.value='';display()})}
         repeat.addEventListener('change',()=>{audio.loop=Boolean(current?.loop&&repeat.checked)});document.getElementById('stop').addEventListener('click',()=>{++playRequest;audio.pause();audio.currentTime=0});
-        document.getElementById('export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:manifest.engine,modelVersion:manifest.modelVersion,listeningRound:manifest.listeningRound,dspSourceSha256:manifest.dspSourceSha256,compiledClassSha256:manifest.compiledClassSha256,modelProvenance:manifest.modelProvenance,recipeSha256:manifest.recipeSha256,exportedAt:new Date().toISOString(),full:manifest.full,sonicAcceptance:manifest.sonicAcceptance,verdicts},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=manifest.listeningRound+'-notes.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});display();
+        document.getElementById('export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:manifest.engine,modelVersion:manifest.modelVersion,listeningRound:manifest.listeningRound,dspSourceSha256:manifest.dspSourceSha256,compiledClassSha256:manifest.compiledClassSha256,modelProvenance:manifest.modelProvenance,recipeSha256:manifest.recipeSha256,clipModels:Object.fromEntries(clips.map(c=>[c.id,c.modelVersion])),exportedAt:new Date().toISOString(),full:manifest.full,sonicAcceptance:manifest.sonicAcceptance,previousFeedback:manifest.previousFeedback,verdicts},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=manifest.listeningRound+'-notes.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});display();
         </script></html>
     """.trimIndent()
 }
