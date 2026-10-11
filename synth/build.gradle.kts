@@ -2,6 +2,29 @@ plugins {
     kotlin("jvm")
 }
 
+/** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
+tasks.register<JavaExec>("generateMurmurAudition") {
+    group = "distribution"
+    description = "Render MURMUR raw/matched WAVs, measurements and the audition page. -PmurmurFull adds the full pitch/velocity and interaction grids."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/murmur-audition")
+    if (project.hasProperty("murmurFull")) args("--full")
+}
+
+/** Export the sixteen first-listen pads through the standard MPC program pipeline. */
+tasks.register<JavaExec>("generateMurmurKit") {
+    group = "distribution"
+    description = "Render the dry MURMUR MPC acceptance kit with regenerable kit.json recipes."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 repositories {
     mavenCentral()
 }

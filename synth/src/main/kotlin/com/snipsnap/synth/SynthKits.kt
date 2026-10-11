@@ -622,6 +622,28 @@ object SynthKits {
     }
 
     /**
+     * Sixteen dry FM/formant pads for the first audition. A01–A08 walk KEY up
+     * C minor pentatonic from C3, with explicit roots rather than a tuning macro.
+     * The upper pads contrast all six roles and end with settled held choir.
+     * Every pad carries operator, mouth and envelope state in its complete recipe.
+     */
+    fun murmur(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = MurmurPatch(
+            "Murmur $n", MurmurVoice.KEY, Murmur.defaults(MurmurVoice.KEY),
+            midi = 48 + semitone,
+        ).let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
+        val contrasts = listOf(
+            "CLOSED CIRCUIT", "ROUND HUM", "DUST VOWEL", "POCKET VOICE",
+            "NARROW CALL", "SMALL CHOIR", "GLASS MOUTH", "HELD HUM",
+        )
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            contrasts.map { name ->
+                MurmurPresets.all().first { it.name == name }
+                    .let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
+            }
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

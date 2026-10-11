@@ -5,6 +5,8 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.MurmurConfig
+import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -331,7 +333,8 @@ object UserPresets {
      * with every macro's exact value, so the promoted preset renders the
      * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
+     * PITCHWHEEL keeps its render-model version as well; MURMUR keeps its
+     * root, velocity and complete operator/formant/envelope definition. The name is a
      * Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
@@ -340,9 +343,24 @@ object UserPresets {
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
+    }
+
+    private fun murmurConfigLiteral(config: MurmurConfig): String {
+        fun text(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
+        fun values(items: List<Double>) = items.joinToString(", ", "listOf(", ")")
+        val targets = config.targets.joinToString(", ", "listOf(", ")") { target ->
+            "MurmurFormantTarget(name = ${text(target.name)}, centers = ${values(target.centers)}, " +
+                "widths = ${values(target.widths)}, gains = ${values(target.gains)}, sourceBalance = ${target.sourceBalance})"
+        }
+        return "MurmurConfig(routing = MurmurRouting.${config.routing.name}, ratios = ${values(config.ratios)}, " +
+            "trajectory = MurmurTrajectory.${config.trajectory.name}, direction = ${config.direction}, " +
+            "referenceSeconds = ${config.referenceSeconds}, attack = ${config.attack}, decay = ${config.decay}, " +
+            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets)"
     }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */

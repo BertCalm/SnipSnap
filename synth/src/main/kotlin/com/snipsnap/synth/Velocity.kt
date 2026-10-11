@@ -234,6 +234,7 @@ object Velocity {
         is SuturePatch -> Suture.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
+        is MurmurPatch -> Murmur.macrosFor(patch.voice)
     }
 
     /**
@@ -299,13 +300,14 @@ object Velocity {
      * preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
+     * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch
+            patch is PitchwheelPatch || patch is MurmurPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -340,6 +342,7 @@ object Velocity {
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
                 is PitchwheelPatch -> patch.copy(velocity = v).render()
+                is MurmurPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")

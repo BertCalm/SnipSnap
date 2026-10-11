@@ -308,26 +308,26 @@ class ArcoPresetsTest {
         for (grip in listOf(0.7f, 0.5f)) assertEquals(DrumClass.TONAL, r1b.getValue(grip).first, "R1b's G#2 swell at GRIP $grip reads ${r1b.getValue(grip)}, not TONAL")
     }
 
-    private class Control(val voice: ArcoVoice, val label: String, val macros: Map<String, Float>)
+    private class Control(val voice: ArcoVoice, val label: String, val macros: Map<String, Float>, val expected: DrumClass)
 
     /**
-     * The guard above only means something if a bowed note really can land in a drum's class. Two renders
-     * R1b saw do, each the mechanism the roster steers around: a slow bow on a short bass note (CELLO C2, BOW 0,
-     * HOLD 0) reads KICK because its head is all low swell and it does not ring on, and a hard bow on a thin box
-     * at the top of ERHU's span (G5, BODY 0.1) reads SNARE (0.53 of its head above 2 kHz). (A third, a slow-ish
+     * A slow bow on a short bass note (CELLO C2, BOW 0, HOLD 0) still reads KICK because its head is all
+     * low swell and it does not ring on. The hard bow on a thin ERHU box (G5, BODY 0.1) used to read SNARE
+     * from brightness alone (0.53 of its head above 2 kHz). Its flatness is only 0.060, so the shared
+     * snare noise guard now correctly leaves it PERC. (A third, a slow-ish
      * bow on a 0.42 HOLD A2, read KICK until the stop and the vibrato changed: whether a slow low swell reads a
      * kick or a tone is a knife edge between neighbouring notes, which is why the roster is checked by name.)
      */
     @Test
-    fun `the classifier guard can fail - the corners the roster avoids do read as drums`() {
+    fun `short bass still risks a drum class but bright harmonic bow is not a snare`() {
         val controls = listOf(
-            Control(ArcoVoice.CELLO, "C2 BOW 0 HOLD 0", mapOf("TUNE" to 0f, "BOW" to 0f, "GRIP" to 0.5f, "BODY" to 0.5f, "HOLD" to 0f)),
-            Control(ArcoVoice.ERHU, "G5 BODY 0.1", mapOf("TUNE" to 17f / 19, "BOW" to 0.85f, "GRIP" to 0.5f, "BODY" to 0.1f, "HOLD" to 0.2f)),
+            Control(ArcoVoice.CELLO, "C2 BOW 0 HOLD 0", mapOf("TUNE" to 0f, "BOW" to 0f, "GRIP" to 0.5f, "BODY" to 0.5f, "HOLD" to 0f), DrumClass.KICK),
+            Control(ArcoVoice.ERHU, "G5 BODY 0.1", mapOf("TUNE" to 17f / 19, "BOW" to 0.85f, "GRIP" to 0.5f, "BODY" to 0.1f, "HOLD" to 0.2f), DrumClass.PERC),
         )
         for (c in controls) {
             val heard = Classifier.classify(Arco.render(c.voice, c.macros)).drumClass
             println("ARCO control ${c.voice} ${c.label} reads $heard")
-            assertTrue(heard in choking, "${c.voice} ${c.label} should read as a drum (the corner the roster avoids), read $heard")
+            assertEquals(c.expected, heard, "${c.voice} ${c.label} reads $heard")
         }
     }
 

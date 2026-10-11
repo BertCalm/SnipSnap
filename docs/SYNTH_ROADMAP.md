@@ -227,6 +227,35 @@ that approval.
 Numerical verification, phone/MPC validation and release naming remain
 separate acceptance work.
 
+### MURMUR — FM articulation through a moving mouth
+
+MURMUR ports the [supplied engineering specification](engines/MURMUR_SPEC.md)
+into six dry pitched roles: BASS, KEY, PLUCK, LEAD, CHOIR and METAL. A small
+four-operator FM core feeds a moving formant bank, with a direct tonal anchor
+and seeded breath shaped by the same mouth state. MOUTH, EDGE, BREATH,
+MOTION and BODY are its five timbral controls; HOLD is the sixth control.
+The requested root is an explicit MIDI note from 36–96 (default 60), and
+velocity changes excitation energy and bite rather than changing a macro.
+
+Each saved recipe retains its routing, four operator ratios, complete
+formant targets, trajectory, direction, reference duration and envelope.
+Patch editing, velocity layers and rack replay preserve that state.
+Twelve original preset proposals cover the six roles; broader preset
+quotas wait for the owner's dry listening verdict. `SynthKits.murmur()`
+contains sixteen dry recipe pads: eight KEY notes in C minor pentatonic
+from C3, seven contrasts and a settled held choir. Finite notes route as
+TONAL and HOLD at or above 0.99 routes as LOOP, with no drum choke group.
+
+The Android picker and FRESH TAPE starter expose the engine. ROOT and
+VELOCITY are separate from the six macro sliders; the CLI accepts
+`snipsnap synth MURMUR KEY --all --midi 60 --velocity .6 --out <dir>`.
+`./gradlew :synth:generateMurmurAudition` builds raw/matched examples and
+the standalone listening page; `-PmurmurFull` adds the broad note,
+velocity, macro and interaction matrix. `generateMurmurKit` exports the
+sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
+initiating onset because the sample API has no attack-plus-loop region.
+Sonic identity, phone/MPC validation and release naming remain open.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,
