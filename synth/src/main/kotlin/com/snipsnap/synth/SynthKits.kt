@@ -705,4 +705,22 @@ object SynthKits {
             preset("RESISTED STITCH"), preset("DEEP VESSEL"), preset("QUIET MURMUR"), preset("RETURNING GAP"),
         )
     }
+
+    /**
+     * Dry original recordings in C minor pentatonic. A01–A08 play the clear string family;
+     * A09–A14 expose all six first-review voices, and A15–A16 repeat forward/return cycles
+     * using a finite frozen imprint snapshot. Every pad carries the complete machine recipe.
+     */
+    fun spool(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = SpoolPatch(
+            "Frame $n", SpoolVoice.STRING,
+            Spool.defaults(SpoolVoice.STRING) + ("TUNE" to semitone / Spool.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Spool.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: SpoolVoice, hold: Boolean = false) = SpoolPresets.forVoice(voice).first()
+            .let { if (hold) it.copy(name = "${it.name} LOOP", macros = it.macros + ("HOLD" to 1f)) else it }
+            .let { pad(it, Spool.drumClassFor(it.voice, it.macros)) }
+        return (0..7).map { i -> note(i + 1, PENTATONIC[i]) } +
+            SpoolVoice.entries.map { preset(it) } +
+            listOf(preset(SpoolVoice.CHOIR, hold = true), preset(SpoolVoice.PALIMPSEST, hold = true))
+    }
 }
