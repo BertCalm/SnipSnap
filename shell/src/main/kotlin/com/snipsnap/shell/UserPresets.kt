@@ -5,6 +5,7 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -331,10 +332,15 @@ object UserPresets {
      * with every macro's exact value, so the promoted preset renders the
      * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
-     * Kotlin string literal, escaped.
+     * PITCHWHEEL keeps its render-model version as well. LACQUER carries its
+     * entire layered recipe through the JSON constructor. String literals are escaped.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is LacquerPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+        }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
         val state = when (patch) {

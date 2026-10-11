@@ -622,6 +622,20 @@ object SynthKits {
     }
 
     /**
+     * A dry layered-tone audition kit. Eight KEY notes climb C minor pentatonic;
+     * the upper half contains the eight provisional recipes, including held SILK.
+     * Each pad keeps its root, velocity and complete layer profile for regeneration.
+     */
+    fun lacquer(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = LacquerPatch(
+            "Lacquer $n", LacquerVoice.KEY, Lacquer.defaults(LacquerVoice.KEY),
+            midi = Lacquer.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            LacquerPresets.all().map { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

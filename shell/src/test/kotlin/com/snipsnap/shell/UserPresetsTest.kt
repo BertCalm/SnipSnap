@@ -1,9 +1,14 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.Json
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.Lacquer
+import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LacquerRole
+import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -177,8 +182,13 @@ class UserPresetsTest {
         // Every factory preset, back out of its own line to the float it holds.
         val value = Regex("\"[^\"]+\" to ([-0-9.E]+)f")
         for (preset in Presets.all()) {
-            val parsed = value.findAll(UserPresets.rosterLine(preset)).map { it.groupValues[1].toFloat() }.toList()
-            assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            val promoted = UserPresets.rosterLine(preset)
+            if (preset is LacquerPatch) {
+                assertEquals(preset, lacquerFromRosterLine(promoted), "${preset.name}: complete profile promotion")
+            } else {
+                val parsed = value.findAll(promoted).map { it.groupValues[1].toFloat() }.toList()
+                assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            }
         }
         val quoted = UserPresets.rosterLine(ThumpPatch("SAY \"HI\" \$X", ThumpVoice.KICK, emptyMap()))
         assertTrue("\"SAY \\\"HI\\\" \\\$X\"" in quoted, quoted)
@@ -234,6 +244,39 @@ class UserPresetsTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    @Test
+    fun `saved lacquer promotion retains custom independent layers root velocity and escaped name`() {
+        val root = shelf()
+        try {
+            val profile = Lacquer.profileFor(LacquerVoice.KEY)
+            val custom = profile.copy(layers = profile.layers.map { layer ->
+                if (layer.role == LacquerRole.TRAIL) layer.copy(
+                    gain = layer.gain * .85f,
+                    timing = layer.timing.copy(reliefSeconds = .08f),
+                    envelope = layer.envelope.copy(releaseSeconds = 1.1f),
+                ) else layer
+            })
+            val source = LacquerPatch("COAT \"A\" \$X", LacquerVoice.KEY,
+                linkedMapOf("RELIEF" to .83f, "GLUE" to .21f), midi = 36, velocity = .3f, profile = custom)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(source, lacquerFromRosterLine(line), "the constructor rebuilds every nested field and escaped text")
+            assertEquals("LacquerPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    private fun lacquerFromRosterLine(line: String): LacquerPatch {
+        assertTrue(line.startsWith("LacquerPatch.fromJsonText(\"") && line.endsWith("\"),"), line)
+        val literal = line.removePrefix("LacquerPatch.fromJsonText(").removeSuffix("),")
+        // Kotlin escapes a dollar sign in addition to JSON's ordinary string escapes.
+        val json = Json.parse(literal.replace("\\\$", "\$")).str()
+        return LacquerPatch.fromJsonText(json)
     }
 
     @Test

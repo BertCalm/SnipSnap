@@ -160,3 +160,8 @@ testkit/SnipSnap Tessera Kit/
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
+
+# Lacquer listening evidence and MPC acceptance audio are regenerated locally.
+testkit/lacquer-audition/
+testkit/SnipSnap Lacquer Kit/
+testkit/SnipSnap-Lacquer-Kit.zip

@@ -676,3 +676,25 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     args("${rootDir}/testkit/pitchwheel-audition")
     if (project.hasProperty("pitchwheelFull")) args("--full")
 }
+
+/** Render Lacquer's provisional bank, layer solos, macro grids and held loops. */
+tasks.register<JavaExec>("generateLacquerAudition") {
+    group = "distribution"
+    description = "Render LACQUER dry audition WAVs, measured evidence and a listening page under testkit/lacquer-audition/."
+    maxHeapSize = "512m"
+    dependsOn("generateLacquerKit")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LacquerAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/lacquer-audition")
+}
+
+tasks.register<JavaExec>("generateLacquerKit") {
+    group = "distribution"
+    description = "Export the sixteen dry LACQUER starter pads as MPC 3 with an MPC 2 program twin."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LacquerKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}

@@ -276,6 +276,16 @@ fixed until then.
 six isolated catches and includes the previous defaults for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
 
+LACQUER is a layered-tone engine for finished keys, glass, synthetic brass,
+bass, plucks and broad sustains. RELIEF separates independent body, edge and
+trail articulation; SHEEN, BODY, CONTOUR and GLUE shape their common finish.
+Eight provisional patches retain explicit layer models, MIDI root and velocity.
+HOLD's top step supplies settled loop material, with periodic layer contours
+preserving RELIEF after the initial arrivals have passed. Run
+`./gradlew :synth:generateLacquerAudition` for native/matched samples, layer solos,
+macro sweeps and interaction grids. [Implementation notes](docs/LACQUER.md)
+describe the contracts. Dry sonic approval precedes the full preset expansion.
+
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
 decaying sine partials at inharmonic ratios, the textbook recipe for a
@@ -684,10 +694,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, LACQUER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN and PITCHWHEEL are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL and LACQUER are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
