@@ -3,6 +3,9 @@ package com.snipsnap.shell
 import com.snipsnap.json.JsonException
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourPresets
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
@@ -138,6 +141,7 @@ class UserPresetsTest {
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
+                "CONTOUR" to ContourVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -231,6 +235,28 @@ class UserPresetsTest {
                 )
                 assertEquals("PitchwheelPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
             }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved contour retains its complete spectral recipe when promoted`() {
+        val root = shelf()
+        try {
+            val source = ContourPresets.all().first { it.name == "Moving Corner" }.copy(name = "MY CORNER", velocity = .3f)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val patch = saved.patch as ContourPatch
+            val line = UserPresets.rosterLine(patch)
+            assertTrue("bodyTable = ContourTable.SOFT_SAW" in line)
+            assertTrue("edgeTable = ContourTable.COPPER" in line)
+            assertTrue("relation = ContourRelation.OPPOSED" in line)
+            assertTrue("ampDecay = 0.45f" in line)
+            assertTrue("loopSeconds = ${patch.config.loopSeconds}f" in line)
+            assertTrue("velocity = 0.3f, model = ${patch.model}" in line)
+            assertEquals("ContourPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
         } finally {
             root.deleteRecursively()
         }

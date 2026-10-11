@@ -126,6 +126,10 @@ object Presets {
             val v = PitchwheelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             PitchwheelPresets.forVoice(v)
         }
+        ContourPatch.ENGINE -> {
+            val v = ContourVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ContourPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -157,5 +161,6 @@ object Presets {
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
-            CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all()
+            CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
+            ContourPresets.all()
 }

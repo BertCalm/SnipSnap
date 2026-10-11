@@ -172,6 +172,9 @@ import com.snipsnap.synth.TesseraVoice
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
@@ -233,7 +236,8 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA and PITCHWHEEL, join it here.
+ * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA,
+ * PITCHWHEEL and CONTOUR, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -293,7 +297,8 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN and PITCHWHEEL carry note and velocity outside the macro map.
+    // FLOTILLA, CISTERN and PITCHWHEEL carry note and velocity outside the macro map;
+    // CONTOUR also carries its authored table pair and trajectory configuration.
     // Keep that state through preview, editing, saving and placing.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
@@ -1074,6 +1079,7 @@ fun SynthScreen(
                                 engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.PITCHWHEEL && spec.name == "HOLD" && Pitchwheel.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CONTOUR && spec.name == "HOLD" && ContourEngine.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1909,7 +1915,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, CONTOUR;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1939,6 +1945,7 @@ private enum class Engine {
         SUTURE -> SutureVoice.entries
         TESSERA -> TesseraVoice.entries
         PITCHWHEEL -> PitchwheelVoice.entries
+        CONTOUR -> ContourVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1966,6 +1973,7 @@ private enum class Engine {
         SUTURE -> Suture.macrosFor(voice as SutureVoice)
         TESSERA -> Tessera.macrosFor(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
+        CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1993,6 +2001,7 @@ private enum class Engine {
         SUTURE -> Suture.defaults(voice as SutureVoice)
         TESSERA -> Tessera.defaults(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
+        CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2020,6 +2029,7 @@ private enum class Engine {
         SUTURE -> Suture.scramble(voice as SutureVoice, random)
         TESSERA -> Tessera.scramble(voice as TesseraVoice, random)
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
+        CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2052,6 +2062,7 @@ private enum class Engine {
         SUTURE -> Suture.render(voice as SutureVoice, macros)
         TESSERA -> Tessera.render(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
+        CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
     }
 
     /**
@@ -2085,6 +2096,7 @@ private enum class Engine {
         SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
         TESSERA -> Tessera.drumClassFor(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
+        CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2112,6 +2124,7 @@ private enum class Engine {
         SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
         TESSERA -> TesseraPatch(name, voice as TesseraVoice, macros)
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
+        CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

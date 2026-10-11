@@ -676,3 +676,16 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     args("${rootDir}/testkit/pitchwheel-audition")
     if (project.hasProperty("pitchwheelFull")) args("--full")
 }
+
+/** Render Contour's original tables, related layers and complete dry listening matrix. */
+tasks.register<JavaExec>("generateContourAudition") {
+    group = "distribution"
+    description = "Render CONTOUR raw/matched WAVs, shared-level references, diagnostics, HOLD repeats and an accessible page under testkit/contour-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/contour-audition")
+    if (providers.gradleProperty("contourQuick").orNull == "true") args("--quick")
+    if (providers.gradleProperty("contourRefreshPage").orNull == "true") args("--refresh-page")
+}

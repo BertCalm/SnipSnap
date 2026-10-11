@@ -5,6 +5,8 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ContourConfig
+import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -331,7 +333,8 @@ object UserPresets {
      * with every macro's exact value, so the promoted preset renders the
      * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. The name is a
+     * PITCHWHEEL keeps its render-model version as well; CONTOUR retains
+     * its table pair, layer relationships, envelopes, loop recipe and velocity. The name is a
      * Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
@@ -340,10 +343,25 @@ object UserPresets {
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
     }
+
+    /** Structural wavetable state is part of a promoted preset, just like the audible macros. */
+    private fun contourConfigLine(c: ContourConfig): String = "ContourConfig(" + listOf(
+        "bodyTable = ContourTable.${c.bodyTable.name}", "edgeTable = ContourTable.${c.edgeTable.name}",
+        "edgeRatio = ${c.edgeRatio}f", "edgeLag = ${c.edgeLag}f", "relation = ContourRelation.${c.relation.name}",
+        "bodyLevel = ${c.bodyLevel}f", "edgeLevel = ${c.edgeLevel}f", "subLevel = ${c.subLevel}f",
+        "bodyScanBias = ${c.bodyScanBias}f", "edgeScanBias = ${c.edgeScanBias}f",
+        "bodyTravel = ${c.bodyTravel}f", "edgeTravel = ${c.edgeTravel}f",
+        "ampAttack = ${c.ampAttack}f", "ampDecay = ${c.ampDecay}f", "ampSustain = ${c.ampSustain}f",
+        "ampRelease = ${c.ampRelease}f", "sustainSeconds = ${c.sustainSeconds}f",
+        "filterAttack = ${c.filterAttack}f", "filterDecay = ${c.filterDecay}f", "filterAmount = ${c.filterAmount}f",
+        "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
+        "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
+    ).joinToString(", ") + ")"
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */
     fun renderAll(saved: List<Saved>): String {

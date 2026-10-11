@@ -261,7 +261,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 17 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 18 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -275,6 +275,18 @@ fixed until then.
 [The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
 six isolated catches and includes the previous defaults for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
+
+CONTOUR is an original wavetable instrument: a stable body carries the note while
+a related edge takes a different spectral path. BASS, KEY, PLUCK, LEAD, HOLLOW
+and SWELL share SCAN, OFFSET, MOTION, FILTER, DRIVE and HOLD, plus host TUNE.
+Eight generated table families, nine provisional dry recipes, a sixteen-pad kit,
+excitation-sensitive velocity and held keygroup loops use the existing pipeline.
+The existing CONTOUR rack filter keeps its saved effect recipes. Run
+`./gradlew :synth:generateContourAudition` for the listening matrix; the proposed
+36-preset expansion waits for sonic approval. Listen on the
+[published audition page](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+(owner-private). [Implementation notes](docs/CONTOUR.md)
+cover the patch format, controls and verification.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
@@ -500,8 +512,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL and GRAINS round out the lineup —
-twenty-four engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, CONTOUR and GRAINS round out the lineup —
+twenty-five engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -684,7 +696,7 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, CONTOUR, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 CISTERN and PITCHWHEEL are also in the picker, preset roster and starter kits;

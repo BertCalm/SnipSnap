@@ -1,0 +1,132 @@
+# CONTOUR
+
+Contour is a preset-first original wavetable instrument. A stable body oscillator
+carries the requested note while a related edge oscillator takes a different
+spectral path. Its generated tables and generic filter are musical DSP choices,
+not imported Waldorf assets or a measured hardware emulation.
+
+The source specification is
+[the 11 October engineering spec](superpowers/specs/2026-10-11-contour-engine-engineering-spec.md).
+SnipSnap already has a CONTOUR rack filter. That existing effect keeps its API and
+saved recipes; the new synth is `ContourEngine`, identified by `CONTOUR` in engine
+patch JSON. The effect and instrument have separate dispatchers.
+
+## Playing and saving
+
+BASS, KEY, PLUCK, LEAD, HOLLOW and SWELL select different table pairs, layer
+relationships and amplitude/filter contours. Each render starts with fresh
+oscillator, envelope and filter state and produces mono 44.1 kHz audio.
+
+| Control | Behavior |
+| --- | --- |
+| TUNE | Host pitch control; neutral at .5, two octaves down or up from the voice root |
+| SCAN | Base position along the patch's fixed table pair |
+| OFFSET | Spectral displacement and response difference of the edge layer |
+| MOTION | Depth and speed of pre-filter spectral travel; zero freezes both scans |
+| FILTER | Generic filter cutoff, restrained resonance and envelope amount |
+| DRIVE | Compensated pre-filter excitation and bounded saturation on the 4× path |
+| HOLD | Finite sustain length; the top step supplies settled loop-only material |
+
+Velocity changes excitation energy, spectral emphasis and filter response.
+Its energy gain enters before saturation and filtering; velocity zero returns
+silence. BASS is centered on C2 (MIDI 36), KEY/PLUCK/LEAD on C4 (60), and
+HOLLOW/SWELL on C3 (48). The supported range is the center ±24 semitones.
+Default finite notes last about 1.2–4.9 seconds; configured finite renders are
+bounded at eight seconds. HOLD reaches loop-only export at .95.
+Table selection is a patch property: moving macros never replaces a table ID
+mid-note. Patch JSON preserves the table pair, layer ratio, scan biases, travel,
+relationship, motion shape, filter type, envelopes, loop timing, velocity and
+render-model version. Recipes replay the same dry source through any stored rack.
+
+Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
+Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
+Contour. Their table pairs and contours differ; the proposed 36-preset expansion
+waits for the owner's sonic verdict.
+
+`SynthKits.contour()` supplies sixteen pads: seven C-minor-pentatonic KEY notes
+and the nine recipes. CONTOUR appears in the Android SYNTH picker and FRESH TAPE
+starter catalog. Finite pads carry TONAL metadata; held pads carry LOOP metadata.
+The capture classifier still makes its own duration/spectrum-based decision.
+
+The CLI accepts the usual preset path with explicit note and velocity overrides:
+
+```text
+./gradlew :cli:run --args="synth CONTOUR KEY --preset 1 --midi 60 --velocity 0.4 --out /tmp/contour"
+```
+
+## HOLD and export
+
+The top of HOLD exports settled sustain without the initial pluck/key attack.
+Motion cycles and the edge relationship are fitted to a compatible period after
+three preroll periods. Oscillator/filter states, complete consecutive periods and
+the unblended seam must agree before the wrap crossfade. Fine sample-frame fitting follows the existing pitched-loop
+convention rather than shifting the requested note by a coarse cycle fit.
+
+Ordinary drum pads play their WAV once; their format does not expose a separate
+attack-plus-loop region. `Keys.contourPad()` supplies two copies of the settled
+region and a nonzero `loopStartFrame`, matching the existing keygroup export
+convention. Repeated playback on the audition page exposes the actual wrap.
+
+## Audition and verification
+
+The [published first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+is private to the repository owner's connected ChatGPT account.
+
+```text
+./gradlew --no-daemon test
+./gradlew :synth:generateContourAudition
+```
+
+The generator writes a listening page, manifest and dry WAVs under
+`testkit/contour-audition/`. The complete first round contains 477 cases:
+9 presets, 36 note/velocity voice checks, 150 macro-sweep points, 216 interaction
+points, 6 all-high corners, 36 diagnostic comparisons and 24 held loops.
+Start with the nine recipes, then compare voices
+across note and velocity. The full matrix includes five-point macro sweeps,
+SCAN × OFFSET, OFFSET × MOTION, SCAN × FILTER and FILTER × DRIVE,
+all-high settings, isolated body/edge and frozen/open/clean comparisons,
+raw versus normalized levels, and held repeats. Feedback stays in the browser
+and can be exported as JSON.
+
+Numerical checks cover table continuity/bandwidth, root pitch, raw bounds/DC and
+decay, deterministic fresh and concurrent renders, macro activity, velocity,
+structural patch/recipe round-trip, kits/MPC routing, and measured loop seams.
+Passing these checks establishes reproducibility and bounded behavior. Sonic
+acceptance is the owner's listening decision; Android/device and MPC hardware
+checks remain separate.
+
+The rendered round's 24 held cases have a maximum unblended seam error of
+`1.14e-13`, consecutive-period relative RMS error of `3.04e-7`, and oscillator/filter
+state error of `1.79e-7`, all below the `1e-3` gates. Every raw export fits PCM
+headroom without attenuation; every matched export stays at or below .90 peak.
+The manifest records complete patch JSON, source/recipe fingerprints and WAV
+hashes. Browser checks cover 320–1440 px layouts, A/B playback, repeated HOLD,
+native audio fallback, keyboard filters and persistent feedback export.
+The hosted audition uses 16-bit mono 44.1 kHz WAVs to fit the complete matrix
+within the hosting archive limit. SnipSnap's kit and MPC exports remain 24-bit.
+
+The moving-table bandwidth probe compares coherent scans against an 8× reference,
+retaining intended modulation sidebands. Its worst folded-energy share is
+`3.24e-9` (about −84.9 dB), below the −60 dB gate; a deliberately unbandlimited
+moving control folds 59.3% and proves the measurement detects aliases. The
+separate nonlinear-engine probe measures frozen high-register output and includes
+an intentionally aliased native-rate control.
+
+## Table and filter policy
+
+The eight original families are ROUND_PULSE, SAW_HOLLOW, ODD_EVEN, DIGITAL_BELL,
+CLUSTER, FORMANT, SOFT_SAW and COPPER. Each has 24 phase-aligned frames, 2048
+samples per frame and 16 harmonic-limit levels from 1 to 256 partials. Pitch
+crossfades use two levels that both stay below 18 kHz, leaving room for slow scan
+sidebands before the shared output low-pass and decimator.
+
+One gain per family sets the maximum absolute sample across every frame and
+pitch level to .90. No per-frame normalization erases the intended dynamics;
+the fixed fundamental and continuous interpolation retain the tonal body.
+The bank is immutable and shared; all sounding state stays local to a render.
+
+The filter is the existing generic TPT state-variable filter with restrained
+damping, followed by the shared output bandwidth conditioning. HOLLOW recipes
+may blend its low-pass and band-pass outputs. DRIVE uses bounded tanh excitation
+before the filter at 176.4 kHz. Raw internal probes run before output conditioning
+and loudness makeup, so the final gain stage cannot conceal unstable filter state.

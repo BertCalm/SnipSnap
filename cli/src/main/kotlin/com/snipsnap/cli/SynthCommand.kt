@@ -12,6 +12,9 @@ import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.PadRecipe
@@ -51,7 +54,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA and PITCHWHEEL) override
+ * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and CONTOUR) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -81,7 +84,10 @@ object SynthCommand {
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA and PITCHWHEEL, got $engine")
+                ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
+                    (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
+                }
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL and CONTOUR, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -127,6 +133,12 @@ object SynthCommand {
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ContourPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (.5f + (midiOverride - ContourEngine.rootMidi(patch.voice)) /
+                            (2f * ContourEngine.TUNE_SEMITONES))),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
                     macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
                 )

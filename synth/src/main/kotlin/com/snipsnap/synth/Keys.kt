@@ -348,6 +348,43 @@ object Keys {
         return KeyNote(Snip(loop + loop, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
+    // ---------- CONTOUR, held ----------
+
+    /** Seventeen minor-third zones around the voice root, over CONTOUR's four-octave TUNE range. */
+    fun contourPadMidis(voice: ContourVoice): List<Int> =
+        (-ContourEngine.TUNE_SEMITONES..ContourEngine.TUNE_SEMITONES step 3)
+            .map { ContourEngine.rootMidi(voice) + it }
+
+    /**
+     * A settled CONTOUR sustain for MPC keygroup export. The initial key/pluck
+     * attack is omitted. TUNE is fixed by the requested MIDI note and HOLD is forced
+     * to the repeating region. Two identical copies express a nonzero loop marker
+     * in formats where frame zero means no loop, as in [sirenPad].
+     */
+    fun contourPad(
+        voice: ContourVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        config: ContourConfig = ContourConfig.forVoice(voice),
+        velocity: Float = 1f,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        val semis = midi - ContourEngine.rootMidi(voice)
+        require(semis in -ContourEngine.TUNE_SEMITONES..ContourEngine.TUNE_SEMITONES) {
+            "CONTOUR $voice pads are MIDI ${ContourEngine.rootMidi(voice) - ContourEngine.TUNE_SEMITONES}.." +
+                "${ContourEngine.rootMidi(voice) + ContourEngine.TUNE_SEMITONES}, got $midi"
+        }
+        if (cancelled()) throw java.util.concurrent.CancellationException("CONTOUR pad render cancelled")
+        val tune = .5f + semis / (2f * ContourEngine.TUNE_SEMITONES)
+        val defaults = ContourEngine.defaults(voice)
+        val m = defaults + macros.filterKeys { it in defaults } + mapOf("TUNE" to tune, "HOLD" to 1f)
+        val loop = ContourEngine.renderLoop(voice, m, velocity, config)
+        if (cancelled()) throw java.util.concurrent.CancellationException("CONTOUR pad render cancelled")
+        val samples = loop + loop
+        if (velocity > 0f) requireSeam("CONTOUR $voice at MIDI $midi", samples, loop.size)
+        return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
+    }
+
     /**
      * Music box — the TINES chime recipe held to exact pitch: an
      * inharmonic 3.5-ratio strike and a barely-detuned twin beating

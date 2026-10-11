@@ -227,6 +227,31 @@ that approval.
 Numerical verification, phone/MPC validation and release naming remain
 separate acceptance work.
 
+### CONTOUR — a stable body with a moving digital edge
+
+CONTOUR ports the [engineering spec](superpowers/specs/2026-10-11-contour-engine-engineering-spec.md)
+as an original two-layer wavetable instrument. Eight generated harmonic families
+provide phase/frame interpolation and pitch-dependent bandwidth. BASS, KEY,
+PLUCK, LEAD, HOLLOW and SWELL select related table pairs and envelope/trajectory
+recipes. SCAN sets their base spectra, OFFSET separates their spectral positions,
+and MOTION changes travel before a bounded generic filter and compensated drive.
+TUNE is the centered host pitch control; velocity changes excitation and spectrum.
+
+Nine provisional recipes, a sixteen-pad FRESH TAPE kit, saved structural patch
+configuration, the phone SYNTH picker and CLI rendering join the existing
+deterministic mono pipeline. HOLD supplies settled sustain; the Keys adapter
+exports a nonzero loop marker for keygroups. The existing CONTOUR rack effect
+keeps its implementation and effect recipe format.
+
+`./gradlew :synth:generateContourAudition` writes the dry listening matrix under
+`testkit/contour-audition/`, including matched/raw controls, note/velocity checks,
+five-point sweeps, required interactions, isolated layers and repeated held loops.
+[CONTOUR](CONTOUR.md) records integration contracts and numerical verification.
+The [first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+is published with owner-private access and all 477 cases.
+The owner's sonic verdict precedes expansion to the proposed 36 presets;
+Android/device, MPC hardware and release naming checks remain open.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,

@@ -143,6 +143,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.pitchwheel() },
         Starter(
+            "contour", "CONTOUR",
+            "A solid wavetable body and moving digital edge in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.contour() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

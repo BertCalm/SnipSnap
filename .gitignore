@@ -160,3 +160,7 @@ testkit/SnipSnap Tessera Kit/
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
 testkit/SnipSnap Pitchwheel Kit/
+
+# CONTOUR's generated dry listening matrix and kit audio.
+testkit/contour-audition/
+testkit/SnipSnap Contour Kit/
