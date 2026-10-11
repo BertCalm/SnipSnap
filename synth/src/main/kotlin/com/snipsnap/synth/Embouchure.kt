@@ -253,7 +253,8 @@ object Embouchure {
             // A firm player captures the note early; a gentle player leans into it gradually.
             knots[1] *= 1f+.28f*effortMotion
             knots[2] *= 1f+.13f*effortMotion
-            knots[3] *= 1f+.09f*effortMotion
+            // Overpressure is an entry accent followed by recovered playing pressure.
+            if(gesture!=EmbouchureGesture.OVERPRESSURE) knots[3] *= 1f+.09f*effortMotion
             knots[5] *= 1f+.12f*lengthMotion
         }
         private val heldDepth=.007f+.025f*effort*(.35f+.65f*length)
@@ -283,6 +284,11 @@ object Embouchure {
         private val velocity=unit(probe.velocity,1f)
         private val sourceScale=velocity.pow(.40f)
         private val held=heldFrames>0 || probe.held
+        // Firm contact already raises pressure/speed. Keep extra texture in the same captured
+        // window instead of multiplying its depth by the hard-effort square a second time.
+        private val roughEffortScale=if(held) 1f else exp(-1.2f*max(0f,effortMotion))
+        private val roughBandMix=if(held) 0f else
+            smooth(max(0f,effortMotion)/.65f)*smooth(max(0f,grainMotion)/.5f)
         private val roughMotion=sqrt(max(0f,grainMotion))
         private val roughExpansion=1f+(if(held) 0f else 2.2f)*roughMotion
         private val flowExpansion=1f+(if(held) .2f else when(name) {
@@ -317,16 +323,25 @@ object Embouchure {
             for(i in 0 until fade) { val a=smooth(i.toFloat()/fade); b[i]=b[i]*a+b[b.size-fade+i]*(1f-a) }
         }
         private var noiseLp=0f
+        private var contactNoiseLp=0f
+        private val contactNoiseA=(1-exp(-2*PI*(hz*3f).coerceAtMost(7000f)/rate)).toFloat()
         private val noiseA=(1-exp(-2*PI*(hz*(5f+(if(held) 0f else 15f)*max(0f,grainMotion))).coerceAtMost(14000f)/rate)).toFloat()
         private val offset=.52f+.20f*reed+(if(held) 0f else .035f)*reedMotion
         private val closing=(1f-offset)/.3f
         // Contact-dependent speaking threshold fitted by BORE's reed probes. Preserve a working
         // pressure window at tight contact and soft velocity rather than creating a silent knob end.
-        private val share=.60f+.63f*(offset-.50f)+.095f+.060f*effort+(if(held) 0f else .045f)*effortMotion
+        private val shareWanted=.60f+.63f*(offset-.50f)+.095f+.060f*effort+(if(held) 0f else .045f)*effortMotion
+        // At R=.98 the junction closes before its idealised R=1 pressure. A finite
+        // overpressure accent may cross that boundary; its underlying sustained pressure may not.
+        private val share=if(held) shareWanted else
+            shareWanted.coerceAtMost((.98f-offset)/(1f-offset)-.035f)
         private val pressure=closing*share*(.88f+.12f*sqrt(velocity))
+        // Extra loss under simultaneous firm effort/tight contact selects the root
+        // rather than sustaining the briefly approached upper regime; tuning charges this loss.
         private val cutoff=(hz*(3.2f+10f*v.brightness*(1f-.63f*shape)*(.65f+.35f*reed+.55f*effort))*
             exp(-(if(held) .30f else if(name==EmbouchureVoice.WHISTLE) .45f else 1.1f)*shapeMotion+
-                (if(held) 0f else .18f)*effortMotion+(if(held) .12f else .90f)*reedMotion)).coerceIn(hz*2.2f,14000f)
+                (if(held) 0f else .18f)*effortMotion+(if(held) .12f else .90f)*reedMotion-
+                (if(held) 0f else 1.5f)*max(0f,effortMotion)*max(0f,reedMotion))).coerceIn(hz*2.2f,14000f)
         private val dcHz=hz/35f
         // Bounded lip loading's phase is small and its compensation measured by held pitch matching.
         private val lip=Mode(hz*(4.5f+2.5f*reed),.004f+.009f*(1f-reed),rate)
@@ -383,10 +398,15 @@ object Embouchure {
                 periodicNoise[k]+f*(periodicNoise[(k+1)%periodicNoise.size]-periodicNoise[k])
             } else noise.next()
             noiseLp += noiseA*(rough-noiseLp)
+            // Hard, rough contact constrains the turbulent/friction bandwidth before it
+            // reaches the junction. Gentle/default effort retains the calibrated full flow curve.
+            contactNoiseLp += contactNoiseA*(noiseLp-contactNoiseLp)
+            val sourceNoise=if(roughBandMix==0f) noiseLp else
+                noiseLp+roughBandMix*(contactNoiseLp-noiseLp)
             // The clear whistle has less turbulent area; a held lip uses smaller source
             // fluctuations to stay in the captured periodic regime rather than a noisy flutter.
             val roughScale=(if(name==EmbouchureVoice.WHISTLE) .5f else 1f)*(if(held) .55f else 1f)
-            val texture=sourceGrain*roughExpansion*(.045f+.19f*effort*effort)*noiseLp*playerNow*roughScale
+            val texture=sourceGrain*roughExpansion*(.045f+.19f*effort*effort)*roughEffortScale*sourceNoise*playerNow*roughScale
             val s=sample-starterAt
             val starter=if(sourceOn && s in 0 until starterN)
                 starterAmp*velocity*playerNow*(.5f-.5f*cos(2*PI*s/starterN).toFloat())*sin(2*PI*hz*s/rate).toFloat() else 0f
@@ -399,10 +419,10 @@ object Embouchure {
                 val speed=((.070f+.080f*effort)*exp((if(held) 0f else .30f)*effortMotion)*(.6f+.4f*sqrt(velocity))*playerNow*(1f+texture)).coerceIn(0f,.22f)
                 val dv=speed-observed
                 val slope=(1.05f+.42f*(1f-reed)+.11f*shape)*exp((if(held) 0f else if(reedMotion>0f) .55f else .08f)*reedMotion)
-                val knee=.75f+(if(held) 0f else .035f)*reedMotion+(if(held) 0f else .08f)*contactGrain*noiseLp*roughScale*playerNow
+                val knee=.75f+(if(held) 0f else .035f)*reedMotion+(if(held) 0f else .08f)*contactGrain*sourceNoise*roughScale*playerNow
                 val rho=(knee+slope*abs(dv)).pow(-4f).coerceAtMost(.995f)
                 val contact=smooth(playerNow*5f)
-                val frictionTexture=.22f*roughExpansion*speed*tanhUnit(sourceGrain*(2f+12f*effort*effort)*noiseLp*roughScale)*contact
+                val frictionTexture=.22f*roughExpansion*speed*tanhUnit(sourceGrain*(2f+12f*effort*effort)*roughEffortScale*sourceNoise*roughScale)*contact
                 val push=contact*dv*rho+frictionTexture+starter
                 playerNow=speed
                 driverNow=push
@@ -437,7 +457,7 @@ object Embouchure {
                     EmbouchureVoice.SOFT -> .70f
                     EmbouchureVoice.WHISTLE -> 1f
                     else -> 1.2f
-                }*contactGrain*mobility*noiseLp*roughScale*playerNow
+                }*contactGrain*mobility*roughEffortScale*sourceNoise*roughScale*playerNow
                 val reflection=(baseReflection+irregularity).coerceIn(-.98f,.98f)
                 // Bounded turbulent FLOW through the currently open contact. Its energy source
                 // is P and it ends exactly with P; WHISTLE has a smaller calibrated noisy area.
@@ -449,8 +469,8 @@ object Embouchure {
                     else -> .18f
                 }*(if(held && (v.driver==EmbouchureDriver.LIP || name==EmbouchureVoice.REED || name==EmbouchureVoice.BASS))
                     .35f else if(held) .55f else 1f)
-                val turbulentFlow=flowBound*flowExpansion*p*tanhUnit(sourceGrain*(2f+12f*effort*effort)*aperture*
-                    (sqrt(abs(normalizedDp)+.0025f)-.05f)*noiseLp)
+                val turbulentFlow=flowBound*flowExpansion*p*tanhUnit(sourceGrain*(2f+12f*effort*effort)*roughEffortScale*aperture*
+                    (sqrt(abs(normalizedDp)+.0025f)-.05f)*sourceNoise)
                 val y=p+dp*reflection+turbulentFlow+starter
                 driverNow=y-observed
                 bore.inject(y); injected=y
@@ -472,7 +492,7 @@ object Embouchure {
         fun energy(): Double = (bore?.energy() ?: 0.0)+(bridge?.energy() ?: 0.0)+(nut?.energy() ?: 0.0)+
             .08*(mode1.energy()+mode2.energy())+.004*lip.energy()
         fun state(): DoubleArray = (bore?.state() ?: doubleArrayOf())+(bridge?.state() ?: doubleArrayOf())+
-            (nut?.state() ?: doubleArrayOf())+doubleArrayOf(lip.re,lip.im,mode1.re,mode1.im,mode2.re,mode2.im,outputDc.toDouble(),noiseLp.toDouble())
+            (nut?.state() ?: doubleArrayOf())+doubleArrayOf(lip.re,lip.im,mode1.re,mode1.im,mode2.re,mode2.im,outputDc.toDouble(),noiseLp.toDouble(),contactNoiseLp.toDouble())
     }
     private fun tanhUnit(x: Float): Float = kotlin.math.tanh(x)
 
