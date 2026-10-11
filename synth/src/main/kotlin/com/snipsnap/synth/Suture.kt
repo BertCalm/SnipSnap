@@ -36,7 +36,7 @@ enum class SutureVoice { BLOOM, THREAD, CLOSE, MURMUR, STRAIN, SHELL }
  * without resetting them at the loop boundary.
  */
 object Suture {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
     const val MIDI_MIN = ROOT_MIDI
@@ -241,35 +241,57 @@ object Suture {
         var seamActivity = 0.0
         var slipEvents = 0
         var resistance = 0.0
+        var ringingLoad = 0.0
         var actuatorForce = 0.0
         var closureSeconds: Double? = null
         var maxEnergy = 0.0
         var gestureBudget = if (probe.gesture) .035 * (.35 + .65 * gapMacro) * velocity * velocity else 0.0
-        val gestureWeights = DoubleArray(PLATES * MODES)
+        val gestureWeights = DoubleArray(PLATES * MODES + CORDS * CORD_MODES)
 
         init {
             require(probe.oversample == 4 || probe.oversample == 8) { "SUTURE diagnostic oversample must be 4 or 8" }
             val random = Random(Dsp.seedFor("SUTURE", voice, midiFor(voice, m.getValue("TUNE")), "mounts"))
+            // Above the reference opening, expose the coherent answering field
+            // progressively. The neutral and lower range retain their pickups;
+            // full opening doubles these harmonics without adding acoustic work.
+            val upperOpening = ((gapMacro - .40) / .60).coerceIn(0.0, 1.0)
+            val answeringPickup = 1 + upperOpening * upperOpening
             for (p in 0 until PLATES) for (j in 0 until MODES) {
                 val k = p * MODES + j
                 val upper = if (j == 0) 1.0 else configuration.upper * .60.pow(j - 1)
-                pickup[k] = upper * if (p == 0) 1.0 else (if (j == 0) .48 else .18) + .06 * random.nextDouble()
+                // Answering fundamentals are aligned at 2x/3x/4x the root.
+                // Let their real bronze motion radiate alongside the primary
+                // plate, without raising the inharmonic bending pickup.
+                pickup[k] = upper * if (p == 0) 1.0 else
+                    (if (j == 0) (if (voice == SutureVoice.BLOOM) 1.60 else .95) else .18) + .06 * random.nextDouble()
+                if (p > 0 && j == 0) pickup[k] *= answeringPickup
+                // A wider release bends more of the plate, rather than just
+                // making the same fundamental louder. Normalize the projection
+                // below so this remains one finite gesture-energy allowance.
+                val bending = .18 + 2.20 * gapMacro
                 gestureWeights[k] = (if (p == 0) 1.0 else if (j == 0) .50 else .26) *
-                    (if (j == 0) 1.0 else upper * .85) * (if ((p + j) % 3 == 2) -1 else 1)
+                    (if (j == 0) 1.0 else upper * bending) * (if ((p + j) % 3 == 2) -1 else 1)
             }
-            val norm = sqrt(gestureWeights.sumOf { it * it })
-            for (k in gestureWeights.indices) gestureWeights[k] /= norm
             for (c in 0 until CORDS) {
                 phase[c] = random.nextDouble() * 2 * PI
                 strain[c] = .10 + .26 * cord
                 acousticStrain[c] = strain[c]
                 surfacePosition[c] = .035 * strain[c]
                 acousticPosition[c] = surfacePosition[c]
-                for (j in 0 until CORD_MODES) pickup[PLATES * MODES + c * CORD_MODES + j] =
-                    (.08 + .29 * cord) * .55.pow(j)
-                pickup[WOOD + c] = .18 + .35 * cord
+                for (j in 0 until CORD_MODES) {
+                    val k = PLATES * MODES + c * CORD_MODES + j
+                    pickup[k] = (.035 + 1.25 * cord) * .72.pow(j)
+                    // Opening stretches the preloaded links as well as bronze.
+                    // This projection spends the same finite release budget;
+                    // CORD can expose its harmonics before the later take-up.
+                    gestureWeights[k] = cord * configuration.elasticity *
+                        doubleArrayOf(.30, .62, .38)[j] * (if (c % 2 == 0) 1.0 else .50)
+                }
+                pickup[WOOD + c] = .10 + 1.10 * cord
             }
-            for (j in 0 until 4) pickup[CAVITY + j] = (.08 + .25 * cavityMacro) * .66.pow(j)
+            val norm = sqrt(gestureWeights.sumOf { it * it })
+            for (k in gestureWeights.indices) gestureWeights[k] /= norm
+            for (j in 0 until 4) pickup[CAVITY + j] = (.035 + .80 * cavityMacro * cavityMacro) * .76.pow(j)
             val initial = if (probe.initialEnergy.isFinite()) probe.initialEnergy.coerceIn(0.0, .25) else 0.0
             im[0] = sqrt(2 * initial)
             maxEnergy = initial
@@ -295,6 +317,10 @@ object Suture {
                 frictionImpulse[c] = 0.0
             }
             val ring = energy()
+            // A short peak-following load represents the linkage's averaged
+            // response to measured ringing. It can only oppose closing travel;
+            // it neither feeds acoustic energy back nor supplies opening work.
+            ringingLoad = if (held) ring else max(ring, ringingLoad * exp(-controlDt / .18))
             val mass = .075 * configuration.mass
             for (g in 0..1) {
                 val active = probe.drive && velocity > 0 && (held || time < driveHorizon) &&
@@ -314,7 +340,8 @@ object Suture {
                 val spread = if (!held && probe.gesture && velocity > 0 && time < spreadSeconds)
                     (700 * (spreadTarget - gaps[g]) - 5 * speeds[g]).coerceIn(-20.0, 20.0) else 0.0
                 // Ringing changes a bounded closing dashpot. It never pushes the gaps open.
-                val resistanceCoefficient = if (probe.resistance && speeds[g] < 0) min(24.0, 650 * ring) else 0.0
+                val resistanceCoefficient = if (probe.resistance && speeds[g] < 0)
+                    min(if (held) 10.0 else 24.0, (if (held) 650 else 1800) * ringingLoad) else 0.0
                 val baseDamping = .55 + .35 * (1 - stitch)
                 val roughCatch = if (probe.cordMotion) min(5.0, .25 +
                     16 * (frictionReaction[g] + frictionReaction[g + 2])) else 0.0
@@ -372,39 +399,53 @@ object Suture {
 
         private fun updateCoefficients(initial: Boolean) {
             val aperture = .5 * (gaps[0] + gaps[1])
+            // STITCH also sets linkage compliance. A firm, nearly closed mount
+            // absorbs plate motion more quickly than a soft open mounting. It
+            // is a dissipative modal load, not an extra gain envelope or source.
+            val mountingLoad = 1 + 4.5 * stitch * (1 - aperture)
+            // Tighter links transmit more plate motion into lossy mountings.
+            // Calibrate this load at each voice's reference tension; its cord
+            // modes retain their independent, increasing elastic decay time.
+            val tensionLoad = (.60 + 1.60 * cord) / (.60 + 1.60 * configuration.defaults[2])
             for (p in 0 until PLATES) for (j in 0 until MODES) {
                 val k = p * MODES + j
-                // Root loading: at most 5.2 cents at ordinary geometry, 8.6 at full
-                // opening. Answering plates carry stronger mounting movement.
+                // Fundamental mounting movement is at most 6.9 cents before
+                // reciprocal loading; upper bending modes move more strongly.
                 val detune = if (j == 0) 1 + .004 * gaps[p % 2] else 1 + .018 * gaps[p % 2] * j
                 val plateRatio = if (p == 0) 1.0 else (p + 1).toDouble()
-                val radiation = 1 + (.7 + .8 * cavityMacro) * aperture
+                val radiation = 1 + (1.4 + 1.8 * cavityMacro) * aperture
                 val t60 = if (p == 0 && j == 0)
-                    (3.60 + 2.0 * cavityMacro) * (.85 + .20 * configuration.decay) / (1 + .80 * aperture)
-                    else if (j == 0) configuration.decay * (1.60 + 1.10 * cavityMacro) / radiation
-                    else configuration.decay * (.82 + .55 * cavityMacro) * .75.pow(j) / radiation
-                coefficient(k, hz * plateRatio * configuration.ratios[j] * detune, t60, initial)
+                    (1.0 + 6.20 * cavityMacro) * (.85 + .20 * configuration.decay) *
+                        (if (voice == SutureVoice.MURMUR) 1.20 else 1.0) / (1 + .25 * aperture)
+                    else if (j == 0) configuration.decay * (1.20 + 2.10 * cavityMacro) / radiation
+                    // Bending must still be present when the stitchers reach the
+                    // seam. Closed enclosure absorption varies independently of
+                    // aperture, so CAVITY is audible after rapid closure too.
+                    else configuration.decay * (.55 + 3.40 * cavityMacro) * .82.pow(j) / radiation
+                val load = if (p == 0 && j == 0) 1 + 3.0 * stitch * (1 - aperture) else mountingLoad
+                coefficient(k, hz * plateRatio * configuration.ratios[j] * detune, t60 / (load * tensionLoad), initial)
             }
             for (c in 0 until CORDS) for (j in 0 until CORD_MODES) {
                 val k = PLATES * MODES + c * CORD_MODES + j
                 val movement = .10 * max(0.0, strain[c] - (.10 + .26 * cord))
-                // Balance the root-bearing reference tension for both finite and
-                // held motion. Upper cord modes retain their full elastic stretch.
-                val stretch = 1 + if (j == 0) min(.003, movement) else movement
+                // Keep the harmonic reference fixed: nearby root trajectories
+                // can cancel and shift their mixed spectral peak. Upper cord
+                // modes retain the full strain-dependent elastic movement.
+                val stretch = if (j == 0) 1.0 else 1 + movement
                 coefficient(k, hz * (j + 1) * (if (c % 2 == 0) 1.0 else 2.0) * stretch,
-                    (.40 + 1.00 * cord) * .73.pow(j), initial)
+                    (.20 + 1.80 * cord) * .82.pow(j), initial)
             }
             for (c in 0 until CORDS) coefficient(WOOD + c,
                 (730 + c * 470.0) * (1 + .45 * cord), .028 + .045 * (1 - cord), initial)
             val bodyScale = 1.30 - .65 * cavityMacro
             for (j in 0 until 4) {
                 val bodyHz = hz * doubleArrayOf(1.0, 2.05, 3.25, 5.10)[j] * bodyScale * (1 + .16 * aperture)
-                coefficient(CAVITY + j, bodyHz, (.16 + .80 * cavityMacro) / (1 + 4 * aperture + .30 * j), initial)
-                val rate = (1.0 + 16 * cavityMacro * configuration.body) * (1 - .72 * aperture)
+                coefficient(CAVITY + j, bodyHz, (.10 + 1.60 * cavityMacro) / (1 + 4 * aperture + .30 * j), initial)
+                val rate = (if (j == 0) .40 else 1.0 + 48 * cavityMacro * configuration.body) * (1 - .72 * aperture)
                 // A detuned cavity can load upper bending modes strongly without
                 // extinguishing the requested root before the stitchers arrive.
                 bodyExchange[j] = .5 * (1 - exp(-2 * rate * (if (j == 0) .08 else .18) * dt))
-                val bridgeRate = (.5 + 20 * cavityMacro) * (1 - .65 * aperture)
+                val bridgeRate = (.5 + 60 * cavityMacro) * (1 - .65 * aperture)
                 // A subordinate root footprint bounds the avoided crossing when
                 // cavity and bronze nearly coincide. Scaling with the reference
                 // pitch preserves that bound through the host's two octaves;
@@ -415,7 +456,7 @@ object Suture {
                 cavityBridgeS[j] = sin(angle)
             }
             for (j in 0 until MODES) {
-                val angle = (2 + 15 * (1 - aperture)) * (if (j == 0) .18 else .65) * dt
+                val angle = (2 + (if (j == 0) 15 else 32) * (1 - aperture)) * (if (j == 0) .18 else .65) * dt
                 plateBridgeC[j] = cos(angle)
                 plateBridgeS[j] = sin(angle)
             }
@@ -423,9 +464,9 @@ object Suture {
                 exchange[c] = .5 * (1 - exp(-2 * (1.0 + 12 * cord) * (.35 + strain[c]) * dt))
                 // A small reciprocal elastic bridge transmits powered cord work
                 // into bronze without extinguishing its root against a dashpot.
-                // The primary bridge's worst-case unloaded split is <2.5 cents
+                // The primary bridge's unloaded per-mode shift is <1.3 cents
                 // at C3; responding plates may carry a larger answering spread.
-                val angle = (if (c == 0) .25 + .9 * cord else 1 + 3 * cord) * dt
+                val angle = (if (c == 0) .125 + .45 * cord else 1 + 3 * cord) * dt
                 cordBridgeC[c] = cos(angle)
                 cordBridgeS[c] = sin(angle)
             }
@@ -471,8 +512,8 @@ object Suture {
                 val k = PLATES * MODES + c * CORD_MODES
                 val wood = WOOD + c
                 val b0 = 1.0
-                val b1 = .42
-                val b2 = .23
+                val b1 = .16 + .84 * cord
+                val b2 = .05 + .65 * cord
                 // Balanced HOLD keeps woody catches subordinate to the tuned
                 // links; one-shots retain the broader wooden opening response.
                 val bw = if (held) -.20 else -.55
@@ -537,7 +578,7 @@ object Suture {
             for (g in 0..1) {
                 val i = g * MODES
                 val j = (g + 2) * MODES
-                val clearance = .012 + .105 * seamMacro
+                val clearance = .012 + .240 * seamMacro
                 val edge = .42 * (re[i] - re[j])
                 val penetration = max(0.0, clearance - acousticGap[g] + edge)
                 val contact = penetration / (.012 + penetration)
@@ -555,12 +596,12 @@ object Suture {
                 im[i] += (nv - v) / sqrt(2.0)
                 im[j] -= (nv - v) / sqrt(2.0)
                 val rough = 1 + .30 * seamMacro * sin(75 * penetration + phase[g])
-                val amount = .5 * (1 - exp(-2 * (8 + 155 * seamMacro) * contact * rough * dt))
+                val amount = .5 * (1 - exp(-2 * (8 + 160 * seamMacro + 220 * seamMacro * seamMacro) * contact * rough * dt))
                 val before = passiveLoss
                 val oldDifference = im[j] - im[i]
                 // The requested-root edge has a small footprint; the answering
                 // 2x/4x plate pair carries stronger seam loss and audible chatter.
-                val fundamentalProjection = if (g == 0) (if (held) .015 else .10) else .55
+                val fundamentalProjection = if (g == 0) (if (held) .015 else if (voice == SutureVoice.MURMUR) .05 else .10) else .55
                 exchange(i, j, fundamentalProjection * amount)
                 seam += -.22 * fundamentalProjection * amount * oldDifference * internalRate / 1000
                 // The same edge damps upper bending coordinates. Their switching
@@ -633,8 +674,9 @@ object Suture {
                 // Aperture changes the radiation of this same moving bronze,
                 // in addition to its modal loading and cavity reaction. Upper
                 // bending modes radiate freely while open and soften on closure.
-                val radiation = if (k == 0) (if (held) .90 + .10 * aperture else .40 + 2.0 * aperture)
-                    else heldField * (.60 + 1.30 * aperture)
+                val radiation = if (k == 0) (.75 + .35 * aperture) *
+                    (if (voice == SutureVoice.BLOOM || voice == SutureVoice.STRAIN) 2.5 else 1.0)
+                    else heldField * (.20 + 2.80 * aperture)
                 plates += radiation * pickup[k] * im[k]
             }
             for (k in PLATES * MODES until WOOD) cords += pickup[k] * im[k]
@@ -653,12 +695,12 @@ object Suture {
 
         fun state(): DoubleArray = re + im + gaps + speeds + strain + previousSlip + frictionReaction + frictionImpulse + cr + sr + targetCr + targetSr +
             travelSpeed + surfacePosition + takeUp + acousticGap + acousticStrain + acousticPosition + acousticTravel +
-            doubleArrayOf(storedGestureWork, storedActuatorWork, pendingGestureWork, pendingActuatorWork)
+            doubleArrayOf(storedGestureWork, storedActuatorWork, pendingGestureWork, pendingActuatorWork, ringingLoad)
 
         fun groups(): List<DoubleArray> = listOf(re + im, gaps + speeds + acousticGap,
             strain + previousSlip + frictionReaction + frictionImpulse + travelSpeed + surfacePosition + takeUp + acousticStrain + acousticPosition + acousticTravel,
             cr + sr + targetCr + targetSr,
-            doubleArrayOf(storedGestureWork, storedActuatorWork, pendingGestureWork, pendingActuatorWork))
+            doubleArrayOf(storedGestureWork, storedActuatorWork, pendingGestureWork, pendingActuatorWork, ringingLoad))
 
         fun record(trace: Trace, frame: Int) {
             for (g in 0..1) { trace.gap[g][frame] = gaps[g].toFloat(); trace.gapVelocity[g][frame] = speeds[g].toFloat() }
