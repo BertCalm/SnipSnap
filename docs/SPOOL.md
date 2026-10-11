@@ -5,7 +5,8 @@ offline melodic pipeline. STRING, CHOIR, FLUTE and BRASS use original synthesize
 PALIMPSEST and CUT let those performances cross, return and inherit filtered traces. The sources
 are generated for the requested note, with evolving articulation. They are not imported tapes.
 
-This is the first dry listening prototype. Six presets cover the six voices. The planned
+This dry listening prototype now includes revised forward, return and repeat transitions.
+Six presets cover the six voices. The planned
 36-preset library remains deferred until the owner approves the dry sonic identity. A published
 audition presents the sounds for that decision; passing numerical checks alone is not sonic approval.
 
@@ -36,8 +37,43 @@ This deliberate write-path exemption keeps inherited material tied to an inspect
 HOLD records `FROZEN_SNAPSHOT` in its machine recipe: a finite deterministic imprint is prepared
 before writes are frozen for the exported repeating cycle. IMPRINT controls that snapshot.
 The exported loop does not continuously rewrite its history. Return events remain part of its cycle.
-During the silent rest, transport and pickup state restart at the reference state for the next
+During a short rest, transport and pickup state restart at the reference state for the next
 powered cycle. This is a repeating machine schedule; it does not claim live write-state convergence.
+
+## Connecting forward, return and repeat
+
+The revised calibration connects the phrases without making the RETURN answer as loud as
+the forward recording. Forward transport coasts for 25 ms before the gate. A 120 ms contact
+handoff carries the recording into a return whose velocity launches over 35 ms, then decelerates
+toward rest. Head displacement and splice geometry ease toward their neutral path over 200 ms
+at the turn, so a smooth transport change does not encounter an abrupt read-coordinate change.
+Low SPLICE amounts blend continuous and reordered windows smoothly; the deterministic splice
+schedule and recorded material remain the same.
+RETURN=0 still makes the reset inaudible; values up to .1 ease smoothly from that muted
+behavior into the connected handoff. The measured .2 and .65 settings use the full handoff.
+
+The return stops within the smaller of 12 ms of recorded travel or 1% of its actual travel,
+with the small remaining spring energy dissipated. A finite re-engagement starts immediately
+after that return at 38% contact level with a 60 ms contact ramp. HOLD reduces the scheduled
+rest from 160 ms to 25 ms. These remain bounded journeys through the original recordings and
+their inherited overlays; the update does not add a separate effect or a new preset library.
+It is a calibration revision within the prototype's existing model and recipe schema.
+
+The transition probes compare STRING, CHOIR, FLUTE and BRASS at C4 with HEAD=.2, STRAIN=.1,
+SPLICE=0 and IMPRINT=0, at RETURN=.2 and .65. They use 25 ms RMS windows at 5 ms hops.
+The quiet-run measurement counts consecutive windows below 3% of each case's peak phrase RMS;
+the finite measurement excludes the intentional terminal fade. The gate measurement compares
+the lowest handoff window with the quieter adjacent phrase, preserving a deliberately quiet return.
+
+| Measured transition | Original calibration | Revised calibration |
+|---|---:|---:|
+| Minimum gate RMS / quieter adjacent phrase RMS | .202–.298 | 1.157–1.439 |
+| Quiet run between return and finite re-engagement | 305–425 ms | 5–115 ms |
+| Quiet run across a repeated HOLD wrap | 400–505 ms | 20–130 ms |
+
+The acceptance probes require a gate ratio of at least .40 and a quiet run of at most 150 ms.
+These measures establish audible continuity under those settings; the published before/after
+clips let the owner judge whether the connected phrases have the intended fluid character.
 
 ## Saved machine and integration
 
@@ -80,11 +116,19 @@ Generate the listening pack with:
 python scripts/prepare-spool-audition.py
 ```
 
+To include a preserved earlier pack for transition comparisons, assemble with:
+
+```sh
+python scripts/prepare-spool-audition.py --compare-renders /path/to/preserved-spool-audition
+```
+
 The renderer writes `testkit/spool-audition/`. The assembly script copies its actual WAVs, patch
 recipes and kit into `testkit/spool-audition-site/`, adds the listening interface and download
 bundle, and records the DSP source hash in its manifest. It includes the six prototype presets,
 dry/level-matched audio and machine probes for the owner's review. The static site directory is
 the publishable audition; publishing does not change the rendering or imply sonic approval.
+The optional comparison flag adds labelled before/after pairs for each voice's finite note,
+HOLD cycle and three repeated cycles, retaining the earlier pack's source provenance.
 Individual sounds can also be rendered with:
 
 ```sh
@@ -92,22 +136,23 @@ Individual sounds can also be rendered with:
 ./gradlew :cli:run --args="synth SPOOL CHOIR --midi 60 --velocity .35 --out /tmp/spool-soft"
 ```
 
-The first measured pack contains 150 listening clips: 300 native and matched WAVs, plus
+The revised measured pack contains 150 listening clips: 300 native and matched WAVs, plus
 16 samples in the MPC kit. All WAV headers, frame counts, asset paths and sixteen XPM sample
 references were checked. The listening WAVs are mono 44.1 kHz PCM16. Every HOLD cycle measured
 `Keys.seamError` of zero against an independently rendered preceding cycle; the separate
-normalized boundary step/slope error was at most `1.79e-28`. Independent renders reset their
+normalized boundary step/slope error was at most `9.23e-9`. Independent renders reset their
 overlays, and HOLD repeats a frozen snapshot rather than accumulating live memory.
 
-The fifteen Spool acceptance probes passed, including forward pitch within ten cents for
+All eighteen Spool acceptance probes passed, including forward pitch within ten cents for
 all six voices at C3, C4 and C5 with mild transport and SPLICE=0. The manifest's wider forward
-window can include diagonal travel and a splice overlap: ordinary default gestures reached
-17.1 cents in that measurement, while experimental bends reached 92.9 cents. Those figures
+window can include diagonal travel and a splice overlap: the four clean families across their
+measured default, register and velocity cases stayed within 5.11 cents in that window,
+while experimental bends reached 75.4 cents. Those figures
 remain visible alongside each clip instead of being treated as steady source tuning.
 
-Reported core-array allocation peaked at 20.34 MiB; this is renderer buffer accounting,
-not peak JVM memory. Median rendering time was 1.17 seconds per clip and the maximum was
-4.10 seconds while repository tests ran concurrently. These cloud measurements do not
+Reported core-array allocation peaked at 19.84 MiB; this is renderer buffer accounting,
+not peak JVM memory. Median rendering time was 0.966 seconds per clip and the maximum was
+2.647 seconds during the final cloud render. These cloud measurements do not
 estimate phone or MPC performance.
 
 The required baseline is `./gradlew --no-daemon test`. Acceptance also requires listening to the

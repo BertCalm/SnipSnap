@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Assemble the static listening page from generateSpoolAudition's real WAVs."""
 import argparse
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -15,6 +16,7 @@ def main():
     parser.add_argument("--renders", type=Path, default=root / "testkit/spool-audition")
     parser.add_argument("--output", type=Path, default=root / "testkit/spool-audition-site")
     parser.add_argument("--source-base", help="Git revision preceding the port (defaults to the engine's introduction parent)")
+    parser.add_argument("--compare-renders", type=Path, help="Preserved earlier renders for labelled before/after transition listening")
     args = parser.parse_args()
     renders, output = args.renders.resolve(), args.output.resolve()
     if output == renders or renders in output.parents:
@@ -44,6 +46,51 @@ def main():
             shutil.copy2(renders / name, output / name)
     if (renders / "diagnostics").is_dir():
         shutil.copytree(renders / "diagnostics", output / "diagnostics", dirs_exist_ok=True)
+    if args.compare_renders:
+        before_root = args.compare_renders.resolve()
+        before = json.loads((before_root / "manifest.json").read_text())
+        current = {clip["id"]: clip for clip in clips}
+        pairs = []
+        for original in before["clips"]:
+            if original["section"] not in ("voices", "loops", "repeated-loops") or original["id"] not in current:
+                continue
+            context = {"voices": "one-shot", "loops": "HOLD cycle", "repeated-loops": "three cycles"}[original["section"]]
+            earlier = copy.deepcopy(original)
+            earlier.update(id="before_" + original["id"], section="transition-comparison",
+                           label=f"Before · {original['label']} · {context}",
+                           description="Original prototype, preserved for transition comparison. " + original["description"],
+                           provenance=dict(before.get("provenance", {}), sourceCommit=before.get("sourceCommit")))
+            for field in ("rawPath", "matchedPath"):
+                source = (before_root / original[field]).resolve()
+                if before_root not in source.parents or not source.is_file():
+                    raise ValueError(f"Missing or invalid comparison audio: {original[field]}")
+                relative = Path("comparison/before") / original[field]
+                (output / relative).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, output / relative)
+                earlier[field] = relative.as_posix()
+                assets.add(relative)
+            earlier["file"] = earlier["matchedPath"]
+            for field in ("tracePath", "eventsPath"):
+                previous = original.get("diagnostics", {}).get(field)
+                if not previous:
+                    continue
+                source = (before_root / previous).resolve()
+                if before_root not in source.parents or not source.is_file():
+                    raise ValueError(f"Missing or invalid comparison diagnostic: {previous}")
+                relative = Path("diagnostics/before") / Path(previous).name
+                (output / relative).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, output / relative)
+                earlier["diagnostics"][field] = relative.as_posix()
+            updated = copy.deepcopy(current[original["id"]])
+            updated.update(id="after_" + original["id"], section="transition-comparison",
+                           label=f"After · {updated['label']} · {context}",
+                           description="Revised transition calibration. " + updated["description"])
+            pairs.extend((earlier, updated))
+        clips.extend(pairs)
+        manifest["comparison"] = {"beforeSourceCommit": before.get("sourceCommit"),
+                                  "beforeProvenance": before.get("provenance", {}),
+                                  "pairs": len(pairs) // 2,
+                                  "description": "Compare the original and revised forward, return and repeat transitions at the same audition level."}
     engine = root / "synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"
     manifest["dspSourceSha256"] = hashlib.sha256(engine.read_bytes()).hexdigest()
     rendered_hash = manifest.get("provenance", {}).get("sourceSha256")

@@ -46,13 +46,20 @@ object Spool {
     private const val CONTROL_STRIDE = 88
     private const val SOURCE_BANDWIDTH = 3_400f
     private const val CONTACT_RAMP = .035
+    private const val COAST_SECONDS = .025
+    private const val RETURN_ONSET_SECONDS = .035
+    private const val PHASE_HANDOFF_SECONDS = .060
+    private const val GEOMETRY_FADE_SECONDS = .200
+    private const val REENCOUNTER_RAMP_SECONDS = .060
+    private const val LOOP_REST_SECONDS = .025
+    private const val REST_COORDINATE_SECONDS = .012
     private const val SPLICE_OVERLAP = .032
     private data class ReadKernel(val radius: Int, val weights: FloatArray)
     // Positive normalized Gaussian kernels: l-infinity gain <=1, no box-filter rebound
     // lobes. Sigma scales with complete coordinate speed, not just motor speed. The
     // half-power output bandwidth stays near 15.5kHz; source components able to alias
     // from internal Nyquist into the output band receive strong exponential rejection.
-    private val overlayKernels: Array<ReadKernel> = Array(49) { bin ->
+    private val overlayKernels: Array<ReadKernel> = Array(81) { bin ->
         val sigma = max(.70, bin * .125 * 1.50)
         val radius = kotlin.math.ceil(4 * sigma).toInt()
         val w = FloatArray(2 * radius + 1) { j -> exp(-.5 * ((j - radius) / sigma).pow(2)).toFloat() }
@@ -204,9 +211,11 @@ object Spool {
 
     /**
      * A convex interpolator (l-infinity norm exactly <=1), including reverse and stationary reads.
-     * At faster speeds a positive three-tap kernel adds rate-dependent bandwidth loss. Original
-     * synthesis is separately limited to 3.4 kHz, safely below output Nyquist even at the bounded
-     * reverse+head read rate. Interpolation and both low-pass paths have no norm gain; the overlay
+     * Original synthesis is limited to 3.4kHz. Its positive three-tap smoothing varies
+     * continuously with read rate; above rate 4.0 it blends into the rate-dependent Gaussian
+     * pickup, fully active by 4.4. Mutable overlays always use that Gaussian path. The full head
+     * derivative includes the geometry taper and is bounded below 8.01, within the rate-10
+     * kernel bank. Interpolation and these positive kernels have no norm gain; the overlay
      * projection and saturation are 1-Lipschitz. Thus the inherited-generation operator is bounded
      * by the largest routing row sum times sqrt(IMPRINT), <= .55 in l-infinity. Retaining an existing
      * cell is storage, not a new feedback generation; one-shots permit one finite write pass only. Causal descendants are bounded by
@@ -220,17 +229,32 @@ object Spool {
             val k = j.coerceIn(0, buffer.size - 2)
             return buffer[k] * (1 - f) + buffer[k + 1] * f
         }
-        if (overlay) {
-            val bin = kotlin.math.ceil(abs(speed) / .125).toInt().coerceIn(0, overlayKernels.lastIndex)
-            val kernel = overlayKernels[bin]
-            var y = 0f
-            for (j in kernel.weights.indices) y += kernel.weights[j] * linear(i + j - kernel.radius)
-            return y
+        fun gaussian(): Float {
+            val binPosition = (abs(speed) / .125).coerceIn(0.0, overlayKernels.lastIndex.toDouble())
+            val low = binPosition.toInt()
+            val high = min(low + 1, overlayKernels.lastIndex)
+            val blend = (binPosition - low).toFloat()
+            fun kernelValue(kernel: ReadKernel): Float {
+                var y = 0f
+                for (j in kernel.weights.indices) y += kernel.weights[j] * linear(i + j - kernel.radius)
+                return y
+            }
+            val first = kernelValue(overlayKernels[low])
+            return if (blend <= 0) first else first * (1 - blend) + kernelValue(overlayKernels[high]) * blend
         }
+        if (overlay || abs(speed) >= 4.4) return gaussian()
         val a = linear(i)
         if (abs(speed) <= 1.0) return a
-        val radius = abs(speed).toInt().coerceIn(1, 6)
-        return .50f * a + .25f * linear(i - radius) + .25f * linear(i + radius)
+        val radiusPosition = abs(speed).coerceIn(1.0, 4.0)
+        val radius = radiusPosition.toInt()
+        val blend = (radiusPosition - radius).toFloat()
+        fun triple(r: Int) = .50f * a + .25f * linear(i - r) + .25f * linear(i + r)
+        val first = triple(radius)
+        val value = if (blend <= 0) first else first * (1 - blend) + triple(radius + 1) * blend
+        return if (abs(speed) <= 4.0) value else {
+            val g = smooth((abs(speed) - 4.0) / .4).toFloat()
+            value * (1 - g) + gaussian() * g
+        }
     }
 
     private data class Pickup(val first: Double, val second: Double, val blend: Double)
@@ -286,8 +310,10 @@ object Spool {
         val gate = min(machine.gateSeconds * (1 + .45 * hold), sourceLength - .08).coerceAtLeast(.10)
         private val positions = DoubleArray(3)
         private val rates = DoubleArray(3) { 1.0 }
+        private val driveRates = DoubleArray(3) { 1.0 }
         private val travel = DoubleArray(3)
         private val returnDurations = DoubleArray(3)
+        private val returnStops = DoubleArray(3)
         private val coords = DoubleArray(3)
         private var motor = 1.0
         private var motorWork = 0.0
@@ -304,7 +330,7 @@ object Spool {
         private val pendingPositions = Array(3) { DoubleArray(delay) { -1.0 } }
         private val writeFilter = DoubleArray(3)
         private var returnEnd = gate + machine.returnSeconds
-        private var rereadStart = returnEnd + .06
+        private var rereadStart = returnEnd
         private val rereadLength = if (!cycle && machine.reengage) min(.90, gate * .70) else 0.0
         private val contact = DoubleArray(3) { material.strips[it].contact * (.52 + .48 * velocity) }
         private val nominalDrag = (0..2).sumOf { contact[it] * .045 * material.strips[it].drag }
@@ -336,28 +362,47 @@ object Spool {
                 val differential = (s.tension - 1) * .11 + (s.drag - 1) * .08
                 val slip = strain.pow(2) * (.19 * sin(2 * PI * (1.4 + .21 * k) * t + phase[k]) - differential)
                 val target = (motor + slip).coerceIn(.40, MAX_FORWARD_RATE.toDouble())
-                rates[k] += (target - rates[k]) * min(1.0, dt * (35 - 24 * strain))
-                maxForward = max(maxForward, rates[k].toFloat())
+                driveRates[k] += (target - driveRates[k]) * min(1.0, dt * (35 - 24 * strain))
             }
         }
 
         private fun release() {
             released = true
             for (k in 0..2) {
-                // The designed cubic return is initially fast, then decelerates to rest. Its
-                // speed and energy both fall monotonically; actual travel sets its length.
+                // A gentle Hermite return p/travel=1-1.5u+.5u^3 starts around the
+                // forward pitch, then slows. Integrating a 35ms launch ramp keeps velocity
+                // continuous at the physical turnaround; its normalization preserves travel.
                 val shaped = machine.returnSeconds * (.28 + .72 * sqrt(travel[k] / 1.35))
-                returnDurations[k] = max(shaped, 3 * travel[k] / MAX_REVERSE_RATE)
+                returnDurations[k] = max(shaped, 1.5 * travel[k] / MAX_REVERSE_RATE + RETURN_ONSET_SECONDS / 2)
+                // Brake only when <=1% of actual travel and <=12ms of recording remain.
+                // Residual spring energy is <=1e-4 of gate energy and is dissipated at rest.
+                val rest = min(REST_COORDINATE_SECONDS, .01 * travel[k])
+                var lo = 0.0
+                var hi = 1.0
+                repeat(40) {
+                    val u = (lo + hi) / 2
+                    val p = travel[k] * (1 - 1.5 * u + .5 * u * u * u)
+                    if (p > rest) lo = u else hi = u
+                }
+                val effective = returnDurations[k] - RETURN_ONSET_SECONDS / 2
+                returnStops[k] = ((lo + hi) / 2) * effective + RETURN_ONSET_SECONDS / 2
             }
-            returnEnd = gate + (returnDurations.maxOrNull() ?: 0.0)
-            rereadStart = returnEnd + .06
+            returnEnd = gate + (returnStops.maxOrNull() ?: 0.0)
+            rereadStart = returnEnd
         }
 
         private fun returning(t: Double) {
             for (k in 0..2) {
-                val u = ((t - gate) / returnDurations[k]).coerceIn(0.0, 1.0)
-                positions[k] = travel[k] * (1 - u).pow(3)
-                rates[k] = if (u >= 1) 0.0 else -3 * travel[k] / returnDurations[k] * (1 - u).pow(2)
+                val elapsed = (t - gate).coerceAtLeast(0.0)
+                if (elapsed >= returnStops[k]) { positions[k] = 0.0; rates[k] = 0.0; continue }
+                val z = (elapsed / RETURN_ONSET_SECONDS).coerceIn(0.0, 1.0)
+                val integrated = if (elapsed < RETURN_ONSET_SECONDS)
+                    RETURN_ONSET_SECONDS * (z * z * z - .5 * z * z * z * z)
+                    else elapsed - RETURN_ONSET_SECONDS / 2
+                val effective = returnDurations[k] - RETURN_ONSET_SECONDS / 2
+                val u = (integrated / effective).coerceIn(0.0, 1.0)
+                positions[k] = travel[k] * (1 - 1.5 * u + .5 * u * u * u)
+                rates[k] = -1.5 * travel[k] / effective * (1 - u * u) * smooth(z)
                 maxReverse = max(maxReverse, abs(rates[k]).toFloat())
             }
         }
@@ -403,7 +448,7 @@ object Spool {
                     if (t < gate) forward(t, CONTROL_STRIDE * dt)
                     else if (inReturn) returning(t)
                     else if (inReread) {
-                        if (!passEntered) { positions.fill(0.0); rates.fill(1.0); motor = 1.0; passEntered = true }
+                        if (!passEntered) { positions.fill(0.0); rates.fill(1.0); driveRates.fill(1.0); motor = 1.0; passEntered = true }
                         forward(t - rereadStart, CONTROL_STRIDE * dt)
                     } else { positions.fill(0.0); rates.fill(0.0) }
                 }
@@ -411,35 +456,67 @@ object Spool {
                 // per audio frame. The return law is analytic at every sample.
                 if (inReturn) returning(t)
                 else for (k in 0..2) {
+                    rates[k] = if (t < gate) driveRates[k] * smooth((gate - t) / COAST_SECONDS)
+                        else if (inReread && passEntered) driveRates[k] else 0.0
                     positions[k] = (positions[k] + rates[k] * dt).coerceIn(0.0, sourceLength)
                     if (t < gate) travel[k] = positions[k]
+                    maxForward = max(maxForward, rates[k].toFloat())
                 }
-                val end = if (cycle) returnEnd + .16 else rereadStart + rereadLength + .20
+                val end = if (cycle) returnEnd + LOOP_REST_SECONDS else rereadStart + rereadLength + .20
                 if (released && t >= end) { used = i; break }
                 val weights = headWeights(t)
-                val forwardContact = if (t < gate) smooth(t / CONTACT_RAMP) * smooth((gate - t) / CONTACT_RAMP)
-                    else if (inReread) .38 * smooth((t - rereadStart) / CONTACT_RAMP) *
-                        smooth((rereadStart + rereadLength - t) / CONTACT_RAMP) else 0.0
+                val handoff = smooth((t - gate + PHASE_HANDOFF_SECONDS) / (2 * PHASE_HANDOFF_SECONDS))
+                val fluidContact = 1 + (answer * .85 - 1) * handoff
+                val muteContact = smooth((gate - t) / CONTACT_RAMP)
+                // RETURN approaches exact mute continuously. Normal settings >=.1 retain
+                // the complete fluid handoff; near zero it joins the original mute envelope.
+                val returnContactMix = smooth(answer / .10)
+                val turnContact = muteContact * (1 - returnContactMix) + fluidContact * returnContactMix
+                val forwardContact = if (t < gate) smooth(t / CONTACT_RAMP) * turnContact
+                    else if (inReread) .38 * smooth((t - rereadStart) / REENCOUNTER_RAMP_SECONDS) *
+                        smooth((rereadStart + rereadLength - t) / REENCOUNTER_RAMP_SECONDS) else 0.0
+                val geometryX = if (t < gate) (gate - t) / GEOMETRY_FADE_SECONDS
+                    else if (inReturn) (t - gate) / GEOMETRY_FADE_SECONDS
+                    else if (inReread) (t - rereadStart) / GEOMETRY_FADE_SECONDS else 0.0
+                val geometry = smooth(geometryX)
+                val geometryPrime = if (geometryX > 0 && geometryX < 1)
+                    6 * geometryX * (1 - geometryX) / GEOMETRY_FADE_SECONDS * (if (t < gate) -1 else 1) else 0.0
                 var y = 0.0
                 for (k in 0..2) {
+                    // A stopped pickup cannot send its masked reset-coordinate read into a
+                    // neighbor's recording. The causal write filter receives zero and decays.
+                    if (inReturn && t >= gate + returnStops[k]) {
+                        coords[k] = 0.0
+                        overlayReads[k] = 0f
+                        heard[k] = 0f
+                        continue
+                    }
                     val support = if (inReturn) travel[k] else sourceLength
-                    // Offset <= .12 of traversed support makes this coordinate monotone and
-                    // in bounds, with derivative <= 1+.12pi. At the maximum reverse
-                    // rate the original 3.4kHz material therefore reads below 15kHz.
-                    // The same cap protects short gates with large serialized offsets.
+                    // Fixed-support geometry reaches neutral before the turnaround, so a new
+                    // return support cannot jump the pickup. Its full derivative includes the
+                    // 200ms taper, rather than pretending this virtual head motion is transport.
+                    // Gaussian pickup filtering also protects serialized maximum-offset corners.
                     val motion = if (frozenHead) 0.0 else sin(PI * positions[k] / max(.12, support))
                     val offsetAmplitude = machine.headOffsets[k].toDouble().coerceIn(-.12 * support, .12 * support)
-                    val offset = head * offsetAmplitude * motion
+                    val offset = head * offsetAmplitude * motion * geometry
                     val coordinate = (positions[k] + offset).coerceIn(0.0, support)
                     coords[k] = coordinate
                     val p = pickup(coordinate, support, splice, machine.spliceSchedule, sourceLength)
-                    val speed = rates[k] * (1 + head * abs(offsetAmplitude) * PI / max(.12, support))
-                    val original = tap(material.originals[k], p, speed)
-                    val overlay = if (overlayAvailable) tap(material.overlays[k], p, speed, overlay = true) else 0f
+                    val theta = PI * positions[k] / max(.12, support)
+                    val speed = if (frozenHead) rates[k] else rates[k] *
+                        (1 + head * offsetAmplitude * cos(theta) * PI / max(.12, support) * geometry) +
+                        head * offsetAmplitude * motion * geometryPrime
+                    // Convex dry/reordered pickup avoids deep low-SPLICE phase cancellation.
+                    // Tapering it to dry at the turn also keeps support changes inaudible.
+                    val wet = smooth(splice) * geometry
+                    val originalDry = read(material.originals[k], coordinate, speed)
+                    val original = if (wet > 0) (originalDry * (1 - wet) + tap(material.originals[k], p, speed) * wet).toFloat() else originalDry
+                    val overlayDry = if (overlayAvailable) read(material.overlays[k], coordinate, speed, overlay = true) else 0f
+                    val overlay = if (overlayAvailable && wet > 0) (overlayDry * (1 - wet) + tap(material.overlays[k], p, speed, overlay = true) * wet).toFloat() else overlayDry
                     overlayReads[k] = overlay
                     heard[k] = original + overlay
-                    val returnContact = if (inReturn) answer * .85 * smooth((t - gate) / CONTACT_RAMP) *
-                        smooth(abs(rates[k]) / .16) * smooth((returnEnd - t) / .05) else 0.0
+                    val returnContact = if (inReturn && answer > 0) turnContact *
+                        smooth((gate + returnStops[k] - t) / .015) else 0.0
                     y += weights[k] * heard[k] * contact[k] * (forwardContact + returnContact)
                 }
                 if (firstOverlayRead == null && (forwardContact > 1e-4 || inReturn && answer > 0) &&
@@ -472,6 +549,7 @@ object Spool {
                         for (source in 0..2) writeFilter[source] += .012 * (heard[source] - writeFilter[source])
                         for (route in machine.routes) {
                             val destination = route.destination
+                            if (t >= gate + returnStops[destination]) continue
                             val gain = route.gain * imprint * (.24 + .76 * answer)
                             pending[destination][slot] += (gain * tanh(writeFilter[route.source])).toFloat()
                             // Write geometry is exempt from SPLICE by design: the physical write

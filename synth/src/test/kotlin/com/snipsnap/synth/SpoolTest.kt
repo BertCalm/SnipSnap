@@ -28,6 +28,29 @@ class SpoolTest {
         return sqrt((from until end).sumOf { s[it].toDouble() * s[it] } / (end - from).coerceAtLeast(1))
     }
 
+    private fun phraseRms(s: FloatArray, fromSeconds: Double, untilSeconds: Double): Double =
+        rms(s, (fromSeconds * Dsp.RATE).toInt(), (untilSeconds * Dsp.RATE).toInt())
+
+    /** Twenty-five milliseconds spans several C4 periods without hiding a perceptible phrase gap. */
+    private fun phraseWindows(s: FloatArray, fromSeconds: Double, untilSeconds: Double): List<Double> {
+        val width = .025
+        val hop = .005
+        return (0..((untilSeconds - fromSeconds - width) / hop).toInt()).map { i ->
+            val start = fromSeconds + i * hop
+            phraseRms(s, start, start + width)
+        }
+    }
+
+    private fun longestQuietSeconds(windows: List<Double>, threshold: Double): Double {
+        var run = 0
+        var longest = 0
+        for (energy in windows) {
+            run = if (energy < threshold) run + 1 else 0
+            longest = maxOf(longest, run)
+        }
+        return longest * .005
+    }
+
     /** Matching RMS rejects a control that changes only output gain. */
     private fun shapeDistance(a: FloatArray, b: FloatArray, fromSeconds: Float = 0f): Double {
         val from = (fromSeconds * Dsp.RATE).toInt().coerceAtMost(minOf(a.size, b.size))
@@ -181,6 +204,87 @@ class SpoolTest {
         val until = ((audible.diagnostics.returnEndSeconds - .05f) * Dsp.RATE).toInt()
         assertTrue(rms(audible.samples, from, until) > rms(muted.samples, from, until) * 3,
             "RETURN did not reveal the reset journey")
+    }
+
+    @Test
+    fun `clean forward return and reread phrases connect without a deep notch or a long silent reset`() {
+        for (voice in listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)) {
+            for (answer in listOf(.2f, .65f)) {
+                val macros = mapOf("HEAD" to .2f, "STRAIN" to .1f, "SPLICE" to 0f,
+                    "IMPRINT" to 0f, "RETURN" to answer)
+                val p = Spool.renderProbe(voice, macros)
+                val s = p.samples
+                val gate = p.diagnostics.gateSeconds.toDouble()
+                val forward = phraseRms(s, gate - .20, gate - .08)
+                val reverse = phraseRms(s, gate + .08, gate + .20)
+                val quieterPhrase = minOf(forward, reverse)
+                assertTrue(quieterPhrase > 1e-4, "$voice RETURN=$answer had no adjacent audible phrases")
+                // Compare with the quieter phrase, so a deliberately quiet RETURN need not
+                // match the forward level. A stopped pickup between phrases still fails.
+                val handoff = phraseWindows(s, gate - .0625, gate + .0625).min()
+                assertTrue(handoff >= quieterPhrase * .40,
+                    "$voice RETURN=$answer gate handoff fell to ${handoff / quieterPhrase} of its quieter neighbor")
+
+                // Exclude the finite terminal fade, but include the slowing return and the
+                // original recording's attack at the next encounter. Measure silence in the
+                // rendered sound; a scheduled pause or a repeated attack cannot hide in metadata.
+                val end = p.diagnostics.durationSeconds - .30
+                val peakWindow = phraseWindows(s, 0.0, end).max()
+                val reset = phraseWindows(s, p.diagnostics.returnEndSeconds - .35, end)
+                val quietSeconds = longestQuietSeconds(reset, peakWindow * .03)
+                assertTrue(quietSeconds <= .15,
+                    "$voice RETURN=$answer return-to-reread contained ${quietSeconds}s below 3% of peak phrase RMS")
+            }
+        }
+    }
+
+    @Test
+    fun `held clean phrases remain connected across the actual repeat boundary`() {
+        for (voice in listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)) {
+            for (answer in listOf(.2f, .65f)) {
+                val macros = mapOf("HEAD" to .2f, "STRAIN" to .1f, "SPLICE" to 0f,
+                    "IMPRINT" to 0f, "RETURN" to answer, "HOLD" to 1f)
+                val loop = Spool.renderLoop(voice, macros)
+                val peakWindow = phraseWindows(loop, 0.0, loop.size.toDouble() / Dsp.RATE).max()
+                assertTrue(peakWindow > 1e-4, "$voice RETURN=$answer held phrase was silent")
+                // Listen through the exported cycle's real last-to-first boundary, including
+                // the next recording's attack. A numerically perfect seam may still join silence.
+                val wrapped = loop.copyOfRange(loop.size - Dsp.RATE / 2, loop.size) +
+                    loop.copyOfRange(0, Dsp.RATE * 3 / 10)
+                val windows = phraseWindows(wrapped, 0.0, wrapped.size.toDouble() / Dsp.RATE)
+                val quietSeconds = longestQuietSeconds(windows, peakWindow * .03)
+                assertTrue(quietSeconds <= .15,
+                    "$voice RETURN=$answer HOLD repeat contained ${quietSeconds}s below 3% of peak phrase RMS")
+            }
+        }
+    }
+
+    @Test
+    fun `return approaches mute continuously without a fixed audible turnaround at tiny settings`() {
+        val machine = SpoolMachine(reengage = false)
+        val macros = mapOf("HEAD" to .2f, "STRAIN" to .1f, "SPLICE" to 0f, "IMPRINT" to 0f)
+        for (voice in listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)) {
+            val muted = Spool.renderProbe(voice, macros + ("RETURN" to 0f), machine, writes = false)
+            val tiny = Spool.renderProbe(voice, macros + ("RETURN" to .001f), machine, writes = false)
+            val quiet = Spool.renderProbe(voice, macros + ("RETURN" to .01f), machine, writes = false)
+            val gate = muted.diagnostics.gateSeconds.toDouble()
+            val from = (gate * Dsp.RATE).toInt()
+            val until = (muted.diagnostics.returnEndSeconds * Dsp.RATE).toInt()
+            val body = phraseRms(muted.samples, gate - .30, gate - .10)
+            fun distanceFromMute(s: FloatArray): Double = sqrt((from until until).sumOf { i ->
+                val difference = s[i] - muted.samples[i].toDouble()
+                difference * difference
+            } / (until - from))
+            // Include the complete audible turnaround, while the muted reference permits its
+            // ordinary contact/filter tail. A fixed retrigger at every positive value fails.
+            val tinyDistance = distanceFromMute(tiny.samples)
+            val quietDistance = distanceFromMute(quiet.samples)
+            assertTrue(quietDistance > body * 1e-5, "$voice near-mute probe did not reveal its return")
+            assertTrue(tinyDistance <= quietDistance * .25,
+                "$voice RETURN .001 did not approach mute from .01: $quietDistance -> $tinyDistance")
+            assertTrue(rms(tiny.samples, from, until) <= maxOf(rms(muted.samples, from, until) * 1.5, body * .005),
+                "$voice tiny RETURN left an audible fixed turnaround")
+        }
     }
 
     @Test

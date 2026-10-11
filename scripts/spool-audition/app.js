@@ -20,8 +20,8 @@
     head_splice: 'A diagonal encounter meets a reordered recording.',
     strain_splice: 'Transport hesitation stretches the spaces between splices.'
   };
-  const EXTRA_NAMES = { registers: 'Registers', velocity: 'Velocity', gates: 'Gates', extremes: 'All high', diagnostics: 'Diagnostics', 'repeated-loops': 'Repeated loops', kit: 'Kit' };
-  const state = { manifest: null, clips: [], selected: null, level: 'matched', macro: 'HEAD', pair: '', extra: 'registers', repeat: false, notes: readNotes(), loading: false, request: 0 };
+  const EXTRA_NAMES = { 'transition-comparison': 'Before / after', registers: 'Registers', velocity: 'Velocity', gates: 'Gates', extremes: 'All high', diagnostics: 'Diagnostics', 'repeated-loops': 'Repeated loops', kit: 'Kit' };
+  const state = { manifest: null, clips: [], selected: null, level: 'matched', macro: 'HEAD', pair: '', extra: 'transition-comparison', repeat: false, notes: readNotes(), loading: false, request: 0 };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
   const clamp = (n, low = 0, high = 1) => Math.min(high, Math.max(low, Number(n) || 0));
   const percent = (n) => Math.round(clamp(n) * 100);
@@ -92,6 +92,10 @@
     const sections = Object.keys(EXTRA_NAMES).filter((section) => state.clips.some((c) => c.section === section));
     if (!sections.includes(state.extra)) state.extra = sections[0] || '';
     $('#extra-filters').innerHTML = sections.map((section) => `<button data-extra="${section}" class="${section === state.extra ? 'is-active' : ''}" aria-pressed="${section === state.extra}">${EXTRA_NAMES[section]}</button>`).join('');
+    let context = $('#extra-context');
+    if (!context) { context = document.createElement('p'); context.id = 'extra-context'; context.className = 'small-muted'; context.style.marginBottom = '16px'; $('#extra-clips').before(context); }
+    context.hidden = state.extra !== 'transition-comparison';
+    context.textContent = 'Compare the earlier and revised forward → return → repeat transitions. Each label identifies its render version and one-shot, loop, or three-cycle form.';
     const clips = state.clips.filter((c) => c.section === state.extra);
     $('#extra-clips').innerHTML = clips.length ? clips.map((clip) => `<div class="extra-clip" data-card-id="${esc(clip.id)}">${clipButton(clip, '')}<div class="extra-clip-copy"><h4>${esc(clip.label)}</h4><p>${duration(clip)} · ${noteName(clip.midi)} · VEL ${Math.round(Number(clip.velocity || 0) * 100)}%</p></div></div>`).join('') : empty('No additional recordings are included.');
     updateButtons();
@@ -119,7 +123,7 @@
     $('#measurement-context').textContent = `${clip.description || ''} ${state.level === 'raw' ? `Raw measurements describe native engine output before PCM export${rawGain < 1 ? ` (export gain ${rawGain.toFixed(4)})` : ''}.` : 'Matched files use the common quiet audition level of 0.03 over the loudest 200 ms.'} Listening approval remains a separate step.`;
     $('#measurement-context').classList.add('measurement-context');
     $('#diagnostic-details').hidden = !clip.diagnostics;
-    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, forwardPitch: clip.forwardPitch, provenance: state.manifest.provenance }, null, 2);
+    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, forwardPitch: clip.forwardPitch, provenance: clip.provenance || state.manifest.provenance }, null, 2);
   }
   function updateButtons() {
     const playing = !!state.selected && !audio.paused && !audio.ended;
