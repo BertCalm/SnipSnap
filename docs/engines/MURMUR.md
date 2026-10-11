@@ -18,9 +18,19 @@ modulation with indices in radians and acyclic routing; no feedback is enabled.
 The band-limited voiced excitation and noise feed five TPT bandpasses, whose
 output is mixed with a direct tonal anchor. MOUTH interpolates original spectral
 targets in logarithmic frequency and bandwidth. BREATH and finite onset noise
-drive those same bands. BODY changes
-direct support, lower-band width and upper damping. MOTION changes the mouth
-trajectory and its source balance, rather than applying output tremolo.
+drive those same bands. BODY moves from a clearer, thinner FM/formant balance to
+pitched chest support in the second and third harmonics, broader low/mid formants
+and warmer upper damping. Its filtering acts within the voice's useful spectrum;
+shared leveling keeps the contrast from being only a volume change.
+
+MOTION zero freezes the MOUTH-selected target. Low values make a small travelling
+contour; higher values span most of the original target path, with MOUTH retaining
+positioning influence. Keys and plucks articulate a longer attack-to-target journey,
+while leads, choir and held notes travel through slower repeating shapes. A voiced
+upper-harmonic exciter gives the bands energy to shape even at low EDGE. Motion
+changes the formants and their voiced/breath balance, rather than applying output
+tremolo. BODY and MOTION were strengthened after the first listening review found
+their dry, level-matched effect too subtle.
 
 The internal sample rate is 176.4 kHz; standard decimation produces 44.1 kHz
 audio. Index is reduced with increasing operator frequency, bandwidth and Q are
@@ -59,10 +69,14 @@ page repeats that buffer with Web Audio for seam listening.
 ```
 
 The audition task writes `testkit/murmur-audition/`: raw and level-matched WAVs,
-recipes, measurements and an accessible listening page. Full mode covers all
-voices at low/middle/high roots and velocities, five-point macro sweeps, the four
-required interaction grids, all-high cases and held loops. Metrics are mechanical
-evidence; useful dry identity and audible loop quality still require listening.
+recipes, measurements and an accessible listening page. Full mode contains 195
+cases and 390 WAVs. It covers all voices at low/middle/high roots and velocities,
+five-point BODY and MOTION sweeps on every voice, KEY sweeps for MOUTH, EDGE and
+BREATH, the four required interaction grids, all-high cases and held loops. Tests
+also compare level-independent harmonic profiles and developing spectral contours
+through useful note frames, rather than only checking endpoint sample differences.
+Metrics are mechanical evidence; useful dry identity and audible loop quality still
+require listening.
 
 The kit task writes `testkit/SnipSnap Murmur Kit/`, including the native XPM,
 sixteen mono 24-bit WAVs and the recipe-bearing `kit.json` sidecar. Generated audio

@@ -56,6 +56,77 @@ class MurmurTest {
 
     private fun distance(a: DoubleArray, b: DoubleArray): Double = a.indices.sumOf { abs(a[it] - b[it]) }
 
+    private fun harmonicMass(power: DoubleArray, harmonic: Int): Double {
+        val binHz = Dsp.RATE.toDouble() / 16384
+        val center = Keys.midiHz(60) * harmonic
+        return power.indices.filter { abs((it + 1) * binHz - center) < 2.5 * binHz }.sumOf { power[it] }
+    }
+
+    private fun contourTimes(voice: MurmurVoice): List<Double> =
+        if (voice == MurmurVoice.LEAD || voice == MurmurVoice.CHOIR) listOf(.22, .50, .85, 1.15, 1.45)
+        else listOf(.22, .30, .42, .55, .70)
+
+    @Test
+    fun `BODY retains audible harmonic support and useful quarter steps after shared leveling`() {
+        for (voice in MurmurVoice.entries) {
+            val sounds = listOf(0f, .25f, .5f, .75f, 1f).map { body ->
+                Murmur.render(voice, mapOf("BODY" to body, "MOTION" to 0f)).samples
+            }
+            val profiles = sounds.map { spectrum(it, .60, fine = true) }
+            val fullRoot = harmonicMass(profiles.last(), 1)
+            val fullChest = harmonicMass(profiles.last(), 2) + harmonicMass(profiles.last(), 3)
+            println("MURMUR BODY SUPPORT $voice: full H1 $fullRoot, H2+H3 $fullChest")
+            // A gain-normalized spectrum can differ numerically while both ends remain nearly
+            // pure sine waves. Require useful harmonic energy in the full/chesty endpoint.
+            assertTrue(fullRoot < .94, "$voice full BODY is still an almost pure root: $fullRoot")
+            assertTrue(fullChest > .05, "$voice full BODY has no useful pitched low/mid support: $fullChest")
+            assertTrue(distance(profiles.first(), profiles.last()) > .10, "$voice BODY remains a subtle endpoint change")
+            for (step in 1 until profiles.size) {
+                val change = distance(profiles[step - 1], profiles[step])
+                println("MURMUR BODY QUARTER $voice step $step: normalized harmonic distance $change")
+                assertTrue(change > .025, "$voice BODY quarter $step has little timbral activity after leveling: $change")
+            }
+        }
+    }
+
+    @Test
+    fun `MOTION travels after the onset rather than becoming a different static mouth`() {
+        for (voice in MurmurVoice.entries) {
+            val still = Murmur.render(voice, mapOf("MOTION" to 0f)).samples
+            val moving = Murmur.render(voice, mapOf("MOTION" to 1f)).samples
+            val times = contourTimes(voice)
+            val firstStill = spectrum(still, times.first(), size = 4096)
+            val firstMoving = spectrum(moving, times.first(), size = 4096)
+            val travel = times.drop(1).maxOf { time ->
+                val laterStill = spectrum(still, time, size = 4096)
+                val laterMoving = spectrum(moving, time, size = 4096)
+                firstStill.indices.sumOf { band ->
+                    abs((laterMoving[band] - firstMoving[band]) - (laterStill[band] - firstStill[band]))
+                }
+            }
+            println("MURMUR LATE TRAVEL $voice: broad spectral contour beyond 220 ms $travel")
+            // Each frame is normalized separately, so louder/quieter frames or final-output
+            // tremolo cannot satisfy this guard. Static FM articulation is subtracted too.
+            assertTrue(travel > .06, "$voice MOTION stops developing before useful note frames: $travel")
+        }
+    }
+
+    @Test
+    fun `MOTION middle and upper quarter steps change the developing vowel profile`() {
+        for (voice in MurmurVoice.entries) {
+            val times = contourTimes(voice)
+            val profiles = listOf(0f, .25f, .5f, .75f, 1f).map { motion ->
+                val samples = Murmur.render(voice, mapOf("MOTION" to motion)).samples
+                times.map { spectrum(samples, it, size = 4096) }
+            }
+            for (step in 1 until profiles.size) {
+                val change = times.indices.map { frame -> distance(profiles[step - 1][frame], profiles[step][frame]) }.average()
+                println("MURMUR MOTION QUARTER $voice step $step: mean normalized contour distance $change")
+                assertTrue(change > .025, "$voice MOTION quarter $step is perceptually inactive across useful frames: $change")
+            }
+        }
+    }
+
     @Test
     fun `the panel has five timbral macros and HOLD with valid defaults and neutrals`() {
         for (voice in MurmurVoice.entries) {
@@ -241,6 +312,7 @@ class MurmurTest {
             assertTrue(seam.isFinite() && seam < 1e-3, "$voice held formants or breath do not repeat: $seam")
             assertTrue(abs(seam - probe.seamError) < 1e-9, "$voice reports a different seam than its captured cycles")
             assertTrue(rms(probe.samples) > .001, "$voice closes its loop by going silent")
+            assertTrue(probe.samples.maxOf { abs(it) } < 1f, "$voice held native output clips the audition PCM export")
             assertContentEquals(probe.samples, Murmur.probe(voice, macros).samples, "$voice held seed is nondeterministic")
         }
     }

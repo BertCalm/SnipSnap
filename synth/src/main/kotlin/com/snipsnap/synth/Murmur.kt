@@ -84,8 +84,9 @@ internal data class MurmurProbe(
 )
 
 /**
- * Four phase operators excite five continuously retuned TPT state-variable formants. A quiet
- * root-locked, polyBLEP ramp supplies harmonics when EDGE makes the operators almost sinusoidal.
+ * Four phase operators excite five continuously retuned TPT state-variable formants. A
+ * root-locked, polyBLEP ramp with its fundamental removed supplies voiced upper harmonics when
+ * EDGE makes the operators almost sinusoidal, so moving bands have useful energy to shape.
  * The direct fundamental and direct FM body preserve pitch outside the formants. Seeded breath
  * and a finite contact accent drive the same bank, so mouth motion shapes both sources together.
  *
@@ -316,16 +317,25 @@ object Murmur {
         val held = plan != null
         val root = plan?.root ?: Keys.midiHz(midi).toDouble()
         val ratios = plan?.ratios ?: config.ratios.toDoubleArray()
+        val upperOperator = ratios.indices.maxBy { ratios[it] }
         val mouth = m.getValue("MOUTH").toDouble()
         val edge = m.getValue("EDGE").toDouble()
         val breath = m.getValue("BREATH").toDouble()
         val motion = m.getValue("MOTION").toDouble()
         val body = m.getValue("BODY").toDouble()
+        val fullness = body
+        val motionDepth = if (motion == 0.0) 0.0 else .86 * motion.pow(.65)
         val targets = config.targets
         val bands = Array(targets.first().centers.size) { Formant() }
         val indexCeiling = minOf(MAX_INDEX_RADIANS, 7_200.0 / (root * ratios.max())).coerceAtLeast(.12)
         val indexBase = minOf(indexCeiling, (.10 + edge * 3.8) * (.25 + .75 * velocity))
-        val requestedTrajectory = (config.referenceSeconds / (1.0 + 2.5 * motion)).coerceIn(.1, 3.0)
+        // A struck voice gets a clearly articulated journey rather than spending nearly its
+        // entire note at the endpoint of a 150 ms gesture. Cycles are slow enough to hear the
+        // distinct mouth shapes, with whole-cycle quantization in HOLD below.
+        val requestedTrajectory = when (config.trajectory) {
+            MurmurTrajectory.ATTACK -> config.referenceSeconds * (1.9 - .85 * sqrt(motion))
+            MurmurTrajectory.CYCLE -> config.referenceSeconds / (1.0 + .55 * sqrt(motion))
+        }.coerceIn(.1, 3.0)
         val trajectorySeconds = if (held) requestedTrajectory else minOf(requestedTrajectory, max(.1, gate - .05))
         val loopSeconds = plan?.frames?.div(RATE.toDouble()) ?: 0.0
         val contourCycles = if (held) (loopSeconds / trajectorySeconds).roundToInt().coerceIn(1, 24) else 0
@@ -340,14 +350,17 @@ object Murmur {
         val phases = DoubleArray(4)
         val steps = DoubleArray(4) { root * ratios[it] / INTERNAL_RATE }
         val noiseA = exp(-2.0 * PI * 6_000.0 / INTERNAL_RATE)
-        val highA = exp(-2.0 * PI * (10_500.0 - body * 5_000.0) / INTERNAL_RATE)
+        // BODY's damping acts within the musical spectrum, while a register floor preserves
+        // the root and a little overtone space at the top of the supported keyboard.
+        val bodyCutoff = max(root * 1.5, 5_200.0 * (1_500.0 / 5_200.0).pow(fullness))
+        val highA = exp(-2.0 * PI * bodyCutoff / INTERNAL_RATE)
         val dcA = exp(-2.0 * PI * 12.0 / INTERNAL_RATE)
         var noiseLow = 0.0
         var highLow = 0.0
         var dcLow = 0.0
         var sourceBalance = 0.0
         var sourceStep = 0.0
-        val excitationGain = .38 * velocity.pow(.8)
+        val excitationGain = .24 * velocity.pow(.8)
         // Mostly absolute formants, with only a small extreme-register shift and broader sparse
         // harmonic sampling at the top. The mouth is never retuned to the requested note.
         val registerShift = 2.0.pow(((midi - 60).coerceIn(-24, 36) / 12.0) * .035)
@@ -356,18 +369,18 @@ object Murmur {
             val t = i / INTERNAL_RATE.toDouble()
             val cycleFrame = if (held) i % period else i
             if (i % CONTROL_STRIDE == 0) {
-                val depth = motion * .34
+                val low = mouth * (1.0 - motionDepth)
+                val high = low + motionDepth
                 val position = when {
                     motion == 0.0 -> mouth
                     held || config.trajectory == MurmurTrajectory.CYCLE -> {
                         val contour = if (held) 2.0 * PI * contourCycles * cycleFrame / period
                             else 2.0 * PI * t / trajectorySeconds
-                        val center = mouth * (1.0 - 2.0 * depth) + depth
-                        center + depth * sin(config.direction * contour)
+                        (low + high) * .5 + (high - low) * .5 * sin(config.direction * contour)
                     }
                     else -> {
-                        val from = mouth * (1.0 - depth) + if (config.direction > 0) 0.0 else depth
-                        val to = mouth * (1.0 - depth) + if (config.direction > 0) depth else 0.0
+                        val from = if (config.direction > 0) low else high
+                        val to = if (config.direction > 0) high else low
                         from + (to - from) * smooth(t / trajectorySeconds)
                     }
                 }.coerceIn(0.0, 1.0)
@@ -378,9 +391,14 @@ object Murmur {
                 for (band in bands.indices) {
                     val center = exp(ln(a.centers[band]) * (1.0 - blend) + ln(b.centers[band]) * blend) * registerShift
                     val width = exp(ln(a.widths[band]) * (1.0 - blend) + ln(b.widths[band]) * blend) * registerWidth *
-                        if (band == 0) .70 + body * .8 else 1.0
+                        if (band < 2) .65 + fullness * 1.1 else 1.0
+                    val support = when (band) {
+                        0 -> .75 + fullness * .35
+                        1 -> .75 + fullness * .90
+                        else -> 1.55 - fullness * 1.05
+                    }
                     val gain = sqrt(a.gains[band].pow(2) * (1.0 - blend) + b.gains[band].pow(2) * blend) *
-                        (1.0 - body * .60 * band / (bands.size - 1))
+                        support
                     bands[band].tune(center, max(center / MAX_FORMANT_Q, width), gain, i == 0)
                 }
                 val nextBalance = a.sourceBalance * (1.0 - blend) + b.sourceBalance * blend
@@ -408,7 +426,8 @@ object Murmur {
                 MurmurRouting.STACK -> sin(p0 + .8 * index * sin(p1 + .55 * index * sin(p2 + .35 * index * sin(p3))))
             }
             val ramp = 2.0 * phases[0] - 1.0 - polyBlep(phases[0], steps[0])
-            val voiced = (.76 * fm + .24 * ramp) * (.94 - .18 * breath)
+            val upperRamp = ramp + (2.0 / PI) * sin(p0)
+            val voiced = (.55 * fm + (.40 + .20 * sqrt(motion)) * upperRamp) * (.94 - .18 * breath)
             val n = repeatedNoise?.get(cycleFrame)?.toDouble() ?: noise.next().toDouble()
             noiseLow = noiseA * noiseLow + (1.0 - noiseA) * n
             val contact = if (held || t >= contactSeconds) 0.0 else sin(PI * t / contactSeconds).pow(2) * (.12 + .40 * edge)
@@ -417,14 +436,18 @@ object Murmur {
             val drive = voiced + unvoiced
             var formant = 0.0
             for (band in bands) formant += band.next(drive)
-            val anchor = sin(p0) * (.46 + .32 * body)
-            // Thin/intimate retains a little of the existing upper operator as a carrier; BODY
-            // rounds that away while lifting the root, broadening its lowest band and damping
-            // upper formants. This keeps BODY audible even in a nearly sinusoidal choir patch.
-            val direct = fm * (.20 + .10 * body) + .14 * (1.0 - body) * sin(p2)
-            var y = anchor + direct + formant * (1.55 - .35 * body)
+            val anchor = sin(p0) * (.30 + .20 * fullness)
+            // Chesty support contains pitched second/third harmonics, not an added sub or a
+            // louder sine. Thin BODY keeps the existing upper carrier and a clearer FM edge;
+            // full BODY supports low mids and rounds away upper-formant/direct brightness.
+            // Quadrature keeps the chest partials from cancelling the ramp's sine harmonics
+            // around rounded targets: full BODY must contain audible low mids, not revert to
+            // an almost pure fundamental after shared loudness matching.
+            val chest = fullness * (.55 * cos(2.0 * p0) + .24 * cos(3.0 * p0))
+            val direct = fm * (.60 - .42 * fullness) + .40 * (1.0 - fullness) * cos(2.0 * PI * phases[upperOperator])
+            var y = anchor + chest + direct + formant * (1.30 + .60 * sqrt(motion))
             highLow = highA * highLow + (1.0 - highA) * y
-            y = .16 * y + .84 * highLow
+            y = .06 * y + .94 * highLow
             y *= excitationGain * amplitude
             dcLow = dcA * dcLow + (1.0 - dcA) * y
             y -= dcLow

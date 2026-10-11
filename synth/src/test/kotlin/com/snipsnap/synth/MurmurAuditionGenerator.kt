@@ -18,8 +18,8 @@ import kotlin.math.sqrt
 
 /**
  * Actual JVM-engine listening evidence, with untouched native PCM and the repository's
- * shared audition level. The default 101-case library is bounded for browser use;
- * --full renders the complete 145-case pitch/velocity and interaction matrix.
+ * shared audition level. The default 151-case library is bounded for browser use;
+ * --full renders the complete 195-case pitch/velocity and interaction matrix.
  * All presets and sonic conclusions remain provisional until the owner's listening.
  */
 object MurmurAuditionGenerator {
@@ -40,8 +40,10 @@ object MurmurAuditionGenerator {
     private val groups = linkedMapOf(
         "first-listen" to ("First listen" to "Twelve original dry preset proposals. Start here; the planned 36-preset roster awaits your sonic approval."),
         "defaults" to ("Six dry defaults" to "Same C4 root and full velocity, one voice at a time. No rack effects."),
+        "body-sweeps" to ("BODY · thin to full" to "All six voices at C4, velocity 1. Compare 0, .25, .5, .75 and 1 at matched level: listen for low/mid weight, direct support and upper damping. All other controls retain each voice's defaults."),
+        "motion-sweeps" to ("MOTION · still to moving" to "All six voices at C4, velocity 1. Compare 0, .25, .5, .75 and 1. Listen through the whole note for a wider, developing vowel contour; all other controls retain each voice's defaults."),
         "pitch-velocity" to ("Pitch & velocity" to "C2, C4 and C7 span the declared MIDI 36–96 range. Compare native level to hear excitation energy; matched level makes timbre easier to compare."),
-        "macro-sweeps" to ("Five-point macro sweeps" to "KEY at C4, velocity 1. Change one macro through 0, .25, .5, .75 and 1; all companions retain KEY defaults."),
+        "macro-sweeps" to ("MOUTH, EDGE & BREATH sweeps" to "KEY at C4, velocity 1. Change one macro through 0, .25, .5, .75 and 1; all companions retain KEY defaults. BODY and MOTION have their own all-voice comparison groups."),
         "mouth-edge" to ("MOUTH × EDGE" to "LEAD: compare mouth-shaped spectral emphasis against increasing phase-modulation bite."),
         "mouth-breath" to ("MOUTH × BREATH" to "CHOIR: the unvoiced source should share the mouth shape while a voiced root remains."),
         "motion-breath" to ("MOTION × BREATH" to "CHOIR: compare a static target with moving formants and increasingly airy excitation."),
@@ -66,7 +68,7 @@ object MurmurAuditionGenerator {
         }
         val rows = ArrayList<Map<String, Any?>>(cases.size)
         val assetPaths = mutableSetOf<String>()
-        var keyReference: FloatArray? = null
+        val voiceReferences = mutableMapOf<MurmurVoice, FloatArray>()
         val started = System.nanoTime()
         var renderMilliseconds = 0.0
 
@@ -100,8 +102,9 @@ object MurmurAuditionGenerator {
             if (loop) require(probe.previousCycle.isNotEmpty() && seam != null && seam.isFinite()) {
                 "${case.id} has no independent previous cycle for its seam measurement"
             }
-            if (case.id == "default_key") keyReference = matched.samples.copyOf()
-            val macroDistance = if (case.group == "macro-sweeps") keyReference?.let { normalizedDistance(it, matched.samples) } else null
+            if (case.group == "defaults") voiceReferences[p.voice] = matched.samples.copyOf()
+            val macroDistance = if (case.group in setOf("macro-sweeps", "body-sweeps", "motion-sweeps"))
+                voiceReferences[p.voice]?.let { normalizedDistance(it, matched.samples) } else null
             val recipePath = "recipes/${case.id}.json"
             File(root, recipePath).apply { parentFile.mkdirs(); writeText(Json.write(p.toJsonValue()) + "\n") }
             assetPaths += recipePath
@@ -128,7 +131,8 @@ object MurmurAuditionGenerator {
                 ),
                 "bodySpectrum" to bodySpectrum(raw), "seamError" to seam,
                 "seamMetric" to if (loop) "Keys.seamError on two independently simulated adjacent settled cycles" else null,
-                "normalizedDistanceFromKeyDefault" to macroDistance,
+                "normalizedDistanceFromKeyDefault" to macroDistance.takeIf { p.voice == MurmurVoice.KEY },
+                "normalizedDistanceFromVoiceDefault" to macroDistance,
                 "renderMilliseconds" to renderMs,
                 "renderMillisecondsPerAudioSecond" to renderMs / raw.durationSeconds,
                 "rawSha256" to sha256(File(root, rawPath)), "matchedSha256" to sha256(File(root, matchedPath)),
@@ -155,6 +159,8 @@ object MurmurAuditionGenerator {
             "noteMatrix" to NOTES, "velocityMatrix" to VELOCITIES,
             "pitchVelocityCartesian" to full, "interactionSteps" to if (full) listOf(0f, .5f, 1f) else listOf(0f, 1f),
             "macroSweepVoice" to "KEY", "macroSweepSteps" to STEPS,
+            "bodyMotionSweepVoices" to MurmurVoice.entries.map { it.name },
+            "bodyMotionSweepSteps" to STEPS,
             "renderMilliseconds" to renderMilliseconds,
             "generationMilliseconds" to (System.nanoTime() - started) / 1_000_000.0,
             "metricNotes" to METRIC_NOTES,
@@ -172,8 +178,10 @@ object MurmurAuditionGenerator {
 
             ${rows.size} actual JVM-engine cases; ${rows.size * 2} mono 24-bit WAVs at 44.1 kHz.
             Generated with `./gradlew :synth:generateMurmurAudition${if (full) " -PmurmurFull" else ""}`.
-            The default compact set has 101 cases; `--full` adds the complete 3 × 3 pitch/velocity
-            matrix and 3 × 3 interaction grids (145 cases). No rack effects are applied.
+            The default compact set has 151 cases; `--full` adds the complete 3 × 3 pitch/velocity
+            matrix and 3 × 3 interaction grids (195 cases). No rack effects are applied.
+            BODY and MOTION each have five-point comparisons for all six voices; MOUTH,
+            EDGE and BREATH retain five-point KEY comparisons.
 
             Open index.html, or serve the folder over HTTP for sample-accurate Web Audio playback.
             Start with the twelve first-listen presets and six defaults. Use matched level to compare
@@ -205,8 +213,12 @@ object MurmurAuditionGenerator {
                     if (midi == 96) " At C7, sparse harmonic sampling may weaken apparent vowel identity." else "",
                 midi = midi, velocity = velocity))
         }
-        for (macro in TIMBRE) for (step in STEPS) add(case("key_${macro.lowercase()}_${tag(step)}", "macro-sweeps",
-            MurmurVoice.KEY, "$macro · $step", sweepDescription(macro), mapOf(macro to step)))
+        for (macro in TIMBRE) {
+            val voices = if (macro in listOf("BODY", "MOTION")) MurmurVoice.entries else listOf(MurmurVoice.KEY)
+            val group = when (macro) { "BODY" -> "body-sweeps"; "MOTION" -> "motion-sweeps"; else -> "macro-sweeps" }
+            for (voice in voices) for (step in STEPS) add(case("${voice.name.lowercase()}_${macro.lowercase()}_${tag(step)}", group,
+                voice, "${voice.name} · $macro $step", sweepDescription(macro), mapOf(macro to step)))
+        }
         val interactions = listOf(
             Triple("mouth-edge", MurmurVoice.LEAD, "MOUTH" to "EDGE"),
             Triple("mouth-breath", MurmurVoice.CHOIR, "MOUTH" to "BREATH"),
@@ -331,5 +343,5 @@ object MurmurAuditionGenerator {
         else -> error("Unsupported manifest type ${value::class}")
     }
 
-    private const val METRIC_NOTES = "Raw peak/RMS/DC and Loudness.of use the engine's final-rate buffer before shared loudness targeting or PCM quantization. Raw export gain is exactly 1; out-of-range raw PCM aborts generation. Matched WAVs use the repository's shared .03 audition target and .99 peak guard; actual gain and loudness are recorded. Pitch uses the shared detector over .08–.33 s; C7 exceeds its 1200 Hz bound, so a labelled requested-root-range autocorrelation probe searches only the requested root ± a fifth. That guided probe cannot diagnose arbitrary out-of-range pitches; the unmodified stock detector is also recorded. Whole-file classification often reads LOOP due to duration; headClassifier separately measures the first 1.25 s without that duration shortcut. Body spectral power above 16 kHz describes high-frequency content, not a proven aliasing measurement. Macro distance compares matched KEY buffers with zero padding and is a waveform diagnostic, not a perceptual verdict. Keys.seamError compares the actual independent preceding and final settled cycle, and is gain invariant; adjacent wrapStep and wrapSlopeChange include ordinary waveform motion and have no invented acceptance threshold. Rendering cost excludes encoding/metrics and varies with JIT/hardware. Measurements support listening; no metric approves sonic identity."
+    private const val METRIC_NOTES = "Raw peak/RMS/DC and Loudness.of use the engine's final-rate buffer before shared loudness targeting or PCM quantization. Raw export gain is exactly 1; out-of-range raw PCM aborts generation. Matched WAVs use the repository's shared .03 audition target and .99 peak guard; actual gain and loudness are recorded. Pitch uses the shared detector over .08–.33 s; C7 exceeds its 1200 Hz bound, so a labelled requested-root-range autocorrelation probe searches only the requested root ± a fifth. That guided probe cannot diagnose arbitrary out-of-range pitches; the unmodified stock detector is also recorded. Whole-file classification often reads LOOP due to duration; headClassifier separately measures the first 1.25 s without that duration shortcut. Body spectral power above 16 kHz describes high-frequency content, not a proven aliasing measurement. Macro distance compares matched buffers against the same voice's default with zero padding and is a waveform diagnostic, not a perceptual verdict. Keys.seamError compares the actual independent preceding and final settled cycle, and is gain invariant; adjacent wrapStep and wrapSlopeChange include ordinary waveform motion and have no invented acceptance threshold. Rendering cost excludes encoding/metrics and varies with JIT/hardware. Measurements support listening; no metric approves sonic identity."
 }
