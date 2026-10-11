@@ -135,6 +135,10 @@ class PrismIntegrationTest {
             "TUNE" to 7 / Prism.TUNE_SEMITONES.toFloat(), "HOLD" to 1f), velocity = .35f, template = template)
         assertContentEquals(expected, note.snip.samples.copyOfRange(marker, marker * 2),
             "held zones preserve note energy and the saved spectral template")
+        val silent = Keys.prismPad(voice, macros, midi, velocity = 0f, template = template)
+        assertEquals(note.loopStartFrame, silent.loopStartFrame)
+        assertEquals(note.snip.frameCount, silent.snip.frameCount)
+        assertTrue(silent.snip.samples.all { it == 0f }, "zero velocity exports a silent held zone")
         assertFailsWith<IllegalArgumentException> { Keys.prismPad(voice, macros, Prism.rootMidi(voice) - 1) }
         assertFailsWith<IllegalArgumentException> { Keys.prismPad(voice, macros, Prism.rootMidi(voice) + 25) }
     }

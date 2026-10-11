@@ -378,7 +378,7 @@ object Keys {
         )
         val loop = Prism.renderLoop(voice, m, velocity, template, cancelled)
         val samples = loop + loop
-        requireSeam("PRISM $voice ${Scales.nameOf(midi)}", samples, loop.size)
+        // renderLoop checks independently synthesized cycles, including silent velocity.
         return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
