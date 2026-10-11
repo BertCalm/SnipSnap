@@ -32,12 +32,12 @@ object Relay {
     private const val OUTPUT_GAIN = .42
 
     private val starting = arrayOf(
-        floatArrayOf(.25f, .30f, .45f, .50f, .50f),
-        floatArrayOf(.20f, .45f, .40f, .35f, .45f),
-        floatArrayOf(.40f, .60f, .25f, .60f, .35f),
-        floatArrayOf(.35f, .30f, .65f, .45f, .65f),
-        floatArrayOf(.55f, .40f, .50f, .65f, .60f),
-        floatArrayOf(.45f, .15f, .80f, .50f, .80f),
+        floatArrayOf(0f, .22f, .22f, .60f, .55f),
+        floatArrayOf(0f, .72f, .15f, .45f, .40f),
+        floatArrayOf(0f, .58f, .10f, .68f, .35f),
+        floatArrayOf(0f, .10f, .45f, .60f, .80f),
+        floatArrayOf(0f, .22f, .16f, .72f, .70f),
+        floatArrayOf(0f, .08f, .86f, .42f, .95f),
     )
 
     fun macrosFor(voice: RelayVoice): List<MacroSpec> {
@@ -78,28 +78,85 @@ object Relay {
     /** Six dry identities are proposals for listening; preset expansion follows sonic approval. */
     fun phraseFor(voice: RelayVoice): RelayPhrase {
         val gains = when (voice) {
-            RelayVoice.KEY -> floatArrayOf(1f, .90f, .62f, .65f)
-            RelayVoice.BASS -> floatArrayOf(.95f, 1f, .40f, .85f)
-            RelayVoice.PLUCK -> floatArrayOf(1f, .62f, .75f, .58f)
-            RelayVoice.ORGAN -> floatArrayOf(.65f, 1f, .40f, .85f)
-            RelayVoice.CHIME -> floatArrayOf(.75f, .70f, 1f, .58f)
-            RelayVoice.FLOW -> floatArrayOf(.65f, .85f, .65f, 1f)
+            RelayVoice.KEY -> floatArrayOf(1f, .90f, .72f, .60f)
+            RelayVoice.BASS -> floatArrayOf(1f, .90f, .32f, .60f)
+            RelayVoice.PLUCK -> floatArrayOf(1f, .40f, .85f, .38f)
+            RelayVoice.ORGAN -> floatArrayOf(.50f, 1f, .45f, .70f)
+            RelayVoice.CHIME -> floatArrayOf(.55f, .50f, 1f, .50f)
+            RelayVoice.FLOW -> floatArrayOf(.40f, .60f, .50f, 1f)
         }
         val decays = when (voice) {
-            RelayVoice.PLUCK -> floatArrayOf(.13f, .65f, .40f, .85f)
-            RelayVoice.BASS -> floatArrayOf(.22f, .90f, .30f, .90f)
-            RelayVoice.CHIME -> floatArrayOf(.28f, 1.00f, 1.15f, 1.20f)
-            RelayVoice.FLOW -> floatArrayOf(.55f, 1.20f, .95f, 1.50f)
-            else -> floatArrayOf(.30f, 1.00f, .70f, 1.10f)
+            RelayVoice.KEY -> floatArrayOf(.16f, 1.00f, .50f, .65f)
+            // A bass string rings through its picked answer; the pluck voice remains short.
+            RelayVoice.BASS -> floatArrayOf(1.00f, 1.20f, .25f, .55f)
+            RelayVoice.PLUCK -> floatArrayOf(.07f, .55f, .22f, .42f)
+            RelayVoice.ORGAN -> floatArrayOf(.30f, 2.40f, .45f, 1.30f)
+            RelayVoice.CHIME -> floatArrayOf(.16f, .80f, 2.40f, .70f)
+            RelayVoice.FLOW -> floatArrayOf(.70f, 1.80f, 1.40f, 2.20f)
         }
-        val brightness = floatArrayOf(.60f, .45f, .85f, .25f)
+        val brightness = when (voice) {
+            RelayVoice.KEY -> floatArrayOf(.78f, .68f, .72f, .24f)
+            RelayVoice.BASS -> floatArrayOf(.70f, .46f, .45f, .18f)
+            RelayVoice.PLUCK -> floatArrayOf(.96f, .60f, .82f, .30f)
+            RelayVoice.ORGAN -> floatArrayOf(.58f, .94f, .62f, .40f)
+            RelayVoice.CHIME -> floatArrayOf(.78f, .50f, 1f, .26f)
+            RelayVoice.FLOW -> floatArrayOf(.48f, .60f, .76f, .52f)
+        }
+        val order = when (voice) {
+            RelayVoice.KEY -> listOf(0, 1, 3, 2)
+            RelayVoice.BASS -> listOf(1, 0, 3, 2)
+            RelayVoice.PLUCK -> listOf(0, 2, 3, 1)
+            RelayVoice.ORGAN -> listOf(1, 3, 0, 2)
+            RelayVoice.CHIME -> listOf(2, 3, 0, 1)
+            RelayVoice.FLOW -> listOf(3, 1, 2, 0)
+        }
+        val dwells = when (voice) {
+            RelayVoice.KEY -> floatArrayOf(.65f, 1.40f, .65f, 1.30f)
+            RelayVoice.BASS -> floatArrayOf(1.15f, .60f, 1.40f, .85f)
+            RelayVoice.PLUCK -> floatArrayOf(1.35f, .55f, .75f, 1.35f)
+            RelayVoice.ORGAN -> floatArrayOf(2.00f, .50f, .55f, .95f)
+            RelayVoice.CHIME -> floatArrayOf(2.00f, .75f, .50f, .75f)
+            RelayVoice.FLOW -> floatArrayOf(1.25f, .75f, .75f, 1.25f)
+        }
+        val transition = when (voice) {
+            RelayVoice.KEY -> .18f
+            RelayVoice.BASS -> .12f
+            RelayVoice.PLUCK -> .10f
+            RelayVoice.ORGAN -> .28f
+            RelayVoice.CHIME -> .14f
+            RelayVoice.FLOW -> .44f
+        }
+        val alternates = when (voice) {
+            RelayVoice.KEY -> listOf(listOf(0, 2, 3, 1), listOf(3, 1, 0, 2), listOf(2, 0, 1, 3))
+            RelayVoice.BASS -> listOf(listOf(0, 3, 2, 1), listOf(3, 1, 2, 0), listOf(2, 0, 1, 3))
+            RelayVoice.PLUCK -> listOf(listOf(2, 0, 1, 3), listOf(3, 0, 2, 1), listOf(1, 3, 0, 2))
+            RelayVoice.ORGAN -> listOf(listOf(1, 2, 3, 0), listOf(0, 3, 2, 1), listOf(2, 0, 1, 3))
+            RelayVoice.CHIME -> listOf(listOf(0, 2, 3, 1), listOf(2, 1, 0, 3), listOf(1, 3, 2, 0))
+            RelayVoice.FLOW -> listOf(listOf(1, 3, 0, 2), listOf(2, 0, 3, 1), listOf(0, 2, 1, 3))
+        }
+        val accents = when (voice) {
+            RelayVoice.KEY -> listOf(0f to 1f, .5f to .25f, 1.75f to .62f, 2.75f to .40f)
+            RelayVoice.BASS -> listOf(0f to 1f, .5f to .40f, 1f to .70f, 1.75f to .30f,
+                2f to .90f, 2.75f to .65f, 3.5f to .72f)
+            RelayVoice.PLUCK -> listOf(0f to 1f, .75f to .75f, 1.25f to .30f,
+                2f to .85f, 2.5f to .40f, 3.25f to .60f)
+            RelayVoice.ORGAN -> listOf(0f to .70f, 2f to .50f, 3.1f to .25f)
+            RelayVoice.CHIME -> listOf(0f to .40f, 1.2f to .30f, 2f to .95f,
+                2.75f to .65f, 3.5f to .40f)
+            RelayVoice.FLOW -> listOf(0f to .50f, 1.8f to .30f, 3.2f to .20f)
+        }
+        val tempo = when (voice) {
+            RelayVoice.KEY -> 112f
+            RelayVoice.BASS -> 126f
+            RelayVoice.PLUCK -> 145f
+            RelayVoice.ORGAN -> 88f
+            RelayVoice.CHIME -> 104f
+            RelayVoice.FLOW -> 72f
+        }
         return RelayPhrase(RelayRole.entries.mapIndexed { i, role ->
             RelaySource(role, gains[i], brightness[i], decays[i])
-        }, listOf(RelaySlot(0, 1f, .20f), RelaySlot(1, 1f, .25f),
-            RelaySlot(3, 1f, .30f), RelaySlot(2, 1f, .25f)),
-            listOf(listOf(0, 1, 3, 2), listOf(0, 2, 1, 3), listOf(3, 1, 2, 0), listOf(2, 3, 0, 1)),
-            listOf(RelayAccent(0f, 1f), RelayAccent(.75f, .50f), RelayAccent(1.5f, .72f),
-                RelayAccent(2.5f, .85f), RelayAccent(3.25f, .55f)))
+        }, order.mapIndexed { i, source -> RelaySlot(source, dwells[i], transition) },
+            listOf(order) + alternates, accents.map { RelayAccent(it.first, it.second) }, tempo)
     }
 
     internal data class AccentEvent(val beat: Double, val timeSeconds: Double, val strength: Double)
@@ -118,6 +175,7 @@ object Relay {
         val gateSeconds: Double,
         val rawPeak: Double,
         val accents: List<AccentEvent>,
+        /** Actual output trajectory: finite handoffs stop at the gate; HOLD shows one cycle. */
         val weights: List<WeightFrame>,
     )
 
@@ -179,15 +237,17 @@ object Relay {
         }
 
         /** weights sum to one; excitation histories remain attached to their original source. */
-        fun at(timeSeconds: Double, weights: DoubleArray, envelopes: DoubleArray) {
+        fun at(timeSeconds: Double, weights: DoubleArray, envelopes: DoubleArray,
+               releaseAge: Double = 0.0) {
             weights.fill(0.0); envelopes.fill(0.0)
             val t = if (periodic) ((timeSeconds % seconds) + seconds) % seconds
                 else timeSeconds.coerceIn(0.0, seconds - 1e-9)
-            addOrder(t, lo, 1.0 - morph, weights, envelopes)
-            if (hi != lo && morph > 0.0) addOrder(t, hi, morph, weights, envelopes)
+            addOrder(t, lo, 1.0 - morph, weights, envelopes, releaseAge)
+            if (hi != lo && morph > 0.0) addOrder(t, hi, morph, weights, envelopes, releaseAge)
         }
 
-        private fun addOrder(t: Double, roster: Int, mix: Double, weights: DoubleArray, envelopes: DoubleArray) {
+        private fun addOrder(t: Double, roster: Int, mix: Double, weights: DoubleArray,
+                             envelopes: DoubleArray, releaseAge: Double) {
             val contributions = DoubleArray(starts.size)
             val ages = DoubleArray(starts.size)
             for (slot in starts.indices) {
@@ -209,14 +269,15 @@ object Relay {
             for (slot in starts.indices) {
                 val source = phrase.orderRoster[roster][slot]
                 val w = mix * contributions[slot] / total
-                val age = if (contributions[slot] > 1e-12) ages[slot] / contributions[slot] else 0.0
+                val age = (if (contributions[slot] > 1e-12) ages[slot] / contributions[slot] else 0.0) + releaseAge
                 val definition = phrase.sources[source]
                 val transient = exp(-age / definition.decaySeconds)
                 val envelope = when (definition.role) {
-                    RelayRole.PLUCK -> .25 + .75 * transient
-                    RelayRole.BELL -> .48 + .52 * transient
-                    RelayRole.ORGAN -> .91 + .09 * transient
-                    RelayRole.SOFT -> .96 - .16 * transient
+                    // A string's root keeps ringing after its upper partials have damped.
+                    RelayRole.PLUCK -> .30 + .70 * transient
+                    RelayRole.BELL -> .38 + .62 * transient
+                    RelayRole.ORGAN -> .86 + .14 * smooth(age / .035)
+                    RelayRole.SOFT -> .16 + .84 * smooth(age / (.12 + .32 * definition.decaySeconds))
                 }
                 weights[source] += w
                 envelopes[source] += w * envelope
@@ -232,48 +293,99 @@ object Relay {
         return weightFrames(schedule)
     }
 
-    private fun weightFrames(schedule: Schedule): List<WeightFrame> {
+    private fun weightFrames(schedule: Schedule, durationSeconds: Double = schedule.seconds,
+                             gateSeconds: Double = durationSeconds): List<WeightFrame> {
         val w = DoubleArray(schedule.phrase.sources.size)
         val e = DoubleArray(w.size)
-        val count = ceil(schedule.seconds / .01).toInt()
+        val count = ceil(durationSeconds / .01).toInt()
         return (0..count).map { index ->
-            val t = min(schedule.seconds, index * .01)
-            schedule.at(t, w, e)
+            val t = min(durationSeconds, index * .01)
+            schedule.at(min(t, gateSeconds), w, e)
             WeightFrame(t, w.toList())
         }
     }
 
-    /** Original finite harmonic spectra, with fundamental dominance at every COLOR. */
+    /**
+     * Four deliberately different original spectra. Each has a present, largest single root
+     * partial, but the upper registers carry enough energy to be heard as source handoffs.
+     * The first audition's 86–93% root-energy mixtures sounded like one sine oscillator.
+     */
     private fun table(source: RelaySource, color: Double, hz: Double, seed: Int): FloatArray {
-        val c = (.18 + .70 * color + .25 * (source.brightness - .5)).coerceIn(0.0, 1.0)
+        val c = (color + .42 * (source.brightness - .5)).coerceIn(0.0, 1.0)
         val amplitudes = when (source.role) {
-            RelayRole.PLUCK -> doubleArrayOf(0.0, 1.0, .10 + .35 * c, .035 + .245 * c,
-                .01 + .14 * c, .005 + .085 * c, .035 * c)
-            RelayRole.ORGAN -> doubleArrayOf(0.0, 1.0, .22 + .16 * c, .13 + .20 * c,
-                .04 + .065 * c, 0.0, .02 + .065 * c, 0.0, .035 * c)
-            RelayRole.BELL -> doubleArrayOf(0.0, 1.0, .03 + .13 * c, .06 + .37 * c,
-                0.0, .025 + .245 * c, 0.0, .015 + .145 * c, 0.0, .085 * c)
-            RelayRole.SOFT -> doubleArrayOf(0.0, 1.0, .025, -.085 - .16 * c,
-                0.0, .012 + .055 * c, 0.0, -.02 * c)
+            // Muted string: a picked, dense harmonic burst that can lose its upper register
+            // without losing the root. The high and low banks have the same continuous phase.
+            RelayRole.PLUCK -> DoubleArray(25) { harmonic ->
+                when (harmonic) {
+                    0 -> 0.0
+                    1 -> 1.0
+                    else -> harmonic.toDouble().pow(-1.35 + .60 * c) * (.75 + .25 * c) *
+                        (.78 + .22 * cos(harmonic * .83)) + when (harmonic) {
+                            // The string's low overtones support the picked note after the
+                            // dense upper register damps, rather than collapsing to a sine.
+                            2 -> .12 + .14 * c
+                            3 -> .08 + .12 * c
+                            else -> 0.0
+                        }
+                }
+            }
+            // Drawbars: strong octave registers distinguish this sustained body from both
+            // the string's decaying saw-like burst and the bell's predominantly odd detail.
+            RelayRole.ORGAN -> doubleArrayOf(0.0, 1.0, .55 + .40 * c, .18 + .15 * c,
+                .20 + .55 * c, 0.0, .08 + .32 * c, 0.0, .04 + .20 * c, 0.0,
+                .025 + .12 * c, 0.0, .015 + .08 * c)
+            // Integer-ratio FM-like bell. Bright odd overtones ring above a supported root,
+            // then damp independently through the scheduled source-excitation contour.
+            RelayRole.BELL -> doubleArrayOf(0.0, 1.0, .06, .48 + .40 * c,
+                0.0, .18 + .40 * c, 0.0, .07 + .23 * c, 0.0, .025 + .125 * c,
+                0.0, .01 + .07 * c)
+            // Slow rounded triangle: sparse, hollow and soft; the source's onset swells.
+            RelayRole.SOFT -> doubleArrayOf(0.0, 1.0, 0.0, -.16 - .20 * c,
+                0.0, .035 + .105 * c, 0.0, -.01 - .055 * c, 0.0, .025 * c)
         }
         for (harmonic in amplitudes.indices) {
             val frequency = harmonic * hz
             // Fade before output Nyquist; source generation contains no unrestricted FM/noise.
-            amplitudes[harmonic] *= (1.0 - smooth((frequency - 12_000.0) / 6_000.0))
+            amplitudes[harmonic] *= (1.0 - smooth((frequency - 10_000.0) / 7_000.0))
+            // The densely populated string spectrum darkens toward the top of the keyboard.
+            // Keep its pitched low overtones instead of letting dozens of high harmonics
+            // dominate a short high note. Sparse drawbars and bell registers keep their shape.
+            if (source.role == RelayRole.PLUCK) {
+                amplitudes[harmonic] *= (1.0 - smooth((frequency - 2_000.0) / 5_000.0))
+            }
         }
         val rms = sqrt(amplitudes.sumOf { it * it } / 2.0).coerceAtLeast(.001)
         val phases = Dsp.phases(amplitudes.size, seed)
-        return FloatArray(TABLE_SIZE + 1) { sample ->
+        val output = FloatArray(TABLE_SIZE + 1) { sample ->
             val angle = 2.0 * PI * (sample % TABLE_SIZE) / TABLE_SIZE
             var value = 0.0
             for (harmonic in 1 until amplitudes.size) {
                 // Shared root phase prevents silent cancellation in broad blends. Upper partial
                 // phases are seeded per generated source, stable across all macro settings.
-                val offset = if (harmonic == 1) 0.0 else .10 * sin(phases[harmonic])
+                val offset = if (harmonic == 1) 0.0 else when (source.role) {
+                    // A balanced string waveform has crests on both half-cycles, avoiding
+                    // a narrow, one-sided harmonic spike at the lowest supported notes.
+                    RelayRole.PLUCK -> .35 * sin(phases[harmonic])
+                    RelayRole.ORGAN -> .08 * sin(phases[harmonic])
+                    RelayRole.BELL -> PI / 3.0 + .30 * sin(phases[harmonic])
+                    RelayRole.SOFT -> 0.0
+                }
                 value += amplitudes[harmonic] * sin(harmonic * angle + offset)
             }
             (.45 * value / rms).toFloat()
         }
+        // Static bank calibration, before synthesis. Finite coefficient sums have no feedback
+        // or nonlinear stage; peak trimming only bounds unusually coherent dense tables.
+        val peak = output.maxOf { abs(it) }
+        if (peak > 1.5f) for (index in output.indices) output[index] *= 1.5f / peak
+        return output
+    }
+
+    private fun sourceExcitation(role: RelayRole, envelope: Double): Double = when (role) {
+        RelayRole.PLUCK -> ((envelope - .30) / .70).coerceIn(0.0, 1.0)
+        RelayRole.BELL -> ((envelope - .38) / .62).coerceIn(0.0, 1.0)
+        RelayRole.ORGAN -> .88
+        RelayRole.SOFT -> ((envelope - .16) / .84).coerceIn(0.0, 1.0) * .55
     }
 
     private fun read(table: FloatArray, phase: Double): Double {
@@ -305,11 +417,11 @@ object Relay {
         // starting a fresh late accent would turn a terminal tail into another attack.
         }.filter { p.held || it.timeSeconds < p.gateSeconds }
         val lowTables = recipe.sources.mapIndexed { index, source ->
-            table(source, max(0.0, color - .30), p.actualHz,
+            table(source, max(0.0, color - .55), p.actualHz,
                 Dsp.seedFor("RELAY", voice.name, midiFor(voice, m.getValue("TUNE")), index))
         }
         val highTables = recipe.sources.mapIndexed { index, source ->
-            table(source, min(1.0, color + .12 + .15 * velocity), p.actualHz,
+            table(source, min(1.0, color + .17 + .18 * velocity), p.actualHz,
                 Dsp.seedFor("RELAY", voice.name, midiFor(voice, m.getValue("TUNE")), index))
         }
         val cycle = p.phraseFrames * Dsp.OVERSAMPLE
@@ -320,8 +432,7 @@ object Relay {
         val currentEnvelopes = DoubleArray(recipe.sources.size)
         val nextWeights = DoubleArray(recipe.sources.size)
         val nextEnvelopes = DoubleArray(recipe.sources.size)
-        val cutoff = max(2.4 * p.actualHz, 650.0 + 11_000.0 * color.pow(1.5))
-        val filterA = 1.0 - exp(-2.0 * PI * min(cutoff, 16_000.0) / INTERNAL_RATE)
+        val cutoff = max(3.0 * p.actualHz, 400.0 + 14_000.0 * color.pow(2.0))
         val phaseStep = p.actualHz / INTERNAL_RATE
         var phase = 0.0
         var pole1 = 0.0
@@ -330,12 +441,19 @@ object Relay {
         var nextGlobal = 0.0
         var accent = 0.0
         var nextAccent = 0.0
+        var filterA = 0.0
+        var nextFilterA = 0.0
         var rawPeak = 0.0
 
-        fun contours(frame: Int, weights: DoubleArray, envelopes: DoubleArray): Pair<Double, Double> {
+        fun contours(frame: Int, weights: DoubleArray, envelopes: DoubleArray): Triple<Double, Double, Double> {
             val seconds = frame.toDouble() / INTERNAL_RATE
             val local = if (p.held) seconds % p.phraseSeconds else seconds
-            schedule.at(local, weights, envelopes)
+            // Once the finite note is released, the current source mixture rings out. Its
+            // original excitation histories continue to age, but no new handoff starts in
+            // the tail. HOLD retains the complete periodically repeating source schedule.
+            val scheduleTime = if (p.held) local else min(local, p.gateSeconds)
+            val releaseAge = if (p.held) 0.0 else max(0.0, local - p.gateSeconds)
+            schedule.at(scheduleTime, weights, envelopes, releaseAge)
             var emphasis = 0.0
             for (event in accentEvents) {
                 var elapsed = local - event.timeSeconds
@@ -362,26 +480,44 @@ object Relay {
                     (.5 + .5 * cos(2.0 * PI * cell))
                 articulation
             } else {
-                val attack = smooth(local / (.006 + .023 * (1.0 - velocity)))
+                val attackSeconds = when (voice) {
+                    RelayVoice.KEY -> .006
+                    RelayVoice.BASS -> .004
+                    RelayVoice.PLUCK -> .003
+                    RelayVoice.ORGAN -> .045
+                    RelayVoice.CHIME -> .008
+                    RelayVoice.FLOW -> .28
+                }
+                val attack = smooth(local / (attackSeconds * (1.0 + 2.5 * (1.0 - velocity))))
                 val release = if (local <= p.gateSeconds) 1.0 else {
                     val tailPosition = ((local - p.gateSeconds) / p.tailSeconds).coerceIn(0.0, 1.0)
                     .5 + .5 * cos(PI * tailPosition)
                 }
                 attack * release
             }
-            return Pair(OUTPUT_GAIN * excitation * rhythmic * envelope, emphasis)
+            var opening = 0.0
+            for (source in recipe.sources.indices) {
+                val w = weights[source]
+                if (w > 1e-8) opening += w * sourceExcitation(recipe.sources[source].role, envelopes[source] / w)
+            }
+            // COLOR now spans a genuine closed-to-open filter, while source transients and
+            // independent accents open it within a note. Two nonresonant poles remain bounded.
+            val frequency = (cutoff * (.65 + .70 * opening + .45 * pulse * emphasis))
+                .coerceIn(2.4 * p.actualHz, 16_000.0)
+            val coefficient = 1.0 - exp(-2.0 * PI * frequency / INTERNAL_RATE)
+            return Triple(OUTPUT_GAIN * excitation * rhythmic * envelope, emphasis, coefficient)
         }
 
         val first = contours(0, currentWeights, currentEnvelopes)
-        global = first.first; accent = first.second
+        global = first.first; accent = first.second; filterA = first.third
         for (frame in 0 until warm + frames) {
             if (frame % CONTROL_BLOCK == 0) {
                 if (frame != 0) {
                     nextWeights.copyInto(currentWeights); nextEnvelopes.copyInto(currentEnvelopes)
-                    global = nextGlobal; accent = nextAccent
+                    global = nextGlobal; accent = nextAccent; filterA = nextFilterA
                 }
                 val next = contours(frame + CONTROL_BLOCK, nextWeights, nextEnvelopes)
-                nextGlobal = next.first; nextAccent = next.second
+                nextGlobal = next.first; nextAccent = next.second; nextFilterA = next.third
             }
             val fraction = (frame % CONTROL_BLOCK).toDouble() / CONTROL_BLOCK
             val accentNow = accent + fraction * (nextAccent - accent)
@@ -389,15 +525,16 @@ object Relay {
             for (source in recipe.sources.indices) {
                 val w = currentWeights[source] + fraction * (nextWeights[source] - currentWeights[source])
                 val e = currentEnvelopes[source] + fraction * (nextEnvelopes[source] - currentEnvelopes[source])
-                val transient = if (w > 1e-8) (e / w).coerceIn(0.0, 1.0) else 0.0
-                val brightness = (.25 + .70 * transient + .30 * pulse * accentNow).coerceIn(0.0, 1.0)
+                val excitation = if (w > 1e-8) sourceExcitation(recipe.sources[source].role, e / w) else 0.0
+                val brightness = (.05 + .95 * excitation + .65 * pulse * accentNow).coerceIn(0.0, 1.0)
                 val low = read(lowTables[source], phase)
                 val high = read(highTables[source], phase)
                 mix += recipe.sources[source].gain * e * (low + brightness * (high - low))
             }
             mix *= global + fraction * (nextGlobal - global)
-            pole1 += filterA * (mix - pole1)
-            pole2 += filterA * (pole1 - pole2)
+            val coefficient = filterA + fraction * (nextFilterA - filterA)
+            pole1 += coefficient * (mix - pole1)
+            pole2 += coefficient * (pole1 - pole2)
             if (frame >= warm) {
                 val value = pole2.toFloat()
                 check(value.isFinite() && abs(value) < 1.0f) { "RELAY bounded source stage failed" }
@@ -437,6 +574,7 @@ object Relay {
         check(!p.held || seam < Keys.MAX_SEAM_ERROR) { "RELAY phrase does not close: $seam" }
         return Report(Snip(samples, channels = 1, sampleRate = Dsp.RATE), raw, previous, seam,
             p.held, p.requestedHz, p.actualHz, p.phraseSeconds, p.gateSeconds, rawPeak,
-            accentEvents, weightFrames(schedule))
+            accentEvents, if (p.held) weightFrames(schedule)
+                else weightFrames(schedule, p.frames.toDouble() / Dsp.RATE, p.gateSeconds))
     }
 }

@@ -2,7 +2,11 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -30,6 +34,39 @@ class RelayTest {
 
     private fun rms(samples: FloatArray): Double =
         sqrt(samples.sumOf { it.toDouble() * it } / samples.size.coerceAtLeast(1))
+
+    private fun span(samples: FloatArray, from: Double, until: Double): FloatArray =
+        samples.copyOfRange((from * Dsp.RATE).toInt(), (until * Dsp.RATE).toInt())
+
+    private data class HarmonicProfile(val bands: List<Double>, val even: Double, val oddDetail: Double)
+
+    /** Gain-independent powers: root/2–3/4–7/8–16/residual, plus even and odd detail. */
+    private fun harmonicPowers(samples: FloatArray, hz: Double): HarmonicProfile {
+        val n = 65536
+        require(samples.size in 9..n)
+        val real = FloatArray(n)
+        val imaginary = FloatArray(n)
+        for (i in samples.indices) {
+            val window = 0.5 - 0.5 * cos(2.0 * PI * i / (samples.size - 1))
+            real[i] = (samples[i] * window).toFloat()
+        }
+        Fft.forward(real, imaginary)
+        val powers = DoubleArray(17)
+        for (bin in 1 until n / 2) {
+            val frequency = bin * Dsp.RATE.toDouble() / n
+            val harmonic = (frequency / hz).roundToInt()
+            val band = if (harmonic in 1..16 && abs(frequency - harmonic * hz) <= 12.0) harmonic else 0
+            powers[band] += real[bin].toDouble() * real[bin] + imaginary[bin].toDouble() * imaginary[bin]
+        }
+        val total = powers.sum()
+        require(total > 1e-12) { "source contrast fixture was silent" }
+        return HarmonicProfile(
+            listOf(powers[1], (2..3).sumOf { powers[it] }, (4..7).sumOf { powers[it] },
+                (8..16).sumOf { powers[it] }, powers[0]).map { it / total },
+            (2..16 step 2).sumOf { powers[it] } / total,
+            (3..15 step 2).sumOf { powers[it] } / total,
+        )
+    }
 
     /** Match level and pad the shorter finite tail with silence: a gain-only knob must fail. */
     private fun matchedDifference(a: FloatArray, b: FloatArray): Double {
@@ -143,6 +180,79 @@ class RelayTest {
     }
 
     @Test
+    fun `isolated source roles retain different spectra and transient jobs at one pitch`() {
+        val voice = RelayVoice.KEY
+        val original = Relay.phraseFor(voice)
+        val macros = mapOf("TUNE" to 0f, "ORDER" to 0f, "PULSE" to 0f,
+            "BLEND" to 0f, "COLOR" to 0.65f, "LENGTH" to 1f)
+        val hz = Relay.frequencyFor(voice, 0f).toDouble()
+        val samples = RelayRole.entries.associateWith { role ->
+            val source = original.sources.indexOfFirst { it.role == role }
+            assertTrue(source >= 0, "$role is absent from the shared source fixture")
+            val phrase = original.copy(
+                slots = List(4) { RelaySlot(source, 1f, 0.2f) },
+                orderRoster = listOf(List(4) { source }), accents = emptyList(), tempoBpm = 100f,
+            )
+            Relay.render(voice, macros, phrase = phrase).samples
+        }
+        val attack = samples.mapValues { (_, audio) -> harmonicPowers(span(audio, 0.04, 0.24), hz) }
+        val body = samples.mapValues { (_, audio) -> harmonicPowers(span(audio, 0.32, 0.52), hz) }
+        val attackToBody = samples.mapValues { (_, audio) ->
+            rms(span(audio, 0.025, 0.125)) / rms(span(audio, 0.32, 0.52)).coerceAtLeast(1e-12)
+        }
+        for (role in RelayRole.entries) println(
+            "RELAY source $role: attack powers ${attack.getValue(role)}, body powers ${body.getValue(role)}, " +
+                "early/body RMS ${attackToBody.getValue(role)}",
+        )
+        // These relative guards preserve the authored jobs. They catch a common
+        // almost-pure root with quiet decorative partials; listening decides identity.
+        val softRoot = body.getValue(RelayRole.SOFT).bands[0]
+        for (role in listOf(RelayRole.PLUCK, RelayRole.ORGAN, RelayRole.BELL)) {
+            val sourceRoot = if (role == RelayRole.ORGAN) body.getValue(role).bands[0] else attack.getValue(role).bands[0]
+            assertTrue(softRoot - sourceRoot > 0.15,
+                "$role collapsed toward the soft source's root-dominated spectrum: $sourceRoot vs $softRoot")
+        }
+        val bell = attack.getValue(RelayRole.BELL)
+        val organ = body.getValue(RelayRole.ORGAN)
+        assertTrue(bell.oddDetail > bell.even * 2.0 && organ.even > organ.oddDetail * 2.0,
+            "bell odd detail and organ even drawbar registers lost their separate jobs: $bell / $organ")
+        assertTrue(attackToBody.getValue(RelayRole.PLUCK) > attackToBody.getValue(RelayRole.ORGAN) * 1.5,
+            "the pluck lost its decaying transient relative to the sustained organ")
+        assertTrue(attackToBody.getValue(RelayRole.SOFT) < attackToBody.getValue(RelayRole.ORGAN) * 0.5,
+            "the soft source lost its swelling entrance relative to the sustained organ")
+    }
+
+    @Test
+    fun `voice scores author distinct entrances dwell priorities and accent figures`() {
+        val phrases = RelayVoice.entries.associateWith { Relay.phraseFor(it) }
+        fun path(voice: RelayVoice) = phrases.getValue(voice).let { phrase ->
+            phrase.orderRoster.first().map { phrase.sources[it].role }
+        }
+        fun dwellFraction(voice: RelayVoice, role: RelayRole) = phrases.getValue(voice).let { phrase ->
+            val slot = path(voice).indexOf(role)
+            phrase.slots[slot].beats / phrase.phraseBeats
+        }
+        for ((voice, phrase) in phrases) println(
+            "RELAY score $voice: ${phrase.tempoBpm} BPM/${phrase.phraseSeconds}s; path ${path(voice)}; " +
+                "dwell fractions ${phrase.slots.map { it.beats / phrase.phraseBeats }}; accents ${phrase.accents}",
+        )
+        assertEquals(listOf(RelayRole.PLUCK, RelayRole.ORGAN), path(RelayVoice.KEY).take(2), "key lost its attack-to-body handoff")
+        assertEquals(listOf(RelayRole.ORGAN, RelayRole.PLUCK), path(RelayVoice.BASS).take(2), "bass lost its body-to-pluck answer")
+        assertEquals(listOf(RelayRole.PLUCK, RelayRole.BELL), path(RelayVoice.PLUCK).take(2), "pluck lost its bright answer")
+        assertEquals(RelayRole.ORGAN, path(RelayVoice.ORGAN).first(), "organ lost its sustained entrance")
+        assertEquals(RelayRole.BELL, path(RelayVoice.CHIME).first(), "chime lost its ringing entrance")
+        assertEquals(RelayRole.SOFT, path(RelayVoice.FLOW).first(), "flow lost its soft entrance")
+        assertTrue(dwellFraction(RelayVoice.ORGAN, RelayRole.ORGAN) > dwellFraction(RelayVoice.PLUCK, RelayRole.PLUCK),
+            "sustained organ and picked pluck have the same opening dwell priority")
+        assertTrue(dwellFraction(RelayVoice.CHIME, RelayRole.BELL) > dwellFraction(RelayVoice.PLUCK, RelayRole.BELL),
+            "chime's ringing body became the pluck's brief bell answer")
+        assertTrue(phrases.getValue(RelayVoice.BASS).accents.size > phrases.getValue(RelayVoice.FLOW).accents.size,
+            "rhythmic bass and flowing texture share the same accent density")
+        assertTrue(phrases.getValue(RelayVoice.FLOW).phraseSeconds > phrases.getValue(RelayVoice.PLUCK).phraseSeconds,
+            "flow lost its longer phrase relative to pluck")
+    }
+
+    @Test
     fun `order changes handoffs on the same clock and morphs continuously at roster boundaries`() {
         for (voice in RelayVoice.entries) {
             val phrase = Relay.phraseFor(voice)
@@ -187,6 +297,17 @@ class RelayTest {
         val changed = Relay.inspect(voice, macros + mapOf("ORDER" to 1f, "PULSE" to 0f), phrase = phrase)
         assertEquals(finite.accents.map { it.beat to it.timeSeconds }, changed.accents.map { it.beat to it.timeSeconds },
             "ORDER/PULSE changed which fixed accents the finite gate admits")
+
+        val releaseFrames = finite.weights.filter { it.timeSeconds >= finite.gateSeconds }
+        assertTrue(releaseFrames.size > 2 && releaseFrames.last().timeSeconds > finite.gateSeconds + 0.2,
+            "finite diagnostics omitted the release interval")
+        assertTrue(releaseFrames.all { it.weights == releaseFrames.first().weights },
+            "finite release starts a fresh source handoff after its selected gate")
+        val planned = Relay.weightSchedule(phrase, 0f, Relay.defaults(voice).getValue("BLEND"))
+        assertTrue(planned.any { frame ->
+            frame.timeSeconds > finite.gateSeconds &&
+                frame.weights.zip(releaseFrames.first().weights).sumOf { (a, b) -> abs(a - b) } > 0.1
+        }, "finite fixture did not exclude a later planned source handoff")
 
         // Removing the two late serialized events must leave finite audio
         // unchanged, proving the admission rule reaches synthesis and release.

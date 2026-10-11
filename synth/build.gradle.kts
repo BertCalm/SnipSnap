@@ -699,4 +699,5 @@ tasks.register<JavaExec>("generateRelayAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/relay-audition")
     if (project.hasProperty("relayQuick")) args("--quick")
+    if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }

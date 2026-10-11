@@ -21,12 +21,12 @@ object RelayAuditionGenerator {
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val timbral = listOf("ORDER", "PULSE", "BLEND", "COLOR", "LENGTH")
     private val descriptions = mapOf(
-        "KEY" to "A key attack opens into a rounded harmonic body.",
-        "BASS" to "A low tonal body carries a restrained rhythmic handoff.",
-        "PLUCK" to "Short, clear source changes follow a muted pluck.",
-        "ORGAN" to "Rounded harmonic sustain changes its source balance.",
-        "CHIME" to "Bell detail travels above a supporting tonal body.",
-        "FLOW" to "Broad source overlap makes a slowly changing vector tone.",
+        "KEY" to "A picked attack passes into a rich harmonic body, soft landing and bell answer.",
+        "BASS" to "A rounded drawbar start takes picked accents and a low-color answer.",
+        "PLUCK" to "A sharp string gesture is answered by short bell and soft-tone handoffs.",
+        "ORGAN" to "A sustained drawbar body carries subordinate soft support and upper detail.",
+        "CHIME" to "A bell-first phrase rings with odd overtones, then passes into softer body.",
+        "FLOW" to "A soft swelling entrance opens into broad, slowly changing source overlap.",
     )
     private val macroGuides = mapOf(
         "ORDER" to "Listen for a different source handoff order at the same phrase clock. Accents keep their positions.",
@@ -39,10 +39,12 @@ object RelayAuditionGenerator {
     private data class Case(
         val id: String, val group: String, val voice: RelayVoice, val title: String,
         val description: String, val macros: Map<String, Float> = emptyMap(),
-        val midi: Int = 48, val velocity: Float = 1f, val bpm: Float = 100f,
+        val midi: Int = 48, val velocity: Float = 1f, val bpm: Float? = null,
+        val phrase: RelayPhrase? = null,
     )
     private val groups = listOf(
-        group("identities", "Six dry identities", "Start here. All six voices play C3 at full velocity, with their own timbral defaults. Raw and matched files come from the same render."),
+        group("identities", "Six revised identities", "Start here. All six voices play C3 at full velocity, with their own source balance, articulation and phrase score. Compare at matched level, then use Original audition to check the first version."),
+        group("sources", "Hear the four sources", "One source at a time, at the same C3 and COLOR. Listen for a damped string, drawbar body, bright bell and soft swell before comparing their handoffs."),
         group("registers", "Notes and velocity", "Each voice at the ends of its supported two-octave register, then three excitation strengths on KEY and BASS. Use raw playback to hear the energy change; matched playback exposes articulation."),
         group("sweeps", "One control at a time", "Five points on every control, on both KEY and FLOW. Other controls remain at that voice's defaults. The HOLD examples include repeated playback wherever the engine produces a loop."),
         group("interactions", "The controls together", "Four corners of ORDER × PULSE, ORDER × BLEND, BLEND × COLOR and PULSE × LENGTH. Compare both directions of each pair."),
@@ -52,12 +54,15 @@ object RelayAuditionGenerator {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.count { !it.startsWith("--") } <= 1 && args.filter { it.startsWith("--") }.all { it == "--quick" }) {
-            "supply one output directory and optional --quick"
+        require(args.count { !it.startsWith("--") } <= 1 &&
+            args.count { it.startsWith("--baseline=") } <= 1 &&
+            args.filter { it.startsWith("--") }.all { it == "--quick" || it.startsWith("--baseline=") }) {
+            "supply one output directory, optional --quick and --baseline=<previous audition directory>"
         }
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/relay-audition")
         val quick = "--quick" in args
-        val cases = if (quick) cases().filter { it.group == "identities" || it.group == "loops" } else cases()
+        val baseline = args.firstOrNull { it.startsWith("--baseline=") }?.substringAfter('=')?.let(::File)
+        val cases = if (quick) cases().filter { it.group in listOf("identities", "sources", "loops") } else cases()
         check(cases.map { it.id }.distinct().size == cases.size)
         root.mkdirs()
         val clips = ArrayList<Map<String, Any?>>(cases.size)
@@ -65,7 +70,8 @@ object RelayAuditionGenerator {
         for ((index, case) in cases.withIndex()) {
             val tune = (case.midi - Relay.rootMidi(case.voice)).toFloat() / 24f
             val macros = Relay.defaults(case.voice) + case.macros + ("TUNE" to tune)
-            val phrase = Relay.phraseFor(case.voice).copy(tempoBpm = case.bpm)
+            val basePhrase = case.phrase ?: Relay.phraseFor(case.voice)
+            val phrase = basePhrase.copy(tempoBpm = case.bpm ?: basePhrase.tempoBpm)
             val before = System.nanoTime()
             val report = Relay.inspect(case.voice, macros, velocity = case.velocity, normalize = false, phrase = phrase)
             val renderMs = (System.nanoTime() - before) / 1e6
@@ -98,8 +104,11 @@ object RelayAuditionGenerator {
             val evidence = linkedMapOf<String, Any?>(
                 "id" to case.id, "group" to case.group, "voice" to case.voice.name,
                 "title" to case.title, "description" to case.description,
+                "sources" to phrase.sources.map { it.role.name },
+                "comparisonId" to if (baseline != null && case.group == "identities") case.voice.name.lowercase() + "_original" else null,
+                "comparisonLabel" to if (baseline != null && case.group == "identities") "Original" else null,
                 "midi" to case.midi, "note" to noteName(case.midi), "velocity" to case.velocity,
-                "tempoBpm" to case.bpm, "actualTempoBpm" to phrase.phraseBeats * 60.0 / report.phraseSeconds, "macros" to macros,
+                "tempoBpm" to phrase.tempoBpm, "actualTempoBpm" to phrase.phraseBeats * 60.0 / report.phraseSeconds, "macros" to macros,
                 "requestedHz" to report.requestedHz, "actualHz" to report.actualHz,
                 "tuningErrorCents" to 1200.0 * ln(report.actualHz / report.requestedHz) / ln(2.0),
                 "phraseSeconds" to report.phraseSeconds, "gateSeconds" to report.gateSeconds,
@@ -117,24 +126,28 @@ object RelayAuditionGenerator {
             clips += evidence
             if ((index + 1) % 10 == 0 || index == cases.lastIndex) println("Relay audition: ${index + 1}/${cases.size} cases · ${(index + 1) * 2} WAVs")
         }
+        if (baseline != null) clips += previousIdentities(root, baseline)
+        val auditionGroups = if (baseline == null) groups else groups + group(
+            "previous", "Original audition", "The six unchanged recordings from the first audition. Compare each with its revised C3 identity at the same playback level.")
+        val currentClips = clips.filter { it["group"] != "previous" }
         val manifest = Json.write(json(linkedMapOf(
             "schemaVersion" to 1, "engine" to "RELAY", "status" to "working audition — awaiting owner sonic approval",
             "presetExpansion" to "36-preset target deferred until dry identity is approved",
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 24,
-            "referenceNote" to "C3", "quick" to quick, "clipCount" to clips.size,
+            "referenceNote" to "C3", "quick" to quick, "clipCount" to clips.size, "auditionRevision" to 2,
             "listeningTarget" to .03, "listeningPeakCeiling" to .99, "loopThreshold" to Relay.LOOP_THRESHOLD,
             "sourceRevision" to git("rev-parse", "HEAD"), "workingTreeDirty" to (git("status", "--porcelain")?.isNotBlank() ?: true),
             "metricNotes" to "Raw WAVs preserve the conditioned engine output before loudness leveling, except a recorded PCM export gain if required. internalRawPeak is the unconditioned 4× path peak. loudestWindowRms uses SnipSnap's loudest 200 ms rule. HOLD fits the loop clock to the requested root; actualTempoBpm records the resulting tempo. Loop seamError is measured by the engine against the preceding settled cycle; pass requires < 0.001 and owner listening. contour brightness is first-difference RMS divided by RMS, a high-frequency proxy, not spectral centroid. Raw and matched files are 24-bit PCM from the same render. No rack effects.",
-            "groups" to groups, "clips" to clips,
+            "groups" to auditionGroups, "clips" to clips,
             "summary" to mapOf(
                 "wavCount" to clips.size * 2,
-                "maxInternalRawPeak" to clips.maxOf { (it.getValue("internalRawPeak") as Number).toDouble() },
+                "maxInternalRawPeak" to currentClips.maxOf { (it.getValue("internalRawPeak") as Number).toDouble() },
                 "heldCases" to clips.count { it["loop"] != null },
                 "loopSeamsPassed" to clips.filter { it["loop"] != null }.all { (it["loop"] as Map<*, *>)["seamPass"] == true },
                 "generationSeconds" to (System.nanoTime() - started) / 1e9,
             ),
         ))) + "\n"
-        prunePrevious(root, cases.map { it.id }.toSet())
+        prunePrevious(root, clips.map { it.getValue("id") as String }.toSet())
         File(root, "manifest.json").writeText(manifest)
         val page = RelayAuditionGenerator::class.java.getResourceAsStream("/audition/relay-audition.html")
             ?.bufferedReader()?.use { it.readText() } ?: error("Relay audition page resource is missing")
@@ -148,6 +161,9 @@ object RelayAuditionGenerator {
             in the page, so file playback needs no server or remote assets.
 
             Working audition; owner sonic approval is pending. The 36-preset expansion is deferred.
+            Revision 2 changes source spectra, articulation and per-voice phrase scores.
+            The isolated-source section exposes each role. If supplied with -PrelayBaseline=<directory>,
+            six unchanged original identities are copied with their original measurements and hashes.
             Raw playback preserves the conditioned output before loudness leveling. Matched playback
             uses AuditionLevel (loudest 200 ms RMS 0.03, peak guard 0.99). Any raw PCM export reduction
             is recorded as rawExportGain; unscaled output metrics remain in manifest.json.
@@ -160,6 +176,15 @@ object RelayAuditionGenerator {
     }
 
     private fun cases(): List<Case> = buildList {
+        for (role in RelayRole.entries) {
+            val source = Relay.phraseFor(RelayVoice.KEY).sources.single { it.role == role }.copy(gain = 1f)
+            val staticPhrase = RelayPhrase(listOf(source), List(4) { RelaySlot(0, 1f, .2f) },
+                listOf(List(4) { 0 }), listOf(RelayAccent(0f, 1f)))
+            add(Case("source_${role.name.lowercase()}", "sources", RelayVoice.KEY, "${role.name} source · C3",
+                "Isolated generated source, with the same pitch, COLOR and phrase clock as the other source probes.",
+                mapOf("ORDER" to 0f, "PULSE" to 0f, "BLEND" to 0f, "COLOR" to .55f, "LENGTH" to .65f),
+                phrase = staticPhrase))
+        }
         for (voice in RelayVoice.entries) {
             val tag = voice.name.lowercase()
             add(Case("${tag}_identity", "identities", voice, "${voice.name} · C3", descriptions.getValue(voice.name)))
@@ -202,6 +227,45 @@ object RelayAuditionGenerator {
         }
     }
 
+    private fun previousIdentities(root: File, baseline: File): List<Map<String, Any?>> {
+        require(baseline.isDirectory) { "previous audition directory is missing" }
+        val manifest = Json.parse(File(baseline, "manifest.json").readText()).obj()
+        val original = manifest.getValue("clips").arr().filter { it.obj().getValue("group").str() == "identities" }
+        require(original.size == RelayVoice.entries.size) { "previous audition needs exactly six identity clips" }
+        return RelayVoice.entries.map { voice ->
+            val item = original.single { it.obj().getValue("voice").str() == voice.name }.obj()
+            val data = item.mapValues { native(it.value) }.toMutableMap()
+            val id = voice.name.lowercase() + "_original"
+            for ((pathKey, hashKey) in listOf("rawPath" to "rawSha256", "matchedPath" to "matchedSha256")) {
+                val oldPath = item.getValue(pathKey).str()
+                require(Regex("(raw|matched)/[a-z0-9_]+\\.wav").matches(oldPath)) { "unsafe previous WAV path" }
+                val file = File(baseline, oldPath).canonicalFile
+                require(file.toPath().startsWith(baseline.canonicalFile.toPath()) && file.isFile)
+                require(sha256(file) == item.getValue(hashKey).str()) { "previous WAV does not match its evidence" }
+                val path = "previous/" + oldPath
+                File(root, path).apply { parentFile.mkdirs(); file.copyTo(this, overwrite = true) }
+                data[pathKey] = path
+            }
+            data["id"] = id
+            data["group"] = "previous"
+            data["title"] = "${voice.name} · original · C3"
+            data["description"] = "Unchanged recording from the first audition, before the source and phrase revision. Compare with ${voice.name} in Six revised identities."
+            data["sourceRevision"] = native(manifest.getValue("sourceRevision"))
+            data["comparisonId"] = voice.name.lowercase() + "_identity"
+            data["comparisonLabel"] = "Revised"
+            data
+        }
+    }
+
+    private fun native(value: JsonValue): Any? = when (value) {
+        JsonValue.Null -> null
+        is JsonValue.Str -> value.value
+        is JsonValue.Num -> value.value
+        is JsonValue.Bool -> value.value
+        is JsonValue.Arr -> value.items.map(::native)
+        is JsonValue.Obj -> value.entries.mapValues { native(it.value) }
+    }
+
     private fun metrics(snip: Snip): Map<String, Any> {
         val x = snip.samples
         var power = 0.0; var sum = 0.0; var maxDifference = 0.0
@@ -240,9 +304,10 @@ object RelayAuditionGenerator {
         if (!previous.isFile) return
         val clips = runCatching { Json.parse(previous.readText()).obj().getValue("clips").arr() }.getOrDefault(emptyList())
         for (clip in clips) for (key in listOf("rawPath", "matchedPath")) {
+            val id = runCatching { clip.obj().getValue("id").str() }.getOrNull() ?: continue
             val path = runCatching { clip.obj().getValue(key).str() }.getOrNull() ?: continue
-            if (!Regex("(raw|matched)/[a-z0-9_]+\\.wav").matches(path)) continue
-            if (File(path).nameWithoutExtension in retained) continue
+            if (!Regex("(previous/)?(raw|matched)/[a-z0-9_]+\\.wav").matches(path)) continue
+            if (id in retained) continue
             val file = File(root, path).canonicalFile
             if (file.toPath().startsWith(root.canonicalFile.toPath()) && file.isFile) check(file.delete())
         }
