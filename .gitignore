@@ -163,3 +163,7 @@ testkit/pitchwheel-audition/
 # PRISM raw/matched WAVs, listening manifest and diagnostics are rendered locally.
 testkit/prism-audition/
 testkit/SnipSnap Pitchwheel Kit/
+
+# REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
+testkit/revel-audition/
+testkit/SnipSnap Revel Kit/
