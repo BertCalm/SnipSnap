@@ -8,8 +8,10 @@ back. Its phrase follows the evolving wheel, contact and resin state.
 
 This is an invented musical DSP instrument. The normalized forces, thermal
 response and modal ratios are expressive design choices, not a validated
-resin model. Pitchwheel remains a working name. The first dry listening verdict
-is pending; the initial preset scope stays small until the owner approves it.
+resin model. Pitchwheel remains a working name. The owner heard the first model
+and reported six similar struck voices differing mainly in rhythm. Model 2
+addresses acoustic character; its revised dry audition remains provisional.
+The initial preset scope stays small until the owner approves it.
 
 ## Playing and saving
 
@@ -33,12 +35,28 @@ range, so the combined controls span MIDI 12–108. Upper modes beyond the
 output bandwidth are excluded from excitation and pickup before decimation.
 Velocity spans 0–1 and scales gesture energy separately from PUSH's playing character.
 `PitchwheelPatch` stores `midi`, `velocity` and render `model` beside the macro
-map. The current model is 1. Missing fields read as the defaults; unsupported
-models, voices and invalid normalized macro values are refused.
+map. Newly authored recipes use model 2. Saved model 1 recipes use the preserved
+original renderer, including velocity variants. An absent or null JSON `model`
+reads as 1 so an older recipe keeps its original sound. Editing, replaying or
+promoting a saved recipe retains its model. Missing note and velocity fields
+read as their defaults; unsupported models, voices and invalid normalized
+macro values are refused.
 
-The render seed derives from the engine, model, voice and saved root through
-`Dsp.seedFor`. Tooth geometry stays fixed when comparing macro settings at
-that root. Each render constructs a fresh wheel, fingers, attachments,
+The second sound-design round changes the acoustic transfers that the first
+model masked. BODY and TOOTH affect audible modal balance, decay and contact
+rise; finger releases, resin snaps, filament slip and finger-friction creaks
+use different receiving projections. Reverse motion weights the upper/body
+response differently. The root, shared resonator and accounted mechanical
+energy remain the basis of the instrument. These are prototype sound-design
+choices awaiting the next dry audition, with the seven-preset roster unchanged.
+
+The geometry seed derives from the engine, voice and saved root through
+`Dsp.seedFor`, retaining the original model-1 seed tag in both renderers.
+Initial tooth positions, attachment thresholds and variations therefore stay
+the same across the sound revision and when comparing macros at that root.
+Model 2 starts with the same mechanical calibration; changing the fraction
+of friction work sent into sound can affect subsequent warming and drag.
+Each render constructs a fresh wheel, fingers, attachments,
 temperature, controller and resonators. Independently exported pads share
 no phase, heat or resin history. `Patches`, `PadRecipe`, preset saving and
 recipe replay retain the complete regenerable recipe. Editing its name or
@@ -49,7 +67,7 @@ internal path, followed by the established decimation and shared
 `MELODIC_LOUDNESS_TARGET` processing. Diagnostic probes expose raw audio
 and mechanical state before matching loudness.
 
-Finite gestures render for up to eight seconds, with quiet termination after
+Nonzero finite gestures render for up to eight seconds, with quiet termination after
 a two-second minimum. A silent stalled object can finish without exhausting
 the duration limit. Finite patches carry TONAL metadata, so IN KEY can retune
 them. Settled held patches carry LOOP metadata. These explicit pitched classes
@@ -97,24 +115,38 @@ bounded bow excitation. A snap converts a share of the stored elastic energy
 into the same resonant network and loses the remainder. Attachments and force
 thresholds determine snaps rather than a separate crackle generator.
 
-Nonnegative dissipated resin work supplies warming. Cooling moves temperature
+Nonnegative dissipated resin work supplies warming after accounting for the
+share transferred into slip sound. Cooling moves temperature
 toward HEAT's reference. Bounded temperature changes resistance and release
 behavior while retaining adhesion at warm settings. Returned elastic energy
 is accounted separately from heat. Finite renders have no powered source;
 the mechanical/acoustic ledger charges excitation transfers and constrains
 numerical energy growth. Probes expose those transfers and correction amounts
-so a limiter cannot be the evidence for solver stability.
+so a limiter cannot be the evidence for solver stability. Finger-friction
+loss can fund a continuous creak while a tooth remains caught, and active
+filament friction can fund slip sound between releases. A diagnostic acoustic
+mute routes its allocated work to a silent sink so it preserves the same
+wheel trajectory and temperature. Static strain has no continuing sound
+source without motion or an accounted elastic release.
 
-The root-bearing resonances stay tied to the requested note as PUSH changes
-encounter timing and BODY changes receiving response. Contact and resin
-excitation project accounted energy into one shared ten-mode network;
-each mode receives an explicit share of available work. Repeated excitation
-grows the root receiving modes without changing their phase, while velocity
-kicks into upper/body modes carry the release edge. Slip-funded radial
-excitation sustains the harmonic subset between catches. These receiving
-approximations keep encounter timing from shifting the requested pitch;
-upper modes remain subordinate to the root. This first version omits acoustic
-feedback into wheel motion.
+The root-bearing tooth bank starts at ratios 1, 2 and 3, with sparse upper
+modes at 3.9 and 6.2. The wooden body uses separate ratios 1.42, 1.86, 2.72,
+4.12 and 6.43, scaled by BODY; it no longer duplicates the fundamental as
+its first mode. Voice calibration changes mode losses and receiving weights
+within this same ten-mode network. TOOTH changes release brightness and rise
+time; BODY changes audible wooden response, frequency ratios and decay.
+
+Every transfer divides its available work among the modes. Existing modal
+states grow radially without resetting phase, adding exactly their allocated
+energy; a previously silent mode receives a direction-dependent velocity seed.
+Release and snap work first enters a short contact reservoir, which counts
+as stored energy before it reaches the modes. Its TOOTH- and voice-dependent
+transfer rate shapes the onset without another impulse budget. Slip and creak
+work enters the same bank continuously. Slip's receiving distribution follows
+filament strain, temperature and bounded modal-state feedback, while reverse
+motion changes the spectral weighting. The requested root remains fixed as
+wheel speed changes encounter timing. This model omits acoustic feedback into
+wheel motion.
 
 ## HOLD and export
 
@@ -133,8 +165,11 @@ attack-plus-loop-region field. The initiating push is excluded from the held
 buffer, and the starter pad plays that buffer once. Repeat the audition clip
 to hear the wrap continuously.
 
-Loop acceptance includes the complete retained state: wheel phase and speed,
-fingers, attachment lifecycle, temperature, resonators and controller state.
+Held modal frequencies are rounded to whole cycles of the selected loop
+period so tooth and body phases can recur together. Loop acceptance includes
+the complete retained state: wheel phase and speed, fingers, attachment
+lifecycle and remembered limits, temperature, resonators, pending contact
+energy and its direction, and controller state.
 A single revolution cannot establish convergence by itself. A bounded
 settling stage selects recurring material before the existing wrap handling.
 The exported buffer must meet `Keys.seamError < 1e-3`; repeated playback must
@@ -148,11 +183,19 @@ also retain useful contacts, pitch, timing and peak level.
 ./gradlew :synth:generatePitchwheelAudition -PpitchwheelFull
 ```
 
-The default audition task creates the compact first-listen pack at
+The default audition task creates a 63-case compact first-listen pack at
 `testkit/pitchwheel-audition/`, including a listening page, dry audio and
-diagnostic records. The optional full pack adds note/velocity corners,
+diagnostic records. Six fixed-energy isolated catches compare attack colour
+without rhythm; six preserved model 1 defaults provide a listening reference.
+Each clip records its rendering model. Isolated catches have no wheel
+trajectory and intentionally omit the mechanical diagnostic ledger.
+The optional 172-case full pack adds note/velocity corners,
 five-step macro sweeps, PUSH × ADHESION and ADHESION × HEAT comparisons,
 raw/matched audio, difficult extremes and held-loop material.
+
+The [published audition](https://pitchwheel-audition.bertcalm.chatgpt.site)
+starts with the isolated catches, then offers full gestures and previous
+defaults. Hosted FLAC preserves every sample of the 24-bit audition WAVs.
 
 Numerical acceptance checks deterministic samples and event traces, root
 calibration, pitch independence from encounter rate, contact-funded releases
