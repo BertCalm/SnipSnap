@@ -18,6 +18,20 @@
     return node;
   }
 
+  function decorativeArrow() {
+    const wrapper = element('span', 'preset-arrow');
+    wrapper.setAttribute('aria-hidden', 'true');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'ui-icon');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('focusable', 'false');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M5 19 19 5M5 5h14v14');
+    svg.append(path);
+    wrapper.append(svg);
+    return wrapper;
+  }
+
   function number(value, fallback = 0) {
     const result = Number(value);
     return Number.isFinite(result) ? result : fallback;
@@ -271,7 +285,7 @@
       }
       const copy = element('span', 'preset-button-copy');
       copy.append(element('span', 'preset-name', preset.name), element('span', 'preset-family', String(preset.voice || 'LACQUER').toUpperCase()));
-      button.append(glyph, copy, element('span', 'preset-arrow', '↗'));
+      button.append(glyph, copy, decorativeArrow());
       button.addEventListener('click', () => selectPreset(preset));
       $('preset-list').append(button);
     }
