@@ -159,11 +159,17 @@ testkit/SnipSnap Tessera Kit/
 
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
+
+# PRISM raw/matched WAVs, listening manifest and diagnostics are rendered locally.
+testkit/prism-audition/
 testkit/SnipSnap Pitchwheel Kit/
 
 # REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
 testkit/revel-audition/
 testkit/SnipSnap Revel Kit/
+# Alloy generated listening matrix, audio, recipes, and native MPC kit.
+testkit/alloy-audition/
+testkit/SnipSnap Alloy Kit/
 # CONTOUR's generated dry listening matrix and kit audio.
 testkit/contour-audition/
 testkit/SnipSnap Contour Kit/
