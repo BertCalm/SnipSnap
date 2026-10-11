@@ -30,7 +30,7 @@ object StoopAuditionGenerator {
         "wear" to ("Direct / worn" to "WEAR 0 and .85 at matched level for every family. Compare body, pitch and attack; no added rack effect or noise bed."),
         "velocity" to ("Gesture and level" to "The same quiet, medium and strong excitation twice: raw preserves energy, matched exposes articulation. A common raw-group gain prevents PCM clipping without normalizing each note."),
         "chords" to ("Know the voicing" to "Explicit interval recipes transpose with the root. No inferred key, scale or automatic progression."),
-        "hold" to ("Let it run" to "Settled loop-only exports, repeated four times in each listening WAV. Attack and delayed onset are absent; the shadow becomes a quieter sustained companion."),
+        "hold" to ("Let it run" to "Settled loop-only exports: stress WAVs contain four exact wraps, while focused held-articulation clips contain one cycle with Repeat on. Compare main TOUCH and isolated companion articulation across all six families; attack and delayed onset are absent."),
         "edges" to ("At the edges" to "All five timbral controls at maximum, HOLD off, one render per family. These are stress cases rather than factory defaults."),
     )
     private val familyCopy = mapOf(
@@ -175,6 +175,43 @@ object StoopAuditionGenerator {
         }
 
         if (!quick) {
+            for ((voice, preset) in representatives) {
+                val tag = voice.name.lowercase()
+                val held = preset.copy(shadowInterval = 0, shadowReplies = 1, macros = preset.macros + mapOf(
+                    "HOLD" to 1f, "TOUCH" to .5f, "COLOR" to .5f, "LENGTH" to .5f, "SHADOW" to 0f, "WEAR" to 0f))
+                for (touch in listOf(0f, .5f, 1f)) {
+                    save("${tag}_hold_touch_${percent(touch)}", "${voice.name} · held TOUCH ${fmt(touch)}",
+                        "Settled main voice, TOUCH ${fmt(touch)}, no shadow and no wear. COLOR and LENGTH stay at .5. Matched listening level; compare the sustained articulation, with the attack excluded.",
+                        "hold", "${voice.name} · held main TOUCH", held.copy(macros = held.macros + ("TOUCH" to touch)),
+                        extra = mapOf("loop" to true, "branch" to "main", "cyclesInFile" to 1))
+                }
+                val companions = listOf(0f, .5f, 1f).associateWith { articulation ->
+                    val patch = held.copy(shadowArticulation = articulation, macros = held.macros + ("SHADOW" to 1f))
+                    val t = System.nanoTime()
+                    val probe = Stoop.renderProbe(patch, normalize = false)
+                    renderNanos += System.nanoTime() - t
+                    require(probe.seamError.isFinite() && probe.seamError < 1e-3) { "${voice.name} held companion reference seam failed" }
+                    patch to probe
+                }
+                val reference = Snip(companions.getValue(.5f).second.samples, 1, 44_100)
+                val commonGain = Loudness.of(AuditionLevel.level(reference)) / Loudness.of(reference).coerceAtLeast(1e-9f)
+                for ((articulation, pair) in companions) {
+                    val (patch, probe) = pair
+                    require(probe.previousShadow.size >= 256) { "held shadow history is missing" }
+                    val shadowSeam = Keys.seamError(probe.previousShadow + probe.shadow, probe.previousShadow.size)
+                    require(shadowSeam.isFinite() && shadowSeam < 1e-3) { "${voice.name} isolated held companion seam $shadowSeam failed" }
+                    save("${tag}_hold_shadow_articulation_${percent(articulation)}", "${voice.name} · held answer ${fmt(articulation)}",
+                        "Isolated settled companion, saved shadow articulation ${fmt(articulation)}. SHADOW 1, main TOUCH .5, COLOR .5, LENGTH .5 and WEAR 0. All three companion clips retain the same full-voice reference gain from articulation .5, preserving their quieter actual balance.",
+                        "hold", "${voice.name} · held companion articulation", patch, Snip(probe.shadow, 1, 44_100),
+                        level = "reference", referenceGain = commonGain, extra = mapOf(
+                            "loop" to true, "branch" to "shadow", "cyclesInFile" to 1,
+                            "commonReferenceGain" to commonGain, "referenceShadowArticulation" to .5f,
+                            "seamError" to shadowSeam, "seamMethod" to "Keys.seamError on actual 256-frame continuous pre-cut shadow history and isolated kept shadow loop",
+                            "referenceCombinedSeamError" to probe.seamError, "prerollFrames" to probe.prerollFrames,
+                            "sourceFrequencies" to probe.sourceFrequencies, "maxPitchAdjustmentCents" to probe.maxPitchAdjustmentCents,
+                        ) + shadowEvidence(probe))
+                }
+            }
             for (voice in listOf(StoopVoice.BASS, StoopVoice.TINE)) {
                 val base = representatives.getValue(voice).copy(macros = representatives.getValue(voice).macros + ("HOLD" to 0f))
                 val tag = voice.name.lowercase()
@@ -247,7 +284,7 @@ object StoopAuditionGenerator {
             "status" to "Candidate implementation. Awaiting the owner's listening verdict; presets and numeric settings remain provisional.",
             "sampleRate" to 44_100, "channels" to 1, "bitDepth" to 16, "effects" to "none",
             "levelRule" to "Shared AuditionLevel: loudest 200-ms RMS 0.03, peak guard 0.99. Raw groups and decomposed parts explicitly identify a common reference gain.",
-            "holdRule" to "Loop-only settled material. Each HOLD listening WAV contains four exact cycle copies; delayed attack onset is absent, with a sustained shadow companion.",
+            "holdRule" to "Loop-only settled material. Stress HOLD WAVs contain four exact cycle copies; held-articulation comparisons contain one settled cycle with page Repeat on. Delayed attack onset is absent, with a sustained shadow companion.",
             "exportTiming" to "Offline samples retain their embedded reply timing. External sampler transposition changes reply delay in seconds with playback rate; answers are not tempo-locked.",
             "clipCount" to clips.size, "totalAudioBytes" to clips.sumOf { (it.getValue("bytes") as Number).toLong() },
             "renderSeconds" to renderNanos / 1e9, "generationSeconds" to (System.nanoTime() - started) / 1e9,

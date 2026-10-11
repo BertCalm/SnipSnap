@@ -89,6 +89,63 @@ class StoopEngineTest {
         }
     }
 
+    @Test fun `held contact and companion articulation change spectrum after gain matching`() {
+        fun distance(a: FloatArray, b: FloatArray): Double {
+            assertEquals(a.size, b.size)
+            val ra = rms(a)
+            val rb = rms(b)
+            assertTrue(ra > 1e-6 && rb > 1e-6)
+            var sum = 0.0
+            for (i in a.indices) {
+                val delta = a[i] / ra - b[i] / rb
+                sum += delta * delta
+            }
+            return sqrt(sum / a.size)
+        }
+        fun spectralDistance(a: FloatArray, b: FloatArray): Double {
+            fun magnitude(x: FloatArray): DoubleArray {
+                val n = 16_384
+                val re = FloatArray(n) { i -> x[i] * (.5 - .5 * cos(2.0 * PI * i / n)).toFloat() }
+                val im = FloatArray(n)
+                Fft.forward(re, im)
+                val bins = DoubleArray(n / 2) { i -> hypot(re[i].toDouble(), im[i].toDouble()) }
+                val norm = sqrt(bins.sumOf { it * it })
+                return DoubleArray(bins.size) { bins[it] / norm }
+            }
+            val ma = magnitude(a)
+            val mb = magnitude(b)
+            return sqrt(ma.indices.sumOf { (ma[it] - mb[it]).pow(2) })
+        }
+        for (voice in StoopVoice.entries) {
+            val p = patch(voice, mapOf("HOLD" to 1f, "COLOR" to .5f, "LENGTH" to .5f,
+                "WEAR" to 0f, "SHADOW" to 1f, "TOUCH" to .5f)).copy(midi = 60)
+            val rounded = Stoop.renderProbe(p.copy(macros = p.macros + ("TOUCH" to 0f)))
+            val accented = Stoop.renderProbe(p.copy(macros = p.macros + ("TOUCH" to 1f)))
+            val softReply = Stoop.renderProbe(p.copy(shadowArticulation = 0f))
+            val hardReply = Stoop.renderProbe(p.copy(shadowArticulation = 1f))
+            val contact = distance(rounded.main, accented.main)
+            val companion = distance(softReply.shadow, hardReply.shadow)
+            val contactSpectrum = spectralDistance(rounded.main, accented.main)
+            val companionSpectrum = spectralDistance(softReply.shadow, hardReply.shadow)
+            println("STOOP held $voice gain-matched TOUCH distance=$contact spectrum=$contactSpectrum, companion articulation distance=$companion spectrum=$companionSpectrum")
+            // RMS matching removes a scalar level change; the kept region
+            // begins after bounded preroll, so attack changes cannot pass.
+            assertTrue(contact > .01, "$voice held TOUCH only changed level: $contact")
+            assertTrue(companion > .01, "$voice held companion articulation only changed level: $companion")
+            // Magnitude spectra also differ, excluding a pure phase shift.
+            assertTrue(contactSpectrum > .005, "$voice held TOUCH only moved phase: $contactSpectrum")
+            assertTrue(companionSpectrum > .005, "$voice held companion articulation only moved phase: $companionSpectrum")
+            assertContentEquals(softReply.main, hardReply.main, "$voice companion articulation leaked into main")
+            for (r in listOf(rounded, accented, softReply, hardReply)) {
+                assertTrue(Keys.seamError(r.previousCycle + r.samples, 256) < Keys.MAX_SEAM_ERROR)
+                assertEquals(256, r.previousMain.size)
+                assertEquals(256, r.previousShadow.size)
+                assertTrue(Keys.seamError(r.previousMain + r.main, 256) < Keys.MAX_SEAM_ERROR)
+                assertTrue(Keys.seamError(r.previousShadow + r.shadow, 256) < Keys.MAX_SEAM_ERROR)
+            }
+        }
+    }
+
     @Test fun `zero velocity held audio and normalized probes remain exact silence`() {
         for (voice in StoopVoice.entries) {
             val p = patch(voice, mapOf("HOLD" to 1f, "SHADOW" to 1f, "WEAR" to 1f)).copy(velocity = 0f)

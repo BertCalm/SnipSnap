@@ -15,7 +15,8 @@ chord intervals and model version. The same recipe is used by the phone,
 CLI, starter kit and offline audition generator. `Patches.edited`, saved
 presets and `PadRecipe` retain these fields.
 
-TOUCH changes attack contact and early spectrum continuously. COLOR moves
+TOUCH changes attack contact and early spectrum continuously, and retains
+a restrained influence on the settled spectrum in HOLD. COLOR moves
 the family from dark/full to bright/nasal. SHADOW controls a quieter answer
 with its own source and envelope; zero omits that synthesis. WEAR controls
 bounded coloration and bypasses cleanly at zero. LENGTH changes the finite
@@ -78,7 +79,8 @@ unavailable in the development environment.
 HOLD returns loop-only settled material. The initial attack and the shadow's
 delayed reply are absent; the shadow becomes a quieter sustained companion.
 The patch API does not attach a separate attack segment or promise a release
-tail in that loop. LENGTH still shapes the held character.
+tail in that loop. LENGTH still shapes the held character, while TOUCH and
+the companion's own articulation remain audible in the settled spectrum.
 
 The loop planner searches a long compatible period and records its maximum
 oscillator tuning adjustment. Pitch wear completes an integral cycle in

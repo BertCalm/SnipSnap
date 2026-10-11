@@ -92,6 +92,9 @@ object Stoop {
         val sourceFrequencies: List<Double> = emptyList(),
         val maxPitchAdjustmentCents: Double = 0.0,
         val prerollFrames: Int = 0,
+        /** Continuous conditioned component histories, before the shared WEAR stage. */
+        val previousMain: FloatArray = FloatArray(0),
+        val previousShadow: FloatArray = FloatArray(0),
     ) {
         val actualShadowEvents get() = events
     }
@@ -104,7 +107,8 @@ object Stoop {
     private data class LoopPlan(val frames: Int, val tuned: Map<Double, Double>, val adjustment: Double)
     private data class Rendered(val samples: FloatArray, val main: FloatArray, val shadow: FloatArray,
         val events: List<ShadowEvent>, val previous: FloatArray, val seam: Double,
-        val frequencies: List<Double>, val adjustment: Double, val warm: Int)
+        val frequencies: List<Double>, val adjustment: Double, val warm: Int,
+        val previousMain: FloatArray, val previousShadow: FloatArray)
 
     private fun duration(voice: StoopVoice, length: Float, hold: Float): Double {
         val short = when (voice) {
@@ -247,18 +251,22 @@ object Stoop {
         val sub = if (source.sub > 0f && t.sub < SOURCE_CEILING) sin(TAU * ((warpedAge * t.sub + t.phase * .5) % 1.0)) * source.sub * .36 else 0.0
         val settle = .018 + .075 * length
         val transient = if (held) (1.0 - age / (.4 + length)).coerceIn(0.0, 1.0).pow(3) else exp(-age / settle)
+        // A held sample excludes its attack. Keep contact in the settled
+        // source spectrum so TOUCH and the companion's own articulation
+        // remain useful after settling, without repeating an attack.
+        val heldContact = if (held) 1.0 else 0.0
         val bright = (.16 + .72 * color) * (.58 + .42 * velocity)
         val twin = if (source.detuneCents != 0f && voice != StoopVoice.CLAV && t.twin < SOURCE_CEILING)
             .14 * sin(TAU * ((warpedAge * t.twin + t.phase + .19) % 1.0)) else 0.0
         val body = when (voice) {
             StoopVoice.BASS -> {
                 val harmonic = (1.0 - shape) * saw(p, dt) + shape * pulse(p, dt, .23 + .32 * shape)
-                .64 * fundamental + (.26 + .40 * bright + .14 * tilt + .16 * touch * transient) * harmonic
+                .64 * fundamental + (.26 + .40 * bright + .14 * tilt + .16 * touch * (transient + .75 * heldContact)) * harmonic
             }
             StoopVoice.TINE -> {
                 // Carson-style sideband bound; high-note index retreats before the decimator.
                 val bandwidthIndex = ((SOURCE_CEILING - t.hz) / t.mod - 1.0).coerceAtLeast(0.0)
-                val index = (source.fmIndex * (.24 + 1.35 * bright + .75 * touch * transient) *
+                val index = (source.fmIndex * (.24 + 1.35 * bright + .75 * touch * (transient + .55 * heldContact)) *
                     (if (held) .55 + .45 * length else 1.0)).coerceAtMost(min(3.0, bandwidthIndex))
                 val mod = sin(TAU * ((warpedAge * t.mod + .07) % 1.0))
                 .64 * fundamental + .38 * sin(phase + index * mod) +
@@ -283,18 +291,19 @@ object Stoop {
                         (.22 + .66 * bright + .20 * touch) * pick * damping / h.toDouble().pow(.65 + .8 * (1.0 - tilt))
                     } else {
                         val registration = if (h % 2 == 0) .22 + .60 * shape else .60 - .25 * shape
-                        registration * (.16 + .84 * bright) / h.toDouble().pow(.6 + 1.2 * (1.0 - tilt))
+                        val contactRegistration = 1.0 + heldContact * .34 * touch * (h - 1) / count
+                        registration * contactRegistration * (.16 + .84 * bright) / h.toDouble().pow(.6 + 1.2 * (1.0 - tilt))
                     }
                     sum += amplitude * hs
                     weight += amplitude
                 }
                 if (voice == StoopVoice.ORGAN && t.hz * 3 < SOURCE_CEILING)
-                    sum += .19 * touch * sin(phase * 3.0) * transient
+                    sum += .19 * touch * sin(phase * 3.0) * (transient + .45 * heldContact)
                 sum / sqrt(weight)
             }
             StoopVoice.LEAD, StoopVoice.CHORD -> {
                 val harmonic = (1.0 - shape) * saw(p, dt) + shape * pulse(p, dt, .20 + .35 * shape)
-                .53 * fundamental + (.34 + .35 * bright + .13 * touch * transient) * harmonic
+                .53 * fundamental + (.34 + .35 * bright + .13 * touch * (transient + .90 * heldContact)) * harmonic
             }
         }
         return body + sub + twin
@@ -367,7 +376,8 @@ object Stoop {
                     transient = if (held) (1.0 - age / (.35 + length)).coerceIn(0.0, 1.0).pow(3)
                         else exp(-age / (.018 + .12 * length))
                     val heldDamping = if (held) .68 + .50 * length else 1.0
-                    cutoff = (cutoffBase * heldDamping * (1.0 + g.touch * transient * (1.4 + 1.2 * g.color)))
+                    val heldArticulation = if (held) .82 + .40 * g.touch else 1.0
+                    cutoff = (cutoffBase * heldDamping * heldArticulation * (1.0 + g.touch * transient * (1.4 + 1.2 * g.color)))
                         .coerceIn(min(baseHz * 1.3, 13_500.0), 13_500.0)
                 }
                 val warped = warp(seconds) - warp(g.start)
@@ -388,6 +398,10 @@ object Stoop {
         val mainOut = if (components) condition(main) else FloatArray(0)
         val shadowOut = if (components && shadow.isNotEmpty()) condition(shadow) else FloatArray(0)
         val previous = if (held) out.copyOfRange(warm - HISTORY, warm) else FloatArray(0)
+        val previousMain = if (held && components) mainOut.copyOfRange(warm - HISTORY, warm) else FloatArray(0)
+        val previousShadow = if (held && components) {
+            if (shadowOut.isNotEmpty()) shadowOut.copyOfRange(warm - HISTORY, warm) else FloatArray(HISTORY)
+        } else FloatArray(0)
         val samples = out.copyOfRange(warm, warm + kept)
         // Keys' normalized energy metric is undefined for exactly silent audio.
         // Silence has no discontinuity; every sounding loop still uses the
@@ -401,7 +415,7 @@ object Stoop {
         return Rendered(samples, if (components) mainOut.copyOfRange(warm, warm + kept) else mainOut,
             if (shadowOut.isNotEmpty()) shadowOut.copyOfRange(warm, warm + kept) else FloatArray(kept),
             events, previous, seam, allTones.flatMap { t -> listOf(fitted(t, plan).hz, fitted(t, plan).mod, fitted(t, plan).twin) },
-            plan?.adjustment ?: 0.0, warm)
+            plan?.adjustment ?: 0.0, warm, previousMain, previousShadow)
     }
 
     fun render(voice: StoopVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI, velocity: Float = 1f): Snip =
@@ -421,8 +435,10 @@ object Stoop {
             val after = r.samples.maxOfOrNull { abs(it) } ?: 0f
             val gain = if (before > 0f) after / before else 1f
             for (i in r.previous.indices) r.previous[i] *= gain
+            for (i in r.previousMain.indices) r.previousMain[i] *= gain
+            for (i in r.previousShadow.indices) r.previousShadow[i] *= gain
             for (i in r.main.indices) { r.main[i] *= gain; r.shadow[i] *= gain }
         }
-        return Probe(r.samples, r.main, r.shadow, r.events, r.previous, r.seam, r.frequencies, r.adjustment, r.warm)
+        return Probe(r.samples, r.main, r.shadow, r.events, r.previous, r.seam, r.frequencies, r.adjustment, r.warm, r.previousMain, r.previousShadow)
     }
 }
