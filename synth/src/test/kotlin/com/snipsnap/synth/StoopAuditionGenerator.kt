@@ -216,7 +216,7 @@ object StoopAuditionGenerator {
                 val base = representatives.getValue(voice).copy(macros = representatives.getValue(voice).macros + ("HOLD" to 0f))
                 val tag = voice.name.lowercase()
                 for (macro in timbral) for (value in steps) {
-                    save("${tag}_${macro.lowercase()}_${percent(value)}", "$macro ${fmt(value)}", "${voice.name}: only $macro changes; all companions use ${base.name}'s saved defaults.",
+                    save("${tag}_sweep_${macro.lowercase()}_${percent(value)}", "$macro ${fmt(value)}", "${voice.name}: only $macro changes; all companions use ${base.name}'s saved defaults.",
                         "sweeps", "${voice.name} · $macro", base.copy(macros = base.macros + (macro to value)))
                 }
                 for ((a, b) in listOf("TOUCH" to "COLOR", "TOUCH" to "WEAR", "SHADOW" to "LENGTH", "COLOR" to "WEAR")) {
