@@ -165,3 +165,7 @@ testkit/SnipSnap Pitchwheel Kit/
 testkit/lacquer-audition/
 testkit/SnipSnap Lacquer Kit/
 testkit/SnipSnap-Lacquer-Kit.zip
+
+# REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
+testkit/revel-audition/
+testkit/SnipSnap Revel Kit/
