@@ -143,6 +143,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.pitchwheel() },
         Starter(
+            "prism", "PRISM",
+            "Harmonic keys, glass and separating partials in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.prism() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

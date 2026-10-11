@@ -622,6 +622,24 @@ object SynthKits {
     }
 
     /**
+     * Eight dry harmonic keys in C minor pentatonic followed by the eight
+     * curated spectral recipes. Each note rebuilds its own partial phases
+     * and contours; finite notes are TONAL and the held veil is LOOP.
+     */
+    fun prism(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = PrismPatch(
+            "Prism $n", PrismVoice.KEY,
+            PrismPresets.forVoice(PrismVoice.KEY).first().macros +
+                ("TUNE" to semitone / Prism.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
+        val presets = PrismPresets.all()
+        val finite = presets.filterNot { Prism.isLoop(it.macros.getValue("HOLD")) }
+        val held = presets.filter { Prism.isLoop(it.macros.getValue("HOLD")) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            (finite + held).map { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

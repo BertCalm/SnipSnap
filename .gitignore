@@ -159,4 +159,7 @@ testkit/SnipSnap Tessera Kit/
 
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
+
+# PRISM raw/matched WAVs, listening manifest and diagnostics are rendered locally.
+testkit/prism-audition/
 testkit/SnipSnap Pitchwheel Kit/
