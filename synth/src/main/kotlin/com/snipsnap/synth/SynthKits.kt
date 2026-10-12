@@ -639,6 +639,28 @@ object SynthKits {
     }
 
     /**
+     * Sixteen dry FM/formant pads for the first audition. A01–A08 walk KEY up
+     * C minor pentatonic from C3, with explicit roots rather than a tuning macro.
+     * The upper pads contrast all six roles and end with settled held choir.
+     * Every pad carries operator, mouth and envelope state in its complete recipe.
+     */
+    fun murmur(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = MurmurPatch(
+            "Murmur $n", MurmurVoice.KEY, Murmur.defaults(MurmurVoice.KEY),
+            midi = 48 + semitone,
+        ).let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
+        val contrasts = listOf(
+            "CLOSED CIRCUIT", "ROUND HUM", "DUST VOWEL", "POCKET VOICE",
+            "NARROW CALL", "SMALL CHOIR", "GLASS MOUTH", "HELD HUM",
+        )
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            contrasts.map { name ->
+                MurmurPresets.all().first { it.name == name }
+                    .let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
+            }
+    }
+
+    /**
      * Eight dry harmonic keys in C minor pentatonic followed by the eight
      * curated spectral recipes. Each note rebuilds its own partial phases
      * and contours; finite notes are TONAL and the held veil is LOOP.

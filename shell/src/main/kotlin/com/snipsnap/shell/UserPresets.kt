@@ -9,6 +9,8 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.MurmurConfig
+import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -354,7 +356,8 @@ object UserPresets {
      * its render-model version. LACQUER carries its entire layered recipe through
      * the JSON constructor. SPOOL writes its complete machine constructor, including
      * recording roster and HOLD memory mode. RELAY retains its complete source and
-     * phrase schedules. Names and embedded JSON are escaped Kotlin string literals.
+     * phrase schedules. MURMUR keeps its root, velocity and complete
+     * operator/formant/envelope definition. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is LacquerPatch) {
@@ -404,6 +407,7 @@ object UserPresets {
                 ".let { RelayPatch.fromJsonText(\"$json\") }"
             }
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
+            is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is RevelPatch -> {
                 val c = patch.configuration
                 fun values(items: List<*>, literal: (Any?) -> String): String =
@@ -456,6 +460,20 @@ object UserPresets {
         "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
         "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
     ).joinToString(", ") + ")"
+
+    private fun murmurConfigLiteral(config: MurmurConfig): String {
+        fun text(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
+        fun values(items: List<Double>) = items.joinToString(", ", "listOf(", ")")
+        val targets = config.targets.joinToString(", ", "listOf(", ")") { target ->
+            "MurmurFormantTarget(name = ${text(target.name)}, centers = ${values(target.centers)}, " +
+                "widths = ${values(target.widths)}, gains = ${values(target.gains)}, sourceBalance = ${target.sourceBalance})"
+        }
+        return "MurmurConfig(routing = MurmurRouting.${config.routing.name}, ratios = ${values(config.ratios)}, " +
+            "trajectory = MurmurTrajectory.${config.trajectory.name}, direction = ${config.direction}, " +
+            "referenceSeconds = ${config.referenceSeconds}, attack = ${config.attack}, decay = ${config.decay}, " +
+            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets)"
+    }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */
     fun renderAll(saved: List<Saved>): String {

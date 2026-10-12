@@ -51,6 +51,7 @@ class PadRecipeTest {
         AlloyPatch("Hybrid Test", AlloyVoice.KEY, mapOf("FUSE" to 0.6f), midi = 55, velocity = 0.6f),
         StoopPatch("Groove Test", StoopVoice.TINE, mapOf("TOUCH" to 0.6f), midi = 55, velocity = 0.6f, shadowInterval = 12),
         TanglePatch("Knot Test", TangleVoice.BASS, mapOf("TANGLE" to 0.6f), midi = 36, velocity = 0.6f),
+        MurmurPatch("Mouth Test", MurmurVoice.KEY, mapOf("MOUTH" to 0.7f), midi = 55, velocity = 0.6f),
     )
 
     @Test

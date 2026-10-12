@@ -138,6 +138,10 @@ object Presets {
             val v = EmbouchureVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             EmbouchurePresets.forVoice(v)
         }
+        MurmurPatch.ENGINE -> {
+            val v = MurmurVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            MurmurPresets.forVoice(v)
+        }
         PrismPatch.ENGINE -> {
             val v = PrismVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             PrismPresets.forVoice(v)
@@ -202,5 +206,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + MurmurPresets.all()
 }

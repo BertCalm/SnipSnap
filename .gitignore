@@ -183,6 +183,9 @@ testkit/SnipSnap Relay Kit/
 testkit/embouchure-audition/
 testkit/embouchure-audition-model2/
 testkit/SnipSnap Embouchure Kit/
+# MURMUR's generated listening matrix and export evidence.
+testkit/murmur-audition/
+testkit/SnipSnap Murmur Kit/
 
 # REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
 testkit/revel-audition/

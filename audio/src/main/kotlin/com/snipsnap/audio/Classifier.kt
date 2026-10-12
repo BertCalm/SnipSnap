@@ -67,6 +67,15 @@ object Classifier {
     private const val HAT_MIN_HIGH_RATIO = 0.97f
     private const val CLOSED_HAT_MAX_DECAY_MS = 120f
     private const val SNARE_MIN_HIGH_RATIO = 0.5f
+    // Brightness alone reads a high musical root as a snare: C7 is already above
+    // the high band's 2 kHz boundary. Require noise-like spectral spread too.
+    // Calibrated against 441 THUMP snare preset/macro/FX probes: the 329 cases
+    // already classified SNARE have flatness >= 0.4789 (lowest: CHOKED CRACK
+    // through dull EQ). DrumSynth's body-heavy snare controls stay >= 0.4818.
+    // MURMUR's C7 defaults, breath .8 and all-high voices stay <= 0.19795.
+    // The .25 floor leaves margin on both sides without depending on duration
+    // or pitch detection; feature-only classification and saved teaching logs agree.
+    private const val SNARE_MIN_FLATNESS = 0.25f
 
     // Anything longer than this is a phrase, not a hit.
     private const val LOOP_MIN_SECONDS = 1.5f
@@ -186,7 +195,7 @@ object Classifier {
             return Classification(DrumClass.CLAP, confidence = 0.7f, features = features)
         }
 
-        if (features.highRatio > SNARE_MIN_HIGH_RATIO) {
+        if (features.highRatio > SNARE_MIN_HIGH_RATIO && features.flatness >= SNARE_MIN_FLATNESS) {
             return Classification(
                 DrumClass.SNARE,
                 margin(features.highRatio, SNARE_MIN_HIGH_RATIO, 0.4f),

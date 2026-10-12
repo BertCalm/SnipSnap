@@ -209,6 +209,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.embouchure() },
         Starter(
+            "murmur", "MURMUR",
+            "Talking FM bass, vowel keys and mouth-shaped plucks in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.murmur() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,
