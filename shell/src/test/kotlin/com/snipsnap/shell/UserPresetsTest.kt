@@ -16,6 +16,8 @@ import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.StoopVoice
@@ -153,6 +155,7 @@ class UserPresetsTest {
                 "PRISM" to PrismVoice.entries.map { it.name },
                 "CONTOUR" to ContourVoice.entries.map { it.name },
                 "STOOP" to StoopVoice.entries.map { it.name },
+                "SKITTER" to SkitterVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -282,6 +285,28 @@ class UserPresetsTest {
             assertTrue("loopSeconds = ${patch.config.loopSeconds}f" in line)
             assertTrue("velocity = 0.3f, model = ${patch.model}" in line)
             assertEquals("ContourPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved circuit retains root excitation velocity and noise seed when promoted`() {
+        val root = shelf()
+        try {
+            val source = SkitterPatch(
+                "LOW CIRCUIT", SkitterVoice.BASS,
+                linkedMapOf("AGITATE" to .73f, "STATIC" to .21f), midi = 36, velocity = .3f, seed = -927,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(SkitterVoice.BASS, \"LOW CIRCUIT\", \"AGITATE\" to 0.73f, \"STATIC\" to 0.21f).copy(midi = 36, velocity = 0.3f, seed = -927),",
+                line,
+            )
+            assertEquals("SkitterPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
         } finally {
             root.deleteRecursively()
         }

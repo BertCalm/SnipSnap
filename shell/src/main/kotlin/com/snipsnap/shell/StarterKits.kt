@@ -179,6 +179,18 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.lacquer() },
         Starter(
+            "spool", "SPOOL",
+            "Recorded strings, choir, flute and brass in C minor pentatonic. Diagonal heads and backward answers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.spool() },
+        Starter(
+            "skitter", "SKITTER",
+            "Recovering oscillator pairs provoke a fluttering circuit in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.skitter() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

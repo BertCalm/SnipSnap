@@ -367,6 +367,26 @@ is published with owner-private access and all 477 cases.
 The owner's sonic verdict precedes expansion to the proposed 36 presets;
 Android/device, MPC hardware and release naming checks remain open.
 
+### SKITTER — provoke, flutter, settle
+
+SKITTER ports the [engineering specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
+into the deterministic melodic pipeline. BASS, LEAD, HOLLOW, FLUTTER, CHIRP and
+FRAY share two oscillators with unequal pitch recovery, a seeded noise exciter,
+signal-history detectors, bounded agitation and one nonlinear multimode filter.
+BUZZ, SKITTER, AGITATE, VENT and STATIC act inside that coupled system; HOLD
+selects periodic sustained material.
+
+Patches retain MIDI root 24–84, velocity and seed. Thirty-six dry presets and
+`SynthKits.skitter()` provide the initial roster and sixteen-pad kit. Patch
+recipes, physical velocity, CLI, FRESH TAPE and the phone synth picker expose
+the same engine. `./gradlew :synth:generateSkitterAudition` renders the
+voice/register/velocity matrix, macro sweeps and interactions, causal ablations,
+raw/matched clips and held boundaries. The [published audition](https://skitter-snipsnap-audition.bertcalm.chatgpt.site)
+is the listening gate; [SKITTER](SKITTER.md) records the implementation,
+measurements and explicit HOLD approximation. The owner's sonic verdict and
+phone/MPC checks remain open. The history and agitation model is a new design,
+not a reconstruction of the historical Wasp circuit.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,
@@ -574,6 +594,22 @@ material because the pad API has no attack-plus-loop-region field.
 Implementation and validation notes are in [SUTURE.md](SUTURE.md).
 **Awaiting the owner's sonic verdict.** The reduced mechanical constants,
 voice shapes and release names remain provisional.
+
+SPOOL follows as the returning recording machine, ported from the
+[supplied engineering specification](SPOOL_SPEC.md). STRING, CHOIR, FLUTE,
+BRASS, PALIMPSEST and CUT use original note-specific source performances,
+three loaded strips, diagonal heads, audible spring return, deterministic
+splices and delayed cross-strip imprint. TUNE (C3–C5), HEAD, STRAIN, RETURN,
+IMPRINT, SPLICE and HOLD share that machine. Patch recipes retain gate/source
+duration, source roster and contact/transport/head/splice/write geometry;
+velocity changes the contact gesture. Six dry presets, `SynthKits.spool()`,
+the FRESH TAPE starter, phone picker and CLI expose the first review set.
+HOLD explicitly exports a finite `FROZEN_SNAPSHOT` imprint through repeated
+forward/return cycles. `./gradlew :synth:generateSpoolAudition` builds the
+listening pack; [SPOOL.md](SPOOL.md) describes integration and its limits.
+**Awaiting the owner's dry sonic verdict before expanding to 36 presets.**
+Published auditions and numerical probes support that review; device and
+release-name validation remain outstanding.
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.

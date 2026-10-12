@@ -702,6 +702,24 @@ object SynthKits {
     }
 
     /**
+     * SKITTER's dry pitched kit. The first eight pads walk BASS up C minor
+     * pentatonic from C3; the remaining pads expose clean, hollow, fluttering,
+     * chirping and frayed reactions, ending with two seamless held recipes.
+     */
+    fun skitter(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = SkitterPatch(
+            "Circuit $n", SkitterVoice.BASS, Skitter.defaults(SkitterVoice.BASS),
+            midi = Skitter.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Skitter.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = SkitterPresets.all().first { it.name == name }
+            .let { pad(it, Skitter.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(
+            preset("Quiet Circuit"), preset("Nervous Wire"), preset("Open Interval"), preset("Aftershock"),
+            preset("Pitched Chirp"), preset("Soft Fray"), preset("Held Flutter"), preset("Frayed Sustain"),
+        )
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
@@ -814,5 +832,23 @@ object SynthKits {
         ).let { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(7).mapIndexed { i, semitone -> note(i + 1, semitone) } +
             ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
+     * Dry original recordings in C minor pentatonic. A01–A08 play the clear string family;
+     * A09–A14 expose all six first-review voices, and A15–A16 repeat forward/return cycles
+     * using a finite frozen imprint snapshot. Every pad carries the complete machine recipe.
+     */
+    fun spool(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = SpoolPatch(
+            "Frame $n", SpoolVoice.STRING,
+            Spool.defaults(SpoolVoice.STRING) + ("TUNE" to semitone / Spool.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Spool.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: SpoolVoice, hold: Boolean = false) = SpoolPresets.forVoice(voice).first()
+            .let { if (hold) it.copy(name = "${it.name} LOOP", macros = it.macros + ("HOLD" to 1f)) else it }
+            .let { pad(it, Spool.drumClassFor(it.voice, it.macros)) }
+        return (0..7).map { i -> note(i + 1, PENTATONIC[i]) } +
+            SpoolVoice.entries.map { preset(it) } +
+            listOf(preset(SpoolVoice.CHOIR, hold = true), preset(SpoolVoice.PALIMPSEST, hold = true))
     }
 }
