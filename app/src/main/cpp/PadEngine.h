@@ -41,7 +41,11 @@ struct PadCommand {
     int32_t sample = -1;
     int64_t start = 0;
     int64_t end = 0;
-    /** -1 plays once to `end`; otherwise the frame the read wraps back to when it reaches `end` (a keygroup's sustain). */
+    /**
+     * -1 plays once to `end`; otherwise the loop is `[loopStart, end)`: the read wraps back to this frame when it
+     * reaches `end`, the last frame is played, and the frame after it is `loopStart` (a keygroup's sustain; the
+     * period is `end - loopStart`). A loop of fewer than two frames plays once.
+     */
     int64_t loopStart = -1;
     float gainL = 0.0f, gainR = 0.0f;
     double pitch = 1.0;

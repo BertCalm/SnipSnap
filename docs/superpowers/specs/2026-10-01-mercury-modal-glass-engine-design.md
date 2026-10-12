@@ -1036,7 +1036,7 @@ zones held together as a diminished seventh for 5 s, and the middle zone held
 through four wraps, all played the way the keygroup plays the file (the first
 pass, the loop from its marker, the 0.6 s release).
 
-**Known, house-wide, not changed here: the phone's players wrap one frame early.**
+**Known, house-wide, not changed here (fixed afterwards, see the end of this paragraph): the phone's players wrap one frame early.**
 Copilot's review of the PR found that `InstrumentEngine.render` (the Kotlin
 reference) wraps when `pos >= end - 1`, subtracting `end - 1 - loopStart`: the loop's
 period is one frame short of the file's `[loopStart, end)`, and the last frame is
@@ -1052,6 +1052,19 @@ RMS: a faint tick every 3 s, most audible on the highest keys. The MPC hardware'
 own loop is `[loopStart, end)` and is not affected. Fixing it means changing both
 playback engines and their tests for every held instrument, so it is not part of
 R2b; it is the owner's call (raised in the PR).
+
+**Fixed (2026-10-12, the owner's go-ahead).** Both players now loop the file's
+`[loopStart, end)`: the read wraps when it reaches `end`, the period is
+`end - loopStart`, the last frame is played, and the frame after it is the loop's
+first (the seam is interpolated like any other step). `InstrumentEngine` and
+`PadEngine.cpp`, forwards and backwards, with the one-shot path untouched. The
+defect was measured before the fix on the real zones (PING's top zone, MIDI 84:
+1.06 of the loop's steepest step across the wrap, matching the range above), and
+`MercuryPadMakerTest` now holds every voice's top zone to at most 1.00; a sine whose
+loop holds whole periods plays as one unbroken sine across many wraps in both
+engines' tests, which fail on the old wrap. Every looped instrument gains it
+(RESIN, SIREN, GLINT, the organ, MERCURY) and so does any looped pad (a loop at
+`loopStart = 0` now repeats its whole window, `end` frames, not `end - 1`).
 
 **Not done in R2b, for the desktop session:** the app's own MAKE INSTRUMENT
 path (R1.1 item 6 above).

@@ -376,13 +376,17 @@ TEST(pad_engine_refuses_a_bad_index_or_empty_window_by_reporting_the_voice) {
 
 TEST(pad_engine_a_looping_voice_sustains_and_wraps_to_its_loop_start) {
     PadEngine& e = seeded();
-    // The ramp's first 10 frames, looping from frame 9 back to 4: 0..8, 4..8, 4..8 ...
+    // The ramp's first 10 frames, looping [4, 10): 0..9, 4..9, 4..9 ... The
+    // loop is the window's [loopStart, end), so the LAST frame is played and
+    // the period is end - loopStart. (It used to wrap at end - 1: frame 9
+    // was never read and every wrap slipped a frame.)
     e.pushCommand(looping(60, 0, 10, 4));
     auto out = callback(e, 20);
     CHECK_NEAR(out[2 * 8], 0.008f, 1e-6);
-    CHECK_NEAR(out[2 * 9], 0.004f, 1e-6);   // wrapped
-    CHECK_NEAR(out[2 * 13], 0.008f, 1e-6);
-    CHECK_NEAR(out[2 * 14], 0.004f, 1e-6);  // and again
+    CHECK_NEAR(out[2 * 9], 0.009f, 1e-6);   // the last frame is played
+    CHECK_NEAR(out[2 * 10], 0.004f, 1e-6);  // then wrapped
+    CHECK_NEAR(out[2 * 15], 0.009f, 1e-6);
+    CHECK_NEAR(out[2 * 16], 0.004f, 1e-6);  // and again, a period of six
     CHECK_EQ(static_cast<int>(ended(e).size()), 0);  // still sounding
     // A release is a Stop with the instrument's release as its fade.
     e.pushCommand(stop(60, 1.0f));
@@ -401,6 +405,63 @@ TEST(pad_engine_a_looping_voice_sustains_and_wraps_to_its_loop_start) {
     auto held = callback(e, 64);
     CHECK(peak(held) > 0.0f);
     CHECK_EQ(static_cast<int>(ended(e).size()), 0);
+}
+
+TEST(pad_engine_the_seam_of_a_loop_is_interpolated_into_the_loop_start) {
+    // Half a frame per output frame (pitch 0.5): position 9.5 sits between
+    // the last frame (9) and the loop's first (4), and reads their mean.
+    PadEngine& e = seeded();
+    PadCommand c = looping(70, 0, 10, 4);
+    c.pitch = 0.5;
+    e.pushCommand(c);
+    auto out = callback(e, 24);
+    CHECK_NEAR(out[2 * 18], 0.009f, 1e-6);    // position 9.0
+    CHECK_NEAR(out[2 * 19], 0.0065f, 1e-6);   // 9.5: (0.009 + 0.004) / 2
+    CHECK_NEAR(out[2 * 20], 0.004f, 1e-6);    // 10 wraps to 4
+    CHECK_NEAR(out[2 * 21], 0.0045f, 1e-6);   // 4.5
+}
+
+TEST(pad_engine_a_loop_that_closes_exactly_plays_as_one_unbroken_sine) {
+    // 2000 frames, looping [1000, 2000): ten periods of a 100-frame sine, so
+    // the file closes exactly and a held note is the sine for as long as it
+    // is held. With the loop one frame short each wrap slipped the phase by a
+    // frame (0.063 rad here) and the note walked out of the sine it was cut from.
+    const double pi = 3.14159265358979323846;
+    std::vector<float> sine(2000);
+    for (int i = 0; i < 2000; ++i) sine[static_cast<size_t>(i)] = 0.5f * static_cast<float>(std::sin(2.0 * pi * i / 100.0));
+    PadEngine e(kRate);
+    e.beginBank();
+    e.addSample(std::move(sine), 1, kRate);
+    e.commitBank();
+    callback(e, 8);
+    ended(e);
+    e.pushCommand(looping(71, 0, 2000, 1000));
+    float worst = 0.0f;
+    for (int block = 0; block < 5; ++block) {  // 5000 frames: two wraps and more
+        const auto out = callback(e, 1000);
+        for (int i = 0; i < 1000; ++i) {
+            const int n = block * 1000 + i;
+            const float want = 0.5f * static_cast<float>(std::sin(2.0 * pi * n / 100.0));
+            worst = std::max(worst, std::fabs(out[static_cast<size_t>(2 * i)] - want));
+        }
+    }
+    CHECK(worst < 2e-5f);
+    CHECK(ended(e).empty());
+}
+
+TEST(pad_engine_a_fast_voice_over_a_short_loop_stays_inside_it) {
+    // A two-frame loop [8, 10) at 4x speed: after the first pass every read
+    // is one of frames 8 and 9 or between them.
+    PadEngine& e = seeded();
+    PadCommand c = looping(72, 0, 10, 8);
+    c.pitch = 4.0;
+    e.pushCommand(c);
+    const auto out = callback(e, 64);
+    for (int i = 3; i < 64; ++i) {
+        const float v = out[static_cast<size_t>(2 * i)];
+        CHECK(v >= 0.00799f && v <= 0.00901f);
+    }
+    CHECK(ended(e).empty());
 }
 
 TEST(latency_is_minus_one_with_no_stream) {
@@ -1502,11 +1563,19 @@ TEST(pad_engine_plays_a_window_backwards) {
 TEST(pad_engine_a_backwards_loop_wraps_the_other_way) {
     // Forwards a loop falls off the top and returns to loopStart;
     // backwards it falls off the bottom at loopStart and returns to the
-    // last frame. Either way it never ends.
+    // last frame. Either way it never ends, and either way the loop is the
+    // window's [loopStart, end): frame loopStart is played and the period
+    // is end - loopStart.
     PadEngine& e = seeded();
     PadCommand c = reversed(2, 0, 0, 200);
     c.loopStart = 150;
     e.pushCommand(c);
+    // 199, 198 ... 150, then 199 again: a period of fifty.
+    const auto first = callback(e, 120);
+    for (int i = 0; i < 120; ++i) {
+        const float want = static_cast<float>(199 - (i % 50)) / 1000.0f;
+        CHECK_NEAR(first[static_cast<size_t>(2 * i)], want, 1e-6);
+    }
     float lowest = 1.0f, highest = 0.0f;
     for (int i = 0; i < 60; ++i) {
         for (float v : callback(e, 64)) {
