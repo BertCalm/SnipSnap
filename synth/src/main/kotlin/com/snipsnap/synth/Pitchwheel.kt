@@ -18,7 +18,7 @@ enum class PitchwheelVoice { CLUNK, PLUCK, DRAW, RECOIL, THAWED, TURN }
  */
 object Pitchwheel {
     const val RATE = Dsp.RATE
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 24
     const val MIDI_MAX = 96
@@ -94,7 +94,7 @@ object Pitchwheel {
     /** One ten-mode wooden body, with work-conserving contact transfers. Release
      * work waits in a short contact reservoir; it is part of the stored energy.
      * Resin slip pumps a broader subset of these same modes, never a noise layer. */
-    private class Wood(hz: Double, body: Double, tooth: Double, voice: PitchwheelVoice, period: Int = 0) {
+    private class Wood(hz: Double, body: Double, tooth: Double, private val voice: PitchwheelVoice, period: Int = 0) {
         val x = DoubleArray(10)
         val v = DoubleArray(10)
         val pending = DoubleArray(10)
@@ -113,13 +113,13 @@ object Pitchwheel {
             val rootDecay = when (voice) {
                 PitchwheelVoice.CLUNK -> .16 + .34 * body
                 PitchwheelVoice.PLUCK -> .40 + .80 * body
-                PitchwheelVoice.DRAW -> .22 + .42 * body
-                PitchwheelVoice.RECOIL -> .25 + .45 * body
-                PitchwheelVoice.THAWED -> .12 + .30 * body
+                PitchwheelVoice.DRAW -> .35 + .60 * body
+                PitchwheelVoice.RECOIL -> .28 + .60 * body
+                PitchwheelVoice.THAWED -> .25 + .60 * body
                 PitchwheelVoice.TURN -> .25 + .60 * body
             }
             val bodyDecay = when (voice) {
-                PitchwheelVoice.CLUNK -> .07 + .19 * body
+                PitchwheelVoice.CLUNK -> .18 + .30 * body
                 PitchwheelVoice.PLUCK -> .06 + .10 * body
                 PitchwheelVoice.DRAW -> .14 + .32 * body
                 PitchwheelVoice.RECOIL -> .08 + .28 * body
@@ -142,13 +142,41 @@ object Pitchwheel {
                 PitchwheelVoice.THAWED -> 1.6
                 PitchwheelVoice.TURN -> 1.0
             }
+            // Contact positions have mode nodes: a release does not excite every
+            // partial by one common brightness scalar. These projections and the
+            // mode-specific losses retain material colour through the audible body.
+            // All six calibrations still use this same body and its stable root.
+            val projection = when (voice) {
+                PitchwheelVoice.CLUNK -> doubleArrayOf(1.0, .24, .12, .25, .08, .62, .4, .85, .3, .25)
+                PitchwheelVoice.PLUCK -> DoubleArray(10) { 1.0 }
+                PitchwheelVoice.DRAW -> doubleArrayOf(1.0, 2.4, .7, .35, .2, .6, .3, .35, .2, .15)
+                PitchwheelVoice.RECOIL -> doubleArrayOf(1.0, .18, 1.15, 2.8, 2.3, .3, 1.4, .25, 1.1, .7)
+                PitchwheelVoice.THAWED -> doubleArrayOf(1.0, .35, 2.8, .3, .12, .16, .14, .22, .12, .10)
+                PitchwheelVoice.TURN -> doubleArrayOf(1.0, .55, 1.8, .5, .6, .25, .3, .7, 1.4, .35)
+            }
+            val pitchedLife = when (voice) {
+                PitchwheelVoice.CLUNK -> doubleArrayOf(1.0, .35, .25, .30, .20)
+                PitchwheelVoice.PLUCK -> DoubleArray(5) { 1.0 / (1 + .36 * it) }
+                PitchwheelVoice.DRAW -> doubleArrayOf(1.0, 1.1, .65, .32, .25)
+                PitchwheelVoice.RECOIL -> doubleArrayOf(1.0, .30, .75, 1.15, .80)
+                PitchwheelVoice.THAWED -> doubleArrayOf(1.0, .40, 1.05, .35, .25)
+                PitchwheelVoice.TURN -> doubleArrayOf(1.0, .60, 1.0, .45, .60)
+            }
+            val bodyLife = when (voice) {
+                PitchwheelVoice.CLUNK -> doubleArrayOf(1.0, .45, .95, .45, .30)
+                PitchwheelVoice.PLUCK -> DoubleArray(5) { 1.0 / (1 + .19 * it) }
+                PitchwheelVoice.DRAW -> doubleArrayOf(.90, .55, .65, .45, .30)
+                PitchwheelVoice.RECOIL -> doubleArrayOf(.45, 1.8, .40, 1.8, .90)
+                PitchwheelVoice.THAWED -> doubleArrayOf(.45, .35, .50, .30, .25)
+                PitchwheelVoice.TURN -> doubleArrayOf(.45, .50, .90, 1.6, .60)
+            }
             val attack = (.00045 + .004 * (1 - tooth).pow(2)) * when (voice) {
                 PitchwheelVoice.CLUNK -> 1.4
                 PitchwheelVoice.PLUCK -> .55
-                PitchwheelVoice.DRAW -> 1.3
+                PitchwheelVoice.DRAW -> 4.0
                 PitchwheelVoice.RECOIL -> .65
-                PitchwheelVoice.THAWED -> 1.5
-                PitchwheelVoice.TURN -> 1.0
+                PitchwheelVoice.THAWED -> 6.0
+                PitchwheelVoice.TURN -> .85
             }
             transferRate = 1 - exp(-1 / (INTERNAL_RATE * attack))
             for (j in x.indices) {
@@ -157,8 +185,10 @@ object Pitchwheel {
                 if (period > 0) f = round(f * period / RATE) * RATE / period
                 val a = TAU * f / INTERNAL_RATE
                 c[j] = cos(a); s[j] = sin(a)
-                val t60 = if (j < 5) rootDecay / (1 + .36 * j)
-                    else bodyDecay / (1 + .19 * (j - 5))
+                val t60 = if (voice == PitchwheelVoice.PLUCK) {
+                    if (j < 5) rootDecay / (1 + .36 * j) else bodyDecay / (1 + .19 * (j - 5))
+                } else if (j < 5) rootDecay * pitchedLife[j]
+                    else bodyDecay * bodyLife[j - 5]
                 d[j] = exp(-ln(1000.0) / (INTERNAL_RATE * t60))
                 pickup[j] = if (f > RATE * .42) 0.0 else when (j) {
                     0 -> 1.0; 1 -> .70; 2 -> .55; 3 -> .42; 4 -> .30
@@ -171,7 +201,7 @@ object Pitchwheel {
                     3 -> (.10 + .70 * tooth) * edge
                     4 -> (.06 + .58 * tooth) * edge
                     else -> (.18 + .65 * body) * bodyTransfer / (1 + .24 * (j - 5))
-                }
+                } * projection[j]
                 snap[j] = if (j == 0) .45 else if (j < 5) (.55 + .40 * tooth) / (1 + .10 * j)
                     else (.45 + .35 * body) / (1 + .12 * (j - 5))
                 slip[j] = when (j) {
@@ -198,8 +228,15 @@ object Pitchwheel {
             var norm = 0.0
             for (j in p.indices) {
                 val colour = if (j == 0) 1.0 else variation * (if (direction < 0) 1.0 + .16 * j else 1.0)
-                val texture = if (transfer == Transfer.SLIP && j > 0)
-                    (1.0 + .55 * strain + .30 * (1 - temperature)) * (1 + .22 * tanh(v[j] * 12 - v[0] * 4)) else 1.0
+                val texture = when {
+                    transfer == Transfer.SLIP && j > 0 ->
+                        (1.0 + .55 * strain + .30 * (1 - temperature)) * (1 + .22 * tanh(v[j] * 12 - v[0] * 4))
+                    // Warm resin changes the transfer at the instant of contact,
+                    // including a single release; it does not retune the root.
+                    voice == PitchwheelVoice.THAWED && transfer == Transfer.RELEASE && j == 2 -> .55 + 1.20 * temperature
+                    voice == PitchwheelVoice.THAWED && transfer == Transfer.RELEASE && j >= 5 -> 1.35 - .75 * temperature
+                    else -> 1.0
+                }
                 val w = p[j] * colour * texture
                 weights[j] = w * w; norm += weights[j]
             }

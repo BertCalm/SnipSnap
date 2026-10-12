@@ -8,10 +8,12 @@ back. Its phrase follows the evolving wheel, contact and resin state.
 
 This is an invented musical DSP instrument. The normalized forces, thermal
 response and modal ratios are expressive design choices, not a validated
-resin model. Pitchwheel remains a working name. The owner heard the first model
-and reported six similar struck voices differing mainly in rhythm. Model 2
-addresses acoustic character; its revised dry audition remains provisional.
-The initial preset scope stays small until the owner approves it.
+resin model. Pitchwheel remains a working name. The owner heard model 1 as six
+similar struck voices differing mainly in rhythm. Model 2 revised acoustic
+character; its listening notes gave five voices Revise and found PLUCK most
+different, with no Keep verdict. Model 3 is the current provisional revision,
+aimed at preserving distinct colour through the audible body of each release.
+The initial preset scope stays small until the owner approves the dry sound.
 
 ## Playing and saving
 
@@ -35,26 +37,32 @@ range, so the combined controls span MIDI 12–108. Upper modes beyond the
 output bandwidth are excluded from excitation and pickup before decimation.
 Velocity spans 0–1 and scales gesture energy separately from PUSH's playing character.
 `PitchwheelPatch` stores `midi`, `velocity` and render `model` beside the macro
-map. Newly authored recipes use model 2. Saved model 1 recipes use the preserved
-original renderer, including velocity variants. An absent or null JSON `model`
+map. Newly authored recipes use model 3. Saved model 1 recipes select the
+preserved `PitchwheelV1` renderer; saved model 2 recipes select `PitchwheelV2`.
+Velocity variants use the stored model too. An absent or null JSON `model`
 reads as 1 so an older recipe keeps its original sound. Editing, replaying or
 promoting a saved recipe retains its model. Missing note and velocity fields
 read as their defaults; unsupported models, voices and invalid normalized
 macro values are refused.
 
-The second sound-design round changes the acoustic transfers that the first
-model masked. BODY and TOOTH affect audible modal balance, decay and contact
-rise; finger releases, resin snaps, filament slip and finger-friction creaks
-use different receiving projections. Reverse motion weights the upper/body
-response differently. The root, shared resonator and accounted mechanical
-energy remain the basis of the instrument. These are prototype sound-design
-choices awaiting the next dry audition, with the seven-preset roster unchanged.
+Model 2 changed acoustic transfers that the first model masked: stronger
+wooden-body pickup, distinct body frequencies, TOOTH-dependent contact rise,
+and different receiving projections for releases, snaps, slip and creaks.
+Its isolated releases still converged toward a similar root ring after their
+attacks. Model 3 adds contact-position projections and mode-specific losses
+so each voice can retain a different harmonic or wooden-body emphasis as it
+decays. DRAW and THAWED deliver release work more gradually; THAWED's current
+temperature changes the balance of the third harmonic and body at release.
+PLUCK's model-2 release projection and decay calibration are preserved.
+The root, shared resonator and accounted mechanical energy remain the basis
+of the instrument. These prototype choices await the next dry audition;
+the seven-preset roster is unchanged.
 
 The geometry seed derives from the engine, voice and saved root through
-`Dsp.seedFor`, retaining the original model-1 seed tag in both renderers.
+`Dsp.seedFor`, retaining the original model-1 seed tag in all three renderers.
 Initial tooth positions, attachment thresholds and variations therefore stay
 the same across the sound revision and when comparing macros at that root.
-Model 2 starts with the same mechanical calibration; changing the fraction
+The revisions start with the same mechanical calibration; changing the fraction
 of friction work sent into sound can affect subsequent warming and drag.
 Each render constructs a fresh wheel, fingers, attachments,
 temperature, controller and resonators. Independently exported pads share
@@ -133,7 +141,11 @@ The root-bearing tooth bank starts at ratios 1, 2 and 3, with sparse upper
 modes at 3.9 and 6.2. The wooden body uses separate ratios 1.42, 1.86, 2.72,
 4.12 and 6.43, scaled by BODY; it no longer duplicates the fundamental as
 its first mode. Voice calibration changes mode losses and receiving weights
-within this same ten-mode network. TOOTH changes release brightness and rise
+within this same ten-mode network. In model 3, CLUNK favours wooden-body modes,
+DRAW retains a second-harmonic component, RECOIL favours upper modes and
+selected body modes, THAWED retains a temperature-dependent third harmonic,
+and TURN combines that harmonic with a higher body mode. These are receiving
+and damping choices in one network. TOOTH changes release brightness and rise
 time; BODY changes audible wooden response, frequency ratios and decay.
 
 Every transfer divides its available work among the modes. Existing modal
@@ -183,19 +195,27 @@ also retain useful contacts, pitch, timing and peak level.
 ./gradlew :synth:generatePitchwheelAudition -PpitchwheelFull
 ```
 
-The default audition task creates a 63-case compact first-listen pack at
+The default audition task creates a compact first-listen pack at
 `testkit/pitchwheel-audition/`, including a listening page, dry audio and
-diagnostic records. Six fixed-energy isolated catches compare attack colour
-without rhythm; six preserved model 1 defaults provide a listening reference.
-Each clip records its rendering model. Isolated catches have no wheel
-trajectory and intentionally omit the mechanical diagnostic ledger.
-The optional 172-case full pack adds note/velocity corners,
+diagnostic records. Six fixed-energy release-only resonator hits compare
+body colour and decay without rhythm. They have no moving wheel, bowing,
+recoil or warming and intentionally omit the mechanical diagnostic ledger.
+Actual moving-wheel probes separately compare DRAW's funded bowing with its
+muted partner, record RECOIL's forward and reverse encounters, compare THAWED
+at cold and warm starting temperatures, and expose TURN's settled powered
+orbit. Each new release-only hit also has a direct matched-level button for
+the preserved model-2 hit. Preserved model 1 and model 2 defaults provide
+full-gesture listening references.
+Each clip records its rendering model and source provenance.
+The optional full pack adds note/velocity corners,
 five-step macro sweeps, PUSH × ADHESION and ADHESION × HEAT comparisons,
 raw/matched audio, difficult extremes and held-loop material.
 
 The [published audition](https://pitchwheel-audition.bertcalm.chatgpt.site)
-starts with the isolated catches, then offers full gestures and previous
-defaults. Hosted FLAC preserves every sample of the 24-bit audition WAVs.
+starts with release-only hits, then offers the real mechanisms, full gestures
+and previous-model defaults. Hosted FLAC preserves every sample of the 24-bit
+audition WAVs. The listening round and model recorded on the page identify
+the prototype being reviewed.
 
 Numerical acceptance checks deterministic samples and event traces, root
 calibration, pitch independence from encounter rate, contact-funded releases

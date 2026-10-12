@@ -21,6 +21,10 @@
          opens SNAP; LIVE ▸ just says so and stays closed. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- A MIDI keyboard on KEYS and PLAY (MidiInput): the system's own
+         MidiManager, no permission. Not required - a phone without the
+         feature still opens both screens, and MidiInput.open says no. -->
+    <uses-feature android:name="android.software.midi" android:required="false" />
 
     <application
         android:name=".SnipSnapApplication"
