@@ -30,10 +30,11 @@ data class PitchwheelPatch(
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = if (model == LEGACY_MODEL) {
-        PitchwheelV1.render(voice, macros, midi, velocity)
-    } else {
-        Pitchwheel.render(voice, macros, midi, velocity)
+    override fun render() = when (model) {
+        1 -> PitchwheelV1.render(voice, macros, midi, velocity)
+        2 -> PitchwheelV2.render(voice, macros, midi, velocity)
+        3 -> Pitchwheel.render(voice, macros, midi, velocity)
+        else -> error("unsupported pitchwheel model $model")
     }
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
