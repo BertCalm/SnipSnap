@@ -1,0 +1,583 @@
+{
+  "schemaVersion": 1,
+  "engine": "PRISM",
+  "modelVersion": 1,
+  "generatedAt": "2026-10-11T14:22:27.122161092Z",
+  "sampleRate": 44100,
+  "internalSampleRate": 176400,
+  "channels": 1,
+  "bitDepth": 24,
+  "matchedLoudnessTarget": 0.03,
+  "sourceRepository": "https://github.com/BertCalm/SnipSnap",
+  "sourceRevision": "530c14774b0fa801674e7a2544755d889d965d4b",
+  "sourceBranch": "codex/prism-additive-engine",
+  "auditionRevision": "r1",
+  "archiveDescription": "Unmodified real Kotlin DSP WAVs from the first published PRISM audition. SHA-256 checks also match the original Site distribution.",
+  "clips": [
+    {
+      "id": "glass_low_soft",
+      "label": "GLASS C4 · soft",
+      "description": "Sparse bright resonance. Default timbre at velocity 0.25.",
+      "section": "voices",
+      "voice": "GLASS",
+      "note": 60,
+      "noteName": "C4",
+      "effectiveHz": 261.62554931640625,
+      "nominalHz": 261.6255653005986,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.0596306174993515,
+      "loopCycleError": null,
+      "velocity": 0.25,
+      "macros": {
+        "TUNE": 0,
+        "GRAIN": 0.6499999761581421,
+        "DRIFT": 0.44999998807907104,
+        "SHAPE": 0.6000000238418579,
+        "STRIKE": 0.5,
+        "BODY": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/voices/glass_low_soft.wav",
+      "matched": "r1/matched/voices/glass_low_soft.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 137900,
+      "seconds": 3.126984119415283,
+      "elapsedMs": 160.447998,
+      "msPerRenderedSecond": 51.31078121049182,
+      "metrics": {
+        "raw": {
+          "peak": 0.05973503738641739,
+          "rms": 0.00711680171330335,
+          "dc": 1.6184263612296425e-10,
+          "loudness": 0.020243488252162933,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.08852481842041016,
+          "rms": 0.010546801461931718,
+          "dc": 2.4088592304155185e-10,
+          "loudness": 0.029999999329447746,
+          "seamError": null
+        }
+      },
+      "register": "low",
+      "sha256": {
+        "raw": "fe83bdbeb8ffd08b5dc1dd1ede83e1ff7b8768af7b72ef104f048c90902363cb",
+        "matched": "04cef8f68909a514ed6a6e7b325f48925870b33b76e5bba11d8af513451718d9"
+      }
+    },
+    {
+      "id": "glass_low_loud",
+      "label": "GLASS C4 · loud",
+      "description": "Sparse bright resonance. Default timbre at velocity 1.",
+      "section": "voices",
+      "voice": "GLASS",
+      "note": 60,
+      "noteName": "C4",
+      "effectiveHz": 261.62554931640625,
+      "nominalHz": 261.6255653005986,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.2507760226726532,
+      "loopCycleError": null,
+      "velocity": 1,
+      "macros": {
+        "TUNE": 0,
+        "GRAIN": 0.6499999761581421,
+        "DRIFT": 0.44999998807907104,
+        "SHAPE": 0.6000000238418579,
+        "STRIKE": 0.5,
+        "BODY": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/voices/glass_low_loud.wav",
+      "matched": "r1/matched/voices/glass_low_loud.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 137900,
+      "seconds": 3.126984119415283,
+      "elapsedMs": 169.51947,
+      "msPerRenderedSecond": 54.21181033426501,
+      "metrics": {
+        "raw": {
+          "peak": 0.2511195242404938,
+          "rms": 0.027232221720411343,
+          "dc": 4.933641390550706e-10,
+          "loudness": 0.07794439792633057,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.09665333479642868,
+          "rms": 0.010481403060348117,
+          "dc": 1.8925833281711527e-10,
+          "loudness": 0.030000001192092896,
+          "seamError": null
+        }
+      },
+      "register": "low",
+      "sha256": {
+        "raw": "77febb6c64d75f0bc77dc6b360fe6ee9cfc2183c77d286030fd8c50a6a600a2e",
+        "matched": "bbf94d903c520741b1a4293f070897244fec0586e3ce2111133ad7e09bbebfdd"
+      }
+    },
+    {
+      "id": "glass_middle_soft",
+      "label": "GLASS C5 · soft",
+      "description": "Sparse bright resonance. Default timbre at velocity 0.25.",
+      "section": "voices",
+      "voice": "GLASS",
+      "note": 72,
+      "noteName": "C5",
+      "effectiveHz": 523.2510986328125,
+      "nominalHz": 523.2511306011972,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.07623118907213211,
+      "loopCycleError": null,
+      "velocity": 0.25,
+      "macros": {
+        "TUNE": 0.5,
+        "GRAIN": 0.6499999761581421,
+        "DRIFT": 0.44999998807907104,
+        "SHAPE": 0.6000000238418579,
+        "STRIKE": 0.5,
+        "BODY": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/voices/glass_middle_soft.wav",
+      "matched": "r1/matched/voices/glass_middle_soft.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 137900,
+      "seconds": 3.126984119415283,
+      "elapsedMs": 175.609122,
+      "msPerRenderedSecond": 56.15926250141535,
+      "metrics": {
+        "raw": {
+          "peak": 0.07679027318954468,
+          "rms": 0.007648116700335497,
+          "dc": -7.563169549185516e-12,
+          "loudness": 0.02280019223690033,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.10103897750377655,
+          "rms": 0.010063226564045912,
+          "dc": -9.912956329615695e-12,
+          "loudness": 0.030000001192092896,
+          "seamError": null
+        }
+      },
+      "register": "middle",
+      "sha256": {
+        "raw": "dfdb106deb8504f20f1d7755f2ce7d978e0d2d5d578d052e4c6d9bbdd2d5ae10",
+        "matched": "0a25a6e186a34dd01bb601960871035a58cbb265c50a381951539e4d112cd3e0"
+      }
+    },
+    {
+      "id": "glass_middle_loud",
+      "label": "GLASS C5 · loud",
+      "description": "Sparse bright resonance. Default timbre at velocity 1.",
+      "section": "voices",
+      "voice": "GLASS",
+      "note": 72,
+      "noteName": "C5",
+      "effectiveHz": 523.2510986328125,
+      "nominalHz": 523.2511306011972,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.327938437461853,
+      "loopCycleError": null,
+      "velocity": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "GRAIN": 0.6499999761581421,
+        "DRIFT": 0.44999998807907104,
+        "SHAPE": 0.6000000238418579,
+        "STRIKE": 0.5,
+        "BODY": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/voices/glass_middle_loud.wav",
+      "matched": "r1/matched/voices/glass_middle_loud.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 137900,
+      "seconds": 3.126984119415283,
+      "elapsedMs": 169.615581,
+      "msPerRenderedSecond": 54.24254633941554,
+      "metrics": {
+        "raw": {
+          "peak": 0.3312888443470001,
+          "rms": 0.029751439976349756,
+          "dc": -2.063780483225403e-11,
+          "loudness": 0.08797530829906464,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.11297107487916946,
+          "rms": 0.010145382619318017,
+          "dc": -7.540792263438786e-12,
+          "loudness": 0.029999999329447746,
+          "seamError": null
+        }
+      },
+      "register": "middle",
+      "sha256": {
+        "raw": "5007a38c7187eaa04376ba7b51e3bc81cc393d0f518d4a7976472ec7ede76215",
+        "matched": "953db306c85d3eb0c1cc0054b236311f4d95e42417c12f75dde1987e79f31f11"
+      }
+    },
+    {
+      "id": "glass_high_soft",
+      "label": "GLASS C6 · soft",
+      "description": "Sparse bright resonance. Default timbre at velocity 0.25.",
+      "section": "voices",
+      "voice": "GLASS",
+      "note": 84,
+      "noteName": "C6",
+      "effectiveHz": 1046.502197265625,
+      "nominalHz": 1046.5022612023945,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.07922902703285217,
+      "loopCycleError": null,
+      "velocity": 0.25,
+      "macros": {
+        "TUNE": 1,
+        "GRAIN": 0.6499999761581421,
+        "DRIFT": 0.44999998807907104,
+        "SHAPE": 0.6000000238418579,
+        "STRIKE": 0.5,
+        "BODY": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/voices/glass_high_soft.wav",
+      "matched": "r1/matched/voices/glass_high_soft.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 137900,
+      "seconds": 3.126984119415283,
+      "elapsedMs": 142.629544,
+      "msPerRenderedSecond": 45.61249387690219,
+      "metrics": {
+        "raw": {
+          "peak": 0.07889630645513535,
+          "rms": 0.011107601099066779,
+          "dc": -3.796534001687877e-11,
+          "loudness": 0.033857349306344986,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.06990769505500793,
+          "rms": 0.009842118208474828,
+          "dc": -3.289960182477024e-11,
+          "loudness": 0.030000001192092896,
+          "seamError": null
+        }
+      },
+      "register": "high",
+      "sha256": {
+        "raw": "ca77b821961703baa67f6565a3dad1fcfe917dade9b481aebc3fda7b8d09d508",
+        "matched": "93dc2b6a6b3f08fb2eba1420e6f655a171f2dd8636890e911255617758395c86"
+      }
+    },
+    {
+      "id": "glass_high_loud",
+      "label": "GLASS C6 · loud",
+      "description": "Sparse bright resonance. Default timbre at velocity 1.",
+      "section": "voices",
+      "voice": "GLASS",
+      "note": 84,
+      "noteName": "C6",
+      "effectiveHz": 1046.502197265625,
+      "nominalHz": 1046.5022612023945,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.3255012631416321,
+      "loopCycleError": null,
+      "velocity": 1,
+      "macros": {
+        "TUNE": 1,
+        "GRAIN": 0.6499999761581421,
+        "DRIFT": 0.44999998807907104,
+        "SHAPE": 0.6000000238418579,
+        "STRIKE": 0.5,
+        "BODY": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/voices/glass_high_loud.wav",
+      "matched": "r1/matched/voices/glass_high_loud.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 137900,
+      "seconds": 3.126984119415283,
+      "elapsedMs": 162.502136,
+      "msPerRenderedSecond": 51.96768828822399,
+      "metrics": {
+        "raw": {
+          "peak": 0.3245221972465515,
+          "rms": 0.04221805864533008,
+          "dc": -1.087134157089847e-10,
+          "loudness": 0.12804362177848816,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.07603397220373154,
+          "rms": 0.009891486157912799,
+          "dc": -2.6003484586764366e-11,
+          "loudness": 0.029999997466802597,
+          "seamError": null
+        }
+      },
+      "register": "high",
+      "sha256": {
+        "raw": "754fa9eafe8e7e49e00e24beaec476276a41849d9b96895ebbf76fffb2d0db2d",
+        "matched": "6a8f6036cc0e6818b12e47add65d0bb8c5bcf4345b3122298977edcb2e2f0011"
+      }
+    },
+    {
+      "id": "preset_small_prism",
+      "label": "Small Prism",
+      "description": "Sparse bright resonance. GRAIN 0.7 · DRIFT 0.48 · SHAPE 0.72 · STRIKE 0.62 · BODY 0.3.",
+      "section": "presets",
+      "voice": "GLASS",
+      "note": 72,
+      "noteName": "C5",
+      "effectiveHz": 523.2510986328125,
+      "nominalHz": 523.2511306011972,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.31467005610466003,
+      "loopCycleError": null,
+      "velocity": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "GRAIN": 0.699999988079071,
+        "DRIFT": 0.47999998927116394,
+        "SHAPE": 0.7200000286102295,
+        "STRIKE": 0.6200000047683716,
+        "BODY": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/presets/preset_small_prism.wav",
+      "matched": "r1/matched/presets/preset_small_prism.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 138350,
+      "seconds": 3.137188196182251,
+      "elapsedMs": 304.493875,
+      "msPerRenderedSecond": 97.05948638036722,
+      "metrics": {
+        "raw": {
+          "peak": 0.3190893828868866,
+          "rms": 0.028351744341942067,
+          "dc": 1.6879858332845048e-10,
+          "loudness": 0.08412476629018784,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.11379147320985794,
+          "rms": 0.01011060511841245,
+          "dc": 6.074505737033098e-11,
+          "loudness": 0.029999999329447746,
+          "seamError": null
+        }
+      },
+      "patch": {
+        "engine": "PRISM",
+        "version": 1,
+        "name": "Small Prism",
+        "voice": "GLASS",
+        "macros": {
+          "TUNE": 0.5,
+          "GRAIN": 0.699999988079071,
+          "DRIFT": 0.47999998927116394,
+          "SHAPE": 0.7200000286102295,
+          "STRIKE": 0.6200000047683716,
+          "BODY": 0.30000001192092896,
+          "HOLD": 0
+        },
+        "model": 1,
+        "velocity": 1,
+        "template": {
+          "spectralId": "BELL",
+          "envelopeId": "RINGING",
+          "ratioOverrides": [],
+          "amplitudeOverrides": [],
+          "groupProfiles": [],
+          "attackSeconds": null,
+          "decaySeconds": null,
+          "loopSeconds": 2
+        }
+      },
+      "sha256": {
+        "raw": "0b75552dd219bdef322adf42a4f956e41377a6cdecad3615ccf802f9a75a2c71",
+        "matched": "eda4820c0a6839ec65d22881b9b89cdefbf76cd4f804a222599432839015f62c"
+      }
+    },
+    {
+      "id": "glass_all_high",
+      "label": "GLASS · all timbral controls 1",
+      "description": "Every timbral macro at its maximum. Finite note, HOLD 0.",
+      "section": "extremes",
+      "voice": "GLASS",
+      "note": 72,
+      "noteName": "C5",
+      "effectiveHz": 523.2510986328125,
+      "nominalHz": 523.2511306011972,
+      "carrierPitchDeviationCents": -0.00010577092827992409,
+      "rawAdditivePeak": 0.2962779998779297,
+      "loopCycleError": null,
+      "velocity": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "GRAIN": 1,
+        "DRIFT": 1,
+        "SHAPE": 1,
+        "STRIKE": 1,
+        "BODY": 1,
+        "HOLD": 0
+      },
+      "raw": "r1/raw/extremes/glass_all_high.wav",
+      "matched": "r1/matched/extremes/glass_all_high.wav",
+      "loop": false,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null,
+      "frames": 215654,
+      "seconds": 4.890113353729248,
+      "elapsedMs": 313.136599,
+      "msPerRenderedSecond": 64.03462994599072,
+      "metrics": {
+        "raw": {
+          "peak": 0.2979091703891754,
+          "rms": 0.03022979294587632,
+          "dc": 6.267859593469401e-10,
+          "loudness": 0.09322205185890198,
+          "seamError": null
+        },
+        "matched": {
+          "peak": 0.09587083011865616,
+          "rms": 0.00972831835273216,
+          "dc": 2.0112511833168432e-10,
+          "loudness": 0.029999999329447746,
+          "seamError": null
+        }
+      },
+      "sha256": {
+        "raw": "6c966a80fc01c7f8797f2e49ebe028ad7c3e6e1487fad681930c1458cbceec0a",
+        "matched": "ad1b2b266a18b0f734a5dd92fbd9905aa35eeca2d79c1cd0ef70831a53c52ba9"
+      }
+    },
+    {
+      "id": "glass_hold_default",
+      "label": "GLASS · held default",
+      "description": "One seamless sustain region, default timbre, HOLD 1. The onset is excluded.",
+      "section": "hold",
+      "voice": "GLASS",
+      "note": 72,
+      "noteName": "C5",
+      "effectiveHz": 523.2514571190675,
+      "nominalHz": 523.2511306011972,
+      "carrierPitchDeviationCents": 0.0010803200321024998,
+      "rawAdditivePeak": 0.41091424226760864,
+      "loopCycleError": 9.667259855950173e-17,
+      "velocity": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "GRAIN": 0.6499999761581421,
+        "DRIFT": 0.44999998807907104,
+        "SHAPE": 0.6000000238418579,
+        "STRIKE": 0.5,
+        "BODY": 0.30000001192092896,
+        "HOLD": 1
+      },
+      "raw": "r1/raw/hold/glass_hold_default.wav",
+      "matched": "r1/matched/hold/glass_hold_default.wav",
+      "loop": true,
+      "loopStartFrame": 0,
+      "loopEndFrameExclusive": 96080,
+      "frames": 96080,
+      "seconds": 2.178684711456299,
+      "elapsedMs": 379.981223,
+      "msPerRenderedSecond": 174.40854153972975,
+      "metrics": {
+        "raw": {
+          "peak": 0.41626471281051636,
+          "rms": 0.12567611810589652,
+          "dc": -3.21123429448085e-11,
+          "loudness": 0.12952056527137756,
+          "seamError": 0
+        },
+        "matched": {
+          "peak": 0.0964166671037674,
+          "rms": 0.02910953492747964,
+          "dc": -8.598583368129645e-12,
+          "loudness": 0.029999997466802597,
+          "seamError": 0
+        }
+      },
+      "variant": "default",
+      "sha256": {
+        "raw": "324eea0d8a31e47c1a2faaab0cc310fb4ef9092b9336a87559ece785a7004bb1",
+        "matched": "e377eb20a72e943d2058df140bdc27735e0dd5b7ece8e94e75bdf3660e9d56f6"
+      }
+    },
+    {
+      "id": "glass_hold_extreme",
+      "label": "GLASS · held extreme",
+      "description": "One seamless sustain region, every timbral macro at 1, HOLD 1. The onset is excluded.",
+      "section": "hold",
+      "voice": "GLASS",
+      "note": 72,
+      "noteName": "C5",
+      "effectiveHz": 523.2514571190675,
+      "nominalHz": 523.2511306011972,
+      "carrierPitchDeviationCents": 0.0010803200321024998,
+      "rawAdditivePeak": 0.44816121459007263,
+      "loopCycleError": 1.9176520962096038e-17,
+      "velocity": 1,
+      "macros": {
+        "TUNE": 0.5,
+        "GRAIN": 1,
+        "DRIFT": 1,
+        "SHAPE": 1,
+        "STRIKE": 1,
+        "BODY": 1,
+        "HOLD": 1
+      },
+      "raw": "r1/raw/hold/glass_hold_extreme.wav",
+      "matched": "r1/matched/hold/glass_hold_extreme.wav",
+      "loop": true,
+      "loopStartFrame": 0,
+      "loopEndFrameExclusive": 96080,
+      "frames": 96080,
+      "seconds": 2.178684711456299,
+      "elapsedMs": 390.092096,
+      "msPerRenderedSecond": 179.049356682386,
+      "metrics": {
+        "raw": {
+          "peak": 0.4530011713504791,
+          "rms": 0.13160670996936266,
+          "dc": 8.746728452080817e-11,
+          "loudness": 0.14484703540802002,
+          "seamError": 0
+        },
+        "matched": {
+          "peak": 0.09382335841655731,
+          "rms": 0.027257728901550662,
+          "dc": 1.9966352856377614e-11,
+          "loudness": 0.029999999329447746,
+          "seamError": 0
+        }
+      },
+      "variant": "extreme",
+      "sha256": {
+        "raw": "c27ee429005c3d67bf668e899c60ba2a9a8deafb5577a438c4fec695816ae615",
+        "matched": "36b90cfc65cb749f37c8f930f85a084c0003d4edf64fac5191c5f0325d9c798a"
+      }
+    }
+  ]
+}
