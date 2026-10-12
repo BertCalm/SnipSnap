@@ -37,14 +37,17 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
+import com.snipsnap.app.MidiInput
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.MidiKeys
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Schemes
 import java.io.File
@@ -58,6 +61,13 @@ import kotlinx.coroutines.withContext
  * scale, OCTAVE moving the whole grid. Press to sound, let go to
  * release: a looped pad holds while the finger does. Over
  * `InstrumentPlayer`, `:shell`'s `InstrumentEngine` on the device.
+ *
+ * A MIDI keyboard plays the same instrument through the same player:
+ * `MidiInput` hands every connected device's notes to `:shell`'s
+ * `MidiKeys`, whose rules (the keyboard's own velocity, the sustain
+ * pedal, the panics) are tested there. The grid and the keyboard are two
+ * hands on one instrument, so a keyboard note and a grid note share the
+ * eight voices and steal from each other's oldest.
  */
 private val GRID_ROWS = WINDOW_GRID_ROWS
 
@@ -82,10 +92,39 @@ fun KeysScreen(
     var octave by remember(sidecar) { mutableIntStateOf(0) }
     val root = instrument.rootNote
 
+    // The keyboard's rules over this same player. Every "go quiet" on
+    // this screen goes through `midiKeys.allOff()` rather than the
+    // player's own, so the sustain pedal is forgotten with the notes:
+    // a pedal still "down" after a panic would hold the next key up.
+    val midiKeys = remember(player) {
+        MidiKeys(object : MidiKeys.Voice {
+            override fun noteOn(note: Int, velocity: Float) { player.noteOn(note, velocity) }
+            override fun noteOff(note: Int) = player.noteOff(note)
+            override fun allOff() = player.allOff()
+        })
+    }
+    fun silence() = midiKeys.allOff()
+    // The LCD's readout: what is plugged in, by name. Empty when nothing
+    // is, and never shown at all on a phone that cannot do MIDI. The
+    // keyboard is opened and closed with the lifecycle, below, beside the
+    // audio focus: a note arriving while the app is backgrounded would
+    // otherwise restart the stream ON_STOP had just silenced.
+    var midiDevices by remember(player) { mutableStateOf<List<String>>(emptyList()) }
+    var midiSupported by remember(player) { mutableStateOf(false) }
+    val midi = remember(player) { MidiInput(context) }
+    val midiListener = remember(player) {
+        object : MidiInput.Listener {
+            override fun onEvent(event: MidiWire.Event) = midiKeys.handle(event)
+            override fun onDevicesChanged(names: List<String>) { midiDevices = names }
+            // The cable is out: its note-offs will never come.
+            override fun onDeviceRemoved() = midiKeys.allOff()
+        }
+    }
+
     // ◄ SHELF's own path — shared by the chip and system Back so both
     // silence the instrument before leaving.
     fun requestBack() {
-        player.allOff()
+        silence()
         onBack()
     }
     BackHandler(onBack = ::requestBack)
@@ -97,16 +136,26 @@ fun KeysScreen(
     // same silence, so the same AudioFocus registration rides this effect —
     // see PlayScreen's own copy of this pattern for the full reasoning.
     val lifecycleOwner = LocalLifecycleOwner.current
-    val audioVoice = remember(player) { object : AudioVoice { override fun silence() = player.allOff() } }
+    val audioVoice = remember(player) { object : AudioVoice { override fun silence() = midiKeys.allOff() } }
     DisposableEffect(lifecycleOwner, player) {
         AudioFocus.acquire(audioVoice)
+        // The keyboard rides the same events: open while the screen can
+        // make sound (addObserver replays ON_START for a screen already
+        // up), closed the moment it must not. The readout is cleared on
+        // the way down so a device pulled while backgrounded is not still
+        // named when the screen comes back; reopening lists what is there.
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
-                    player.allOff()
+                    silence()
                     AudioFocus.release(audioVoice)
+                    midi.close()
+                    midiDevices = emptyList()
                 }
-                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                Lifecycle.Event.ON_START -> {
+                    AudioFocus.acquire(audioVoice)
+                    midiSupported = midi.open(midiListener)
+                }
                 else -> {}
             }
         }
@@ -114,6 +163,7 @@ fun KeysScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
+            midi.close()
         }
     }
 
@@ -133,8 +183,8 @@ fun KeysScreen(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton("◄ SHELF", scheme, enabled = true, onClick = ::requestBack)
-            ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave-- })
-            ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave++ })
+            ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { silence(); octave-- })
+            ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { silence(); octave++ })
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -145,7 +195,7 @@ fun KeysScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .tapeClick(label = l) { player.allOff(); layout = l }
+                        .tapeClick(label = l) { silence(); layout = l }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -171,8 +221,25 @@ fun KeysScreen(
                 }
             }
         }
+
+        // The keyboard line, PLAY's own hint row's shape: what is plugged
+        // in, or how to plug one in. A phone with no MIDI feature draws
+        // nothing here rather than an invitation it cannot honour.
+        if (midiSupported) {
+            Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
+                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            }
+        }
     }
 }
+
+/** The words under the grid: the connected keyboard by name, or the invitation. */
+internal fun midiLine(devices: List<String>): String =
+    if (devices.isEmpty()) NO_MIDI_DEVICE
+    else "MIDI · " + devices.joinToString(" + ") { it.uppercase(java.util.Locale.ROOT) }
+
+/** Nothing plugged in: say what would work, in the words the USB cable is sold under. */
+internal const val NO_MIDI_DEVICE = "NO MIDI KEYBOARD · PLUG ONE IN OVER USB"
 
 /**
  * Touch-Y velocity, like PLAY's pads: the top of the pad is softest.

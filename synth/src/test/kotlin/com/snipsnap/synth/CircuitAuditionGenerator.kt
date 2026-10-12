@@ -38,6 +38,7 @@ object CircuitAuditionGenerator {
         var count = 0
         val sections = mutableListOf<JsonValue>()
         val measurements = Measurements()
+        var voicedReferenceGain: Float? = null
 
         fun clip(
             section: String,
@@ -78,7 +79,15 @@ object CircuitAuditionGenerator {
             val dir = File(root, section).also { it.mkdirs() }
             val rawName = "$id-raw.wav"
             val matchedName = "$id-matched.wav"
-            val matched = AuditionLevel.level(report.snip)
+            // Source details retain their level inside VOICED. Independently
+            // matching each solo turns a quiet articulation into another lead.
+            val matched = if (probe.solo != null) {
+                require(voice == CircuitVoice.VOICED && macros == Circuit.defaults(voice) && velocity == 1f)
+                val gain = checkNotNull(voicedReferenceGain) { "Render the VOICED reference before its sources" }
+                Snip(FloatArray(report.raw.size) { report.raw[it] * gain }, 1, report.snip.sampleRate)
+            } else AuditionLevel.level(report.snip)
+            val matchedGain = if (rawStats.peak > 0.0) matched.samples.maxOf { abs(it) } / rawStats.peak else 0.0
+            if (section == "DEFAULTS" && voice == CircuitVoice.VOICED) voicedReferenceGain = matchedGain.toFloat()
             WavWriter.write(File(dir, rawName), Snip(report.raw, 1, report.snip.sampleRate), WavWriter.BitDepth.PCM_24)
             WavWriter.write(File(dir, matchedName), matched, WavWriter.BitDepth.PCM_24)
             val diagnosticName = "$id-diagnostics.json"
@@ -93,6 +102,8 @@ object CircuitAuditionGenerator {
                 "voice" to str(voice.name), "macros" to macroJson(macros), "velocity" to num(velocity),
                 "raw" to str("$section/$rawName"), "matched" to str("$section/$matchedName"),
                 "diagnostics" to str("$section/$diagnosticName"), "classification" to str(classification.name),
+                "levelReference" to str(if (probe.solo != null) "DEFAULTS/voiced" else "self"),
+                "matchedGainFromRaw" to num(matchedGain),
                 "seconds" to num(report.snip.durationSeconds), "renderMs" to num(elapsedMs),
             )
         }
@@ -153,7 +164,7 @@ object CircuitAuditionGenerator {
         val diagnosticVoice = CircuitVoice.VOICED
         val diagnosticMacros = Circuit.defaults(diagnosticVoice)
         val solos = listOf("ANCHOR", "PULSE", "VOICE", "STONE RATTLE", "WOOD CLAPPER", "CLAY VESSEL", "BREATH VOICE").mapIndexed { i, name ->
-            clip("DIAGNOSTICS", "source_$i", name, "Source $i alone through its acoustic paths; classifier guard omitted for source isolates.",
+            clip("DIAGNOSTICS", "source_$i", name, "One isolated detail at its actual level inside VOICED, through the same acoustic paths.",
                 diagnosticVoice, diagnosticMacros, probe = Circuit.Probe(solo = i, recordPaths = true), guard = false)
         }
         val responseClips = listOf(

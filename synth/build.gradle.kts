@@ -674,6 +674,7 @@ tasks.register<JavaExec>("generateNimbusAudition") {
     providers.gradleProperty("nimbusBaselineDir").orNull?.let { args("--baseline-dir=$it") }
     providers.gradleProperty("nimbusBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
     if (providers.gradleProperty("nimbusCompareHold").orNull == "true") args("--compare-hold")
+    if (providers.gradleProperty("nimbusCompareHoldAll").orNull == "true") args("--compare-hold-all")
 }
 
 /** Render Tessera's dry materials, moving paths, causal probes and settled loops. */

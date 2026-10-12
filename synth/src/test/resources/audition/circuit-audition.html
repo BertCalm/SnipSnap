@@ -41,7 +41,7 @@
   <header>
     <h1>CIRCUIT</h1>
     <p>Three breath roles share a root and one authored four-pulse figure with wood, clay, rattle and synthesized voice. Shared breath shapes the opening, weaker support, affirmation and settling gestures while the ensemble moves through asymmetric canyon paths. A slow rise and settle spans the whole phrase or held loop. Listen for one intentional phrase, with quiet accompaniment overlapping its vocal turns.</p>
-    <p>Each pair compares the physical source level (<strong>RAW</strong>) with the shared audition loudness (<strong>MATCHED</strong>). RAW files keep their original gain. Use MATCHED when judging changes in tone and timing; normalization can hide changes in source energy.</p>
+    <p>Each full ensemble compares its original level (<strong>RAW</strong>) with a consistent listening level (<strong>MATCHED</strong>). The seven isolated source details use the same gain as the VOICED ensemble (<strong>MIX LEVEL</strong>), so quiet articulations stay quiet. RAW files keep their original gain.</p>
     <p>Returned invitations can enable one authored answer opportunity per figure. Player identities stay stable as pacing and geometry change; a common energy budget preserves accepted answers' relative dynamics. Numerical reference analysis informed pacing only. All instruments and gestures are invented, and listening acceptance is pending.</p>
     <p>Finite PACE fits complete four-pulse figures into the available breath. Its actual rate changes in steps and low requests can round upward; compare the requested and actual rates in the diagnostic files. ROOT adds a firmer pitched foundation at faster playing rates while keeping sparse and default playing quiet. ORBIT still controls movement independently.</p>
     <p>HOLD returns the settled procession without its opening gesture. Repeat those clips and listen for a continuous shared breath, complete figures, cut syllables, timing jumps, clicks or pumping. The diagnostic files report requested and actual clock rates.</p>
@@ -126,7 +126,8 @@
         const item = node('div', undefined, 'clip');
         item.append(node('div', clip.name, 'clip-name'), node('div', clip.description, 'description'));
         const players = node('div', undefined, 'players');
-        players.append(player(clip.raw, clip.name + ' / RAW'), player(clip.matched, clip.name + ' / MATCHED'));
+        players.append(player(clip.raw, clip.name + ' / RAW'), player(clip.matched, clip.name +
+          (clip.levelReference === 'DEFAULTS/voiced' ? ' / MIX LEVEL' : ' / MATCHED')));
         item.append(players);
         const metadata = node('div', clip.voice + ' · ' + clip.seconds.toFixed(2) + ' s · ' + clip.renderMs.toFixed(0) + ' ms render · ' + clip.classification + ' · ', 'metadata');
         const diagnostics = node('a', 'Diagnostics');
