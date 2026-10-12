@@ -20,6 +20,17 @@ object ContourAuditionGenerator {
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val timbral = listOf("SCAN", "OFFSET", "MOTION", "FILTER", "DRIVE")
     private val interactions = listOf("SCAN" to "OFFSET", "OFFSET" to "MOTION", "SCAN" to "FILTER", "FILTER" to "DRIVE")
+    private val presetDescriptions = mapOf(
+        "Rounded Edge" to "Intended character: a gentler, rounded bass entrance.",
+        "Moving Corner" to "Intended character: a slower, pulsing bass contour.",
+        "Dark Table" to "Intended character: dark bass that opens gradually.",
+        "Copper Scan" to "Intended character: a mellow key with a delayed bloom.",
+        "Soft Digital" to "Intended character: a soft key with a rounded entrance.",
+        "Bright Margin" to "Intended character: a rounded plucked tone.",
+        "Twin Outline" to "Intended character: a sustained lead with slower movement.",
+        "Hollow Step" to "Intended character: a soft hollow tone with a gradual entrance.",
+        "Long Contour" to "Intended character: a slower, evolving held tone.",
+    )
     private val macroNotes = mapOf(
         "SCAN" to "Hear the spectral path change while the root stays recognizable. Motion is frozen for this sweep.",
         "OFFSET" to "Hear the edge take a different spectral perspective. The body should keep carrying the note.",
@@ -69,7 +80,7 @@ object ContourAuditionGenerator {
         val sourceHashes = sourceFiles.mapValues { sha256(it.value) }
         val sourceHash = sha256(sourceHashes.entries.joinToString("\n") { "${it.key}:${it.value}" }.toByteArray())
         val recipeHash = sha256(cases.joinToString("\n") { "${it.id}|${it.voice}|${it.macros.toSortedMap()}|${it.velocity}|${it.config}|${it.diagnostic}" }.toByteArray())
-        val listeningRound = "contour-r02-${sourceHash.take(12)}-${recipeHash.take(12)}"
+        val listeningRound = "contour-r03-${sourceHash.take(12)}-${recipeHash.take(12)}"
         val started = System.nanoTime()
         val clips = cases.mapIndexed { index, case ->
             check(sourceFiles.all { sha256(it.value) == sourceHashes.getValue(it.key) }) {
@@ -152,9 +163,9 @@ object ContourAuditionGenerator {
             "holdPolicy" to "Loop-only exports contain settled sustain, without the initial attack. Custom playback repeats the decoded buffer sample accurately. The four-cycle WAV repeats its exact samples without seam fades.",
             "comparisonBaseline" to comparisonBaseline?.metadata,
             "categories" to (if (comparisonBaseline != null) listOf(category("revision", "Revision A/B",
-                "Nine original and revised pairs at the same note and velocity. Original audio is preserved byte for byte; both sides use the same matched-level policy.")) else emptyList()) + listOf(
+                "Nine Previous and New pairs at the same note and velocity. Previous is the last published voicing, preserved byte for byte; both sides use the same matched-level policy.")) else emptyList()) + listOf(
                 category("presets", "Start here", "Nine saved dry recipes. Compare their characters first; every recipe remains provisional."),
-                category("voices", "Six voices", "Six voice identities at three notes and two velocities. Select one voice to hear its register and attack response."),
+                category("voices", "Six voices", "Reference voices for checking register and velocity, using the existing engine defaults. Revision A/B compares the nine newly authored presets."),
                 category("sweeps", "Macro sweeps", "Five positions per control and voice. Companion controls are neutral; SCAN uses frozen motion."),
                 category("interactions", "Interactions", "Four required control pairs, each as a 3 × 3 grid for every voice. Compare adjacent settings at matched level."),
                 category("corners", "All high", "Every timbral control at maximum for each voice. Listen for root clarity and bounded roughness."),
@@ -180,7 +191,7 @@ object ContourAuditionGenerator {
             Refresh page only: ./gradlew :synth:generateContourAudition -PcontourRefreshPage=true
             Smoke pack: ./gradlew :synth:generateContourAudition -PcontourQuick=true
 
-            ${if (comparisonBaseline != null) "Revision A/B includes nine byte-identical original references and nine current preset references. Their patch JSON and source, recipe and audio hashes remain with each clip. Original normalized and four-cycle paths are omitted because only the original raw/matched WAVs were archived. Every comparison render requires an explicit --comparison-baseline=<archive-directory>, where baseline.json, source/, raw/ and matched/ contain the verified original pack. Use -PcontourComparisonBaseline=<archive-directory> with the Gradle generator task. Never reconstruct the baseline with the current engine." else "To add an original-versus-revised comparison, supply --comparison-baseline=<archive-directory> to this generator's Java entry point, or -PcontourComparisonBaseline=<archive-directory> to its Gradle task. The directory must contain baseline.json, source/ and its archived raw/matched WAVs with valid original hashes."}
+            ${if (comparisonBaseline != null) "Revision A/B includes nine byte-identical Previous references from the last published voicing and nine New preset references. Their patch JSON and source, recipe and audio hashes remain with each clip. Previous normalized and four-cycle paths are omitted because only the previous raw/matched WAVs were archived. Every comparison render requires an explicit --comparison-baseline=<archive-directory>, where baseline.json, source/, raw/ and matched/ contain the verified previous pack. Use -PcontourComparisonBaseline=<archive-directory> with the Gradle generator task. Never reconstruct the baseline with the current engine." else "To add a Previous-versus-New comparison, supply --comparison-baseline=<archive-directory> to this generator's Java entry point, or -PcontourComparisonBaseline=<archive-directory> to its Gradle task. The directory must contain baseline.json, source/ and its archived raw/matched WAVs with valid previous hashes."}
         """.trimIndent() + "\n")
         println("Wrote ${clips.size} CONTOUR cases under ${root.absolutePath} in %.1f s".format(Locale.ROOT, (System.nanoTime() - started) / 1e9))
     }
@@ -214,7 +225,7 @@ object ContourAuditionGenerator {
             (row as? Map<*, *>)?.entries?.associate { it.key.toString() to it.value } ?: error("Invalid archived preset")
         } ?: error("Baseline preset roster is missing")
         require(archived.size == 9 && archived.all { it["category"] == "presets" } && archived.map { it["id"] }.distinct().size == 9) {
-            "Baseline must contain exactly nine unique original presets"
+            "Baseline must contain exactly nine unique previous presets"
         }
         val targetDirectory = File(root, "comparison").apply { mkdirs() }
         fun verifiedCopy(relativePath: String, expectedHash: String): File {
@@ -247,42 +258,42 @@ object ContourAuditionGenerator {
 
     private fun addComparisons(clips: MutableList<LinkedHashMap<String, Any?>>, baseline: ComparisonBaseline) {
         val currentPresets = clips.filter { it["category"] == "presets" }.associateBy { it.getValue("id") as String }
-        require(currentPresets.size == baseline.clips.size) { "Current and original preset rosters differ" }
-        for (original in baseline.clips) {
-            val presetId = original.getValue("id") as String
-            val revised = currentPresets[presetId] ?: error("Original preset has no revised partner: $presetId")
-            require(original["voice"] == revised["voice"] && original["note"] == revised["note"] &&
-                (original["velocity"] as? Number)?.toDouble() == (revised["velocity"] as? Number)?.toDouble()) {
+        require(currentPresets.size == baseline.clips.size) { "Previous and new preset rosters differ" }
+        for (previous in baseline.clips) {
+            val presetId = previous.getValue("id") as String
+            val current = currentPresets[presetId] ?: error("Previous preset has no new partner: $presetId")
+            require(previous["voice"] == current["voice"] && previous["note"] == current["note"] &&
+                (previous["velocity"] as? Number)?.toDouble() == (current["velocity"] as? Number)?.toDouble()) {
                 "Comparison note, voice or velocity changed for $presetId"
             }
-            val name = original.getValue("title") as String
-            val originalReference = LinkedHashMap(original).apply {
-                put("id", "round1_$presetId"); put("category", "revision"); put("group", name)
-                put("title", "$name · Original"); put("featured", false)
-                put("description", "Preserved original dry preset, at the same note, velocity and matched-level policy as its revised partner.")
-                put("referencePresetId", presetId); put("comparisonVersion", "original")
-                put("comparisonRevision", "original"); put("baselineRound", baseline.metadata["listeningRound"])
-                put("rawPath", "comparison/${original.getValue("rawPath")}")
-                put("matchedPath", "comparison/${original.getValue("matchedPath")}")
+            val name = previous.getValue("title") as String
+            val previousReference = LinkedHashMap(previous).apply {
+                put("id", "previous_$presetId"); put("category", "revision"); put("group", name)
+                put("title", "$name · Previous"); put("featured", false)
+                put("description", "The last published dry voicing, preserved at the same note, velocity and matched-level policy as New.")
+                put("referencePresetId", presetId); put("comparisonVersion", "previous")
+                put("comparisonRevision", "previous"); put("baselineRound", baseline.metadata["listeningRound"])
+                put("rawPath", "comparison/${previous.getValue("rawPath")}")
+                put("matchedPath", "comparison/${previous.getValue("matchedPath")}")
                 put("normalizedPath", null); put("normalizedMetrics", null); put("repeatPath", null)
                 put("provenance", baseline.metadata)
             }
-            val revisedReference = LinkedHashMap(revised).apply {
+            val newReference = LinkedHashMap(current).apply {
                 put("id", "revised_$presetId"); put("category", "revision"); put("group", name)
-                put("title", "$name · Revised"); put("featured", false)
-                put("description", "Current revised dry preset. Compare its articulation, sustained body and moving edge against the preserved original.")
-                put("referencePresetId", presetId); put("comparisonVersion", "revised")
-                put("comparisonRevision", "revised"); put("baselineRound", baseline.metadata["listeningRound"])
+                put("title", "$name · New"); put("featured", false)
+                put("description", current.getValue("description"))
+                put("referencePresetId", presetId); put("comparisonVersion", "new")
+                put("comparisonRevision", "new"); put("baselineRound", baseline.metadata["listeningRound"])
             }
-            clips += originalReference
-            clips += revisedReference
+            clips += previousReference
+            clips += newReference
         }
         check(clips.map { it["id"] }.distinct().size == clips.size) { "Duplicate comparison IDs" }
     }
 
     private fun cases(quick: Boolean): List<Case> = buildList {
         for (preset in ContourPresets.all()) add(Case("preset_${slug(preset.name)}", "presets", "Nine provisional recipes", preset.name,
-            "Saved dry recipe for ${preset.voice.name.lowercase()}. Compare its body, moving edge, articulation and root clarity.",
+            presetDescriptions.getValue(preset.name),
             preset.voice, preset.macros, preset.velocity, preset.config, includeNormalized = true, featured = true))
         for (voice in ContourVoice.entries) {
             for (tune in if (quick) listOf(.5f) else listOf(.25f, .5f, .75f)) for (velocity in if (quick) listOf(1f) else listOf(.3f, 1f)) {

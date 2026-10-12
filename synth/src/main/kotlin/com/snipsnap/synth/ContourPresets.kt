@@ -1,78 +1,130 @@
 package com.snipsnap.synth
 
 /**
- * Nine dry first-listen recipes. Different table pairs, layer responses and envelopes
- * establish the six voices before the proposed 36-preset library receives sonic approval.
- * Every recipe saves its complete seven-control map and structural configuration.
+ * Nine dry first-listen recipes. Rounded attacks, delayed edges and contrasting
+ * low-partial palettes establish each voice before owner-approved expansion.
+ * Complete saved configurations keep these recipes independent of voice defaults.
  */
 object ContourPresets {
+    // Promoted shelf rows paste into this helper, then copy their complete saved configuration.
     private fun p(voice: ContourVoice, name: String, vararg macros: Pair<String, Float>) =
         ContourPatch(name, voice, ContourEngine.defaults(voice) + macros.toMap())
 
+    private fun recipe(voice: ContourVoice, name: String, config: ContourConfig,
+        scan: Float, offset: Float, motion: Float, filter: Float, drive: Float, hold: Float = 0f) =
+        ContourPatch(name, voice, linkedMapOf("TUNE" to .5f, "SCAN" to scan,
+            "OFFSET" to offset, "MOTION" to motion, "FILTER" to filter,
+            "DRIVE" to drive, "HOLD" to hold), config)
+
     private val presets = listOf(
-        p(ContourVoice.BASS, "Rounded Edge", "SCAN" to .25f, "OFFSET" to .20f, "MOTION" to .25f,
-            "FILTER" to .40f, "DRIVE" to .24f).copy(config = ContourConfig.forVoice(ContourVoice.BASS).copy(
-            bodyHarmonics = 2.05f, bodyScanBias = .08f, edgeRootLevel = .40f,
-            edgeAttack = .005f, edgeDecay = .38f, edgeSustain = .78f,
-        )),
-        p(ContourVoice.BASS, "Moving Corner", "SCAN" to .30f, "OFFSET" to .45f, "MOTION" to .48f,
-            "FILTER" to .58f, "DRIVE" to .20f).copy(config = ContourConfig.forVoice(ContourVoice.BASS).copy(
-            bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER,
-            relation = ContourRelation.OPPOSED, bodyTravel = .22f, edgeTravel = .60f,
-            ampDecay = .45f, ampRelease = .42f, bodyHarmonics = 1.85f,
-            edgeRootLevel = .5f, edgeDecay = .45f, edgeSustain = .82f,
-        )),
-        p(ContourVoice.BASS, "Dark Table", "SCAN" to .18f, "OFFSET" to .32f, "MOTION" to .18f,
-            "FILTER" to .30f, "DRIVE" to .18f).copy(config = ContourConfig.forVoice(ContourVoice.BASS).copy(
-            bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.ODD_EVEN,
-            relation = ContourRelation.CURVE, filterAmount = .38f, ampSustain = .45f,
-            bodyHarmonics = 1.8f, bodyScanBias = .06f, edgeRootLevel = .35f,
-            edgeAttack = .01f, edgeDecay = .3f, edgeSustain = .72f,
-        )),
-        p(ContourVoice.KEY, "Copper Scan", "SCAN" to .36f, "OFFSET" to .40f, "MOTION" to .38f,
-            "FILTER" to .60f, "DRIVE" to .12f).copy(config = ContourConfig.forVoice(ContourVoice.KEY).copy(
-            bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER,
-            edgeLag = .24f, bodyTravel = .25f, edgeTravel = .52f,
-            bodyHarmonics = 1.95f, bodyScanBias = .06f, edgeRootLevel = .45f,
-            edgeAttack = .008f, edgeDecay = .7f, edgeSustain = .65f,
-        )),
-        p(ContourVoice.KEY, "Soft Digital", "SCAN" to .24f, "OFFSET" to .30f, "MOTION" to .24f,
-            "FILTER" to .46f, "DRIVE" to .04f).copy(config = ContourConfig.forVoice(ContourVoice.KEY).copy(
-            bodyTable = ContourTable.ROUND_PULSE, edgeTable = ContourTable.DIGITAL_BELL,
-            edgeLevel = .24f, ampAttack = .018f, ampDecay = .85f, ampRelease = .90f,
-            filterAmount = .42f, bodyHarmonics = 1.85f, bodyScanBias = .10f,
-            edgeRootLevel = .55f, edgeAttack = .014f, edgeDecay = .85f, edgeSustain = .7f,
-        )),
-        p(ContourVoice.PLUCK, "Bright Margin", "SCAN" to .40f, "OFFSET" to .42f, "MOTION" to .48f,
-            "FILTER" to .72f, "DRIVE" to .15f).copy(config = ContourConfig.forVoice(ContourVoice.PLUCK).copy(
-            bodyTable = ContourTable.COPPER, edgeTable = ContourTable.DIGITAL_BELL,
-            ampDecay = .28f, ampSustain = .10f, sustainSeconds = .25f, ampRelease = .35f,
-            relation = ContourRelation.CURVE, bodyHarmonics = 1.8f,
-            edgeLevel = .40f, edgeRootLevel = .6f, edgeAttack = .002f,
-            edgeDecay = .16f, edgeSustain = .48f,
-        )),
-        p(ContourVoice.LEAD, "Twin Outline", "SCAN" to .45f, "OFFSET" to .35f, "MOTION" to .40f,
-            "FILTER" to .70f, "DRIVE" to .16f).copy(config = ContourConfig.forVoice(ContourVoice.LEAD).copy(
-            bodyTable = ContourTable.SAW_HOLLOW, edgeTable = ContourTable.ODD_EVEN,
-            relation = ContourRelation.OPPOSED, edgeLag = .12f,
-            bodyHarmonics = 1.8f, edgeRootLevel = .55f,
-            edgeAttack = .012f, edgeDecay = .8f, edgeSustain = .9f,
-        )),
-        p(ContourVoice.HOLLOW, "Hollow Step", "SCAN" to .55f, "OFFSET" to .50f, "MOTION" to .30f,
-            "FILTER" to .55f, "DRIVE" to .10f).copy(config = ContourConfig.forVoice(ContourVoice.HOLLOW).copy(
-            bodyTable = ContourTable.SAW_HOLLOW, edgeTable = ContourTable.FORMANT,
-            filterType = ContourFilterType.BAND_PASS, relation = ContourRelation.CURVE,
-            bodyHarmonics = 1.75f, edgeLevel = .44f, edgeTravel = .36f, edgeRootLevel = .4f,
-            edgeAttack = .018f, edgeDecay = .55f, edgeSustain = .75f,
-        )),
-        p(ContourVoice.SWELL, "Long Contour", "SCAN" to .35f, "OFFSET" to .45f, "MOTION" to .55f,
-            "FILTER" to .60f, "DRIVE" to .15f, "HOLD" to 1f).copy(config = ContourConfig.forVoice(ContourVoice.SWELL).copy(
-            bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.FORMANT,
-            motionShape = ContourMotionShape.CYCLE, relation = ContourRelation.LAG,
-            bodyTravel = .30f, edgeTravel = .58f, motionSeconds = 2.4f, loopSeconds = 2.4f,
-            bodyHarmonics = 1.95f, edgeRootLevel = .4f,
-            edgeAttack = .35f, edgeDecay = 1.8f, edgeSustain = .9f,
-        )),
+        recipe(ContourVoice.BASS, "Rounded Edge", ContourConfig(
+            ContourTable.SOFT_SAW, ContourTable.ROUND_PULSE,
+            edgeRatio = 1f, edgeLag = .25f, relation = ContourRelation.LAG,
+            bodyLevel = .84f, edgeLevel = .26f, subLevel = .07f,
+            bodyHarmonics = 1.1f, edgeRootLevel = .8f,
+            edgeAttack = .085f, edgeDecay = .7f, edgeSustain = .35f,
+            bodyScanBias = -.05f, edgeScanBias = -.1f, bodyTravel = .18f, edgeTravel = .32f,
+            ampAttack = .035f, ampDecay = .65f, ampSustain = .52f, ampRelease = .8f,
+            sustainSeconds = .9f, filterAttack = .04f, filterDecay = .7f, filterAmount = .12f,
+            motionShape = ContourMotionShape.FALL, motionSeconds = 1.6f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .28f, offset = .2f, motion = .38f,
+            filter = .3f, drive = 0f),
+        recipe(ContourVoice.BASS, "Moving Corner", ContourConfig(
+            ContourTable.ODD_EVEN, ContourTable.SOFT_SAW,
+            edgeRatio = 1f, edgeLag = .3f, relation = ContourRelation.OPPOSED,
+            bodyLevel = .82f, edgeLevel = .33f, subLevel = .05f,
+            bodyHarmonics = 1.05f, edgeRootLevel = .8f,
+            edgeAttack = .12f, edgeDecay = 1.2f, edgeSustain = .52f,
+            bodyScanBias = -.04f, edgeScanBias = -.12f, bodyTravel = .18f, edgeTravel = .45f,
+            ampAttack = .06f, ampDecay = .75f, ampSustain = .55f, ampRelease = .85f,
+            sustainSeconds = 1.1f, filterAttack = .07f, filterDecay = 1f, filterAmount = .1f,
+            motionShape = ContourMotionShape.CYCLE, motionSeconds = 2.1f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .3f, offset = .23f, motion = .58f,
+            filter = .32f, drive = .02f),
+        recipe(ContourVoice.BASS, "Dark Table", ContourConfig(
+            ContourTable.SOFT_SAW, ContourTable.ODD_EVEN,
+            edgeRatio = 1f, edgeLag = .25f, relation = ContourRelation.CURVE,
+            bodyLevel = .86f, edgeLevel = .22f, subLevel = .08f,
+            bodyHarmonics = 1.1f, edgeRootLevel = .85f,
+            edgeAttack = .16f, edgeDecay = 1.2f, edgeSustain = .4f,
+            bodyScanBias = -.1f, edgeScanBias = -.12f, bodyTravel = .14f, edgeTravel = .3f,
+            ampAttack = .09f, ampDecay = .9f, ampSustain = .56f, ampRelease = 1f,
+            sustainSeconds = 1.1f, filterAttack = .08f, filterDecay = .9f, filterAmount = .08f,
+            motionShape = ContourMotionShape.RISE, motionSeconds = 2.4f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .22f, offset = .2f, motion = .25f,
+            filter = .2f, drive = 0f),
+        recipe(ContourVoice.KEY, "Copper Scan", ContourConfig(
+            ContourTable.SOFT_SAW, ContourTable.COPPER,
+            edgeRatio = 1f, edgeLag = .34f, relation = ContourRelation.LAG,
+            bodyLevel = .8f, edgeLevel = .23f, subLevel = 0f,
+            bodyHarmonics = 1.05f, edgeRootLevel = .8f,
+            edgeAttack = .1f, edgeDecay = .65f, edgeSustain = .2f,
+            bodyScanBias = -.04f, edgeScanBias = -.24f, bodyTravel = .17f, edgeTravel = .4f,
+            ampAttack = .04f, ampDecay = .95f, ampSustain = .3f, ampRelease = 1f,
+            sustainSeconds = .8f, filterAttack = .08f, filterDecay = .9f, filterAmount = .1f,
+            motionShape = ContourMotionShape.RISE, motionSeconds = 1.9f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .3f, offset = .22f, motion = .5f,
+            filter = .3f, drive = 0f),
+        recipe(ContourVoice.KEY, "Soft Digital", ContourConfig(
+            ContourTable.SAW_HOLLOW, ContourTable.DIGITAL_BELL,
+            edgeRatio = 1f, edgeLag = .25f, relation = ContourRelation.LAG,
+            bodyLevel = .8f, edgeLevel = .18f, subLevel = 0f,
+            bodyHarmonics = 1.1f, edgeRootLevel = .8f,
+            edgeAttack = .2f, edgeDecay = 1.1f, edgeSustain = .35f,
+            bodyScanBias = -.08f, edgeScanBias = -.27f, bodyTravel = .18f, edgeTravel = .33f,
+            ampAttack = .095f, ampDecay = 1.1f, ampSustain = .42f, ampRelease = 1.2f,
+            sustainSeconds = .8f, filterAttack = .14f, filterDecay = .95f, filterAmount = .1f,
+            motionShape = ContourMotionShape.RISE, motionSeconds = 2.2f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .26f, offset = .18f, motion = .32f,
+            filter = .28f, drive = 0f),
+        recipe(ContourVoice.PLUCK, "Bright Margin", ContourConfig(
+            ContourTable.SOFT_SAW, ContourTable.ROUND_PULSE,
+            edgeRatio = 1f, edgeLag = .2f, relation = ContourRelation.CURVE,
+            bodyLevel = .8f, edgeLevel = .3f, subLevel = 0f,
+            bodyHarmonics = 1.1f, edgeRootLevel = .8f,
+            edgeAttack = .045f, edgeDecay = .3f, edgeSustain = .12f,
+            bodyScanBias = -.06f, edgeScanBias = -.15f, bodyTravel = .22f, edgeTravel = .42f,
+            ampAttack = .018f, ampDecay = .62f, ampSustain = .16f, ampRelease = .52f,
+            sustainSeconds = .25f, filterAttack = .015f, filterDecay = .5f, filterAmount = .16f,
+            motionShape = ContourMotionShape.FALL, motionSeconds = .9f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .34f, offset = .2f, motion = .45f,
+            filter = .38f, drive = 0f),
+        recipe(ContourVoice.LEAD, "Twin Outline", ContourConfig(
+            ContourTable.SOFT_SAW, ContourTable.ODD_EVEN,
+            edgeRatio = 1f, edgeLag = .22f, relation = ContourRelation.OPPOSED,
+            bodyLevel = .8f, edgeLevel = .25f, subLevel = 0f,
+            bodyHarmonics = 1.05f, edgeRootLevel = .8f,
+            edgeAttack = .18f, edgeDecay = 1.5f, edgeSustain = .55f,
+            bodyScanBias = -.03f, edgeScanBias = -.17f, bodyTravel = .22f, edgeTravel = .35f,
+            ampAttack = .07f, ampDecay = .5f, ampSustain = .66f, ampRelease = .9f,
+            sustainSeconds = 1.4f, filterAttack = .1f, filterDecay = 1.2f, filterAmount = .11f,
+            motionShape = ContourMotionShape.CYCLE, motionSeconds = 1.9f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .33f, offset = .22f, motion = .5f,
+            filter = .37f, drive = .02f),
+        recipe(ContourVoice.HOLLOW, "Hollow Step", ContourConfig(
+            ContourTable.SOFT_SAW, ContourTable.SAW_HOLLOW,
+            edgeRatio = 1f, edgeLag = .32f, relation = ContourRelation.CURVE,
+            bodyLevel = .8f, edgeLevel = .34f, subLevel = 0f,
+            bodyHarmonics = 1.05f, edgeRootLevel = .8f,
+            edgeAttack = .26f, edgeDecay = 1.2f, edgeSustain = .45f,
+            bodyScanBias = -.1f, edgeScanBias = .1f, bodyTravel = .18f, edgeTravel = .35f,
+            ampAttack = .11f, ampDecay = .8f, ampSustain = .58f, ampRelease = 1.15f,
+            sustainSeconds = 1.1f, filterAttack = .14f, filterDecay = 1.1f, filterAmount = .1f,
+            motionShape = ContourMotionShape.RISE, motionSeconds = 2.4f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
+        ), scan = .3f, offset = .24f, motion = .46f,
+            filter = .3f, drive = 0f),
+        recipe(ContourVoice.SWELL, "Long Contour", ContourConfig(
+            ContourTable.SOFT_SAW, ContourTable.ODD_EVEN,
+            edgeRatio = 1f, edgeLag = .36f, relation = ContourRelation.LAG,
+            bodyLevel = .8f, edgeLevel = .28f, subLevel = 0f,
+            bodyHarmonics = 1.05f, edgeRootLevel = .8f,
+            edgeAttack = .5f, edgeDecay = 1.8f, edgeSustain = .75f,
+            bodyScanBias = -.1f, edgeScanBias = -.15f, bodyTravel = .28f, edgeTravel = .42f,
+            ampAttack = .8f, ampDecay = .8f, ampSustain = .76f, ampRelease = 1.8f,
+            sustainSeconds = 2.4f, filterAttack = .5f, filterDecay = 1.6f, filterAmount = .1f,
+            motionShape = ContourMotionShape.CYCLE, motionSeconds = 3f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 3.6f,
+        ), scan = .28f, offset = .25f, motion = .6f,
+            filter = .28f, drive = 0f, hold = 1f),
     )
 
     fun forVoice(voice: ContourVoice): List<ContourPatch> = presets.filter { it.voice == voice }

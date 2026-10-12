@@ -48,6 +48,14 @@ Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
 Contour. Their table pairs and contours differ; the proposed 36-preset expansion
 waits for the owner's sonic verdict.
 
+R03 reauthors those nine recipes around rounded bass entrances, mellow key blooms,
+a softer pluck, slower lead and hollow gestures, and an evolving held tone.
+Different table pairings and bounded scan paths replace the preceding recipes'
+broad overtone boost. Finite attacks span 18–110 ms, with new decay, sustain and
+edge contours; the held recipe has a loop of about 3.6 seconds. Filter openings and
+drive are restrained in these authored recipes. Their complete configurations
+are saved as usual, so earlier saved recipes keep their previous sound.
+
 `SynthKits.contour()` supplies sixteen pads: seven C-minor-pentatonic KEY notes
 and the nine recipes. CONTOUR appears in the Android SYNTH picker and FRESH TAPE
 starter catalog. Finite pads carry TONAL metadata; held pads carry LOOP metadata.
@@ -71,6 +79,8 @@ Ordinary drum pads play their WAV once; their format does not expose a separate
 attack-plus-loop region. `Keys.contourPad()` supplies two copies of the settled
 region and a nonzero `loopStartFrame`, matching the existing keygroup export
 convention. Repeated playback on the audition page exposes the actual wrap.
+`Keys.contourPad()` is a tested helper; SYNTH MAKE INSTRUMENT and the CLI
+`--instrument` path do not call it yet.
 
 ## Audition and verification
 
@@ -87,9 +97,10 @@ The generator writes a listening page, manifest and dry WAVs under
 `testkit/contour-audition/`. The complete matrix contains 477 cases:
 9 presets, 36 note/velocity voice checks, 150 macro-sweep points, 216 interaction
 points, 6 all-high corners, 36 diagnostic comparisons and 24 held loops.
-Supplying the archived first round adds nine Original/Revised pairs, bringing
-the current comparison pack to 495 cases. Original WAVs remain byte-identical;
-current references reuse the revised preset WAVs. The comparison records each
+Supplying an archived previous round adds nine Previous/New pairs, bringing
+the current comparison pack to 495 cases. The R03 comparison uses the previously
+published R02 voicing. Previous WAVs remain byte-identical;
+current references reuse the new preset WAVs. The comparison records each
 version's complete patch, source fingerprints and audio hashes. The baseline
 directory must contain `baseline.json`, its original `source/` files, and the
 verified `raw/` and `matched/` WAVs. Generation refuses a mismatched source,
@@ -97,7 +108,7 @@ audio hash or level policy. An existing generated `comparison/` directory is a
 valid baseline for a later regeneration.
 
 The page opens with Revision A/B when comparisons are available. Each pair can
-load Original into A and Revised into B. Both use the same note, velocity and
+load Previous into A and New into B. Both use the same note, velocity and
 level policy, with finite attacks played as rendered. The previous page added a
 12 ms entry ramp to every clip, which softened short pluck attacks; only settled
 HOLD entries now use that ramp. Stop fades remain in place.
