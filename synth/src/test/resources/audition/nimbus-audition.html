@@ -63,7 +63,7 @@
     .clip-group { margin-bottom:2rem; }
     .clip-group h3 { font-size:1rem; margin:0 0 .8rem; color:var(--accent); }
     .clip-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
-    #comparison .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #comparison .clip-grid,#hold-comparison .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .clip { min-width:0; border:1px solid var(--line); border-radius:.65rem; background:var(--panel); padding:1.2rem; display:flex; flex-direction:column; }
     .clip.playing { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
     .clip-badges { display:flex; gap:.45rem; flex-wrap:wrap; }
@@ -96,7 +96,7 @@
     footer p { max-width:850px; }
     .empty { padding:2rem 0; }
     @media(max-width:980px) { .clip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media(max-width:650px) { html { scroll-padding-top:15rem; } .hero { padding-top:1rem; } .story { grid-template-columns:1fr; gap:1rem; } .filters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; padding-top:1rem; } .filters label:last-child { grid-column:1/-1; } .clip-grid,#comparison .clip-grid { grid-template-columns:1fr; } .transport-main { gap:.4rem 1rem; } .volume { margin-left:auto; } .volume input { width:90px; } .clip { padding:1rem; } }
+    @media(max-width:650px) { html { scroll-padding-top:15rem; } .hero { padding-top:1rem; } .story { grid-template-columns:1fr; gap:1rem; } .filters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; padding-top:1rem; } .filters label:last-child { grid-column:1/-1; } .clip-grid,#comparison .clip-grid,#hold-comparison .clip-grid { grid-template-columns:1fr; } .transport-main { gap:.4rem 1rem; } .volume { margin-left:auto; } .volume input { width:90px; } .clip { padding:1rem; } }
     @media(max-height:500px) { html { scroll-padding-top:1rem; } .transport { position:static; } }
     @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
     @media(forced-colors:active) { .clip.playing { outline:2px solid Highlight; } .transport,.clip { border:1px solid CanvasText; } }
@@ -107,8 +107,9 @@
   <header class="shell hero">
     <p class="eyebrow">SnipSnap / dry engine audition</p>
     <div class="hero-title"><h1>Nimbus.</h1><span>Six rings, one note.</span></div>
-    <p class="intro">Six metal identities share one requested note inside an imaginary funnel. Hear the connected whole, then compare the actual cymbal contributions to its attack, body and gathering tail.</p>
+    <p class="intro">Six metal identities share one requested note inside an imaginary funnel. Compare finite responses and powered sustain for recognizable pitch, metal character and movement.</p>
     <p class="read-first"><strong>Audio starts off.</strong> Read each clip's description before enabling playback. Nothing plays automatically.</p>
+    <!-- NIMBUS_HOLD_COMPARISON_NOTE -->
     <!-- NIMBUS_ENSEMBLE_NOTE -->
     <!-- NIMBUS_COMPARISON_NOTE -->
     <details class="listening-guide"><summary>What to listen for: identity, movement and gathering</summary><div class="story" aria-label="The sound's three connected parts">
@@ -116,7 +117,7 @@
       <div><span>02 / Suspension</span><h2>A stack that yields</h2><p>A harder event changes excitation and displacement. SPACING changes neighboring transfer; FIELD changes the stack's restoration. Compare matched velocity clips.</p></div>
       <div><span>03 / Funnel</span><h2>A gathering shimmer</h2><p>HEIGHT changes the source's position; FUNNEL changes its enclosure. Close rims can add contact, while powered HOLD supplies a settled sustain.</p></div>
     </div></details>
-    <p class="read-first">These clips document a new DSP port. Descriptions state intended behavior; <strong>listening acceptance remains open.</strong> Begin with the natural whole instrument at C4. Compare its selected contribution, selected-muted mix and other five cymbals at the same playback level.</p>
+    <p class="read-first">These clips document a new DSP port. Descriptions state intended behavior; <strong>listening acceptance remains open.</strong> <!-- NIMBUS_START_GUIDE --></p>
   </header>
   <div class="transport">
     <div class="shell">
