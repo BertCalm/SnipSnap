@@ -261,6 +261,45 @@ awaits the owner's listening verdict. [REVEL](REVEL.md) documents current
 contracts and measured validation; phone/MPC verification and release naming
 remain separate gates.
 
+### PRISM — harmonics with different lifetimes
+
+PRISM ports the [engineering specification](superpowers/specs/2026-10-11-prism-engine-engineering-spec.md)
+as a deterministic 32-partial additive engine. KEY, PLUCK, ORGAN, BASS, GLASS
+and VEIL share five independently developing spectral groups. GRAIN changes
+spectral organization, DRIFT separates group timing, SHAPE moves broad partial
+masks, STRIKE articulates the onset and BODY reinforces lower and middle energy.
+TUNE keeps the requested root stable; HOLD exports settled loop-only material.
+
+The initial eight presets, patches, dry sixteen-pad kit, starter, CLI and phone
+picker use the same 44.1 kHz mono/4× renderer and shared melodic loudness.
+Finite notes route as TONAL and held material as LOOP. The
+[published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
+contains raw/matched voices across register and velocity, five-point sweeps,
+interaction corners and HOLD extremes. Run
+`./gradlew :synth:generatePrismAudition` to regenerate the listening pack.
+[PRISM](PRISM.md) records saving, rendering and loop contracts. The proposed
+36-preset expansion waits for the owner's dry sonic approval. Device playback
+and release naming remain outstanding.
+
+### ALLOY — generated attack entering a four-operator tonal body
+
+The [supplied engineering specification](ALLOY_ENGINE_SPEC.md) is ported to the
+existing deterministic offline engine, patch, velocity and kit interfaces.
+MATERIAL blends generated wood, tine/string and breath/contact projections.
+FUSE feeds the conditioned attack into carrier phase, while EDGE changes ordinary
+PM articulation independently. BODY preserves root support and shapes carrier
+balance; LENGTH and HOLD control finite gestures and settled periodic excitation.
+Held exports omit the initial attack and retain MATERIAL/FUSE through the same port.
+
+Six voices and twelve provisional presets form the first listening roster. The
+proposed 36-preset expansion waits for the owner's dry audition decision. Run
+`./gradlew :synth:generateAlloyAudition` for the reproducible listening pack.
+The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
+includes voice/register/velocity coverage, five-point macro sweeps, interactions,
+attack-port removal pairs and held seams. [ALLOY](ALLOY.md) records implementation
+and remaining listening/device acceptance. This is original synthesis, with no
+factory PCM imports or hardware-compatibility claim.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,
