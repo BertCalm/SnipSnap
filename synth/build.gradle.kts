@@ -712,3 +712,16 @@ tasks.register<JavaExec>("generatePrismAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/prism-audition")
 }
+
+/** Render Alloy's provisional dry hybrid patches, causal FUSE comparisons and held-loop listening pack. */
+tasks.register<JavaExec>("generateAlloyAudition") {
+    group = "distribution"
+    description = "Render ALLOY matched WAVs, raw diagnostics, patch JSONs, an MPC kit and an accessible listening page under testkit/alloy-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AlloyAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/alloy-audition")
+    if (project.hasProperty("alloyFull")) args("--full")
+    if (project.hasProperty("alloyRefreshPage")) args("--refresh-page")
+}

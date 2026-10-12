@@ -656,6 +656,22 @@ object SynthKits {
     }
 
     /**
+     * Sixteen dry hybrid pads: eight KEY notes in C minor pentatonic, one finite
+     * candidate from each voice, and the two settled held STRING/SOFT candidates.
+     * Every pad saves the generated attack, PM routing, envelopes, root and energy.
+     */
+    fun alloy(): List<ArrangedPad?> {
+        val key = AlloyPresets.forVoice(AlloyVoice.KEY).first()
+        fun landed(patch: AlloyPatch) = pad(patch, Alloy.drumClassFor(patch.voice, patch.macros))
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            landed(key.copy(name = "Alloy ${i + 1}", midi = Alloy.DEFAULT_MIDI + semitone))
+        }
+        val finite = AlloyVoice.entries.map { landed(AlloyPresets.forVoice(it).first()) }
+        val held = AlloyPresets.all().filter { Alloy.isLoop(it.macros.getValue("HOLD")) }.map { landed(it) }
+        return scale + finite + held
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
