@@ -474,7 +474,14 @@ object Tangle {
 
     private data class Conditioned(val samples: FloatArray, val stateError: Double)
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
+    // and every long pass polls it so a stale render stops instead of finishing unwanted.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("TANGLE render no longer wanted")
+    }
+
     private fun condition(raw: FloatArray, oversample: Int, boundary: Int = 0, period: Int = 0): Conditioned {
+        stopIfUnwanted()
         val filter = Antialias(RATE * oversample)
         val filtered = FloatArray(raw.size)
         var firstMemory: DoubleArray? = null
@@ -515,6 +522,7 @@ object Tangle {
         val release = min(.24, seconds * .22)
         val gate = seconds - release - .04
         for (i in raw.indices) {
+            if (i % 8192 == 0) stopIfUnwanted()
             val time = i.toDouble() / rate
             val attack = smoothstep(time / (v.attack * (1.25 - .4 * velocity)))
             val body = .76 + .24 * exp(-time / .32) * velocity
@@ -554,7 +562,7 @@ object Tangle {
         val meter = Meter()
         val pilot = Machine(v, m, plan.hz, rate, velocity.toDouble(), seed(TangleVoice.entries.first { voice(it) == v }, midi), meter)
         // No onset in a held loop. Preroll preserves the interaction before recording a schedule.
-        repeat((.55 * rate).roundToInt()) { pilot.step(1.0) }
+        repeat((.55 * rate).roundToInt()) { if (it % 8192 == 0) stopIfUnwanted(); pilot.step(1.0) }
         pilot.capture = CaptureState.FREE; pilot.captureAge = 0; pilot.refractory = 0
         pilot.clock = 0; meter.held.clear(); meter.capture.clear()
         val phaseA = DoubleArray(n); val phaseB = DoubleArray(n)
@@ -566,6 +574,7 @@ object Tangle {
         val initialA = pilot.phaseA; val initialB = pilot.phaseB
         val noNewCapture = pilot.approachFrames + pilot.dwellFrames + pilot.releaseFrames + pilot.refractoryFrames + 64
         for (i in 0 until n) {
+            if (i % 8192 == 0) stopIfUnwanted()
             phaseA[i] = initialA + accumulatedA; phaseB[i] = initialB + accumulatedB
             held[i] = pilot.heldTarget; capture[i] = pilot.capture; strength[i] = pilot.strength()
             age[i] = pilot.captureAge; refractory[i] = pilot.refractory
@@ -612,6 +621,7 @@ object Tangle {
         repeat(3) {
             periodicBoundary(machine, s)
             for (i in 0 until s.frames) {
+                if (i % 8192 == 0) stopIfUnwanted()
                 machine.step(1.0, schedule = s, index = i, forcedPhases = true)
                 correctionA[i] = s.advanceA[i] * rate - machine.lastNaturalA
                 correctionB[i] = s.advanceB[i] * rate - machine.lastNaturalB
@@ -634,8 +644,10 @@ object Tangle {
             periodicBoundary(machine, s)
             val before = machine.snapshot()
             val period = FloatArray(s.frames)
-            for (i in 0 until s.frames) period[i] = machine.step(1.0, schedule = s, index = i,
-                correctionA = correctionA[i], correctionB = correctionB[i])
+            for (i in 0 until s.frames) {
+                if (i % 8192 == 0) stopIfUnwanted()
+                period[i] = machine.step(1.0, schedule = s, index = i, correctionA = correctionA[i], correctionB = correctionB[i])
+            }
             periodicBoundary(machine, s)
             stateError = before.distance(machine.snapshot())
             val previous = previousAudio
