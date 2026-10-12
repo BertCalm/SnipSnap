@@ -75,6 +75,18 @@ object Treatments {
         // centre, its neutral, as "ensembled" leaves it. Appended last: the
         // names list is pinned in order.
         "sectioned" to FxChain(ensemble = mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)),
+        // A drive pedal: VALVE with a middling DRIVE and only part of a speaker. TONE is left out (its
+        // centre is its neutral, so AMT could never move it); CAB is set above its neutral (0, no
+        // cabinet) so it can move. DRIVE and SAG are starting shape values, heard at the pedal board's
+        // Stage 0 listen (docs/superpowers/specs/2026-10-04-pedal-board-design.md). On a pad that is
+        // already through an amp this is a second amp, not a pedal in front of one.
+        "driven" to FxChain(valve = mapOf("DRIVE" to 0.45f, "SAG" to 0.2f, "CAB" to 0.3f)),
+        // A compressor pedal: SQUASH alone, leaning on the body for sustain. The bank's "punched" is
+        // SQUASH plus CRUNCH; this has no crunch.
+        "compressed" to FxChain(squash = mapOf("AMOUNT" to 0.7f, "ATTACK" to 0.55f)),
+        // A wah: the ladder's contour with the resonance up and a deep, fast sweep (a one-shot's
+        // sweep from the hit works as an auto-wah). "contoured" is CUTOFF 0.3, CREAM 0.6, SWEEP 0.7.
+        "quacked" to FxChain(contour = mapOf("CUTOFF" to 0.45f, "CREAM" to 0.85f, "SWEEP" to 0.85f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

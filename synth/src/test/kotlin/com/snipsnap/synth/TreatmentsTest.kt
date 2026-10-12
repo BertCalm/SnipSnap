@@ -1,9 +1,11 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -31,6 +33,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
+                "driven", "compressed", "quacked",
             ),
             Treatments.names,
         )
@@ -91,5 +94,33 @@ class TreatmentsTest {
         assertEquals(0.3f, stopped.fx!!.motion!!.getValue("STOP"), 1e-6f)
         val started = PadRecipe.fromJsonValue(Treatments.apply("started", snare, 1f).recipe)
         assertEquals(mapOf("START" to 0.5f), started.fx!!.motion)
+    }
+
+    @Test
+    fun `the pedal recipes set only their own section, and none sits on a neutral`() {
+        val expected = mapOf("driven" to "valve", "compressed" to "squash", "quacked" to "contour")
+        for ((name, section) in expected) {
+            val chain = Treatments.chain(name)
+            assertEquals(
+                setOf(section),
+                FxChain.SECTION_NAMES.filter { chain.section(it) != null }.toSet(),
+                "$name sets only $section",
+            )
+            val neutrals = FxChain.macrosOf(section).associate { it.name to it.neutral }
+            for ((macro, v) in chain.section(section)!!) {
+                assertTrue(v != neutrals.getValue(macro), "$name.$macro sits on its neutral $v: AMT could never move it")
+            }
+        }
+    }
+
+    @Test
+    fun `each pedal recipe changes a snare and leaves it finite and audible`() {
+        val snare = Thump.render(ThumpVoice.SNARE)
+        for (name in listOf("driven", "compressed", "quacked")) {
+            val out = Treatments.apply(name, snare, 1f).snip
+            assertTrue(out.samples.all { it.isFinite() && it in -1f..1f }, "$name stays finite and in range")
+            assertTrue(out.samples.any { abs(it) > 0.05f }, "$name is audible")
+            assertFalse(out.samples.contentEquals(snare.samples), "$name changes the hit")
+        }
     }
 }
