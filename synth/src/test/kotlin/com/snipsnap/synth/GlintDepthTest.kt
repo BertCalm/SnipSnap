@@ -131,7 +131,9 @@ class GlintDepthTest {
         for (voice in GlintVoice.entries) {
             val withoutDepth = Glint.defaults(voice).filterKeys { it != "DEPTH" }
             val before = Dsp.scrambleNear(withoutDepth, 0.35f, Random(7))
-            val now = Glint.scramble(voice, Random(7))
+            // An explicit near patch with no macros seeds the roll from the defaults, so no preset is drawn and
+            // these are the draws DEPTH's arrival must not have moved.
+            val now = Glint.scramble(voice, Random(7), near = GlintPatch("Defaults", voice, emptyMap()))
             assertEquals(before, now.filterKeys { it != "DEPTH" }, "$voice: DEPTH moved an earlier macro's draw")
             assertTrue(now.getValue("DEPTH") in 0f..1f, "$voice: DEPTH rolled out of range")
         }

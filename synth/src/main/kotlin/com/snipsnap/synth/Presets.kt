@@ -54,6 +54,10 @@ object Presets {
             val v = TideVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TidePresets.forVoice(v)
         }
+        GlintPatch.ENGINE -> {
+            val v = GlintVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            GlintPresets.forVoice(v)
+        }
         SirenPatch.ENGINE -> {
             val v = SirenVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             SirenPresets.forVoice(v)
@@ -201,7 +205,7 @@ object Presets {
     fun all(): List<Patch> =
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
-            ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
+            ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +

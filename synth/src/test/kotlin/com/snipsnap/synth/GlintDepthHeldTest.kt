@@ -12,7 +12,8 @@ class GlintDepthHeldTest {
     @Test
     fun `every voice's loop closes at DEPTH 0_3, 0_75 and 1 - the seam and the second breath`() {
         // BLOOM both ways: 0.8 falls into PEAK and 0.2 rises into it. A rising BLOOM runs STEP's ladder
-        // upward and takes the negative-BLOOM branch of every voice's breath, BRASS's included.
+        // upward and takes the negative-BLOOM branch of the path voices' breath, BRASS's included.
+        // VOWEL's breath has no such branch: its signed BLOOM walks the vowel line the other way.
         for (bloom in listOf(0.8f, 0.2f)) {
             for (voice in GlintVoice.entries) {
                 for (depth in listOf(0.3f, 0.75f, 1f)) {
