@@ -74,6 +74,37 @@ class CircuitInstrumentsTest {
     }
 
     @Test
+    fun `an excitation curve silences forcing and scales quiet gestures`() {
+        val rate = 44_100
+        for (kind in CircuitInstruments.Kind.entries) {
+            val silent = CircuitInstruments.gesture(kind, 130.8128, rate, .35, 33,
+                excitationAtSeconds = { 0.0 })
+            assertTrue(silent.all { it == 0f }, "$kind sounds with zero excitation")
+
+            // Quiet energy avoids the exceptional peak limiter. This compares the
+            // entire modal/tract response, rather than just its peak or loudness.
+            val full = CircuitInstruments.gesture(kind, 130.8128, rate, .35, 33)
+            val half = CircuitInstruments.gesture(kind, 130.8128, rate, .35, 33,
+                excitationAtSeconds = { .5 })
+            val referenceEnergy = full.sumOf { it.toDouble() * it }
+            val differenceEnergy = full.indices.sumOf { i ->
+                val difference = half[i].toDouble() - .5 * full[i]
+                difference * difference
+            }
+            assertTrue(referenceEnergy > 0.0, "$kind has no reference response")
+            val error = sqrt(differenceEnergy / referenceEnergy)
+            assertTrue(error < 1e-4, "$kind constant half excitation changed its response: relative error=$error")
+            if (kind == CircuitInstruments.Kind.CLAY) {
+                val restored = CircuitInstruments.gesture(kind, 130.8128, rate, .35, 33,
+                    excitationAtSeconds = { if (it < .012) .5 else 1.0 })
+                // The single contact is over by 12 ms. Restoring excitation
+                // cannot boost its quieter, already excited passive modes.
+                assertTrue(half.contentEquals(restored), "restoring excitation boosts the clay's passive tail")
+            }
+        }
+    }
+
+    @Test
     fun `power cutoff prevents later strikes and syllables while preserving passive tails`() {
         val rate = 44_100
         for (kind in CircuitInstruments.Kind.entries) {
@@ -85,6 +116,15 @@ class CircuitInstrumentsTest {
         // Both cutoffs are after the first contact and before the second: the same passive response remains.
         assertTrue(clapper.contentEquals(clapperLater), "the mounting and arm tails should not need continued power")
         assertTrue(rms(clapper, rate, .026, .045) > .001, "cutoff hard-truncates the clapper's passive response")
+
+        val curveClapper = CircuitInstruments.gesture(CircuitInstruments.Kind.CLAPPER, 130.8128, rate, .9, 33,
+            excitationAtSeconds = { if (it < .025) 1.0 else 0.0 })
+        val curveClapperLater = CircuitInstruments.gesture(CircuitInstruments.Kind.CLAPPER, 130.8128, rate, .9, 33,
+            excitationAtSeconds = { if (it < .040) 1.0 else 0.0 })
+        // Both curves stop between contacts. Moving the zero-excitation point
+        // cannot gate the first contact's freely decaying arm and mounting modes.
+        assertTrue(curveClapper.contentEquals(curveClapperLater), "the curve gates the clapper's passive tail")
+        assertTrue(clapper.contentEquals(curveClapper), "zero excitation should match the physical power cutoff")
 
         val voice = CircuitInstruments.gesture(CircuitInstruments.Kind.UH_HUH, 130.8128, rate, .9, 33, poweredSeconds = .100)
         val fullVoice = CircuitInstruments.gesture(CircuitInstruments.Kind.UH_HUH, 130.8128, rate, .9, 33)

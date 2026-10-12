@@ -9,7 +9,9 @@ import com.snipsnap.json.JsonValue
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.ln
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.Test
@@ -202,38 +204,65 @@ class SpoolTest {
         val audible = Spool.renderProbe(SpoolVoice.STRING, macros, writes = false)
         val from = ((audible.diagnostics.gateSeconds + .1f) * Dsp.RATE).toInt()
         val until = ((audible.diagnostics.returnEndSeconds - .05f) * Dsp.RATE).toInt()
-        assertTrue(rms(audible.samples, from, until) > rms(muted.samples, from, until) * 3,
-            "RETURN did not reveal the reset journey")
+        assertTrue(requireNotNull(muted.reverseStem).all { it == 0f }, "RETURN=0 left a backward pickup")
+        assertTrue(rms(requireNotNull(audible.reverseStem), from, until) > 1e-4,
+            "RETURN did not reveal the independent backward journey")
     }
 
     @Test
-    fun `clean forward return and reread phrases connect without a deep notch or a long silent reset`() {
+    fun `clean forward and backward pickups overlap substantially and agree on the requested note`() {
         for (voice in listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)) {
-            for (answer in listOf(.2f, .65f)) {
-                val macros = mapOf("HEAD" to .2f, "STRAIN" to .1f, "SPLICE" to 0f,
-                    "IMPRINT" to 0f, "RETURN" to answer)
+            for (midi in listOf(48, 60, 72)) {
+                val macros = mapOf("TUNE" to (midi - 48) / 24f, "HEAD" to .2f, "STRAIN" to .1f,
+                    "SPLICE" to 0f, "IMPRINT" to .15f, "RETURN" to .65f)
                 val p = Spool.renderProbe(voice, macros)
-                val s = p.samples
-                val gate = p.diagnostics.gateSeconds.toDouble()
-                val forward = phraseRms(s, gate - .20, gate - .08)
-                val reverse = phraseRms(s, gate + .08, gate + .20)
-                val quieterPhrase = minOf(forward, reverse)
-                assertTrue(quieterPhrase > 1e-4, "$voice RETURN=$answer had no adjacent audible phrases")
-                // Compare with the quieter phrase, so a deliberately quiet RETURN need not
-                // match the forward level. A stopped pickup between phrases still fails.
-                val handoff = phraseWindows(s, gate - .0625, gate + .0625).min()
-                assertTrue(handoff >= quieterPhrase * .40,
-                    "$voice RETURN=$answer gate handoff fell to ${handoff / quieterPhrase} of its quieter neighbor")
+                val forward = requireNotNull(p.forwardStem)
+                val reverse = requireNotNull(p.reverseStem)
+                assertEquals(p.samples.size, forward.size)
+                assertEquals(p.samples.size, reverse.size)
+                val d = p.diagnostics
+                val overlap = SpoolListeningMeasure.overlap(forward, reverse, d.gateSeconds.toDouble(), d.returnEndSeconds.toDouble())
+                val label = "$voice MIDI $midi"
+                assertTrue(overlap.preGateSeconds >= .4, "$label lacked audible concurrent pickups before release: $overlap")
+                assertTrue(overlap.postGateFraction >= .6, "$label handed off instead of layering across the return: $overlap")
+                assertTrue(overlap.totalSeconds >= 1.0 && overlap.reverseToForwardRms >= .10,
+                    "$label backward pickup was too brief or hidden: $overlap")
+                val wanted = Keys.midiHz(midi).toDouble()
+                val f = SpoolListeningMeasure.tone(forward, overlap.fromSeconds, overlap.untilSeconds, wanted)
+                val r = SpoolListeningMeasure.tone(reverse, overlap.fromSeconds, overlap.untilSeconds, wanted)
+                assertTrue(abs(f.cents) <= 15 && abs(r.cents) <= 15 && abs(f.cents - r.cents) <= 20,
+                    "$label independent layers disagreed on pitch: $f / $r")
+                assertTrue(f.harmonicPowerShare >= .85 && r.harmonicPowerShare >= .85,
+                    "$label layers acquired substantial inharmonic energy: $f / $r")
+                val mixed = FloatArray(forward.size) { forward[it] + reverse[it] }
+                val tone = SpoolListeningMeasure.tone(mixed, overlap.fromSeconds, overlap.untilSeconds, wanted)
+                val detuned = SpoolListeningMeasure.semitoneReference(reverse, overlap.fromSeconds, overlap.untilSeconds)
+                val first = (overlap.fromSeconds * Dsp.RATE).toInt()
+                val reference = FloatArray(detuned.size) { forward[first + it] + detuned[it] }
+                val rough = SpoolListeningMeasure.tone(reference, 0.0, reference.size.toDouble() / Dsp.RATE, wanted)
+                assertTrue(tone.roughness <= rough.roughness * .80,
+                    "$label overlap was as rough as a semitone-detuned layer: $tone / $rough")
+                assertEquals(0f, d.reengageSeconds, "$label restarted an attacked third pass")
+            }
+        }
+    }
 
-                // Exclude the finite terminal fade, but include the slowing return and the
-                // original recording's attack at the next encounter. Measure silence in the
-                // rendered sound; a scheduled pause or a repeated attack cannot hide in metadata.
-                val end = p.diagnostics.durationSeconds - .30
-                val peakWindow = phraseWindows(s, 0.0, end).max()
-                val reset = phraseWindows(s, p.diagnostics.returnEndSeconds - .35, end)
-                val quietSeconds = longestQuietSeconds(reset, peakWindow * .03)
-                assertTrue(quietSeconds <= .15,
-                    "$voice RETURN=$answer return-to-reread contained ${quietSeconds}s below 3% of peak phrase RMS")
+    @Test
+    fun `reverse grain footprints stay inside already captured recording support`() {
+        for (gate in listOf(.15f, 1.35f, 2.4f)) {
+            val machine = SpoolMachine(gateSeconds = gate, sourceSeconds = 3f,
+                headOffsets = listOf(-.6f, .6f, .6f))
+            val p = Spool.renderProbe(SpoolVoice.STRING,
+                mapOf("HEAD" to 1f, "RETURN" to 1f, "STRAIN" to .1f, "SPLICE" to 1f), machine)
+            val d = p.diagnostics
+            for (frame in d.pickupTrace) for (k in 0..2) {
+                val support = frame.reverseSupports[k]
+                assertTrue(frame.reverseMinCoordinates[k] >= -1e-6f && frame.reverseMaxCoordinates[k] <= support + 1e-6f,
+                    "reverse grain/kernel exceeded captured support: gate=$gate $frame")
+                assertTrue(support <= d.returnTravel[k] + .001f,
+                    "reverse pickup revealed future tape: gate=$gate $frame")
+                if (frame.reverseMaxCoordinates[k] > frame.reverseMinCoordinates[k])
+                    assertEquals(-1f, frame.reverseReadRates[k], "clean reverse grain did not run backward")
             }
         }
     }
@@ -320,7 +349,16 @@ class SpoolTest {
         val moving = Spool.renderProbe(SpoolVoice.STRING, baseline + ("HEAD" to .9f))
         val frozen = Spool.renderProbe(SpoolVoice.STRING, baseline + ("HEAD" to .9f), frozenHead = true)
         assertEquals(moving.diagnostics.sourceHashes, frozen.diagnostics.sourceHashes)
-        assertTrue(shapeDistance(moving.samples, frozen.samples) > .05, "HEAD collapsed to static mixing of completed exports")
+        val toneChange = shapeDistance(moving.samples, frozen.samples)
+        val movingHeads = moving.diagnostics.pickupTrace
+        val frozenHeads = frozen.diagnostics.pickupTrace
+        val travelChange = movingHeads.indices.sumOf { i -> movingHeads[i].forwardCoordinates.indices.sumOf { k ->
+            abs(movingHeads[i].forwardCoordinates[k] - frozenHeads[i].forwardCoordinates[k]).toDouble()
+        } } / (movingHeads.size * 3).coerceAtLeast(1)
+        // Pitch preservation deliberately removes the large phase distance of detuned heads.
+        // HEAD must still select different recorded material and produce an audible tone change.
+        assertTrue(toneChange > .01 && travelChange > .001,
+            "HEAD failed to change tone and recorded-time pickup: $toneChange / $travelChange")
         assertEquals(moving.diagnostics.returnTravel, frozen.diagnostics.returnTravel, "freezing the head changed the transport")
     }
 
@@ -440,6 +478,126 @@ class SpoolTest {
             assertTrue(classified !in drumClasses, "$voice classified as $classified")
             assertEquals(DrumClass.TONAL, Spool.drumClassFor(voice, macros))
             assertEquals(DrumClass.LOOP, Spool.drumClassFor(voice, macros + ("HOLD" to 1f)))
+        }
+    }
+}
+
+/** Shared listening meters for tests and the real audition manifest. */
+internal object SpoolListeningMeasure {
+    private const val RATE = 44100
+    private const val WINDOW = .025
+    private const val HOP = .005
+
+    data class Overlap(val preGateSeconds: Double, val postGateSeconds: Double, val totalSeconds: Double,
+                       val postGateFraction: Double, val reverseToForwardRms: Double,
+                       val fromSeconds: Double, val untilSeconds: Double) {
+        fun values() = mapOf("preGateSeconds" to preGateSeconds, "postGateSeconds" to postGateSeconds,
+            "totalSeconds" to totalSeconds, "postGateFraction" to postGateFraction,
+            "reverseToForwardRms" to reverseToForwardRms, "fromSeconds" to fromSeconds, "untilSeconds" to untilSeconds,
+            "windowSeconds" to WINDOW, "hopSeconds" to HOP)
+    }
+
+    data class Tone(val hz: Double, val cents: Double, val rootPowerShare: Double,
+                    val harmonicPowerShare: Double, val roughness: Double) {
+        fun values() = mapOf("hz" to hz, "cents" to cents, "rootPowerShare" to rootPowerShare,
+            "harmonicPowerShare" to harmonicPowerShare, "roughness" to roughness)
+    }
+
+    fun rms(s: FloatArray, from: Int = 0, until: Int = s.size): Double =
+        sqrt((from until until).sumOf { s[it].toDouble() * s[it] } / (until - from).coerceAtLeast(1))
+
+    fun overlap(forward: FloatArray, reverse: FloatArray, gate: Double, end: Double): Overlap {
+        val size = minOf(forward.size, reverse.size)
+        val width = (WINDOW * RATE).toInt()
+        val count = ((size.toDouble() / RATE - WINDOW) / HOP).toInt() + 1
+        val f = DoubleArray(count) { j -> val at = (j * HOP * RATE).toInt(); rms(forward, at, at + width) }
+        val r = DoubleArray(count) { j -> val at = (j * HOP * RATE).toInt(); rms(reverse, at, at + width) }
+        val peakF = f.maxOrNull() ?: 0.0
+        val peakR = r.maxOrNull() ?: 0.0
+        var pre = 0; var post = 0; var run = 0; var longest = 0; var last = 0
+        var fEnergy = 0.0; var rEnergy = 0.0
+        for (j in f.indices) {
+            val t = j * HOP + WINDOW / 2
+            val threshold = if (t < gate) .05 else .02
+            val active = t < end && peakF > 1e-8 && peakR > 1e-8 &&
+                f[j] > peakF * threshold && r[j] > peakR * threshold && r[j] >= f[j] * .05
+            if (active) {
+                if (t < gate) pre++ else post++
+                fEnergy += f[j] * f[j]; rEnergy += r[j] * r[j]
+                run++
+                if (run > longest) { longest = run; last = j }
+            } else run = 0
+        }
+        val span = longest * HOP
+        val middle = ((last - longest + 1 + last) * HOP + WINDOW) / 2
+        val measured = minOf(.55, (span - .10).coerceAtLeast(0.0))
+        return Overlap(pre * HOP, post * HOP, (pre + post) * HOP,
+            post * HOP / (end - gate).coerceAtLeast(1e-12), sqrt(rEnergy / fEnergy.coerceAtLeast(1e-30)),
+            middle - measured / 2, middle + measured / 2)
+    }
+
+    /** Hann resolution widens harmonic bands; their width is capped so adjacent roots remain separable. */
+    fun tone(s: FloatArray, fromSeconds: Double, untilSeconds: Double, wanted: Double): Tone {
+        val first = (fromSeconds * RATE).toInt().coerceAtLeast(0)
+        val count = minOf(((untilSeconds - fromSeconds) * RATE).toInt(), s.size - first)
+        require(count > RATE / 5)
+        val n = 65536
+        require(count <= n)
+        val re = FloatArray(n); val im = FloatArray(n)
+        for (i in 0 until count) re[i] = s[first + i] * (.5 - .5 * cos(2 * PI * i / (count - 1))).toFloat()
+        Fft.forward(re, im)
+        val power = DoubleArray(n / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        val bin = RATE.toDouble() / n
+        val duration = count.toDouble() / RATE
+        val lo = (40 / bin).toInt().coerceAtLeast(2)
+        val hi = (8000 / bin).toInt()
+        fun frequency(p: Int): Double {
+            val left = sqrt(power[p - 1]); val center = sqrt(power[p]); val right = sqrt(power[p + 1])
+            val curve = left - 2 * center + right
+            val offset = if (abs(curve) < 1e-25) 0.0 else (.5 * (left - right) / curve).coerceIn(-1.0, 1.0)
+            return (p + offset) * bin
+        }
+        val rootPeak = ((wanted * .65 / bin).toInt()..(wanted * 1.4 / bin).toInt()).maxBy { power[it] }
+        val hz = frequency(rootPeak)
+        val total = (lo..hi).sumOf { power[it] }.coerceAtLeast(1e-30)
+        val root = ((wanted * .96 / bin).toInt()..(wanted * 1.04 / bin).toInt()).sumOf { power[it] }
+        val harmonic = BooleanArray(power.size)
+        for (h in 1..(8000 / wanted).toInt()) {
+            val center = wanted * h
+            val halfWidth = maxOf(2 / duration, center * (2.0.pow(25.0 / 1200) - 1)).coerceAtMost(wanted * .25)
+            val start = ((center - halfWidth) / bin).toInt().coerceAtLeast(lo)
+            val end = ((center + halfWidth) / bin).toInt().coerceAtMost(hi)
+            for (p in start..end) harmonic[p] = true
+        }
+        val harmonicEnergy = (lo..hi).filter { harmonic[it] }.sumOf { power[it] }
+        val maximum = (lo..hi).maxOf { power[it] }
+        val peaks = (lo + 1 until hi).filter { p -> power[p] > power[p - 1] && power[p] >= power[p + 1] && power[p] > maximum * .0009 }
+            .sortedByDescending { power[it] }
+        val selected = mutableListOf<Int>()
+        for (p in peaks) {
+            if (selected.all { abs(frequency(p) - frequency(it)) >= 2 / duration }) selected += p
+            if (selected.size == 60) break
+        }
+        // Normalized critical-band interaction is a roughness proxy, not a listening verdict.
+        var roughness = 0.0
+        for (i in selected.indices) for (j in i + 1 until selected.size) {
+            val a = selected[i]; val b = selected[j]
+            val x = abs(frequency(a) - frequency(b)) * .24 / (.021 * minOf(frequency(a), frequency(b)) + 19)
+            roughness += sqrt(power[a] * power[b]) * (exp(-3.5 * x) - exp(-5.75 * x))
+        }
+        return Tone(hz, 1200 * ln(hz / wanted) / ln(2.0), root / total, harmonicEnergy / total,
+            roughness / selected.sumOf { power[it] }.coerceAtLeast(1e-30))
+    }
+
+    /** A deliberately detuned counterexample calibrates the roughness check; it is never exported. */
+    fun semitoneReference(s: FloatArray, fromSeconds: Double, untilSeconds: Double): FloatArray {
+        val size = ((untilSeconds - fromSeconds) * RATE).toInt()
+        val first = fromSeconds * RATE
+        val speed = 2.0.pow(1.0 / 12)
+        return FloatArray(size) { i ->
+            val at = (first + i * speed).coerceAtMost(s.size - 2.0001)
+            val p = at.toInt(); val fraction = (at - p).toFloat()
+            s[p] + (s[p + 1] - s[p]) * fraction
         }
     }
 }

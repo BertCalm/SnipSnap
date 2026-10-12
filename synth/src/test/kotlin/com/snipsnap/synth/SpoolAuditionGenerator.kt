@@ -32,8 +32,8 @@ object SpoolAuditionGenerator {
     private val macroDescriptions = mapOf(
         "HEAD" to "Aligned pickup to diagonal track and recorded-time travel.",
         "STRAIN" to "Stable drive to competing strip loads, slip and recovery.",
-        "RETURN" to "Silent reset to a pronounced backward counterphrase.",
-        "IMPRINT" to "Original recordings to audible delayed inherited traces in one finite reread.",
+        "RETURN" to "An overlapping backward layer grows beneath the forward recording.",
+        "IMPRINT" to "Delayed neighboring traces are heard during the layered return.",
         "SPLICE" to "Continuous timeline to smoothly overlapped reordered sections.",
     )
 
@@ -67,10 +67,19 @@ object SpoolAuditionGenerator {
         check(cases.map { it.id }.distinct().size == cases.size)
         val source = listOf(File("src/main/kotlin/com/snipsnap/synth/Spool.kt"), File("synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"))
             .first { it.isFile }
-        val sourceHash = sha256(source.readBytes())
+        val sourceFiles = listOf("Spool.kt", "SpoolPatch.kt", "SpoolPresets.kt").associate { name ->
+            "synth/src/main/kotlin/com/snipsnap/synth/$name" to File(source.parentFile, name)
+        }
+        val sourceFileHashes = sourceFiles.mapValues { (_, file) -> sha256(file.readBytes()) }
+        val sourceHash = sourceFileHashes.getValue("synth/src/main/kotlin/com/snipsnap/synth/Spool.kt")
+        fun verifySources() {
+            for ((path, file) in sourceFiles) check(file.isFile && sha256(file.readBytes()) == sourceFileHashes.getValue(path)) {
+                "$path changed during rendering; regenerate one consistent pack"
+            }
+        }
         val entries = mutableListOf<JsonValue>()
         for ((index, case) in cases.withIndex()) {
-            check(sha256(source.readBytes()) == sourceHash) { "Spool source changed during rendering; regenerate one consistent pack" }
+            verifySources()
             val macros = Spool.defaults(case.voice) + case.macros + ("TUNE" to ((case.midi - 48) / 24f))
             val geometry = SpoolMachine.forVoice(case.voice).copy(gateSeconds = case.gate, sourceSeconds = case.sourceSeconds, motorTorque = case.motorTorque)
             val machine = if (case.companionLoad) geometry.copy(roster = geometry.roster.mapIndexed { i, strip ->
@@ -79,6 +88,7 @@ object SpoolAuditionGenerator {
             val start = System.nanoTime()
             val result = Spool.renderProbe(case.voice, macros, machine, case.velocity,
                 normalize = false, frozenHead = case.frozenHead, writes = case.writes)
+            verifySources()
             val renderMs = (System.nanoTime() - start) / 1_000_000.0
             require(result.samples.isNotEmpty() && result.samples.all { it.isFinite() }) { "Invalid clip ${case.id}" }
             val held = Spool.isLoop(macros.getValue("HOLD"))
@@ -114,6 +124,17 @@ object SpoolAuditionGenerator {
                     out.appendLine(listOf(event.timeSeconds, event.source, event.destination, event.coordinateSeconds, event.gain).joinToString(","))
                 }
             }
+            val pickupPath = "diagnostics/${case.id}_pickups.csv"
+            File(root, pickupPath).bufferedWriter().use { out ->
+                out.appendLine("time_seconds,fwd_0,fwd_1,fwd_2,rev_0,rev_1,rev_2,fwd_rate_0,fwd_rate_1,fwd_rate_2,rev_rate_0,rev_rate_1,rev_rate_2,fwd_gain_0,fwd_gain_1,fwd_gain_2,rev_gain_0,rev_gain_1,rev_gain_2,fwd_min_0,fwd_min_1,fwd_min_2,fwd_max_0,fwd_max_1,fwd_max_2,rev_min_0,rev_min_1,rev_min_2,rev_max_0,rev_max_1,rev_max_2,rev_support_0,rev_support_1,rev_support_2,physical_rate_0,physical_rate_1,physical_rate_2,varispeed_blend")
+                val stride = (d.rate / 40).coerceAtLeast(1)
+                d.pickupTrace.filterIndexed { i, _ -> i % stride == 0 }.forEach { f ->
+                    out.appendLine((listOf(f.timeSeconds) + f.forwardCoordinates + f.reverseCoordinates +
+                        f.forwardReadRates + f.reverseReadRates + f.forwardGains + f.reverseGains +
+                        f.forwardMinCoordinates + f.forwardMaxCoordinates + f.reverseMinCoordinates +
+                        f.reverseMaxCoordinates + f.reverseSupports + f.physicalRates + listOf(f.varispeedBlend)).joinToString(","))
+                }
+            }
             val diagnosticValues = linkedMapOf<String, Any?>(
                 "gateSeconds" to d.gateSeconds, "returnEndSeconds" to d.returnEndSeconds,
                 "durationSeconds" to d.durationSeconds, "reengageSeconds" to d.reengageSeconds, "sourceHashes" to d.sourceHashes,
@@ -128,6 +149,9 @@ object SpoolAuditionGenerator {
                 "frozenHead" to case.frozenHead, "writesEnabled" to case.writes,
                 "motorTorque" to machine.motorTorque, "companionLoad" to case.companionLoad,
                 "tracePath" to tracePath, "traceRate" to 40, "eventsPath" to eventsPath, "imprintEventCount" to d.imprintEvents.size,
+                "pickupTracePath" to pickupPath, "pitchMode" to d.pitchMode,
+                "overlapSeconds" to d.overlapSeconds, "overlapMeasure" to "active grain/contact time; audible RMS overlap is in the stem measurements", "carrierRateMeaning" to "grain branch rate; physical transport is in the transport trace",
+
             )
             val entry = linkedMapOf<String, Any?>(
                 "id" to case.id, "section" to case.section, "voice" to case.voice.name,
@@ -143,28 +167,68 @@ object SpoolAuditionGenerator {
                 "boundaryError" to if (held) boundaryError(result.samples) else null,
                 "recipeStatus" to "Provisional dry identity; owner listening review pending",
             )
+            val forward = requireNotNull(result.forwardStem)
+            val reverse = requireNotNull(result.reverseStem)
+            val stems = linkedMapOf<String, Any?>()
+            val stemClips = mutableListOf<JsonValue>()
+            if (case.section in setOf("voices", "registers", "loops")) {
+                val overlap = SpoolListeningMeasure.overlap(forward, reverse, d.gateSeconds.toDouble(), d.returnEndSeconds.toDouble())
+                entry["overlap"] = overlap.values()
+                for ((kind, stem) in listOf("forward" to forward, "reverse" to reverse)) {
+                    val stemSnip = Snip(stem, 1, Dsp.RATE)
+                    val values = linkedMapOf<String, Any?>("metrics" to metrics(stemSnip), "signalStage" to "actual pickup before shared contact coloration")
+                    if (overlap.untilSeconds - overlap.fromSeconds > .21) values["tone"] =
+                        SpoolListeningMeasure.tone(stem, overlap.fromSeconds, overlap.untilSeconds, Keys.midiHz(case.midi).toDouble()).values()
+                    if (case.section == "voices") {
+                        val stemRaw = "stems/${case.id}_$kind.wav"
+                        val stemMatched = "stems/matched/${case.id}_$kind.wav"
+                        WavWriter.write(File(root, stemRaw), stemSnip, WavWriter.BitDepth.PCM_16)
+                        val stemLevelled = AuditionLevel.level(stemSnip)
+                        WavWriter.write(File(root, stemMatched), stemLevelled, WavWriter.BitDepth.PCM_16)
+                        values["rawPath"] = stemRaw; values["matchedPath"] = stemMatched
+                        val derivative = LinkedHashMap(entry)
+                        derivative["id"] = "stem_${case.id}_$kind"
+                        derivative["section"] = "diagnostics"
+                        derivative["label"] = "${case.label} · $kind pickup only"
+                        derivative["description"] = "Actual $kind pickup from the same parent render, before shared contact coloration. The matched version is levelled for inspection; native audio retains its contribution level."
+                        derivative["parentClipId"] = case.id
+                        derivative["stemKind"] = kind
+                        derivative["rawPath"] = stemRaw; derivative["matchedPath"] = stemMatched; derivative["file"] = stemMatched
+                        derivative["rawMetrics"] = metrics(stemSnip); derivative["matchedMetrics"] = metrics(stemLevelled)
+                        derivative["rawExportGain"] = 1f; derivative["signalStage"] = "precolor pickup"
+                        stemClips += j(derivative)
+                    }
+                    stems[kind] = values
+                }
+                entry["stems"] = stems
+            }
             if (case.macro != null) entry["macro"] = case.macro
             if (case.value != null) entry["value"] = case.value
             if (case.groupKey != null) entry["groupKey"] = case.groupKey
             if (case.section in setOf("voices", "registers")) entry["forwardPitch"] = forwardPitch(samples, Keys.midiHz(case.midi))
             entries += j(entry)
+            entries += stemClips
             println("Spool audition ${index + 1}/${cases.size}: ${case.id} (${"%.0f".format(Locale.ROOT, renderMs)} ms)")
         }
+        verifySources()
         val kit = exportKit(root)
+        verifySources()
         val patches = SpoolPresets.all().map { it.toJsonValue() }
         File(root, "patches.json").writeText(Json.write(JsonValue.Arr(patches)) + "\n")
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "SPOOL", "title" to "Spool — a recording that returns", "generatedAt" to Instant.now().toString(),
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 16,
             "memoryMode" to "FROZEN_SNAPSHOT", "controls" to (timbral + "HOLD"),
-            "description" to "Original synthesized recordings cross three strips, return under stored spring energy, and inherit quieter delayed traces. All audio is rendered by SnipSnap's Spool engine without external tape effects.",
+            "description" to "Forward and backward pickups overlap through original synthesized recordings. Clean layers preserve the requested pitch, while causal imprint carries neighboring traces. All audio is rendered by SnipSnap's Spool engine without external tape effects.",
             "holdDescription" to "HOLD prepares a finite deterministic imprint snapshot, freezes writes, then exports a repeating forward/return cycle. Memory does not continue accumulating during sample playback.",
-            "exportDescription" to "The backward answer is baked into each one-shot at its serialized gate. Sampler pitch transposition changes gesture timing as well as pitch; playback-time release samples are not provided.",
+            "exportDescription" to "The overlapping pickup motion and serialized gate are baked into each sample. Sampler pitch transposition changes gesture timing as well as pitch; playback-time release samples are not provided.",
             "levelDescription" to "Native dry files preserve measured machine level, with any PCM attenuation recorded per clip. Matched dry files share the repository's quiet audition loudness of 0.03 over the loudest 200 ms.",
-            "provenance" to mapOf("sourceSha256" to sourceHash, "renderer" to "com.snipsnap.synth.Spool.renderProbe", "internalRate" to Dsp.RATE * Dsp.OVERSAMPLE),
+            "provenance" to mapOf("sourceSha256" to sourceHash, "sourceFilesSha256" to sourceFileHashes,
+                "renderer" to "com.snipsnap.synth.Spool.renderProbe", "internalRate" to Dsp.RATE * Dsp.OVERSAMPLE),
             "clips" to entries, "kit" to kit,
             "downloads" to mapOf("patches" to "patches.json"),
         )
+        verifySources()
         File(root, "manifest.json").writeText(Json.write(j(manifest)) + "\n")
         println("Spool audition: ${entries.size} clips and a 16-pad MPC kit under ${root.absolutePath}")
     }

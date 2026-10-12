@@ -171,6 +171,27 @@ logcat tag to grab when something is wrong.
   layout change mid-note should go silent, never stick. The zones load
   off the main thread, so the first key after opening may be silent for
   a moment on a big instrument.
+- **A MIDI keyboard (KEYS and PLAY)**: plug a USB keyboard into the
+  phone on an OTG cable (Bluetooth MIDI is not wired yet: pairing in the
+  phone's settings does not make a BLE keyboard visible to `MidiManager`
+  without a scan and permissions this app lacks). The line under KEYS' grid should change from NO
+  MIDI KEYBOARD to `MIDI · <its name>` without leaving the screen, and
+  on PLAY the hint row becomes that same line with a map chip beside
+  it. On KEYS, keys play the instrument at the keyboard's own velocity
+  (a soft touch is quiet, not clamped to the grid's floor), the sustain
+  pedal holds let-go notes until it lifts, a grid note and a keyboard
+  note share the eight voices, and a panic button on the controller (All
+  Notes Off) silences everything. On PLAY the chip reads MPC NOTES by
+  default: note 36 fires A02 (the kick), 38 A06, 42 A03, exactly as the
+  exported kit answers on the Live III. Tap it to A01 = C1 and C1 walks
+  up the slots a semitone a pad, which is what a melodic kit wants.
+  Unplug mid-note: nothing should stick, and the line should go back to
+  NO MIDI KEYBOARD. A phone that reports no `android.software.midi`
+  draws neither line; `MidiInput.open` returns false there. If a
+  plugged-in keyboard never shows, logcat's `MidiInput` tag says whether
+  the device or one of its ports refused to open. Clock and transport
+  sync are **not** part of this — `docs/MIDI_SYNC.md` gates those behind
+  bench items S1–S4 that still need the phone.
 - **SNAP**: open a kit, tap SNAP, TAKE PHOTO. The system camera should
   open and hand back a thumbnail; the LCD then shows the picture with its
   LUM/SAT/HUE/DETAIL numbers, the sliders jump to what those numbers

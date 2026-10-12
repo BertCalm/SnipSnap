@@ -205,8 +205,10 @@ Release naming and device/hardware validation remain separate gates.
 ### PITCHWHEEL — wooden teeth catching through stretching resin
 
 The owner heard PITCHWHEEL R1 as six similar struck sounds distinguished
-mainly by rhythm. A model 2 prototype revises acoustic articulation and awaits
-the next dry listening verdict. CLUNK, PLUCK, DRAW, RECOIL, THAWED and TURN
+mainly by rhythm. Model 2 revised acoustic articulation; the owner's v2 review
+marked five voices Revise and found PLUCK most different, with no Keep verdict.
+Model 3 is the current provisional revision and awaits a new dry
+listening verdict. CLUNK, PLUCK, DRAW, RECOIL, THAWED and TURN
 share one pitched wheel, flexible fingers and bounded resin attachments.
 PUSH supplies gesture energy; TOOTH shapes catches and releases;
 ADHESION changes stretch and resistance;
@@ -214,11 +216,12 @@ HEAT sets the initial thermal state; BODY shapes the wooden resonance.
 Independent renders reset wheel phase, heat and resin state.
 
 Patches save an explicit MIDI root from 24–96 (default 48), velocity from
-0–1 and a render model. Newly authored patches use model 2. Saved model 1
-patches retain `PitchwheelV1`; JSON with an absent or null model also selects
-that original renderer. Editing, recipe replay and velocity variants preserve
-the stored model. TUNE is neutral at 0.5 and offsets that root by
-±12 semitones, giving an effective note range of 12–108 without clamping
+0–1 and a render model. Newly authored patches use model 3. Saved model 1
+patches retain `PitchwheelV1`; saved model 2 patches retain `PitchwheelV2`.
+JSON with an absent or null model selects V1. Editing, recipe replay and
+velocity variants preserve the stored model. TUNE is neutral at 0.5 and
+offsets that root by ±12 semitones, giving an effective note range of
+12–108 without clamping
 back to the saved-root range. Modes above 0.42 times the output sample rate
 are removed from the audible pickup before decimation. HOLD at or above
 0.99 returns settled loop-only material.
@@ -226,7 +229,7 @@ Its loop-specific calibration uses a deterministic attachment cycle and
 caps adhesion at 0.65; it is an explicit export constraint rather than
 evidence that every finite mechanical trajectory repeats.
 
-Model 2 gives the same ten-mode bank stronger body pickup, separate
+Model 2 introduced stronger body pickup into the same ten-mode bank, separate
 inharmonic body modes, voice-dependent loss and TOOTH projection, and a
 contact-rise reservoir for release work. Finger friction, filament slip and
 snaps use distinct receiving projections. Transfers remain charged to the
@@ -235,6 +238,15 @@ and undelivered release energy counts as stored energy and held-loop state.
 The geometry seed deliberately retains legacy model 1, preserving the tooth
 layout across the revision. Revised acoustic transfers can still change
 heating and damping, so this does not promise identical encounter timing.
+
+Model 3 revises contact-position projections and individual mode losses so
+body and harmonic differences can persist after the initial attack. DRAW and
+THAWED use longer contact rise; THAWED's release projection responds to the
+current resin temperature. PLUCK retains its model-2 release projection and
+decay calibration. All voices still share the root and accounted ten-mode
+network. The audition adds actual moving-wheel probes for funded bowing,
+reverse encounters, thermal evolution and settled powered loops. Release-only
+resonator hits compare body colour and decay without exercising those mechanisms.
 
 The initial roster is limited to six voice defaults and Endless Turn.
 `SynthKits.pitchwheel()`, the FRESH TAPE starter, patch recipes, CLI rendering

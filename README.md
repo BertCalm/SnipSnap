@@ -129,6 +129,12 @@ this module owns that folder's whole life.
 - **Velocity layers** — a pad can carry up to four velocity zones
   (`KitLayer`), written through to the XPM's per-layer velocity windows, so
   soft hits sound soft on hardware, not just quiet.
+- **`MidiGroove` / `MidiWire`** — MIDI on disk and on the wire. The first
+  reads and writes Standard MIDI Files for grooves; the second reads the
+  live byte stream a keyboard sends (running status, real-time bytes
+  mid-message, a message split across deliveries) into typed note and
+  controller events, which `:shell`'s `MidiKeys` and `MidiPads` turn into
+  what KEYS and PLAY do with them.
 - **`XpnPackager`** — the same expansion as a single deterministic `.xpn`
   ZIP, for one-file kit sharing, in the layout real commercial archives use:
   `Expansion.xml` at the archive root, bare sample names (no real program
@@ -285,15 +291,23 @@ FRESH TAPE's 25 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
-similar struck sounds distinguished mainly by rhythm. The model 2 prototype
-strengthens wooden body and TOOTH character, shapes contact rise, and gives
-finger friction and filament slip separate transfers into the same resonator.
-New patches use model 2; saved model 1 patches, including JSON with an absent
-or null model, retain the original renderer. Velocity variants preserve that
-choice. The revised dry audition awaits approval; the seven-preset scope stays
-fixed until then.
+similar struck sounds distinguished mainly by rhythm. Model 2 strengthened
+wooden body and TOOTH character, shaped contact rise, and gave finger friction
+and filament slip separate transfers into the same resonator. The owner's
+v2 review marked five voices Revise and found PLUCK most different; no voice
+received Keep. Provisional model 3 changes contact projections and individual
+mode losses to retain different body colours through decay. DRAW and THAWED
+have slower contact rise; THAWED's release balance follows temperature. PLUCK
+retains its model-2 release calibration. The new audition includes actual
+bowing, reverse encounters, warming and powered-loop probes alongside the
+release-only hits.
+New patches use model 3; saved models 1 and 2 retain their respective V1 and
+V2 renderers. JSON with an absent or null model selects V1. Velocity variants
+preserve the stored model. The revised dry audition awaits approval; the
+seven-preset scope stays fixed until then.
 [The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
-six isolated catches and includes the previous defaults for comparison.
+six release-only resonator hits and includes the real moving mechanisms and
+preserved models 1 and 2 for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
 
 LACQUER is a layered-tone engine for finished keys, glass, synthetic brass,
