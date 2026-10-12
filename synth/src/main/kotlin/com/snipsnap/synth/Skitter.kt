@@ -336,6 +336,12 @@ object Skitter {
     }
 
     /** Blackman-windowed sinc, 48 output-sample support, >70 dB far-stopband rejection. */
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
+    // and the long loops poll it so a stale render stops instead of finishing unwanted.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("SKITTER render no longer wanted")
+    }
+
     private fun decimate(raw: FloatArray, oversample: Int, periodic: Boolean): FloatArray {
         val radius=24*oversample
         val kernel=DoubleArray(2*radius+1)
@@ -397,6 +403,7 @@ object Skitter {
             fun cycle(recordTrace: Boolean): FloatArray {
                 val raw=FloatArray(n)
                 for(i in raw.indices) {
+                    if(i%8192==0) stopIfUnwanted()
                     a=force.a[i].toDouble(); b=force.b[i].toDouble(); gesture=force.gesture[i].toDouble()
                     val fa=plan.rootHz*force.correctionA*2.0.pow(a/1200.0)
                     val fb=plan.rootHz*s.interval*force.correctionB*2.0.pow(b/1200.0)
@@ -436,6 +443,7 @@ object Skitter {
             a=excursion; b=-.72*excursion; gesture=skitter; stats.gestures=if(skitter>0.0) 1 else 0
             var nextGesture=.48-.29*skitter; var event=1; var armed=true
             for(i in rawInternal.indices) {
+                if(i%8192==0) stopIfUnwanted()
                 val t=i.toDouble()/rate
                 if(skitter>.28 && t<gate-.12 && t>=nextGesture && armed) {
                     val sign=if(event%2==0) 1.0 else -1.0
@@ -465,6 +473,7 @@ object Skitter {
             }
         }
         check(stats.boundHits==0) { "SKITTER internal bounds exceeded ${stats.boundHits} times" }
+        stopIfUnwanted()
         val raw=decimate(rawInternal,oversample,held)
         val output=raw.copyOf()
         Dsp.levelTo(output,RATE,Dsp.MELODIC_LOUDNESS_TARGET)
