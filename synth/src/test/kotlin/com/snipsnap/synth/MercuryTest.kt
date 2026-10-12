@@ -71,7 +71,7 @@ class MercuryTest {
 
     /**
      * With BEND centred (no gesture) and WATER at 0 (no drift), the note is the note: the tapped PING read just after
-     * its strike, the rubbed SING and BLADE read late in their contact, at both ends and the middle of TUNE. R1 measured
+     * its strike, every other voice read late in its contact, at both ends and the middle of TUNE. R1 measured
      * within 0.53 cents everywhere; the bar is 3, Phase 0's own.
      */
     @Test
@@ -89,22 +89,29 @@ class MercuryTest {
     }
 
     /**
-     * BEND is a gesture into the note: it starts up to [Mercury.BEND_EXCURSION_SEMITONES] away (up for BEND 1, down for 0)
-     * and settles onto the note. Read on a long rubbed BLADE (HOLD .98, the longest one-shot: 3.8 s of contact) in the first tenth of a second
-     * and after 2.5 s. R1 measured about +160 and -160 cents early and under 1 cent late.
+     * BEND is a gesture into the note, on every voice: it starts up to the voice's own excursion away (two semitones,
+     * SHARD's four; up for BEND 1, down for 0) and settles onto the note. The early read, in the first tenth of a second,
+     * is what is left of that excursion by then (the gesture's time constant sets how much), and has to be at least 60%
+     * of it: R1 measured about 160 cents on a rubbed BLADE, and this run measures PING 71, SING 173, EDDY 177, VESSEL
+     * 137 and SHARD 200 against expectations of 78 to 211. The late read, after a long contact, is on the note within 3
+     * cents. Read at RUB .85 so a tapped voice sustains through the window too.
      */
     @Test
-    fun `the bend gesture glides into the note and settles on it`() {
-        for ((bend, sign) in listOf(1f to 1.0, 0f to -1.0)) {
-            val snip = render(MercuryVoice.BLADE, "TUNE" to 0.5f, "BEND" to bend, "WATER" to 0f, "HOLD" to 0.98f)
-            // FineTuning searches one semitone either side of the frequency it is given, and the gesture is about 1.6 semitones
-            // out in this window, so the early read is centred 1.5 semitones out, where the gesture is, and reported against the note.
-            val hz = Mercury.frequencyFor(MercuryVoice.BLADE, 0.5f)
-            val early = FineTuning.cents(FineTuning.measuredHz(snip, (hz * Math.pow(2.0, sign * 1.5 / 12)).toFloat(), 0.03f, 0.1f), hz.toDouble())
-            val late = cents(MercuryVoice.BLADE, snip, 0.5f, 2.5, 0.4)
-            println("MERCURY bend $bend: early ${f(early)} cents, late ${f(late)} cents")
-            assertTrue(sign * early > 60.0, "BEND $bend should start well ${if (sign > 0) "above" else "below"} the note: ${f(early)} cents")
-            assertTrue(abs(late) < 3.0, "BEND $bend should settle on the note: ${f(late)} cents")
+    fun `every voice's bend gesture glides into the note and settles on it`() {
+        for (voice in MercuryVoice.entries) for ((bend, sign) in listOf(1f to 1.0, 0f to -1.0)) {
+            val snip = render(voice, "TUNE" to 0.5f, "BEND" to bend, "WATER" to 0f, "RUB" to 0.85f, "HOLD" to 0.98f)
+            val tau = Mercury.gestureSeconds(voice)
+            // What is left of the excursion, averaged over 0.03-0.13 s: centre the read there, since FineTuning looks one semitone either side.
+            val left = tau / 0.1 * (Math.exp(-0.03 / tau) - Math.exp(-0.13 / tau))
+            val centre = Mercury.geometryOf(voice).bendExcursionSemitones * left
+            val hz = Mercury.frequencyFor(voice, 0.5f)
+            val early = FineTuning.cents(FineTuning.measuredHz(snip, (hz * Math.pow(2.0, sign * centre / 12)).toFloat(), 0.03f, 0.1f), hz.toDouble())
+            val late = cents(voice, snip, 0.5f, 3.2, 0.4)
+            println("MERCURY bend $voice $bend: early ${f(early)} cents, late ${f(late)} cents")
+            // Relative to this voice's own expectation, so a weakened excursion or a slower gesture fails on every voice, not
+            // only where it happens to fall under one absolute number.
+            assertTrue(sign * early > 0.6 * centre * 100, "$voice BEND $bend should start well ${if (sign > 0) "above" else "below"} the note (at least ${f(0.6 * centre * 100, 0)} cents): ${f(early)} cents")
+            assertTrue(abs(late) < 3.0, "$voice BEND $bend should settle on the note: ${f(late)} cents")
         }
     }
 
@@ -180,11 +187,12 @@ class MercuryTest {
     /**
      * RUB turns a tap into a rub on the same object: at RUB 0 the note decays through its contact, at RUB 1 it sustains.
      * Read as the level over the last 0.2 s of a 2.4 s contact against the 0.2 s after the strike. R1 measured the tap at
-     * 0.07 and the rub at 1.15 (SING), and 0.01 and 1.25 (BLADE).
+     * 0.07 and the rub at 1.15 (SING), and 0.01 and 1.25 (BLADE). PING is the voice that is a tap by default and has its
+     * own claims; the five that rub (R2c's EDDY, VESSEL and SHARD among them) are read here.
      */
     @Test
     fun `RUB turns a decaying tap into a sustained rub`() {
-        for (voice in listOf(MercuryVoice.SING, MercuryVoice.BLADE)) {
+        for (voice in MercuryVoice.entries.filter { it != MercuryVoice.PING }) {
             val hold = Mercury.holdSeconds(0.8f).toDouble()
             fun ratio(rub: Float): Double {
                 val s = render(voice, "RUB" to rub, "HOLD" to 0.8f, "WATER" to 0f).samples
@@ -202,10 +210,11 @@ class MercuryTest {
      * The rub sings on the fundamental, not on mode 1, at the bottom of each rubbed voice and at both ends of GLASS (the
      * selective, long-ringing end and the rough end), with the springs at COUPLE 1. Phase 0 saw mode 1 capture SING's low
      * notes before the contact taper and the period-scaled onset; this is the guard. R1 measured within 0.42 cents.
+     * EDDY and VESSEL start at A2, and the bar is why: EDDY's bowl sat +5.3 cents sharp at F2, +3.3 at A2, so its root is A2.
      */
     @Test
     fun `the rub locks onto the note at the bottom of the range, at both ends of GLASS, coupled`() {
-        for (voice in listOf(MercuryVoice.SING, MercuryVoice.BLADE)) for (glass in listOf(0f, 1f)) {
+        for (voice in MercuryVoice.entries.filter { it != MercuryVoice.PING }) for (glass in listOf(0f, 1f)) {
             val snip = render(voice, "TUNE" to 0f, "RUB" to 1f, "BEND" to 0.5f, "WATER" to 0f, "GLASS" to glass, "COUPLE" to 1f, "HOLD" to 0.8f)
             val hold = Mercury.holdSeconds(0.8f).toDouble()
             val c = cents(voice, snip, 0f, hold - 0.5, 0.4)
@@ -341,12 +350,14 @@ class MercuryTest {
     /**
      * Velocity (decision 8), as the owner heard it (2026-10-02).
      *
-     * PING registers GLASS, which shortens the strike and tilts the pickup bright, after the house's sweep: the onset
-     * centroid rises at every tenth of velocity's travel, and by at least 15% over all of it (544 to 710 Hz, +31%).
-     * The owner heard it and kept it.
+     * The struck voices (PING, and R2c's VESSEL and SHARD, whose default is mostly a tap: [Mercury.velocityKind]) register
+     * GLASS, which shortens the strike and tilts the pickup bright, after the house's sweep: the onset centroid rises at
+     * every tenth of velocity's travel, and by at least 15% over all of it (PING 544 to 710 Hz, +31%; VESSEL's lower object measures +10%, so its bar is 8%,
+     * and SHARD's +83% has a bar of 50%). The owner heard
+     * PING's and kept it.
      *
-     * SING and BLADE take velocity as the touch, the owner's choice of "attack and bite". A rubbed body is close to a
-     * pure tone, so a harder touch is heard in how the note starts, not in brightness:
+     * The rubbed ones (SING and BLADE, and R2c's EDDY) take velocity as the touch, the owner's choice of "attack and
+     * bite". A rubbed body is close to a pure tone, so a harder touch is heard in how the note starts, not in brightness:
      * - the swell: the time to half level falls at every step from soft to hard, and the softest is at least three
      *   times the hardest (measured 0.35-0.38 s against 0.07-0.08 s);
      * - the bite: a hard touch catches with a scrape that rides the note's own swell. Round 3 levelled it against
@@ -361,18 +372,35 @@ class MercuryTest {
      * - and Velocity renders exactly that, with no macro moved and no soften.
      */
     @Test
-    fun `velocity brightens PING, and swells or bites SING and BLADE`() {
-        val ping = MercuryPatch("Velocity", MercuryVoice.PING, Mercury.defaults(MercuryVoice.PING))
-        assertEquals("GLASS", Velocity.brightnessSpec(ping)?.name, "PING: velocity is not on GLASS")
-        val centroids = (0..10).map { onsetCentroid(Velocity.atVelocity(ping, it / 10f)) }
-        println("MERCURY velocity PING onset centroid: " + centroids.joinToString(" ") { f(it, 0) })
-        for (k in 1 until centroids.size) {
-            assertTrue(centroids[k] >= centroids[k - 1], "PING: velocity ${k / 10f} is darker than ${(k - 1) / 10f} (${centroids.map { f(it, 0) }})")
+    fun `velocity brightens the struck voices, and swells or bites the rubbed ones`() {
+        // Pinned here, not read back from the function under test: the two loops below choose their voices by it.
+        val kinds = mapOf(
+            MercuryVoice.PING to Mercury.VelocityKind.GLASS, MercuryVoice.VESSEL to Mercury.VelocityKind.GLASS, MercuryVoice.SHARD to Mercury.VelocityKind.GLASS,
+            MercuryVoice.SING to Mercury.VelocityKind.TOUCH, MercuryVoice.BLADE to Mercury.VelocityKind.TOUCH, MercuryVoice.EDDY to Mercury.VelocityKind.TOUCH,
+        )
+        assertEquals(MercuryVoice.entries.toSet(), kinds.keys, "a voice has no pinned velocity kind")
+        for ((voice, kind) in kinds) assertEquals(kind, Mercury.velocityKind(voice), "$voice: the velocity kind changed")
+        for (voice in MercuryVoice.entries.filter { Mercury.velocityKind(it) == Mercury.VelocityKind.GLASS }) {
+            val struck = MercuryPatch("Velocity", voice, Mercury.defaults(voice))
+            assertEquals("GLASS", Velocity.brightnessSpec(struck)?.name, "$voice: velocity is not on GLASS")
+            val centroids = (0..10).map { onsetCentroid(Velocity.atVelocity(struck, it / 10f)) }
+            println("MERCURY velocity $voice onset centroid: " + centroids.joinToString(" ") { f(it, 0) })
+            for (k in 1 until centroids.size) {
+                assertTrue(centroids[k] >= centroids[k - 1], "$voice: velocity ${k / 10f} is darker than ${(k - 1) / 10f} (${centroids.map { f(it, 0) }})")
+            }
+            // PING's travel is +31% (the owner heard it and kept it). VESSEL's is a lower object with a longer first 46 ms to
+            // fill and measures +10%, so its bar is the smallest that is still a monotone sweep a listener can follow; SHARD
+            // measures +83% (1136 to 2075 Hz) and keeps a bar a quarter to a third under that.
+            val bar = when (voice) {
+                MercuryVoice.PING -> 1.15
+                MercuryVoice.VESSEL -> 1.08
+                else -> 1.5
+            }
+            assertTrue(centroids.last() >= centroids.first() * bar, "$voice: velocity brightens the onset by only ${f(centroids.last() / centroids.first(), 3)}x (bar $bar)")
         }
-        assertTrue(centroids.last() >= centroids.first() * 1.15, "PING: velocity brightens the onset by only ${f(centroids.last() / centroids.first(), 3)}x")
 
         val raw = rate * Dsp.OVERSAMPLE
-        for (voice in listOf(MercuryVoice.SING, MercuryVoice.BLADE)) {
+        for (voice in MercuryVoice.entries.filter { Mercury.velocityKind(it) == Mercury.VelocityKind.TOUCH }) {
             val macros = Mercury.defaults(voice)
             val patch = MercuryPatch("Velocity", voice, macros)
             assertEquals(null, Velocity.brightnessSpec(patch), "$voice: velocity has a brightness macro")
@@ -430,5 +458,33 @@ class MercuryTest {
         com.snipsnap.audio.Fft.forward(re, im)
         val p = (0 until n / 2).filter { it.toDouble() * sampleRate / n in lo..hi }.map { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] + 1e-30 }
         return kotlin.math.exp(p.sumOf { kotlin.math.ln(it) } / p.size) / p.average()
+    }
+
+    /**
+     * The three voices the owner has heard and approved (PING, SING, BLADE) keep their sound through any later change to the
+     * shared engine or the Geometry hooks. The R2c refactor onto Geometry was held to the bit by a hash of 39 renders, run once
+     * before and after; this is what stays: each voice's defaults one-shot and its LOOP, as length, RMS and six samples, in
+     * [ValveTest]'s way. A change that moves a shared default, a ring or beam table, or the friction changes these.
+     */
+    private class Golden(val voice: MercuryVoice, val what: String, val frames: Int, val rms: Double, val at: FloatArray)
+
+    @Test
+    fun `PING, SING and BLADE still sound as the owner heard them`() {
+        val goldens = listOf(
+            Golden(MercuryVoice.PING, "defaults", 154013, 0.08982441789507076, floatArrayOf(0.26971376f, 0.030051807f, -0.09113836f, -0.19247356f, -0.25109005f, -0.12293644f)),
+            Golden(MercuryVoice.PING, "loop", 135692, 0.1479320538535563, floatArrayOf(0.13680199f, -0.032375976f, -0.098112576f, -0.14663213f, -0.05831167f, 0.14257415f)),
+            Golden(MercuryVoice.SING, "defaults", 154013, 0.11097168808708335, floatArrayOf(0.0035384605f, 0.009097785f, -0.038125977f, -0.25515306f, -0.16931587f, 0.04674018f)),
+            Golden(MercuryVoice.SING, "loop", 129714, 0.1502013556287208, floatArrayOf(-0.082158454f, -0.033554245f, -0.10470635f, -0.15544003f, -0.015238915f, 0.18793282f)),
+            Golden(MercuryVoice.BLADE, "defaults", 147619, 0.10493528062673735, floatArrayOf(-0.022677392f, 0.039824687f, -0.080689415f, 0.20144099f, -0.05433459f, -0.2341467f)),
+            Golden(MercuryVoice.BLADE, "loop", 121614, 0.17380263317570627, floatArrayOf(0.13895139f, 0.06698783f, 0.1815851f, 0.2176442f, 0.12893565f, -0.05902378f)),
+        )
+        for (g in goldens) {
+            val d = Mercury.defaults(g.voice)
+            val x = if (g.what == "loop") Mercury.renderLoop(g.voice, d + ("HOLD" to 1f)) else Mercury.render(g.voice, d).samples
+            assertEquals(g.frames, x.size, "${g.voice} ${g.what}: the length moved")
+            assertEquals(g.rms, sqrt(x.sumOf { it.toDouble() * it } / x.size), 1e-4, "${g.voice} ${g.what}: rms")
+            val points = listOf(100, 1000, 3000, 6000, 9000, 12000)
+            for (k in points.indices) assertEquals(g.at[k], x[points[k]], 1e-4f, "${g.voice} ${g.what}: sample ${points[k]}")
+        }
     }
 }

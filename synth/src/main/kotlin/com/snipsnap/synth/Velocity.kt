@@ -223,10 +223,22 @@ object Velocity {
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
         is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
+        is CisternPatch -> Cistern.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
         is CircuitPatch -> Circuit.macrosFor(patch.voice)
         is MurkPatch -> Murk.macrosFor(patch.voice)
+        is NimbusPatch -> Nimbus.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is UndertowPatch -> Undertow.macrosFor(patch.voice)
+        is CorollaPatch -> Corolla.macrosFor(patch.voice)
+        is SuturePatch -> Suture.macrosFor(patch.voice)
+        is RevelPatch -> Revel.macrosFor(patch.voice)
+        is TesseraPatch -> Tessera.macrosFor(patch.voice)
+        is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
+        is PrismPatch -> Prism.macrosFor(patch.voice)
+        is AlloyPatch -> Alloy.macrosFor(patch.voice)
+        is ContourPatch -> ContourEngine.macrosFor(patch.voice)
+        is StoopPatch -> Stoop.macrosFor(patch.voice)
     }
 
     /**
@@ -260,12 +272,13 @@ object Velocity {
         // exactly what this function exists to find. Proven monotonic by
         // ForkTest's `STRIKE moves the onset centroid at every step`.
         patch is ForkPatch -> "STRIKE"
-        // MERCURY PING's GLASS shortens the strike (a harder mallet) and tilts
+        // MERCURY's struck voices (PING, VESSEL, SHARD: Mercury.velocityKind)
+        // register GLASS, which shortens the strike (a harder mallet) and tilts
         // the pickup bright. Proven monotonic by MercuryTest's `velocity
-        // brightens PING at every step`; the owner heard it and kept it
-        // (2026-10-02). SING and BLADE take velocity as a number instead
-        // ([touchedVelocity]).
-        patch is MercuryPatch && patch.voice == MercuryVoice.PING -> "GLASS"
+        // brightens the struck voices, and swells or bites the rubbed ones`;
+        // the owner heard PING's and kept it (2026-10-02). The rubbed voices
+        // take velocity as a number instead ([touchedVelocity]).
+        patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.GLASS -> "GLASS"
         // MAGNET's PICK is a thumb to a wire: the string exciter's low-pass
         // corner (150 to 16000 Hz, pinned at the voice's default) with a
         // second pole below the default and the loop's and the pickup's
@@ -280,16 +293,27 @@ object Velocity {
 
     /**
      * Voices that take velocity as a number on their own render, with no
-     * macro moved and no [soften]. MERCURY SING and BLADE use velocity as
-     * touch; AEROSTAT uses it as strike energy; TREMOR uses it as the blow;
-     * CIRCUIT uses it as performer event energy; MURK uses it as event energy
-     * and response reach, preserving the STRIKE contact character. THAW uses it
-     * as runner gesture energy while retaining the selected contact character.
+     * macro moved and no [soften]. MERCURY's rubbed voices (SING, BLADE, EDDY:
+     * [Mercury.velocityKind]) use velocity as touch; AEROSTAT and CISTERN use it
+     * as strike energy, CIRCUIT as event energy, and TREMOR as the blow. MURK uses
+     * it as event energy and response reach, preserving the STRIKE contact
+     * character. NIMBUS uses it as flex impulse and transient stack displacement,
+     * preserving EXCITE's contact character. THAW uses it as runner gesture energy while retaining
+     * the selected contact character. TESSERA scales hammer energy while retaining HAMMER's
+     * contact character. UNDERTOW uses it as piston work while
+     * preserving the weighted-flap recipe, and
+     * SUTURE uses finite opening and release energy in the selected vessel.
+     * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
+     * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
+     * ALLOY scales generated attack energy and modulation work with its stored material and routing.
+     * CONTOUR changes attack energy, filter motion and edge emphasis in the saved table pair.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
-        (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
-            patch is AerostatPatch || patch is TremorPatch || patch is CircuitPatch ||
-            patch is ThawPatch || patch is MurkPatch
+        (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
+            patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
+            patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
+            patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -315,9 +339,23 @@ object Velocity {
                 is MercuryPatch -> Mercury.render(patch.voice, patch.macros, velocity = v)
                 is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
                 is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+                is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
                 is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
                 is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
+                is NimbusPatch -> Nimbus.render(patch.voice, patch.macros, velocity = v)
+                // COROLLA scales the pull and contact energy; PULL keeps the playing character.
+                is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
+                is RevelPatch -> Revel.render(patch.voice, patch.macros, velocity = v, configuration = patch.configuration)
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
+                is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
+                is PitchwheelPatch -> patch.copy(velocity = v).render()
+                is PrismPatch -> patch.copy(velocity = v).render()
+                is AlloyPatch -> patch.copy(velocity = v).render()
+                is ContourPatch -> patch.copy(velocity = v).render()
+                // Source registration, shadow gesture and chord voicing belong to this exact recipe.
+                is StoopPatch -> patch.copy(velocity = v).render()
+                is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
+                is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")
             }
         }

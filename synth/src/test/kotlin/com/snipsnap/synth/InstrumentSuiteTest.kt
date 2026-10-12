@@ -101,7 +101,7 @@ class InstrumentSuiteTest {
      */
     @Test
     fun `the Mercury instruments are the held pads, looped in every zone`() {
-        for (voice in MercuryVoice.entries) {
+        for (voice in InstrumentSuite.MERCURY_INSTRUMENT_VOICES) {
             val pad = InstrumentSuite.renderMercury(voice, File(temp, "mercury-$voice"))
             assertEquals(InstrumentSuite.mercuryName(voice), pad.name)
             zonesTile(pad)

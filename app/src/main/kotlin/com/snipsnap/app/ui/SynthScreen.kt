@@ -83,6 +83,7 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
@@ -153,19 +154,55 @@ import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.Corolla
+import com.snipsnap.synth.CorollaVoice
+import com.snipsnap.synth.CorollaPatch
 import com.snipsnap.synth.FlotillaVoice
+import com.snipsnap.synth.Cistern
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.Murk
 import com.snipsnap.synth.MurkPatch
 import com.snipsnap.synth.MurkVoice
+import com.snipsnap.synth.Nimbus
+import com.snipsnap.synth.NimbusPatch
+import com.snipsnap.synth.NimbusVoice
+import com.snipsnap.synth.Tessera
+import com.snipsnap.synth.TesseraPatch
+import com.snipsnap.synth.TesseraVoice
+import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.Prism
+import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.PrismVoice
+import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourVoice
+import com.snipsnap.synth.Stoop
+import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
+import com.snipsnap.synth.Undertow
+import com.snipsnap.synth.UndertowPatch
+import com.snipsnap.synth.UndertowVoice
+import com.snipsnap.synth.Suture
+import com.snipsnap.synth.SuturePatch
+import com.snipsnap.synth.SutureVoice
+import com.snipsnap.synth.Revel
+import com.snipsnap.synth.RevelVoice
+import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
 import com.snipsnap.synth.Circuit
 import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
+import com.snipsnap.synth.Alloy
+import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.AlloyVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -181,6 +218,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
@@ -211,7 +249,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including CIRCUIT, THAW and MURK, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR and STOOP, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -261,7 +299,7 @@ fun SynthScreen(
     // prototype's `state.macros` map — not a fresh set of defaults every
     // time. Populated eagerly for every (engine, voice) pair up front, same
     // idiom the THUMP-only screen used for its own eight voices — cheap
-    // macro maps, which mean no read site
+    // (one entry per engine and voice) and means no read site
     // ever has to defend against a missing key.
     val macrosByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
@@ -271,8 +309,12 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // Some patches carry state outside the macro map (FLOTILLA's note and
-    // velocity). Keep that state through preview, editing, saving and placing.
+    // FLOTILLA, CISTERN, PITCHWHEEL and STOOP carry note and velocity outside the macro map;
+    // REVEL also retains its microphones, phrase and seed configuration.
+    // PRISM also preserves its spectral/envelope template and strike velocity,
+    // ALLOY its synthesis configuration, and CONTOUR its authored table pair and
+    // trajectory configuration. Keep that state through preview, editing, saving
+    // and placing by editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -298,6 +340,14 @@ fun SynthScreen(
         touched = true
         currentPresetByVoice.remove(engine to voice)
         macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value)
+    }
+    fun updateStoopRoot(midi: Int) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        // Copy the current recipe so transposition retains its source,
+        // answering gesture, chord intervals and velocity.
+        loadedPatchesByVoice[engine to voice] = patch.copy(midi = midi.coerceIn(Stoop.MIDI_MIN, Stoop.MIDI_MAX))
     }
     fun loadPreset(patch: Patch) {
         touched = true
@@ -474,7 +524,7 @@ fun SynthScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) {
+            val rendered = runInterruptible(Dispatchers.Default) {
                 val dry = if (loadedPatch != null) buildCurrentPatch(engine.patchDisplayName(voice)).render()
                     else engine.render(voice, macros)
                 // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
@@ -883,7 +933,9 @@ fun SynthScreen(
             try {
                 val src = withContext(Dispatchers.Default) {
                     val rendered = patch.render()
-                    val midi = Spread.detect(rendered)
+                    // STOOP keeps an explicit root even when a chord, sub or
+                    // shadow makes the strongest detected partial another note.
+                    val midi = if (patch is StoopPatch) patch.midi.toFloat() else Spread.detect(rendered)
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
                 spreadPatch = patch
@@ -1031,6 +1083,33 @@ fun SynthScreen(
                     }
                 }
 
+                if (engine == Engine.STOOP) {
+                    val root = (loadedPatch as? StoopPatch)?.midi ?: Stoop.DEFAULT_MIDI
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ActionButton(
+                            "OCT −", scheme, enabled = root - 12 >= Stoop.MIDI_MIN,
+                            accessibilityLabel = "ROOT OCTAVE DOWN", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root - 12) }
+                        ActionButton(
+                            "−", scheme, enabled = root > Stoop.MIDI_MIN,
+                            accessibilityLabel = "ROOT DOWN", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root - 1) }
+                        TapeText("ROOT ${Scales.nameOf(root)}", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.4f))
+                        ActionButton(
+                            "+", scheme, enabled = root < Stoop.MIDI_MAX,
+                            accessibilityLabel = "ROOT UP", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root + 1) }
+                        ActionButton(
+                            "OCT +", scheme, enabled = root + 12 <= Stoop.MIDI_MAX,
+                            accessibilityLabel = "ROOT OCTAVE UP", modifier = Modifier.weight(1f),
+                        ) { updateStoopRoot(root + 12) }
+                    }
+                }
+
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
@@ -1046,9 +1125,21 @@ fun SynthScreen(
                             readout = when {
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.ALLOY && spec.name == "HOLD" && Alloy.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.PITCHWHEEL && spec.name == "HOLD" && Pitchwheel.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.PRISM && spec.name == "HOLD" && Prism.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CONTOUR && spec.name == "HOLD" && ContourEngine.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.STOOP && spec.name == "HOLD" && Stoop.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.REVEL && spec.name == "HOLD" && Revel.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
@@ -1867,10 +1958,10 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). The registered engines converge on one shape (an
+ * change"). The registered engines already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of near-
+ * this gives the screen one dispatch point instead of several near-
  * identical call sites, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
@@ -1880,7 +1971,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CIRCUIT, THAW, MURK;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1900,9 +1991,21 @@ private enum class Engine {
         SIREN -> SirenVoice.entries
         FORK -> ForkVoice.entries
         FLOTILLA -> FlotillaVoice.entries
+        CISTERN -> CisternVoice.entries
         CIRCUIT -> CircuitVoice.entries
+        ALLOY -> AlloyVoice.entries
         MURK -> MurkVoice.entries
+        NIMBUS -> NimbusVoice.entries
         THAW -> ThawVoice.entries
+        UNDERTOW -> UndertowVoice.entries
+        COROLLA -> CorollaVoice.entries
+        SUTURE -> SutureVoice.entries
+        REVEL -> RevelVoice.entries
+        TESSERA -> TesseraVoice.entries
+        PITCHWHEEL -> PitchwheelVoice.entries
+        PRISM -> PrismVoice.entries
+        CONTOUR -> ContourVoice.entries
+        STOOP -> StoopVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1920,9 +2023,21 @@ private enum class Engine {
         SIREN -> Siren.macrosFor(voice as SirenVoice)
         FORK -> Fork.macrosFor(voice as ForkVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
+        CISTERN -> Cistern.macrosFor(voice as CisternVoice)
         CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
+        ALLOY -> Alloy.macrosFor(voice as AlloyVoice)
         MURK -> Murk.macrosFor(voice as MurkVoice)
+        NIMBUS -> Nimbus.macrosFor(voice as NimbusVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
+        UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
+        COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
+        SUTURE -> Suture.macrosFor(voice as SutureVoice)
+        REVEL -> Revel.macrosFor(voice as RevelVoice)
+        TESSERA -> Tessera.macrosFor(voice as TesseraVoice)
+        PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
+        PRISM -> Prism.macrosFor(voice as PrismVoice)
+        CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
+        STOOP -> Stoop.macrosFor(voice as StoopVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1940,9 +2055,21 @@ private enum class Engine {
         SIREN -> Siren.defaults(voice as SirenVoice)
         FORK -> Fork.defaults(voice as ForkVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
+        CISTERN -> Cistern.defaults(voice as CisternVoice)
         CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
+        ALLOY -> Alloy.defaults(voice as AlloyVoice)
         MURK -> Murk.defaults(voice as MurkVoice)
+        NIMBUS -> Nimbus.defaults(voice as NimbusVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
+        UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
+        COROLLA -> Corolla.defaults(voice as CorollaVoice)
+        SUTURE -> Suture.defaults(voice as SutureVoice)
+        REVEL -> Revel.defaults(voice as RevelVoice)
+        TESSERA -> Tessera.defaults(voice as TesseraVoice)
+        PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
+        PRISM -> Prism.defaults(voice as PrismVoice)
+        CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
+        STOOP -> Stoop.defaults(voice as StoopVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1960,9 +2087,21 @@ private enum class Engine {
         SIREN -> Siren.scramble(voice as SirenVoice, random)
         FORK -> Fork.scramble(voice as ForkVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
+        CISTERN -> Cistern.scramble(voice as CisternVoice, random)
         CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
+        ALLOY -> Alloy.scramble(voice as AlloyVoice, random)
         MURK -> Murk.scramble(voice as MurkVoice, random)
+        NIMBUS -> Nimbus.scramble(voice as NimbusVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
+        UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
+        COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
+        SUTURE -> Suture.scramble(voice as SutureVoice, random)
+        REVEL -> Revel.scramble(voice as RevelVoice, random)
+        TESSERA -> Tessera.scramble(voice as TesseraVoice, random)
+        PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
+        PRISM -> Prism.scramble(voice as PrismVoice, random)
+        CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
+        STOOP -> Stoop.scramble(voice as StoopVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1985,9 +2124,21 @@ private enum class Engine {
         SIREN -> Siren.render(voice as SirenVoice, macros)
         FORK -> Fork.render(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
+        CISTERN -> Cistern.render(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
+        ALLOY -> Alloy.render(voice as AlloyVoice, macros)
         MURK -> Murk.render(voice as MurkVoice, macros)
+        NIMBUS -> Nimbus.render(voice as NimbusVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
+        UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
+        COROLLA -> Corolla.render(voice as CorollaVoice, macros)
+        SUTURE -> Suture.render(voice as SutureVoice, macros)
+        REVEL -> Revel.render(voice as RevelVoice, macros)
+        TESSERA -> Tessera.render(voice as TesseraVoice, macros)
+        PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
+        PRISM -> Prism.render(voice as PrismVoice, macros)
+        CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
+        STOOP -> Stoop.render(voice as StoopVoice, macros)
     }
 
     /**
@@ -2011,9 +2162,21 @@ private enum class Engine {
         // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
+        CISTERN -> Cistern.drumClassFor(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
+        ALLOY -> Alloy.drumClassFor(voice as AlloyVoice, macros)
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
+        NIMBUS -> Nimbus.drumClassFor(voice as NimbusVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
+        UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
+        COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
+        SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
+        REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
+        TESSERA -> Tessera.drumClassFor(voice as TesseraVoice, macros)
+        PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
+        PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
+        CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
+        STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2031,9 +2194,21 @@ private enum class Engine {
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
+        CISTERN -> CisternPatch(name, voice as CisternVoice, macros)
         CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
+        ALLOY -> AlloyPatch(name, voice as AlloyVoice, macros)
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
+        NIMBUS -> NimbusPatch(name, voice as NimbusVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
+        UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
+        COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
+        SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
+        REVEL -> RevelPatch(name, voice as RevelVoice, macros)
+        TESSERA -> TesseraPatch(name, voice as TesseraVoice, macros)
+        PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
+        PRISM -> PrismPatch(name, voice as PrismVoice, macros)
+        CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
+        STOOP -> StoopPatch(name, voice as StoopVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -2264,7 +2439,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
  * null` case has no placeholder either).
  *
  * A horizontally-scrolling strip of chips inside one [sunkenField], not a
- * vertical list: sixteen names have to fit next to a voice picker and five
+ * vertical list: seventeen names have to fit next to a voice picker and five
  * sliders on one phone screen, and a horizontal strip is what "tap it, hear
  * it, tap the next one" (the roadmap's own browsing-speed framing) wants
  * anyway — no per-row height cost as the roster grows. [current] is `null`

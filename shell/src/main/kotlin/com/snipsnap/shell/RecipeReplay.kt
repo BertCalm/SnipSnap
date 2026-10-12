@@ -62,7 +62,7 @@ object RecipeReplay {
         if (recipe == null) return Plan.Refused(Copy.REPLAY_NOTHING)
         val e = recipe.entries
         MutateSheet.read(recipe)?.let { m ->
-            return Plan.Refused(Copy.replayNeedsParent(m.word, m.parents.map { PadSheetBoxes.parentName(it) }))
+            return Plan.Refused(Copy.replayNeedsPartner(m.word, m.parents.map { PadSheetBoxes.parentName(it) }))
         }
         OutsideSheet.read(recipe)?.let { return Plan.Refused(Copy.REPLAY_OUTSIDE) }
         if ("splice" in e) return Plan.Refused(Copy.REPLAY_SPLICE)

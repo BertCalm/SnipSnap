@@ -37,12 +37,19 @@ class PadRecipeTest {
         ArcoPatch("Cello Test", ArcoVoice.CELLO, mapOf("GRIP" to 0.4f)),
         MercuryPatch("Ping Test", MercuryVoice.PING, mapOf("GLASS" to 0.4f)),
         GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
+        GyrePatch("Drawn Test", GyreVoice.DRAWN, mapOf("TOUCH" to 0.6f, "BODY" to 0.7f)),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
         AerostatPatch("Float Test", AerostatVoice.FLOAT, mapOf("STRIKE" to 0.7f)),
         FlotillaPatch("Wake Test", FlotillaVoice.RIPPLE, mapOf("SURFACE" to 0.4f), midi = 64),
         TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
         MurkPatch("Wood Test", MurkVoice.CLUNK, mapOf("FOG" to 0.4f)),
         ThawPatch("Ice Test", ThawVoice.BRITTLE, mapOf("HEAT" to 0.4f)),
+        TesseraPatch("Mixed Material Test", TesseraVoice.ANSWER, mapOf("FOLD" to 0.7f)),
+        UndertowPatch("Shell Test", UndertowVoice.KNOCK, mapOf("DRAW" to 0.4f)),
+        SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
+        PitchwheelPatch("Wheel Test", PitchwheelVoice.RECOIL, mapOf("ADHESION" to 0.8f), midi = 55, velocity = 0.6f),
+        AlloyPatch("Hybrid Test", AlloyVoice.KEY, mapOf("FUSE" to 0.6f), midi = 55, velocity = 0.6f),
+        StoopPatch("Groove Test", StoopVoice.TINE, mapOf("TOUCH" to 0.6f), midi = 55, velocity = 0.6f, shadowInterval = 12),
     )
 
     @Test
@@ -69,6 +76,17 @@ class PadRecipeTest {
         val back = PadRecipe.fromJsonText(recipe.toJsonText())
         assertEquals(recipe, back)
         assertTrue(back.render().samples.contentEquals(recipe.render().samples))
+    }
+
+    @Test
+    fun `editing a wheel recipe retains its root velocity and model`() {
+        val source = PitchwheelPatch("Low Wheel", PitchwheelVoice.DRAW, mapOf("BODY" to .7f), midi = 36, velocity = .3f)
+        val edited = Patches.edited(source, "Warm Wheel", source.macros + ("HEAT" to .8f))
+        assertEquals(source.copy(name = "Warm Wheel", macros = source.macros + ("HEAT" to .8f)), edited)
+        val recipe = PadRecipe(edited)
+        val restored = PadRecipe.fromJsonText(recipe.toJsonText())
+        assertEquals(recipe, restored, "recipe dispatch retains state outside the macro map")
+        assertNull(restored.fx)
     }
 
     @Test

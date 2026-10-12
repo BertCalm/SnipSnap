@@ -36,17 +36,41 @@ class MercuryLoopTest {
             "COUPLE 1" to mapOf("COUPLE" to 1f),
             "hard" to mapOf("GLASS" to 0.1f, "COUPLE" to 1f, "WATER" to 1f),
         )
-        for (voice in MercuryVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) {
+        val cases = MercuryVoice.entries.flatMap { v -> listOf(0f, 0.5f, 1f).map { v to it } }
+        // Each case is independent and a render is seconds of audio, so they spread over the cores; the claims are
+        // asserted in the parallel body, whose first failure rethrows here.
+        val lines = cases.parallelStream().map { (voice, tune) ->
             val line = corners.map { (name, c) ->
                 val r = Mercury.renderLoopNudged(voice, Mercury.defaults(voice) + c + ("TUNE" to tune))
                 assertTrue(r.seam < Keys.MAX_SEAM_ERROR, "$voice $tune $name: seam ${f(r.seam)}")
                 if (name == "defaults") assertEquals(0f, r.nudge, "$voice $tune: the defaults were nudged")
                 "$name ${f(r.seam)}${if (r.nudge > 0f) " nudged ${r.nudge}" else ""}"
             }
-            println("MERCURY LOOP $voice $tune: " + line.joinToString(", "))
-        }
+            "MERCURY LOOP $voice $tune: " + line.joinToString(", ")
+        }.toList()
+        lines.forEach(::println)
         val bottom = Mercury.renderLoopNudged(MercuryVoice.SING, Mercury.defaults(MercuryVoice.SING) + mapOf("TUNE" to 0f, "GLASS" to 0.1f, "COUPLE" to 1f, "WATER" to 1f))
         assertTrue(bottom.nudge > 0f, "the hard corner at the bottom of SING closed without a nudge; the ladder is untested")
+    }
+
+    /**
+     * R2c's gate on the keys: each new voice's defaults close as asked, with no nudge, at every one of the 25 TUNE steps
+     * (the keys of its held instrument). EDDY's friction is chaotic from key to key (its first tuning failed at C4
+     * and G4 only), and VESSEL's failures were at the four lowest keys, so three keys cannot stand for them. The
+     * three older voices' defaults were swept in R2a; their renders are unchanged to the bit.
+     */
+    @Test
+    fun `the new voices' defaults close un-nudged at every key`() {
+        val keys = listOf(MercuryVoice.EDDY, MercuryVoice.VESSEL, MercuryVoice.SHARD).flatMap { v -> (0..Mercury.TUNE_SEMITONES).map { v to it } }
+        val worst = HashMap<MercuryVoice, Double>()
+        val rows = keys.parallelStream().map { (voice, step) ->
+            val r = Mercury.renderLoopNudged(voice, Mercury.defaults(voice) + ("TUNE" to step / Mercury.TUNE_SEMITONES.toFloat()))
+            assertTrue(r.seam < Keys.MAX_SEAM_ERROR, "$voice step $step: seam ${f(r.seam)}")
+            assertEquals(0f, r.nudge, "$voice step $step: the defaults needed a nudge")
+            Triple(voice, step, r.seam)
+        }.toList()
+        for ((voice, _, seam) in rows) worst.merge(voice, seam) { a, b -> maxOf(a, b) }
+        println("MERCURY LOOP defaults, 25 keys each, worst seam: " + worst.entries.joinToString(", ") { "${it.key} ${f(it.value)}" })
     }
 
     /** HOLD's top step is the LOOP: render gives the loop itself, it is filed LOOP, and below the step a one-shot is unchanged. */

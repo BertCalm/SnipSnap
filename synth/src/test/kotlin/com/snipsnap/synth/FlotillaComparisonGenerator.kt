@@ -16,7 +16,7 @@ object FlotillaComparisonGenerator {
         root.mkdirs()
         val clips = FlotillaVoice.entries.map { voice ->
             Clip(voice.name.lowercase() + "_default", voice.name, voice, Flotilla.defaults(voice), "Compare the voice at C4; listen for water sitting beneath the pitched hull.")
-        } + listOf("PULSE", "VESSEL", "CROSSING", "SURFACE").flatMap { macro ->
+        } + listOf("FLOTILLA", "VESSEL", "CROSSING", "SURFACE").flatMap { macro ->
             listOf(0f, 1f).map { value ->
                 val end = if (value == 0f) "low" else "high"
                 Clip("ripple_${macro.lowercase()}_$end", "RIPPLE · $macro $end", FlotillaVoice.RIPPLE,

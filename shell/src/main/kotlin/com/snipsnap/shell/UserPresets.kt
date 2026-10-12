@@ -4,9 +4,17 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ContourConfig
+import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RevelPatch
 import java.io.File
 import java.util.Locale
 
@@ -115,12 +123,16 @@ object UserPresets {
     /** A name as it is kept: trimmed, every run of whitespace one space, uppercase. */
     fun normalize(raw: String): String = raw.trim().replace(Regex("\\s+"), " ").uppercase(Locale.ROOT)
 
+    /** Factory labels reserve the same normalized names used for saved presets. */
+    private fun factoryNameTaken(engine: String, voice: String, normalizedName: String): Boolean =
+        Presets.forVoice(engine, voice).any { normalize(it.name) == normalizedName }
+
     /** The rules a name has to pass, and which of the two saves it would be. */
     fun check(raw: String, engine: String, voice: String, saved: List<Saved>): Check {
         val name = normalize(raw)
         if (name.isEmpty()) return Check.Blank
         if (name.length > MAX_NAME) return Check.TooLong(name)
-        if (Presets.byName(engine, voice, name) != null) return Check.Factory(name)
+        if (factoryNameTaken(engine, voice, name)) return Check.Factory(name)
         return if (forVoice(saved, engine, voice).any { it.name == name }) Check.Replaces(name) else Check.Fresh(name)
     }
 
@@ -136,7 +148,7 @@ object UserPresets {
         var n = 1
         while (true) {
             val candidate = "$base $n"
-            val taken = Presets.byName(engine, voice, candidate) != null || forVoice(saved, engine, voice).any { it.name == candidate }
+            val taken = factoryNameTaken(engine, voice, normalize(candidate)) || forVoice(saved, engine, voice).any { it.name == candidate }
             if (!taken) return candidate
             n++
         }
@@ -166,7 +178,7 @@ object UserPresets {
         val name = patch.name
         require(name == normalize(name) && name.isNotEmpty()) { "a preset name is trimmed and uppercase: '$name'" }
         require(name.length <= MAX_NAME) { "a preset name is at most $MAX_NAME letters: '$name'" }
-        require(Presets.byName(patch.engine, patch.voiceName, name) == null) { "the factory already has $name on ${patch.engine} ${patch.voiceName}" }
+        require(!factoryNameTaken(patch.engine, patch.voiceName, name)) { "the factory already has $name on ${patch.engine} ${patch.voiceName}" }
         val target = file(shelfRoot)
         val store = readStore(target)
         val entry = Saved(patch, nowMillis)
@@ -320,16 +332,96 @@ object UserPresets {
     fun rosterFile(engine: String): String = engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
 
     /**
-     * [patch] as the line its engine's table is written in — the same
-     * `p(voice, name, macros…)` helper every `<Engine>Presets.kt` has —
-     * with every macro's exact value, so the promoted preset renders the
-     * bytes the phone heard. The name is a Kotlin string literal, escaped.
+     * [patch] as the line its engine's table is written in, using its
+     * `p` helper with every macro's exact value. STOOP's metadata table
+     * takes named macro arguments and a description alongside the recipe,
+     * so the promoted preset renders the
+     * bytes the phone heard. CISTERN, PITCHWHEEL and STOOP also copy the saved
+     * note and strike velocity, which live outside the macro map.
+     * PITCHWHEEL keeps its render-model version as well; REVEL retains the
+     * microphones, phrase configuration, seed and saved velocity. PRISM retains its
+     * additive template, group profiles, model and strike velocity. ALLOY retains its
+     * generated materials, operator routing and held recipe alongside note and
+     * energy. CONTOUR retains its table pair, layer relationships, envelopes, loop
+     * recipe and velocity. STOOP retains its source, answer and chord recipe and
+     * its render-model version. The name is a Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+        if (patch is StoopPatch) {
+            val arguments = buildList {
+                add("source = StoopSource(shape = ${patch.source.shape}f, sub = ${patch.source.sub}f, " +
+                    "fmRatio = ${patch.source.fmRatio}f, fmIndex = ${patch.source.fmIndex}f, " +
+                    "harmonicTilt = ${patch.source.harmonicTilt}f, detuneCents = ${patch.source.detuneCents}f)")
+                add("description = \"User-authored preset.\"")
+                add("tags = \"saved\"")
+                addAll(patch.macros.map { (k, v) -> "${k.lowercase(Locale.ROOT)} = ${v}f" })
+                add("midi = ${patch.midi}")
+                add("velocity = ${patch.velocity}f")
+                add("shadowInterval = ${patch.shadowInterval}")
+                add("shadowDelayMs = ${patch.shadowDelayMs}f")
+                add("shadowArticulation = ${patch.shadowArticulation}f")
+                add("shadowReplies = ${patch.shadowReplies}")
+                add("chordIntervals = listOf(${patch.chordIntervals.joinToString(", ")})")
+                add("model = ${patch.model}")
+            }
+            return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
+        }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
-        return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros),"
+        val state = when (patch) {
+            is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is RevelPatch -> {
+                val c = patch.configuration
+                fun values(items: List<*>, literal: (Any?) -> String): String =
+                    if (items.isEmpty()) "emptyList()" else items.joinToString(", ", "listOf(", ")", transform = literal)
+                val seed = if (c.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${c.seed}L"
+                ".copy(configuration = RevelConfig(" +
+                    "micCount = ${c.micCount}, phraseTempo = ${c.phraseTempo}f, phraseBeats = ${c.phraseBeats}, " +
+                    "trajectories = ${values(c.trajectories) { "RevelTrajectory.$it" }}, " +
+                    "phaseOffsets = ${values(c.phaseOffsets) { "${it}f" }}, " +
+                    "directions = ${values(c.directions) { it.toString() }}, " +
+                    "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
+            }
+            is PrismPatch -> {
+                val t = patch.template
+                fun floats(values: List<Float>) = values.joinToString(", ", "listOf(", ")") { "${it}f" }
+                val groups = t.groupProfiles.joinToString(", ", "listOf(", ")") { group ->
+                    "PrismGroupProfile(attackScale = ${group.attackScale}f, decayScale = ${group.decayScale}f, " +
+                        "delaySeconds = ${group.delaySeconds}f, motionCycles = ${group.motionCycles}, motionDepth = ${group.motionDepth}f)"
+                }
+                val attack = t.attackSeconds?.let { "${it}f" } ?: "null"
+                val decay = t.decaySeconds?.let { "${it}f" } ?: "null"
+                ".copy(velocity = ${patch.velocity}f, model = ${patch.model}, template = " +
+                    "PrismTemplate(spectralId = PrismSpectrum.${t.spectralId}, envelopeId = PrismContour.${t.envelopeId}, " +
+                    "ratioOverrides = ${floats(t.ratioOverrides)}, amplitudeOverrides = ${floats(t.amplitudeOverrides)}, " +
+                    "groupProfiles = $groups, attackSeconds = $attack, decaySeconds = $decay, loopSeconds = ${t.loopSeconds}f))"
+            }
+            is AlloyPatch -> {
+                val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
+            }
+            is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            else -> ""
+        }
+        return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
     }
+
+    /** Structural wavetable state is part of a promoted preset, just like the audible macros. */
+    private fun contourConfigLine(c: ContourConfig): String = "ContourConfig(" + listOf(
+        "bodyTable = ContourTable.${c.bodyTable.name}", "edgeTable = ContourTable.${c.edgeTable.name}",
+        "edgeRatio = ${c.edgeRatio}f", "edgeLag = ${c.edgeLag}f", "relation = ContourRelation.${c.relation.name}",
+        "bodyLevel = ${c.bodyLevel}f", "edgeLevel = ${c.edgeLevel}f", "subLevel = ${c.subLevel}f",
+        "bodyHarmonics = ${c.bodyHarmonics}f", "edgeRootLevel = ${c.edgeRootLevel}f",
+        "edgeAttack = ${c.edgeAttack}f", "edgeDecay = ${c.edgeDecay}f", "edgeSustain = ${c.edgeSustain}f",
+        "bodyScanBias = ${c.bodyScanBias}f", "edgeScanBias = ${c.edgeScanBias}f",
+        "bodyTravel = ${c.bodyTravel}f", "edgeTravel = ${c.edgeTravel}f",
+        "ampAttack = ${c.ampAttack}f", "ampDecay = ${c.ampDecay}f", "ampSustain = ${c.ampSustain}f",
+        "ampRelease = ${c.ampRelease}f", "sustainSeconds = ${c.sustainSeconds}f",
+        "filterAttack = ${c.filterAttack}f", "filterDecay = ${c.filterDecay}f", "filterAmount = ${c.filterAmount}f",
+        "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
+        "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
+    ).joinToString(", ") + ")"
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */
     fun renderAll(saved: List<Saved>): String {

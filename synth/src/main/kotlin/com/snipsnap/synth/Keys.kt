@@ -309,7 +309,7 @@ object Keys {
 
     /**
      * The nine MERCURY pad zones: every minor third across the two-octave TUNE range from [Mercury.rootMidi],
-     * per voice (PING's root is C4, SING's and BLADE's G3).
+     * per voice (PING's and SHARD's root is C4, SING's and BLADE's G3, EDDY's and VESSEL's A2: [Mercury.rootMidi]).
      */
     fun mercuryPadMidis(voice: MercuryVoice): List<Int> =
         (0..Mercury.TUNE_SEMITONES step 3).map { Mercury.rootMidi(voice) + it }
@@ -346,6 +346,77 @@ object Keys {
         val m = defaults + macros.filterKeys { it in defaults } + mapOf("TUNE" to tune, "HOLD" to 1f)
         val loop = Mercury.renderLoop(voice, m, cancelled)
         return KeyNote(Snip(loop + loop, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
+    }
+
+    /** Every minor third over PRISM's two-octave per-voice register. */
+    fun prismPadMidis(voice: PrismVoice): List<Int> =
+        (0..Prism.TUNE_SEMITONES step 3).map { Prism.rootMidi(voice) + it }
+
+    /**
+     * A held additive zone at exact MIDI pitch. HOLD is forced to its
+     * seamless region and the saved partial template and velocity remain
+     * intact. As with [sirenPad], two identical copies make a nonzero loop
+     * marker that both MPC formats can express; this exports the settled
+     * region without the finite note's strike onset.
+     */
+    fun prismPad(
+        voice: PrismVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        velocity: Float = 1f,
+        template: PrismTemplate = Prism.templateFor(voice),
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        val low = Prism.rootMidi(voice)
+        require(midi - low in 0..Prism.TUNE_SEMITONES) {
+            "PRISM $voice pads are MIDI $low..${low + Prism.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Prism.defaults(voice)
+        val m = defaults + macros.filterKeys { it in defaults } + mapOf(
+            "TUNE" to (midi - low) / Prism.TUNE_SEMITONES.toFloat(),
+            "HOLD" to 1f,
+        )
+        val loop = Prism.renderLoop(voice, m, velocity, template, cancelled)
+        val samples = loop + loop
+        // renderLoop checks independently synthesized cycles, including silent velocity.
+        return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
+    }
+
+    // ---------- CONTOUR, held ----------
+
+    /** Seventeen minor-third zones around the voice root, over CONTOUR's four-octave TUNE range. */
+    fun contourPadMidis(voice: ContourVoice): List<Int> =
+        (-ContourEngine.TUNE_SEMITONES..ContourEngine.TUNE_SEMITONES step 3)
+            .map { ContourEngine.rootMidi(voice) + it }
+
+    /**
+     * A settled CONTOUR sustain for MPC keygroup export. The initial key/pluck
+     * attack is omitted. TUNE is fixed by the requested MIDI note and HOLD is forced
+     * to the repeating region. Two identical copies express a nonzero loop marker
+     * in formats where frame zero means no loop, as in [sirenPad].
+     */
+    fun contourPad(
+        voice: ContourVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        config: ContourConfig = ContourConfig.forVoice(voice),
+        velocity: Float = 1f,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        val semis = midi - ContourEngine.rootMidi(voice)
+        require(semis in -ContourEngine.TUNE_SEMITONES..ContourEngine.TUNE_SEMITONES) {
+            "CONTOUR $voice pads are MIDI ${ContourEngine.rootMidi(voice) - ContourEngine.TUNE_SEMITONES}.." +
+                "${ContourEngine.rootMidi(voice) + ContourEngine.TUNE_SEMITONES}, got $midi"
+        }
+        if (cancelled()) throw java.util.concurrent.CancellationException("CONTOUR pad render cancelled")
+        val tune = .5f + semis / (2f * ContourEngine.TUNE_SEMITONES)
+        val defaults = ContourEngine.defaults(voice)
+        val m = defaults + macros.filterKeys { it in defaults } + mapOf("TUNE" to tune, "HOLD" to 1f)
+        val loop = ContourEngine.renderLoop(voice, m, velocity, config, cancelled)
+        if (cancelled()) throw java.util.concurrent.CancellationException("CONTOUR pad render cancelled")
+        val samples = loop + loop
+        if (velocity > 0f) requireSeam("CONTOUR $voice at MIDI $midi", samples, loop.size)
+        return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
     /**

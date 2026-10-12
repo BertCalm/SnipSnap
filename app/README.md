@@ -65,11 +65,31 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (starters including CIRCUIT and THAW,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (22 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR and STOOP,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
+
+The SYNTH source picker has 29 engines: THUMP, SKIN, TINES, VELVET,
+VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR and STOOP.
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR and STOOP also provide
+FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
+remain provisional until the owner's first dry listening approval.
+PRISM adds six additive voices, eight review presets and a dry pitched
+starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
+precedes further preset expansion.
+ALLOY adds six attack-driven PM voices, twelve provisional presets and a dry
+sixteen-pad starter kit; its first listening set also awaits owner approval.
+CONTOUR adds six wavetable voices with SCAN, OFFSET, MOTION, FILTER,
+DRIVE and HOLD. Loading, editing and saving a preset retains its authored
+table pair, layer relationship and envelopes along with the macros.
+STOOP saves its source, shadow and chord recipe beside the six macros; its root
+can be changed by semitone or octave without resetting that recipe. Its 48
+provisional presets and dry starter kit await listening.
+GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here
 
@@ -149,6 +169,27 @@ logcat tag to grab when something is wrong.
   layout change mid-note should go silent, never stick. The zones load
   off the main thread, so the first key after opening may be silent for
   a moment on a big instrument.
+- **A MIDI keyboard (KEYS and PLAY)**: plug a USB keyboard into the
+  phone on an OTG cable (Bluetooth MIDI is not wired yet: pairing in the
+  phone's settings does not make a BLE keyboard visible to `MidiManager`
+  without a scan and permissions this app lacks). The line under KEYS' grid should change from NO
+  MIDI KEYBOARD to `MIDI · <its name>` without leaving the screen, and
+  on PLAY the hint row becomes that same line with a map chip beside
+  it. On KEYS, keys play the instrument at the keyboard's own velocity
+  (a soft touch is quiet, not clamped to the grid's floor), the sustain
+  pedal holds let-go notes until it lifts, a grid note and a keyboard
+  note share the eight voices, and a panic button on the controller (All
+  Notes Off) silences everything. On PLAY the chip reads MPC NOTES by
+  default: note 36 fires A02 (the kick), 38 A06, 42 A03, exactly as the
+  exported kit answers on the Live III. Tap it to A01 = C1 and C1 walks
+  up the slots a semitone a pad, which is what a melodic kit wants.
+  Unplug mid-note: nothing should stick, and the line should go back to
+  NO MIDI KEYBOARD. A phone that reports no `android.software.midi`
+  draws neither line; `MidiInput.open` returns false there. If a
+  plugged-in keyboard never shows, logcat's `MidiInput` tag says whether
+  the device or one of its ports refused to open. Clock and transport
+  sync are **not** part of this — `docs/MIDI_SYNC.md` gates those behind
+  bench items S1–S4 that still need the phone.
 - **SNAP**: open a kit, tap SNAP, TAKE PHOTO. The system camera should
   open and hand back a thumbnail; the LCD then shows the picture with its
   LUM/SAT/HUE/DETAIL numbers, the sliders jump to what those numbers
@@ -503,23 +544,23 @@ logcat tag to grab when something is wrong.
 - **ANOTHER KIT (MUTATE)**: with two kits on the shelf, open a pad on
   one and the MUTATE card grows an ANOTHER KIT · PICK ITS PAD row under
   ROOMS: one chip per other kit, none for this one. Tap a kit and its
-  pads appear as A01…-style chips, four to a row; tap one and the partner
-  line reads "SOUL A03". MUTATE ▸ MORPH: the child's lineage names the
+  pads appear as A01…-style chips, four to a row; tap one and the card's
+  top line ends "× SOUL A03". MORPH, then KEEP: the child's lineage names the
   other kit's pad the way a deal would ("Soul:A03") and the recipe carries
   the other kit's name. A kit whose folder no longer loads is simply not
-  offered. UNDO puts the parent back byte for byte.
+  offered. UNDO puts the pad back byte for byte.
 - **A FILE (MUTATE)**: on the MUTATE card, under ANOTHER KIT, A FILE ▸
   PICK ONE OFF THE PHONE opens the system picker on audio. Pick a WAV or
   an MP3: the button reads "A FILE ▸ CLAP.WAV" and it is the partner;
-  MUTATE ▸ STACK and the child's lineage names "clap.wav", as the CLI's
+  STACK, then KEEP, and the child's lineage names "clap.wav", as the CLI's
   `--with clap.wav` would. Cancel the picker and nothing changes. Pick a
   silent file or one too big for the tape and the toast reads NOT A
-  PARENT with the reason. UNDO puts the parent back byte for byte.
+  PARTNER with the reason. UNDO puts the pad back byte for byte.
 - **KEEP ROOM (pad sheet)**: after a ROOM trip the OUTSIDE card's KEEP
   ROOM button lights; tap it and the toast names the room ("FUNK ROOM IS
   ON THE SHELF…"), a `Rooms/FUNK ROOM.wav` + `.json` pair appears beside
   the kits, and the MUTATE card grows a ROOMS row with that room already
-  the partner. Open another kit's pad, pick the room, MUTATE ▸ ROOM: the
+  the partner. Open another kit's pad, pick the room, ROOM, then KEEP: the
   pad plays inside it with no trip. A REAMP trip leaves KEEP ROOM dim.
 
 - **WORKSHOP / SEND TO BENCH** (`docs/WORKSHOP.md`): on SETUP, tap the

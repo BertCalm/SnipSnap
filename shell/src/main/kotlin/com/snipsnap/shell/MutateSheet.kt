@@ -211,10 +211,11 @@ object MutateSheet {
     }
 
     /**
-     * DRIFT: one tap — the crate under [root] deals the neighbour and MORPH
+     * DRIFT: one tap — the shelf under [root] deals the neighbour and MORPH
      * blends [fraction] of the MIX knob toward it, through [Mutate.drift] so
      * the recipe records the spin and the drift. A new [seed] is a new
-     * neighbour. Throws [IllegalArgumentException] when the crate is empty.
+     * neighbour. Throws [Mutate.RouletteRefused] when the shelf has nothing
+     * to deal (EMPTY, or ONLY_COPIES: every sound is this pad's double).
      */
     fun drift(model: KitBuilderModel, slot: Int, root: File, seed: Int, fraction: Float): Mutate.Drifted {
         val mix = knobFor(Mutate.Mode.MORPH)!!
@@ -222,34 +223,54 @@ object MutateSheet {
     }
 
     /**
-     * ROULETTE: the crate under [root] (the shelf, on the phone) deals a
+     * ROULETTE: the shelf under [root] (the crate, on the CLI) deals a
      * partner for [slot] — guided, never wild, never the pad itself; a new
      * [seed] is a new deal, the same seed the same one. Throws
-     * [IllegalArgumentException] when the crate has nothing to deal.
+     * [Mutate.RouletteRefused] (EMPTY or ONLY_COPIES) when the shelf has
+     * nothing to deal.
      */
     fun deal(model: KitBuilderModel, slot: Int, root: File, seed: Int): Partner.Deal {
         val pick = Mutate.roulette(model, slot, root, seed = seed, wild = false)
         return Partner.Deal(pick.label, pick.file, seed)
     }
 
-    /** The parent as [Mutate] wants it; a pad's label is the CLI's own `Kit:A03` form, so the lineage reads the same either way. */
+    /**
+     * The picked partner is no longer there: a pad deleted, another kit or
+     * its `kit.json` removed, a ROULETTE pick's, a room's or a held file
+     * gone. Thrown by [source] before anything is read, so the card can say
+     * so instead of a generic failure. An [IllegalArgumentException], so
+     * every existing catch and test still holds.
+     */
+    class PartnerGone(message: String) : IllegalArgumentException(message)
+
+    /**
+     * The parent as [Mutate] wants it; a pad's label is the CLI's own
+     * `Kit:A03` form, so the lineage reads the same either way. Each kind
+     * is checked before it is read and throws [PartnerGone] when it is not
+     * there; a file that is there but does not decode is a real failure.
+     */
     fun source(model: KitBuilderModel, partner: Partner): Mutate.Source = when (partner) {
         is Partner.Pad -> {
-            val pad = model.pad(partner.slot) ?: throw IllegalArgumentException("no pad on ${padTag(partner.slot)}")
-            Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", WavReader.read(File(model.kitDir, pad.sampleFile)))
+            val pad = model.pad(partner.slot) ?: throw PartnerGone("no pad on ${padTag(partner.slot)}")
+            Mutate.Source("${model.kit.name}:${padTag(partner.slot)}", WavReader.read(present(File(model.kitDir, pad.sampleFile))))
         }
-        is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(partner.file))
-        is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(partner.file))
+        is Partner.Deal -> Mutate.Source(partner.label, WavReader.read(present(partner.file)))
+        is Partner.Room -> Mutate.Source(Rooms.LABEL_PREFIX + partner.name, WavReader.read(present(partner.file)))
         is Partner.Other -> {
+            // Checked here, because KitStore.load would throw a plain IOException.
+            if (!File(partner.kitDir, KitStore.FILE_NAME).isFile) throw PartnerGone("${partner.kitName} is not on the shelf")
             val kit = KitStore.load(partner.kitDir)
             val pad = kit.pads.firstOrNull { it.slot == partner.slot }
-                ?: throw IllegalArgumentException("no pad on ${partner.kitName} ${padTag(partner.slot)}")
+                ?: throw PartnerGone("no pad on ${partner.kitName} ${padTag(partner.slot)}")
             // The CLI's own Kit:Pad label, so the lineage reads the same as a roulette deal's.
-            Mutate.Source("${kit.name}:${padTag(partner.slot)}", WavReader.read(File(partner.kitDir, pad.sampleFile)))
+            Mutate.Source("${kit.name}:${padTag(partner.slot)}", WavReader.read(present(File(partner.kitDir, pad.sampleFile))))
         }
         // The file's own name, as `--with hit.wav` labels it.
-        is Partner.Wav -> Mutate.Source(partner.label, WavReader.read(partner.file))
+        is Partner.Wav -> Mutate.Source(partner.label, WavReader.read(present(partner.file)))
     }
+
+    /** [file] itself, or [PartnerGone] when it is not there; WavReader.read would throw a plain IOException. */
+    private fun present(file: File): File = if (file.isFile) file else throw PartnerGone("${file.name} is gone")
 
     /**
      * The card's two steppers as the six knob slots [Mutate.render] and
@@ -279,9 +300,18 @@ object MutateSheet {
             morphAmount = if (mode == Mutate.Mode.MORPH) v!! else 0.5f,
             roomMix = if (mode == Mutate.Mode.ROOM) v!! else 0.5f,
             bands = if (mode == Mutate.Mode.TRANSPLANT) v!!.roundToInt() else com.snipsnap.audio.Transplant.DEFAULT_BANDS,
-            becomeMs = becomeFor(mode)?.let { value(it, becomeFraction).roundToInt() } ?: 0,
+            becomeMs = becomeMs(mode, becomeFraction),
         )
     }
+
+    /**
+     * BECOME's milliseconds for [mode] at [becomeFraction]: MORPH's alone,
+     * 0 on every other move. One place, read by [knobs] for the render and
+     * by [outcomeLine] for the words, so the line under the moves says the
+     * hit turns exactly when the render turns it.
+     */
+    private fun becomeMs(mode: Mutate.Mode, becomeFraction: Float): Int =
+        becomeFor(mode)?.let { value(it, becomeFraction).roundToInt() } ?: 0
 
     /**
      * What [apply] would write, without writing it — the card's HEAR.
@@ -354,4 +384,240 @@ object MutateSheet {
 
     /** The parents back apart: the pre-mutation audio out of the bin, recipe and parent stamp cleared. */
     fun undo(model: KitBuilderModel, slot: Int): KitPad = Mutate.undo(model, slot)
+
+    // ---------- the length seam (the redesign's round M1) ----------
+
+    /** A render's length in whole milliseconds, at its own rate: `frameCount * 1000 / sampleRate`, rounded down. */
+    fun lengthMs(snip: Snip): Int = (snip.frameCount.toLong() * 1000 / snip.sampleRate).toInt()
+
+    /**
+     * The pad's file length in whole milliseconds, read off the file at its
+     * own rate. The KEEP and DRIFT doors call it inside their write, before
+     * and after [apply] or [drift], whose signatures stay as they are.
+     */
+    fun lengthMs(model: KitBuilderModel, slot: Int): Int {
+        val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on ${padTag(slot)}")
+        return lengthMs(WavReader.read(File(model.kitDir, pad.sampleFile)))
+    }
+
+    // ---------- honest refusals (the redesign's round M1) ----------
+
+    /** Why a MUTATE door will not run, and the line the card toasts for it. */
+    sealed interface Refusal {
+        val line: String
+
+        /** HEAR or KEEP with no partner picked. */
+        data object NoPartner : Refusal { override val line: String = Copy.MUTATE_PICK_PARTNER }
+
+        /** The pad has velocity layers (SOFT HITS, or STACK THE TAKES). */
+        data object Layered : Refusal { override val line: String = Copy.MUTATE_LAYERED }
+
+        /** The pad plays a chain of slices in turn (CHOP's FOLD, the CLI's `robin` or `--break-pad`). */
+        data object Chained : Refusal { override val line: String = Copy.MUTATE_CHAINED }
+
+        /** ROULETTE or DRIFT found no other pad on the shelf. */
+        data object ShelfEmpty : Refusal { override val line: String = Copy.CRATE_EMPTY }
+
+        /** ROULETTE or DRIFT found only near-doubles of this pad. */
+        data object OnlyCopies : Refusal { override val line: String = Copy.ROULETTE_ONLY_COPIES }
+
+        /** The picked partner is no longer there. */
+        data object PartnerGone : Refusal { override val line: String = Copy.MUTATE_PARTNER_GONE }
+    }
+
+    /**
+     * The check every MUTATE door runs before it launches anything: a
+     * layered pad, then a chained one, then (when the door needs one) no
+     * partner, so a pad that can never mutate says so before the card asks
+     * for a partner. DRIFT and ROULETTE pick their own partner and pass
+     * [needsPartner] false. Null when the door may go ahead.
+     */
+    fun refusalBefore(pad: KitPad, partner: Partner?, needsPartner: Boolean): Refusal? = when {
+        pad.velocityLayers.isNotEmpty() -> Refusal.Layered
+        pad.chain != null -> Refusal.Chained
+        needsPartner && partner == null -> Refusal.NoPartner
+        else -> null
+    }
+
+    /**
+     * The refusal a door's exception stands for: ROULETTE's two typed kinds
+     * and a gone partner. Every other exception is a real failure, null
+     * here, and the card says `<ACTION> FAILED. TRY AGAIN.`
+     */
+    fun refusalOf(e: Throwable): Refusal? = when (e) {
+        is Mutate.RouletteRefused -> when (e.kind) {
+            Mutate.RouletteRefused.Kind.EMPTY -> Refusal.ShelfEmpty
+            Mutate.RouletteRefused.Kind.ONLY_COPIES -> Refusal.OnlyCopies
+        }
+        is PartnerGone -> Refusal.PartnerGone
+        else -> null
+    }
+
+    /**
+     * Why UNDO has nothing to do, or null when it can undo: no mutate on the
+     * pad ([mutated] is [read]'s answer), or no earlier take of the pad in
+     * the bin ([binned]). The card draws UNDO dimmed while this is not null,
+     * and a tap toasts it instead of undoing.
+     */
+    fun undoRefusal(mutated: Applied?, binned: Boolean): String? = when {
+        mutated == null -> Copy.UNDO_NOTHING
+        !binned -> Copy.UNDO_NOT_BINNED
+        else -> null
+    }
+
+    // ---------- the card's words (the redesign's round M1) ----------
+    //
+    // Card labels, not `Copy` constants: PersonalityTest's reflective shout
+    // law cannot see them, so MutateWordsTest holds them to the house style
+    // (capitals, a 44-character row, no retired word, one meaning per word).
+
+    /** A full row of the card, in characters (`docs/UI_DESIGN.md`'s 44-character budget). */
+    const val ROW_CHARS = 44
+
+    /** The longest a partner's name runs on the card: the TERRA spec's `MAX_FROM_CHARS`, for the shared chooser. */
+    const val NAME_CHARS = 24
+
+    /** HEAR plays the move on the pad and never writes; its label says so. */
+    const val HEAR_LABEL = "▶ HEAR THE RESULT"
+
+    /** The line under HEAR. */
+    const val NOTE_LINE = "NOTHING CHANGES YOUR PAD UNTIL YOU KEEP IT"
+
+    /** The commit button. KEEP writes in place, so it carries no `▸`, which the house keeps for "goes somewhere". */
+    const val KEEP_LABEL = "KEEP"
+
+    /** DRIFT beside KEEP: it picks a partner, blends toward it and saves, in one tap, and its label says it saves. */
+    const val DRIFT_LABEL = "DRIFT · BLEND & SAVE"
+
+    /** ROULETTE at rest: it only picks a partner, and writes nothing. */
+    const val ROULETTE_LABEL = "ROULETTE · PICK A PARTNER OFF THE SHELF"
+
+    /** The partner panel's room row with no room kept (drawn from round M2). It avoids KEEP ROOM: KEEP is the card's commit verb. */
+    const val NO_ROOM_LINE = "NO ROOM YET · MAKE ONE IN OUTSIDE ▸ ROOM"
+
+    /** The partner panel's other-kit row on a one-kit shelf (drawn from round M2). */
+    const val NO_OTHER_KIT_LINE = "NO OTHER KIT ON THE SHELF"
+
+    /** STACK's knob row, where the bar would be: `design/mutate-v2/Moves.dc.html:45`, verbatim. */
+    const val deadKnobLine = "NO KNOB — THEY LINE UP ON THE HIT"
+
+    /** One line per move, under the move chips: `design/mutate-v2/Moves.dc.html:45-50`, verbatim. */
+    private val MOVE_LINES: Map<Mutate.Mode, String> = mapOf(
+        Mutate.Mode.STACK to "BOTH AT ONCE. THICKER.",
+        Mutate.Mode.SPLICE to "THIS ATTACK, THAT TAIL.",
+        Mutate.Mode.SPLIT to "MY LOWS, THEIR HIGHS.",
+        Mutate.Mode.MORPH to "A HIT BETWEEN THE TWO.",
+        Mutate.Mode.ROOM to "MY HIT, PLAYED IN THEIR ROOM.",
+        Mutate.Mode.TRANSPLANT to "MY TIMING, THEIR TONE.",
+    )
+
+    /** MORPH's line while BECOME is above OFF (the brief's). */
+    private const val BECOME_LINE = "STARTS AS MINE, TURNS INTO THE MIX."
+
+    /** What each knob means, on a caption line under its bar: `design/mutate-v2/Moves.dc.html:46-50`, verbatim. */
+    private val KNOB_MEANINGS: Map<Mutate.Mode, String> = mapOf(
+        Mutate.Mode.SPLICE to "WHERE THEY HAND OVER",
+        Mutate.Mode.SPLIT to "WHERE LOWS BECOME HIGHS",
+        Mutate.Mode.MORPH to "HOW FAR TOWARD THEM",
+        Mutate.Mode.ROOM to "HOW MUCH ROOM",
+        Mutate.Mode.TRANSPLANT to "HOW FINELY TONE IS READ",
+    )
+
+    /**
+     * The line under the move chips: what HEAR would play. MORPH's turns to
+     * BECOME's line exactly when [becomeFraction] maps above 0 ms, through
+     * the same mapping the render reads ([becomeMs]).
+     */
+    fun outcomeLine(mode: Mutate.Mode, becomeFraction: Float): String =
+        if (becomeMs(mode, becomeFraction) > 0) BECOME_LINE else MOVE_LINES.getValue(mode)
+
+    /** The knob's meaning, drawn on a caption line under its bar; null for STACK, which has no knob ([deadKnobLine] instead). */
+    fun knobMeaning(mode: Mutate.Mode): String? = KNOB_MEANINGS[mode]
+
+    /** BECOME's row: its meaning on the caption line under its bar on MORPH; on every other move, the words its dead row draws. */
+    fun becomeMeaning(mode: Mutate.Mode): String =
+        if (mode == Mutate.Mode.MORPH) "HOW LONG THE TURN TAKES" else "ONLY MORPH TURNS OVER TIME"
+
+    /**
+     * The partner as the pairing line names it, in capitals, at most
+     * [NAME_CHARS]: a pad on this kit by its tag and name (`B07 KICK`,
+     * [padName] giving the name), another kit's pad as `SOUL B02`, a
+     * ROULETTE pick as the strip names it (`SOUL A03`), a room or a file
+     * by its name. A cut never goes through the tag.
+     */
+    fun partnerName(partner: Partner, padName: (Int) -> String? = { null }): String = cutName(
+        when (partner) {
+            is Partner.Pad -> listOfNotNull(padTag(partner.slot), padName(partner.slot)?.takeIf { it.isNotBlank() }).joinToString(" ")
+            is Partner.Other -> "${partner.kitName} ${padTag(partner.slot)}"
+            is Partner.Deal -> PadSheetBoxes.parentName(partner.label)
+            is Partner.Room -> partner.name
+            is Partner.Wav -> partner.label
+        }.uppercase(java.util.Locale.ROOT),
+        NAME_CHARS,
+    )
+
+    /** The partner's short name, for the keep toast (and KEEP's label from round M2): a pad on this kit by its tag alone, every other kind as [partnerName]. */
+    fun partnerShort(partner: Partner): String =
+        if (partner is Partner.Pad) padTag(partner.slot) else partnerName(partner)
+
+    /** Between the pad and its partner on the pairing line. */
+    private const val PAIR_SEP = " × "
+
+    /** The pairing line's empty state, after the pad: never cut. */
+    private const val NO_PARTNER_TAIL = " × ?  — PICK A PARTNER"
+
+    /**
+     * The card's top line: the pad × its partner (`A02 SNARE × B07 KICK`),
+     * or `A02 SNARE × ?  — PICK A PARTNER` with none, within one row
+     * ([ROW_CHARS]). When both sides do not fit, each is cut to an even
+     * share, its tag kept whole; a side shorter than its share gives the
+     * rest to the other. The empty state's tail is never cut: the pad's
+     * name gives way and its tag stays. The `partnerName` argument is the
+     * partner's name as the [partnerName] function returns it.
+     */
+    fun pairLine(padTag: String, padName: String, partnerName: String?): String {
+        val mine = pairSide(padTag, padName)
+        if (partnerName == null) return cutName(mine, ROW_CHARS - NO_PARTNER_TAIL.length) + NO_PARTNER_TAIL
+        val room = ROW_CHARS - PAIR_SEP.length
+        val (mineMax, theirsMax) = when {
+            mine.length + partnerName.length <= room -> mine.length to partnerName.length
+            mine.length <= room / 2 -> mine.length to room - mine.length
+            partnerName.length <= room - room / 2 -> room - partnerName.length to partnerName.length
+            else -> room / 2 to room - room / 2
+        }
+        return cutName(mine, mineMax) + PAIR_SEP + cutName(partnerName, theirsMax)
+    }
+
+    /** [pairLine] uncut, for TalkBack. */
+    fun pairSpoken(padTag: String, padName: String, partnerName: String?): String =
+        pairSide(padTag, padName) + (if (partnerName == null) NO_PARTNER_TAIL else PAIR_SEP + partnerName)
+
+    private fun pairSide(padTag: String, padName: String): String =
+        "$padTag ${padName.uppercase(java.util.Locale.ROOT)}".trimEnd()
+
+    /** A pad tag at the start of a name (`A02 SNARE`) or at its end (`SOUL B02`): [PadBanks.tag]'s shape. */
+    private val LEADING_TAG = Regex("""^[A-Z]\d{2}(?= |$)""")
+    private val TRAILING_TAG = Regex("""(?<=^| )[A-Z]\d{2}$""")
+
+    /**
+     * [name] cut to [max] characters, ending in `…` where it is cut, never
+     * through a pad tag: a leading tag stays whole (`A02 SNA…`), so does a
+     * trailing one (`SO… B02`), and where not one character of the rest
+     * fits, the tag stands alone. A name with no tag (a room, a file) is
+     * cut at the end.
+     */
+    private fun cutName(name: String, max: Int): String {
+        if (name.length <= max) return name
+        LEADING_TAG.find(name)?.let { m ->
+            val rest = name.substring(m.value.length).trimStart()
+            val keep = max - m.value.length - 2 // a space and the ellipsis
+            return if (keep < 1 || rest.isEmpty()) m.value else "${m.value} ${rest.take(keep).trimEnd()}…"
+        }
+        TRAILING_TAG.find(name)?.let { m ->
+            val head = name.substring(0, m.range.first).trimEnd()
+            val keep = max - m.value.length - 2
+            return if (keep < 1 || head.isEmpty()) m.value else "${head.take(keep).trimEnd()}… ${m.value}"
+        }
+        return name.take(max - 1).trimEnd() + "…"
+    }
 }

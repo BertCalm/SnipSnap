@@ -238,6 +238,31 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the second mercury kit is five eddy, five vessel and six shard presets, all dry and filed LOOP`() {
+        val kit = SynthKits.mercury2()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a MERCURY render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? MercuryPatch
+            assertTrue(patch != null, "pad ${i + 1} should be a MERCURY patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry")
+            patch!!
+        }
+        // Written out: every one of these presets is past the classifier's 1.5 s line, so the length rule files each LOOP.
+        for (k in 0 until 16) assertEquals(DrumClass.LOOP, kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+        assertEquals(
+            listOf(
+                "EDDY HEARTH HUM", "EDDY TWIN BEATING", "EDDY SLOW SWIRL", "EDDY RIM WAVER", "EDDY STRUCK BOWL",
+                "VESSEL CISTERN", "VESSEL DRAIN PIPE", "VESSEL BOILER HUM", "VESSEL WATER TOWER", "VESSEL TWIN PIPES",
+                "SHARD BROKEN PANE", "SHARD SPLINTER", "SHARD SKITTER", "SHARD HAIRLINE", "SHARD FRAYED EDGE", "SHARD TIN SKY",
+            ),
+            patches.map { "${it.voice} ${it.name}" },
+        )
+        for (p in patches) assertEquals(MercuryPresets.forVoice(p.voice).first { it.name == p.name }, p, "${p.voice} ${p.name} is the preset itself")
+    }
+
+    @Test
     fun `the mercury kit is eight pings up the pentatonic, four sing and four blade presets, all dry`() {
         val kit = SynthKits.mercury()
         assertEquals(16, kit.size)

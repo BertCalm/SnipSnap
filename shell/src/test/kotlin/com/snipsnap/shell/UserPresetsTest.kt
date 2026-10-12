@@ -1,9 +1,20 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
+import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourPresets
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.PluckVoice
+import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.PrismVoice
+import com.snipsnap.synth.StoopVoice
+import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.SkinVoice
@@ -18,6 +29,7 @@ import java.io.File
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -58,6 +70,30 @@ class UserPresetsTest {
         assertEquals(UserPresets.Check.Replaces("MY KICK"), UserPresets.check("my kick", "THUMP", "KICK", mine))
         assertEquals(UserPresets.Check.Fresh("MY KICK"), UserPresets.check("my kick", "THUMP", "SNARE", mine), "yours are per voice too")
         assertEquals("HAT CLOSED 2", UserPresets.normalize("  hat\tclosed   2 "))
+    }
+
+    @Test
+    fun `title-case cistern factory names reserve their normalized saved names`() {
+        val factory = Presets.byName("CISTERN", "FIRST", "First Drop") as CisternPatch
+        assertEquals(null, Presets.byName("CISTERN", "FIRST", "FIRST DROP"), "factory lookup keeps its exact-label contract")
+        for (raw in listOf("First Drop", "FIRST DROP", " first\t drop ")) {
+            assertEquals(UserPresets.Check.Factory("FIRST DROP"), UserPresets.check(raw, "CISTERN", "FIRST", emptyList()))
+        }
+        assertEquals(UserPresets.Check.Fresh("FIRST DROP"), UserPresets.check("First Drop", "CISTERN", "DRIP", emptyList()), "factory names remain per voice")
+
+        val root = shelf()
+        try {
+            val own = UserPresets.save(root, factory.copy(name = "MY SURFACE"), 1L)
+            val before = UserPresets.file(root).readText()
+            val refusal = assertFailsWith<IllegalArgumentException> {
+                UserPresets.save(root, factory.copy(name = "FIRST DROP"), 2L)
+            }
+            assertTrue("the factory already has FIRST DROP" in refusal.message.orEmpty(), "the normalized factory collision is the refusal")
+            assertEquals(before, UserPresets.file(root).readText(), "a refused duplicate leaves the existing store unchanged")
+            assertEquals(listOf(own), UserPresets.read(root))
+        } finally {
+            root.deleteRecursively()
+        }
     }
 
     @Test
@@ -107,6 +143,11 @@ class UserPresetsTest {
                 "VOX" to VoxVoice.entries.map { it.name }, "PLUCK" to PluckVoice.entries.map { it.name },
                 "TONEWHEEL" to TonewheelVoice.entries.map { it.name }, "FATHOM" to FathomVoice.entries.map { it.name },
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
+                "CISTERN" to CisternVoice.entries.map { it.name },
+                "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
+                "PRISM" to PrismVoice.entries.map { it.name },
+                "CONTOUR" to ContourVoice.entries.map { it.name },
+                "STOOP" to StoopVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -145,9 +186,16 @@ class UserPresetsTest {
         assertEquals("p(ThumpVoice.KICK, \"MY KICK\", \"TUNE\" to 0.34f, \"SWEEP\" to 0.45f),", line)
         // Every factory preset, back out of its own line to the float it holds.
         val value = Regex("\"[^\"]+\" to ([-0-9.E]+)f")
+        val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
-            val parsed = value.findAll(UserPresets.rosterLine(preset)).map { it.groupValues[1].toFloat() }.toList()
-            assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            val line = UserPresets.rosterLine(preset)
+            if (preset is StoopPatch) {
+                val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
+                assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
+            } else {
+                val parsed = value.findAll(line).map { it.groupValues[1].toFloat() }.toList()
+                assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            }
         }
         val quoted = UserPresets.rosterLine(ThumpPatch("SAY \"HI\" \$X", ThumpVoice.KICK, emptyMap()))
         assertTrue("\"SAY \\\"HI\\\" \\\$X\"" in quoted, quoted)
@@ -158,14 +206,144 @@ class UserPresetsTest {
     }
 
     @Test
+    fun `a saved cistern roster line retains a custom note and strike velocity`() {
+        val root = shelf()
+        try {
+            val source = CisternPatch(
+                "LOW SURFACE", CisternVoice.POOL,
+                linkedMapOf("DROP" to 0.73f, "DRAIN" to 0.21f),
+                midi = 36, velocity = 0.3f,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "the shelf retains state outside the macros")
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(CisternVoice.POOL, \"LOW SURFACE\", \"DROP\" to 0.73f, \"DRAIN\" to 0.21f).copy(midi = 36, velocity = 0.3f),",
+                line,
+                "the pasteable factory line reconstructs the saved sound, including its non-default note and energy",
+            )
+            assertEquals("CisternPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved wheel retains root gesture velocity and model when promoted`() {
+        val root = shelf()
+        try {
+            for (model in listOf(1, 2)) {
+                val source = PitchwheelPatch(
+                    "LOW WHEEL", PitchwheelVoice.RECOIL,
+                    linkedMapOf("ADHESION" to .83f, "HEAT" to .21f), midi = 36, velocity = .3f, model = model,
+                )
+                UserPresets.save(root, source, 1L)
+                val saved = UserPresets.read(root).single()
+                assertEquals(source, saved.patch)
+                val line = UserPresets.rosterLine(saved.patch)
+                assertEquals(
+                    "p(PitchwheelVoice.RECOIL, \"LOW WHEEL\", \"ADHESION\" to 0.83f, \"HEAT\" to 0.21f).copy(midi = 36, velocity = 0.3f, model = $model),",
+                    line,
+                )
+                assertEquals("PitchwheelPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved contour retains its complete spectral recipe when promoted`() {
+        val root = shelf()
+        try {
+            val source = ContourPresets.all().first { it.name == "Moving Corner" }.copy(name = "MY CORNER", velocity = .3f)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val patch = saved.patch as ContourPatch
+            val line = UserPresets.rosterLine(patch)
+            assertTrue("bodyTable = ContourTable.SOFT_SAW" in line)
+            assertTrue("edgeTable = ContourTable.COPPER" in line)
+            assertTrue("relation = ContourRelation.OPPOSED" in line)
+            assertTrue("ampDecay = 0.45f" in line)
+            assertTrue("bodyHarmonics = ${patch.config.bodyHarmonics}f" in line)
+            assertTrue("edgeRootLevel = ${patch.config.edgeRootLevel}f" in line)
+            assertTrue("edgeAttack = ${patch.config.edgeAttack}f" in line)
+            assertTrue("edgeDecay = ${patch.config.edgeDecay}f" in line)
+            assertTrue("edgeSustain = ${patch.config.edgeSustain}f" in line)
+            assertTrue("loopSeconds = ${patch.config.loopSeconds}f" in line)
+            assertTrue("velocity = 0.3f, model = ${patch.model}" in line)
+            assertEquals("ContourPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Contour promotion reconstructs every spectral and edge envelope field exactly`() {
+        val root = shelf()
+        try {
+            val source = ContourPresets.all().first { it.name == "Moving Corner" }.let {
+                it.copy(name = "MY EDGE", velocity = .3f, config = it.config.copy(
+                    bodyHarmonics = 1.37f, edgeRootLevel = .29f,
+                    edgeAttack = .017f, edgeDecay = .91f, edgeSustain = .43f,
+                ))
+            }
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single().patch as ContourPatch
+            assertEquals(source, saved, "all revised fields survive the shelf JSON roundtrip")
+            val line = UserPresets.rosterLine(saved)
+            val constructor = line.substringAfter("config = ").substringBefore(", velocity = ")
+            assertEquals(
+                "ContourConfig(bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER, " +
+                    "edgeRatio = 1.0f, edgeLag = 0.18f, relation = ContourRelation.OPPOSED, " +
+                    "bodyLevel = 0.8f, edgeLevel = 0.31f, subLevel = 0.09f, " +
+                    "bodyHarmonics = 1.37f, edgeRootLevel = 0.29f, " +
+                    "edgeAttack = 0.017f, edgeDecay = 0.91f, edgeSustain = 0.43f, " +
+                    "bodyScanBias = 0.0f, edgeScanBias = 0.0f, bodyTravel = 0.22f, edgeTravel = 0.6f, " +
+                    "ampAttack = 0.006f, ampDecay = 0.45f, ampSustain = 0.48f, " +
+                    "ampRelease = 0.42f, sustainSeconds = 0.75f, " +
+                    "filterAttack = 0.005f, filterDecay = 0.5f, filterAmount = 0.6f, " +
+                    "motionShape = ContourMotionShape.FALL, motionSeconds = 1.2f, " +
+                    "filterType = ContourFilterType.LOW_PASS, loopSeconds = 2.0f)",
+                constructor,
+                "the pasteable Kotlin constructor retains the exact architecture, including all five revised fields",
+            )
+            // Read the emitted constructor's own literals into the patch decoder. Any omitted
+            // revised field falls back to neutral legacy state and changes this recipe.
+            val fields = constructor.removePrefix("ContourConfig(").removeSuffix(")").split(", ").associate { entry ->
+                val (name, literal) = entry.split(" = ", limit = 2)
+                name to if (literal.endsWith("f")) JsonValue.Num(literal.dropLast(1).toDouble())
+                    else JsonValue.Str(literal.substringAfterLast('.'))
+            }
+            val promoted = ContourPatch.fromJsonValue(JsonValue.Obj(
+                saved.toJsonValue().entries + ("config" to JsonValue.Obj(fields)),
+            )) as ContourPatch
+            assertEquals(source.config, promoted.config, "promotion reconstructs the saved contour and independent edge envelope")
+            assertEquals(source, promoted, "all audible recipe fields survive promotion")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
         assertTrue(engines.size >= 8, "every registered engine ships a roster: $engines")
         for (engine in engines) {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
-            val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
-            assertTrue(helper in table.readText(Charsets.UTF_8), "${table.name} is written with the helper the line uses: $helper")
+            val text = table.readText(Charsets.UTF_8)
+            if (engine == StoopPatch.ENGINE) {
+                assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
+                for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
+                    assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
+                }
+            } else {
+                val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
+                assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
+            }
             val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
             assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
         }
