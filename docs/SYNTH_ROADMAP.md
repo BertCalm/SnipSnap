@@ -281,6 +281,33 @@ approval precedes the wider 36-preset bank; numerical checks do not establish
 that listening verdict. Android device, MPC hardware and naming checks remain
 separate acceptance work.
 
+### TANGLE — oscillators that catch and release
+
+The supplied [Tangle engineering specification](superpowers/specs/2026-10-11-tangle-engine-engineering-spec.md)
+is ported as an experimental pitched engine. BASS, LEAD, HOLLOW, PULSE,
+METAL and KNOT share two causal reciprocally modulated oscillators,
+encounter-derived held controls, temporary phase attraction, octave-down
+support and a quiet unmodulated root. TANGLE, CHASE, CATCH, BITE, WEIGHT and
+HOLD are the six saved macros; MIDI 24–84 and velocity 0–1 are explicit patch
+fields. CATCH at zero disables capture while reciprocal influence continues.
+
+The initial audition roster has 36 provisional recipes: 10 bass, 8 lead
+(including HOLLOW), 6 pulse, 6 metallic and 6 experimental, with held examples
+for all voices. `SynthKits.tangle()` supplies sixteen dry C minor pentatonic
+pads, preserving note and velocity in recipes. Patch, preset and velocity
+dispatch, CLI overrides, the phone picker and FRESH TAPE starter use the
+same engine. Finite sounds route as TONAL; HOLD at or above .99 selects LOOP.
+Run `./gradlew :synth:generateTangleAudition` to build the dry listening pack
+and diagnostic data under `testkit/tangle-audition/`.
+
+This is an implemented prototype awaiting the owner's listening verdict.
+Numeric verification does not establish that CHASE conveys who leads,
+CATCH audibly settles and releases, or held loops preserve the texture.
+Macro mappings, voice calibrations and names remain provisional. The port
+does not claim a circuit recreation of its historical starting point.
+[TANGLE.md](TANGLE.md) records the saved-format and integration contracts,
+HOLD constraint and remaining acceptance work.
+
 ### REVEL — interlocking skins through moving microphones
 
 REVEL ports the [supplied specification](REVEL_SPEC.md): six modal heads at

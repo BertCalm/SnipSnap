@@ -188,6 +188,9 @@ import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
+import com.snipsnap.synth.Tangle
+import com.snipsnap.synth.TanglePatch
+import com.snipsnap.synth.TangleVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
@@ -318,7 +321,7 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER and SKITTER carry note and velocity outside the macro map;
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER and TANGLE carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
@@ -1147,6 +1150,7 @@ fun SynthScreen(
                                 engine == Engine.STOOP && spec.name == "HOLD" && Stoop.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.LACQUER && spec.name == "HOLD" && Lacquer.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SKITTER && spec.name == "HOLD" && Skitter.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1984,7 +1988,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2022,6 +2026,7 @@ private enum class Engine {
         LACQUER -> LacquerVoice.entries
         SPOOL -> SpoolVoice.entries
         SKITTER -> SkitterVoice.entries
+        TANGLE -> TangleVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -2057,6 +2062,7 @@ private enum class Engine {
         LACQUER -> Lacquer.macrosFor(voice as LacquerVoice)
         SPOOL -> Spool.macrosFor(voice as SpoolVoice)
         SKITTER -> Skitter.macrosFor(voice as SkitterVoice)
+        TANGLE -> Tangle.macrosFor(voice as TangleVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -2092,6 +2098,7 @@ private enum class Engine {
         LACQUER -> Lacquer.defaults(voice as LacquerVoice)
         SPOOL -> Spool.defaults(voice as SpoolVoice)
         SKITTER -> Skitter.defaults(voice as SkitterVoice)
+        TANGLE -> Tangle.defaults(voice as TangleVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2127,6 +2134,7 @@ private enum class Engine {
         LACQUER -> Lacquer.scramble(voice as LacquerVoice, random)
         SPOOL -> Spool.scramble(voice as SpoolVoice, random)
         SKITTER -> Skitter.scramble(voice as SkitterVoice, random)
+        TANGLE -> Tangle.scramble(voice as TangleVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2167,6 +2175,7 @@ private enum class Engine {
         LACQUER -> Lacquer.render(voice as LacquerVoice, macros)
         SPOOL -> Spool.render(voice as SpoolVoice, macros)
         SKITTER -> Skitter.render(voice as SkitterVoice, macros)
+        TANGLE -> Tangle.render(voice as TangleVoice, macros)
     }
 
     /**
@@ -2208,6 +2217,7 @@ private enum class Engine {
         LACQUER -> Lacquer.drumClassFor(voice as LacquerVoice, macros)
         SPOOL -> Spool.drumClassFor(voice as SpoolVoice, macros)
         SKITTER -> Skitter.drumClassFor(voice as SkitterVoice, macros)
+        TANGLE -> Tangle.drumClassFor(voice as TangleVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2243,6 +2253,7 @@ private enum class Engine {
         LACQUER -> LacquerPatch(name, voice as LacquerVoice, macros)
         SPOOL -> SpoolPatch(name, voice as SpoolVoice, macros)
         SKITTER -> SkitterPatch(name, voice as SkitterVoice, macros)
+        TANGLE -> TanglePatch(name, voice as TangleVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

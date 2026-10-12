@@ -16,6 +16,7 @@ import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RevelPatch
 import java.io.File
@@ -339,7 +340,7 @@ object UserPresets {
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, PITCHWHEEL, STOOP and SKITTER also copy the saved
+     * bytes the phone heard. CISTERN, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
@@ -392,6 +393,7 @@ object UserPresets {
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RevelPatch -> {
                 val c = patch.configuration
                 fun values(items: List<*>, literal: (Any?) -> String): String =

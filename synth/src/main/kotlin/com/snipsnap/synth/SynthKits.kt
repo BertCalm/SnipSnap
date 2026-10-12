@@ -720,6 +720,28 @@ object SynthKits {
     }
 
     /**
+     * The dry TANGLE kit. A01–A08 walk BASS up C minor pentatonic from C2;
+     * A09–A14 expose leads, a hollow pair, crawling pulses, metal and knots.
+     * The last two pads hold the oscillator relationship. Every pad saves its
+     * root and velocity and renders without an FX chain: the movement belongs
+     * to the interacting oscillators. Finite sounds route as TONAL, held as LOOP.
+     */
+    fun tangle(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = TanglePatch(
+            "Tangle Bass $n", TangleVoice.BASS, Tangle.defaults(TangleVoice.BASS),
+            midi = Tangle.rootMidi(TangleVoice.BASS) + semitone,
+        ).let { pad(it, Tangle.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = TanglePresets.all().first { it.name == name }
+            .let { pad(it, Tangle.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("Catch Wire"), preset("Hollow Pair"), preset("Crawling Teeth"), preset("Metal Recoil"),
+            preset("Tight Knot"), preset("Quiet Trap"), preset("Long Escape"), preset("Held Struggle"),
+        )
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

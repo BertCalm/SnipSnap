@@ -48,6 +48,17 @@ tasks.register<JavaExec>("generateStoopAudition") {
     mainClass.set("com.snipsnap.synth.StoopAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/stoop-audition")
+}
+
+/** Actual TANGLE renders, listening assets and a reproducible probe report. */
+tasks.register<JavaExec>("generateTangleAudition") {
+    group = "distribution"
+    description = "Render TANGLE matched/raw WAVs, patches, manifest, causal probes and listening page under testkit/tangle-audition/. -Pquick selects a development pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TangleAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/tangle-audition")
     if (project.hasProperty("quick")) args("--quick")
 }
 

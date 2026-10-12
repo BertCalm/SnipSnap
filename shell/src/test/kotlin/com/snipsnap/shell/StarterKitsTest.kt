@@ -24,6 +24,9 @@ import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Tessera
 import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.TesseraVoice
+import com.snipsnap.synth.Tangle
+import com.snipsnap.synth.TanglePatch
+import com.snipsnap.synth.TangleVoice
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -177,6 +180,29 @@ class StarterKitsTest {
                 assertEquals(source.recipe, replayed.pad.recipe, "source, answer, chord and note survive replay")
                 assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved groove regenerates exactly")
             }
+            if (starter.id == "tangle") {
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = Breed.recipeOf(pad.recipe)!!
+                    val patch = assertIs<TanglePatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the oscillator relationship is dry")
+                    assertEquals(Tangle.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot, "${pad.displayName}: the complete finite or settled buffer plays once")
+                    patch
+                }
+                assertEquals(TangleVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(listOf(36, 39, 41, 43, 46, 48, 51, 53), patches.take(8).map { it.midi })
+                assertTrue(model.kit.pads.take(14).all { it.drumClass == DrumClass.TONAL })
+                assertTrue(model.kit.pads.takeLast(2).all { it.drumClass == DrumClass.LOOP })
+                val source = model.kit.pads.first()
+                val target = model.kit.pads.last()
+                val original = File(dir, source.sampleFile).readBytes()
+                val replayed = RecipeReplay.apply(model, target.slot, source.recipe!!, target.displayName)
+                assertEquals(source.recipe, replayed.pad.recipe, "root and velocity survive replay")
+                assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved oscillator system regenerates exactly")
+            }
             if (starter.id == "revel") {
                 val model = KitBuilderModel.open(dir)
                 assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
@@ -246,7 +272,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -269,6 +295,10 @@ class StarterKitsTest {
         assertEquals("LACQUER", lacquer.displayName)
         assertFalse(lacquer.seeded, "LACQUER is a fixed dry audition kit")
         assertEquals(KeySpec.parse("Cminpent"), lacquer.key)
+        val tangle = StarterKits.byId("tangle")!!
+        assertEquals("TANGLE", tangle.displayName)
+        assertFalse(tangle.seeded, "TANGLE is a fixed dry audition kit")
+        assertEquals(KeySpec.parse("Cminpent"), tangle.key)
         val revel = StarterKits.byId("revel")!!
         assertEquals("REVEL", revel.displayName)
         assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")

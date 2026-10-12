@@ -54,6 +54,10 @@ object Presets {
             val v = TideVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TidePresets.forVoice(v)
         }
+        GlintPatch.ENGINE -> {
+            val v = GlintVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            GlintPresets.forVoice(v)
+        }
         SirenPatch.ENGINE -> {
             val v = SirenVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             SirenPresets.forVoice(v)
@@ -158,9 +162,9 @@ object Presets {
             val v = SkitterVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             SkitterPresets.forVoice(v)
         }
-        GlintPatch.ENGINE -> {
-            val v = GlintVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
-            GlintPresets.forVoice(v)
+        TanglePatch.ENGINE -> {
+            val v = TangleVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TanglePresets.forVoice(v)
         }
         else -> emptyList()
     }
@@ -189,11 +193,10 @@ object Presets {
     fun all(): List<Patch> =
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
-            ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
+            ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() +
-            GlintPresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all()
 }
