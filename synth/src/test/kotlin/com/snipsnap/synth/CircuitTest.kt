@@ -129,12 +129,13 @@ class CircuitTest {
     fun `the trio and all surrounding roles have distinct finite source sound`() {
         val voice = CircuitVoice.VOICED
         val m = Circuit.defaults(voice)
-        val sources = (0..6).map { source ->
-            Circuit.inspect(voice, m, probe = Circuit.Probe(solo = source, responses = false)).raw.also {
-                assertTrue(it.all(Float::isFinite), "source $source is not finite")
-                assertTrue(rms(it) > 1e-5, "source $source is silent")
+        val reports = (0..6).map { source ->
+            Circuit.inspect(voice, m, probe = Circuit.Probe(solo = source, responses = false)).also {
+                assertTrue(it.raw.all(Float::isFinite), "source $source is not finite")
+                assertTrue(rms(it.raw) > 1e-5, "source $source is silent")
             }
         }
+        val sources = reports.map { it.raw }
         for (a in 0..2) for (b in a + 1..2) {
             assertTrue(shapeDifference(sources[a], sources[b]) > 1e-4, "tube $b is a scaled copy of tube $a")
         }
@@ -146,12 +147,31 @@ class CircuitTest {
         val until = 3 * Dsp.RATE
         val foreground = rms(players, from, until)
         val backing = rms(trio, from, until)
-        assertTrue(foreground > backing,
-            "VOICED players lost audible balance with the tube bed: players=$foreground RMS, bed=$backing RMS")
+        val balance = foreground / backing
+        println("CIRCUIT SUPPORT BALANCE: players/tubes=$balance")
+        assertTrue(balance in .25..1.0,
+            "VOICED accompaniment should support its tubes: players/tubes=$balance")
+
+        // Reuse the raw branches at their common gain, including their acoustic tails.
+        // A phrase-wide average can conceal a foreground gesture dominating its local turn.
+        val ensemble = FloatArray(trio.size) { i -> trio[i] + players[i] }
+        val stoneAndWood = FloatArray(trio.size) { i -> sources[3][i] + sources[4][i] }
+        val events = reports.first().events.filterNot { it.reply }
+        val openings = events.filter { it.source == 4 && it.reason == "opening-wood" }
+        val affirmations = events.filter { it.source == 6 && it.reason == "affirmation" }
+        assertTrue(openings.isNotEmpty(), "the voiced figure lost its opening accompaniment")
+        assertTrue(affirmations.isNotEmpty(), "the voiced figure lost its affirmation")
+        for (event in openings) assertLocalSupport(stoneAndWood, ensemble, event, "stone and wood opening")
+        for (event in affirmations) {
+            assertLocalSupport(sources[6], ensemble, event, "vocal affirmation")
+            if (event.kind == "UH_HUH") {
+                assertLocalSupport(sources[6], ensemble, event, "second affirmation syllable", offsetSeconds = .235)
+            }
+        }
         val root = Circuit.frequencyFor(m.getValue("TUNE")).toDouble()
         assertTrue(tonePower(sources[2], 2 * root, from, until) > 4 * tonePower(sources[2], root, from, until),
             "upper tube collapsed back to the anchor's root tone")
-        val vocal = Circuit.inspect(voice, m).events.filter { it.source == 6 }
+        val vocal = events.filter { it.source == 6 }
         assertTrue(vocal.isNotEmpty(), "the voiced configuration lost its gestures")
         assertTrue(vocal.map { it.kind }.distinct().size >= 2, "vocal diagnostics lost grunt or two-part gesture")
     }
@@ -419,6 +439,28 @@ class CircuitTest {
 
     private fun scientific(value: Double) = "%.3e".format(java.util.Locale.ROOT, value)
     private fun decimal(value: Double) = "%.3f".format(java.util.Locale.ROOT, value)
+
+    private fun assertLocalSupport(own: FloatArray, ensemble: FloatArray, event: Circuit.Event, label: String,
+                                   offsetSeconds: Double = 0.0) {
+        // Start 5 ms after emission and keep the same 180 ms window used by the
+        // shared-gain audition analysis; direct and reflected arrivals remain in it.
+        val startSeconds = event.timeSeconds + offsetSeconds
+        val from = ((startSeconds + .005) * Dsp.RATE).toInt().coerceAtLeast(0)
+        val until = minOf(ensemble.size, from + (Dsp.RATE * .180).toInt())
+        assertTrue(until > from, "$label has no local output window")
+        var remainingEnergy = 0.0
+        for (i in from until until) {
+            val other = ensemble[i].toDouble() - own[i]
+            remainingEnergy += other * other
+        }
+        val ownRms = rms(own, from, until)
+        val remainingRms = sqrt(remainingEnergy / (until - from))
+        val ratio = ownRms / remainingRms
+        println("CIRCUIT LOCAL SUPPORT: $label at ${decimal(startSeconds)}s own/rest=$ratio")
+        assertTrue(ownRms > 0.0, "$label became silent")
+        assertTrue(ratio.isFinite() && ratio < 1.0,
+            "$label dominates its ensemble turn: own/rest=$ratio at ${startSeconds}s")
+    }
 
     private fun rms(s: FloatArray, from: Int = 0, until: Int = s.size): Double {
         val a = from.coerceIn(0, s.size)

@@ -6,10 +6,13 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ContourConfig
+import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
@@ -330,21 +333,42 @@ object UserPresets {
     fun rosterFile(engine: String): String = engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
 
     /**
-     * [patch] as the line its engine's table is written in — the same
-     * `p(voice, name, macros…)` helper every `<Engine>Presets.kt` has —
-     * with every macro's exact value, so the promoted preset renders the
-     * bytes the phone heard. Engine fields outside the macros travel too:
-     * CISTERN and PITCHWHEEL retain note and strike velocity; PITCHWHEEL
-     * also keeps its render-model version. REVEL retains microphones,
-     * phrase configuration, seed and saved velocity. RELAY retains its
-     * complete source and phrase schedules. PRISM retains its additive
-     * template, group profiles, model and strike velocity. ALLOY retains
-     * generated materials, operator routing and held recipe alongside
-     * note, energy and model. Names and embedded JSON are escaped Kotlin
-     * string literals.
+     * [patch] as the line its engine's table is written in, using its
+     * `p` helper with every macro's exact value, so the promoted preset
+     * renders the bytes the phone heard. STOOP's metadata table takes
+     * named macro arguments and a description alongside the recipe.
+     * Fields outside the macros travel too: CISTERN, PITCHWHEEL and STOOP
+     * retain note and strike velocity; PITCHWHEEL also keeps its render-model
+     * version. REVEL retains microphones, phrase configuration, seed and
+     * saved velocity. RELAY retains its complete source and phrase schedules.
+     * PRISM retains its additive template, group profiles, model and strike
+     * velocity. ALLOY retains generated materials, operator routing and held
+     * recipe alongside note, energy and model. CONTOUR retains its table pair,
+     * layer relationships, envelopes, loop recipe and velocity. STOOP retains
+     * its source, answer and chord recipe and render-model version. Names and
+     * embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+        if (patch is StoopPatch) {
+            val arguments = buildList {
+                add("source = StoopSource(shape = ${patch.source.shape}f, sub = ${patch.source.sub}f, " +
+                    "fmRatio = ${patch.source.fmRatio}f, fmIndex = ${patch.source.fmIndex}f, " +
+                    "harmonicTilt = ${patch.source.harmonicTilt}f, detuneCents = ${patch.source.detuneCents}f)")
+                add("description = \"User-authored preset.\"")
+                add("tags = \"saved\"")
+                addAll(patch.macros.map { (k, v) -> "${k.lowercase(Locale.ROOT)} = ${v}f" })
+                add("midi = ${patch.midi}")
+                add("velocity = ${patch.velocity}f")
+                add("shadowInterval = ${patch.shadowInterval}")
+                add("shadowDelayMs = ${patch.shadowDelayMs}f")
+                add("shadowArticulation = ${patch.shadowArticulation}f")
+                add("shadowReplies = ${patch.shadowReplies}")
+                add("chordIntervals = listOf(${patch.chordIntervals.joinToString(", ")})")
+                add("model = ${patch.model}")
+            }
+            return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
+        }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
@@ -384,10 +408,27 @@ object UserPresets {
                 val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
                 ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
             }
+            is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
     }
+
+    /** Structural wavetable state is part of a promoted preset, just like the audible macros. */
+    private fun contourConfigLine(c: ContourConfig): String = "ContourConfig(" + listOf(
+        "bodyTable = ContourTable.${c.bodyTable.name}", "edgeTable = ContourTable.${c.edgeTable.name}",
+        "edgeRatio = ${c.edgeRatio}f", "edgeLag = ${c.edgeLag}f", "relation = ContourRelation.${c.relation.name}",
+        "bodyLevel = ${c.bodyLevel}f", "edgeLevel = ${c.edgeLevel}f", "subLevel = ${c.subLevel}f",
+        "bodyHarmonics = ${c.bodyHarmonics}f", "edgeRootLevel = ${c.edgeRootLevel}f",
+        "edgeAttack = ${c.edgeAttack}f", "edgeDecay = ${c.edgeDecay}f", "edgeSustain = ${c.edgeSustain}f",
+        "bodyScanBias = ${c.bodyScanBias}f", "edgeScanBias = ${c.edgeScanBias}f",
+        "bodyTravel = ${c.bodyTravel}f", "edgeTravel = ${c.edgeTravel}f",
+        "ampAttack = ${c.ampAttack}f", "ampDecay = ${c.ampDecay}f", "ampSustain = ${c.ampSustain}f",
+        "ampRelease = ${c.ampRelease}f", "sustainSeconds = ${c.sustainSeconds}f",
+        "filterAttack = ${c.filterAttack}f", "filterDecay = ${c.filterDecay}f", "filterAmount = ${c.filterAmount}f",
+        "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
+        "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
+    ).joinToString(", ") + ")"
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */
     fun renderAll(saved: List<Saved>): String {

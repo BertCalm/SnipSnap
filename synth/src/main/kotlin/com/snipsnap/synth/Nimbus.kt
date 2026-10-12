@@ -377,13 +377,42 @@ object Nimbus {
         private val driveY = Array(CYMBALS) { DoubleArray(MODES) }
         private val driveCos = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> cos(2 * PI * rates[i][j] / INTERNAL_RATE) } }
         private val driveSin = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> sin(2 * PI * rates[i][j] / INTERNAL_RATE) } }
-        private val drivePhase = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> if (j == 0) (if (i % 2 == 0) -.90 else .90) + .03 * random.nextDouble() else 2 * PI * random.nextDouble() } }
+        private val drivePhase = Array(CYMBALS) { i -> DoubleArray(MODES) { j ->
+            if (j == 0) {
+                val offset = if (hold > 0.0) 1.15 else .90
+                (if (i % 2 == 0) -offset else offset) + .03 * random.nextDouble()
+            } else 2 * PI * random.nextDouble()
+        } }
+        // A strike can spend its short attack on bright partials. Sustained field force
+        // instead favors the plates' lower flexural bodies: continuously replacing all
+        // fast upper losses would turn the finite metal response into a fixed squeal.
+        // Keep each native vector's total participation while redistributing that force.
+        private val heldBody = Array(CYMBALS) { i ->
+            val b = normalize(DoubleArray(MODES) { j ->
+                if (j == 0 || !supported[i][j]) 0.0 else {
+                    val ratio = RATIOS[i][j]
+                    val hz = root * ratio
+                    bodyImpulse[i][j] / sqrt((1 + (ratio / 3.8).pow(6.0)) * (1 + (hz / 2200).pow(4.0)))
+                }
+            })
+            for (j in b.indices) b[j] *= sqrt(1 - rootShare)
+            b
+        }
         private val driveAmplitude = Array(CYMBALS) { i -> DoubleArray(MODES) { j ->
             val preference = .30 + .70 * exp(-abs(i - selected) * (.58 + .32 * excite))
-            val target = if (j == 0) (if (selected == 5) .26 else .12) * sqrt(rootShare) * preference else
-                (.115 + .035 * funnel) * bodyImpulse[i][j] * shape.releaseStrength * preference
+            val target = if (j == 0) (if (selected == 5) .20 else .09) * sqrt(rootShare) * preference else
+                (.115 + .035 * funnel) * heldBody[i][j] * shape.releaseStrength * preference
             2 * 6.907755278982137 / lossTimes[i][j] / INTERNAL_RATE * target
         } }
+        // These index-derived phases consume no random draws. The smooth stagger changes
+        // supplied energy, not output gain or pitch, and completes exactly one loop cycle.
+        private val breathingFrames = if (cycle > 0) cycle else (1.35 * INTERNAL_RATE).roundToInt()
+        private val breathingCos = cos(2 * PI / breathingFrames)
+        private val breathingSin = sin(2 * PI / breathingFrames)
+        private val breathingPhaseCos = DoubleArray(CYMBALS) { cos(2 * PI * (it - selected) / CYMBALS) }
+        private val breathingPhaseSin = DoubleArray(CYMBALS) { sin(2 * PI * (it - selected) / CYMBALS) }
+        private var breathingX = 1.0
+        private var breathingY = 0.0
         var driveWork = 0.0; private set
         private val incomingNeighbors = DoubleArray(10)
         private val outgoingNeighbors = DoubleArray(10)
@@ -425,6 +454,8 @@ object Nimbus {
             for (i in 0 until CYMBALS) for (j in 0 until MODES) {
                 driveX[i][j] = cos(drivePhase[i][j]); driveY[i][j] = sin(drivePhase[i][j])
             }
+            breathingX = 1.0
+            breathingY = 0.0
         }
         private fun load() {
             for (i in 0 until CYMBALS - 1) {
@@ -690,13 +721,19 @@ object Nimbus {
                 } else 0.0
                 if (driveEnvelope > 0.0 && options.poweredDriveEnabled) {
                     if (cycle > 0 && frame % cycle == 0) resetDrive()
-                    for (i in 0 until CYMBALS) for (j in 0 until MODES) {
-                        val old = driveX[i][j]
-                        driveX[i][j] = driveCos[i][j] * old - driveSin[i][j] * driveY[i][j]
-                        driveY[i][j] = driveSin[i][j] * old + driveCos[i][j] * driveY[i][j]
-                        val dv = driveAmplitude[i][j] * driveX[i][j] * driveEnvelope
-                        driveWork += plates[i].v[j] * dv + .5 * dv * dv
-                        plates[i].v[j] += dv
+                    val oldBreathingX = breathingX
+                    breathingX = breathingCos * oldBreathingX - breathingSin * breathingY
+                    breathingY = breathingSin * oldBreathingX + breathingCos * breathingY
+                    for (i in 0 until CYMBALS) {
+                        val supplied = driveEnvelope * (.65 + .35 * (breathingX * breathingPhaseCos[i] - breathingY * breathingPhaseSin[i]))
+                        for (j in 0 until MODES) {
+                            val old = driveX[i][j]
+                            driveX[i][j] = driveCos[i][j] * old - driveSin[i][j] * driveY[i][j]
+                            driveY[i][j] = driveSin[i][j] * old + driveCos[i][j] * driveY[i][j]
+                            val dv = driveAmplitude[i][j] * driveX[i][j] * supplied
+                            driveWork += plates[i].v[j] * dv + .5 * dv * dv
+                            plates[i].v[j] += dv
+                        }
                     }
                 }
                 var returnAudio = 0.0

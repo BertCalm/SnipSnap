@@ -81,6 +81,8 @@ object Patches {
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
             PrismPatch.ENGINE -> PrismPatch.fromJsonValue(value)
             AlloyPatch.ENGINE -> AlloyPatch.fromJsonValue(value)
+            ContourPatch.ENGINE -> ContourPatch.fromJsonValue(value)
+            StoopPatch.ENGINE -> StoopPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

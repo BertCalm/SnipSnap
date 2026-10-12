@@ -129,6 +129,12 @@ this module owns that folder's whole life.
 - **Velocity layers** — a pad can carry up to four velocity zones
   (`KitLayer`), written through to the XPM's per-layer velocity windows, so
   soft hits sound soft on hardware, not just quiet.
+- **`MidiGroove` / `MidiWire`** — MIDI on disk and on the wire. The first
+  reads and writes Standard MIDI Files for grooves; the second reads the
+  live byte stream a keyboard sends (running status, real-time bytes
+  mid-message, a message split across deliveries) into typed note and
+  controller events, which `:shell`'s `MidiKeys` and `MidiPads` turn into
+  what KEYS and PLAY do with them.
 - **`XpnPackager`** — the same expansion as a single deterministic `.xpn`
   ZIP, for one-file kit sharing, in the layout real commercial archives use:
   `Expansion.xml` at the archive root, bare sample names (no real program
@@ -265,6 +271,16 @@ contains 297 dry clips and diagnostics. The sound awaits the owner's listening
 verdict; [implementation notes](docs/TESSERA.md) describe the render, saving
 and export contracts.
 
+STOOP is an original groove module with six families: BASS, TINE, CLAV,
+ORGAN, LEAD and CHORD. TOUCH, COLOR, SHADOW, WEAR and LENGTH shape dry,
+preset-first sounds; HOLD exports settled loops. Recipes save an explicit
+MIDI root, velocity, source configuration, independently articulated
+shadow and explicit chord intervals. A provisional 48-preset roster and
+dry sixteen-pad starter kit share the phone and CLI renderer. Run
+`./gradlew :synth:generateStoopAudition` for presets, phrases, macro
+comparisons and repeated-loop listening. The owner's listening verdict
+is pending; [implementation notes](docs/STOOP.md) record the contracts.
+
 PITCHWHEEL is a pitched wooden wheel whose teeth catch flexible fingers while
 resin filaments stretch, bow and release. CLUNK, PLUCK, DRAW, RECOIL, THAWED
 and TURN share PUSH, TOOTH, ADHESION, HEAT, BODY and HOLD. Patches retain an
@@ -272,19 +288,27 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 21 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 23 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
-similar struck sounds distinguished mainly by rhythm. The model 2 prototype
-strengthens wooden body and TOOTH character, shapes contact rise, and gives
-finger friction and filament slip separate transfers into the same resonator.
-New patches use model 2; saved model 1 patches, including JSON with an absent
-or null model, retain the original renderer. Velocity variants preserve that
-choice. The revised dry audition awaits approval; the seven-preset scope stays
-fixed until then.
+similar struck sounds distinguished mainly by rhythm. Model 2 strengthened
+wooden body and TOOTH character, shaped contact rise, and gave finger friction
+and filament slip separate transfers into the same resonator. The owner's
+v2 review marked five voices Revise and found PLUCK most different; no voice
+received Keep. Provisional model 3 changes contact projections and individual
+mode losses to retain different body colours through decay. DRAW and THAWED
+have slower contact rise; THAWED's release balance follows temperature. PLUCK
+retains its model-2 release calibration. The new audition includes actual
+bowing, reverse encounters, warming and powered-loop probes alongside the
+release-only hits.
+New patches use model 3; saved models 1 and 2 retain their respective V1 and
+V2 renderers. JSON with an absent or null model selects V1. Velocity variants
+preserve the stored model. The revised dry audition awaits approval; the
+seven-preset scope stays fixed until then.
 [The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
-six isolated catches and includes the previous defaults for comparison.
+six release-only resonator hits and includes the real moving mechanisms and
+preserved models 1 and 2 for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
@@ -321,6 +345,19 @@ five-point sweeps, interactions, FUSE ablation and settled loop listening. The
 [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) awaits
 the owner's sonic verdict before expansion to the proposed 36 presets.
 [Implementation notes](docs/ALLOY.md) describe the render and export contracts.
+
+CONTOUR is an original wavetable instrument: a stable body carries the note while
+a related edge takes a different spectral path. BASS, KEY, PLUCK, LEAD, HOLLOW
+and SWELL share SCAN, OFFSET, MOTION, FILTER, DRIVE and HOLD, plus host TUNE.
+Eight generated table families, nine provisional dry recipes, a sixteen-pad kit,
+excitation-sensitive velocity and settled HOLD loops use the existing pipeline;
+held keygroup export (MAKE INSTRUMENT, `--instrument`) does not route CONTOUR yet.
+The existing CONTOUR rack filter keeps its saved effect recipes. Run
+`./gradlew :synth:generateContourAudition` for the listening matrix; the proposed
+36-preset expansion waits for sonic approval. Listen on the
+[published audition page](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+(owner-private). [Implementation notes](docs/CONTOUR.md)
+cover the patch format, controls and verification.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
@@ -546,8 +583,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, ALLOY and GRAINS round out the lineup —
-twenty-eight engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, ALLOY, CONTOUR, STOOP and GRAINS round out the lineup —
+thirty engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -730,10 +767,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, ALLOY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, ALLOY, CONTOUR, STOOP, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, REVEL, RELAY, PRISM and ALLOY are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL, REVEL, RELAY, PRISM, ALLOY, CONTOUR and STOOP are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and excitation energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.

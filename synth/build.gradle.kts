@@ -40,6 +40,17 @@ tasks.test {
     }
 }
 
+/** Stoop's reproducible dry listening pack; -Pquick selects the smoke pack. */
+tasks.register<JavaExec>("generateStoopAudition") {
+    group = "distribution"
+    description = "Render STOOP presets, phrases, macro comparisons and held loops under testkit/stoop-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StoopAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/stoop-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
 /** REVEL's dry acceptance matrix and standalone listening page; -Pquick selects first-listen evidence. */
 tasks.register<JavaExec>("generateRevelAudition") {
     group = "distribution"
@@ -663,6 +674,7 @@ tasks.register<JavaExec>("generateNimbusAudition") {
     providers.gradleProperty("nimbusBaselineDir").orNull?.let { args("--baseline-dir=$it") }
     providers.gradleProperty("nimbusBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
     if (providers.gradleProperty("nimbusCompareHold").orNull == "true") args("--compare-hold")
+    if (providers.gradleProperty("nimbusCompareHoldAll").orNull == "true") args("--compare-hold-all")
 }
 
 /** Render Tessera's dry materials, moving paths, causal probes and settled loops. */
@@ -724,4 +736,20 @@ tasks.register<JavaExec>("generateAlloyAudition") {
     args("${rootDir}/testkit/alloy-audition")
     if (project.hasProperty("alloyFull")) args("--full")
     if (project.hasProperty("alloyRefreshPage")) args("--refresh-page")
+}
+
+/** Render Contour's original tables, related layers and complete dry listening matrix. */
+tasks.register<JavaExec>("generateContourAudition") {
+    group = "distribution"
+    description = "Render CONTOUR raw/matched WAVs, shared-level references, diagnostics, HOLD repeats and an accessible page under testkit/contour-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/contour-audition")
+    if (providers.gradleProperty("contourQuick").orNull == "true") args("--quick")
+    if (providers.gradleProperty("contourRefreshPage").orNull == "true") args("--refresh-page")
+    providers.gradleProperty("contourComparisonBaseline").orNull?.let {
+        args("--comparison-baseline=$it")
+    }
 }
