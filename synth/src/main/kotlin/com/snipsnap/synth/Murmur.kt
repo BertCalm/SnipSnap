@@ -218,6 +218,12 @@ object Murmur {
     private fun cleanVelocity(velocity: Float) = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f).toDouble()
     private fun smooth(x: Double): Double { val t = x.coerceIn(0.0, 1.0); return t * t * (3.0 - 2.0 * t) }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
+    // and the long passes poll it so a stale render stops instead of finishing unwanted.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("MURMUR render no longer wanted")
+    }
+
     internal fun probe(
         voice: MurmurVoice,
         macros: Map<String, Float> = emptyMap(),
@@ -246,7 +252,8 @@ object Murmur {
         // three continuously rendered periods plus decimator padding; compare the last two.
         val preroll = if (held) period * 2 else 0
         val keep = if (held) period * 3 + 512 * Dsp.OVERSAMPLE else period
-        val raw = synthesize(voice, m, note, v, c, plan, gate, preroll, keep)
+        val raw = synthesize(voice, m, note, v, c, plan, gate, effectiveAttack, preroll, keep)
+        stopIfUnwanted()
         val down = Dsp.decimate(raw, RATE)
         if (!held) {
             removeMean(down)
@@ -312,7 +319,7 @@ object Murmur {
 
     private fun synthesize(
         voice: MurmurVoice, m: Map<String, Float>, midi: Int, velocity: Double, config: MurmurConfig,
-        plan: LoopPlan?, gate: Double, preroll: Int, keep: Int,
+        plan: LoopPlan?, gate: Double, attack: Double, preroll: Int, keep: Int,
     ): FloatArray {
         val held = plan != null
         val root = plan?.root ?: Keys.midiHz(midi).toDouble()
@@ -339,7 +346,6 @@ object Murmur {
         val trajectorySeconds = if (held) requestedTrajectory else minOf(requestedTrajectory, max(.1, gate - .05))
         val loopSeconds = plan?.frames?.div(RATE.toDouble()) ?: 0.0
         val contourCycles = if (held) (loopSeconds / trajectorySeconds).roundToInt().coerceIn(1, 24) else 0
-        val attack = config.attack * (.75 + breath * .9 + (1.0 - velocity) * .4)
         val contactSeconds = (.007 + .025 * (1.0 - edge) + .018 * breath).coerceIn(.005, .060)
         val period = plan?.frames?.times(Dsp.OVERSAMPLE) ?: 0
         val seed = Dsp.seedFor("MURMUR", voice.name, midi, "BREATH")
@@ -366,6 +372,7 @@ object Murmur {
         val registerShift = 2.0.pow(((midi - 60).coerceIn(-24, 36) / 12.0) * .035)
         val registerWidth = 1.0 + ((midi - 72).coerceAtLeast(0) / 24.0) * .80
         for (i in 0 until total) {
+            if (i % 8192 == 0) stopIfUnwanted()
             val t = i / INTERNAL_RATE.toDouble()
             val cycleFrame = if (held) i % period else i
             if (i % CONTROL_STRIDE == 0) {
