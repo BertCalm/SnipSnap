@@ -42,7 +42,7 @@ data class LacquerPatch(
     companion object {
         const val ENGINE = "LACQUER"
         const val VERSION = Patches.VERSION
-        const val MODEL_VERSION = 1
+        const val MODEL_VERSION = Lacquer.MODEL_VERSION
 
         fun fromJsonValue(value: JsonValue): LacquerPatch = try {
             Patches.decode(value, ENGINE, { n -> LacquerVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->

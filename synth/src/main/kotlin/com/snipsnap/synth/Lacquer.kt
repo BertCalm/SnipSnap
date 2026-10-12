@@ -89,6 +89,8 @@ object Lacquer {
     const val LOOP_THRESHOLD = HOLD_LOOP
     const val MODEL_VERSION = 1
     internal const val MAX_FINITE_SECONDS = 8f
+    /** Room after the latest release so the finite buffer neither truncates it nor exceeds the host budget. */
+    private const val TAIL_PAD_SECONDS = .035
     private const val INTERNAL_RATE = RATE * Dsp.OVERSAMPLE
     private const val TAU = 2.0 * PI
     private const val TABLE_SIZE = 2048
@@ -215,7 +217,7 @@ object Lacquer {
         }
         // Compress the complete schedule together, retaining the scheduled trail and
         // relative articulation. Nothing is cut before its last active envelope.
-        val scale = min(1.0, (MAX_FINITE_SECONDS - .035) / plans.maxOf { it.duration })
+        val scale = min(1.0, (MAX_FINITE_SECONDS - TAIL_PAD_SECONDS) / plans.maxOf { it.duration })
         return plans.map { it.scaled(scale) }
     }
 
@@ -318,6 +320,9 @@ object Lacquer {
     }
 
     private fun finish(raw: FloatArray): FloatArray {
+        // The tick loop polls the preview thread's interrupt; this band-limit and resample
+        // pass over the full 4x buffer is long enough to deserve its own check first.
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("LACQUER render cancelled")
         val filtered = raw.copyOf()
         Tide.bandLimit(filtered, INTERNAL_RATE)
         val out = Dsp.decimate(filtered, RATE)
@@ -358,7 +363,7 @@ object Lacquer {
             m, velocity.toDouble(), gains[i] * mixScale, held, period, profile.loop,
             random.nextDouble(-.08, .08)) }
         val glue = Glue(m, profile.processing)
-        val duration = (plans.maxOf { it.duration } + .035).coerceAtMost(MAX_FINITE_SECONDS.toDouble())
+        val duration = (plans.maxOf { it.duration } + TAIL_PAD_SECONDS).coerceAtMost(MAX_FINITE_SECONDS.toDouble())
         val n = if (held) period * 2 else (((seconds?.toDouble() ?: duration) * RATE).roundToInt() * Dsp.OVERSAMPLE)
         val raw = FloatArray(n)
         val taps = if (recordLayers) profile.layers.associate { it.role to FloatArray(n) } else emptyMap()
