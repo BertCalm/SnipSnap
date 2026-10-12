@@ -13,7 +13,7 @@ import kotlin.math.abs
 import kotlin.math.log10
 
 /**
- * Renders the ARCO R1j bell gate: the short listening page for the two lowest CELLO notes (C2 and F#2), where the engine's peak ceiling stops the BODY lift short. Output under `testkit/arco-bell-gate/` (gitignored):
+ * Renders the ARCO R1j bell gate: the short listening page for two low CELLO notes (C2 and F#2), where the engine's peak ceiling stops the BODY lift short. Output under `testkit/arco-bell-gate/` (gitignored):
  * `manifest.json` (the page builds itself from it), the clips in one folder, `CELLO/<clip id>.wav`, and, in a full run, a copy of the page from the test resources (`audition/arco-bell-gate.html`). The key
  * (`testkit/arco-bell-gate-key.json`, a sibling of the folder and never in it) says which clip is which and carries each clip's numbers; [ArcoBellGateDecoder] reads it with the owner's saved answers.
  * Run `./gradlew :synth:generateArcoBellGate` (add `-PclipsOnly` for the development mode, `--clips-only` on the command line: clips, manifest and key, no `index.html`). The full run refuses a page that is missing or is
@@ -50,11 +50,14 @@ import kotlin.math.log10
  * The manifest (JSON, UTF-8; every text in it is what the page shows; no number, no `box`, no EQ words, nothing on direction: [guardWords] throws on one):
  *  - `phase` "arco_r1j", `storagePrefix` "arco-bell-gate:" and `docs`: `{prefix: "verdicts/arco_r1j_", overallKey: "overall"}`. There is ONE db doc, at `docs.prefix + docs.overallKey`, and its local copy is under
  *    `arco-bell-gate:arco_r1j:overall`. The R1h voice docs (chips, reactions) are gone: there are no chips.
- *  - `intro`: the honesty text, a list of paragraphs (the clips are not level on purpose, nobody has listened, some may sound worse, the two lowest notes of the cello, headphones please and how to answer).
+ *  - `intro`: the honesty text, three short paragraphs: headphones, where to say what else is used, and one steady volume for the whole page; two low cello notes in several versions, nobody has listened, some may sound better than
+ *    THE PLAIN ONE and some worse, where to write anything odd; the clips are not level on purpose, choose what sounds fuller whether or not it is louder, and where to tap SAVE VERDICT. How a pair is answered is not in the intro:
+ *    it is said on the pair (`pair.lockedText`) and in the opening text of the first section (`body`).
  *  - `groups`: `[{id, voice, note, label, body, clips: [[id, name, desc]]}]`, C2 then F#2, in the page's order. `voice` is "CELLO" and the file of a clip is `<voice>/<id>.wav`. `body` is the text that opens the section.
  *    A clip is `[id, name, desc]` as on R1e's page: THE PLAIN ONE is first, its id ends in `_plain`; then the four versions as `CLIP <letter>` in the keep widget's shuffled order; at C2 the hidden copy last (`CLIP G`).
  *    The page never shows a clip's id or name outside a keep widget; the pair widgets play clips by id and show only A and B. These are the only clips the page plays.
- *  - `questions` (all wording lives here): `required` (the ids the counter counts: the device question, the 15 pairs and the two keeps), `counter` and `save` (texts with `{n}` for the count: `some`, `one`, `none`; the page
+ *  - `questions` (all wording lives here): `required` (the ids the counter counts: the device question, the nine C2 pairs and the C2 keep, 11 items; the F#2 section is OPTIONAL: its six pairs and its keep stay on the page,
+ *    are answered if the owner wishes and are not counted, so the page marks an item that is not in `required` as optional; [guardRequired] proves the list), `counter` and `save` (texts with `{n}` for the count: `some`, `one`, `none`; the page
  *    shows the counter and the save button says how many are unanswered; saving with some unanswered is allowed; `counter.unsent` is what the strip says when every required question is answered but the answers have not
  *    been sent, which only SAVE VERDICT does), `device` (`{id, first, required, text, options: [{v, t}]}`: the first question, required, a single choice of six), `pair` (`{gate: "pairRun", text, lockedText, options: [{v, t}]}`,
  *    the one wording shared by the 15 widgets) and `pairs` (`[{id, voice, group, note, a, b}]`, 15 widgets in the page's order, the section of a widget being its `group`: `a` is the clip played first and `b` the second;
@@ -64,7 +67,7 @@ import kotlin.math.log10
  *    `surfaceAfter` any more.
  *
  * The saved doc, `verdicts/arco_r1j_overall`: `{q_device, q_pair_1 .. q_pair_15, q_keep_C2, q_keep_F2, q_note, plays, savedAt}`; every answer is a string, `plays` is an object of numbers, and a field that is empty or absent is
- * unanswered. The values: [Q_DEVICE] one of [DEVICE_HEADPHONES], [DEVICE_EARBUDS], [DEVICE_PHONE], [DEVICE_LAPTOP], [DEVICE_LOW], [DEVICE_OTHER]; each of [Q_PAIRS]: [PAIR_A], [PAIR_B] or [PAIR_CANT] (`a` and `b` are the
+ * unanswered (the F#2 fields, `q_pair_10 .. q_pair_15` and `q_keep_F2`, are optional and may stay empty). The values: [Q_DEVICE] one of [DEVICE_HEADPHONES], [DEVICE_EARBUDS], [DEVICE_PHONE], [DEVICE_LAPTOP], [DEVICE_LOW], [DEVICE_OTHER]; each of [Q_PAIRS]: [PAIR_A], [PAIR_B] or [PAIR_CANT] (`a` and `b` are the
  * first and second clip of the widget, as the manifest and the key list them); [Q_KEEP_C2] and [Q_KEEP_F2]: the id of the chosen clip (one of the four in that widget), [KEEP_NONE] (the plain one is better), [KEEP_THICK]
  * (all of them too thick or boomy) or [KEEP_CANT]; [Q_NOTE]: the owner's text. `plays` has exactly R1h's shape (its voice docs held the same map): `{<clip id>: <how many times that clip was started>, <pair widget id>: <how
  * many times that widget's own PLAY A, THEN B ran to its end>}`. A PLAY A, THEN B run adds one to the plays of A's clip and of B's clip when each starts and one to the widget's id when it ends; a play of A or B alone adds
@@ -84,7 +87,7 @@ import kotlin.math.log10
  * with the rule broken and requires it to throw (and the right guard to be the one that threw), or, for a positive control, requires it not to: the copy of the lift section against the engine's (and one with the bell 0.5 dB
  * off); the helper's equal split against the engine's cap; the cap acting and no halving at BODY 1; a frontier point over the limit, at the search ceiling or short of the frontier; a rise off the scout's table by more than
  * 0.05 dB; THE PLAIN ONE not [Arco.render] at BODY 0.5; TODAY not [Arco.render] at BODY 1.0; TODAY-COPY not bit-identical to TODAY; a page gain off by 0.001 percent; a clip over 0.95 at the page's gain; a version that does
- * not lift or turns the top down; identical clips that should differ; each shuffle rule; a clip file that is not the clip times the gain; a tampered hash; the words law (extended with shelf, bell and bigger); the one-line
+ * not lift or turns the top down; identical clips that should differ; each shuffle rule; a clip file that is not the clip times the gain; a tampered hash; the words law (extended with shelf, bell and bigger); the required list (an F#2 item counted, a C2 item or the device question missing, an item twice); the one-line
  * placeholder page, a page with an earlier round's paths or a leaked name; a manifest with a number in it; the key inside the published folder. The run is deterministic: two runs write identical bytes of every file and the key.
  */
 object ArcoBellGateGenerator {
@@ -184,11 +187,11 @@ object ArcoBellGateGenerator {
      */
     internal val SPECS: List<Spec> = listOf(
         Spec(
-            0, "C2", G_C2, "CELLO, C2 (THE LOWEST NOTE)", "The lowest note. Nine pairs, then one question to finish this note.", Q_KEEP_C2,
+            0, "C2", G_C2, "CELLO, C2 (THE LOWEST NOTE)", "The lowest note. Nine pairs. In each, tap PLAY A, THEN B and let it finish, then answer. After the pairs, one question to finish this note.", Q_KEEP_C2,
             listOf(Role.MORE_BELL, Role.MORE_SHELF, Role.TODAY, Role.BELL_ONLY), "CDEF", 'G',
         ),
         Spec(
-            6, "F#2", G_F2, "CELLO, F#2 (A SECOND LOW NOTE)", "A second low note. Six pairs, then one question to finish this note.", Q_KEEP_F2,
+            6, "F#2", G_F2, "CELLO, F#2 (A SECOND LOW NOTE)", "A second low note. Optional: only if you still have the patience. Six pairs, then one question to finish this note.", Q_KEEP_F2,
             listOf(Role.MORE_SHELF, Role.TODAY, Role.BELL_ONLY, Role.MORE_BELL), "HJKL", null,
         ),
     )
@@ -232,6 +235,11 @@ object ArcoBellGateGenerator {
         pair(14, G_F2, Comparison.MORE_SHELF, Role.TODAY, Role.MORE_SHELF),
         pair(15, G_F2, Comparison.BELL_ONLY, Role.BELL_ONLY, Role.TODAY),
     )
+
+    /**
+     * The ids the counter counts (the manifest's `required`): the device question, the nine C2 pairs and the C2 keep, 11 items. The F#2 section (six pairs and its keep) is optional: it stays on the page and is not counted.
+     */
+    internal fun requiredIds(): List<String> = listOf(Q_DEVICE) + PAIRS.filter { it.group == G_C2 }.map { it.id } + SPECS.first { it.prefix == G_C2 }.keepId
 
     // ---- the scout's table ------------------------------------------------------------------------------
 
@@ -456,6 +464,19 @@ object ArcoBellGateGenerator {
         check(!Regex("[0-9]\\.[0-9]").containsMatchIn(manifest)) { "the manifest has a decimal number" }
         val shown = manifest.replace(STORAGE_PREFIX, "")
         for (leak in LEAKS + listOf("sha256", "shelf", "bell", "today", "identical")) check(!shown.contains(leak, ignoreCase = true)) { "the manifest names \"$leak\"" }
+    }
+
+    /**
+     * The manifest's `required` list is the device question, every C2 pair and the C2 keep, each once, and nothing from the F#2 section (optional: it stays on the page and is not counted). [required] is read back from the
+     * built manifest, so it is the list the page will count.
+     */
+    private fun guardRequired(required: List<String>, pairs: List<PairSpec>, specs: List<Spec>) {
+        check(required.toSet().size == required.size) { "the required list names an item twice: $required" }
+        val optional = pairs.filter { it.group != G_C2 }.map { it.id } + specs.filter { it.prefix != G_C2 }.map { it.keepId }
+        val counted = optional.filter { it in required }
+        check(counted.isEmpty()) { "the required list counts an optional F#2 item: $counted" }
+        val want = listOf(Q_DEVICE) + pairs.filter { it.group == G_C2 }.map { it.id } + specs.first { it.prefix == G_C2 }.keepId
+        check(required == want) { "the required list is not the device question, the C2 pairs and the C2 keep (${want.size} items): $required" }
     }
 
     private fun guardJson(label: String, text: String) {
@@ -892,6 +913,15 @@ object ArcoBellGateGenerator {
         mustThrow("page: an earlier round's path", "an earlier round's path") { guardPage("$longPage arco_r1h") }
         mustThrow("page: a leaked name of a version", "kind of clip") { guardPage("$longPage MORE-BELL") }
         mustThrow("page: no manifest", "does not say") { guardPage("arco_r1j arco-bell-gate: " + "x".repeat(MIN_PAGE_CHARS)) }
+        val req = requiredIds()
+        mustHold("required: the device question, the nine C2 pairs and the C2 keep (11 items)") { guardRequired(req, pairs, specs) }
+        mustThrow("required: the earlier list of 18 (F#2 counted)", "optional F#2 item") { guardRequired(listOf(Q_DEVICE) + Q_PAIRS + specs.map { it.keepId }, pairs, specs) }
+        mustThrow("required: the F#2 keep counted", "optional F#2 item") { guardRequired(req + Q_KEEP_F2, pairs, specs) }
+        mustThrow("required: an F#2 pair counted", "optional F#2 item") { guardRequired(req + Q_PAIRS[9], pairs, specs) }
+        mustThrow("required: a C2 pair missing", "is not the device question") { guardRequired(req - Q_PAIRS[3], pairs, specs) }
+        mustThrow("required: the C2 keep missing", "is not the device question") { guardRequired(req - Q_KEEP_C2, pairs, specs) }
+        mustThrow("required: the device question missing", "is not the device question") { guardRequired(req - Q_DEVICE, pairs, specs) }
+        mustThrow("required: an item twice", "twice") { guardRequired(req + Q_PAIRS[0], pairs, specs) }
         mustThrow("manifest: a decimal number", "decimal number") { guardBlind("{\"x\":\"0.75\"}") }
         mustThrow("manifest: a hash", "names") { guardBlind("{\"sha256\":\"abc\"}") }
         mustThrow("manifest: a role", "names") { guardBlind("{\"x\":\"bell-only\"}") }
@@ -1020,6 +1050,9 @@ object ArcoBellGateGenerator {
         guardWords(visible)
         guardBlind(manifest)
         guardJson("manifest.json", manifest)
+        val required = Json.parse(manifest).obj().getValue("questions").obj().getValue("required").arr().map { it.str() }
+        guardRequired(required, PAIRS, SPECS)
+        println("ARCO bell REQUIRED the counter counts ${required.size} items (the device question, the C2 pairs ${PAIRS.count { it.group == G_C2 }} and the C2 keep); the F#2 section is optional (${PAIRS.count { it.group != G_C2 }} pairs and its keep, not counted): OK")
         val key = keyJson(groups, hashes)
         guardJson("the key", key)
         File(root, "manifest.json").writeText(manifest)
@@ -1046,18 +1079,15 @@ object ArcoBellGateGenerator {
     private const val DOT = "·"
 
     private val INTRO = listOf(
-        "Headphones, please. If your speaker cannot play low notes, say so in the first question.",
-        "These are the two lowest notes of the cello, long and low. Each note comes in several versions. The questions put two of them side by side, and at the end of each note you pick the one you would keep.",
-        "The clips are not the same loudness, on purpose. THE PLAIN ONE sets the level for its note, and some versions add sound to it, so they are louder than it is.",
-        "Nobody has listened to these versions yet. Some of them may sound worse than THE PLAIN ONE. If one does, say so.",
-        "In each pair, tap PLAY A, THEN B and let it finish. The answer unlocks once it has. After that you can play A or B alone as often as you like.",
-        "Your answers stay on this phone until you tap SAVE VERDICT at the very bottom of the page. Tap it when you are done.",
+        "Headphones, please. No headphones? Say what you use in the first question. Set your volume once, so THE PLAIN ONE is easy to hear, and leave it there for the whole page.",
+        "Two low cello notes, each in several versions. Nobody has listened to them yet: some may sound better than THE PLAIN ONE (nothing added) and some worse. Anything odd, write it in the last field.",
+        "The clips are not the same loudness, on purpose: the other versions add sound, so they are louder than THE PLAIN ONE. Choose what sounds fuller to you, whether or not it is louder. Tap SAVE VERDICT at the very bottom when you are done.",
     )
     private const val PLAIN_DESC = "the reference: how the note sounds with nothing added"
     private const val DEVICE_TEXT = "First question: what are you listening on?"
     private const val PAIR_TEXT = "Which of these two sounds fuller?"
     private const val PAIR_LOCKED = "Tap PLAY A, THEN B and let it finish, then answer."
-    private const val KEEP_TEXT = "Which one would you keep for this note?"
+    private const val KEEP_TEXT = "Which one would you keep for this note? Tap the triangle to hear a clip, and its name to keep it."
     private const val NOTE_TEXT = "Anything else you noticed? Say it in your own words."
 
     private fun q(s: String): String {
@@ -1097,7 +1127,7 @@ object ArcoBellGateGenerator {
             )
         }
         val questions = obj(
-            "required" to arr((listOf(Q_DEVICE) + Q_PAIRS + SPECS.map { it.keepId }).map { q(it) }),
+            "required" to arr(requiredIds().map { q(it) }),
             "counter" to obj(
                 "some" to v("{n} REQUIRED QUESTIONS UNANSWERED"), "one" to v("ONE REQUIRED QUESTION UNANSWERED"), "none" to v("ALL REQUIRED QUESTIONS ANSWERED"),
                 "unsent" to v("ALL ANSWERED. NOW TAP SAVE VERDICT AT THE BOTTOM"),

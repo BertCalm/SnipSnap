@@ -414,6 +414,7 @@ tasks.register<JavaExec>("generateArcoBellGate") {
     description = "Render the ARCO R1j bell gate clips, manifest and listening page under testkit/arco-bell-gate/ and the key to it beside the folder as testkit/arco-bell-gate-key.json. -PclipsOnly skips the page."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ArcoBellGateGenerator")
+    jvmArgs("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8")
     workingDir = projectDir
     args("${rootDir}/testkit/arco-bell-gate")
     if (project.hasProperty("clipsOnly")) args("--clips-only")
@@ -428,6 +429,7 @@ tasks.register<JavaExec>("decodeArcoBellGate") {
     description = "Decode the saved verdicts of the ARCO R1j bell gate page (-PgateVerdicts=<folder or file>[,<folder or file>...]) against testkit/arco-bell-gate-key.json."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ArcoBellGateDecoder")
+    jvmArgs("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8")
     workingDir = projectDir
     args("${rootDir}/testkit/arco-bell-gate-key.json")
     (project.findProperty("gateVerdicts") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.forEach { args(it) }

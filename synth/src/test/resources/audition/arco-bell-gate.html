@@ -118,8 +118,8 @@
     top: env(safe-area-inset-top, 0px);
     z-index: 5;
     display: grid;
-    gap: 6px;
-    padding: 8px 12px;
+    gap: 4px;
+    padding: 6px 12px;
     border-bottom: 1px solid var(--field-border);
   }
   .transport > div { min-width: 0; }
@@ -148,7 +148,7 @@
 
   .counter {
     appearance: none;
-    min-height: 34px;
+    min-height: 44px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -252,8 +252,8 @@
 
   /* The play pads: one per clip in a keep question. */
   .pad {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     display: grid;
     place-items: center;
@@ -283,17 +283,6 @@
   .krow .meta { display: grid; gap: 2px; min-width: 0; }
   .krow .name { font-size: 18px; color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
   .krow .desc { font-size: 15px; color: var(--ink2); line-height: 1.2; }
-  .ref {
-    justify-self: start;
-    padding: 5px 8px 4px;
-    border: 1px dashed var(--field-border);
-    border-radius: 4px;
-    font-family: var(--f-pixel);
-    font-size: 8px;
-    letter-spacing: .5px;
-    color: var(--ink2);
-    user-select: none;
-  }
 
   /* The questions. */
   .q { padding: 10px 12px 8px; display: grid; gap: 8px; min-width: 0; scroll-margin-top: 130px; }
@@ -310,7 +299,7 @@
   /* The play buttons of a pair: the run (A, then B) and each clip alone. */
   .runbtn, .solobtn {
     min-width: 44px;
-    min-height: 42px;
+    min-height: 44px;
     padding: 0 10px;
     font-family: var(--f-pixel);
     font-size: 9px;
@@ -327,7 +316,7 @@
   .chip {
     appearance: none;
     min-width: 0;
-    min-height: 34px;
+    min-height: 44px;
     padding: 4px 6px;
     border: 1px solid var(--field-border);
     border-radius: 6px;
@@ -357,7 +346,8 @@
   .notes label { font-family: var(--f-marker); font-size: 13px; color: var(--ink); line-height: 1.5; }
   textarea {
     display: block;
-    width: calc(100% - 22px);
+    width: auto;
+    justify-self: stretch;
     min-height: 64px;
     resize: vertical;
     padding: 8px 10px;
@@ -446,13 +436,13 @@
     <div class="transport lcd">
       <div>
         <div class="label">NOW PLAYING</div>
-        <div class="now idle" id="now">TAP A PLAY BUTTON TO LISTEN</div>
+        <div class="now idle" id="now" role="status" aria-live="polite">TAP A PLAY BUTTON TO LISTEN</div>
       </div>
       <button class="counter" id="counter" type="button" hidden></button>
     </div>
 
-    <div id="intro"></div>
     <div id="devicehost"></div>
+    <div id="intro"></div>
 
     <div id="sections"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
 
@@ -687,12 +677,15 @@
   }
 
   // One pair question: the run (A, then B), each clip alone, and the answer, which stays shut until the run has ended.
-  function buildPair(card, g, p) {
+  // n of total is its place among its group's pairs, in the manifest's order; a pair the manifest does not
+  // list as required says so (the counter does not count it).
+  function buildPair(card, g, p, n, total) {
     var where = g.voice + DOT + g.note;
     var w = el('div', 'q');
     w.id = 'q-' + p.id;
     var qhd = el('div', 'qhd');
-    qhd.appendChild(el('span', 'where', where));
+    var place = where + DOT + 'PAIR ' + n + ' OF ' + total + (REQUIRED.indexOf(p.id) < 0 ? DOT + 'OPTIONAL' : '');
+    qhd.appendChild(el('span', 'where', place));
     var rt = reqTag(p.id);
     if (rt) qhd.appendChild(rt);
     w.appendChild(qhd);
@@ -752,14 +745,14 @@
       pad.addEventListener('click', function () { tapPad(g, fid, where + DOT + info.name, pad, row); });
       row.appendChild(pad);
       if (info.plain) {
-        // the reference: nothing to answer
+        // the reference: nothing to answer (its description, from the manifest, already says it is the reference)
         var meta = el('div', 'meta');
         meta.appendChild(el('span', 'name', info.name));
         if (info.desc) meta.appendChild(el('span', 'desc', info.desc));
-        meta.appendChild(el('span', 'ref', 'THE REFERENCE'));
         row.appendChild(meta);
       } else {
-        row.appendChild(chip(k.id, fid, info.name, where + ': ' + k.text + ' ' + info.name));
+        // the button says what a tap does: it keeps this clip (the pad beside it plays it)
+        row.appendChild(chip(k.id, fid, 'KEEP ' + info.name, where + ': ' + k.text + ' ' + info.name));
       }
       w.appendChild(row);
     });
@@ -778,7 +771,8 @@
       hd.appendChild(el('h2', null, g.label));
       hd.appendChild(el('div', 'lead', g.body));
       card.appendChild(hd);
-      only(Q.pairs, function (p) { return p.group === g.id; }).forEach(function (p) { buildPair(card, g, p); });
+      var inGroup = only(Q.pairs, function (p) { return p.group === g.id; });
+      inGroup.forEach(function (p, i) { buildPair(card, g, p, i + 1, inGroup.length); });
       only(Q.keep, function (k) { return k.group === g.id; }).forEach(function (k) { buildKeep(card, g, k); });
       host.appendChild(card);
     });
@@ -899,6 +893,7 @@
     seq.waiting = false;
     var st = seq.steps[i];
     light(seq, st.row);
+    if (st.say) say(st.say);
     st.started = false;
     a.src = st.src;
     start(seq, a, st);
@@ -954,14 +949,16 @@
             steps: [{ fid: fid, src: srcOf(g, fid), row: row }] });
   }
 
-  // The first clip of a pair question, then (after GAP_MS) the second. The strip says only A, then B.
+  // The first clip of a pair question, then (after GAP_MS) the second. The strip says which of the two
+  // sounds (A while the first plays, with B to follow, then B), and only A or B: never a clip's letter or name.
   // When the second clip has played to its end, the run counts (pw is the widget's id).
   function tapRun(g, p, btn) {
     if (current && current.btn === btn) { setPlaying(null); return; }
+    var at = g.voice + DOT + g.note + DOT;
     begin({ btn: btn, pw: p.id, audio: null, step: 0, waiting: false, timer: null, lit: null,
-            label: g.voice + DOT + g.note + DOT + 'A, THEN B',
-            steps: [{ fid: p.a, src: srcOf(g, p.a), row: null },
-                    { fid: p.b, src: srcOf(g, p.b), row: null }] });
+            label: at + 'A (THEN B)',
+            steps: [{ fid: p.a, src: srcOf(g, p.a), row: null, say: at + 'A (THEN B)' },
+                    { fid: p.b, src: srcOf(g, p.b), row: null, say: at + 'B' }] });
   }
 
   // How often each clip was started, and each pair question's runs. Plays are not answers: this
@@ -1095,6 +1092,24 @@
   var statusEl = $('status'), statusV = $('statusv');
   var timers = {};
   var queue = Promise.resolve();
+  // A call to the store that never answers (a dropped connection, a phone that slept in the middle of the
+  // call) must not freeze saving for good: after STORE_WAIT_MS it counts as failed, the ten second retry
+  // sends it again, and an answer that comes after that is ignored. Twenty seconds is not a listening value.
+  // Known and accepted: the store cannot call a request back, so a request that timed out may still land
+  // later. It could land after a newer save only if the owner changed an answer and saved again while the
+  // first save was stuck for over twenty seconds; the store would then hold the older answers while the
+  // page says SAVED. No read-back is added for that.
+  var STORE_WAIT_MS = 20000;
+  function within(promise) {
+    return new Promise(function (resolve, reject) {
+      var t = setTimeout(function () {
+        var e = new Error('no answer from the store');
+        e.code = 'timeout';
+        reject(e);
+      }, STORE_WAIT_MS);
+      Promise.resolve(promise).then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
+    });
+  }
   // The page is usable before the shared store has answered, and a reload must
   // not forget what the store never got. So these flags say what this phone holds
   // that the store may not. They live here and in the local record beside the content,
@@ -1272,7 +1287,7 @@
     busy++;
     setStatus(null, 'SAVING...');
     queue = queue
-      .then(function () { return store.doc(docPath()).set(data); })
+      .then(function () { return within(store.doc(docPath()).set(data)); })
       .then(function () {
         busy--;
         if (draft) {
@@ -1306,13 +1321,16 @@
   function connect() {
     if (started) return;
     started = true;
-    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use(STORE_NAME) : Promise.resolve(null);
+    // use() should give the store or null, but if it throws on the spot the page goes the way of no store at all
+    var use = null;
+    try { if (window.claude && typeof window.claude.use === 'function') use = window.claude.use(STORE_NAME); } catch (e) { use = null; }
     Promise.resolve(use).then(function (ns) { store = ns || null; return store; }, function () { store = null; return null; })
       .then(function (ns) {
         if (!ns) { storeState = 'off'; setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
         storeState = 'ready';
-        // the first read is applied or skipped (reconcile) before anything is written
-        return new Promise(function (res) { res(ns.doc(docPath()).get()); })
+        // the first read is applied or skipped (reconcile) before anything is written. A read that
+        // never answers counts as failed after STORE_WAIT_MS, like a write, so saving is not blocked for good.
+        return within(new Promise(function (res) { res(ns.doc(docPath()).get()); }))
           .then(function (snap) { reconcile(snap, false); }, function () { reconcile(null, true); })
           .then(function () {
             setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE');
