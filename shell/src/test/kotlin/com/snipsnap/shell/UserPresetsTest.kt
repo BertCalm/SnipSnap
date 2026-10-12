@@ -1,14 +1,25 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
+import com.snipsnap.json.Json
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourPresets
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.Lacquer
+import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LacquerRole
+import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.PrismVoice
+import com.snipsnap.synth.StoopVoice
+import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.SkinVoice
@@ -140,6 +151,8 @@ class UserPresetsTest {
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
                 "PRISM" to PrismVoice.entries.map { it.name },
+                "CONTOUR" to ContourVoice.entries.map { it.name },
+                "STOOP" to StoopVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -178,9 +191,18 @@ class UserPresetsTest {
         assertEquals("p(ThumpVoice.KICK, \"MY KICK\", \"TUNE\" to 0.34f, \"SWEEP\" to 0.45f),", line)
         // Every factory preset, back out of its own line to the float it holds.
         val value = Regex("\"[^\"]+\" to ([-0-9.E]+)f")
+        val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
-            val parsed = value.findAll(UserPresets.rosterLine(preset)).map { it.groupValues[1].toFloat() }.toList()
-            assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            val line = UserPresets.rosterLine(preset)
+            if (preset is LacquerPatch) {
+                assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is StoopPatch) {
+                val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
+                assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
+            } else {
+                val parsed = value.findAll(line).map { it.groupValues[1].toFloat() }.toList()
+                assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+            }
         }
         val quoted = UserPresets.rosterLine(ThumpPatch("SAY \"HI\" \$X", ThumpVoice.KICK, emptyMap()))
         assertTrue("\"SAY \\\"HI\\\" \\\$X\"" in quoted, quoted)
@@ -239,14 +261,129 @@ class UserPresetsTest {
     }
 
     @Test
+    fun `a saved contour retains its complete spectral recipe when promoted`() {
+        val root = shelf()
+        try {
+            val source = ContourPresets.all().first { it.name == "Moving Corner" }.copy(name = "MY CORNER", velocity = .3f)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val patch = saved.patch as ContourPatch
+            val line = UserPresets.rosterLine(patch)
+            assertTrue("bodyTable = ContourTable.SOFT_SAW" in line)
+            assertTrue("edgeTable = ContourTable.COPPER" in line)
+            assertTrue("relation = ContourRelation.OPPOSED" in line)
+            assertTrue("ampDecay = 0.45f" in line)
+            assertTrue("bodyHarmonics = ${patch.config.bodyHarmonics}f" in line)
+            assertTrue("edgeRootLevel = ${patch.config.edgeRootLevel}f" in line)
+            assertTrue("edgeAttack = ${patch.config.edgeAttack}f" in line)
+            assertTrue("edgeDecay = ${patch.config.edgeDecay}f" in line)
+            assertTrue("edgeSustain = ${patch.config.edgeSustain}f" in line)
+            assertTrue("loopSeconds = ${patch.config.loopSeconds}f" in line)
+            assertTrue("velocity = 0.3f, model = ${patch.model}" in line)
+            assertEquals("ContourPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `saved lacquer promotion retains custom independent layers root velocity and escaped name`() {
+        val root = shelf()
+        try {
+            val profile = Lacquer.profileFor(LacquerVoice.KEY)
+            val custom = profile.copy(layers = profile.layers.map { layer ->
+                if (layer.role == LacquerRole.TRAIL) layer.copy(
+                    gain = layer.gain * .85f,
+                    timing = layer.timing.copy(reliefSeconds = .08f),
+                    envelope = layer.envelope.copy(releaseSeconds = 1.1f),
+                ) else layer
+            })
+            val source = LacquerPatch("COAT \"A\" \$X", LacquerVoice.KEY,
+                linkedMapOf("RELIEF" to .83f, "GLUE" to .21f), midi = 36, velocity = .3f, profile = custom)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(source, lacquerFromRosterLine(line), "the constructor rebuilds every nested field and escaped text")
+            assertEquals("LacquerPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Contour promotion reconstructs every spectral and edge envelope field exactly`() {
+        val root = shelf()
+        try {
+            val source = ContourPresets.all().first { it.name == "Moving Corner" }.let {
+                it.copy(name = "MY EDGE", velocity = .3f, config = it.config.copy(
+                    bodyHarmonics = 1.37f, edgeRootLevel = .29f,
+                    edgeAttack = .017f, edgeDecay = .91f, edgeSustain = .43f,
+                ))
+            }
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single().patch as ContourPatch
+            assertEquals(source, saved, "all revised fields survive the shelf JSON roundtrip")
+            val line = UserPresets.rosterLine(saved)
+            val constructor = line.substringAfter("config = ").substringBefore(", velocity = ")
+            assertEquals(
+                "ContourConfig(bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER, " +
+                    "edgeRatio = 1.0f, edgeLag = 0.18f, relation = ContourRelation.OPPOSED, " +
+                    "bodyLevel = 0.8f, edgeLevel = 0.31f, subLevel = 0.09f, " +
+                    "bodyHarmonics = 1.37f, edgeRootLevel = 0.29f, " +
+                    "edgeAttack = 0.017f, edgeDecay = 0.91f, edgeSustain = 0.43f, " +
+                    "bodyScanBias = 0.0f, edgeScanBias = 0.0f, bodyTravel = 0.22f, edgeTravel = 0.6f, " +
+                    "ampAttack = 0.006f, ampDecay = 0.45f, ampSustain = 0.48f, " +
+                    "ampRelease = 0.42f, sustainSeconds = 0.75f, " +
+                    "filterAttack = 0.005f, filterDecay = 0.5f, filterAmount = 0.6f, " +
+                    "motionShape = ContourMotionShape.FALL, motionSeconds = 1.2f, " +
+                    "filterType = ContourFilterType.LOW_PASS, loopSeconds = 2.0f)",
+                constructor,
+                "the pasteable Kotlin constructor retains the exact architecture, including all five revised fields",
+            )
+            // Read the emitted constructor's own literals into the patch decoder. Any omitted
+            // revised field falls back to neutral legacy state and changes this recipe.
+            val fields = constructor.removePrefix("ContourConfig(").removeSuffix(")").split(", ").associate { entry ->
+                val (name, literal) = entry.split(" = ", limit = 2)
+                name to if (literal.endsWith("f")) JsonValue.Num(literal.dropLast(1).toDouble())
+                    else JsonValue.Str(literal.substringAfterLast('.'))
+            }
+            val promoted = ContourPatch.fromJsonValue(JsonValue.Obj(
+                saved.toJsonValue().entries + ("config" to JsonValue.Obj(fields)),
+            )) as ContourPatch
+            assertEquals(source.config, promoted.config, "promotion reconstructs the saved contour and independent edge envelope")
+            assertEquals(source, promoted, "all audible recipe fields survive promotion")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    private fun lacquerFromRosterLine(line: String): LacquerPatch {
+        assertTrue(line.startsWith("LacquerPatch.fromJsonText(\"") && line.endsWith("\"),"), line)
+        val literal = line.removePrefix("LacquerPatch.fromJsonText(").removeSuffix("),")
+        // Kotlin escapes a dollar sign in addition to JSON's ordinary string escapes.
+        val json = Json.parse(literal.replace("\\\$", "\$")).str()
+        return LacquerPatch.fromJsonText(json)
+    }
+
+    @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
         assertTrue(engines.size >= 8, "every registered engine ships a roster: $engines")
         for (engine in engines) {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
-            val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
-            assertTrue(helper in table.readText(Charsets.UTF_8), "${table.name} is written with the helper the line uses: $helper")
+            val text = table.readText(Charsets.UTF_8)
+            if (engine == StoopPatch.ENGINE) {
+                assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
+                for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
+                    assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
+                }
+            } else {
+                val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
+                assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
+            }
             val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
             assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
         }

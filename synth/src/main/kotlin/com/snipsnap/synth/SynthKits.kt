@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Scales
 import com.snipsnap.kit.ArrangedPad
 
 /**
@@ -640,6 +641,67 @@ object SynthKits {
     }
 
     /**
+     * Sixteen dry hybrid pads: eight KEY notes in C minor pentatonic, one finite
+     * candidate from each voice, and the two settled held STRING/SOFT candidates.
+     * Every pad saves the generated attack, PM routing, envelopes, root and energy.
+     */
+    fun alloy(): List<ArrangedPad?> {
+        val key = AlloyPresets.forVoice(AlloyVoice.KEY).first()
+        fun landed(patch: AlloyPatch) = pad(patch, Alloy.drumClassFor(patch.voice, patch.macros))
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            landed(key.copy(name = "Alloy ${i + 1}", midi = Alloy.DEFAULT_MIDI + semitone))
+        }
+        val finite = AlloyVoice.entries.map { landed(AlloyPresets.forVoice(it).first()) }
+        val held = AlloyPresets.all().filter { Alloy.isLoop(it.macros.getValue("HOLD")) }.map { landed(it) }
+        return scale + finite + held
+
+    }
+
+    /**
+     * A dry groove kit: bass in the bottom row, tines above it, then clipped keys,
+     * organ, lead and explicit root/fifth/octave chords. The final two pads hold.
+     * Exact note, source registration, answer and chord voicing stay in every recipe.
+     */
+    fun stoop(): List<ArrangedPad?> {
+        fun sound(voice: StoopVoice, name: String, midi: Int, held: Boolean = false, shadow: Float? = null): ArrangedPad {
+            val preset = StoopPresets.forVoice(voice).first()
+            val macros = preset.macros + ("HOLD" to if (held) 1f else 0f) +
+                (shadow?.let { mapOf("SHADOW" to it) } ?: emptyMap())
+            val patch = preset.copy(name = name, macros = macros, midi = midi,
+                chordIntervals = if (voice == StoopVoice.CHORD) listOf(0, 7, 12) else preset.chordIntervals)
+            val tags = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi)) +
+                if (voice == StoopVoice.CHORD) mapOf("chordIntervals" to patch.chordIntervals.joinToString(",")) else emptyMap()
+            return pad(patch, Stoop.drumClassFor(voice, macros)).copy(displayName = name, source = tags)
+        }
+        return listOf(
+            sound(StoopVoice.BASS, "Bass C2", 36), sound(StoopVoice.BASS, "Bass Eb2", 39),
+            sound(StoopVoice.BASS, "Bass F2", 41), sound(StoopVoice.BASS, "Bass G2", 43),
+            sound(StoopVoice.TINE, "Tine C4", 60), sound(StoopVoice.TINE, "Tine Eb4", 63),
+            sound(StoopVoice.TINE, "Tine F4", 65), sound(StoopVoice.TINE, "Tine G4", 67),
+            sound(StoopVoice.CLAV, "Clav C3", 48), sound(StoopVoice.CLAV, "Clav G3", 55),
+            sound(StoopVoice.ORGAN, "Organ C3", 48), sound(StoopVoice.LEAD, "Lead C5", 72),
+            sound(StoopVoice.CHORD, "Fifth Chord C3", 48), sound(StoopVoice.TINE, "Answering Tine", 60, shadow = .6f),
+            sound(StoopVoice.ORGAN, "Held Organ C3", 48, held = true),
+            sound(StoopVoice.CHORD, "Held Fifth C3", 48, held = true),
+        )
+
+    }
+
+    /**
+     * A dry layered-tone audition kit. Eight KEY notes climb C minor pentatonic;
+     * the upper half contains the eight provisional recipes, including held SILK.
+     * Each pad keeps its root, velocity and complete layer profile for regeneration.
+     */
+    fun lacquer(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = LacquerPatch(
+            "Lacquer $n", LacquerVoice.KEY, Lacquer.defaults(LacquerVoice.KEY),
+            midi = Lacquer.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            LacquerPresets.all().map { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
@@ -738,6 +800,20 @@ object SynthKits {
             preset("Skin Conversation"), preset("Close Pass"), preset("Two Directions"), preset("Three Listeners"),
             preset("Flower Path"), preset("Elastic Answer"), preset("Rolling Floor"), preset("Held Revel"),
         )
+    }
+
+    /**
+     * Sixteen dry tonal pads: seven KEY notes in C minor pentatonic, followed by
+     * all nine first-listen recipes. HOLD contains the settled sustain alone.
+     */
+    fun contour(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = ContourPatch(
+            "Contour $n", ContourVoice.KEY,
+            ContourEngine.defaults(ContourVoice.KEY) +
+                ("TUNE" to (.5f + semitone / (2f * ContourEngine.TUNE_SEMITONES))),
+        ).let { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(7).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
     }
 
     /**

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f1e9">
+  <meta name="description" content="Listen to CONTOUR for SnipSnap: original wavetable voices, a stable body and a moving digital edge. Compare dry WAVs and save your listening verdicts.">
+  <title>CONTOUR — SnipSnap audition</title>
+  <style>
+    :root{color-scheme:light;--paper:#f5f1e9;--card:#fffdf8;--ink:#22291f;--muted:#687063;--line:#dedfd4;--green:#254f3a;--lime:#d9eeac;--edge:#a9482f;--warm:#f4e8dc;--radius:18px}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:var(--green)}button,input,select,textarea{font:inherit}button,select,input,textarea{border:1px solid var(--line);border-radius:9px}button{cursor:pointer;background:var(--card);color:var(--ink);padding:9px 13px;font-weight:600}button:hover{border-color:var(--green)}button:disabled{cursor:default;opacity:.5}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--edge);outline-offset:3px}button.primary{background:var(--green);color:white;border-color:var(--green)}button.active{background:var(--lime);border-color:#abc87c}a.download{display:inline-block;text-decoration:none;border-bottom:1px solid var(--green);font-weight:600;font-size:12px}h1,h2,h3,p{margin-top:0}h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:400;letter-spacing:-.035em}h1{font-size:clamp(70px,12vw,144px);line-height:.95;margin:17px 0 23px}h2{font-size:38px;line-height:1.12;margin-bottom:14px}h3{font-size:17px;line-height:1.35;margin-bottom:9px}small,.muted{color:var(--muted)}.wrap{max-width:1380px;margin:0 auto;padding:0 42px}.topline{display:flex;justify-content:space-between;align-items:center;padding-top:28px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}.brand{font-weight:800;letter-spacing:.16em;text-decoration:none;color:var(--ink)}.edition{display:flex;align-items:center;gap:8px}.dot{height:7px;width:7px;background:var(--edge);border-radius:50%}.hero{display:grid;grid-template-columns:1.2fr 1fr;gap:55px;padding:54px 0 44px;align-items:center}.eyebrow{color:var(--green);text-transform:uppercase;letter-spacing:.15em;font-size:11px;font-weight:750}.intro{font-size:18px;max-width:470px;margin-bottom:23px}.pillrow{display:flex;flex-wrap:wrap;gap:8px}.pill{font-size:11px;border:1px solid #d0d9c4;border-radius:999px;padding:5px 10px;background:#f0f4e6}.hero-art{position:relative;border:1px solid #dce0ce;border-radius:24px;background:linear-gradient(130deg,#e9efdd,#e5e9dc 55%,#f3e3d6);min-height:310px;overflow:hidden;padding:30px}.hero-art svg{width:100%;height:195px;display:block}.art-label{display:flex;justify-content:space-between;font-size:12px;color:var(--green);font-weight:700}.art-footer{padding-top:17px;border-top:1px solid #c8d2b9;display:flex;justify-content:space-between;font-size:11px;color:#53604c}.art-footer span:last-child{color:var(--edge)}.quicklinks{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}.quicklinks button{font-size:12px}.facts{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;margin-bottom:34px;gap:25px}.fact strong{display:block;font-size:24px;font-weight:600;letter-spacing:-.04em}.fact span{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}.policy{display:grid;grid-template-columns:1.05fr 1fr;gap:42px;margin:0 0 30px}.policy p{font-size:13px;color:var(--muted);margin-bottom:8px}.policy details{border-top:1px solid var(--line);padding-top:12px}.policy summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--green)}.policy details p{padding-top:12px;font-size:12px}.notes{font-size:12px;background:#eef1e6;border:1px solid #dbe2ce;border-radius:12px;padding:12px 15px;color:#495744}.sectionline{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:17px}.sectionline h2{margin:0}.save{display:flex;gap:10px;align-items:center}.save small{font-size:11px}.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:15px}.tabs button{white-space:nowrap;border-radius:999px;font-size:12px;padding:10px 17px}.tabs button[aria-selected=true]{background:var(--green);color:white;border-color:var(--green)}.toolbar{display:grid;grid-template-columns:1.2fr .65fr 1fr .9fr;gap:13px;padding:19px 0 23px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}label.control{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:11px;font-weight:650;letter-spacing:.04em}input[type=search],select{background:var(--card);color:var(--ink);width:100%;padding:10px;font-size:13px;min-height:43px}input[type=checkbox]{accent-color:var(--green)}.category-heading{padding:28px 0 18px;display:flex;align-items:end;justify-content:space-between;gap:25px}.category-heading h3{font-size:21px;letter-spacing:-.02em;margin-bottom:5px}.category-heading p{color:var(--muted);font-size:13px;max-width:740px;margin:0}.category-heading span{font-size:12px;white-space:nowrap;color:var(--muted)}.group-label{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:20px 0 15px}.group-label h3{font-size:14px;margin:0;letter-spacing:.015em}.group-label span{font-size:11px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.clip{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;display:flex;flex-direction:column;min-width:0;transition:border-color .15s}.clip.playing{border-color:var(--green);box-shadow:0 0 0 2px #d6e7c4}.clip-top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:15px}.voice{color:var(--green);font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:750}.clip-number{font-size:10px;color:var(--muted)}.clip p.description{font-size:12px;color:var(--muted);margin-bottom:16px;min-height:57px}.recipe{font-size:10px;color:#6f7468;line-height:1.85;font-variant-numeric:tabular-nums;border-top:1px solid #ebede4;padding-top:11px;margin-bottom:15px}.recipe span{display:inline-block;margin-right:9px}.actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:auto}.actions .play{flex:1;min-width:95px}.actions button.assign{font-size:11px;padding:9px 10px;color:var(--green)}.playhead{display:flex;align-items:center;gap:9px;padding-top:12px;font-size:10px;color:var(--muted)}progress{height:4px;flex:1;width:100%;border:0;appearance:none;border-radius:8px;overflow:hidden;background:#e5e9da}progress::-webkit-progress-bar{background:#e5e9da}progress::-webkit-progress-value{background:var(--green)}progress::-moz-progress-bar{background:var(--green)}.clip-foot{display:flex;gap:11px;align-items:center;justify-content:space-between;padding:12px 0;font-size:11px}.repeat{display:flex;gap:5px;align-items:center;color:var(--green);font-size:11px}.clip details{border-top:1px solid #e7e9e0;padding-top:10px;margin-top:3px}.clip summary{cursor:pointer;font-size:11px;color:var(--muted)}audio{width:100%;height:35px;margin-top:12px}.native-hint{font-size:10px!important;margin:9px 0 0!important;min-height:0!important}.metrics{display:grid;grid-template-columns:1fr 1fr;font-size:10px;gap:6px;margin:10px 0 5px}.metrics dt{color:var(--muted)}.metrics dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}.feedback{margin-top:12px}.feedback label{display:block;font-size:11px;color:var(--muted);margin:10px 0 5px}.feedback select{font-size:11px;min-height:36px;padding:7px}.feedback textarea{background:#fffdf8;width:100%;resize:vertical;min-height:55px;padding:9px;font-size:12px}.group-feedback{border:1px solid var(--line);border-radius:14px;padding:20px;margin:26px 0;background:#eaf0e0}.group-feedback h3{font-size:14px}.group-feedback .formline{display:grid;grid-template-columns:220px 1fr;gap:16px}.group-feedback textarea{min-height:43px}.group-feedback .feedback{margin:0}.group-feedback label{margin-top:0}.more{text-align:center;padding:28px 0}.more button{min-width:220px}.empty{padding:60px;text-align:center;color:var(--muted)}.status{min-height:24px;font-size:12px;color:var(--green);padding-top:8px}.error{color:#a33824}.footer{display:flex;justify-content:space-between;gap:30px;padding:29px 0 150px;border-top:1px solid var(--line);margin-top:25px;font-size:11px;color:var(--muted)}.footer p{max-width:600px}.compare{position:fixed;z-index:5;bottom:18px;left:50%;transform:translateX(-50%);width:min(calc(100% - 36px),1020px);background:#253b2c;color:#fffef8;border-radius:17px;padding:15px 20px;box-shadow:0 10px 35px #253b2c26;display:grid;grid-template-columns:auto 1fr 1fr auto;gap:17px;align-items:center}.compare-title{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#d1dfc7}.compare-title strong{display:block;font-size:17px;text-transform:none;letter-spacing:-.02em;color:#fff;margin-bottom:1px}.slot{display:flex;align-items:center;gap:10px;min-width:0}.slot button{background:#edf4e2;color:#253b2c;font-size:11px;border:0;min-width:65px}.slot button.selected{background:#d9eeac;box-shadow:0 0 0 2px #b3d092}.slot span{font-size:11px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.compare .stop{font-size:11px;background:transparent;border-color:#748b6e;color:#fff}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.skip{position:absolute;top:-90px;left:16px;background:white;padding:12px;z-index:10}.skip:focus{top:10px}.loading{padding:45px 0;color:var(--muted)}
+    @media(max-width:1050px){.wrap{padding:0 25px}.hero{gap:25px}.hero-art{min-height:280px;padding:23px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar{grid-template-columns:1fr 1fr}.compare{gap:10px}.compare-title{display:none}.compare{grid-template-columns:1fr 1fr auto}.policy{gap:22px}}
+    @media(max-width:650px){body{font-size:14px}.wrap{padding:0 18px}.topline{padding-top:19px;font-size:10px}.edition{font-size:9px;letter-spacing:.06em}.hero{grid-template-columns:1fr;gap:20px;padding:33px 0 25px}h1{font-size:82px}.intro{font-size:16px}.hero-art{min-height:225px;padding:18px}.hero-art svg{height:135px}.facts{gap:14px;grid-template-columns:repeat(2,1fr);padding:19px 0;margin-bottom:25px}.fact strong{font-size:22px}.fact span{font-size:9px}.policy{grid-template-columns:1fr;gap:10px}.sectionline{align-items:start;flex-direction:column;gap:10px}.sectionline h2{font-size:33px}.save small{font-size:10px}.toolbar{gap:10px}.category-heading{align-items:start}.category-heading span{padding-top:5px}.grid{grid-template-columns:1fr}.clip{padding:20px}.clip p.description{min-height:0}.group-feedback .formline{grid-template-columns:1fr;gap:10px}.compare{bottom:8px;width:calc(100% - 16px);padding:11px;gap:8px;border-radius:12px}.slot{gap:6px;align-items:start;flex-direction:column}.slot span{font-size:10px;max-width:100%;-webkit-line-clamp:1}.slot button{font-size:10px;padding:8px 10px;min-width:59px}.compare .stop{padding:8px;font-size:10px}.footer{flex-direction:column;gap:6px;padding-bottom:130px}.group-label span{display:none}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.clip{transition:none}}
+    .grid.revision-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.group-label .load-pair{font-size:11px;padding:8px 12px}
+    @media(max-width:650px){.grid.revision-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<a class="skip" href="#listen">Skip to listening clips</a>
+<div class="wrap">
+  <header class="topline"><a class="brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">SnipSnap / instruments</a><span class="edition"><span class="dot" aria-hidden="true"></span>Engineering audition · 01</span></header>
+  <section class="hero" aria-labelledby="title">
+    <div><div class="eyebrow">Original wavetable instrument</div><h1 id="title">Contour</h1><p class="intro">A solid body.<br>A moving digital edge.</p><p class="muted">Six voices built from related table pairs. Listen dry, compare at a common level, and decide which characters belong in SnipSnap.</p><div class="pillrow"><span class="pill">Original tables</span><span class="pill">Mono · 44.1 kHz · 16-bit audition</span><span class="pill">No rack effects</span><span class="pill">Provisional recipes</span></div><div class="quicklinks"><button type="button" data-jump="presets">Hear the presets ↗</button><button type="button" data-jump="voices">Meet the six voices ↗</button><button type="button" data-jump="diagnostics">Follow body + edge ↗</button></div></div>
+    <div class="hero-art"><div class="art-label"><span>01 / body</span><span style="color:var(--edge)">02 / edge</span></div><svg viewBox="0 0 540 185" role="img" aria-label="A stable rounded body waveform alongside an evolving edge waveform; an illustration of the two related layers"><g fill="none" stroke="#ccd5bf" stroke-width="1"><path d="M0 45H540M0 92H540M0 140H540"/><path d="M45 0V185M135 0V185M225 0V185M315 0V185M405 0V185M495 0V185"/></g><path d="M0 63C22 63 22 17 45 17S68 108 90 108S113 17 135 17S158 108 180 108S203 17 225 17S248 108 270 108S293 17 315 17S338 108 360 108S383 17 405 17S428 108 450 108S473 17 495 17S518 63 540 63" fill="none" stroke="#345b3c" stroke-width="3"/><path d="M0 141C8 124 17 153 26 133S36 111 45 132S52 165 62 143S76 100 85 137S93 166 102 144S111 118 120 133S130 172 140 142S151 99 160 127S171 165 180 143S190 112 200 139S209 166 220 137S232 104 242 144S252 167 260 137S273 110 282 134S293 172 304 143S315 99 324 132S334 164 345 137S357 109 366 142S379 171 389 136S400 101 409 136S420 166 432 138S444 104 453 135S465 172 477 141S489 109 499 136S520 160 540 141" fill="none" stroke="#bc593c" stroke-width="2.5"/></svg><div class="art-footer"><span>Recognizable root</span><span>Related spectral travel</span></div></div>
+  </section>
+  <div class="facts" aria-label="Audition overview"><div class="fact"><strong>09</strong><span>Dry preset recipes</span></div><div class="fact"><strong>06</strong><span>Voice identities</span></div><div class="fact"><strong>05</strong><span>Timbral controls</span></div><div class="fact"><strong id="clipTotal">—</strong><span>Listening cases</span></div></div>
+  <div class="policy"><div><div class="eyebrow">What to listen for</div><p>The body should keep the note recognizable as the edge takes a different path through its overtones. SCAN chooses a place, OFFSET separates the layers, and MOTION travels between spectral positions.</p><p>Start with the saved presets. Then compare Combined, Body only and Edge only in the Body + edge section. Add any two clips to A and B below.</p></div><div><div class="notes"><strong>Matched level is the default.</strong> Gain only: loudness target 0.12, peak ceiling 0.90. Some clips may stay below the target because of their peak. Begin with your listening volume low.</div><details><summary>Level policy, original tables and the filter</summary><p id="levelPolicy">Loading the render's level policy…</p><p>These are generated, band-limited harmonic tables with related body and edge scans. The shared low-pass is a generic chosen model with bounded drive on an oversampled path. There are no imported factory waves or circuit emulation claims.</p><p>HOLD contains the settled sustain, without its original attack. The main Play buttons use sample-accurate buffer looping. Native browser controls are available as a fallback; the four-cycle WAV gives an exact repeated-loop listening check.</p></details></div></div>
+  <main id="listen" tabindex="-1">
+    <div class="sectionline"><h2>The listening room</h2><div class="save"><small>Feedback stays in this browser.</small><button id="exportVerdicts" type="button">Export verdicts ↓</button></div></div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Listening sections"></nav>
+    <div class="toolbar"><label class="control">Search clips<input type="search" id="search" placeholder="Name, note or control…"></label><label class="control">Voice<select id="voice"><option value="">Every voice</option></select></label><label class="control">Comparison group<select id="group"><option value="">Every group</option></select></label><label class="control">Playback level<select id="level"><option value="matched">Matched · default</option><option value="raw">Raw synthesis</option><option value="normalized">Host normalized · references</option></select></label></div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <section id="panel" role="tabpanel" aria-labelledby="tab-presets"><div class="category-heading"><div><h3 id="categoryTitle">Start here</h3><p id="categoryDescription">Loading the listening matrix…</p></div><span id="count"></span></div><div id="clips"><p class="loading">Loading manifest.json…</p></div><div class="more" id="more" hidden><button id="showMore" type="button">Show more clips</button></div><div class="group-feedback"><h3 id="groupFeedbackTitle">Your verdict on this section</h3><div class="formline"><div class="feedback"><label for="groupVerdict">Overall verdict</label><select id="groupVerdict"><option value="">Not reviewed</option><option value="useful">Useful — keep developing</option><option value="needs-work">Needs work</option><option value="approved">Approved for this round</option></select></div><div class="feedback"><label for="groupNotes">What should change, or stay?</label><textarea id="groupNotes" placeholder="Tone, root clarity, control range, loop wraps…"></textarea></div></div></div></section>
+  </main>
+  <footer class="footer"><p>CONTOUR for SnipSnap. The nine recipes are provisional; owner listening approval precedes expansion. Passing measurements support engineering checks and do not establish sonic acceptance.</p><p id="round">Render provenance loading…</p></footer>
+</div>
+<aside class="compare" aria-label="Two clip comparison"><div class="compare-title"><strong>A / B</strong>One at a time</div><div class="slot"><button type="button" id="playA" aria-pressed="false" disabled>Play A</button><span id="slotA">Add a clip to A</span></div><div class="slot"><button type="button" id="playB" aria-pressed="false" disabled>Play B</button><span id="slotB">Add a clip to B</span></div><button type="button" class="stop" id="stop">Stop ■</button></aside>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const fixed = (value, places = 3) => Number.isFinite(value) ? Number(value).toFixed(places) : '—';
+  let manifest, category = 'presets', visibleLimit = 18, feedback = {clips:{},groups:{}}, storageKey = '', pendingJump = null;
+  let context, source, sourceGain, activeClip = null, activePath = '', startedAt = 0, progressFrame, requestId = 0;
+  const buffers = new Map(), repeatPreferences = new Map(), slots = {A:null,B:null};
+  let storageAvailable = true;
+  function announce(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
+  function chosenPath(clip) { return clip[$('level').value + 'Path'] || clip.matchedPath; }
+  function chosenLevel(clip) { return clip[$('level').value + 'Path'] ? $('level').value : 'matched'; }
+  function byId(id) { return manifest.clips.find(clip => clip.id === id); }
+  function saveFeedback() {
+    feedback.updatedAt = new Date().toISOString();
+    try { localStorage.setItem(storageKey, JSON.stringify(feedback)); } catch (_) { storageAvailable = false; announce('Browser storage is unavailable. Export verdicts to keep your answers.', true); }
+  }
+  function feedbackForExport() {
+    const clips = Object.fromEntries(Object.entries(feedback.clips).map(([id, answers]) => {
+      const clip = byId(id); if (!clip) return [id, answers];
+      const provenance = clip.provenance || {};
+      return [id, {...answers,
+        sourceSha256: provenance.sourceSha256 || manifest.sourceSha256,
+        sourceFiles: provenance.sourceFiles || manifest.sourceFiles,
+        listeningRound: provenance.listeningRound || manifest.listeningRound,
+        recipeSha256: provenance.recipeSha256 || manifest.recipeSha256,
+        patch: clip.patch, audioSha256: clip.audioSha256, rawSha256: clip.rawSha256,
+        comparisonRevision: clip.comparisonRevision || clip.comparisonVersion,
+        baselineRound: clip.baselineRound || (clip.category === 'revision' ? manifest.comparisonBaseline?.listeningRound : undefined),
+      }];
+    }));
+    return {...feedback, clips};
+  }
+  function groupKey() { return category + ' / ' + ($('group').value || 'all') + ' / ' + ($('voice').value || 'all voices'); }
+  function groupFeedback() {
+    const saved = feedback.groups[groupKey()] || {};
+    $('groupVerdict').value = saved.verdict || ''; $('groupNotes').value = saved.notes || '';
+    $('groupFeedbackTitle').textContent = 'Your verdict · ' + ($('group').value || manifest.categories.find(item => item.id === category).title) + ($('voice').value ? ' · ' + $('voice').value : '');
+  }
+  function filtered() {
+    const query = $('search').value.trim().toLowerCase();
+    const revisionOrder = new Map([...new Set(manifest.clips.filter(clip => clip.category === 'revision').map(clip => clip.group))].map((group,index) => [group,index]));
+    return manifest.clips.filter(clip => (category === 'presets' ? (clip.category === 'presets' || (clip.category === 'voices' && clip.featured) || (clip.voice === 'KEY' && ['BODY_ONLY','EDGE_ONLY','COMBINED'].includes(clip.diagnostic))) : clip.category === category) && (!$('voice').value || clip.voice === $('voice').value) && (!$('group').value || clip.group === $('group').value) && (!query || [clip.title,clip.description,clip.group,clip.voice,clip.note].join(' ').toLowerCase().includes(query)) && ($('level').value !== 'normalized' || clip.normalizedPath)).sort((a,b) => category === 'revision' ? (revisionOrder.get(a.group) - revisionOrder.get(b.group) || Number(a.id.startsWith('revised_')) - Number(b.id.startsWith('revised_'))) : category === 'presets' ? ({presets:0,voices:1,diagnostics:2}[a.category] - {presets:0,voices:1,diagnostics:2}[b.category]) : 0);
+  }
+  function fillGroups() {
+    const prior = $('group').value;
+    const groups = [...new Set(manifest.clips.filter(clip => (category === 'presets' ? (clip.category === 'presets' || (clip.category === 'voices' && clip.featured) || (clip.voice === 'KEY' && ['BODY_ONLY','EDGE_ONLY','COMBINED'].includes(clip.diagnostic))) : clip.category === category) && (!$('voice').value || clip.voice === $('voice').value)).map(clip => clip.group))];
+    $('group').innerHTML = '<option value="">Every group</option>' + groups.map(group => '<option value="' + esc(group) + '">' + esc(group) + '</option>').join('');
+    if (groups.includes(prior)) $('group').value = prior;
+  }
+  function clipCard(clip, number) {
+    const repeats = repeatPreferences.get(clip.id) ?? true;
+    const level = chosenLevel(clip), data = clip[level + 'Metrics'] || clip.matchedMetrics, saved = feedback.clips[clip.id] || {};
+    const macroLine = Object.entries(clip.macros).filter(([key]) => key !== 'TUNE' && key !== 'HOLD').map(([key,value]) => '<span>' + esc(key) + ' ' + fixed(value,2) + '</span>').join('');
+    return '<article class="clip' + (activeClip?.id === clip.id ? ' playing' : '') + '" id="clip-' + clip.id + '" data-id="' + clip.id + '" aria-labelledby="title-' + clip.id + '">' +
+      '<div class="clip-top"><span class="voice">' + esc(clip.voice) + (clip.loop ? ' / HOLD' : '') + '</span><span class="clip-number">' + String(number).padStart(2,'0') + ' · ' + esc(clip.note) + '</span></div>' +
+      '<h3 id="title-' + clip.id + '">' + esc(clip.title) + '</h3><p class="description">' + esc(clip.description) + '</p><div class="recipe" aria-label="Control settings">' + macroLine + '</div>' +
+      '<div class="actions"><button type="button" class="primary play" data-action="play" aria-pressed="' + (activeClip?.id === clip.id) + '" aria-label="Play ' + esc(clip.title) + '">' + (activeClip?.id === clip.id ? 'Stop ■' : 'Play ▶') + '</button><button type="button" class="assign" data-action="A" aria-label="Add ' + esc(clip.title) + ' to comparison A">+ A</button><button type="button" class="assign" data-action="B" aria-label="Add ' + esc(clip.title) + ' to comparison B">+ B</button></div>' +
+      '<div class="playhead"><progress max="' + clip.durationSeconds + '" value="0" aria-label="Playback progress for ' + esc(clip.title) + '"></progress><span>' + fixed(clip.durationSeconds,1) + ' s</span></div>' +
+      '<div class="clip-foot"><span>' + esc(level) + ' level</span>' + (clip.loop ? '<label class="repeat"><input type="checkbox" data-action="repeat"' + (repeats ? ' checked' : '') + '> Repeat</label>' : '') + '<a class="download" href="' + esc(chosenPath(clip)) + '" download aria-label="Download ' + esc(clip.title) + ' WAV">WAV ↓</a></div>' +
+      '<details><summary>Measurements + listening notes</summary><dl class="metrics"><dt>Peak / RMS</dt><dd>' + fixed(data.peak) + ' / ' + fixed(data.rms) + '</dd><dt>Measured loudness</dt><dd>' + fixed(data.loudness) + '</dd><dt>DC mean</dt><dd>' + fixed(data.dc,5) + '</dd>' + (clip.loop ? '<dt>Loop seam error</dt><dd>' + Number(clip.seamError).toExponential(2) + '</dd>' : '') + (level === 'raw' && clip.rawExportGain < 1 ? '<dt>Raw PCM export gain</dt><dd>' + fixed(clip.rawExportGain) + '</dd>' : '') + '</dl>' +
+      (clip.repeatPath ? '<a class="download" href="' + esc(clip.repeatPath) + '" download>Exact four-cycle WAV ↓</a>' : '') +
+      '<div class="feedback"><label for="verdict-' + clip.id + '">Clip verdict</label><select id="verdict-' + clip.id + '" data-feedback="verdict"><option value="">Not reviewed</option>' + [['useful','Useful'],['needs-work','Needs work'],['approved','Approved for this round']].map(([value,label]) => '<option value="' + value + '"' + (saved.verdict === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select><label for="notes-' + clip.id + '">Listening notes</label><textarea id="notes-' + clip.id + '" data-feedback="notes" placeholder="What do you hear?">' + esc(saved.notes || '') + '</textarea></div></details>' +
+      '<details class="native"><summary>Native audio controls</summary><p class="native-hint">Browser repeat may add a gap. Main Play uses sample-accurate loops.</p><audio controls preload="none"' + (clip.loop && repeats ? ' loop' : '') + ' src="' + esc(chosenPath(clip)) + '" aria-label="Native controls for ' + esc(clip.title) + '"></audio></details></article>';
+  }
+  function render() {
+    if (!manifest) return;
+    const section = manifest.categories.find(item => item.id === category), clips = filtered(), shown = clips.slice(0,visibleLimit);
+    $('categoryTitle').textContent = section.title; $('categoryDescription').textContent = category === 'revision' ? 'Same note and velocity, dry sound, same level policy. Both versions preserve the rendered attack. Compare the original and revised voicing.' : category === 'presets' ? 'Nine saved recipes, six center-note voice references, and the defining body + edge comparison. Start with these matched clips, then explore the complete matrix.' : section.description;
+    $('panel').setAttribute('aria-labelledby','tab-' + category);
+    $('count').textContent = clips.length + ' cases';
+    let previousGroup = '', html = '';
+    for (let index = 0; index < shown.length; index++) {
+      const clip = shown[index];
+      const displayGroup = category === 'presets' && clip.category === 'voices' ? 'Six voice references' : clip.group;
+      if (previousGroup !== displayGroup) {
+        if (index) html += '</div>';
+        html += '<div class="group-label"><h3>' + esc(displayGroup) + '</h3>' + (category === 'revision' ? '<button type="button" class="load-pair" data-comparison-group="' + esc(displayGroup) + '" aria-label="Load Original and Revised ' + esc(displayGroup) + ' into A and B">Load A / B</button>' : '<span>Compare at matched level · add two clips to A / B</span>') + '</div><div class="grid' + (category === 'revision' ? ' revision-grid' : '') + '">'; previousGroup = displayGroup;
+      }
+      html += clipCard(clip,index + 1);
+    }
+    if (shown.length) html += '</div>';
+    $('clips').innerHTML = html || '<div class="empty">No clips match these filters.' + ($('level').value === 'normalized' ? ' Host-normalized references are in Start here and Six voices.' : '') + '</div>';
+    $('more').hidden = shown.length >= clips.length;
+    $('showMore').textContent = 'Show ' + Math.min(18, clips.length - shown.length) + ' more clips';
+    groupFeedback(); updateActiveUI();
+  }
+  function selectCategory(id) {
+    if (!manifest) { pendingJump = id; return; }
+    category = id; visibleLimit = 18; $('group').value = ''; $('search').value = '';
+    const previousLevel = $('level').value;
+    const normalizedAvailable = category !== 'revision' || manifest.clips.filter(clip => clip.category === 'revision').every(clip => clip.normalizedPath);
+    $('level').querySelector('[value="normalized"]').disabled = !normalizedAvailable;
+    if (!normalizedAvailable && $('level').value === 'normalized') $('level').value = 'matched';
+    if ($('level').value === 'normalized' && !['presets','voices'].includes(category)) $('level').value = 'matched';
+    if ($('level').value !== previousLevel) { stopPlayback(); pauseNative(); announce('Playback level: ' + $('level').value + '.'); }
+    for (const tab of $('tabs').children) { const selected = tab.dataset.category === id; tab.setAttribute('aria-selected',String(selected)); tab.tabIndex = selected ? 0 : -1; }
+    fillGroups(); render();
+  }
+  function pauseNative(except) { document.querySelectorAll('audio').forEach(audio => { if (audio !== except) audio.pause(); }); }
+  function updateActiveUI() {
+    document.querySelectorAll('.clip').forEach(card => {
+      const active = card.dataset.id === activeClip?.id; card.classList.toggle('playing',active);
+      const button = card.querySelector('.play'); button.textContent = active ? 'Stop ■' : 'Play ▶'; button.setAttribute('aria-pressed',String(active)); button.setAttribute('aria-label',(active ? 'Stop ' : 'Play ') + byId(card.dataset.id).title);
+      if (!active) card.querySelector('progress').value = 0;
+    });
+    for (const slot of ['A','B']) { const active = Boolean(slots[slot] && slots[slot].id === activeClip?.id); $('play' + slot).classList.toggle('selected',active); $('play' + slot).setAttribute('aria-pressed',String(active)); $('play' + slot).textContent = (active ? 'Stop ' : 'Play ') + slot; }
+  }
+  function stopPlayback(invalidate = true) {
+    if (invalidate) requestId++;
+    if (source) { source.onended = null; try { const now = context.currentTime; sourceGain.gain.cancelScheduledValues(now); sourceGain.gain.setValueAtTime(sourceGain.gain.value,now); sourceGain.gain.linearRampToValueAtTime(0,now + .012); source.stop(now + .015); } catch (_) {} }
+    source = null; sourceGain = null; activeClip = null; activePath = ''; cancelAnimationFrame(progressFrame); updateActiveUI();
+  }
+  async function decoded(path) {
+    if (buffers.has(path)) { const buffer = buffers.get(path); buffers.delete(path); buffers.set(path,buffer); return buffer; }
+    const response = await fetch(path); if (!response.ok) throw new Error('WAV could not be loaded (' + response.status + ')');
+    const buffer = await context.decodeAudioData(await response.arrayBuffer()); buffers.set(path,buffer);
+    while (buffers.size > 6) buffers.delete(buffers.keys().next().value);
+    return buffer;
+  }
+  async function play(clip) {
+    const path = chosenPath(clip);
+    if (activeClip?.id === clip.id && activePath === path) { stopPlayback(); return; }
+    stopPlayback(); pauseNative(); const request = ++requestId;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) throw new Error('Sample-accurate playback is unavailable in this browser');
+      context ||= new AudioContext(); await context.resume(); announce('Loading ' + clip.title + '…');
+      const buffer = await decoded(path); if (request !== requestId) return;
+      source = context.createBufferSource(); sourceGain = context.createGain(); source.buffer = buffer;
+      source.loop = clip.loop && (repeatPreferences.get(clip.id) ?? true); source.loopStart = 0; source.loopEnd = buffer.duration;
+      source.connect(sourceGain); sourceGain.connect(context.destination);
+      const now = context.currentTime, playbackStart = now + .02;
+      if (clip.loop) { sourceGain.gain.setValueAtTime(0,now); sourceGain.gain.setValueAtTime(0,playbackStart); sourceGain.gain.linearRampToValueAtTime(1,playbackStart + .012); }
+      else sourceGain.gain.setValueAtTime(1,now);
+      source.onended = () => { if (request === requestId) { source = null; activeClip = null; updateActiveUI(); cancelAnimationFrame(progressFrame); announce('Finished ' + clip.title + '.'); } };
+      startedAt = playbackStart; activeClip = clip; activePath = path; source.start(playbackStart); updateActiveUI();
+      announce('Playing ' + clip.title + ' · ' + chosenLevel(clip) + (source.loop ? ' · sample-accurate repeat' : '') + '.');
+      function progress() {
+        if (!source || !activeClip) return;
+        const elapsed = Math.max(0,context.currentTime - startedAt);
+        const meter = document.querySelector('#clip-' + clip.id + ' progress'); if (meter) meter.value = source.loop ? elapsed % buffer.duration : Math.min(elapsed,buffer.duration);
+        progressFrame = requestAnimationFrame(progress);
+      }
+      progress();
+    } catch (error) {
+      if (request !== requestId) return;
+      announce(error.message + '. Open Native audio controls or download the WAV.',true);
+      const native = document.querySelector('#clip-' + clip.id + ' .native'); if (native) native.open = true;
+    }
+  }
+  $('clips').addEventListener('click', event => {
+    const pairButton = event.target.closest('[data-comparison-group]');
+    if (pairButton) {
+      const pair = manifest.clips.filter(clip => clip.category === 'revision' && clip.group === pairButton.dataset.comparisonGroup);
+      const original = pair.find(clip => clip.id.startsWith('round1_')), revised = pair.find(clip => clip.id.startsWith('revised_'));
+      if (!original || !revised) { announce('This comparison pair is incomplete.',true); return; }
+      stopPlayback(); pauseNative();
+      slots.A = original; slots.B = revised; $('slotA').textContent = original.title; $('slotB').textContent = revised.title;
+      $('playA').disabled = false; $('playB').disabled = false; updateActiveUI(); announce('Original in A; Revised in B · ' + pairButton.dataset.comparisonGroup + '.'); return;
+    }
+    const button = event.target.closest('button[data-action]'); if (!button) return;
+    const clip = byId(button.closest('.clip').dataset.id), action = button.dataset.action;
+    if (action === 'play') play(clip);
+    else if (action === 'A' || action === 'B') { slots[action] = clip; $('slot' + action).textContent = clip.title; $('play' + action).disabled = false; updateActiveUI(); announce(clip.title + ' added to ' + action + '.'); }
+  });
+  $('clips').addEventListener('input', event => {
+    const field = event.target.dataset.feedback; if (!field) return;
+    const id = event.target.closest('.clip').dataset.id;
+    feedback.clips[id] = {...feedback.clips[id],[field]:event.target.value,playbackLevel:chosenLevel(byId(id)),updatedAt:new Date().toISOString()}; saveFeedback();
+  });
+  $('clips').addEventListener('change', event => {
+    if (event.target.dataset.action !== 'repeat') return;
+    const card = event.target.closest('.clip'); repeatPreferences.set(card.dataset.id,event.target.checked); if (activeClip?.id === card.dataset.id && source) source.loop = event.target.checked;
+    card.querySelector('audio').loop = event.target.checked;
+  });
+  document.addEventListener('play', event => { if (event.target.tagName === 'AUDIO') { stopPlayback(); pauseNative(event.target); announce('Playing with native audio controls.'); } },true);
+  $('playA').addEventListener('click',() => play(slots.A)); $('playB').addEventListener('click',() => play(slots.B));
+  $('stop').addEventListener('click',() => { stopPlayback(); pauseNative(); announce('Playback stopped.'); });
+  $('search').addEventListener('input',() => { visibleLimit = 18; render(); });
+  $('voice').addEventListener('change',() => { visibleLimit = 18; fillGroups(); render(); });
+  $('group').addEventListener('change',() => { visibleLimit = 18; render(); });
+  $('level').addEventListener('change',() => { stopPlayback(); pauseNative(); visibleLimit = 18; render(); announce($('level').value === 'normalized' ? 'Showing saved presets and center-note voice references with host normalization.' : 'Playback level: ' + $('level').value + '.'); });
+  $('showMore').addEventListener('click',() => { visibleLimit += 18; render(); });
+  for (const id of ['groupVerdict','groupNotes']) $(id).addEventListener('input',() => { feedback.groups[groupKey()] = {verdict:$('groupVerdict').value,notes:$('groupNotes').value,playbackLevel:$('level').value,updatedAt:new Date().toISOString()}; saveFeedback(); });
+  $('exportVerdicts').addEventListener('click',() => {
+    if (!manifest) return;
+    const verdict = {schemaVersion:1,engine:'CONTOUR',listeningRound:manifest.listeningRound,sourceSha256:manifest.sourceSha256,sourceFiles:manifest.sourceFiles,recipeSha256:manifest.recipeSha256,comparisonBaseline:manifest.comparisonBaseline,exportedAt:new Date().toISOString(),levelPolicy:manifest.levelPolicy,feedback:feedbackForExport()};
+    const url = URL.createObjectURL(new Blob([JSON.stringify(verdict,null,2)],{type:'application/json'})); const link = document.createElement('a'); link.href = url; link.download = manifest.listeningRound + '-verdicts.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000); announce('Verdicts exported. Browser answers remain saved.');
+  });
+  document.querySelectorAll('[data-jump]').forEach(button => button.addEventListener('click',() => { selectCategory(button.dataset.jump); $('listen').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'}); }));
+  $('tabs').addEventListener('keydown',event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    const tabs = [...$('tabs').children], index = tabs.indexOf(document.activeElement); if (index < 0) return;
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    event.preventDefault(); selectCategory(tabs[next].dataset.category); tabs[next].focus();
+  });
+  fetch('manifest.json').then(response => { if (!response.ok) throw new Error('Manifest could not be loaded (' + response.status + ')'); return response.json(); }).then(data => {
+    if (data.engine !== 'CONTOUR' || !Array.isArray(data.clips) || !data.clips.length) throw new Error('The listening manifest is incomplete');
+    manifest = data; storageKey = 'snipsnap-contour-verdicts:' + manifest.listeningRound;
+    try { const saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); if (saved?.clips && saved?.groups) feedback = saved; } catch (_) { storageAvailable = false; }
+    $('clipTotal').textContent = String(manifest.clipCount).padStart(2,'0');
+    $('levelPolicy').textContent = manifest.levelPolicy.measurement + ' ' + manifest.levelPolicy.matched + ' Raw: ' + manifest.levelPolicy.raw + ' Host normalized: ' + manifest.levelPolicy.normalized;
+    $('round').textContent = 'Round ' + manifest.listeningRound + ' · ' + (manifest.full ? 'Full matrix' : 'Development smoke pack');
+    $('voice').innerHTML += [...new Set(manifest.clips.map(clip => clip.voice))].map(voice => '<option value="' + esc(voice) + '">' + esc(voice) + '</option>').join('');
+    const categories = [...manifest.categories].sort((a,b) => (a.id === 'revision' ? -1 : b.id === 'revision' ? 1 : 0));
+    $('tabs').innerHTML = categories.map(section => '<button type="button" role="tab" id="tab-' + section.id + '" aria-controls="panel" aria-selected="false" tabindex="-1" data-category="' + section.id + '">' + esc(section.title) + '</button>').join('');
+    $('tabs').addEventListener('click',event => { const tab = event.target.closest('[data-category]'); if (tab) selectCategory(tab.dataset.category); });
+    selectCategory(pendingJump || (manifest.categories.some(section => section.id === 'revision') ? 'revision' : 'presets'));
+    if (!storageAvailable) announce('Browser storage is unavailable. Export verdicts to keep your answers.',true);
+  }).catch(error => { $('clips').innerHTML = '<div class="empty">The listening pack could not load. Serve this folder over HTTP and keep manifest.json beside index.html.</div>'; announce(error.message,true); });
+})();
+</script>
+</body>
+</html>

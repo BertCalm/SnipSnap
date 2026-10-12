@@ -155,6 +155,30 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.prism() },
         Starter(
+            "alloy", "ALLOY",
+            "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.alloy() },
+        Starter(
+            "contour", "CONTOUR",
+            "A solid wavetable body and moving digital edge in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.contour() },
+        Starter(
+            "stoop", "STOOP",
+            "Bass, keys and compact chords in C minor pentatonic. Warm grooves with quiet answers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.stoop() },
+        Starter(
+            "lacquer", "LACQUER",
+            "Polished keys, glass, brass and soft layers in C minor pentatonic. Separate arrivals, one finished tone.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.lacquer() },
+        Starter(
             "spool", "SPOOL",
             "Recorded strings, choir, flute and brass in C minor pentatonic. Diagonal heads and backward answers.",
             seeded = false,
