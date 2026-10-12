@@ -135,6 +135,9 @@ object ContourTables {
             val levels = Array(harmonicLimits.size) { Array(FRAME_COUNT) { FloatArray(TABLE_SIZE) } }
             var peak = 0.0
             for (frame in 0 until FRAME_COUNT) {
+                // The first preview builds this lazy bank; an interrupt aborts it and the
+                // next request retries, rather than keeping a worker busy for a stale render.
+                if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("CONTOUR table bank no longer wanted")
                 val scan = frame.toDouble() / (FRAME_COUNT - 1)
                 val waveform = DoubleArray(TABLE_SIZE)
                 var level = 0

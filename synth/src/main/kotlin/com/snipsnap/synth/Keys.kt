@@ -412,7 +412,7 @@ object Keys {
         val tune = .5f + semis / (2f * ContourEngine.TUNE_SEMITONES)
         val defaults = ContourEngine.defaults(voice)
         val m = defaults + macros.filterKeys { it in defaults } + mapOf("TUNE" to tune, "HOLD" to 1f)
-        val loop = ContourEngine.renderLoop(voice, m, velocity, config)
+        val loop = ContourEngine.renderLoop(voice, m, velocity, config, cancelled)
         if (cancelled()) throw java.util.concurrent.CancellationException("CONTOUR pad render cancelled")
         val samples = loop + loop
         if (velocity > 0f) requireSeam("CONTOUR $voice at MIDI $midi", samples, loop.size)

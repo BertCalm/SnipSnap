@@ -13,6 +13,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -107,6 +108,22 @@ internal object ContourTestAudio {
 /** CONTOUR's claims are measured before shared loudness makeup as well as on finished audio. */
 class ContourEngineTest {
     private val timbre = listOf("SCAN", "OFFSET", "MOTION", "FILTER", "DRIVE")
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        for (render in listOf<() -> Unit>(
+            { ContourEngine.render(ContourVoice.KEY) },
+            { ContourEngine.renderLoop(ContourVoice.KEY) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException> { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(ContourEngine.renderLoop(ContourVoice.KEY).any { it != 0f }, "an uninterrupted held render still sounds")
+    }
 
     @Test
     fun `body partial weighting preserves root energy and changes only the overtones`() {

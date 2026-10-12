@@ -315,7 +315,8 @@ CONTOUR is an original wavetable instrument: a stable body carries the note whil
 a related edge takes a different spectral path. BASS, KEY, PLUCK, LEAD, HOLLOW
 and SWELL share SCAN, OFFSET, MOTION, FILTER, DRIVE and HOLD, plus host TUNE.
 Eight generated table families, nine provisional dry recipes, a sixteen-pad kit,
-excitation-sensitive velocity and held keygroup loops use the existing pipeline.
+excitation-sensitive velocity and settled HOLD loops use the existing pipeline;
+held keygroup export (MAKE INSTRUMENT, `--instrument`) does not route CONTOUR yet.
 The existing CONTOUR rack filter keeps its saved effect recipes. Run
 `./gradlew :synth:generateContourAudition` for the listening matrix; the proposed
 36-preset expansion waits for sonic approval. Listen on the

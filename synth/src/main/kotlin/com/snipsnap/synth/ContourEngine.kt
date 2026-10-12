@@ -384,8 +384,15 @@ object ContourEngine {
             filter.low.toDouble(), filter.band.toDouble(), filter.high.toDouble())
     }
 
+    // SynthScreen previews run in runInterruptible and keygroup exports pass a cancel
+    // callback; either stops a long render instead of letting it finish unwanted.
+    private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
+        if (Thread.currentThread().isInterrupted || cancelled()) throw java.util.concurrent.CancellationException("CONTOUR render no longer wanted")
+    }
+
     /** Band limiting and DC conditioning only; deliberately no limiter or gain. */
     internal fun finish(raw: FloatArray, normalize: Boolean = false, fade: Boolean = false): FloatArray {
+        stopIfUnwanted()
         val filtered = raw.copyOf()
         Tide.bandLimit(filtered, INTERNAL_RATE)
         val out = Dsp.decimate(filtered, RATE)
@@ -404,7 +411,8 @@ object ContourEngine {
 
     internal fun renderLoopMeasured(voice: ContourVoice, macros: Map<String, Float> = emptyMap(),
         velocity: Float = 1f, config: ContourConfig = ContourConfig.forVoice(voice),
-        normalize: Boolean = true, diagnostic: ContourDiagnostic = ContourDiagnostic.COMBINED): LoopRender {
+        normalize: Boolean = true, diagnostic: ContourDiagnostic = ContourDiagnostic.COMBINED,
+        cancelled: () -> Boolean = { false }): LoopRender {
         require(velocity.isFinite() && velocity in 0f..1f) { "CONTOUR velocity must be finite in 0..1" }
         val m = settled(voice, macros) + ("HOLD" to 1f) +
             (if (diagnostic == ContourDiagnostic.FROZEN) mapOf("MOTION" to 0f) else emptyMap())
@@ -418,6 +426,7 @@ object ContourEngine {
         var precedingState = DoubleArray(0)
         var stateError = 0.0
         val raw = FloatArray(periodInternal * 6) { i ->
+            if (i % 8192 == 0) stopIfUnwanted(cancelled)
             val x = engine.tick()
             if (i + 1 == periodInternal * 4) precedingState = engine.state()
             if (i + 1 == periodInternal * 5) {
@@ -456,8 +465,8 @@ object ContourEngine {
     }
 
     fun renderLoop(voice: ContourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
-        config: ContourConfig = ContourConfig.forVoice(voice)): FloatArray =
-        renderLoopMeasured(voice, macros, velocity, config).let { it.samples.copyOfRange(it.loopStart, it.samples.size) }
+        config: ContourConfig = ContourConfig.forVoice(voice), cancelled: () -> Boolean = { false }): FloatArray =
+        renderLoopMeasured(voice, macros, velocity, config, cancelled = cancelled).let { it.samples.copyOfRange(it.loopStart, it.samples.size) }
 
     internal fun renderInternalRaw(voice: ContourVoice, macros: Map<String, Float> = emptyMap(),
         velocity: Float = 1f, config: ContourConfig = ContourConfig.forVoice(voice),
@@ -467,7 +476,7 @@ object ContourEngine {
         val frames = (duration(config, m.getValue("HOLD").toDouble()) * INTERNAL_RATE).roundToInt()
         if (velocity == 0f) return FloatArray(frames)
         val engine = Engine(voice, m, velocity, config, false, null, diagnostic)
-        return FloatArray(frames) { engine.tick() }
+        return FloatArray(frames) { if (it % 8192 == 0) stopIfUnwanted(); engine.tick() }
     }
 
     fun renderDiagnosticRaw(voice: ContourVoice, diagnostic: ContourDiagnostic,
