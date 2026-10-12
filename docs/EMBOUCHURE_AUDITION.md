@@ -1,11 +1,13 @@
 # Embouchure audition pack
 
 The [published listening page](https://embouchure-audition.bertcalm.chatgpt.site)
-is private to the owner. It contains the complete first listening matrix:
-365 clips, 395 audition WAVs, and sixteen PCM24 kit samples. The curated
-starter ZIP is 9.523 MiB. Full Chromium checks cover every decoded WAV,
-all 150 macro selections, nine held loops, diagnostic modes, downloads,
-saved notes, and desktop/mobile layout. Owner sonic approval remains pending.
+is private to the owner. The revised matrix contains 365 model 2 clips plus
+164 original model 1 references: 529 clips, 559 audition WAVs, and sixteen
+PCM24 kit samples. The curated starter ZIP is 12.016 MiB and contains 35 clips
+and 61 WAVs, including the kit. Full Chromium checks pass for all 575 decoded
+WAVs, 300 macro selections, 164 original/revised pairs, ten held loops,
+diagnostic modes, downloads, model-specific notes, and desktop/mobile layout.
+Listening approval of the revised controls remains pending.
 
 Generate the complete dry listening pack from the production Kotlin engine:
 
@@ -17,8 +19,9 @@ The output is `testkit/embouchure-audition/`. Serve that folder with a static HT
 server, or publish it with its relative paths intact. The task copies the listening
 page resources and writes `manifest.json`, `measurements.json`, `audio/*.wav`, and
 `embouchure-audition.zip`. The ZIP is a curated starter pack containing the eight
-presets, six voice defaults, selected held/velocity/feedback clips, a matching
-subset manifest, the offline page, and a sixteen-pad kit. The full listening
+revised presets, six revised voice defaults, their fourteen original references,
+selected held/velocity/feedback clips, a matching subset manifest, the offline
+page, and a sixteen-pad kit. The full listening
 matrix remains in the generated folder and published page. The generator limits
 the ZIP to less than 25 MiB for static hosting. Generated audio is excluded from
 Git.
@@ -43,6 +46,21 @@ lip/bow contact grids, all-high finite cases, difficult held states, feedback
 ablations, and raw/shared-normalized/matched velocity comparisons. Every audition clip is
 mono 44.1 kHz PCM16 with no rack effects.
 
+The Original/Revised buttons replay identical notes, velocities, gestures and
+control values with their respective renderer models. The 164 historical
+references cover the eight presets, six defaults and all 150 five-point
+control takes. All six revised finite default voices are sample-identical to
+model 1. Clicking a macro value immediately plays it from the start; A/B
+compares the voice baseline with the selected point. Listening notes remain
+separate by model and loudness mode, including notes saved on the original page.
+
+Model 1 is frozen for saved recipes. New factory patches use model 2; saved
+JSON with an absent or null model still restores model 1. Both models use the
+same deterministic source seed. To verify a regenerated pack against an
+archived original pack, supply `-PembouchureReference=/path/to/model1-pack`;
+the generator checks each original recipe and WAV hash. This optional local
+reference is not required for ordinary generation.
+
 The default `path` is the host's shared melodic forte reference followed by its
 expressive velocity gain (`velocity^0.60`) for both finite notes and held loops.
 Every `rawPath` uses one fixed export gain of 0.5 (−6.02 dB) after output conditioning,
@@ -61,21 +79,48 @@ roughness seed, and diagnostic render options. Feedback-off files are engineerin
 probes: restoring the serialized production patch also restores feedback.
 Identical engine inputs reproduce the WAV audio; recorded runtime measurements
 vary with the machine and are not part of the sound recipe.
-The manifest also fingerprints the compiled renderer and its DSP/tuning support
-classes, distinguishing candidate calibrations that share the initial model
-number. The same fingerprint travels with each exported listening recipe.
+The manifest also fingerprints both compiled renderers and their DSP/tuning
+support classes. Each clip records its model, paired comparison IDs where
+available, and the build fingerprint. The same fingerprint travels with each
+exported listening recipe.
 
 Finite WAVs include the playing gesture and passive tail. HOLD WAVs contain one
 settled repeating region with the finite onset omitted. `loopDiagnostics` records
 the engine's seam measurement, convergence, and preroll duration; enable repeat
 to listen to the join. The measurement buffer contains successive loops, while
 the downloadable production WAV keeps one selected loop.
+Model 2 permits up to seven genuine warm periods and retains the strict seam
+and complete-state convergence limits. Held contact ranges are narrower than
+finite gestures to retain a captured repeating tone.
 
 Metrics describe the floating-point samples before PCM encoding. RMS and DC use
 the whole clip; loudness uses the shared loudest-200-ms measure. The body spectral
 probe skips the onset. Pitch estimates are optional and limited to 40–1200 Hz;
 they are not an acoustic-accuracy claim. The existing classifier labels clips
 longer than 1.5 seconds LOOP regardless of whether the sound is pitched.
+
+The response tests separate body color and continuing roughness from attack
+timing. They examine all five points of every control, corroborate color changes
+with root-relative harmonic power, measure actual player exposure and full-note
+entry for EFFORT, and measure energy span for LENGTH. These are regression
+targets rather than universal audibility thresholds. Some middle clear-tone
+steps remain modest; minimum effort is intentionally gentle, particularly BASS
+and the late-speaking SOFT entry. SOFT's final EFFORT step remains subtle after
+matching; BOW's final step changes sustain intensity more than timbre. BRASS's
+strongest overpressure accent briefly suppresses the early note, so its peak
+arrives later despite an early entry. EFFORT's entry and peak arrival depend on
+the selected gesture. The complete ranges have much stronger entry and contour changes.
+The paired GRAIN audit measures 4.07–7.92 dB of
+gain-independent body contrast, with the fundamental retaining 56–83% of
+high-GRAIN body power. These descriptors corroborate the change; listening
+decides its musical usefulness.
+
+The revised renderer and current host integration pass 129 focused JVM tests,
+including all nineteen original engine gates, the five-point response matrix,
+historical WAV goldens, both model dispatch paths, PRISM/REVEL coexistence,
+presets, starter IDs and CLI/shell routes. The Android debug APK is built and
+verified with 27 engines, both renderer versions and all four native ABIs.
+Device playback remains a separate check.
 
 WHISTLE is a simplified clear-tone air/reed approximation. The drivers and
 gestures are original; the pack contains no Yamaha algorithms, factory data, or
