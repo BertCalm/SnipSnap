@@ -151,6 +151,12 @@ object Spool {
                            val rootPhases: DoubleArray)
 
     /** A finite performance with an evolving articulation, rather than a repeated static waveform. */
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
+    // and every long stage polls it so a stale render stops instead of finishing unwanted.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("SPOOL render no longer wanted")
+    }
+
     private fun material(voice: SpoolVoice, m: Map<String, Float>, machine: SpoolMachine, velocity: Float): Material {
         val strips = if (machine.roster.isEmpty()) SpoolMachine.rosterFor(voice) else machine.roster
         val n = (machine.sourceSeconds * INTERNAL_RATE).toInt().coerceAtLeast(64)
@@ -178,6 +184,7 @@ object Spool {
             val out = FloatArray(n)
             var breath = 0.0
             for (i in out.indices) {
+                if (i % 8192 == 0) stopIfUnwanted()
                 val t = i.toDouble() / INTERNAL_RATE
                 if (i % 64 == 0) {
                     // Tiny recorded ensemble movement: below a cent at the ordinary setting.
@@ -221,6 +228,7 @@ object Spool {
             }
             val sourceFilters = Array(4) { Dsp.OnePole(INTERNAL_RATE) }
             for (j in out.indices) {
+                if (j % 8192 == 0) stopIfUnwanted()
                 var value = out[j]
                 for (filter in sourceFilters) value = filter.lp(value, SOURCE_BANDWIDTH)
                 out[j] = value
@@ -784,6 +792,7 @@ object Spool {
 
     internal fun finish(raw: FloatArray, normalize: Boolean = true, loop: Boolean = false): FloatArray {
         if (raw.isEmpty()) return raw
+        stopIfUnwanted()
         val guard = if (loop) min(4096, raw.size) else 0
         val work = if (loop) raw.copyOfRange(raw.size - guard, raw.size) + raw + raw.copyOfRange(0, guard) else raw.copyOf()
         Tide.bandLimit(work, INTERNAL_RATE)
