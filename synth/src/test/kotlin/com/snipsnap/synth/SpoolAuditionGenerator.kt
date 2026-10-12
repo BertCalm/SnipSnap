@@ -22,17 +22,17 @@ import kotlin.math.sqrt
 object SpoolAuditionGenerator {
     private val timbral = listOf("HEAD", "STRAIN", "RETURN", "IMPRINT", "SPLICE")
     private val descriptions = mapOf(
-        SpoolVoice.STRING to "Warm synthesized string recordings with a restrained backward answer.",
-        SpoolVoice.CHOIR to "Voiced formant recordings, diagonal sustain encounters and a backward murmur.",
-        SpoolVoice.FLUTE to "A clear airy root crossing the softer neighboring strips.",
-        SpoolVoice.BRASS to "Rounded harmonic attacks followed by a spring-driven return.",
+        SpoolVoice.STRING to "Warm string recordings, backward attack swells and gentle shared tape flutter.",
+        SpoolVoice.CHOIR to "Voiced formant recordings with a growing backward breath and shared tape movement.",
+        SpoolVoice.FLUTE to "A clear airy root with a rising reversed articulation beneath the held tone.",
+        SpoolVoice.BRASS to "Rounded harmonic attacks turn into backward swells with a lightly wavering pitch.",
         SpoolVoice.PALIMPSEST to "Recorded material inherits a quieter delayed trace from its neighbors.",
         SpoolVoice.CUT to "A deterministic schedule reorders sections of original synthesized recordings.",
     )
     private val macroDescriptions = mapOf(
         "HEAD" to "Aligned pickup to diagonal track and recorded-time travel.",
-        "STRAIN" to "Stable drive to competing strip loads, slip and recovery.",
-        "RETURN" to "An overlapping backward layer grows beneath the forward recording.",
+        "STRAIN" to "Gentle common wow/flutter to stronger competing strip loads, slip and recovery.",
+        "RETURN" to "Reversed recorded decays swell and brighten beneath the held recording.",
         "IMPRINT" to "Delayed neighboring traces are heard during the layered return.",
         "SPLICE" to "Continuous timeline to smoothly overlapped reordered sections.",
     )
@@ -126,13 +126,13 @@ object SpoolAuditionGenerator {
             }
             val pickupPath = "diagnostics/${case.id}_pickups.csv"
             File(root, pickupPath).bufferedWriter().use { out ->
-                out.appendLine("time_seconds,fwd_0,fwd_1,fwd_2,rev_0,rev_1,rev_2,fwd_rate_0,fwd_rate_1,fwd_rate_2,rev_rate_0,rev_rate_1,rev_rate_2,fwd_gain_0,fwd_gain_1,fwd_gain_2,rev_gain_0,rev_gain_1,rev_gain_2,fwd_min_0,fwd_min_1,fwd_min_2,fwd_max_0,fwd_max_1,fwd_max_2,rev_min_0,rev_min_1,rev_min_2,rev_max_0,rev_max_1,rev_max_2,rev_support_0,rev_support_1,rev_support_2,physical_rate_0,physical_rate_1,physical_rate_2,varispeed_blend")
+                out.appendLine("time_seconds,fwd_0,fwd_1,fwd_2,rev_0,rev_1,rev_2,fwd_rate_0,fwd_rate_1,fwd_rate_2,rev_rate_0,rev_rate_1,rev_rate_2,fwd_gain_0,fwd_gain_1,fwd_gain_2,rev_gain_0,rev_gain_1,rev_gain_2,fwd_min_0,fwd_min_1,fwd_min_2,fwd_max_0,fwd_max_1,fwd_max_2,rev_min_0,rev_min_1,rev_min_2,rev_max_0,rev_max_1,rev_max_2,rev_support_0,rev_support_1,rev_support_2,physical_rate_0,physical_rate_1,physical_rate_2,varispeed_blend,tape_rate")
                 val stride = (d.rate / 40).coerceAtLeast(1)
                 d.pickupTrace.filterIndexed { i, _ -> i % stride == 0 }.forEach { f ->
                     out.appendLine((listOf(f.timeSeconds) + f.forwardCoordinates + f.reverseCoordinates +
                         f.forwardReadRates + f.reverseReadRates + f.forwardGains + f.reverseGains +
                         f.forwardMinCoordinates + f.forwardMaxCoordinates + f.reverseMinCoordinates +
-                        f.reverseMaxCoordinates + f.reverseSupports + f.physicalRates + listOf(f.varispeedBlend)).joinToString(","))
+                        f.reverseMaxCoordinates + f.reverseSupports + f.physicalRates + listOf(f.varispeedBlend, f.tapeRate)).joinToString(","))
                 }
             }
             val diagnosticValues = linkedMapOf<String, Any?>(
@@ -150,7 +150,9 @@ object SpoolAuditionGenerator {
                 "motorTorque" to machine.motorTorque, "companionLoad" to case.companionLoad,
                 "tracePath" to tracePath, "traceRate" to 40, "eventsPath" to eventsPath, "imprintEventCount" to d.imprintEvents.size,
                 "pickupTracePath" to pickupPath, "pitchMode" to d.pitchMode,
-                "overlapSeconds" to d.overlapSeconds, "overlapMeasure" to "active grain/contact time; audible RMS overlap is in the stem measurements", "carrierRateMeaning" to "grain branch rate; physical transport is in the transport trace",
+                "overlapSeconds" to d.overlapSeconds, "overlapMeasure" to "active grain/contact time; audible RMS overlap is in the stem measurements", "carrierRateMeaning" to "grain branches share an integrated wow/flutter clock; physical transport is in the transport trace",
+                "tapeMotion" to "common 0.73 Hz wow and 6.7/12.1 Hz flutter; both heads stay together",
+                "tapeExcursionBoundCents" to Spool.MAX_TAPE_CENTS,
 
             )
             val entry = linkedMapOf<String, Any?>(

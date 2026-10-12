@@ -8,8 +8,8 @@
   const VOICE_NAMES = { STRING: 'Soft Frame', CHOIR: 'Returning Choir', FLUTE: 'Flute Memory', BRASS: 'Worn Brass', PALIMPSEST: 'Ghost Copy', CUT: 'Short Splice' };
   const MACRO_COPY = {
     HEAD: ['Aligned pickup becomes a diagonal encounter through track and recorded time.', 'Aligned', 'Diagonal'],
-    STRAIN: ['One motor meets three competing loads. Listen for hesitation, stretch, and recovery.', 'Stable', 'Competing'],
-    RETURN: ['A backward layer enters alongside the continuing forward layer, retracing material already traversed.', 'Silent', 'Pronounced'],
+    STRAIN: ['Both directions share gentle tape wow and flutter. Raising STRAIN adds hesitation, stretch, and recovery.', 'Gentle flutter', 'Competing'],
+    RETURN: ['Listen for the backward swell rising through the held forward tone. Raising RETURN brings that reversed layer into focus.', 'Silent', 'Pronounced'],
     IMPRINT: ['A delayed neighboring trace is softly written, then heard during a finite reread.', 'Original', 'Inherited'],
     SPLICE: ['The continuous recording becomes a deterministic sequence of overlapped, reordered sections.', 'Continuous', 'Reordered']
   };
@@ -21,6 +21,10 @@
     strain_splice: 'Transport hesitation stretches the spaces between splices.'
   };
   const EXTRA_NAMES = { 'transition-comparison': 'Before / after', registers: 'Registers', velocity: 'Velocity', gates: 'Gates', extremes: 'All high', diagnostics: 'Diagnostics', 'repeated-loops': 'Repeated loops', kit: 'Kit' };
+  const EXTRA_COPY = {
+    'transition-comparison': 'Before is the previous coherent overlapping version. After brings out the backward swell and adds gentle shared wow and flutter. Each pair keeps the same voice and one-shot, loop, or three-cycle form.',
+    diagnostics: 'Hear the forward and backward pickups on their own. Start with a backward pickup, then return to the full voice to hear its swell in the mix.'
+  };
   const state = { manifest: null, clips: [], selected: null, level: 'matched', macro: 'HEAD', pair: '', extra: 'transition-comparison', repeat: false, notes: readNotes(), loading: false, request: 0 };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
   const clamp = (n, low = 0, high = 1) => Math.min(high, Math.max(low, Number(n) || 0));
@@ -94,8 +98,8 @@
     $('#extra-filters').innerHTML = sections.map((section) => `<button data-extra="${section}" class="${section === state.extra ? 'is-active' : ''}" aria-pressed="${section === state.extra}">${EXTRA_NAMES[section]}</button>`).join('');
     let context = $('#extra-context');
     if (!context) { context = document.createElement('p'); context.id = 'extra-context'; context.className = 'small-muted'; context.style.marginBottom = '16px'; $('#extra-clips').before(context); }
-    context.hidden = state.extra !== 'transition-comparison';
-    context.textContent = 'Compare the earlier sequential forward → return cycle with the revised overlapping forward and backward layers. Each label identifies its render version and one-shot, loop, or three-cycle form.';
+    context.hidden = !EXTRA_COPY[state.extra];
+    context.textContent = EXTRA_COPY[state.extra] || '';
     const clips = state.clips.filter((c) => c.section === state.extra);
     $('#extra-clips').innerHTML = clips.length ? clips.map((clip) => `<div class="extra-clip" data-card-id="${esc(clip.id)}">${clipButton(clip, '')}<div class="extra-clip-copy"><h4>${esc(clip.label)}</h4><p>${duration(clip)} · ${noteName(clip.midi)} · VEL ${Math.round(Number(clip.velocity || 0) * 100)}%</p></div></div>`).join('') : empty('No additional recordings are included.');
     updateButtons();
