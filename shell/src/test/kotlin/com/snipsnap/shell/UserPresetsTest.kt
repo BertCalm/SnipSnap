@@ -2,12 +2,17 @@ package com.snipsnap.shell
 
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import com.snipsnap.json.Json
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourPresets
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.Lacquer
+import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LacquerRole
+import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -189,7 +194,9 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is StoopPatch) {
+            if (preset is LacquerPatch) {
+                assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
                 assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
             } else {
@@ -281,6 +288,31 @@ class UserPresetsTest {
     }
 
     @Test
+    fun `saved lacquer promotion retains custom independent layers root velocity and escaped name`() {
+        val root = shelf()
+        try {
+            val profile = Lacquer.profileFor(LacquerVoice.KEY)
+            val custom = profile.copy(layers = profile.layers.map { layer ->
+                if (layer.role == LacquerRole.TRAIL) layer.copy(
+                    gain = layer.gain * .85f,
+                    timing = layer.timing.copy(reliefSeconds = .08f),
+                    envelope = layer.envelope.copy(releaseSeconds = 1.1f),
+                ) else layer
+            })
+            val source = LacquerPatch("COAT \"A\" \$X", LacquerVoice.KEY,
+                linkedMapOf("RELIEF" to .83f, "GLUE" to .21f), midi = 36, velocity = .3f, profile = custom)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(source, lacquerFromRosterLine(line), "the constructor rebuilds every nested field and escaped text")
+            assertEquals("LacquerPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `Contour promotion reconstructs every spectral and edge envelope field exactly`() {
         val root = shelf()
         try {
@@ -325,6 +357,14 @@ class UserPresetsTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    private fun lacquerFromRosterLine(line: String): LacquerPatch {
+        assertTrue(line.startsWith("LacquerPatch.fromJsonText(\"") && line.endsWith("\"),"), line)
+        val literal = line.removePrefix("LacquerPatch.fromJsonText(").removeSuffix("),")
+        // Kotlin escapes a dollar sign in addition to JSON's ordinary string escapes.
+        val json = Json.parse(literal.replace("\\\$", "\$")).str()
+        return LacquerPatch.fromJsonText(json)
     }
 
     @Test

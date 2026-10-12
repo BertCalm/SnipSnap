@@ -167,6 +167,11 @@ testkit/SnipSnap Pitchwheel Kit/
 # Stoop's generated audio, manifest and listening page.
 testkit/stoop-audition/
 testkit/SnipSnap Stoop Kit/
+# Lacquer listening evidence and MPC acceptance audio are regenerated locally.
+testkit/lacquer-audition/
+testkit/SnipSnap Lacquer Kit/
+testkit/SnipSnap-Lacquer-Kit.zip
+
 # REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
 testkit/revel-audition/
 testkit/SnipSnap Revel Kit/
