@@ -116,7 +116,8 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(31, PadSheet.ALL_SEGMENTS.size, "the card should draw 31 chips")
+        assertEquals(listOf("DRIVE", "COMP", "WAH"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(34, PadSheet.ALL_SEGMENTS.size, "the card should draw 34 chips")
     }
 
     /**
@@ -127,7 +128,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one and the pedals' three thirty-four`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -146,9 +147,24 @@ class PadSheetTest {
             "ENSEMBLE",
             // the same section as six independent players
             "SECTION",
+            // the pedal board's Stage 0
+            "DRIVE", "COMP", "WAH",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(31, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(34, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+    }
+
+    @Test
+    fun `the pedals are the last row, and each chip draws a rack character`() {
+        assertEquals(PadSheet.PEDAL_SEGMENTS, PadSheet.ROWS.last())
+        assertEquals(PadSheet.Treatment.Character("driven"), PadSheet.treatmentFor("DRIVE"))
+        assertEquals(PadSheet.Treatment.Character("compressed"), PadSheet.treatmentFor("COMP"))
+        assertEquals(PadSheet.Treatment.Character("quacked"), PadSheet.treatmentFor("WAH"))
+        for (segment in PadSheet.PEDAL_SEGMENTS) {
+            val t = PadSheet.treatmentFor(segment)!!
+            assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is not treatmentFor's inverse for $segment")
+            assertTrue(t.name in com.snipsnap.synth.Treatments.names, "$segment names a character the rack does not have")
+        }
     }
 
     @Test

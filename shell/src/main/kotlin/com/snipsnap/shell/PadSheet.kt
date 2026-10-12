@@ -8,7 +8,7 @@ import com.snipsnap.synth.Treatments
 /**
  * The PAD SHEET's TREATMENT card, as data.
  *
- * Six rows, grouped by what an effect *does* rather than by which family
+ * Seven rows, six of them grouped by what an effect *does* rather than by which family
  * implements it. Row one draws five segments: four of them are the
  * design's Time Machine eras, and [SMEAR] — a fifth, deliberately not an
  * era (see below). Row two is the hit's anatomy — its arrival, its
@@ -16,7 +16,7 @@ import com.snipsnap.synth.Treatments
  * damage done to it. Row four is what happens to it in time — repeats,
  * rooms, the grid. Row five is the machine's own transport. Row six is
  * the keyed family ([Keyed]), the treatments that read the kit's own key
- * and tempo.
+ * and tempo. Row seven is the pedals ([PEDAL_SEGMENTS]), grouped by what an effect *is*.
  * Every row is a vocabulary mapping and nothing more: the words are the
  * app's, not the engine's, so [Eras] and [Treatments] never learn what a
  * "segment" is.
@@ -92,13 +92,21 @@ object PadSheet {
     val KEYED_SEGMENTS: List<String> = listOf(TUNE, "BODY", "WOBBLE", "ETERNAL")
 
     /**
+     * Row seven, the pedals: the guitar-pedal words over the rack's own sections (the pedal board's
+     * Stage 0, docs/superpowers/specs/2026-10-04-pedal-board-design.md). The one row grouped by what an
+     * effect *is* rather than what it does: a guitarist looks for a pedal by its name. FUZZ, TREM and
+     * FLANGE join it as their sections pass their listening gates.
+     */
+    val PEDAL_SEGMENTS: List<String> = listOf("DRIVE", "COMP", "WAH")
+
+    /**
      * All rows, in drawing order. Grouped by what an effect *does*, not by
      * which family implements it: ROLL and GATE are keyed treatments sitting
      * on the TIME row because that is what they sound like, the way TUNE has
      * always sat among the characters.
      */
     val ROWS: List<List<String>> = listOf(
-        SEGMENTS, ANATOMY_SEGMENTS, CHARACTER_SEGMENTS, TIME_SEGMENTS, TRANSPORT_SEGMENTS, KEYED_SEGMENTS,
+        SEGMENTS, ANATOMY_SEGMENTS, CHARACTER_SEGMENTS, TIME_SEGMENTS, TRANSPORT_SEGMENTS, KEYED_SEGMENTS, PEDAL_SEGMENTS,
     )
 
     /** Every segment on any row. */
@@ -207,6 +215,12 @@ object PadSheet {
         "ENSEMBLE" to "ensembled",
         // The same section as six independent players: one instrument swirled, or several playing.
         "SECTION" to "sectioned",
+        // A drive pedal: VALVE with a middling DRIVE and part of a speaker.
+        "DRIVE" to "driven",
+        // A compressor pedal: SQUASH alone, for sustain.
+        "COMP" to "compressed",
+        // A wah: CONTOUR's ladder with the resonance up and a fast, deep sweep from the hit.
+        "WAH" to "quacked",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
     )
