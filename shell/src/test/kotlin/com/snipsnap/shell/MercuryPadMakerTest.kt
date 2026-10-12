@@ -150,6 +150,37 @@ class MercuryPadMakerTest {
         assertEquals(0.6f, MercuryPadMaker.spec(MercuryVoice.PING, emptyMap(), MercuryPadMaker.RELEASE.defaultFraction).releaseSeconds, 1e-4f)
     }
 
+    /**
+     * What `MercuryHeldTest` holds of the FILE, held of the phone's player: a zone that closes exactly plays its wrap as a
+     * step the loop makes everywhere else. (The reference player used to wrap one frame early, skipping the last frame,
+     * so the step across the wrap was 1.04 to 1.86 of the loop's steepest step at the top zones: a faint tick every loop,
+     * most audible on the highest keys.) The top zone of every voice is the worst case, played at its root; the steepest
+     * step is read from the file's own loop, the wrap pair excluded, and every step the player makes in three loops past
+     * the first pass must be inside it.
+     */
+    @Test
+    fun `the phone's player wraps every voice's top zone with a step the loop itself makes`() {
+        val gain = InstrumentEngine.VOICE_LEVEL
+        for (voice in MercuryVoice.entries) {
+            val midi = Keys.mercuryPadMidis(voice).last()
+            val note = Keys.mercuryPad(voice, emptyMap(), midi)
+            val file = note.snip.samples
+            val start = note.loopStartFrame.toInt()
+            var steepest = 0.0
+            for (i in start until file.size - 1) steepest = maxOf(steepest, Math.abs((file[i + 1] - file[i]).toDouble()))
+            val zone = InstrumentStore.Zone(0, 127, midi, "z.wav", file.size.toLong(), note.loopStartFrame)
+            val rate = note.snip.sampleRate
+            val engine = InstrumentEngine(InstrumentEngine.Loaded(InstrumentStore.Instrument("Z", 0.2f, listOf(zone)), rate, listOf(file)), rate)
+            assertTrue(engine.noteOn(midi))
+            val played = render(engine, (file.size + 3 * (file.size - start)).toFloat() / rate, rate)
+            var worst = 0.0
+            for (k in file.size - 2 until played.frameCount - 1) {
+                worst = maxOf(worst, Math.abs((played.samples[(k + 1) * 2] - played.samples[k * 2]).toDouble()) / gain)
+            }
+            assertTrue(worst <= steepest * 1.0001, "$voice MIDI $midi: the player steps ${"%.2f".format(worst / steepest)} of the loop's steepest step across its wrap")
+        }
+    }
+
     private fun render(engine: InstrumentEngine, seconds: Float, rate: Int): Snip {
         val frames = (seconds * rate).toInt()
         val out = FloatArray(frames * 2)

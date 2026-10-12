@@ -39,8 +39,8 @@ object KeyHit {
      * Resolve [note] at [velocity] on [instrument]. Null when no zone covers
      * the note, or [framesOf] says the zone's sample never loaded - silence
      * rather than a guess, exactly as the JVM engine stays silent there.
-     * A loop start at or past the end is played unlooped (the JVM engine's
-     * own rule), never a zero-length loop.
+     * A loop of fewer than two frames (a loop start at or past the last
+     * frame) is played unlooped (the JVM engine's own rule).
      */
     fun resolve(instrument: InstrumentStore.Instrument, note: Int, velocity: Float, framesOf: (String) -> Long?): Hit? {
         require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }

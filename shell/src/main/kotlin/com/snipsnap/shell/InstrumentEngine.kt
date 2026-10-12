@@ -14,7 +14,8 @@ import kotlin.math.pow
  * A note picks the zone that covers it, reads the zone's sample at the
  * ratio between the note and the zone's root (times the sample rate
  * ratio to the device), linearly interpolated; a zone with a loop start
- * wraps from the sample's end back to it and sustains while held; a note
+ * loops the file's `[loopStart, end)` - the last frame is played and is
+ * followed by the first of the loop - and sustains while held; a note
  * that lets go fades over the instrument's release; a zone without a loop
  * plays to its end and stops. [MAX_VOICES] at once, the oldest stolen.
  * Output is interleaved stereo, the same mono in both ears, summed at
@@ -100,17 +101,23 @@ class InstrumentEngine(
             val s = v.sample
             val end = s.size
             for (i in 0 until frames) {
-                if (v.pos >= end - 1) {
-                    if (v.loopStart >= 0 && end - 1 > v.loopStart) {
-                        v.pos -= (end - 1 - v.loopStart)
-                    } else {
-                        v.dead = true
-                        break
-                    }
+                if (v.loopStart >= 0 && end - 1 > v.loopStart) {
+                    // The loop is the file's [loopStart, end), the MPC's own and the one a file that closes
+                    // exactly (Keys.seamError) is cut for: the read wraps when it reaches `end`, so the loop's
+                    // period is end - loopStart and the last frame is played. A fast note over a short loop
+                    // can cross `end` more than once in a frame, so wrap until the read is inside.
+                    val period = (end - v.loopStart).toDouble()
+                    while (v.pos >= end) v.pos -= period
+                } else if (v.pos >= end - 1) {
+                    v.dead = true
+                    break
                 }
                 val i0 = v.pos.toInt()
                 val frac = (v.pos - i0).toFloat()
-                val x = s[i0] + (s[i0 + 1] - s[i0]) * frac
+                // Inside a loop the read can sit between the last frame and `end`; the frame after the last
+                // is the loop's first, which is what makes the seam a step the loop makes everywhere else.
+                val next = i0 + 1
+                val x = s[i0] + ((if (next < end) s[next] else s[v.loopStart]) - s[i0]) * frac
                 if (v.releasing) {
                     v.level -= releaseStep
                     if (v.level <= 0f) {

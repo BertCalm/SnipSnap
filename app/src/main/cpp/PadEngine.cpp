@@ -203,8 +203,10 @@ void PadEngine::apply(const PadCommand& c) {
             v.reverse = c.reverse;
             // Backwards starts at the last frame of the window and walks down.
             v.pos = c.reverse ? static_cast<double>(end - 1) : static_cast<double>(start);
-            // A loop wraps from the last frame back to loopStart; a loop that
-            // would be empty (start at or past end - 1) plays once instead.
+            // A loop is the window's [loopStart, end): the read wraps from
+            // `end` back to loopStart, and the last frame is played. A loop
+            // of fewer than two frames (loopStart at or past end - 1) plays
+            // once instead.
             v.loopStart = (c.loopStart >= 0 && c.loopStart < end - 1) ? c.loopStart : -1;
             v.inc = std::min(speed, kMaxSpeed);
             // A gain that is not a number would make the whole mix one: the
@@ -255,6 +257,11 @@ void PadEngine::render(float* out, int32_t numFrames) {
         const BankSample& s = current_->samples[static_cast<size_t>(v.sample)];
         const float* f = s.frames.data();
         const int64_t last = v.end - 1;
+        // The loop is [loopStart, end): its period is end - loopStart, and
+        // the frame after the last is the loop's first. (It used to wrap at
+        // `last`, so the last frame was never played and every wrap slipped
+        // a frame against a file cut to close exactly.)
+        const double period = v.loopStart >= 0 ? static_cast<double>(v.end - v.loopStart) : 0.0;
         for (int32_t i = 0; i < numFrames; ++i) {
             // A fast voice over a short loop can cross the far end more
             // than once in one frame: wrap until the read is back inside.
@@ -262,16 +269,23 @@ void PadEngine::render(float* out, int32_t numFrames) {
             // loopStart, back up to the last frame - and the window ends
             // at `start` rather than at `end`.
             if (v.reverse) {
-                while (v.loopStart >= 0 && v.pos <= static_cast<double>(v.loopStart)) {
-                    v.pos += static_cast<double>(last - v.loopStart);
+                while (v.loopStart >= 0 && v.pos < static_cast<double>(v.loopStart)) {
+                    v.pos += period;
+                }
+                // A read a few ulps short of loopStart (a step that is not a
+                // dyadic fraction arrives at an integer with rounding error)
+                // can add back to exactly `end`: that is the loop's first
+                // frame, not a frame past the window, and must not end the voice.
+                if (v.loopStart >= 0 && v.pos >= static_cast<double>(v.end)) {
+                    v.pos -= period;
                 }
                 if (v.pos < static_cast<double>(v.start)) {
                     endVoice(v);
                     break;
                 }
             } else {
-                while (v.loopStart >= 0 && v.pos >= static_cast<double>(last)) {
-                    v.pos -= static_cast<double>(last - v.loopStart);
+                while (v.loopStart >= 0 && v.pos >= static_cast<double>(v.end)) {
+                    v.pos -= period;
                 }
             }
             const int64_t i0 = static_cast<int64_t>(v.pos);
@@ -279,7 +293,11 @@ void PadEngine::render(float* out, int32_t numFrames) {
                 endVoice(v);
                 break;
             }
-            const int64_t i1 = std::min<int64_t>(i0 + 1, last);
+            // Inside a loop the pair at the last frame is (last, loopStart):
+            // the seam is interpolated like any other step. A voice that
+            // is not looping holds its last frame instead.
+            const int64_t i1 = (v.loopStart >= 0 && i0 + 1 >= v.end) ? v.loopStart
+                                                                     : std::min<int64_t>(i0 + 1, last);
             const float frac = static_cast<float>(v.pos - static_cast<double>(i0));
             float l, r;
             if (s.channels == 2) {
