@@ -581,6 +581,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/. See PedalAuditionGenerator. */
+tasks.register<JavaExec>("generatePedalAudition") {
+    group = "distribution"
+    description = "Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PedalAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pedal-audition")
+}
+
 tasks.register<JavaExec>("generateFlotillaKit") {
     group = "distribution"
     description = "Render the FLOTILLA acceptance kit under testkit/."
