@@ -115,11 +115,12 @@ gain-independent body contrast, with the fundamental retaining 56–83% of
 high-GRAIN body power. These descriptors corroborate the change; listening
 decides its musical usefulness.
 
-The revised renderer and current host integration pass 129 focused JVM tests,
+The revised renderer and host integration pass 154 unique focused JVM checks
+across the 129-test control revision and 110-test latest-main merge validation,
 including all nineteen original engine gates, the five-point response matrix,
-historical WAV goldens, both model dispatch paths, PRISM/REVEL coexistence,
+historical WAV goldens, both model dispatch paths, PRISM/REVEL/ALLOY coexistence,
 presets, starter IDs and CLI/shell routes. The Android debug APK is built and
-verified with 27 engines, both renderer versions and all four native ABIs.
+verified with 28 engines, both renderer versions and all four native ABIs.
 Device playback remains a separate check.
 
 WHISTLE is a simplified clear-tone air/reed approximation. The drivers and
