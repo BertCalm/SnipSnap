@@ -575,6 +575,22 @@ Implementation and validation notes are in [SUTURE.md](SUTURE.md).
 **Awaiting the owner's sonic verdict.** The reduced mechanical constants,
 voice shapes and release names remain provisional.
 
+SPOOL follows as the returning recording machine, ported from the
+[supplied engineering specification](SPOOL_SPEC.md). STRING, CHOIR, FLUTE,
+BRASS, PALIMPSEST and CUT use original note-specific source performances,
+three loaded strips, diagonal heads, audible spring return, deterministic
+splices and delayed cross-strip imprint. TUNE (C3–C5), HEAD, STRAIN, RETURN,
+IMPRINT, SPLICE and HOLD share that machine. Patch recipes retain gate/source
+duration, source roster and contact/transport/head/splice/write geometry;
+velocity changes the contact gesture. Six dry presets, `SynthKits.spool()`,
+the FRESH TAPE starter, phone picker and CLI expose the first review set.
+HOLD explicitly exports a finite `FROZEN_SNAPSHOT` imprint through repeated
+forward/return cycles. `./gradlew :synth:generateSpoolAudition` builds the
+listening pack; [SPOOL.md](SPOOL.md) describes integration and its limits.
+**Awaiting the owner's dry sonic verdict before expanding to 36 presets.**
+Published auditions and numerical probes support that review; device and
+release-name validation remain outstanding.
+
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
 

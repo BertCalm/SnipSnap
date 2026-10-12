@@ -249,6 +249,17 @@ listening set, or omit the property for the full raw/matched and diagnostic
 gate. [Implementation notes](docs/SUTURE.md) explain the model and HOLD's
 settled-loop format. The sound awaits the owner's listening verdict.
 
+SPOOL is a returning recording machine: three original synthesized string,
+choir, flute or brass performances share a loaded transport and overlapping
+forward/backward pickup heads. Clean settings keep both layers on the requested
+note. STRAIN shapes their journey, RETURN sets the backward layer,
+IMPRINT leaves delayed traces in neighboring strips and SPLICE
+reorders short sections. Six dry presets, a sixteen-pad starter, the synth
+picker and CLI use the same serialized machine. HOLD loops an explicitly
+frozen imprint snapshot. Run `./gradlew :synth:generateSpoolAudition` for the
+first listening pack; [implementation notes](docs/SPOOL.md) explain its
+export semantics. The proposed 36-preset library awaits dry sonic approval.
+
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
 the gesture. Six voices, eight presets and a dry sixteen-pad kit use MATERIAL,
@@ -277,7 +288,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 23 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 24 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -584,8 +595,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER and GRAINS round out the lineup —
-thirty engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL and GRAINS round out the lineup —
+thirty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -768,10 +779,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP and LACQUER are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER and SPOOL are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.

@@ -701,6 +701,18 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     if (project.hasProperty("pitchwheelFull")) args("--full")
 }
 
+/** Render Spool's original recordings, causal transport evidence, sweeps, loops and 16-pad MPC kit. */
+tasks.register<JavaExec>("generateSpoolAudition") {
+    group = "distribution"
+    description = "Render SPOOL dry native/matched WAVs, mechanical traces, manifest and 16-pad MPC kit under testkit/spool-audition/. -PspoolQuick selects a smaller development pack."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SpoolAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/spool-audition")
+    if (project.hasProperty("spoolQuick")) args("--quick")
+}
+
 /** Render Prism's dry register/velocity, macro, interaction and HOLD matrix. */
 tasks.register<JavaExec>("generatePrismAudition") {
     group = "distribution"

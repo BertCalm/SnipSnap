@@ -194,6 +194,9 @@ import com.snipsnap.synth.UndertowVoice
 import com.snipsnap.synth.Suture
 import com.snipsnap.synth.SuturePatch
 import com.snipsnap.synth.SutureVoice
+import com.snipsnap.synth.Spool
+import com.snipsnap.synth.SpoolPatch
+import com.snipsnap.synth.SpoolVoice
 import com.snipsnap.synth.Revel
 import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.RevelPatch
@@ -315,9 +318,10 @@ fun SynthScreen(
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP and LACQUER carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // PRISM also preserves its spectral/envelope template and strike velocity,
-    // ALLOY its synthesis configuration, and CONTOUR its authored table pair and
-    // trajectory configuration. Keep that state through preview, editing, saving
-    // and placing by editing the loaded patch rather than constructing anew.
+    // ALLOY its synthesis configuration, CONTOUR its authored table pair and
+    // trajectory configuration, and SPOOL its tape-machine configuration and
+    // velocity. Keep that state through preview, editing, saving and placing by
+    // editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1143,6 +1147,7 @@ fun SynthScreen(
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.SPOOL && spec.name == "HOLD" && Spool.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.REVEL && spec.name == "HOLD" && Revel.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 else -> null
                             },
@@ -1975,7 +1980,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2004,13 +2009,14 @@ private enum class Engine {
         UNDERTOW -> UndertowVoice.entries
         COROLLA -> CorollaVoice.entries
         SUTURE -> SutureVoice.entries
-        REVEL -> RevelVoice.entries
         TESSERA -> TesseraVoice.entries
         PITCHWHEEL -> PitchwheelVoice.entries
+        REVEL -> RevelVoice.entries
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
         LACQUER -> LacquerVoice.entries
+        SPOOL -> SpoolVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -2037,13 +2043,14 @@ private enum class Engine {
         UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
         COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
         SUTURE -> Suture.macrosFor(voice as SutureVoice)
-        REVEL -> Revel.macrosFor(voice as RevelVoice)
         TESSERA -> Tessera.macrosFor(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
+        REVEL -> Revel.macrosFor(voice as RevelVoice)
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
         LACQUER -> Lacquer.macrosFor(voice as LacquerVoice)
+        SPOOL -> Spool.macrosFor(voice as SpoolVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -2070,13 +2077,14 @@ private enum class Engine {
         UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
         COROLLA -> Corolla.defaults(voice as CorollaVoice)
         SUTURE -> Suture.defaults(voice as SutureVoice)
-        REVEL -> Revel.defaults(voice as RevelVoice)
         TESSERA -> Tessera.defaults(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
+        REVEL -> Revel.defaults(voice as RevelVoice)
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
         LACQUER -> Lacquer.defaults(voice as LacquerVoice)
+        SPOOL -> Spool.defaults(voice as SpoolVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2103,13 +2111,14 @@ private enum class Engine {
         UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
         COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
         SUTURE -> Suture.scramble(voice as SutureVoice, random)
-        REVEL -> Revel.scramble(voice as RevelVoice, random)
         TESSERA -> Tessera.scramble(voice as TesseraVoice, random)
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
+        REVEL -> Revel.scramble(voice as RevelVoice, random)
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
         LACQUER -> Lacquer.scramble(voice as LacquerVoice, random)
+        SPOOL -> Spool.scramble(voice as SpoolVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2141,13 +2150,14 @@ private enum class Engine {
         UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
         COROLLA -> Corolla.render(voice as CorollaVoice, macros)
         SUTURE -> Suture.render(voice as SutureVoice, macros)
-        REVEL -> Revel.render(voice as RevelVoice, macros)
         TESSERA -> Tessera.render(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
+        REVEL -> Revel.render(voice as RevelVoice, macros)
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
         LACQUER -> Lacquer.render(voice as LacquerVoice, macros)
+        SPOOL -> Spool.render(voice as SpoolVoice, macros)
     }
 
     /**
@@ -2180,13 +2190,14 @@ private enum class Engine {
         UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
         COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
         SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
-        REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         TESSERA -> Tessera.drumClassFor(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
+        REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
         LACQUER -> Lacquer.drumClassFor(voice as LacquerVoice, macros)
+        SPOOL -> Spool.drumClassFor(voice as SpoolVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2213,13 +2224,14 @@ private enum class Engine {
         UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
         COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
         SUTURE -> SuturePatch(name, voice as SutureVoice, macros)
-        REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         TESSERA -> TesseraPatch(name, voice as TesseraVoice, macros)
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
+        REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)
         LACQUER -> LacquerPatch(name, voice as LacquerVoice, macros)
+        SPOOL -> SpoolPatch(name, voice as SpoolVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

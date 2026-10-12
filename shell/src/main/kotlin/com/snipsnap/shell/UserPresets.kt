@@ -12,6 +12,7 @@ import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Presets
@@ -339,14 +340,15 @@ object UserPresets {
      * so the promoted preset renders the
      * bytes the phone heard. CISTERN, PITCHWHEEL and STOOP also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well; REVEL retains the
+     * PITCHWHEEL keeps its render-model version as well. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
      * energy. CONTOUR retains its table pair, layer relationships, envelopes, loop
      * recipe and velocity. STOOP retains its source, answer and chord recipe and
      * its render-model version. LACQUER carries its entire layered recipe through
-     * the JSON constructor. The name is a Kotlin string literal, escaped.
+     * the JSON constructor. SPOOL writes its complete machine constructor, including
+     * recording roster and HOLD memory mode. The name is a Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is LacquerPatch) {
@@ -375,6 +377,17 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is SpoolPatch) {
+            val m = patch.machine
+            val roster = m.roster.joinToString(", ") {
+                "SpoolStrip(SpoolSourceFamily.${it.family}, gain = ${it.gain}f, tension = ${it.tension}f, drag = ${it.drag}f, contact = ${it.contact}f, doubling = ${it.doubling}f)"
+            }
+            val heads = m.headOffsets.joinToString(", ") { "${it}f" }
+            val splices = m.spliceSchedule.joinToString(", ") { "SpoolSplice(${it.boundary}f, ${it.displacement}f)" }
+            val routes = m.routes.joinToString(", ") { "SpoolRoute(${it.source}, ${it.destination}, ${it.gain}f)" }
+            val machine = "SpoolMachine(roster = listOf($roster), gateSeconds = ${m.gateSeconds}f, sourceSeconds = ${m.sourceSeconds}f, motorTorque = ${m.motorTorque}f, returnSeconds = ${m.returnSeconds}f, headOffsets = listOf($heads), spliceSchedule = listOf($splices), routes = listOf($routes), holdMode = SpoolHoldMode.${m.holdMode}, seed = ${m.seed}, writeDelaySamples = ${m.writeDelaySamples}, reengage = ${m.reengage})"
+            return "SpoolPatch(\"$name\", SpoolVoice.${patch.voice}, mapOf($macros), machine = $machine, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"

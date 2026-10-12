@@ -151,6 +151,8 @@ testkit/undertow-audition/
 
 # SUTURE listening clips, mechanical traces and local listening page.
 testkit/suture-audition/
+testkit/spool-audition/
+testkit/spool-audition-site/
 testkit/suture-first-listen/
 
 # Tessera's generated listening matrix, diagnostic traces and kit audio.
