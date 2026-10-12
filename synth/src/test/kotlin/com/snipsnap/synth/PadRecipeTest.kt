@@ -49,6 +49,7 @@ class PadRecipeTest {
         SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
         PitchwheelPatch("Wheel Test", PitchwheelVoice.RECOIL, mapOf("ADHESION" to 0.8f), midi = 55, velocity = 0.6f),
         MurmurPatch("Mouth Test", MurmurVoice.KEY, mapOf("MOUTH" to 0.7f), midi = 55, velocity = 0.6f),
+        AlloyPatch("Hybrid Test", AlloyVoice.KEY, mapOf("FUSE" to 0.6f), midi = 55, velocity = 0.6f),
     )
 
     @Test

@@ -80,6 +80,7 @@ object Patches {
             PitchwheelPatch.ENGINE -> PitchwheelPatch.fromJsonValue(value)
             MurmurPatch.ENGINE -> MurmurPatch.fromJsonValue(value)
             PrismPatch.ENGINE -> PrismPatch.fromJsonValue(value)
+            AlloyPatch.ENGINE -> AlloyPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

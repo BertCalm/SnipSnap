@@ -4,6 +4,7 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
@@ -338,8 +339,9 @@ object UserPresets {
      * PITCHWHEEL keeps its render-model version as well; REVEL retains the
      * microphones, phrase configuration, seed and saved velocity. MURMUR keeps its
      * root, velocity and complete operator/formant/envelope definition. PRISM retains
-     * its additive template, group profiles, model and strike velocity. The name is a
-     * Kotlin string literal, escaped.
+     * its additive template, group profiles, model and strike velocity. ALLOY retains its
+     * generated materials, operator routing and held recipe alongside note and
+     * energy. The name is a Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -373,6 +375,10 @@ object UserPresets {
                     "PrismTemplate(spectralId = PrismSpectrum.${t.spectralId}, envelopeId = PrismContour.${t.envelopeId}, " +
                     "ratioOverrides = ${floats(t.ratioOverrides)}, amplitudeOverrides = ${floats(t.amplitudeOverrides)}, " +
                     "groupProfiles = $groups, attackSeconds = $attack, decaySeconds = $decay, loopSeconds = ${t.loopSeconds}f))"
+            }
+            is AlloyPatch -> {
+                val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
             }
             else -> ""
         }
