@@ -9,6 +9,7 @@ import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.Relay
 import com.snipsnap.synth.RelayAccent
@@ -145,6 +146,7 @@ class UserPresetsTest {
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
                 "RELAY" to RelayVoice.entries.map { it.name },
+                "PRISM" to PrismVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {

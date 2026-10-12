@@ -348,6 +348,40 @@ object Keys {
         return KeyNote(Snip(loop + loop, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
+    /** Every minor third over PRISM's two-octave per-voice register. */
+    fun prismPadMidis(voice: PrismVoice): List<Int> =
+        (0..Prism.TUNE_SEMITONES step 3).map { Prism.rootMidi(voice) + it }
+
+    /**
+     * A held additive zone at exact MIDI pitch. HOLD is forced to its
+     * seamless region and the saved partial template and velocity remain
+     * intact. As with [sirenPad], two identical copies make a nonzero loop
+     * marker that both MPC formats can express; this exports the settled
+     * region without the finite note's strike onset.
+     */
+    fun prismPad(
+        voice: PrismVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        velocity: Float = 1f,
+        template: PrismTemplate = Prism.templateFor(voice),
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        val low = Prism.rootMidi(voice)
+        require(midi - low in 0..Prism.TUNE_SEMITONES) {
+            "PRISM $voice pads are MIDI $low..${low + Prism.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Prism.defaults(voice)
+        val m = defaults + macros.filterKeys { it in defaults } + mapOf(
+            "TUNE" to (midi - low) / Prism.TUNE_SEMITONES.toFloat(),
+            "HOLD" to 1f,
+        )
+        val loop = Prism.renderLoop(voice, m, velocity, template, cancelled)
+        val samples = loop + loop
+        // renderLoop checks independently synthesized cycles, including silent velocity.
+        return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
+    }
+
     /**
      * Music box — the TINES chime recipe held to exact pitch: an
      * inharmonic 3.5-ratio strike and a barely-detuned twin beating

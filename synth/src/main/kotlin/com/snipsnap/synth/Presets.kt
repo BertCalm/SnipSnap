@@ -134,6 +134,14 @@ object Presets {
             val v = RelayVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             RelayPresets.forVoice(v)
         }
+        PrismPatch.ENGINE -> {
+            val v = PrismVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            PrismPresets.forVoice(v)
+        }
+        AlloyPatch.ENGINE -> {
+            val v = AlloyVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            AlloyPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -166,5 +174,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + RelayPresets.all()
+            RevelPresets.all() + RelayPresets.all() + PrismPresets.all() + AlloyPresets.all()
 }
