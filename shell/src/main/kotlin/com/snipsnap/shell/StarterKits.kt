@@ -167,6 +167,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.contour() },
         Starter(
+            "stoop", "STOOP",
+            "Bass, keys and compact chords in C minor pentatonic. Warm grooves with quiet answers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.stoop() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

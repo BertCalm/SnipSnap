@@ -29,6 +29,8 @@ import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Stoop
+import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Revel
 import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Tessera
@@ -61,7 +63,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM and CONTOUR) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR and STOOP) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -92,6 +94,7 @@ object SynthCommand {
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
+                StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
@@ -101,7 +104,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM and CONTOUR, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR and STOOP, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -148,6 +151,7 @@ object SynthCommand {
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is StoopPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),

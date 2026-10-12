@@ -180,6 +180,28 @@ listening page, raw/matched audio and causal traces under
 integration contracts and listening gates. Sonic acceptance remains the
 owner's listening decision; device validation remains outstanding.
 
+### STOOP — original groove voices with an answering articulation
+
+STOOP ports the [supplied engineering specification](superpowers/specs/2026-10-10-stoop-engine-engineering-spec.md).
+BASS, TINE, CLAV, ORGAN, LEAD and CHORD use family-specific source recipes.
+TOUCH changes attack character continuously; COLOR shapes spectrum;
+SHADOW adds a quieter, newly articulated reply; WEAR supplies bounded
+recording character; LENGTH shapes the finite envelope. HOLD returns
+settled loop-only material, including a sustained shadow companion.
+
+Patches retain explicit MIDI 24–96, gesture velocity, source settings,
+shadow timing/interval/articulation, chord intervals and model version.
+The initial 48-preset roster is weighted toward bass and keys (16 bass,
+10 tine, 8 clav, 6 organ, 4 lead, 4 chord). It awaits the owner's listening
+verdict; source variety and numerical checks are not sonic approval.
+Finite notes route TONAL, held notes LOOP. The phone picker, CLI, saved
+recipes and dry sixteen-pad starter kit share the renderer.
+
+Run `./gradlew :synth:generateStoopAudition` for the listening matrix,
+or add `-Pquick` for its smaller smoke pack. [STOOP](STOOP.md) documents
+saving, dry auditions, HOLD and the exported shadow's playback-rate limit.
+Release naming and device/hardware validation remain separate gates.
+
 ### PITCHWHEEL — wooden teeth catching through stretching resin
 
 The owner heard PITCHWHEEL R1 as six similar struck sounds distinguished

@@ -40,6 +40,17 @@ tasks.test {
     }
 }
 
+/** Stoop's reproducible dry listening pack; -Pquick selects the smoke pack. */
+tasks.register<JavaExec>("generateStoopAudition") {
+    group = "distribution"
+    description = "Render STOOP presets, phrases, macro comparisons and held loops under testkit/stoop-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StoopAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/stoop-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
 /** REVEL's dry acceptance matrix and standalone listening page; -Pquick selects first-listen evidence. */
 tasks.register<JavaExec>("generateRevelAudition") {
     group = "distribution"
