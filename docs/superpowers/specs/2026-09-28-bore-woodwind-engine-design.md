@@ -2399,7 +2399,7 @@ test is blind to the waveform still settling, and it was the correlation of the 
 - **Render time** fell: one render of 4.6 s of note (0.8 M raw samples), 368 ms median and 464 ms worst, against three renders of
   0.6 to 0.9 M and, at six per cent of the SAX corners, a retry that more than doubled them.
 
-**Verification.** The full suite before the default branch was merged in: 4,343 tests, one failing, `ConventionTest`'s stale-count law (README line 264 said FRESH TAPE has 17 starters and the code has 18; the default branch had already fixed that on its own, and it is not in `synth`). Each guard was then broken alone, on the final code, with the unbroken baseline first (59 tests in `BoreTest`,
+**Verification.** The full suite (`./gradlew test`) on the code with the default branch merged in: build successful, 3,565 test results, none failing (the first full run, before that merge, had one failure: `ConventionTest`'s stale-count law, on a README line that said FRESH TAPE has 17 starters where the code has 18, which the default branch had already fixed and which is not in `synth`). Each guard was then broken alone, on the final code, with the unbroken baseline first (59 tests in `BoreTest`,
 `BoreLoopFuzzTest` and `BorePresetsTest`, none failing; a baseline that runs no tests aborts the sweep), and a named test failed for 26 of 27:
 
 - *The held note.* Blown at the loop step's HOLD, by dropping the override and by `LOOP_HOLD` = 1 (`a LOOP has the life of its one-shot`, `a LOOP's vibrato is the held note's at half the most`); conditioned without the rasp and the voicing (`a LOOP carries the one-shot's rasp and voicing`).
