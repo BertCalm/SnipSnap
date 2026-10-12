@@ -4,10 +4,12 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RevelPatch
 import java.io.File
@@ -333,8 +335,10 @@ object UserPresets {
      * bytes the phone heard. CISTERN and PITCHWHEEL also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL keeps its render-model version as well; REVEL retains the
-     * microphones, phrase configuration, seed and saved velocity. The name is a
-     * Kotlin string literal, escaped.
+     * microphones, phrase configuration, seed and saved velocity. PRISM retains its
+     * additive template, group profiles, model and strike velocity. ALLOY retains its
+     * generated materials, operator routing and held recipe alongside note and
+     * energy. The name is a Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -353,6 +357,24 @@ object UserPresets {
                     "phaseOffsets = ${values(c.phaseOffsets) { "${it}f" }}, " +
                     "directions = ${values(c.directions) { it.toString() }}, " +
                     "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
+            }
+            is PrismPatch -> {
+                val t = patch.template
+                fun floats(values: List<Float>) = values.joinToString(", ", "listOf(", ")") { "${it}f" }
+                val groups = t.groupProfiles.joinToString(", ", "listOf(", ")") { group ->
+                    "PrismGroupProfile(attackScale = ${group.attackScale}f, decayScale = ${group.decayScale}f, " +
+                        "delaySeconds = ${group.delaySeconds}f, motionCycles = ${group.motionCycles}, motionDepth = ${group.motionDepth}f)"
+                }
+                val attack = t.attackSeconds?.let { "${it}f" } ?: "null"
+                val decay = t.decaySeconds?.let { "${it}f" } ?: "null"
+                ".copy(velocity = ${patch.velocity}f, model = ${patch.model}, template = " +
+                    "PrismTemplate(spectralId = PrismSpectrum.${t.spectralId}, envelopeId = PrismContour.${t.envelopeId}, " +
+                    "ratioOverrides = ${floats(t.ratioOverrides)}, amplitudeOverrides = ${floats(t.amplitudeOverrides)}, " +
+                    "groupProfiles = $groups, attackSeconds = $attack, decaySeconds = $decay, loopSeconds = ${t.loopSeconds}f))"
+            }
+            is AlloyPatch -> {
+                val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
             }
             else -> ""
         }
