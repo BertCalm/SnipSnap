@@ -167,18 +167,29 @@ object Spool {
         var peak = 0f
         val originals = Array(3) { strip ->
             val s = strips[strip]
+            val family = s.family
             val random = Random(Dsp.seedFor("SPOOL", voice.name, midiFor(voice, m.getValue("TUNE")), machine.seed, strip))
             val harmonics = min(24, floor(SOURCE_BANDWIDTH / hz).toInt()).coerceAtLeast(1)
-            val phase = DoubleArray(harmonics) { if (it == 0) .13 * strip else random.nextDouble() * 2 * PI }
+            val filterA = (1.0 - exp(-2 * PI * SOURCE_BANDWIDTH / INTERNAL_RATE)).toFloat().toDouble()
+            val filterMemory = 1 - filterA
+            val phase = DoubleArray(harmonics) { index ->
+                val h = index + 1
+                val angle = 2 * PI * hz * h / INTERNAL_RATE
+                val filterPhase = atan2(-filterMemory * sin(angle), 1 - filterMemory * cos(angle))
+                val sign = if (family == SpoolSourceFamily.BRASS && h > 1 && h % 2 == 1) PI else 0.0
+                // An even carrier profile survives time reversal in EVERY partial. Compensate
+                // the four causal source filters so their phase does not undo this relation.
+                // Recorded envelopes, vowel movement and airflow still play backwards.
+                PI / 2 + h * .13 * strip + sign - 4 * filterPhase
+            }
             val oscSin = DoubleArray(harmonics) { sin(phase[it]) }
             val oscCos = DoubleArray(harmonics) { cos(phase[it]) }
             val stepSin = DoubleArray(harmonics)
             val stepCos = DoubleArray(harmonics)
             val gain = DoubleArray(harmonics)
-            val family = s.family
             val attack = when (family) {
-                SpoolSourceFamily.STRING -> .085; SpoolSourceFamily.CHOIR -> .145
-                SpoolSourceFamily.FLUTE -> .065; SpoolSourceFamily.BRASS -> .035
+                SpoolSourceFamily.STRING -> .085; SpoolSourceFamily.CHOIR -> .190
+                SpoolSourceFamily.FLUTE -> .050; SpoolSourceFamily.BRASS -> .022
             }
             var doubleSin = sin(.8 + strip)
             var doubleCos = cos(.8 + strip)
@@ -186,6 +197,7 @@ object Spool {
             val ds = sin(doubleStep); val dc = cos(doubleStep)
             val out = FloatArray(n)
             var breath = 0.0
+            var fastBreath = 0.0
             for (i in out.indices) {
                 if (i % 8192 == 0) stopIfUnwanted()
                 val t = i.toDouble() / INTERNAL_RATE
@@ -199,19 +211,33 @@ object Spool {
                         stepSin[h - 1] = sin(step); stepCos[h - 1] = cos(step)
                         val f = hz * h
                         val a = when (family) {
-                            SpoolSourceFamily.STRING -> h.toDouble().pow(-1.30) * exp(-f / (1550 + 1500 * evolution))
-                            SpoolSourceFamily.CHOIR -> if (h == 1) .72 else (.12 +
-                                .90 * exp(-((f - 740) / 260).pow(2)) +
-                                .55 * exp(-((f - 1160 - 100 * sin(t * 1.2)) / 340).pow(2)) +
-                                .20 * exp(-((f - 2480) / 400).pow(2))) / h.toDouble().pow(.80)
-                            SpoolSourceFamily.FLUTE -> when (h) { 1 -> 1.0; 2 -> .16 + .09 * evolution; 3 -> .055; else -> .025 / h }
-                            SpoolSourceFamily.BRASS -> h.toDouble().pow(-.98) * exp(-f / (1100 + 1700 * evolution))
+                            SpoolSourceFamily.STRING -> (if (h == 1) .80 else 1.20 / h.toDouble().pow(.78)) *
+                                exp(-f / (3400 + 1600 * evolution))
+                            SpoolSourceFamily.CHOIR -> if (h == 1) .42 else (.020 +
+                                1.35 * exp(-((f - 730 - 35 * sin(t * 1.6)) / 145).pow(2)) +
+                                1.10 * exp(-((f - 1260 - 45 * sin(t * 1.1)) / 300).pow(2)) +
+                                .70 * exp(-((f - 2500) / 260).pow(2))) / h.toDouble().pow(.18)
+                            SpoolSourceFamily.FLUTE -> when (h) { 1 -> 1.0; 2 -> .045 + .035 * evolution; 3 -> .018; else -> .008 / h }
+                            SpoolSourceFamily.BRASS -> (when {
+                                h == 1 -> .72
+                                h % 2 == 0 -> 1.40 / h.toDouble().pow(.28)
+                                else -> .60 / h.toDouble().pow(.58)
+                            }) * exp(-f / (3100 + 2100 * evolution))
                         }
                         // The recording has a bright, decaying attack. Reading this same
                         // immutable articulation backwards produces a growing breath/bow swell.
-                        val bloom = .68 + .32 * exp(-t / .24)
+                        val bloom = when (family) {
+                            SpoolSourceFamily.STRING -> .68 + .32 * exp(-t / .24)
+                            SpoolSourceFamily.CHOIR -> .96 + .04 * exp(-t / .35)
+                            SpoolSourceFamily.FLUTE -> .74 + .26 * exp(-t / .08)
+                            SpoolSourceFamily.BRASS -> .90 + .10 * exp(-t / .12)
+                        }
                         gain[h - 1] = a * if (h == 1) 1.0 else (.65 + .35 * velocity) * bloom
                     }
+                    // Bound every recorded family by the same partial-amplitude budget;
+                    // audition leveling then compares color instead of oscillator loudness.
+                    val budget = gain.sum()
+                    if (budget > 2.6) for (h in gain.indices) gain[h] *= 2.6 / budget
                 }
                 var y = 0.0
                 for (h in 0 until harmonics) {
@@ -225,12 +251,30 @@ object Spool {
                 doubleCos = doubleCos * dc - old * ds
                 y = y * (1 - .18 * s.doubling) + .18 * s.doubling * doubleSin
                 // Original airflow is restrained, bandwidth-limited and never the voice's identity.
-                breath += .021 * (random.nextDouble(-1.0, 1.0) - breath)
-                if (family == SpoolSourceFamily.FLUTE) y += .025 * breath
+                val air = random.nextDouble(-1.0, 1.0)
+                breath += .021 * (air - breath)
+                fastBreath += .15 * (air - fastBreath)
+                val airflow = fastBreath - breath
+                y += when (family) {
+                    SpoolSourceFamily.FLUTE -> .38 * airflow * (.65 + .35 * exp(-t / .10))
+                    SpoolSourceFamily.CHOIR -> .06 * airflow
+                    SpoolSourceFamily.STRING -> .025 * airflow
+                    SpoolSourceFamily.BRASS -> .04 * airflow * exp(-t / .08)
+                }
                 val env = smooth(t / attack) * smooth((machine.sourceSeconds - t) / .16)
-                val gesture = (.90 + .07 * sin(2 * PI * .75 * t + strip * .45)) *
-                    (1 - .09 * exp(-((t - .38 - strip * .09) / .13).pow(2)))
-                val articulation = .55 + .45 * exp(-t / .32)
+                val gesture = when (family) {
+                    SpoolSourceFamily.STRING -> (.90 + .07 * sin(2 * PI * .75 * t + strip * .45)) *
+                        (1 - .09 * exp(-((t - .38 - strip * .09) / .13).pow(2)))
+                    SpoolSourceFamily.CHOIR -> .88 + .10 * sin(2 * PI * .32 * t + strip * .6)
+                    SpoolSourceFamily.FLUTE -> .97 + .02 * sin(2 * PI * t + strip * .4)
+                    SpoolSourceFamily.BRASS -> (.82 + .16 * exp(-t / .12) + .04 * sin(2 * PI * .55 * t)).coerceAtMost(1.0)
+                }
+                val articulation = when (family) {
+                    SpoolSourceFamily.STRING -> .55 + .45 * exp(-t / .32)
+                    SpoolSourceFamily.CHOIR -> .74 + .26 * exp(-t / .60)
+                    SpoolSourceFamily.FLUTE -> .92 + .08 * exp(-t / .22)
+                    SpoolSourceFamily.BRASS -> .44 + .56 * exp(-t / .17)
+                }
                 out[i] = (.36 * y * env * gesture * articulation * (.60 + .40 * velocity)).toFloat()
             }
             val sourceFilters = Array(4) { Dsp.OnePole(INTERNAL_RATE) }

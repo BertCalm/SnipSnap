@@ -22,12 +22,12 @@ import kotlin.math.sqrt
 object SpoolAuditionGenerator {
     private val timbral = listOf("HEAD", "STRAIN", "RETURN", "IMPRINT", "SPLICE")
     private val descriptions = mapOf(
-        SpoolVoice.STRING to "Warm string recordings, backward attack swells and gentle shared tape flutter.",
-        SpoolVoice.CHOIR to "Voiced formant recordings with a growing backward breath and shared tape movement.",
-        SpoolVoice.FLUTE to "A clear airy root with a rising reversed articulation beneath the held tone.",
-        SpoolVoice.BRASS to "Rounded harmonic attacks turn into backward swells with a lightly wavering pitch.",
-        SpoolVoice.PALIMPSEST to "Recorded material inherits a quieter delayed trace from its neighbors.",
-        SpoolVoice.CUT to "A deterministic schedule reorders sections of original synthesized recordings.",
+        SpoolVoice.STRING to "Broad bowed harmonics and a bow-shaped attack, carried by overlapping reverse swells and tape flutter.",
+        SpoolVoice.CHOIR to "Pronounced evolving vowel formants and a soft voiced onset, with a returning breath beneath the note.",
+        SpoolVoice.FLUTE to "A pure airy root, sparse upper harmonics and filtered airflow with gently moving tape pitch.",
+        SpoolVoice.BRASS to "Bright even harmonics, a fast lip-shaped attack and a darker sustain that blooms backward.",
+        SpoolVoice.PALIMPSEST to "Vocal and bowed recordings combine with filtered inherited traces from neighboring strips.",
+        SpoolVoice.CUT to "A brighter brass/flute recording is rearranged by overlapping recorded-section cuts.",
     )
     private val macroDescriptions = mapOf(
         "HEAD" to "Aligned pickup to diagonal track and recorded-time travel.",
@@ -173,7 +173,7 @@ object SpoolAuditionGenerator {
             val reverse = requireNotNull(result.reverseStem)
             val stems = linkedMapOf<String, Any?>()
             val stemClips = mutableListOf<JsonValue>()
-            if (case.section in setOf("voices", "registers", "loops")) {
+            if (case.section in setOf("voices", "registers", "loops", "voice-comparison")) {
                 val overlap = SpoolListeningMeasure.overlap(forward, reverse, d.gateSeconds.toDouble(), d.returnEndSeconds.toDouble())
                 entry["overlap"] = overlap.values()
                 for ((kind, stem) in listOf("forward" to forward, "reverse" to reverse)) {
@@ -203,6 +203,18 @@ object SpoolAuditionGenerator {
                     stems[kind] = values
                 }
                 entry["stems"] = stems
+                if (case.section != "loops") {
+                    val wanted = Keys.midiHz(case.midi).toDouble()
+                    fun profile(s: FloatArray): Map<String, Any?> {
+                        val p = SpoolTimbreListeningMeasure.profile(s, wanted, .85, 1.25)
+                        return mapOf("partialPower" to p.partialPower, "rootShare" to p.rootShare,
+                            "centroidHz" to p.centroidHarmonic * wanted, "upperShare" to p.upperShare,
+                            "oddUpperShare" to p.oddUpperShare, "evenShare" to p.evenShare)
+                    }
+                    entry["timbre"] = mapOf("fromSeconds" to .85, "untilSeconds" to 1.25,
+                        "normalization" to "total measured harmonic power; independent of gain",
+                        "mixed" to profile(samples), "forward" to profile(forward), "reverse" to profile(reverse))
+                }
             }
             if (case.macro != null) entry["macro"] = case.macro
             if (case.value != null) entry["value"] = case.value
@@ -248,6 +260,14 @@ object SpoolAuditionGenerator {
                 add(Case("velocity_${id}_${(velocity * 100).toInt()}", "velocity", voice, "$voice · velocity $velocity",
                     "Velocity articulates the original source and transport contact; matched audio lets you compare the gesture at equal loudness.", velocity = velocity))
             }
+        }
+        val identityControls = mapOf("HEAD" to .2f, "STRAIN" to .1f, "RETURN" to .65f,
+            "IMPRINT" to .15f, "SPLICE" to 0f, "HOLD" to 0f)
+        for (midi in listOf(48, 60, 72)) for (voice in listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)) {
+            val note = mapOf(48 to "C3", 60 to "C4", 72 to "C5").getValue(midi)
+            add(Case("identity_${voice.name.lowercase(Locale.ROOT)}_$midi", "voice-comparison", voice,
+                "$voice · same controls · $note", "Four source families at the same note, velocity and controls. Use Matched level to compare their harmonic color. " + descriptions.getValue(voice),
+                identityControls, midi = midi, groupKey = "identity_$midi"))
         }
         val baseline = mapOf("HEAD" to .25f, "STRAIN" to .2f, "RETURN" to .6f, "IMPRINT" to .4f, "SPLICE" to .2f)
         for (macro in timbral) for (value in if (quick) listOf(0f, .5f, 1f) else listOf(0f, .25f, .5f, .75f, 1f)) {

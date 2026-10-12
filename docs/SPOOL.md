@@ -44,6 +44,26 @@ powered cycle. This is a repeating machine schedule; it does not claim live writ
 
 ## Overlapping pickups and clean harmony
 
+The four recorded source families have separate harmonic and articulation designs. STRING uses
+a broad bowed spectrum; CHOIR emphasizes evolving vowel regions around 730, 1260 and 2500 Hz;
+FLUTE combines a nearly pure root with filtered airflow; BRASS has a quick lip-shaped attack and
+bright even harmonics. Their attack, sustain and upper-partial evolution also differ. Clean
+factory machines give the named family 94% of strip weight, with quiet 4%/2% companions.
+PALIMPSEST uses a vocal/bowed/air mixture; CUT rearranges a brass/flute/string mixture.
+
+The generated partials have a reversal-compatible phase relation, compensated for the four
+source low-pass filters. Higher harmonics therefore reinforce coherently during overlapping
+pickup playback. Original recordings still carry real changing articulation and airflow;
+the backward pickup traverses that captured material in reverse. Source bandwidth remains
+3.4 kHz, and every family shares a bounded partial-amplitude budget.
+
+At identical controls and C4, measured fundamental shares of harmonic power are 65.1% STRING,
+16.5% CHOIR, 99.4% FLUTE and 33.5% BRASS. Gain-independent harmonic-envelope distances between
+every clean family exceed .239 at C3/C4/C5 in mixed audio and both isolated pickups. Choir vowel
+peaks stay near 785 and 1308 Hz across C3/C4. These are audio measurements, not synthesis
+coefficient comparisons. The audition's **Voice comparison** bank supplies twelve real clips
+at the same controls, velocity and listening level for this review.
+
 The motor and spring still move three physical strip coordinates. Two independent virtual
 pickup paths now hear the recordings concurrently: the backward preview opens at 45% of the
 scheduled gate, while forward playback continues. It uses only the prefix already traversed.
@@ -81,11 +101,11 @@ cover the four clean families at C3, C4 and C5, with HEAD=.2, STRAIN=.1, SPLICE=
 IMPRINT=.15 and RETURN=.65. The checks require substantial simultaneous audibility across the
 return, average per-stem pitch within 15 cents, agreement within 20 cents and at least 85%
 harmonic-band power. Separate audio-derived meters on a single STRING strip at C3/C4/C5 show
-3.94–4.07 cents RMS of pitch motion, including 2.07–2.24 cents RMS of faster flutter. Mean tuning
-error stays within .044 cents and forward/backward disagreement within 1.01 cents RMS.
-The forward recording decays and darkens; its backward pickup swells by 28–30% and its
-upper-harmonic/root energy ratio grows by 27–28%. Across six clean release cases, the largest
-adjacent 5 ms RMS step is .52 dB and the backward layer remains at least 42% of forward RMS.
+3.94–4.03 cents RMS of pitch motion, including 2.06–2.22 cents RMS of faster flutter. Mean tuning
+error stays within .043 cents and forward/backward disagreement within .86 cents RMS.
+The forward recording decays and darkens; its backward pickup swells by 23–33% and its
+upper-harmonic/root energy ratio grows by about 28%. Across six clean release cases, the largest
+adjacent 5 ms RMS step is 1.12 dB and the backward layer remains at least 18.8% of forward RMS.
 These measurements use 25 ms RMS windows at 5 ms hops and the longest active overlap window
 for pitch/spectral analysis. The mixed overlap is also checked against a deliberately
 semitone-detuned reference as a calibrated roughness counterexample; that reference is never
@@ -159,10 +179,11 @@ Individual sounds can also be rendered with:
 ./gradlew :cli:run --args="synth SPOOL CHOIR --midi 60 --velocity .35 --out /tmp/spool-soft"
 ```
 
-The final renderer produces 162 listening clips, including twelve separate pickup diagnostics,
-as 324 native and level-matched WAVs, plus the sixteen-pad MPC kit. The assembly adds eighteen
-pairs of the previous coherent overlap and current reverse/flutter revision, for 198 page
-entries and 384 listening WAVs, including both versions' default pickup stems. Its source patch
+The final renderer produces 174 listening clips, including twelve separate pickup diagnostics
+and twelve equal-control voice comparisons, as 348 native and level-matched WAVs, plus the
+sixteen-pad MPC kit. The assembly adds eighteen pairs of the previous reverse/flutter and
+current voice-character revision, for 210 page entries and 408 listening WAVs, including both
+versions' default pickup stems. Its source patch
 targets the current upstream baseline and records a
 clean source commit. Provenance hashes cover `Spool.kt`, `SpoolPatch.kt` and `SpoolPresets.kt`;
 changes to DSP or recipe defaults require fresh rendering.
@@ -170,14 +191,14 @@ changes to DSP or recipe defaults require fresh rendering.
 Acceptance checks cover independent layer pitch and harmonic agreement, meaningful simultaneous
 audibility before and after release, actual captured support, deterministic source/memory,
 causal inherited traces, complete feedback bounds, serialization, repeated HOLD waveform
-continuity and seam metrics. There are 22 Spool checks, including audio-derived wow/flutter,
-reverse swell/brightness and connected release handoff. Buffer accounting and cloud timings are prototype
+continuity and seam metrics. There are 24 Spool checks, including independent voice spectra,
+fixed-frequency vowel regions, audio-derived wow/flutter, reverse swell/brightness and connected
+release handoff. Buffer accounting and cloud timings are prototype
 measurements, not peak JVM memory or phone/MPC performance estimates.
-The final pack's clean default/register cases overlap for at least 1.825 seconds, covering at
-least 88.57% of the physical return. Mean-window pitch error is below .67 cents and harmonic-band
-power remains above 99.30%. Repeated-cycle seam error is zero; maximum boundary difference is
-1.97e-13. The largest counted core buffer allocation is 31.66 MiB. Cloud render time is 1.73 seconds
-at the median and 7.39 seconds at the maximum, measured while validation was also running.
+All 24 Spool checks and the targeted host checks pass. The rendered pack has zero repeated-cycle
+seam error and a maximum boundary difference of 3.00e-12. The largest counted core buffer
+allocation is 31.66 MiB; cloud render time is 1.57 seconds at the median and 7.76 seconds at the
+maximum, measured while validation was also running.
 
 The required baseline is `./gradlew --no-daemon test`. Acceptance also requires listening to the
 forward identity, backward answers, diagonal encounters, finite inherited traces and repeated

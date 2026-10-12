@@ -251,7 +251,9 @@ settled-loop format. The sound awaits the owner's listening verdict.
 
 SPOOL is a returning recording machine: three original synthesized string,
 choir, flute or brass performances share a loaded transport and overlapping
-forward/backward pickup heads. Clean settings keep both layers on the requested
+forward/backward pickup heads. Bowed harmonics, vowel formants, flute airflow and
+bright brass overtones retain their character through the blend. Clean settings
+keep both layers on the requested
 note together with gentle tape wow/flutter. STRAIN shapes their journey,
 RETURN sets the swelling backward layer,
 IMPRINT leaves delayed traces in neighboring strips and SPLICE

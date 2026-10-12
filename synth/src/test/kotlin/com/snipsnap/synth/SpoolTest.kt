@@ -249,6 +249,72 @@ class SpoolTest {
     }
 
     @Test
+    fun `clean voices retain distinct harmonic envelopes in both pickups and their audible overlap`() {
+        val voices = listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)
+        for (midi in listOf(48, 60, 72)) {
+            val macros = mapOf("TUNE" to (midi - 48) / 24f, "HEAD" to .2f, "STRAIN" to .1f,
+                "RETURN" to .65f, "IMPRINT" to 0f, "SPLICE" to 0f)
+            val profiles = mutableMapOf<String, MutableMap<SpoolVoice, SpoolTimbreListeningMeasure.Profile>>()
+            for (voice in voices) {
+                val p = Spool.renderProbe(voice, macros, writes = false)
+                for ((stage, audio) in listOf("mixed" to p.samples,
+                    "forward" to requireNotNull(p.forwardStem), "reverse" to requireNotNull(p.reverseStem))) {
+                    // Both actual pickups sound throughout this pre-gate span. Identical settings,
+                    // note and energy normalization prevent macros, gain or timing disguising a
+                    // common source spectrum beneath the four advertised recording families.
+                    profiles.getOrPut(stage) { mutableMapOf() }[voice] =
+                        SpoolTimbreListeningMeasure.profile(audio, Keys.midiHz(midi).toDouble(), .85, 1.25)
+                }
+            }
+            for ((stage, byVoice) in profiles) {
+                for (i in voices.indices) for (j in i + 1 until voices.size) {
+                    val a = voices[i]; val b = voices[j]
+                    val distance = byVoice.getValue(a).distance(byVoice.getValue(b))
+                    assertTrue(distance >= .15,
+                        "MIDI $midi $stage $a/$b collapsed into similar normalized harmonic envelopes: $distance")
+                }
+                if (midi == 60) {
+                    val flute = byVoice.getValue(SpoolVoice.FLUTE)
+                    val string = byVoice.getValue(SpoolVoice.STRING)
+                    val brass = byVoice.getValue(SpoolVoice.BRASS)
+                    val choir = byVoice.getValue(SpoolVoice.CHOIR)
+                    assertTrue(flute.rootShare >= .70,
+                        "$stage FLUTE lost the root-dominant airy recording: $flute")
+                    assertTrue(string.rootShare < .80 && string.oddUpperShare >= .035 && string.evenShare >= .06,
+                        "$stage STRING lost audible bowed odd/even harmonic body: $string")
+                    assertTrue(brass.upperShare >= .10 && brass.centroidHarmonic >= string.centroidHarmonic * 1.12,
+                        "$stage BRASS did not retain a substantially brighter upper-partial body: $brass / $string")
+                    assertTrue(choir.rootShare < .75 && choir.share(500.0, 2200.0) >= .30,
+                        "$stage CHOIR reduced its vowel formants to a faint tint of the root: $choir")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `choir vowels retain absolute frequency formants when the note moves an octave`() {
+        val profiles = mutableMapOf<String, MutableList<SpoolTimbreListeningMeasure.Profile>>()
+        for (midi in listOf(48, 60)) {
+            val macros = mapOf("TUNE" to (midi - 48) / 24f, "HEAD" to .2f, "STRAIN" to .1f,
+                "RETURN" to .65f, "IMPRINT" to 0f, "SPLICE" to 0f)
+            val p = Spool.renderProbe(SpoolVoice.CHOIR, macros, writes = false)
+            for ((stage, audio) in listOf("mixed" to p.samples,
+                "forward" to requireNotNull(p.forwardStem), "reverse" to requireNotNull(p.reverseStem))) {
+                profiles.getOrPut(stage) { mutableListOf() } +=
+                    SpoolTimbreListeningMeasure.profile(audio, Keys.midiHz(midi).toDouble(), .85, 1.25)
+            }
+        }
+        for ((stage, pair) in profiles) for ((low, high) in listOf(500.0 to 1100.0, 1100.0 to 2200.0)) {
+            for (p in pair) assertTrue(p.share(low, high) >= .07,
+                "$stage CHOIR ${p.wantedHz}Hz lost an audible vowel band at $low..$high Hz: $p")
+            val a = pair[0].strongestPartialHz(low, high)
+            val b = pair[1].strongestPartialHz(low, high)
+            assertTrue(maxOf(a, b) / minOf(a, b) <= 1.4,
+                "$stage CHOIR transposed its vowel resonance with the note: $a -> $b Hz")
+        }
+    }
+
+    @Test
     fun `reverse grain footprints stay inside already captured recording support`() {
         for (gate in listOf(.15f, 1.35f, 2.4f)) {
             val machine = SpoolMachine(gateSeconds = gate, sourceSeconds = 3f,
@@ -573,6 +639,61 @@ class SpoolTest {
             assertEquals(DrumClass.TONAL, Spool.drumClassFor(voice, macros))
             assertEquals(DrumClass.LOOP, Spool.drumClassFor(voice, macros + ("HOLD" to 1f)))
         }
+    }
+}
+
+/** Harmonic energy envelopes from pickup audio, independent of phase, gain and recipe coefficients. */
+internal object SpoolTimbreListeningMeasure {
+    private const val RATE = 44100
+
+    data class Profile(val wantedHz: Double, val partialPower: List<Double>) {
+        val rootShare get() = partialPower.first()
+        val centroidHarmonic get() = partialPower.indices.sumOf { (it + 1) * partialPower[it] }
+        val upperShare get() = partialPower.drop(3).sum()
+        val oddUpperShare get() = partialPower.indices.filter { it >= 2 && it % 2 == 0 }.sumOf { partialPower[it] }
+        val evenShare get() = partialPower.indices.filter { it % 2 == 1 }.sumOf { partialPower[it] }
+
+        fun share(lowHz: Double, highHz: Double) = partialPower.indices
+            .filter { (it + 1) * wantedHz in lowHz..highHz }.sumOf { partialPower[it] }
+
+        fun strongestPartialHz(lowHz: Double, highHz: Double): Double {
+            val index = partialPower.indices.filter { (it + 1) * wantedHz in lowHz..highHz }
+                .maxBy { partialPower[it] }
+            return (index + 1) * wantedHz
+        }
+
+        /** Hellinger distance compares amplitude envelopes after normalizing total partial power. */
+        fun distance(other: Profile) = sqrt(partialPower.indices.sumOf {
+            (sqrt(partialPower[it]) - sqrt(other.partialPower[it])).pow(2)
+        } / 2)
+
+        override fun toString() = "root=$rootShare, centroid=$centroidHarmonic, upper=$upperShare, " +
+            "oddUpper=$oddUpperShare, even=$evenShare"
+    }
+
+    fun profile(s: FloatArray, wanted: Double, fromSeconds: Double, untilSeconds: Double): Profile {
+        val first = (fromSeconds * RATE).toInt()
+        val count = ((untilSeconds - fromSeconds) * RATE).toInt().coerceAtMost(s.size - first)
+        require(count > RATE / 5)
+        val n = 65536
+        require(count <= n)
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) re[i] = s[first + i] * (.5 - .5 * cos(2 * PI * i / (count - 1))).toFloat()
+        Fft.forward(re, im)
+        val bin = RATE.toDouble() / n
+        val power = DoubleArray(n / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        val partial = (1..minOf(24, (8000 / wanted).toInt())).map { h ->
+            // Admit tape-motion sidebands without assigning power to neighboring harmonics.
+            val center = h * wanted
+            val width = maxOf(3 / (count.toDouble() / RATE),
+                center * (2.0.pow(20.0 / 1200) - 1)).coerceAtMost(wanted * .25)
+            val lo = ((center - width) / bin).toInt().coerceAtLeast(1)
+            val hi = ((center + width) / bin).toInt().coerceAtMost(power.lastIndex)
+            (lo..hi).sumOf { power[it] }
+        }
+        val total = partial.sum().coerceAtLeast(1e-30)
+        return Profile(wanted, partial.map { it / total })
     }
 }
 

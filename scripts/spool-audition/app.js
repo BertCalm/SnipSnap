@@ -20,12 +20,13 @@
     head_splice: 'A diagonal encounter meets a reordered recording.',
     strain_splice: 'Transport hesitation stretches the spaces between splices.'
   };
-  const EXTRA_NAMES = { 'transition-comparison': 'Before / after', registers: 'Registers', velocity: 'Velocity', gates: 'Gates', extremes: 'All high', diagnostics: 'Diagnostics', 'repeated-loops': 'Repeated loops', kit: 'Kit' };
+  const EXTRA_NAMES = { 'voice-comparison': 'Voice comparison', 'transition-comparison': 'Before / after', registers: 'Registers', velocity: 'Velocity', gates: 'Gates', extremes: 'All high', diagnostics: 'Diagnostics', 'repeated-loops': 'Repeated loops', kit: 'Kit' };
   const EXTRA_COPY = {
-    'transition-comparison': 'Before is the previous coherent overlapping version. After brings out the backward swell and adds gentle shared wow and flutter. Each pair keeps the same voice and one-shot, loop, or three-cycle form.',
+    'voice-comparison': 'Four source families share identical controls and velocity. Each C3, C4 or C5 group shares a root note; Matched uses the common listening level. Listen for bowed STRING, fixed-vowel CHOIR, airy FLUTE, and bright BRASS.',
+    'transition-comparison': 'Before is the previous reverse-swell and flutter version. After gives STRING, CHOIR, FLUTE, and BRASS clearer source characters while keeping the shared tape movement. Each pair keeps the same voice and one-shot, loop, or three-cycle form.',
     diagnostics: 'Hear the forward and backward pickups on their own. Start with a backward pickup, then return to the full voice to hear its swell in the mix.'
   };
-  const state = { manifest: null, clips: [], selected: null, level: 'matched', macro: 'HEAD', pair: '', extra: 'transition-comparison', repeat: false, notes: readNotes(), loading: false, request: 0 };
+  const state = { manifest: null, clips: [], selected: null, level: 'matched', macro: 'HEAD', pair: '', extra: 'voice-comparison', repeat: false, notes: readNotes(), loading: false, request: 0 };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
   const clamp = (n, low = 0, high = 1) => Math.min(high, Math.max(low, Number(n) || 0));
   const percent = (n) => Math.round(clamp(n) * 100);
@@ -101,6 +102,7 @@
     context.hidden = !EXTRA_COPY[state.extra];
     context.textContent = EXTRA_COPY[state.extra] || '';
     const clips = state.clips.filter((c) => c.section === state.extra);
+    if (state.extra === 'voice-comparison') clips.sort((a, b) => Number(a.midi) - Number(b.midi) || VOICES.indexOf(a.voice) - VOICES.indexOf(b.voice));
     $('#extra-clips').innerHTML = clips.length ? clips.map((clip) => `<div class="extra-clip" data-card-id="${esc(clip.id)}">${clipButton(clip, '')}<div class="extra-clip-copy"><h4>${esc(clip.label)}</h4><p>${duration(clip)} · ${noteName(clip.midi)} · VEL ${Math.round(Number(clip.velocity || 0) * 100)}%</p></div></div>`).join('') : empty('No additional recordings are included.');
     updateButtons();
   }
