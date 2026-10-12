@@ -25,8 +25,12 @@ def main():
     clips = manifest["clips"]
     assets = set()
     for clip in clips:
-        for field in ("rawPath", "matchedPath"):
-            relative = Path(clip[field])
+        references = {clip[field] for field in ("rawPath", "matchedPath")}
+        for stem in clip.get("stems", {}).values():
+            if isinstance(stem, dict):
+                references.update(stem[field] for field in ("rawPath", "matchedPath") if stem.get(field))
+        for reference in references:
+            relative = Path(reference)
             source = (renders / relative).resolve()
             if renders not in source.parents or not source.is_file():
                 raise ValueError(f"Missing or invalid audio asset: {relative}")
@@ -49,6 +53,8 @@ def main():
     if args.compare_renders:
         before_root = args.compare_renders.resolve()
         before = json.loads((before_root / "manifest.json").read_text())
+        before_version = (before.get("sourceCommit") or before.get("provenance", {}).get("sourceSha256") or "earlier")[:8]
+        after_version = manifest.get("provenance", {}).get("sourceSha256", "current")[:8]
         current = {clip["id"]: clip for clip in clips}
         pairs = []
         for original in before["clips"]:
@@ -56,9 +62,9 @@ def main():
                 continue
             context = {"voices": "one-shot", "loops": "HOLD cycle", "repeated-loops": "three cycles"}[original["section"]]
             earlier = copy.deepcopy(original)
-            earlier.update(id="before_" + original["id"], section="transition-comparison",
+            earlier.update(id="before_" + before_version + "_" + original["id"], section="transition-comparison",
                            label=f"Before · {original['label']} · {context}",
-                           description="Original prototype, preserved for transition comparison. " + original["description"],
+                           description="Earlier sequential pickup version, preserved for comparison. " + original["description"],
                            provenance=dict(before.get("provenance", {}), sourceCommit=before.get("sourceCommit")))
             for field in ("rawPath", "matchedPath"):
                 source = (before_root / original[field]).resolve()
@@ -82,20 +88,28 @@ def main():
                 shutil.copy2(source, output / relative)
                 earlier["diagnostics"][field] = relative.as_posix()
             updated = copy.deepcopy(current[original["id"]])
-            updated.update(id="after_" + original["id"], section="transition-comparison",
+            updated.update(id="after_" + after_version + "_" + original["id"], section="transition-comparison",
                            label=f"After · {updated['label']} · {context}",
-                           description="Revised transition calibration. " + updated["description"])
+                           description="Overlapping forward and backward pickup version. " + updated["description"])
             pairs.extend((earlier, updated))
         clips.extend(pairs)
         manifest["comparison"] = {"beforeSourceCommit": before.get("sourceCommit"),
                                   "beforeProvenance": before.get("provenance", {}),
                                   "pairs": len(pairs) // 2,
-                                  "description": "Compare the original and revised forward, return and repeat transitions at the same audition level."}
+                                  "description": "Compare the earlier sequential and revised overlapping pickups at the same audition level."}
     engine = root / "synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"
     manifest["dspSourceSha256"] = hashlib.sha256(engine.read_bytes()).hexdigest()
     rendered_hash = manifest.get("provenance", {}).get("sourceSha256")
     if rendered_hash and rendered_hash != manifest["dspSourceSha256"]:
         raise ValueError("Spool source changed since rendering; regenerate the audition first")
+    source_paths = [Path("synth/src/main/kotlin/com/snipsnap/synth") / name
+                    for name in ("Spool.kt", "SpoolPatch.kt", "SpoolPresets.kt")]
+    actual_sources = {str(path): hashlib.sha256((root / path).read_bytes()).hexdigest()
+                      for path in source_paths}
+    recorded_sources = manifest.get("provenance", {}).get("sourceFilesSha256")
+    if recorded_sources and recorded_sources != actual_sources:
+        raise ValueError("Spool DSP or recipe source changed since rendering; regenerate the audition first")
+    manifest["dspSourceFilesSha256"] = actual_sources
     manifest["sourceCommit"] = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     introduction = subprocess.check_output(
