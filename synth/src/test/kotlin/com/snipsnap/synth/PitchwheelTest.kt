@@ -4,6 +4,7 @@ import com.snipsnap.audio.Fft
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.log10
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -81,6 +82,58 @@ class PitchwheelTest {
      * gain, carrier polarity, or large relative changes in inaudible partials. */
     private fun spectralDistance(a: DoubleArray, b: DoubleArray) =
         a.indices.sumOf { abs(a[it] - b[it]) }
+
+    private data class BodyCharacter(
+        val label: String,
+        val samples: FloatArray,
+        val bodyMass: DoubleArray,
+        val bodyLevelDb: Double,
+        val lateMass: DoubleArray?,
+        val lateLevelDb: Double,
+    )
+
+    /** Equal-work isolated releases exercise acoustic character without wheel
+     * timing, recoil or resin slip. A root-only tail is expected once the body
+     * has become quiet; such a tail cannot supply evidence of audible identity. */
+    private fun bodyCharacter(voice: PitchwheelVoice, macros: Map<String, Float> = emptyMap(),
+        label: String = voice.name): BodyCharacter {
+        val samples = Pitchwheel.acousticProbe(voice, macros, seconds = .6)
+        val wanted = Keys.midiHz(Pitchwheel.DEFAULT_MIDI)
+        fun level(from: Double) = rms(samples, (from * Dsp.RATE).roundToInt(),
+            ((from + .08) * Dsp.RATE).roundToInt())
+        val reference = level(.02)
+        assertTrue(reference > 1e-7, "$label has no audible isolated release")
+        fun relativeDb(from: Double) = 20 * log10((level(from) / reference).coerceAtLeast(1e-12))
+        val bodyDb = relativeDb(.12)
+        val lateDb = relativeDb(.3)
+        // -34 dB is a relative audibility guard, not an absolute listening
+        // threshold. Tiny partial changes in a dying tail must not pass.
+        assertTrue(bodyDb >= -34.0, "$label has no usable 120-200 ms body ($bodyDb dB relative to attack)")
+        val body = spectralMass(samples, wanted, from = .12)
+        val late = if (lateDb >= -34.0) spectralMass(samples, wanted, from = .3) else null
+        println("PITCHWHEEL BODY $label: 120-200 ms level $bodyDb dB, root mass ${body[1]}; " +
+            "300-380 ms level $lateDb dB, root mass ${late?.get(1) ?: "quiet-censored"}")
+        return BodyCharacter(label, samples, body, bodyDb, late, lateDb)
+    }
+
+    private fun assertDifferentBody(a: BodyCharacter, b: BodyCharacter) {
+        val distance = spectralDistance(a.bodyMass, b.bodyMass)
+        val lateDistance = if (a.lateMass != null && b.lateMass != null)
+            spectralDistance(a.lateMass, b.lateMass) else null
+        println("PITCHWHEEL BODY ${a.label}/${b.label}: normalized spectral mass distance $distance; " +
+            "relative body decay difference ${abs(a.bodyLevelDb - b.bodyLevelDb)} dB, " +
+            "late decay difference ${abs(a.lateLevelDb - b.lateLevelDb)} dB, " +
+            "late spectral distance ${lateDistance ?: "quiet-censored"}")
+        // .12 moves at least 6% of the window's power between broad audible
+        // bands. The previous renderer's criticized pairs measured .037-.104
+        // here despite large differences in their initial 80 ms and decay.
+        // Normalizing each window independently means a dampened copy cannot
+        // satisfy this check merely by dying faster. This numerical floor is
+        // useful evidence for a listening review, not proof of six good voices.
+        assertTrue(distance >= .12,
+            "${a.label}/${b.label} share their audible body after the contact transient: $distance " +
+                "(body levels ${a.bodyLevelDb}/${b.bodyLevelDb} dB relative to their attacks)")
+    }
 
     private fun firstAttack(p: Pitchwheel.Probe, seconds: Double = .08): FloatArray {
         val release = p.diagnostics.events.first { it.kind == Pitchwheel.EventKind.RELEASE }
@@ -381,6 +434,38 @@ class PitchwheelTest {
             assertTrue(distance >= .08, "$label CLUNK/PLUCK still share the same struck sound: $distance")
         }
         assertTrue(isolated[1][1] < .95, "PLUCK's articulation has less than 5% audible non-root power")
+    }
+
+    @Test
+    fun `clunk and thawed keep different body colour beyond the contact transient`() {
+        assertDifferentBody(bodyCharacter(PitchwheelVoice.CLUNK), bodyCharacter(PitchwheelVoice.THAWED))
+    }
+
+    @Test
+    fun `draw recoil and turn keep different body colour beyond the contact transient`() {
+        val characters = listOf(PitchwheelVoice.DRAW, PitchwheelVoice.RECOIL, PitchwheelVoice.TURN)
+            .map(::bodyCharacter)
+        for (i in characters.indices) for (j in i + 1 until characters.size) {
+            assertDifferentBody(characters[i], characters[j])
+        }
+    }
+
+    @Test
+    fun `thawed initial heat changes fixed work release colour without retuning the body`() {
+        val cold = bodyCharacter(PitchwheelVoice.THAWED, mapOf("HEAT" to .05f), "THAWED cold")
+        val warm = bodyCharacter(PitchwheelVoice.THAWED, mapOf("HEAT" to .9f), "THAWED warm")
+        // This is the acoustic transfer at two initial material states. The
+        // wheel's warming trajectory is covered separately; an isolated
+        // equal-work release cannot claim to exercise that evolution.
+        assertDifferentBody(cold, warm)
+        val wanted = Keys.midiHz(Pitchwheel.DEFAULT_MIDI)
+        val roots = listOf(cold, warm).map {
+            FineTuning.measuredHz(it.samples, Dsp.RATE, wanted, .025f, .5f)
+        }
+        for (root in roots) assertTrue(abs(FineTuning.cents(root, wanted.toDouble())) <= 15.0,
+            "THAWED initial HEAT retunes the freely decaying root")
+        assertTrue(abs(FineTuning.cents(roots[0], roots[1])) < 5.0,
+            "THAWED cold/warm contrast comes from changing the root pitch")
     }
 
     @Test

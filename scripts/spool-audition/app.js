@@ -9,14 +9,14 @@
   const MACRO_COPY = {
     HEAD: ['Aligned pickup becomes a diagonal encounter through track and recorded time.', 'Aligned', 'Diagonal'],
     STRAIN: ['One motor meets three competing loads. Listen for hesitation, stretch, and recovery.', 'Stable', 'Competing'],
-    RETURN: ['A silent reset becomes a backward counterphrase through the material already traversed.', 'Silent', 'Pronounced'],
+    RETURN: ['A backward layer enters alongside the continuing forward layer, retracing material already traversed.', 'Silent', 'Pronounced'],
     IMPRINT: ['A delayed neighboring trace is softly written, then heard during a finite reread.', 'Original', 'Inherited'],
     SPLICE: ['The continuous recording becomes a deterministic sequence of overlapped, reordered sections.', 'Continuous', 'Reordered']
   };
   const PAIR_COPY = {
     head_imprint: 'Head position changes where an inherited trace is heard.',
-    strain_return: 'Competing strip loads shape the backward journey.',
-    return_imprint: 'The backward answer becomes material for a quieter inherited trace.',
+    strain_return: 'Competing strip loads shape the overlapping backward layer.',
+    return_imprint: 'The backward layer becomes material for a quieter inherited trace.',
     head_splice: 'A diagonal encounter meets a reordered recording.',
     strain_splice: 'Transport hesitation stretches the spaces between splices.'
   };
@@ -95,7 +95,7 @@
     let context = $('#extra-context');
     if (!context) { context = document.createElement('p'); context.id = 'extra-context'; context.className = 'small-muted'; context.style.marginBottom = '16px'; $('#extra-clips').before(context); }
     context.hidden = state.extra !== 'transition-comparison';
-    context.textContent = 'Compare the earlier and revised forward → return → repeat transitions. Each label identifies its render version and one-shot, loop, or three-cycle form.';
+    context.textContent = 'Compare the earlier sequential forward → return cycle with the revised overlapping forward and backward layers. Each label identifies its render version and one-shot, loop, or three-cycle form.';
     const clips = state.clips.filter((c) => c.section === state.extra);
     $('#extra-clips').innerHTML = clips.length ? clips.map((clip) => `<div class="extra-clip" data-card-id="${esc(clip.id)}">${clipButton(clip, '')}<div class="extra-clip-copy"><h4>${esc(clip.label)}</h4><p>${duration(clip)} · ${noteName(clip.midi)} · VEL ${Math.round(Number(clip.velocity || 0) * 100)}%</p></div></div>`).join('') : empty('No additional recordings are included.');
     updateButtons();
@@ -116,14 +116,15 @@
     const hasSeam = clip.seamError != null && Number.isFinite(Number(clip.seamError));
     const rows = [ ['Peak', formatDb(metrics.peak), 'dBFS'], ['RMS', formatDb(metrics.rms), 'dBFS'], ['DC offset', Number.isFinite(Number(metrics.dc)) ? Number(metrics.dc).toExponential(1) : '—', ''], ['Duration', Number(clip.seconds || 0).toFixed(2), 's'], ['Render time', Number(clip.renderMs || 0).toFixed(0), 'ms'], [hasSeam ? 'Loop seam error' : 'Requested root', hasSeam ? Number(clip.seamError).toExponential(1) : noteName(clip.midi), ''] ];
     if (clip.forwardPitch && Number.isFinite(Number(clip.forwardPitch.hz))) rows.push(['Forward pitch', Number(clip.forwardPitch.hz).toFixed(1), 'Hz'], ['Pitch offset', Number(clip.forwardPitch.cents).toFixed(1), 'cents'], ['Root power', (Number(clip.forwardPitch.rootPowerShare) * 100).toFixed(1), '%']);
-    $('#metric-download-links').innerHTML = [[clip.rawPath, 'Raw WAV'], [clip.matchedPath || clip.file, 'Matched WAV'], [clip.diagnostics?.tracePath, 'Transport trace'], [clip.diagnostics?.eventsPath, 'Imprint events']].filter(([path]) => safeUrl(path)).map(([path, label]) => `<a href="${esc(safeUrl(path))}" download>${label} ↓</a>`).join('');
+    if (clip.overlap) rows.push(['Audible overlap', Number(clip.overlap.totalSeconds).toFixed(2), 's'], ['Return with both layers', (Number(clip.overlap.postGateFraction) * 100).toFixed(0), '%']);
+    $('#metric-download-links').innerHTML = [[clip.rawPath, 'Raw WAV'], [clip.matchedPath || clip.file, 'Matched WAV'], [clip.stems?.forward?.rawPath, 'Forward pickup WAV'], [clip.stems?.reverse?.rawPath, 'Backward pickup WAV'], [clip.diagnostics?.tracePath, 'Transport trace'], [clip.diagnostics?.pickupTracePath, 'Pickup trace'], [clip.diagnostics?.eventsPath, 'Imprint events']].filter(([path]) => safeUrl(path)).map(([path, label]) => `<a href="${esc(safeUrl(path))}" download>${label} ↓</a>`).join('');
     $('#metric-grid').innerHTML = rows.map(([label, value, unit]) => `<div class="metric"><span class="metric-label">${esc(label)}</span><span class="metric-value">${esc(value)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>`).join('');
     $('#measurement-label').textContent = `${clip.label} / ${state.level}`;
     const rawGain = Number(clip.rawExportGain ?? 1);
     $('#measurement-context').textContent = `${clip.description || ''} ${state.level === 'raw' ? `Raw measurements describe native engine output before PCM export${rawGain < 1 ? ` (export gain ${rawGain.toFixed(4)})` : ''}.` : 'Matched files use the common quiet audition level of 0.03 over the loudest 200 ms.'} Listening approval remains a separate step.`;
     $('#measurement-context').classList.add('measurement-context');
     $('#diagnostic-details').hidden = !clip.diagnostics;
-    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, forwardPitch: clip.forwardPitch, provenance: clip.provenance || state.manifest.provenance }, null, 2);
+    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, forwardPitch: clip.forwardPitch, overlap: clip.overlap, stems: clip.stems, provenance: clip.provenance || state.manifest.provenance }, null, 2);
   }
   function updateButtons() {
     const playing = !!state.selected && !audio.paused && !audio.ended;
