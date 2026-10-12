@@ -261,7 +261,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 18 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 21 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -288,6 +288,41 @@ listening matrix, or add `-Pquick` for a first listening set. The
 [private audition](https://snipsnap-revel-audition.bertcalm.chatgpt.site)
 is the owner's sonic acceptance gate;
 [implementation notes](docs/REVEL.md) describe the model and validation limits.
+
+PRISM is a preset-first additive engine: 32 partials in five groups make keys,
+plucks, organs, basses, glass and sustained veils whose harmonics develop at
+different rates. GRAIN, DRIFT, SHAPE, STRIKE and BODY shape the dry note; HOLD
+exports settled periodic loops. Eight audition presets, a dry sixteen-pad kit,
+patch recipes, CLI and the phone picker share the Kotlin renderer. Run
+`./gradlew :synth:generatePrismAudition` for raw/matched voices, macro sweeps,
+interaction grids, velocity and loop probes. The
+[published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
+awaits the owner's dry listening verdict before expanding the preset roster.
+[Implementation notes](docs/PRISM.md) describe the controls and contracts.
+
+ALLOY is an original attack-driven four-operator PM engine: generated wood,
+tine/string and breath/contact attacks enter the tonal body through a bounded
+modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
+EDGE, BODY, LENGTH, TUNE and HOLD. Twelve provisional presets, saved operator and
+material recipes, native velocity and a dry sixteen-pad kit use the same renderer.
+Run `./gradlew :synth:generateAlloyAudition` for voice/register/velocity coverage,
+five-point sweeps, interactions, FUSE ablation and settled loop listening. The
+[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) awaits
+the owner's sonic verdict before expansion to the proposed 36 presets.
+[Implementation notes](docs/ALLOY.md) describe the render and export contracts.
+
+CONTOUR is an original wavetable instrument: a stable body carries the note while
+a related edge takes a different spectral path. BASS, KEY, PLUCK, LEAD, HOLLOW
+and SWELL share SCAN, OFFSET, MOTION, FILTER, DRIVE and HOLD, plus host TUNE.
+Eight generated table families, nine provisional dry recipes, a sixteen-pad kit,
+excitation-sensitive velocity and settled HOLD loops use the existing pipeline;
+held keygroup export (MAKE INSTRUMENT, `--instrument`) does not route CONTOUR yet.
+The existing CONTOUR rack filter keeps its saved effect recipes. Run
+`./gradlew :synth:generateContourAudition` for the listening matrix; the proposed
+36-preset expansion waits for sonic approval. Listen on the
+[published audition page](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+(owner-private). [Implementation notes](docs/CONTOUR.md)
+cover the patch format, controls and verification.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
@@ -513,8 +548,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL and GRAINS round out the lineup —
-twenty-five engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR and GRAINS round out the lineup —
+twenty-eight engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -697,10 +732,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL and REVEL are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL, REVEL and PRISM are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.

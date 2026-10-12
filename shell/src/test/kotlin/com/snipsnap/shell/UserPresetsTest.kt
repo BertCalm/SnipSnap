@@ -1,13 +1,18 @@
 package com.snipsnap.shell
 
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourPresets
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.SkinVoice
@@ -138,6 +143,8 @@ class UserPresetsTest {
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
+                "PRISM" to PrismVoice.entries.map { it.name },
+                "CONTOUR" to ContourVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -231,6 +238,80 @@ class UserPresetsTest {
                 )
                 assertEquals("PitchwheelPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
             }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved contour retains its complete spectral recipe when promoted`() {
+        val root = shelf()
+        try {
+            val source = ContourPresets.all().first { it.name == "Moving Corner" }.copy(name = "MY CORNER", velocity = .3f)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val patch = saved.patch as ContourPatch
+            val line = UserPresets.rosterLine(patch)
+            assertTrue("bodyTable = ContourTable.SOFT_SAW" in line)
+            assertTrue("edgeTable = ContourTable.COPPER" in line)
+            assertTrue("relation = ContourRelation.OPPOSED" in line)
+            assertTrue("ampDecay = 0.45f" in line)
+            assertTrue("bodyHarmonics = ${patch.config.bodyHarmonics}f" in line)
+            assertTrue("edgeRootLevel = ${patch.config.edgeRootLevel}f" in line)
+            assertTrue("edgeAttack = ${patch.config.edgeAttack}f" in line)
+            assertTrue("edgeDecay = ${patch.config.edgeDecay}f" in line)
+            assertTrue("edgeSustain = ${patch.config.edgeSustain}f" in line)
+            assertTrue("loopSeconds = ${patch.config.loopSeconds}f" in line)
+            assertTrue("velocity = 0.3f, model = ${patch.model}" in line)
+            assertEquals("ContourPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Contour promotion reconstructs every spectral and edge envelope field exactly`() {
+        val root = shelf()
+        try {
+            val source = ContourPresets.all().first { it.name == "Moving Corner" }.let {
+                it.copy(name = "MY EDGE", velocity = .3f, config = it.config.copy(
+                    bodyHarmonics = 1.37f, edgeRootLevel = .29f,
+                    edgeAttack = .017f, edgeDecay = .91f, edgeSustain = .43f,
+                ))
+            }
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single().patch as ContourPatch
+            assertEquals(source, saved, "all revised fields survive the shelf JSON roundtrip")
+            val line = UserPresets.rosterLine(saved)
+            val constructor = line.substringAfter("config = ").substringBefore(", velocity = ")
+            assertEquals(
+                "ContourConfig(bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER, " +
+                    "edgeRatio = 1.0f, edgeLag = 0.18f, relation = ContourRelation.OPPOSED, " +
+                    "bodyLevel = 0.8f, edgeLevel = 0.31f, subLevel = 0.09f, " +
+                    "bodyHarmonics = 1.37f, edgeRootLevel = 0.29f, " +
+                    "edgeAttack = 0.017f, edgeDecay = 0.91f, edgeSustain = 0.43f, " +
+                    "bodyScanBias = 0.0f, edgeScanBias = 0.0f, bodyTravel = 0.22f, edgeTravel = 0.6f, " +
+                    "ampAttack = 0.006f, ampDecay = 0.45f, ampSustain = 0.48f, " +
+                    "ampRelease = 0.42f, sustainSeconds = 0.75f, " +
+                    "filterAttack = 0.005f, filterDecay = 0.5f, filterAmount = 0.6f, " +
+                    "motionShape = ContourMotionShape.FALL, motionSeconds = 1.2f, " +
+                    "filterType = ContourFilterType.LOW_PASS, loopSeconds = 2.0f)",
+                constructor,
+                "the pasteable Kotlin constructor retains the exact architecture, including all five revised fields",
+            )
+            // Read the emitted constructor's own literals into the patch decoder. Any omitted
+            // revised field falls back to neutral legacy state and changes this recipe.
+            val fields = constructor.removePrefix("ContourConfig(").removeSuffix(")").split(", ").associate { entry ->
+                val (name, literal) = entry.split(" = ", limit = 2)
+                name to if (literal.endsWith("f")) JsonValue.Num(literal.dropLast(1).toDouble())
+                    else JsonValue.Str(literal.substringAfterLast('.'))
+            }
+            val promoted = ContourPatch.fromJsonValue(JsonValue.Obj(
+                saved.toJsonValue().entries + ("config" to JsonValue.Obj(fields)),
+            )) as ContourPatch
+            assertEquals(source.config, promoted.config, "promotion reconstructs the saved contour and independent edge envelope")
+            assertEquals(source, promoted, "all audible recipe fields survive promotion")
         } finally {
             root.deleteRecursively()
         }
