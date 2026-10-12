@@ -21,11 +21,11 @@ object RelayAuditionGenerator {
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val timbral = listOf("ORDER", "PULSE", "BLEND", "COLOR", "LENGTH")
     private val descriptions = mapOf(
-        "KEY" to "A picked attack passes into a rich harmonic body, soft landing and bell answer.",
-        "BASS" to "A rounded drawbar start takes picked accents and a low-color answer.",
-        "PLUCK" to "A sharp string gesture is answered by short bell and soft-tone handoffs.",
-        "ORGAN" to "A sustained drawbar body carries subordinate soft support and upper detail.",
-        "CHIME" to "A bell-first phrase rings with odd overtones, then passes into softer body.",
+        "KEY" to "One picked entrance grows into a rounded body with soft and bell color inside the note.",
+        "BASS" to "A rounded low body evolves through string and soft-tone color with restrained emphasis.",
+        "PLUCK" to "A clear string entrance rings into a blended bell and soft-tone decay.",
+        "ORGAN" to "A sustained drawbar body slowly changes its internal soft support and upper detail.",
+        "CHIME" to "A bell entrance rings into a softer tonal body without separate internal attacks.",
         "FLOW" to "A soft swelling entrance opens into broad, slowly changing source overlap.",
     )
     private val macroGuides = mapOf(
@@ -43,7 +43,7 @@ object RelayAuditionGenerator {
         val phrase: RelayPhrase? = null,
     )
     private val groups = listOf(
-        group("identities", "Six revised identities", "Start here. All six voices play C3 at full velocity, with their own source balance, articulation and phrase score. Compare at matched level, then use Original audition to check the first version."),
+        group("identities", "Six refined identities", "Start here. All six voices play C3 at full velocity. Listen for a single evolving note with smoother overlap and gentler internal emphasis, then compare with the previous audition at matched level."),
         group("sources", "Hear the four sources", "One source at a time, at the same C3 and COLOR. Listen for a damped string, drawbar body, bright bell and soft swell before comparing their handoffs."),
         group("registers", "Notes and velocity", "Each voice at the ends of its supported two-octave register, then three excitation strengths on KEY and BASS. Use raw playback to hear the energy change; matched playback exposes articulation."),
         group("sweeps", "One control at a time", "Five points on every control, on both KEY and FLOW. Other controls remain at that voice's defaults. The HOLD examples include repeated playback wherever the engine produces a loop."),
@@ -105,8 +105,8 @@ object RelayAuditionGenerator {
                 "id" to case.id, "group" to case.group, "voice" to case.voice.name,
                 "title" to case.title, "description" to case.description,
                 "sources" to phrase.sources.map { it.role.name },
-                "comparisonId" to if (baseline != null && case.group == "identities") case.voice.name.lowercase() + "_original" else null,
-                "comparisonLabel" to if (baseline != null && case.group == "identities") "Original" else null,
+                "comparisonId" to if (baseline != null && case.group == "identities") case.voice.name.lowercase() + "_previous" else null,
+                "comparisonLabel" to if (baseline != null && case.group == "identities") "Previous" else null,
                 "midi" to case.midi, "note" to noteName(case.midi), "velocity" to case.velocity,
                 "tempoBpm" to phrase.tempoBpm, "actualTempoBpm" to phrase.phraseBeats * 60.0 / report.phraseSeconds, "macros" to macros,
                 "requestedHz" to report.requestedHz, "actualHz" to report.actualHz,
@@ -128,13 +128,13 @@ object RelayAuditionGenerator {
         }
         if (baseline != null) clips += previousIdentities(root, baseline)
         val auditionGroups = if (baseline == null) groups else groups + group(
-            "previous", "Original audition", "The six unchanged recordings from the first audition. Compare each with its revised C3 identity at the same playback level.")
+            "previous", "Previous audition · revision 2", "The six unchanged recordings from the preceding audition. Compare each with its refined C3 identity at the same playback level.")
         val currentClips = clips.filter { it["group"] != "previous" }
         val manifest = Json.write(json(linkedMapOf(
             "schemaVersion" to 1, "engine" to "RELAY", "status" to "working audition — awaiting owner sonic approval",
             "presetExpansion" to "36-preset target deferred until dry identity is approved",
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 24,
-            "referenceNote" to "C3", "quick" to quick, "clipCount" to clips.size, "auditionRevision" to 2,
+            "referenceNote" to "C3", "quick" to quick, "clipCount" to clips.size, "auditionRevision" to 3,
             "listeningTarget" to .03, "listeningPeakCeiling" to .99, "loopThreshold" to Relay.LOOP_THRESHOLD,
             "sourceRevision" to git("rev-parse", "HEAD"), "workingTreeDirty" to (git("status", "--porcelain")?.isNotBlank() ?: true),
             "metricNotes" to "Raw WAVs preserve the conditioned engine output before loudness leveling, except a recorded PCM export gain if required. internalRawPeak is the unconditioned 4× path peak. loudestWindowRms uses SnipSnap's loudest 200 ms rule. HOLD fits the loop clock to the requested root; actualTempoBpm records the resulting tempo. Loop seamError is measured by the engine against the preceding settled cycle; pass requires < 0.001 and owner listening. contour brightness is first-difference RMS divided by RMS, a high-frequency proxy, not spectral centroid. Raw and matched files are 24-bit PCM from the same render. No rack effects.",
@@ -147,7 +147,7 @@ object RelayAuditionGenerator {
                 "generationSeconds" to (System.nanoTime() - started) / 1e9,
             ),
         ))) + "\n"
-        prunePrevious(root, clips.map { it.getValue("id") as String }.toSet())
+        prunePrevious(root, clips.flatMap { listOf(it.getValue("rawPath") as String, it.getValue("matchedPath") as String) }.toSet())
         File(root, "manifest.json").writeText(manifest)
         val page = RelayAuditionGenerator::class.java.getResourceAsStream("/audition/relay-audition.html")
             ?.bufferedReader()?.use { it.readText() } ?: error("Relay audition page resource is missing")
@@ -161,9 +161,9 @@ object RelayAuditionGenerator {
             in the page, so file playback needs no server or remote assets.
 
             Working audition; owner sonic approval is pending. The 36-preset expansion is deferred.
-            Revision 2 changes source spectra, articulation and per-voice phrase scores.
+            Revision 3 refines overlap and source excitation toward one evolving voice.
             The isolated-source section exposes each role. If supplied with -PrelayBaseline=<directory>,
-            six unchanged original identities are copied with their original measurements and hashes.
+            six unchanged previous identities are copied with their own measurements and hashes.
             Raw playback preserves the conditioned output before loudness leveling. Matched playback
             uses AuditionLevel (loudest 200 ms RMS 0.03, peak guard 0.99). Any raw PCM export reduction
             is recorded as rawExportGain; unscaled output metrics remain in manifest.json.
@@ -235,7 +235,7 @@ object RelayAuditionGenerator {
         return RelayVoice.entries.map { voice ->
             val item = original.single { it.obj().getValue("voice").str() == voice.name }.obj()
             val data = item.mapValues { native(it.value) }.toMutableMap()
-            val id = voice.name.lowercase() + "_original"
+            val id = voice.name.lowercase() + "_previous"
             for ((pathKey, hashKey) in listOf("rawPath" to "rawSha256", "matchedPath" to "matchedSha256")) {
                 val oldPath = item.getValue(pathKey).str()
                 require(Regex("(raw|matched)/[a-z0-9_]+\\.wav").matches(oldPath)) { "unsafe previous WAV path" }
@@ -248,11 +248,12 @@ object RelayAuditionGenerator {
             }
             data["id"] = id
             data["group"] = "previous"
-            data["title"] = "${voice.name} · original · C3"
-            data["description"] = "Unchanged recording from the first audition, before the source and phrase revision. Compare with ${voice.name} in Six revised identities."
+            data["title"] = "${voice.name} · previous · C3"
+            data["description"] = "Unchanged recording from the previous audition, before the smoothing refinement. Compare with ${voice.name} in Six refined identities."
             data["sourceRevision"] = native(manifest.getValue("sourceRevision"))
+            data["auditionRevision"] = manifest["auditionRevision"]?.let(::native)
             data["comparisonId"] = voice.name.lowercase() + "_identity"
-            data["comparisonLabel"] = "Revised"
+            data["comparisonLabel"] = "Refined"
             data
         }
     }
@@ -304,10 +305,9 @@ object RelayAuditionGenerator {
         if (!previous.isFile) return
         val clips = runCatching { Json.parse(previous.readText()).obj().getValue("clips").arr() }.getOrDefault(emptyList())
         for (clip in clips) for (key in listOf("rawPath", "matchedPath")) {
-            val id = runCatching { clip.obj().getValue("id").str() }.getOrNull() ?: continue
             val path = runCatching { clip.obj().getValue(key).str() }.getOrNull() ?: continue
             if (!Regex("(previous/)?(raw|matched)/[a-z0-9_]+\\.wav").matches(path)) continue
-            if (id in retained) continue
+            if (path in retained) continue
             val file = File(root, path).canonicalFile
             if (file.toPath().startsWith(root.canonicalFile.toPath()) && file.isFile) check(file.delete())
         }

@@ -35,8 +35,20 @@ class RelayTest {
     private fun rms(samples: FloatArray): Double =
         sqrt(samples.sumOf { it.toDouble() * it } / samples.size.coerceAtLeast(1))
 
-    private fun span(samples: FloatArray, from: Double, until: Double): FloatArray =
-        samples.copyOfRange((from * Dsp.RATE).toInt(), (until * Dsp.RATE).toInt())
+    private fun span(samples: FloatArray, from: Double, until: Double, rate: Int = Dsp.RATE): FloatArray =
+        samples.copyOfRange((from * rate).toInt(), (until * rate).toInt())
+
+    private fun relativeDifference(a: FloatArray, b: FloatArray): Double {
+        assertEquals(a.size, b.size, "same-clock history fixtures have different durations")
+        var difference = 0.0
+        var reference = 0.0
+        for (i in a.indices) {
+            val d = a[i].toDouble() - b[i]
+            difference += d * d
+            reference += a[i].toDouble() * a[i]
+        }
+        return sqrt(difference / reference.coerceAtLeast(1e-12))
+    }
 
     private data class HarmonicProfile(val bands: List<Double>, val even: Double, val oddDetail: Double)
 
@@ -220,6 +232,74 @@ class RelayTest {
             "the pluck lost its decaying transient relative to the sustained organ")
         assertTrue(attackToBody.getValue(RelayRole.SOFT) < attackToBody.getValue(RelayRole.ORGAN) * 0.5,
             "the soft source lost its swelling entrance relative to the sustained organ")
+    }
+
+    @Test
+    fun `subdividing an unchanged source never restarts its note history`() {
+        val voice = RelayVoice.KEY
+        val original = Relay.phraseFor(voice)
+        val macros = mapOf("TUNE" to 0f, "ORDER" to 0f, "BLEND" to 0.4f, "COLOR" to 0.65f, "LENGTH" to 1f)
+        for (role in RelayRole.entries) for (pulse in listOf(0f, Relay.defaults(voice).getValue("PULSE"))) {
+            val source = original.sources.indexOfFirst { it.role == role }
+            val four = original.copy(slots = List(4) { RelaySlot(source, 1f, 0.2f) },
+                orderRoster = listOf(List(4) { source }), accents = emptyList(), tempoBpm = 100f)
+            val eight = four.copy(slots = List(8) { RelaySlot(source, 0.5f, 0.1f) },
+                orderRoster = listOf(List(8) { source }))
+            val a = Relay.inspect(voice, macros + ("PULSE" to pulse), normalize = false, phrase = four)
+            val b = Relay.inspect(voice, macros + ("PULSE" to pulse), normalize = false, phrase = eight)
+            val difference = relativeDifference(a.raw, b.raw)
+            println("RELAY shared history $role PULSE $pulse: subdivision raw difference $difference")
+            // Slot subdivision has no musical effect in an unchanged source.
+            // This tolerance covers numerical control interpolation, not smoothness.
+            assertTrue(difference < 1e-5, "$role PULSE $pulse restarted its contour at a score boundary: $difference")
+        }
+        val source = original.sources.indexOfFirst { it.role == RelayRole.ORGAN }
+        val four = original.copy(slots = List(4) { RelaySlot(source, 1f, 0.2f) },
+            orderRoster = listOf(List(4) { source }), accents = emptyList(), tempoBpm = 100f)
+        val eight = four.copy(slots = List(8) { RelaySlot(source, 0.5f, 0.1f) },
+            orderRoster = listOf(List(8) { source }))
+        val heldMacros = macros + mapOf("HOLD" to 1f, "PULSE" to 0f, "LENGTH" to 0.55f)
+        val heldFour = Relay.inspect(voice, heldMacros, normalize = false, phrase = four)
+        val heldEight = Relay.inspect(voice, heldMacros, normalize = false, phrase = eight)
+        val heldDifference = relativeDifference(heldFour.raw, heldEight.raw)
+        println("RELAY shared held history ORGAN PULSE 0: subdivision raw difference $heldDifference")
+        assertTrue(heldDifference < 1e-5, "HOLD imposed a fresh amplitude figure for every score slot: $heldDifference")
+    }
+
+    @Test
+    fun `serialized accents give high pulse stronger emphasis than the flowing defaults`() {
+        val voice = RelayVoice.KEY
+        val original = Relay.phraseFor(voice)
+        val source = original.sources.indexOfFirst { it.role == RelayRole.ORGAN }
+        val phrase = original.copy(slots = List(4) { RelaySlot(source, 1f, 0.2f) },
+            orderRoster = listOf(List(4) { source }), tempoBpm = 100f,
+            accents = listOf(0.5f, 1.5f, 2.5f, 3.5f).map { RelayAccent(it, 1f) })
+        val macros = mapOf("TUNE" to 0f, "ORDER" to 0f, "BLEND" to 0.5f, "COLOR" to 0.65f, "LENGTH" to 1f)
+        fun render(pulse: Float, score: RelayPhrase = phrase) =
+            Relay.inspect(voice, macros + ("PULSE" to pulse), normalize = false, phrase = score)
+        fun contrast(report: Relay.Report): Double = phrase.accents.map { event ->
+            val time = event.beat / phrase.phraseBeats * report.phraseSeconds
+            val before = rms(span(report.raw, time - 0.12, time - 0.05, Dsp.RATE * Dsp.OVERSAMPLE))
+            val after = rms(span(report.raw, time + 0.015, time + 0.08, Dsp.RATE * Dsp.OVERSAMPLE))
+            after / before.coerceAtLeast(1e-12)
+        }.average()
+        val flowing = render(0f)
+        val defaults = render(Relay.defaults(voice).getValue("PULSE"))
+        val rhythmic = render(1f)
+        val noAccents = render(1f, phrase.copy(accents = emptyList()))
+        val lowWithoutAccents = render(0f, phrase.copy(accents = emptyList()))
+        val low = contrast(flowing)
+        val middle = contrast(defaults)
+        val high = contrast(rhythmic)
+        val neutral = contrast(noAccents)
+        println("RELAY accent contrast pre/post raw RMS: low $low, default $middle, high $high, empty roster $neutral")
+        assertContentEquals(flowing.raw, lowWithoutAccents.raw, "PULSE zero still imposed audible accent events")
+        assertEquals(flowing.weights, rhythmic.weights, "accent emphasis changed source order")
+        assertEquals(flowing.accents.map { it.timeSeconds }, rhythmic.accents.map { it.timeSeconds }, "accent emphasis changed timing")
+        assertTrue(high > middle && high > low && high > neutral,
+            "high PULSE failed to reveal the serialized accents: $low / $middle / $high / $neutral")
+        assertTrue(middle - low < (high - low) * 0.5,
+            "default accents are as strongly articulated as the rhythmic endpoint")
     }
 
     @Test

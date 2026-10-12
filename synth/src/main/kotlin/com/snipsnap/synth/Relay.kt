@@ -32,12 +32,12 @@ object Relay {
     private const val OUTPUT_GAIN = .42
 
     private val starting = arrayOf(
-        floatArrayOf(0f, .22f, .22f, .60f, .55f),
-        floatArrayOf(0f, .72f, .15f, .45f, .40f),
-        floatArrayOf(0f, .58f, .10f, .68f, .35f),
-        floatArrayOf(0f, .10f, .45f, .60f, .80f),
-        floatArrayOf(0f, .22f, .16f, .72f, .70f),
-        floatArrayOf(0f, .08f, .86f, .42f, .95f),
+        floatArrayOf(0f, .20f, .55f, .60f, .55f),
+        floatArrayOf(0f, .42f, .50f, .45f, .40f),
+        floatArrayOf(0f, .46f, .42f, .68f, .35f),
+        floatArrayOf(0f, .10f, .70f, .60f, .80f),
+        floatArrayOf(0f, .18f, .55f, .72f, .70f),
+        floatArrayOf(0f, .08f, .90f, .42f, .95f),
     )
 
     fun macrosFor(voice: RelayVoice): List<MacroSpec> {
@@ -211,21 +211,23 @@ object Relay {
 
     private fun smooth(value: Double): Double = value.coerceIn(0.0, 1.0).let { it * it * (3 - 2 * it) }
 
-    /** Derived before synthesis; source order and envelope are blended at corresponding times. */
+    /** Derived before synthesis; source order morphs while excitation keeps one note history. */
     private class Schedule(val phrase: RelayPhrase, order: Float, blend: Float,
-                           val seconds: Double, val periodic: Boolean) {
+                           val seconds: Double, val periodic: Boolean,
+                           private val historyLength: Double = .5) {
         private val starts = DoubleArray(phrase.slots.size)
         private val scale = seconds / phrase.phraseBeats
-        private val width = .06 + 5.4 * blend.toDouble().pow(1.35)
+        private val width = 1.0 + 4.0 * blend.toDouble().pow(1.35)
+        private val dwellOverlap = .18 + .90 * smooth(blend.toDouble())
         private val position = order.toDouble() * (phrase.orderRoster.size - 1)
         private val lo = position.toInt().coerceAtMost(phrase.orderRoster.lastIndex)
         private val hi = (lo + 1).coerceAtMost(phrase.orderRoster.lastIndex)
         private val morph = smooth(position - lo)
         // Valid short phrases can have broad windows longer than one phrase. Include every
         // overlapping copy, so both gains and source envelope histories close at the modulo
-        // boundary. The serialized dwell/transition budgets bound this radius to 13 cycles.
-        private val cycleRadius = if (periodic) ceil(phrase.slots.maxOf {
-            (it.beats + it.transitionBeats * width) * scale / seconds
+        // boundary. The serialized dwell/transition budgets bound this radius to 12 cycles.
+        private val cycleRadius = if (periodic) ceil(phrase.slots.indices.maxOf {
+            (phrase.slots[it].beats * scale + transitionFor(it)) / seconds
         }).toInt() + 1 else 0
 
         init {
@@ -236,24 +238,51 @@ object Relay {
             }
         }
 
+        private fun transitionFor(slot: Int): Double {
+            val slots = phrase.slots
+            val dwell = slots[slot].beats * scale
+            val before = slots[(slot + slots.size - 1) % slots.size].beats * scale
+            val after = slots[(slot + 1) % slots.size].beats * scale
+            // The serialized transition still sets the character, but normal clocks cannot
+            // turn a new role on in a few milliseconds. BLEND widens both authored and
+            // dwell-relative overlap; several distinct colors can remain in the same note.
+            return max(.008, max(slots[slot].transitionBeats * scale * width,
+                min(dwell, min(before, after)) * dwellOverlap))
+        }
+
         /** weights sum to one; excitation histories remain attached to their original source. */
         fun at(timeSeconds: Double, weights: DoubleArray, envelopes: DoubleArray,
                releaseAge: Double = 0.0) {
             weights.fill(0.0); envelopes.fill(0.0)
             val t = if (periodic) ((timeSeconds % seconds) + seconds) % seconds
                 else timeSeconds.coerceIn(0.0, seconds - 1e-9)
-            addOrder(t, lo, 1.0 - morph, weights, envelopes, releaseAge)
-            if (hi != lo && morph > 0.0) addOrder(t, hi, morph, weights, envelopes, releaseAge)
+            addOrder(t, lo, 1.0 - morph, weights)
+            if (hi != lo && morph > 0.0) addOrder(t, hi, morph, weights)
+            // Source changes reveal continuously running contours; a slot is never a new
+            // excitation. The finite gesture ages from note-on through its terminal release.
+            // A held gesture opens and closes smoothly once per phrase, with zero slope at
+            // the wrap. LENGTH adjusts its damping, not its tempo or number of articulations.
+            val age = if (periodic) .5 * seconds * (1.0 - cos(2.0 * PI * t / seconds)) /
+                (.55 + .90 * historyLength) else max(0.0, timeSeconds) + releaseAge
+            for (source in phrase.sources.indices) {
+                val definition = phrase.sources[source]
+                val transient = exp(-age / definition.decaySeconds)
+                val envelope = when (definition.role) {
+                    RelayRole.PLUCK -> .30 + .70 * transient
+                    RelayRole.BELL -> .38 + .62 * transient
+                    RelayRole.ORGAN -> .86 + .14 * smooth(age / .035)
+                    RelayRole.SOFT -> .16 + .84 * smooth(age / (.12 + .32 * definition.decaySeconds))
+                }
+                envelopes[source] = weights[source] * envelope
+            }
         }
 
-        private fun addOrder(t: Double, roster: Int, mix: Double, weights: DoubleArray,
-                             envelopes: DoubleArray, releaseAge: Double) {
+        private fun addOrder(t: Double, roster: Int, mix: Double, weights: DoubleArray) {
             val contributions = DoubleArray(starts.size)
-            val ages = DoubleArray(starts.size)
             for (slot in starts.indices) {
                 val start = starts[slot]
                 val dwell = phrase.slots[slot].beats * scale
-                val transition = max(.008, phrase.slots[slot].transitionBeats * scale * width)
+                val transition = transitionFor(slot)
                 // Broad windows may overlap three or four roles. Unity-sum normalization below
                 // also handles correlated roots; equal-power weights would make those swell.
                 for (cycle in -cycleRadius..cycleRadius) {
@@ -262,25 +291,13 @@ object Relay {
                     val b = smooth((dwell + transition - age) / transition)
                     val contribution = a * b
                     contributions[slot] += contribution
-                    ages[slot] += contribution * max(0.0, age)
                 }
             }
             val total = contributions.sum().coerceAtLeast(1e-12)
             for (slot in starts.indices) {
                 val source = phrase.orderRoster[roster][slot]
                 val w = mix * contributions[slot] / total
-                val age = (if (contributions[slot] > 1e-12) ages[slot] / contributions[slot] else 0.0) + releaseAge
-                val definition = phrase.sources[source]
-                val transient = exp(-age / definition.decaySeconds)
-                val envelope = when (definition.role) {
-                    // A string's root keeps ringing after its upper partials have damped.
-                    RelayRole.PLUCK -> .30 + .70 * transient
-                    RelayRole.BELL -> .38 + .62 * transient
-                    RelayRole.ORGAN -> .86 + .14 * smooth(age / .035)
-                    RelayRole.SOFT -> .16 + .84 * smooth(age / (.12 + .32 * definition.decaySeconds))
-                }
                 weights[source] += w
-                envelopes[source] += w * envelope
             }
         }
     }
@@ -406,9 +423,12 @@ object Relay {
         val m = settled(voice, macros)
         val p = plan(voice, m, recipe)
         val pulse = m.getValue("PULSE").toDouble()
+        // Most of the knob is phrasing rather than gating. The upper end deliberately
+        // reveals the serialized rhythmic figure without making defaults separate notes.
+        val pulseContrast = pulse.pow(2.4)
         val color = m.getValue("COLOR").toDouble()
         val length = m.getValue("LENGTH").toDouble()
-        val schedule = Schedule(recipe, m.getValue("ORDER"), m.getValue("BLEND"), p.phraseSeconds, p.held)
+        val schedule = Schedule(recipe, m.getValue("ORDER"), m.getValue("BLEND"), p.phraseSeconds, p.held, length)
         val accentEvents = recipe.accents.sortedBy { it.beat }.map {
             AccentEvent(it.beat.toDouble(), it.beat / recipe.phraseBeats * p.phraseSeconds,
                 it.strength * (.15 + .85 * pulse) * velocity)
@@ -459,8 +479,9 @@ object Relay {
                 var elapsed = local - event.timeSeconds
                 if (p.held && elapsed < 0) elapsed += p.phraseSeconds
                 if (elapsed >= 0) {
-                    val attack = .008 + .008 * (1.0 - velocity)
-                    val decay = .045 + .070 * length
+                    val softness = (1.0 - pulse).pow(2.0)
+                    val attack = .008 + .008 * (1.0 - velocity) + .055 * softness
+                    val decay = .045 + .070 * length + .180 * softness
                     val energy = smooth(elapsed / attack) * exp(-elapsed / decay) + if (p.held) {
                         // Include the decaying history of earlier cycles. A finite attack kernel
                         // reset by modulo alone would lose its quiet residue at the phrase seam.
@@ -471,14 +492,12 @@ object Relay {
                 }
             }
             emphasis = emphasis.coerceIn(0.0, 1.0)
-            val rhythmic = (1.0 - .60 * pulse) + .95 * pulse * emphasis
+            val rhythmic = (1.0 - .60 * pulseContrast) + .95 * pulseContrast * emphasis
             val excitation = velocity * (.45 + .55 * velocity)
             val envelope = if (p.held) {
-                // LENGTH changes articulation within each repeating dwell, never phrase tempo.
-                val cell = local / p.phraseSeconds * recipe.slots.size
-                val articulation = (.64 + .36 * length) + (.36 - .36 * length) *
-                    (.5 + .5 * cos(2.0 * PI * cell))
-                articulation
+                // A held note has one continuous body. Its source damping and fixed accent
+                // widths carry LENGTH; slots must not introduce an implicit amplitude gate.
+                1.0
             } else {
                 val attackSeconds = when (voice) {
                     RelayVoice.KEY -> .006
@@ -502,7 +521,7 @@ object Relay {
             }
             // COLOR now spans a genuine closed-to-open filter, while source transients and
             // independent accents open it within a note. Two nonresonant poles remain bounded.
-            val frequency = (cutoff * (.65 + .70 * opening + .45 * pulse * emphasis))
+            val frequency = (cutoff * (.65 + .70 * opening + .45 * pulseContrast * emphasis))
                 .coerceIn(2.4 * p.actualHz, 16_000.0)
             val coefficient = 1.0 - exp(-2.0 * PI * frequency / INTERNAL_RATE)
             return Triple(OUTPUT_GAIN * excitation * rhythmic * envelope, emphasis, coefficient)
@@ -526,7 +545,7 @@ object Relay {
                 val w = currentWeights[source] + fraction * (nextWeights[source] - currentWeights[source])
                 val e = currentEnvelopes[source] + fraction * (nextEnvelopes[source] - currentEnvelopes[source])
                 val excitation = if (w > 1e-8) sourceExcitation(recipe.sources[source].role, e / w) else 0.0
-                val brightness = (.05 + .95 * excitation + .65 * pulse * accentNow).coerceIn(0.0, 1.0)
+                val brightness = (.05 + .95 * excitation + .65 * pulseContrast * accentNow).coerceIn(0.0, 1.0)
                 val low = read(lowTables[source], phase)
                 val high = read(highTables[source], phase)
                 mix += recipe.sources[source].gain * e * (low + brightness * (high - low))

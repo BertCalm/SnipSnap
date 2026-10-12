@@ -10,12 +10,11 @@ The first port is a listening candidate. Its six dry presets establish KEY,
 BASS, PLUCK, ORGAN, CHIME and FLOW. The proposed 36-preset expansion waits for
 the owner's sonic approval, as required by the specification.
 
-The second audition responds to listening feedback that the voices were too
-similar. The first version put 86–93% of each shared-C3 identity's spectral
-energy around the root and reused one timing score. The revision gives the
-source roles different harmonic profiles and articulation, and gives each
-voice a separate dwell, handoff and accent score. These measurements explain
-the change; they do not establish sonic approval.
+The second audition gave the source roles different harmonic profiles and
+articulation, and each voice its own handoff and accent score. The third audition
+responds to feedback that those handoffs sounded like separate gestures. It
+refines source continuity, transition overlap and internal emphasis toward a
+single evolving voice. Listening remains the approval gate.
 
 ## Controls
 
@@ -40,6 +39,13 @@ durations, the order roster, accents, tempo and loop configuration. Four slots
 are the default; at most eight are accepted. Tempo is a patch setting, so PULSE
 does not secretly become a speed control. Independent renders start from fresh
 state with deterministic seeded variation.
+
+Source excitation follows one continuous note history, so entering another
+slot does not restart a source's decay or swell. Normal voice settings use
+smooth, dwell-relative overlap. PULSE adds gentle internal emphasis at low
+settings and reveals stronger rhythmic figures near its high end. HOLD uses
+periodic source histories; low PULSE does not introduce an extra gate at every
+slot boundary.
 
 Finite notes admit accent events only before the selected gate. Their envelopes
 finish naturally during release; no fresh accent begins in the terminal tail.
@@ -88,8 +94,9 @@ register and velocity, five-point sweeps, required interaction corners,
 all-high settings, tempo extremes and repeated HOLD material. Four isolated
 source probes expose the individual timbres. Supply
 `-PrelayBaseline=<previous audition directory>` to include the six unchanged
-original identities with direct Original/Revised playback buttons; the
-previous manifest and WAV hashes are checked before copying.
+previous identities with direct Previous/Refined playback buttons; the
+previous manifest and WAV hashes are checked before copying. The published
+third audition compares against the unchanged second-audition recordings.
 It is a review
 artifact; measured checks do not establish sonic approval.
 
