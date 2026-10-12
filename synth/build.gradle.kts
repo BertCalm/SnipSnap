@@ -724,6 +724,19 @@ tasks.register<JavaExec>("generateSpoolAudition") {
     if (project.hasProperty("spoolQuick")) args("--quick")
 }
 
+/** Render Embouchure's original dry gestures, control matrix and settled held loops. */
+tasks.register<JavaExec>("generateEmbouchureAudition") {
+    group = "distribution"
+    description = "Render EMBOUCHURE dry WAVs, complete recipes, numerical listening metadata and the audition page under testkit/embouchure-audition/. -PembouchureQuick renders a smaller development pack."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.EmbouchureAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("embouchureOutput").orNull ?: "${rootDir}/testkit/embouchure-audition")
+    if (project.hasProperty("embouchureQuick")) args("--quick")
+    providers.gradleProperty("embouchureReference").orNull?.let { args("--reference-dir=$it") }
+}
+
 /** Render Prism's dry register/velocity, macro, interaction and HOLD matrix. */
 tasks.register<JavaExec>("generatePrismAudition") {
     group = "distribution"

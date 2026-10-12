@@ -298,7 +298,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "embouchure", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -325,6 +325,10 @@ class StarterKitsTest {
         assertEquals("TANGLE", tangle.displayName)
         assertFalse(tangle.seeded, "TANGLE is a fixed dry audition kit")
         assertEquals(KeySpec.parse("Cminpent"), tangle.key)
+        val embouchure = StarterKits.byId("embouchure")!!
+        assertEquals("EMBOUCHURE", embouchure.displayName)
+        assertFalse(embouchure.seeded, "EMBOUCHURE is a fixed dry audition kit")
+        assertEquals(KeySpec.parse("Cminpent"), embouchure.key)
         val revel = StarterKits.byId("revel")!!
         assertEquals("REVEL", revel.displayName)
         assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")

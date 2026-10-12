@@ -1,0 +1,430 @@
+{
+  "source": "Published original Model 1 audition, before the Model 2 control calibration",
+  "sourceManifestSha256": "8df8c8c797b0ce6a85d416f315b9c2c90d53c65fb5df904b18d222f0c1431fb4",
+  "rendererFingerprint": {
+    "algorithm": "SHA-256 of sorted compiled renderer/support class names and bytes",
+    "sha256": "7f6b5768cc05c9baaac5d085af2f06bf857e6e624638f22dfe851d46c3041a76",
+    "classes": [
+      "com.snipsnap.audio.Loudness",
+      "com.snipsnap.synth.Bore",
+      "com.snipsnap.synth.Bore$Gate",
+      "com.snipsnap.synth.Bore$LoopPlan",
+      "com.snipsnap.synth.Bore$LoopRender",
+      "com.snipsnap.synth.Bore$Voicing",
+      "com.snipsnap.synth.Bore$Voicing$Companion",
+      "com.snipsnap.synth.Bore$WhenMappings",
+      "com.snipsnap.synth.Dsp",
+      "com.snipsnap.synth.Dsp$Biquad",
+      "com.snipsnap.synth.Dsp$Env",
+      "com.snipsnap.synth.Dsp$Ladder",
+      "com.snipsnap.synth.Dsp$Ladder$Companion",
+      "com.snipsnap.synth.Dsp$Noise",
+      "com.snipsnap.synth.Dsp$OnePole",
+      "com.snipsnap.synth.Dsp$Svf",
+      "com.snipsnap.synth.Dsp$TptSvf",
+      "com.snipsnap.synth.Embouchure",
+      "com.snipsnap.synth.Embouchure$Engine",
+      "com.snipsnap.synth.Embouchure$Engine$WhenMappings",
+      "com.snipsnap.synth.Embouchure$LoopRender",
+      "com.snipsnap.synth.Embouchure$Mode",
+      "com.snipsnap.synth.Embouchure$Played",
+      "com.snipsnap.synth.Embouchure$Player",
+      "com.snipsnap.synth.Embouchure$Player$WhenMappings",
+      "com.snipsnap.synth.Embouchure$Probe",
+      "com.snipsnap.synth.Embouchure$Trace",
+      "com.snipsnap.synth.Embouchure$Voice",
+      "com.snipsnap.synth.Embouchure$Wave",
+      "com.snipsnap.synth.Embouchure$WhenMappings",
+      "com.snipsnap.synth.EmbouchureDriver",
+      "com.snipsnap.synth.EmbouchureGesture",
+      "com.snipsnap.synth.EmbouchureVoice",
+      "com.snipsnap.synth.Keys",
+      "com.snipsnap.synth.Keys$LoopPlan",
+      "com.snipsnap.synth.Siren",
+      "com.snipsnap.synth.Siren$Lfo",
+      "com.snipsnap.synth.Siren$LoopPlan",
+      "com.snipsnap.synth.Siren$Tone",
+      "com.snipsnap.synth.Siren$WhenMappings",
+      "com.snipsnap.synth.Strings",
+      "com.snipsnap.synth.Strings$Bow",
+      "com.snipsnap.synth.Strings$Bow$Companion",
+      "com.snipsnap.synth.Strings$Bridge",
+      "com.snipsnap.synth.Strings$Damping",
+      "com.snipsnap.synth.Strings$Dispersion",
+      "com.snipsnap.synth.Strings$Dispersion$Companion",
+      "com.snipsnap.synth.Strings$Loop",
+      "com.snipsnap.synth.Strings$Membrane",
+      "com.snipsnap.synth.Strings$Membrane$Companion",
+      "com.snipsnap.synth.Strings$Tuning"
+    ]
+  },
+  "sampleRate": 44100,
+  "channels": 1,
+  "bitsPerSample": 16,
+  "clips": [
+    {
+      "id": "preset_leaning_reed",
+      "group": "PRESETS",
+      "frames": 131761,
+      "sha256": "a6f05f8ea51545ae6b13abf0a0d5e8af6ba61fa4efadcc6c2e4f005959e76cbc",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Leaning Reed",
+        "voice": "REED",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.5,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "LEANING_SWELL"
+      }
+    },
+    {
+      "id": "preset_muted_bell",
+      "group": "PRESETS",
+      "frames": 132132,
+      "sha256": "e4bab423938a512ce305436abe4eb0fbc2b7886f6e5ebb3c4ef138a3817d3ec0",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Muted Bell",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.550000011920929,
+          "REED": 0.44999998807907104,
+          "SHAPE": 0.6200000047683716,
+          "GRAIN": 0.15000000596046448,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "LIP",
+        "gesture": "PRESSURE_RELEASE"
+      }
+    },
+    {
+      "id": "preset_breath_pocket",
+      "group": "PRESETS",
+      "frames": 116525,
+      "sha256": "b109ec4c58b29b8ccf4f9107dd81c2a9692addc13ec8ee21eb74bf93b2000e84",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Breath Pocket",
+        "voice": "BASS",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.4000000059604645,
+          "SHAPE": 0.550000011920929,
+          "GRAIN": 0.3199999928474426,
+          "LENGTH": 0.3499999940395355,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 36,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "PRESSURE_RELEASE"
+      }
+    },
+    {
+      "id": "preset_soft_entry",
+      "group": "PRESETS",
+      "frames": 217621,
+      "sha256": "c6f636b85f8b178505e83c0530729faa841a1990a7ef03f8019f47af26169b27",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Soft Entry",
+        "voice": "SOFT",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.30000001192092896,
+          "REED": 0.25,
+          "SHAPE": 0.5,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.75,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "SOFT_ENTRY"
+      }
+    },
+    {
+      "id": "preset_short_overblow",
+      "group": "PRESETS",
+      "frames": 106865,
+      "sha256": "c5872829b551e3ca6927f29277cc56af06c9f4c49a868d3297fbf269df7de256",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Short Overblow",
+        "voice": "REED",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.75,
+          "REED": 0.6499999761581421,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.25,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "OVERPRESSURE"
+      }
+    },
+    {
+      "id": "preset_relaxed_bow",
+      "group": "PRESETS",
+      "frames": 203512,
+      "sha256": "9b143a717ecc6ba229d8e3b6b5295bceffa2de020ab8f01a97ede9cb36e5e942",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Relaxed Bow",
+        "voice": "BOW",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.3499999940395355,
+          "REED": 0.3499999940395355,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.18000000715255737,
+          "LENGTH": 0.6499999761581421,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "BOW",
+        "gesture": "BOWED_CAPTURE"
+      }
+    },
+    {
+      "id": "preset_narrow_air",
+      "group": "PRESETS",
+      "frames": 136446,
+      "sha256": "77354ec66baa93e043f9332132068614099823121e24d0c55312c6d40125396e",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Narrow Air",
+        "voice": "WHISTLE",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.3499999940395355,
+          "REED": 0.30000001192092896,
+          "SHAPE": 0.6499999761581421,
+          "GRAIN": 0.07999999821186066,
+          "LENGTH": 0.550000011920929,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "SOFT_ENTRY"
+      }
+    },
+    {
+      "id": "preset_held_effort",
+      "group": "PRESETS",
+      "frames": 88663,
+      "sha256": "e0318f57c2b0d7d96903b6a0c4b47aa435e172e486e21c94e6ab78813a51d5e9",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Held Effort",
+        "voice": "SOFT",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.25,
+          "SHAPE": 0.5,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.6499999761581421,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "LEANING_SWELL"
+      }
+    },
+    {
+      "id": "voice_reed",
+      "group": "VOICES",
+      "frames": 131761,
+      "sha256": "a6f05f8ea51545ae6b13abf0a0d5e8af6ba61fa4efadcc6c2e4f005959e76cbc",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Reed",
+        "voice": "REED",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.5,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "LEANING_SWELL"
+      }
+    },
+    {
+      "id": "voice_brass",
+      "group": "VOICES",
+      "frames": 132132,
+      "sha256": "b46d61b76e9687be10dde4236bc3f968c30be6ec46c267aa291223fd6cb92966",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Brass",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.550000011920929,
+          "REED": 0.44999998807907104,
+          "SHAPE": 0.44999998807907104,
+          "GRAIN": 0.15000000596046448,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "LIP",
+        "gesture": "OVERPRESSURE"
+      }
+    },
+    {
+      "id": "voice_bass",
+      "group": "VOICES",
+      "frames": 121586,
+      "sha256": "44c85978b2ba03b3083585e2dc1f5cf5d695315d8d1e66421e8d7b49155f7be8",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Bass",
+        "voice": "BASS",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.4000000059604645,
+          "SHAPE": 0.550000011920929,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.4000000059604645,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 36,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "PRESSURE_RELEASE"
+      }
+    },
+    {
+      "id": "voice_whistle",
+      "group": "VOICES",
+      "frames": 136446,
+      "sha256": "4a1ba6fab76f6d9061f3909cb0a1978dd338387ad0eadc3247f432fcb1fae1f7",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Whistle",
+        "voice": "WHISTLE",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.3499999940395355,
+          "REED": 0.30000001192092896,
+          "SHAPE": 0.20000000298023224,
+          "GRAIN": 0.10000000149011612,
+          "LENGTH": 0.550000011920929,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "SOFT_ENTRY"
+      }
+    },
+    {
+      "id": "voice_bow",
+      "group": "VOICES",
+      "frames": 204360,
+      "sha256": "80843f25b755083db05b35eb700bd99e21600cbc7b0f1e80ac215091bf59a792",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Bow",
+        "voice": "BOW",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.44999998807907104,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.25,
+          "LENGTH": 0.6499999761581421,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "BOW",
+        "gesture": "BOWED_CAPTURE"
+      }
+    },
+    {
+      "id": "voice_soft",
+      "group": "VOICES",
+      "frames": 217621,
+      "sha256": "c6f636b85f8b178505e83c0530729faa841a1990a7ef03f8019f47af26169b27",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Soft",
+        "voice": "SOFT",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.30000001192092896,
+          "REED": 0.25,
+          "SHAPE": 0.5,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.75,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "SOFT_ENTRY"
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourPresets
 import com.snipsnap.synth.ContourVoice
+import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
@@ -28,6 +29,7 @@ import com.snipsnap.synth.RelayAccent
 import com.snipsnap.synth.RelayLoop
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RelayVoice
+import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
@@ -159,12 +161,14 @@ class UserPresetsTest {
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
+                "REVEL" to RevelVoice.entries.map { it.name },
                 "PRISM" to PrismVoice.entries.map { it.name },
                 "CONTOUR" to ContourVoice.entries.map { it.name },
                 "STOOP" to StoopVoice.entries.map { it.name },
                 "SKITTER" to SkitterVoice.entries.map { it.name },
                 "TANGLE" to TangleVoice.entries.map { it.name },
                 "RELAY" to RelayVoice.entries.map { it.name },
+                "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {

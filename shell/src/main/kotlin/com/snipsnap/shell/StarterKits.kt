@@ -203,6 +203,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.relay() },
         Starter(
+            "embouchure", "EMBOUCHURE",
+            "Dry expressive reeds, muted brass, breathy bass and bowed notes in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.embouchure() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

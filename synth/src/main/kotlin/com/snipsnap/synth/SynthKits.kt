@@ -604,6 +604,22 @@ object SynthKits {
     }
 
     /**
+     * Eight REED notes in C minor pentatonic followed by the eight dry audition presets.
+     * Every pad carries the model, player gesture and native velocity in its recipe.
+     * Finite notes are TONAL; Held Effort is a settled LOOP for repeated playback.
+     */
+    fun embouchure(): List<ArrangedPad?> {
+        val lead = EmbouchurePresets.all().first { it.name == "Leaning Reed" }
+        val notes = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            lead.copy(name = "Reed ${i + 1}", midi = Embouchure.rootMidi(lead.voice) + semitone,
+                macros = lead.macros + ("TUNE" to 0f))
+        }
+        return (notes + EmbouchurePresets.all()).map {
+            pad(it, Embouchure.drumClassFor(it.voice, it.macros)).copy(displayName = it.name)
+        }
+    }
+
+    /**
      * A dry pitched wheel kit for the first audition. A01–A08 walk CLUNK up C minor
      * pentatonic from C3. A09–A14 contain the six voice defaults, A15 adds the next
      * scale note, and A16 is the settled held TURN. Each pad has a fresh independent

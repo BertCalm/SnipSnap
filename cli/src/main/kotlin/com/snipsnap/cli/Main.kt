@@ -72,7 +72,7 @@ object Cli {
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        render factory presets to wav, to hear them
-        |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY: --midi N --velocity 0..1)
+        |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE: --midi N --velocity 0..1)
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
         |                        (RESIN: --instrument holds a note; --drone

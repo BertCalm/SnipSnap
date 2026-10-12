@@ -299,7 +299,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 27 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 28 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -344,6 +344,21 @@ and capture/control diagnostics. The
 [private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
+
+EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
+lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
+with relative TUNE, native velocity, saved playing gestures and settled HOLD
+loops. Eight dry starting presets and a sixteen-pad C minor pentatonic kit
+are available in SYNTH, FRESH TAPE and the CLI. Run
+`./gradlew :synth:generateEmbouchureAudition` for the complete listening page,
+control matrix and MPC 2/3 kit under `testkit/embouchure-audition/`.
+The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
+contains the revised control matrix, original/revised comparisons and the
+downloadable kit. Model 2 strengthens the controls while preserving all six
+default voices; saved model 1 recipes retain their original render.
+The revised controls await owner listening approval before preset expansion;
+[implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
+driver approximations, recipes and held-sample export limits.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One
@@ -631,8 +646,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY and GRAINS round out the lineup —
-thirty-four engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and GRAINS round out the lineup —
+thirty-five engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -815,10 +830,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL, SKITTER, TANGLE and RELAY are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY and EMBOUCHURE are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
