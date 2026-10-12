@@ -85,7 +85,6 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
-import com.snipsnap.audio.Scales
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.OneNote
