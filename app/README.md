@@ -65,19 +65,35 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (19 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL and RELAY,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (27 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE and RELAY,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 26 engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has 34 engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL and RELAY.
-CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL and RELAY also provide
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE and RELAY.
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE and RELAY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
-remain provisional until the owner's first dry listening approval. RELAY adds six
+remain provisional until the owner's first dry listening approval. SPOOL adds
+six original recorded-material voices, a dry 16-pad starter and CLI note/velocity
+auditions; its presets also remain provisional pending listening review.
+PRISM adds six additive voices, eight review presets and a dry pitched
+starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
+precedes further preset expansion.
+ALLOY adds six attack-driven PM voices, twelve provisional presets and a dry
+sixteen-pad starter kit; its first listening set also awaits owner approval.
+CONTOUR adds six wavetable voices with SCAN, OFFSET, MOTION, FILTER,
+DRIVE and HOLD. Loading, editing and saving a preset retains its authored
+table pair, layer relationship and envelopes along with the macros.
+STOOP saves its source, shadow and chord recipe beside the six macros; its root
+can be changed by semitone or octave without resetting that recipe. Its 48
+provisional presets and dry starter kit await listening.
+TANGLE's six voices, 36 recipes and dry starter kit likewise await the
+owner's listening verdict; saved recipes preserve explicit note and velocity.
+RELAY adds six
 dry phrase seeds and a dry sixteen-pad starter; its larger proposed roster
 waits for the same listening approval.
 GRAINS, SNAP and DRAW work on source material beside the engine picker.

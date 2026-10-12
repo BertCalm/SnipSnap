@@ -172,6 +172,20 @@ hold on the phone's MAKE INSTRUMENT; this command refuses them. An
 engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR)
 still renders here.
 
+LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
+eight-preset audition bank. `--midi 24..96` and `--velocity 0..1` override
+the stored root and strike energy, while TUNE remains the saved ±12-semitone
+offset. For example:
+
+```sh
+snipsnap synth LACQUER GLASS --all --midi 60 --velocity 0.7 --out <dir>
+```
+
+HOLD presets render settled loop material. The wider listening matrix and
+native/matched comparison page come from `:synth:generateLacquerAudition`;
+`:synth:generateLacquerKit` exports the dry starter pads as an MPC 3 track
+with an MPC 2 twin. These remain provisional sounds pending the owner's audition.
+
 RELAY auditions use the complete saved phrase at the requested root: `--midi`
 accepts 48–72 for KEY, PLUCK, ORGAN, CHIME and FLOW, or 24–48 for BASS.
 `--velocity 0..1` changes excitation and accent energy. Its six dry factory
