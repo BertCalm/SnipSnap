@@ -118,6 +118,10 @@ object Presets {
             val v = RevelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             RevelPresets.forVoice(v)
         }
+        SpoolPatch.ENGINE -> {
+            val v = SpoolVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            SpoolPresets.forVoice(v)
+        }
         CorollaPatch.ENGINE -> {
             val v = CorollaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             CorollaPresets.forVoice(v)
@@ -130,6 +134,10 @@ object Presets {
             val v = PitchwheelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             PitchwheelPresets.forVoice(v)
         }
+        EmbouchurePatch.ENGINE -> {
+            val v = EmbouchureVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            EmbouchurePresets.forVoice(v)
+        }
         MurmurPatch.ENGINE -> {
             val v = MurmurVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MurmurPresets.forVoice(v)
@@ -137,6 +145,34 @@ object Presets {
         PrismPatch.ENGINE -> {
             val v = PrismVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             PrismPresets.forVoice(v)
+        }
+        AlloyPatch.ENGINE -> {
+            val v = AlloyVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            AlloyPresets.forVoice(v)
+        }
+        ContourPatch.ENGINE -> {
+            val v = ContourVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ContourPresets.forVoice(v)
+        }
+        StoopPatch.ENGINE -> {
+            val v = StoopVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            StoopPresets.forVoice(v)
+        }
+        LacquerPatch.ENGINE -> {
+            val v = LacquerVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            LacquerPresets.forVoice(v)
+        }
+        SkitterPatch.ENGINE -> {
+            val v = SkitterVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            SkitterPresets.forVoice(v)
+        }
+        TanglePatch.ENGINE -> {
+            val v = TangleVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TanglePresets.forVoice(v)
+        }
+        RelayPatch.ENGINE -> {
+            val v = RelayVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            RelayPresets.forVoice(v)
         }
         else -> emptyList()
     }
@@ -170,5 +206,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            MurmurPresets.all() + RevelPresets.all() + PrismPresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + MurmurPresets.all()
 }

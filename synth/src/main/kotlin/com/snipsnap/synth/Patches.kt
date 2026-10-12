@@ -31,7 +31,7 @@ object Patches {
 
     const val VERSION = 1
 
-    /** Edit the common fields while retaining engine-specific state such as FLOTILLA's pitch and velocity. */
+    /** Edit the common fields while retaining engine-specific state such as saved pitch and velocity. */
     fun edited(patch: Patch, name: String, macros: Map<String, Float>): Patch {
         val obj = LinkedHashMap(patch.withMacros(macros).toJsonValue().entries)
         obj["name"] = JsonValue.Str(name)
@@ -76,10 +76,19 @@ object Patches {
             CorollaPatch.ENGINE -> CorollaPatch.fromJsonValue(value)
             SuturePatch.ENGINE -> SuturePatch.fromJsonValue(value)
             RevelPatch.ENGINE -> RevelPatch.fromJsonValue(value)
+            SpoolPatch.ENGINE -> SpoolPatch.fromJsonValue(value)
             TesseraPatch.ENGINE -> TesseraPatch.fromJsonValue(value)
             PitchwheelPatch.ENGINE -> PitchwheelPatch.fromJsonValue(value)
+            EmbouchurePatch.ENGINE -> EmbouchurePatch.fromJsonValue(value)
             MurmurPatch.ENGINE -> MurmurPatch.fromJsonValue(value)
             PrismPatch.ENGINE -> PrismPatch.fromJsonValue(value)
+            AlloyPatch.ENGINE -> AlloyPatch.fromJsonValue(value)
+            ContourPatch.ENGINE -> ContourPatch.fromJsonValue(value)
+            StoopPatch.ENGINE -> StoopPatch.fromJsonValue(value)
+            LacquerPatch.ENGINE -> LacquerPatch.fromJsonValue(value)
+            SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
+            TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
+            RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

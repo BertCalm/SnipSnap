@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="Listen to the first dry Embouchure physical-modeling port for SnipSnap. Compare voices, rendered macro sweeps, held notes, and diagnostic probes.">
+  <title>Embouchure — the listening bench</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listening-bench">Skip to the listening bench</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="index.html" aria-label="Embouchure listening bench home"><span class="mark" aria-hidden="true">e</span><span>EMBOUCHURE<span class="wordmark-sub">IN SNIPSNAP</span></span></a>
+    <div class="header-right"><span class="edition">ENGINE STUDY / 01</span><a href="https://github.com/BertCalm/SnipSnap/tree/codex/embouchure-engine" target="_blank" rel="noopener">Source <svg class="arrow-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M3 3h6v6"/></svg></a></div>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="page-title">
+      <div><p class="eyebrow"><span class="small-dot" aria-hidden="true"></span> THE LISTENING BENCH</p><h1 id="page-title">A note, played<br><em>with effort.</em></h1></div>
+      <div class="hero-copy"><p>A pressure-driven instrument study. Reed, lip and bow contact meet a resonator, a body, and a finite playing gesture.</p><p class="hero-detail">Listen to Embouchure’s first dry port into SnipSnap. Explore the voices, change one control, and leave a listening verdict.</p><div class="status-tag"><span class="small-dot" aria-hidden="true"></span> DRY FIRST PASS · OWNER REVIEW PENDING</div></div>
+    </section>
+    <section class="bench-section" id="listening-bench" aria-label="Interactive listening bench">
+      <div class="bench-heading"><h2>Choose a voice.<br class="mobile-break"> Hear how it speaks.</h2><p class="bench-count" id="bench-count">Loading rendered clips…</p></div>
+      <nav class="voice-filters" aria-label="Filter by instrument voice" id="voice-filters"></nav>
+      <div class="workbench">
+        <aside class="library" aria-label="Clip library">
+          <div class="library-heading"><span class="eyebrow">THE COLLECTION</span><span class="collection-count" id="collection-count">—</span></div>
+          <div class="library-tabs" role="group" aria-label="Choose collection"><button class="active" id="presets-tab" aria-pressed="true">Presets</button><button id="probes-tab" aria-pressed="false">Deep probes</button></div>
+          <label class="search-box"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m13 13 4 4"></path></svg><input id="clip-search" type="search" placeholder="Find a sound…" aria-label="Search clips"></label>
+          <label class="group-control" id="group-control" hidden>Probe group<select id="group-select"><option value="all">All probes</option></select></label>
+          <div class="clip-list" id="clip-list" aria-label="Rendered clips"><p class="empty-state">Opening the listening collection…</p></div>
+          <button class="load-more" id="load-more" hidden>Show more clips <span aria-hidden="true">↓</span></button>
+          <p class="library-footnote">Every sound on this bench is an actual engine render. All audio is dry, mono, 44.1 kHz.</p>
+        </aside>
+        <div class="instrument">
+          <section class="transport" aria-labelledby="clip-title">
+            <div class="transport-top"><p class="eyebrow" id="clip-label">EMBOUCHURE / READY TO LISTEN</p><span class="dry-badge">DRY / MONO</span></div>
+            <div class="track-heading"><button class="play-button" id="play-button" aria-label="Play selected clip" disabled><svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"></path></svg><svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM14 5h4v14h-4z"></path></svg></button><div><h3 id="clip-title">Preparing the instrument</h3><p id="clip-subtitle">Choose a rendered clip to begin.</p></div></div>
+            <div class="waveform-wrap"><canvas id="waveform" aria-label="Waveform of the selected rendered audio"></canvas><span class="waveform-label">RENDERED WAVEFORM</span></div>
+            <label class="seek-label"><span class="sr-only">Playback position</span><input type="range" id="seek" min="0" max="1000" value="0" aria-label="Playback position" disabled></label>
+            <div class="transport-bottom"><div class="timecode"><span id="current-time">0:00</span><span class="time-separator">/</span><span id="duration">0:00</span></div><label class="loop-control"><input id="loop-control" type="checkbox" disabled><span class="loop-symbol" aria-hidden="true">↻</span> Loop HOLD</label><a id="download-wav" class="download-audio" aria-disabled="true">WAV <span aria-hidden="true">↓</span></a></div>
+            <div class="diagnostic-mode" id="diagnostic-mode" hidden><span>Listen to</span><div role="group" aria-label="Diagnostic audio comparison"><button data-audio-mode="production" class="active" aria-pressed="true">Production</button><button data-audio-mode="raw" aria-pressed="false" hidden>Raw</button><button data-audio-mode="matched" aria-pressed="false" hidden>Level matched</button></div></div>
+            <div class="diagnostic-mode" id="model-comparison" hidden><span>Compare versions</span><div role="group" aria-label="Play original and revised versions at the same settings"><button data-model-side="original" aria-pressed="false">Original</button><button data-model-side="revised" aria-pressed="false">Revised</button></div></div>
+            <p class="model-comparison-note" id="model-comparison-note" hidden>Same note and control values · both replay from the start.</p>
+            <p class="transport-error" id="audio-error" role="status" hidden></p>
+          </section>
+          <section class="control-panel" aria-labelledby="controls-title">
+            <div class="panel-heading"><div><p class="eyebrow">THE PLAYING INPUT</p><h3 id="controls-title">One control at a time.</h3></div></div>
+            <p class="panel-description">Five points, five actual renders. Choose a point to hear it from the start; other settings use the voice defaults. A and B replay from the attack.</p>
+            <div class="comparison-controls"><div class="comparison-buttons" role="group" aria-label="Replay baseline and chosen control point"><button id="reset-voice" class="outline-button" aria-keyshortcuts="A" disabled>A · Baseline</button><button id="replay-sweep" class="outline-button" aria-keyshortcuts="B" disabled>B · Chosen point</button></div><span class="comparison-context" id="comparison-context" role="status">Choose a control point to compare with the voice defaults.</span></div>
+            <div class="macro-controls" id="macro-controls"></div>
+            <div class="recipe-summary"><span id="gesture-label">Gesture —</span><button id="download-recipe" class="text-button" disabled>Download recipe <span aria-hidden="true">↓</span></button></div>
+          </section>
+          <section class="listening-notes" aria-labelledby="notes-title">
+            <div class="panel-heading"><div><p class="eyebrow">YOUR LISTENING NOTES</p><h3 id="notes-title">Does this voice speak?</h3></div><span class="local-label">SAVED IN THIS BROWSER</span></div>
+            <div class="note-fields"><label>Listening verdict<select id="note-verdict"><option value="unreviewed">Unreviewed</option><option value="approve">Approve dry identity</option><option value="revise">Needs another pass</option></select></label><label>Note on this render<textarea id="note-text" rows="3" placeholder="Root, attack, effort, texture, release… What did you hear?"></textarea></label></div>
+            <div class="notes-footer"><span id="note-status" role="status">Notes stay on this device.</span><button id="export-notes" class="outline-button">Export listening notes <span aria-hidden="true">↓</span></button></div>
+          </section>
+        </div>
+      </div>
+    </section>
+    <section class="about-section" aria-labelledby="about-title"><div><p class="eyebrow">A FIRST PASS, OPEN TO LISTENING</p><h2 id="about-title">The gesture is<br>part of the sound.</h2></div><div class="about-copy"><p>EFFORT shapes how the virtual player enters, leans into, and releases a note. REED changes contact character; SHAPE changes the resonator and body; GRAIN adds seeded roughness; LENGTH stretches the gesture.</p><p id="approval-copy">This collection is for owner sonic approval. Broader preset expansion follows approval of the dry identity. WHISTLE is a simplified air/reed-derived clear-tone approximation.</p><div class="kit-downloads" id="kit-downloads" hidden></div><details class="render-details"><summary>Render details &amp; limitations <span aria-hidden="true">+</span></summary><div id="render-details"><p>Loading render metadata…</p></div></details></div></section>
+    <div id="loading-error" class="loading-error" role="alert" hidden></div>
+  </main>
+  <footer class="site-footer wrap"><p><strong>EMBOUCHURE</strong><span>Original physical-modeling study for SnipSnap.</span></p><div><a href="manifest.json" download>Render manifest <span aria-hidden="true">↓</span></a><a href="embouchure-audition.zip" id="download-bundle" download hidden>Download curated pack <span aria-hidden="true">↓</span></a><a href="https://github.com/BertCalm/SnipSnap/tree/codex/embouchure-engine" target="_blank" rel="noopener">GitHub <svg class="arrow-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M3 3h6v6"/></svg></a></div></footer>
+  <div class="shortcut-hint wrap"><span><kbd>Space</kbd> play / pause</span><span><kbd>←</kbd> <kbd>→</kbd> browse collection</span><span><kbd>A</kbd> baseline / <kbd>B</kbd> chosen point</span><span>Headphones recommended · choose a control point to play it</span></div>
+  <audio id="audio" preload="metadata"></audio>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#181a18">
+  <meta name="description" content="Audition Lacquer in SnipSnap. Explore original layered tones, RELIEF articulation, held loops, and engine-rendered WAV comparisons.">
+  <title>Lacquer — SnipSnap audition lab</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#audition">Skip to audition</a>
+  <header class="masthead wrap">
+    <a class="brand" href="#" aria-label="Lacquer audition home"><span class="brand-mark" aria-hidden="true">l<span></span></span><span>Lacquer<span class="brand-sub">for SnipSnap</span></span></a>
+    <div class="header-right"><span class="status"><i></i> ENGINE AUDITION</span><a class="repo-link" href="https://github.com/BertCalm/SnipSnap/tree/codex/lacquer-engine" target="_blank" rel="noopener">View source <span aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19 19 5M5 5h14v14"/></svg></span></a></div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro" aria-labelledby="page-title">
+      <div class="intro-copy"><p class="eyebrow">ORIGINAL TONES. INDEPENDENT LAYERS.</p><h1 id="page-title">A little separation.<br><em>A deeper sound.</em></h1><p class="lede">Warm body. Bright edge. A softer trail. Lacquer gives each layer its own arrival, shaping polished tones through articulation.</p><a class="text-link" href="#audition">Listen to the engine <span aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v16m-6-6 6 6 6-6"/></svg></span></a></div>
+      <div class="layer-illustration" aria-hidden="true">
+        <div class="illustration-title"><span>THE SHAPE OF RELIEF</span><span>01 — 03</span></div>
+        <div class="layer-line layer-edge"><span>EDGE</span><svg viewBox="0 0 300 70" preserveAspectRatio="none"><path d="M0 58 L15 58 Q25 2 38 17 Q63 53 100 58 L300 58"/></svg></div>
+        <div class="layer-line layer-body"><span>BODY</span><svg viewBox="0 0 300 70" preserveAspectRatio="none"><path d="M0 58 L40 58 Q58 18 82 20 Q120 22 175 49 Q212 58 300 58"/></svg></div>
+        <div class="layer-line layer-trail"><span>TRAIL</span><svg viewBox="0 0 300 70" preserveAspectRatio="none"><path d="M0 58 L79 58 Q112 36 143 37 Q208 42 245 52 L300 58"/></svg></div>
+        <p>One pitch. Three distinct gestures.</p>
+      </div>
+    </section>
+
+    <section id="audition" class="audition-section" aria-labelledby="audition-title">
+      <div class="section-heading"><div><p class="eyebrow">01 / THE PALETTE</p><h2 id="audition-title">Find your finish.</h2></div><p class="section-note">Engine-rendered audio<br><span id="render-meta">44.1 kHz · mono WAV</span></p></div>
+      <div class="audition-shell">
+        <aside class="preset-rail" aria-label="Presets"><div class="rail-heading"><span>PRESETS</span><span id="preset-count">—</span></div><div id="preset-list" class="preset-list"><p class="loading">Loading the palette…</p></div></aside>
+        <div class="instrument">
+          <div class="instrument-top"><div><p id="voice-label" class="eyebrow">LACQUER</p><h3 id="preset-name">Preparing the audition</h3></div><span id="clip-badge" class="chip">PRE-RENDERED</span></div>
+          <p id="preset-description" class="preset-description">Every sound on this page is rendered by the SnipSnap engine.</p>
+          <div class="waveform-wrap"><canvas id="waveform" aria-label="Audio waveform"></canvas><div class="waveform-guides"><span>ARRIVAL</span><span id="duration-label">—</span></div></div>
+          <div class="transport">
+            <button id="play-button" class="play-button" type="button" disabled aria-label="Play selected audio"><svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span id="play-label">Play tone</span></button>
+            <div class="transport-copy"><span id="clip-title">Choose a preset</span><span id="play-time">0:00 <span class="time-divider">/</span> —</span></div>
+            <a id="download" class="download-button" href="#" download aria-label="Download selected WAV" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 17v4h14v-4"/></svg><span>WAV</span></a>
+          </div>
+          <div class="audition-options"><div class="option-group"><span class="option-label">GESTURE</span><div class="segmented" role="group" aria-label="Gesture"><button type="button" id="finite-mode" aria-pressed="true">Finite</button><button type="button" id="held-mode" aria-pressed="false">Held loop <span aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7V2m0 5h-5M20 7a8 8 0 1 0 1 8"/></svg></span></button></div></div><div class="option-group select-option"><label class="option-label" for="level-select">LEVEL</label><select id="level-select" aria-label="Playback level"><option value="matched">Matched</option><option value="native">Native</option></select></div><div class="option-group select-option"><label class="option-label" for="note-select">NOTE</label><select id="note-select" aria-label="Audition note" disabled></select></div><div class="option-group select-option"><label class="option-label" for="velocity-select">VELOCITY</label><select id="velocity-select" aria-label="Audition velocity" disabled></select></div></div>
+          <div class="macro-defaults" id="macro-defaults" aria-label="Rendered clip macro settings"></div>
+          <p class="instrument-footnote" id="gesture-note">Finite tones include their full natural decay. Press space to play or pause.</p>
+        </div>
+      </div>
+      <p id="audio-status" class="audio-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="comparisons" aria-labelledby="comparison-title">
+      <div class="section-heading"><div><p class="eyebrow">02 / UNDER THE SURFACE</p><h2 id="comparison-title">Hear what changes.</h2></div><p class="section-note">The same engine.<br>One change at a time.</p></div>
+      <div class="diagnostic-tabs" role="tablist" aria-label="Engine comparisons"><button type="button" role="tab" id="tab-relief" aria-selected="true" aria-controls="diagnostic-panel" data-tab="relief">RELIEF sweep</button><button type="button" role="tab" id="tab-macros" aria-selected="false" aria-controls="diagnostic-panel" data-tab="macros">Macro comparisons</button><button type="button" role="tab" id="tab-layers" aria-selected="false" aria-controls="diagnostic-panel" data-tab="layers">Layer solos</button><button type="button" role="tab" id="tab-interactions" aria-selected="false" aria-controls="diagnostic-panel" data-tab="interactions">Interactions</button></div>
+      <div id="diagnostic-panel" class="diagnostic-panel" role="tabpanel" aria-labelledby="tab-relief"><div class="diagnostic-intro"><h3 id="diagnostic-title">Together → separated</h3><p id="diagnostic-description">RELIEF changes the timing of independently articulated layers. Compare the same tone at five positions.</p></div><div id="diagnostic-controls"></div><div id="diagnostic-clips" class="diagnostic-clips"></div><p id="diagnostic-note" class="diagnostic-note"></p></div>
+      <div class="hold-explainer"><span class="hold-symbol" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7V2m0 5h-5M20 7a8 8 0 1 0 1 8"/></svg></span><div><h3>A different kind of movement in HOLD.</h3><p>Once an attack settles, onset delays no longer tell the story. In held mode, RELIEF offsets gentle repeating layer contours, keeping their development distinct inside a sustained loop.</p></div></div>
+    </section>
+
+    <section class="render-details" aria-labelledby="details-title"><div><p class="eyebrow">03 / RENDER NOTES</p><h2 id="details-title">Built to be heard.</h2><p>These are original generated layers, with no external sample assets. Playback uses exported WAV files so you hear the port itself.</p><a class="text-link" href="https://github.com/BertCalm/SnipSnap/tree/codex/lacquer-engine" target="_blank" rel="noopener">Explore SnipSnap <span aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19 19 5M5 5h14v14"/></svg></span></a></div><div id="report-summary" class="report-summary"><div class="report-row"><span>Audio source</span><strong>SnipSnap offline render</strong></div><div class="report-row"><span>Format</span><strong>Mono PCM WAV</strong></div><div class="report-row"><span>Engine</span><strong>Lacquer</strong></div></div></section>
+  </main>
+
+  <div class="wrap" id="kit-download-panel" hidden><p><a class="text-link" id="kit-download" download>Download the 16-pad MPC kit <span aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v16m-6-6 6 6 6-6"/></svg></span></a></p><p class="instrument-footnote">MPC 3 track and MPC 2 program in one ZIP. Each pad plays its complete sample once, including held material.</p></div>
+  <footer class="wrap"><span>LACQUER <span class="footer-divider">/</span> SNIPSNAP</span><span>Original layers. A finished tone.</span><span id="revision-label">AUDITION LAB</span></footer>
+  <audio id="audio" preload="none"></audio>
+  <script src="app.js" defer></script>
+</body>
+</html>
