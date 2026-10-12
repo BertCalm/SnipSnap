@@ -261,6 +261,26 @@ that approval.
 Numerical verification, phone/MPC validation and release naming remain
 separate acceptance work.
 
+### LACQUER — layered tone with depth from articulation
+
+Lacquer implements the supplied [engineering spec](superpowers/specs/2026-10-11-lacquer-engine-engineering-spec.md)
+as independent generated body, edge, trail and quiet reinforcement layers.
+KEY, GLASS, BRASS, BASS, PLUCK and SILK share RELIEF, SHEEN, BODY, CONTOUR
+and GLUE, plus host TUNE and HOLD. RELIEF changes actual layer onsets and
+envelope development. Held loops use periodic layer contours with separated
+phases, because initial arrivals cannot remain audible in loop-only material.
+
+Eight provisional recipes cover the six voices. Saved patches retain the layer
+model, timing, envelopes, processing and loop profile. The dry kit, recipes,
+velocity renderer, CLI and synth picker follow existing host paths. Finite notes
+route as TONAL; HOLD's top step routes as LOOP. The audition generator writes
+real Kotlin-rendered native/matched audio, solos, five-point sweeps, interaction
+grids and held comparisons to `testkit/lacquer-audition/`.
+[LACQUER](LACQUER.md) documents reproduction and acceptance. Owner dry sonic
+approval precedes the wider 36-preset bank; numerical checks do not establish
+that listening verdict. Android device, MPC hardware and naming checks remain
+separate acceptance work.
+
 ### REVEL — interlocking skins through moving microphones
 
 REVEL ports the [supplied specification](REVEL_SPEC.md): six modal heads at

@@ -146,6 +146,10 @@ object Presets {
             val v = StoopVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             StoopPresets.forVoice(v)
         }
+        LacquerPatch.ENGINE -> {
+            val v = LacquerVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            LacquerPresets.forVoice(v)
+        }
         GlintPatch.ENGINE -> {
             val v = GlintVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             GlintPresets.forVoice(v)
@@ -182,6 +186,6 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() +
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() +
             GlintPresets.all()
 }

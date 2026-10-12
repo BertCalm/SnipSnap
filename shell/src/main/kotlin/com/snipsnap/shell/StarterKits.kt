@@ -173,6 +173,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.stoop() },
         Starter(
+            "lacquer", "LACQUER",
+            "Polished keys, glass, brass and soft layers in C minor pentatonic. Separate arrivals, one finished tone.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.lacquer() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,
