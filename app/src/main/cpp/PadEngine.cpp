@@ -205,8 +205,8 @@ void PadEngine::apply(const PadCommand& c) {
             v.pos = c.reverse ? static_cast<double>(end - 1) : static_cast<double>(start);
             // A loop is the window's [loopStart, end): the read wraps from
             // `end` back to loopStart, and the last frame is played. A loop
-            // with no frame to repeat (start at or past end - 1) plays once
-            // instead.
+            // of fewer than two frames (loopStart at or past end - 1) plays
+            // once instead.
             v.loopStart = (c.loopStart >= 0 && c.loopStart < end - 1) ? c.loopStart : -1;
             v.inc = std::min(speed, kMaxSpeed);
             // A gain that is not a number would make the whole mix one: the
@@ -271,6 +271,13 @@ void PadEngine::render(float* out, int32_t numFrames) {
             if (v.reverse) {
                 while (v.loopStart >= 0 && v.pos < static_cast<double>(v.loopStart)) {
                     v.pos += period;
+                }
+                // A read a few ulps short of loopStart (a step that is not a
+                // dyadic fraction arrives at an integer with rounding error)
+                // can add back to exactly `end`: that is the loop's first
+                // frame, not a frame past the window, and must not end the voice.
+                if (v.loopStart >= 0 && v.pos >= static_cast<double>(v.end)) {
+                    v.pos -= period;
                 }
                 if (v.pos < static_cast<double>(v.start)) {
                     endVoice(v);
