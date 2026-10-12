@@ -138,6 +138,10 @@ object Presets {
             val v = AlloyVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             AlloyPresets.forVoice(v)
         }
+        ContourPatch.ENGINE -> {
+            val v = ContourVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ContourPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -170,5 +174,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all()
 }

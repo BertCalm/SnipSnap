@@ -6,6 +6,8 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ContourConfig
+import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -338,7 +340,8 @@ object UserPresets {
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
-     * energy. The name is a Kotlin string literal, escaped.
+     * energy. CONTOUR retains its table pair, layer relationships, envelopes, loop
+     * recipe and velocity. The name is a Kotlin string literal, escaped.
      */
     fun rosterLine(patch: Patch): String {
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -376,10 +379,27 @@ object UserPresets {
                 val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
                 ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
             }
+            is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
     }
+
+    /** Structural wavetable state is part of a promoted preset, just like the audible macros. */
+    private fun contourConfigLine(c: ContourConfig): String = "ContourConfig(" + listOf(
+        "bodyTable = ContourTable.${c.bodyTable.name}", "edgeTable = ContourTable.${c.edgeTable.name}",
+        "edgeRatio = ${c.edgeRatio}f", "edgeLag = ${c.edgeLag}f", "relation = ContourRelation.${c.relation.name}",
+        "bodyLevel = ${c.bodyLevel}f", "edgeLevel = ${c.edgeLevel}f", "subLevel = ${c.subLevel}f",
+        "bodyHarmonics = ${c.bodyHarmonics}f", "edgeRootLevel = ${c.edgeRootLevel}f",
+        "edgeAttack = ${c.edgeAttack}f", "edgeDecay = ${c.edgeDecay}f", "edgeSustain = ${c.edgeSustain}f",
+        "bodyScanBias = ${c.bodyScanBias}f", "edgeScanBias = ${c.edgeScanBias}f",
+        "bodyTravel = ${c.bodyTravel}f", "edgeTravel = ${c.edgeTravel}f",
+        "ampAttack = ${c.ampAttack}f", "ampDecay = ${c.ampDecay}f", "ampSustain = ${c.ampSustain}f",
+        "ampRelease = ${c.ampRelease}f", "sustainSeconds = ${c.sustainSeconds}f",
+        "filterAttack = ${c.filterAttack}f", "filterDecay = ${c.filterDecay}f", "filterAmount = ${c.filterAmount}f",
+        "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
+        "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
+    ).joinToString(", ") + ")"
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */
     fun renderAll(saved: List<Saved>): String {

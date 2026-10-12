@@ -14,6 +14,9 @@ import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.PadRecipe
@@ -58,7 +61,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and PRISM) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM and CONTOUR) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -95,7 +98,10 @@ object SynthCommand {
                     val root = Prism.rootMidi(prismVoice)
                     root..(root + Prism.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and PRISM, got $engine")
+                ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
+                    (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
+                }
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM and CONTOUR, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -150,6 +156,12 @@ object SynthCommand {
                 is PrismPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Prism.rootMidi(patch.voice)) / Prism.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
+                is ContourPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (.5f + (midiOverride - ContourEngine.rootMidi(patch.voice)) /
+                            (2f * ContourEngine.TUNE_SEMITONES))),
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
