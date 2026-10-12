@@ -19,6 +19,8 @@ import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.Lacquer
+import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
@@ -66,7 +68,7 @@ import java.util.Locale
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, CONTOUR and STOOP) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, CONTOUR, STOOP and LACQUER) override
  * the preset's note and strike energy for a pad audition.
  */
 object SynthCommand {
@@ -97,6 +99,7 @@ object SynthCommand {
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
+                LacquerPatch.ENGINE -> Lacquer.MIDI_MIN..Lacquer.MIDI_MAX
                 StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
@@ -108,7 +111,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, CONTOUR and STOOP, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, RELAY, PRISM, CONTOUR, STOOP and LACQUER, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -161,6 +164,7 @@ object SynthCommand {
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is StoopPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is LacquerPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),

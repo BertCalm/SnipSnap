@@ -8,6 +8,7 @@ import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -346,9 +347,15 @@ object UserPresets {
      * recipe alongside note, energy and model. CONTOUR retains its table pair,
      * layer relationships, envelopes, loop recipe and velocity. STOOP retains
      * its source, answer and chord recipe and render-model version. Names and
-     * embedded JSON are escaped Kotlin string literals.
+     * embedded JSON are escaped Kotlin string literals. LACQUER carries its
+     * entire layered recipe through the JSON constructor.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is LacquerPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+        }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         if (patch is StoopPatch) {
             val arguments = buildList {

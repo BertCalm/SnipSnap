@@ -684,6 +684,21 @@ object SynthKits {
             sound(StoopVoice.ORGAN, "Held Organ C3", 48, held = true),
             sound(StoopVoice.CHORD, "Held Fifth C3", 48, held = true),
         )
+
+    }
+
+    /**
+     * A dry layered-tone audition kit. Eight KEY notes climb C minor pentatonic;
+     * the upper half contains the eight provisional recipes, including held SILK.
+     * Each pad keeps its root, velocity and complete layer profile for regeneration.
+     */
+    fun lacquer(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = LacquerPatch(
+            "Lacquer $n", LacquerVoice.KEY, Lacquer.defaults(LacquerVoice.KEY),
+            midi = Lacquer.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            LacquerPresets.all().map { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
     }
 
     /**
