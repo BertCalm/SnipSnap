@@ -143,16 +143,20 @@ Individual sounds can also be rendered with:
 ./gradlew :cli:run --args="synth SPOOL CHOIR --midi 60 --velocity .35 --out /tmp/spool-soft"
 ```
 
-The final renderer produces the complete listening matrix, separate pickup diagnostics and the
-sixteen-pad MPC kit. The assembly adds eighteen pairs of preserved sequential and current
-overlapping examples. Its source patch targets the current upstream baseline and records a
+The final renderer produces 162 listening clips, including twelve separate pickup diagnostics,
+as 324 native and level-matched WAVs, plus the sixteen-pad MPC kit. The assembly adds eighteen
+pairs of preserved sequential and current overlapping examples, for 198 page entries and
+360 listening WAVs. Its source patch targets the current upstream baseline and records a
 clean source commit. Provenance hashes cover `Spool.kt`, `SpoolPatch.kt` and `SpoolPresets.kt`;
 changes to DSP or recipe defaults require fresh rendering.
 
 Acceptance checks cover independent layer pitch and harmonic agreement, meaningful simultaneous
 audibility before and after release, actual captured support, deterministic source/memory,
 causal inherited traces, complete feedback bounds, serialization, repeated HOLD waveform
-continuity and seam metrics. Reported buffer accounting and cloud render timings are prototype
+continuity and seam metrics. All 19 Spool tests and the targeted host integration checks pass.
+The rendered pack has zero repeated-cycle seam error and a maximum boundary difference of
+7.89e-14. Its largest counted core buffer allocation is 31.66 MiB; cloud render time is 1.67 seconds
+at the median and 5.16 seconds at the maximum. Buffer accounting and cloud timings are prototype
 measurements, not peak JVM memory or phone/MPC performance estimates.
 
 The required baseline is `./gradlew --no-daemon test`. Acceptance also requires listening to the
