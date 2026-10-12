@@ -1,6 +1,8 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
+import kotlin.math.abs
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.ln
@@ -155,5 +157,44 @@ internal object BoreMeasure {
             return e
         }
         return 10 * log10(band(lowHz, highHz) / (band(50f, 10_000f) + 1e-12) + 1e-18)
+    }
+
+    /**
+     * The note's pitch in cents against [hz], read on windows of [window] seconds every [hop] seconds from [from] to [to]: a vibrato
+     * shows as a swing and a note that is perfectly periodic as no movement at all (0.00 cents for the old LOOP; the one-shot's
+     * own wander is about 5 cents, its vibrato). [rate] is the rate of [x].
+     */
+    fun centsTrack(x: FloatArray, hz: Float, from: Float, to: Float, rate: Int, window: Float = 0.07f, hop: Float = 0.02f): List<Double> {
+        val out = ArrayList<Double>()
+        var t = from
+        while (t + window <= to) { out.add(cents(x, hz, t, t + window, rate)); t += hop }
+        return out
+    }
+
+    /**
+     * The energy between the harmonics of the note, in dB against the energy at them: a Hann-windowed spectrum of the
+     * longest power-of-two stretch of [x] from [from] (a note's turbulence and its vibrato both fall between the
+     * harmonics, and a periodic wave leaves nothing there: the old LOOP read -80 dB, the one-shot of the same note -42).
+     * "At" a harmonic is within 2% of f0 (and at least 3 Hz) of it; "between" is farther than 30% of f0 from every one;
+     * 100 Hz to 8 kHz. f0 is the note's measured pitch, so a pin residual does not move the harmonics off their bins.
+     */
+    fun betweenHarmonicsDb(x: FloatArray, hz: Float, from: Float, rate: Int): Double {
+        val a = (from * rate).toInt()
+        val n = Integer.highestOneBit(x.size - a)
+        val f0 = rate / period(x, hz, from, from + 0.3f, rate)
+        val re = FloatArray(n) { (x[a + it] * (0.5 - 0.5 * cos(2 * PI * it / n))).toFloat() }
+        val im = FloatArray(n)
+        Fft.forward(re, im)
+        var at = 0.0
+        var between = 0.0
+        for (k in 1 until n / 2) {
+            val bin = k * rate.toDouble() / n
+            if (bin < 100.0 || bin > 8000.0) continue
+            val h = bin / f0
+            val distance = abs(h - Math.rint(h)) * f0
+            val power = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            if (distance < maxOf(3.0, 0.02 * f0)) at += power else if (distance > 0.3 * f0) between += power
+        }
+        return 10 * log10(between / at + 1e-18)
     }
 }
