@@ -5,8 +5,10 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.json.Json
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
-import com.snipsnap.synth.ContourPresets
+import com.snipsnap.synth.ContourRelation
+import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.FathomVoice
@@ -303,7 +305,17 @@ class UserPresetsTest {
     fun `a saved contour retains its complete spectral recipe when promoted`() {
         val root = shelf()
         try {
-            val source = ContourPresets.all().first { it.name == "Moving Corner" }.copy(name = "MY CORNER", velocity = .3f)
+            val source = ContourPatch(
+                "MY CORNER", ContourVoice.BASS,
+                linkedMapOf("TUNE" to .5f, "SCAN" to .30f, "OFFSET" to .45f, "MOTION" to .48f,
+                    "FILTER" to .58f, "DRIVE" to .20f, "HOLD" to 0f),
+                config = ContourConfig.legacyForVoice(ContourVoice.BASS).copy(
+                    bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER,
+                    relation = ContourRelation.OPPOSED, bodyTravel = .22f, edgeTravel = .60f,
+                    ampDecay = .45f, ampRelease = .42f,
+                ),
+                velocity = .3f,
+            )
             UserPresets.save(root, source, 1L)
             val saved = UserPresets.read(root).single()
             assertEquals(source, saved.patch)
@@ -404,12 +416,19 @@ class UserPresetsTest {
     fun `Contour promotion reconstructs every spectral and edge envelope field exactly`() {
         val root = shelf()
         try {
-            val source = ContourPresets.all().first { it.name == "Moving Corner" }.let {
-                it.copy(name = "MY EDGE", velocity = .3f, config = it.config.copy(
+            val source = ContourPatch(
+                "MY EDGE", ContourVoice.BASS,
+                linkedMapOf("TUNE" to .5f, "SCAN" to .30f, "OFFSET" to .45f, "MOTION" to .48f,
+                    "FILTER" to .58f, "DRIVE" to .20f, "HOLD" to 0f),
+                config = ContourConfig.legacyForVoice(ContourVoice.BASS).copy(
+                    bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER,
+                    relation = ContourRelation.OPPOSED, bodyTravel = .22f, edgeTravel = .60f,
+                    ampDecay = .45f, ampRelease = .42f,
                     bodyHarmonics = 1.37f, edgeRootLevel = .29f,
                     edgeAttack = .017f, edgeDecay = .91f, edgeSustain = .43f,
-                ))
-            }
+                ),
+                velocity = .3f,
+            )
             UserPresets.save(root, source, 1L)
             val saved = UserPresets.read(root).single().patch as ContourPatch
             assertEquals(source, saved, "all revised fields survive the shelf JSON roundtrip")

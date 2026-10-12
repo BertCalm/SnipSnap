@@ -19,7 +19,7 @@
 <body>
 <a class="skip" href="#listen">Skip to listening clips</a>
 <div class="wrap">
-  <header class="topline"><a class="brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">SnipSnap / instruments</a><span class="edition"><span class="dot" aria-hidden="true"></span>Engineering audition · 01</span></header>
+  <header class="topline"><a class="brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">SnipSnap / instruments</a><span class="edition"><span class="dot" aria-hidden="true"></span><span id="editionRound">Engineering audition</span></span></header>
   <section class="hero" aria-labelledby="title">
     <div><div class="eyebrow">Original wavetable instrument</div><h1 id="title">Contour</h1><p class="intro">A solid body.<br>A moving digital edge.</p><p class="muted">Six voices built from related table pairs. Listen dry, compare at a common level, and decide which characters belong in SnipSnap.</p><div class="pillrow"><span class="pill">Original tables</span><span class="pill">Mono · 44.1 kHz · 16-bit audition</span><span class="pill">No rack effects</span><span class="pill">Provisional recipes</span></div><div class="quicklinks"><button type="button" data-jump="presets">Hear the presets ↗</button><button type="button" data-jump="voices">Meet the six voices ↗</button><button type="button" data-jump="diagnostics">Follow body + edge ↗</button></div></div>
     <div class="hero-art"><div class="art-label"><span>01 / body</span><span style="color:var(--edge)">02 / edge</span></div><svg viewBox="0 0 540 185" role="img" aria-label="A stable rounded body waveform alongside an evolving edge waveform; an illustration of the two related layers"><g fill="none" stroke="#ccd5bf" stroke-width="1"><path d="M0 45H540M0 92H540M0 140H540"/><path d="M45 0V185M135 0V185M225 0V185M315 0V185M405 0V185M495 0V185"/></g><path d="M0 63C22 63 22 17 45 17S68 108 90 108S113 17 135 17S158 108 180 108S203 17 225 17S248 108 270 108S293 17 315 17S338 108 360 108S383 17 405 17S428 108 450 108S473 17 495 17S518 63 540 63" fill="none" stroke="#345b3c" stroke-width="3"/><path d="M0 141C8 124 17 153 26 133S36 111 45 132S52 165 62 143S76 100 85 137S93 166 102 144S111 118 120 133S130 172 140 142S151 99 160 127S171 165 180 143S190 112 200 139S209 166 220 137S232 104 242 144S252 167 260 137S273 110 282 134S293 172 304 143S315 99 324 132S334 164 345 137S357 109 366 142S379 171 389 136S400 101 409 136S420 166 432 138S444 104 453 135S465 172 477 141S489 109 499 136S520 160 540 141" fill="none" stroke="#bc593c" stroke-width="2.5"/></svg><div class="art-footer"><span>Recognizable root</span><span>Related spectral travel</span></div></div>
@@ -47,7 +47,14 @@
   const buffers = new Map(), repeatPreferences = new Map(), slots = {A:null,B:null};
   let storageAvailable = true;
   function announce(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
-  function chosenPath(clip) { return clip[$('level').value + 'Path'] || clip.matchedPath; }
+  function versionedPath(clip, level) {
+    const path = clip[level + 'Path'];
+    const hashes = {raw:clip.rawSha256, matched:clip.audioSha256, normalized:clip.normalizedSha256, repeat:clip.repeatSha256};
+    const version = hashes[level] || (path === clip.matchedPath ? clip.audioSha256 : undefined) ||
+      (path === clip.rawPath ? clip.rawSha256 : undefined) || clip.provenance?.listeningRound || manifest.listeningRound;
+    return path + (path.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(version);
+  }
+  function chosenPath(clip) { return versionedPath(clip, chosenLevel(clip)); }
   function chosenLevel(clip) { return clip[$('level').value + 'Path'] ? $('level').value : 'matched'; }
   function byId(id) { return manifest.clips.find(clip => clip.id === id); }
   function saveFeedback() {
@@ -98,14 +105,14 @@
       '<div class="playhead"><progress max="' + clip.durationSeconds + '" value="0" aria-label="Playback progress for ' + esc(clip.title) + '"></progress><span>' + fixed(clip.durationSeconds,1) + ' s</span></div>' +
       '<div class="clip-foot"><span>' + esc(level) + ' level</span>' + (clip.loop ? '<label class="repeat"><input type="checkbox" data-action="repeat"' + (repeats ? ' checked' : '') + '> Repeat</label>' : '') + '<a class="download" href="' + esc(chosenPath(clip)) + '" download aria-label="Download ' + esc(clip.title) + ' WAV">WAV ↓</a></div>' +
       '<details><summary>Measurements + listening notes</summary><dl class="metrics"><dt>Peak / RMS</dt><dd>' + fixed(data.peak) + ' / ' + fixed(data.rms) + '</dd><dt>Measured loudness</dt><dd>' + fixed(data.loudness) + '</dd><dt>DC mean</dt><dd>' + fixed(data.dc,5) + '</dd>' + (clip.loop ? '<dt>Loop seam error</dt><dd>' + Number(clip.seamError).toExponential(2) + '</dd>' : '') + (level === 'raw' && clip.rawExportGain < 1 ? '<dt>Raw PCM export gain</dt><dd>' + fixed(clip.rawExportGain) + '</dd>' : '') + '</dl>' +
-      (clip.repeatPath ? '<a class="download" href="' + esc(clip.repeatPath) + '" download>Exact four-cycle WAV ↓</a>' : '') +
+      (clip.repeatPath ? '<a class="download" href="' + esc(versionedPath(clip,'repeat')) + '" download>Exact four-cycle WAV ↓</a>' : '') +
       '<div class="feedback"><label for="verdict-' + clip.id + '">Clip verdict</label><select id="verdict-' + clip.id + '" data-feedback="verdict"><option value="">Not reviewed</option>' + [['useful','Useful'],['needs-work','Needs work'],['approved','Approved for this round']].map(([value,label]) => '<option value="' + value + '"' + (saved.verdict === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select><label for="notes-' + clip.id + '">Listening notes</label><textarea id="notes-' + clip.id + '" data-feedback="notes" placeholder="What do you hear?">' + esc(saved.notes || '') + '</textarea></div></details>' +
       '<details class="native"><summary>Native audio controls</summary><p class="native-hint">Browser repeat may add a gap. Main Play uses sample-accurate loops.</p><audio controls preload="none"' + (clip.loop && repeats ? ' loop' : '') + ' src="' + esc(chosenPath(clip)) + '" aria-label="Native controls for ' + esc(clip.title) + '"></audio></details></article>';
   }
   function render() {
     if (!manifest) return;
     const section = manifest.categories.find(item => item.id === category), clips = filtered(), shown = clips.slice(0,visibleLimit);
-    $('categoryTitle').textContent = section.title; $('categoryDescription').textContent = category === 'revision' ? 'Same note and velocity, dry sound, same level policy. Both versions preserve the rendered attack. Compare the original and revised voicing.' : category === 'presets' ? 'Nine saved recipes, six center-note voice references, and the defining body + edge comparison. Start with these matched clips, then explore the complete matrix.' : section.description;
+    $('categoryTitle').textContent = section.title; $('categoryDescription').textContent = category === 'revision' ? 'Same note and velocity, dry sound, same level policy. Previous is the last published voicing. Both versions preserve the rendered attack. Compare Previous and New.' : category === 'presets' ? 'Nine saved recipes, six center-note voice references, and the defining body + edge comparison. Start with these matched clips, then explore the complete matrix.' : section.description;
     $('panel').setAttribute('aria-labelledby','tab-' + category);
     $('count').textContent = clips.length + ' cases';
     let previousGroup = '', html = '';
@@ -114,7 +121,7 @@
       const displayGroup = category === 'presets' && clip.category === 'voices' ? 'Six voice references' : clip.group;
       if (previousGroup !== displayGroup) {
         if (index) html += '</div>';
-        html += '<div class="group-label"><h3>' + esc(displayGroup) + '</h3>' + (category === 'revision' ? '<button type="button" class="load-pair" data-comparison-group="' + esc(displayGroup) + '" aria-label="Load Original and Revised ' + esc(displayGroup) + ' into A and B">Load A / B</button>' : '<span>Compare at matched level · add two clips to A / B</span>') + '</div><div class="grid' + (category === 'revision' ? ' revision-grid' : '') + '">'; previousGroup = displayGroup;
+        html += '<div class="group-label"><h3>' + esc(displayGroup) + '</h3>' + (category === 'revision' ? '<button type="button" class="load-pair" data-comparison-group="' + esc(displayGroup) + '" aria-label="Load Previous and New ' + esc(displayGroup) + ' into A and B">Load A / B</button>' : '<span>Compare at matched level · add two clips to A / B</span>') + '</div><div class="grid' + (category === 'revision' ? ' revision-grid' : '') + '">'; previousGroup = displayGroup;
       }
       html += clipCard(clip,index + 1);
     }
@@ -192,11 +199,11 @@
     const pairButton = event.target.closest('[data-comparison-group]');
     if (pairButton) {
       const pair = manifest.clips.filter(clip => clip.category === 'revision' && clip.group === pairButton.dataset.comparisonGroup);
-      const original = pair.find(clip => clip.id.startsWith('round1_')), revised = pair.find(clip => clip.id.startsWith('revised_'));
-      if (!original || !revised) { announce('This comparison pair is incomplete.',true); return; }
+      const previous = pair.find(clip => clip.id.startsWith('previous_')), current = pair.find(clip => clip.id.startsWith('revised_'));
+      if (!previous || !current) { announce('This comparison pair is incomplete.',true); return; }
       stopPlayback(); pauseNative();
-      slots.A = original; slots.B = revised; $('slotA').textContent = original.title; $('slotB').textContent = revised.title;
-      $('playA').disabled = false; $('playB').disabled = false; updateActiveUI(); announce('Original in A; Revised in B · ' + pairButton.dataset.comparisonGroup + '.'); return;
+      slots.A = previous; slots.B = current; $('slotA').textContent = previous.title; $('slotB').textContent = current.title;
+      $('playA').disabled = false; $('playB').disabled = false; updateActiveUI(); announce('Previous in A; New in B · ' + pairButton.dataset.comparisonGroup + '.'); return;
     }
     const button = event.target.closest('button[data-action]'); if (!button) return;
     const clip = byId(button.closest('.clip').dataset.id), action = button.dataset.action;
@@ -234,11 +241,13 @@
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
     event.preventDefault(); selectCategory(tabs[next].dataset.category); tabs[next].focus();
   });
-  fetch('manifest.json').then(response => { if (!response.ok) throw new Error('Manifest could not be loaded (' + response.status + ')'); return response.json(); }).then(data => {
+  fetch('manifest.json',{cache:'no-store'}).then(response => { if (!response.ok) throw new Error('Manifest could not be loaded (' + response.status + ')'); return response.json(); }).then(data => {
     if (data.engine !== 'CONTOUR' || !Array.isArray(data.clips) || !data.clips.length) throw new Error('The listening manifest is incomplete');
     manifest = data; storageKey = 'snipsnap-contour-verdicts:' + manifest.listeningRound;
     try { const saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); if (saved?.clips && saved?.groups) feedback = saved; } catch (_) { storageAvailable = false; }
     $('clipTotal').textContent = String(manifest.clipCount).padStart(2,'0');
+    const roundLabel = manifest.listeningRound.match(/^contour-(r\d+)-/i)?.[1].toUpperCase();
+    $('editionRound').textContent = 'Engineering audition' + (roundLabel ? ' · ' + roundLabel : '');
     $('levelPolicy').textContent = manifest.levelPolicy.measurement + ' ' + manifest.levelPolicy.matched + ' Raw: ' + manifest.levelPolicy.raw + ' Host normalized: ' + manifest.levelPolicy.normalized;
     $('round').textContent = 'Round ' + manifest.listeningRound + ' · ' + (manifest.full ? 'Full matrix' : 'Development smoke pack');
     $('voice').innerHTML += [...new Set(manifest.clips.map(clip => clip.voice))].map(voice => '<option value="' + esc(voice) + '">' + esc(voice) + '</option>').join('');
