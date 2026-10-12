@@ -4,10 +4,14 @@ The [published listening page](https://embouchure-audition.bertcalm.chatgpt.site
 is private to the owner. The revised matrix contains 365 model 2 clips plus
 164 original model 1 references: 529 clips, 559 audition WAVs, and sixteen
 PCM24 kit samples. The curated starter ZIP is 12.016 MiB and contains 35 clips
-and 61 WAVs, including the kit. Full Chromium checks pass for all 575 decoded
-WAVs, 300 macro selections, 164 original/revised pairs, ten held loops,
-diagnostic modes, downloads, model-specific notes, and desktop/mobile layout.
-Listening approval of the revised controls remains pending.
+and 61 WAVs, including the kit. The author's one-off browser check of the
+published page (all 575 decoded WAVs, 300 macro selections, 164
+original/revised pairs, ten held loops, diagnostic modes, downloads,
+model-specific notes, and desktop/mobile layout) is not reproducible from this
+repository, which holds no browser harness; the reproducible gates are the
+gradle task below, the 14-clip golden in EmbouchureModelTest, the 150-point
+control matrix and the 36 held configurations. Listening approval of the
+revised controls remains pending.
 
 Generate the complete dry listening pack from the production Kotlin engine:
 
@@ -115,13 +119,15 @@ gain-independent body contrast, with the fundamental retaining 56–83% of
 high-GRAIN body power. These descriptors corroborate the change; listening
 decides its musical usefulness.
 
-The revised renderer and host integration pass 154 unique focused JVM checks
-across the 129-test control revision and 110-test latest-main merge validation,
-including all nineteen original engine gates, the five-point response matrix,
-historical WAV goldens, both model dispatch paths, PRISM/REVEL/ALLOY coexistence,
-presets, starter IDs and CLI/shell routes. The Android debug APK is built and
-verified with 28 engines, both renderer versions and all four native ABIs.
-Device playback remains a separate check.
+The author's local runs of the revised renderer and host integration passed
+154 unique focused JVM checks (a 129-test control revision and a 110-test
+latest-main merge validation), covering the nineteen original engine gates, the
+five-point response matrix, historical WAV goldens, both model dispatch paths,
+coexistence with the other engines, presets, starter IDs and CLI/shell routes;
+the repository's own evidence is the jvm-tests job on the PR. The Android debug
+APK was built locally with both renderer versions and all four native ABIs;
+android-build in CI is the repository's proof. Device playback remains a
+separate check.
 
 WHISTLE is a simplified clear-tone air/reed approximation. The drivers and
 gestures are original; the pack contains no Yamaha algorithms, factory data, or

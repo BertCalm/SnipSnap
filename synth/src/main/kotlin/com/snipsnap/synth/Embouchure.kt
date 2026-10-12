@@ -543,6 +543,9 @@ object Embouchure {
 
     /** The production path is band-limited before decimation; diagnostic velocity never gets normalised. */
     internal fun finish(raw: FloatArray, normalize: Boolean=true, loop: Boolean=false, rate: Int=INTERNAL_RATE): FloatArray {
+        // The synthesis loops poll the preview thread's interrupt; this band-limit and
+        // decimation pass over the full oversampled buffer deserves its own check first.
+        if(Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("EMBOUCHURE render no longer wanted")
         val copy=raw.copyOf()
         Tide.bandLimit(copy,rate)
         val out=if(rate==INTERNAL_RATE) Dsp.decimate(copy,Dsp.RATE) else if(rate==Dsp.RATE) copy else
