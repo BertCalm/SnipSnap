@@ -180,11 +180,35 @@ listening page, raw/matched audio and causal traces under
 integration contracts and listening gates. Sonic acceptance remains the
 owner's listening decision; device validation remains outstanding.
 
+### STOOP — original groove voices with an answering articulation
+
+STOOP ports the [supplied engineering specification](superpowers/specs/2026-10-10-stoop-engine-engineering-spec.md).
+BASS, TINE, CLAV, ORGAN, LEAD and CHORD use family-specific source recipes.
+TOUCH changes attack character continuously; COLOR shapes spectrum;
+SHADOW adds a quieter, newly articulated reply; WEAR supplies bounded
+recording character; LENGTH shapes the finite envelope. HOLD returns
+settled loop-only material, including a sustained shadow companion.
+
+Patches retain explicit MIDI 24–96, gesture velocity, source settings,
+shadow timing/interval/articulation, chord intervals and model version.
+The initial 48-preset roster is weighted toward bass and keys (16 bass,
+10 tine, 8 clav, 6 organ, 4 lead, 4 chord). It awaits the owner's listening
+verdict; source variety and numerical checks are not sonic approval.
+Finite notes route TONAL, held notes LOOP. The phone picker, CLI, saved
+recipes and dry sixteen-pad starter kit share the renderer.
+
+Run `./gradlew :synth:generateStoopAudition` for the listening matrix,
+or add `-Pquick` for its smaller smoke pack. [STOOP](STOOP.md) documents
+saving, dry auditions, HOLD and the exported shadow's playback-rate limit.
+Release naming and device/hardware validation remain separate gates.
+
 ### PITCHWHEEL — wooden teeth catching through stretching resin
 
 The owner heard PITCHWHEEL R1 as six similar struck sounds distinguished
-mainly by rhythm. A model 2 prototype revises acoustic articulation and awaits
-the next dry listening verdict. CLUNK, PLUCK, DRAW, RECOIL, THAWED and TURN
+mainly by rhythm. Model 2 revised acoustic articulation; the owner's v2 review
+marked five voices Revise and found PLUCK most different, with no Keep verdict.
+Model 3 is the current provisional revision and awaits a new dry
+listening verdict. CLUNK, PLUCK, DRAW, RECOIL, THAWED and TURN
 share one pitched wheel, flexible fingers and bounded resin attachments.
 PUSH supplies gesture energy; TOOTH shapes catches and releases;
 ADHESION changes stretch and resistance;
@@ -192,11 +216,12 @@ HEAT sets the initial thermal state; BODY shapes the wooden resonance.
 Independent renders reset wheel phase, heat and resin state.
 
 Patches save an explicit MIDI root from 24–96 (default 48), velocity from
-0–1 and a render model. Newly authored patches use model 2. Saved model 1
-patches retain `PitchwheelV1`; JSON with an absent or null model also selects
-that original renderer. Editing, recipe replay and velocity variants preserve
-the stored model. TUNE is neutral at 0.5 and offsets that root by
-±12 semitones, giving an effective note range of 12–108 without clamping
+0–1 and a render model. Newly authored patches use model 3. Saved model 1
+patches retain `PitchwheelV1`; saved model 2 patches retain `PitchwheelV2`.
+JSON with an absent or null model selects V1. Editing, recipe replay and
+velocity variants preserve the stored model. TUNE is neutral at 0.5 and
+offsets that root by ±12 semitones, giving an effective note range of
+12–108 without clamping
 back to the saved-root range. Modes above 0.42 times the output sample rate
 are removed from the audible pickup before decimation. HOLD at or above
 0.99 returns settled loop-only material.
@@ -204,7 +229,7 @@ Its loop-specific calibration uses a deterministic attachment cycle and
 caps adhesion at 0.65; it is an explicit export constraint rather than
 evidence that every finite mechanical trajectory repeats.
 
-Model 2 gives the same ten-mode bank stronger body pickup, separate
+Model 2 introduced stronger body pickup into the same ten-mode bank, separate
 inharmonic body modes, voice-dependent loss and TOOTH projection, and a
 contact-rise reservoir for release work. Finger friction, filament slip and
 snaps use distinct receiving projections. Transfers remain charged to the
@@ -213,6 +238,15 @@ and undelivered release energy counts as stored energy and held-loop state.
 The geometry seed deliberately retains legacy model 1, preserving the tooth
 layout across the revision. Revised acoustic transfers can still change
 heating and damping, so this does not promise identical encounter timing.
+
+Model 3 revises contact-position projections and individual mode losses so
+body and harmonic differences can persist after the initial attack. DRAW and
+THAWED use longer contact rise; THAWED's release projection responds to the
+current resin temperature. PLUCK retains its model-2 release projection and
+decay calibration. All voices still share the root and accounted ten-mode
+network. The audition adds actual moving-wheel probes for funded bowing,
+reverse encounters, thermal evolution and settled powered loops. Release-only
+resonator hits compare body colour and decay without exercising those mechanisms.
 
 The initial roster is limited to six voice defaults and Endless Turn.
 `SynthKits.pitchwheel()`, the FRESH TAPE starter, patch recipes, CLI rendering
@@ -255,6 +289,26 @@ velocity, macro and interaction matrix. `generateMurmurKit` exports the
 sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
 initiating onset because the sample API has no attack-plus-loop region.
 Sonic identity, phone/MPC validation and release naming remain open.
+
+### LACQUER — layered tone with depth from articulation
+
+Lacquer implements the supplied [engineering spec](superpowers/specs/2026-10-11-lacquer-engine-engineering-spec.md)
+as independent generated body, edge, trail and quiet reinforcement layers.
+KEY, GLASS, BRASS, BASS, PLUCK and SILK share RELIEF, SHEEN, BODY, CONTOUR
+and GLUE, plus host TUNE and HOLD. RELIEF changes actual layer onsets and
+envelope development. Held loops use periodic layer contours with separated
+phases, because initial arrivals cannot remain audible in loop-only material.
+
+Eight provisional recipes cover the six voices. Saved patches retain the layer
+model, timing, envelopes, processing and loop profile. The dry kit, recipes,
+velocity renderer, CLI and synth picker follow existing host paths. Finite notes
+route as TONAL; HOLD's top step routes as LOOP. The audition generator writes
+real Kotlin-rendered native/matched audio, solos, five-point sweeps, interaction
+grids and held comparisons to `testkit/lacquer-audition/`.
+[LACQUER](LACQUER.md) documents reproduction and acceptance. Owner dry sonic
+approval precedes the wider 36-preset bank; numerical checks do not establish
+that listening verdict. Android device, MPC hardware and naming checks remain
+separate acceptance work.
 
 ### REVEL — interlocking skins through moving microphones
 
@@ -316,6 +370,31 @@ includes voice/register/velocity coverage, five-point macro sweeps, interactions
 attack-port removal pairs and held seams. [ALLOY](ALLOY.md) records implementation
 and remaining listening/device acceptance. This is original synthesis, with no
 factory PCM imports or hardware-compatibility claim.
+
+### CONTOUR — a stable body with a moving digital edge
+
+CONTOUR ports the [engineering spec](superpowers/specs/2026-10-11-contour-engine-engineering-spec.md)
+as an original two-layer wavetable instrument. Eight generated harmonic families
+provide phase/frame interpolation and pitch-dependent bandwidth. BASS, KEY,
+PLUCK, LEAD, HOLLOW and SWELL select related table pairs and envelope/trajectory
+recipes. SCAN sets their base spectra, OFFSET separates their spectral positions,
+and MOTION changes travel before a bounded generic filter and compensated drive.
+TUNE is the centered host pitch control; velocity changes excitation and spectrum.
+
+Nine provisional recipes, a sixteen-pad FRESH TAPE kit, saved structural patch
+configuration, the phone SYNTH picker and CLI rendering join the existing
+deterministic mono pipeline. HOLD supplies settled sustain; the Keys adapter
+exports a nonzero loop marker for keygroups. The existing CONTOUR rack effect
+keeps its implementation and effect recipe format.
+
+`./gradlew :synth:generateContourAudition` writes the dry listening matrix under
+`testkit/contour-audition/`, including matched/raw controls, note/velocity checks,
+five-point sweeps, required interactions, isolated layers and repeated held loops.
+[CONTOUR](CONTOUR.md) records integration contracts and numerical verification.
+The [first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+is published with owner-private access and all 477 cases.
+The owner's sonic verdict precedes expansion to the proposed 36 presets;
+Android/device, MPC hardware and release naming checks remain open.
 
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 

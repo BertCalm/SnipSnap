@@ -70,9 +70,10 @@ object NimbusAuditionGenerator {
     fun main(args: Array<String>) {
         val positional = args.filterNot { it.startsWith("--") }
         require(positional.size <= 1 && args.filter { it.startsWith("--") }.all {
-            it == "--quick" || it == "--refresh-page" || it == "--compare-hold" || it == "--ensemble-only" ||
+            it == "--quick" || it == "--refresh-page" || it == "--compare-hold" || it == "--compare-hold-all" ||
+                it == "--ensemble-only" || it == "--hold-comparison-only" ||
                 it.startsWith("--baseline-dir=") || it.startsWith("--baseline-revision=")
-        }) { "supply one output directory and optional --quick, --refresh-page, --ensemble-only, --baseline-dir=, --baseline-revision= or --compare-hold" }
+        }) { "supply one output directory and optional --quick, --refresh-page, --ensemble-only, --hold-comparison-only, --baseline-dir=, --baseline-revision=, --compare-hold or --compare-hold-all" }
         fun argument(prefix: String): String? = args.filter { it.startsWith(prefix) }.let {
             require(it.size <= 1) { "duplicate $prefix argument" }
             it.singleOrNull()?.removePrefix(prefix)?.also { value -> require(value.isNotBlank()) }
@@ -81,24 +82,36 @@ object NimbusAuditionGenerator {
         val quick = "--quick" in args
         val ensembleOnly = "--ensemble-only" in args
         val compareHold = "--compare-hold" in args
+        val compareHoldAll = "--compare-hold-all" in args
+        val holdComparisonOnly = "--hold-comparison-only" in args
         val baselineDir = argument("--baseline-dir=")?.let(::File)
         val baselineRevision = argument("--baseline-revision=")
-        require(!ensembleOnly || !quick && baselineDir == null && !compareHold && "--refresh-page" !in args) {
+        require(!ensembleOnly || !quick && baselineDir == null && !compareHold && !compareHoldAll && !holdComparisonOnly && "--refresh-page" !in args) {
             "compact ensemble evidence uses its own output directory without quick, baseline or refresh options"
         }
         require(!ensembleOnly || positional.isNotEmpty()) { "supply a separate output directory for the compact ensemble demonstration" }
         require((baselineDir == null) == (baselineRevision == null)) { "baseline directory and full source revision must be supplied together" }
         require(baselineRevision == null || baselineRevision.matches(Regex("[0-9a-f]{40}"))) { "baseline revision must be a full Git commit SHA" }
-        require(!compareHold || baselineDir != null && !quick) { "HOLD comparison requires a baseline and the full audition" }
+        require(!compareHold || !compareHoldAll) { "choose --compare-hold or --compare-hold-all" }
+        require(!(compareHold || compareHoldAll) || baselineDir != null && !quick) { "HOLD comparison requires a baseline and the full audition, or an explicit HOLD-only prototype" }
+        require(!holdComparisonOnly || compareHoldAll && !quick && !ensembleOnly && "--refresh-page" !in args) {
+            "a HOLD-only prototype requires --compare-hold-all and a baseline, without quick, ensemble or refresh options"
+        }
+        val fullAuditionRoot = git("rev-parse", "--show-toplevel")?.let { File(it, "testkit/nimbus-audition") }
+            ?: File("../testkit/nimbus-audition")
+        require(!holdComparisonOnly || positional.isNotEmpty() && root.canonicalFile != fullAuditionRoot.canonicalFile) {
+            "supply a separate output directory for the HOLD-only prototype; preserve the full audition"
+        }
         require(baselineDir == null || baselineDir.canonicalFile != root.canonicalFile) { "preserve the previous audition in a separate baseline directory" }
         if ("--refresh-page" in args) {
-            require(!quick && baselineDir == null && !compareHold) { "refresh uses the existing audition manifest and its comparison" }
+            require(!quick && baselineDir == null && !compareHold && !compareHoldAll && !holdComparisonOnly) { "refresh uses the existing audition manifest and its comparison" }
             val manifest = Json.parse(File(root, "manifest.json").readText()).obj()
             require(manifest.getValue("engine").str() == "NIMBUS")
             val clips = manifest.getValue("clips").arr().map { row ->
                 val evidence = row.obj().mapValues { fromJson(it.value) }
-                val refreshed = if (evidence.getValue("category") != "comparison") evidence else evidence +
-                    ("description" to comparisonDescription(evidence.getValue("comparisonVersion") as String,
+                val refreshed = if (evidence["comparisonVersion"] == null) evidence else evidence + linkedMapOf(
+                    "category" to (if (evidence.getValue("loop") as Boolean) "hold-comparison" else "comparison"),
+                    "description" to comparisonDescription(evidence.getValue("comparisonVersion") as String,
                         evidence.getValue("voice") as String, evidence.getValue("loop") as Boolean,
                         evidence.getValue("comparisonBaselineRevision") as String))
                 Clip(refreshed).also { clip ->
@@ -310,7 +323,19 @@ object NimbusAuditionGenerator {
                     "sequenceSegments" to sequence.segments))
         }
 
-        if (!ensembleOnly) {
+        fun renderDefaultHold(voice: NimbusVoice) = render(
+            "${voice.name.lowercase()}_hold", "${voice.name} · settled HOLD",
+            "Explicit powered magnetic drive supplies a settled metal texture; the isolated note-on attack is excluded by the host's loop-only contract. Repeat begins on after you enable audio and press Play. Across several cycles, listen to low-note balance, upper-metal sharpness, slow movement and recognizable pitch. Playback adds start/stop ramps, not the texture's movement.",
+            "hold", "Default powered sustains", voice, Nimbus.defaults(voice) + ("HOLD" to 1f))
+
+        fun renderSettledContactC3() = render(
+            "contact_hold_settled_rims_c3", "CONTACT · C3 · close-rim HOLD",
+            "Close rims, hard excitation and FIELD 0.6 at C3 challenge settled contact continuity. Compare this repeating texture with default CONTACT HOLD, then inspect the actual captured-cycle contact count and seam. Contact activity can change after settling; listen across repeated boundaries and judge the sustained balance without assuming collisions remain audible.",
+            "hold", "Settled rim-contact continuity", NimbusVoice.CONTACT,
+            Nimbus.defaults(NimbusVoice.CONTACT) + mapOf("TUNE" to 0f, "EXCITE" to 1f,
+                "SPACING" to 0f, "FIELD" to .6f, "HOLD" to 1f))
+
+        if (!ensembleOnly && !holdComparisonOnly) {
         for (voice in NimbusVoice.entries) {
             for ((tune, register) in if (quick) listOf(.5f to "middle") else registers) {
                 val note = noteName(Nimbus.midiFor(voice, tune))
@@ -421,9 +446,7 @@ object NimbusAuditionGenerator {
             }
         }
         for (voice in NimbusVoice.entries) {
-            render("${voice.name.lowercase()}_hold", "${voice.name} · settled HOLD",
-                "Explicit weak powered magnetic drive maintains a settled metal texture. The isolated note-on attack is excluded by the host's loop-only contract. Repeat begins on after you enable audio and press Play; compare continuity and pitch over several cycles.",
-                "hold", "Default powered sustains", voice, Nimbus.defaults(voice) + ("HOLD" to 1f))
+            renderDefaultHold(voice)
             if (!quick) render("${voice.name.lowercase()}_hold_extreme", "${voice.name} · difficult HOLD",
                 "All timbral controls high with HOLD on. Powered energy, suspension and funnel state must remain bounded and the repeated region should retain a stable root without contact or wrap clicks.",
                 "hold", "Difficult powered sustains", voice,
@@ -435,11 +458,7 @@ object NimbusAuditionGenerator {
                 if (Nimbus.isLoop(step)) "At the 0.99 loop threshold the host returns settled powered sustain with its initial attack excluded."
                 else "Below the 0.99 loop threshold this is a finite event. Compare the supported tail with the settled loop at 1; intermediate values do not imply a browser loop.",
                 "hold", "HOLD transition", NimbusVoice.SUSPEND, neutral + ("HOLD" to step))
-            render("contact_hold_settled_rims_c3", "CONTACT · C3 · settled rim contact",
-                "Close rims, hard excitation and FIELD 0.6 at C3 preserve contact activity in the returned settled cycle. Compare this repeating contact texture with default CONTACT HOLD, which can be nearly collision-free after settling. Inspect the captured-cycle contact count and seam, then listen across repeated boundaries; sonic acceptance remains open.",
-                "hold", "Settled rim-contact continuity", NimbusVoice.CONTACT,
-                Nimbus.defaults(NimbusVoice.CONTACT) + mapOf("TUNE" to 0f, "EXCITE" to 1f,
-                    "SPACING" to 0f, "FIELD" to .6f, "HOLD" to 1f))
+            renderSettledContactC3()
             for ((tune, register) in listOf(0f to "low", 1f to "high")) {
                 for ((spacing, field) in listOf(0f to 0f, 0f to 1f)) {
                     render("contact_hold_${register}_${tag(field)}", "CONTACT · $register · FIELD ${fmt(field)}",
@@ -451,17 +470,33 @@ object NimbusAuditionGenerator {
             }
         }
         }
-        if (!quick) for (voice in listOf(NimbusVoice.RING, NimbusVoice.GATHER)) renderEnsemble(voice)
+        if (holdComparisonOnly) {
+            for (voice in NimbusVoice.entries) renderDefaultHold(voice)
+            renderSettledContactC3()
+        }
+        if (!quick && !holdComparisonOnly) for (voice in listOf(NimbusVoice.RING, NimbusVoice.GATHER)) renderEnsemble(voice)
         val comparison = if (baselineDir == null) null else appendComparison(
-            root, clips, baselineDir, requireNotNull(baselineRevision), compareHold)
+            root, clips, baselineDir, requireNotNull(baselineRevision), compareHold, compareHoldAll,
+            includeFinitePairs = !holdComparisonOnly)
+        if (holdComparisonOnly) {
+            // The seven revised recipe renders have already been copied to the paired cards.
+            // Keep the compact package at exactly fourteen WAVs and mechanical records.
+            for (temporary in clips.filter { it.category != "hold-comparison" }) {
+                for (key in listOf("path", "eventPath")) check(File(root, temporary.evidence.getValue(key) as String).delete())
+            }
+            clips.removeAll { it.category != "hold-comparison" }
+        }
         val sourceRevision = git("rev-parse", "HEAD")
         val sourceDirty = git("status", "--porcelain")?.isNotBlank()
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "NIMBUS", "formatVersion" to 1, "clipCount" to clips.size, "quick" to quick,
             "ensembleOnly" to ensembleOnly,
-            "description" to if (ensembleOnly) "Compact connected-ensemble evidence at actual shared gain; listening acceptance remains open."
+            "holdComparisonOnly" to holdComparisonOnly,
+            "description" to if (holdComparisonOnly) "Focused previous/revised settled HOLD prototype; sustained balance and motion remain open for listening."
+                else if (ensembleOnly) "Compact connected-ensemble evidence at actual shared gain; listening acceptance remains open."
                 else "Dry listening evidence for the Nimbus port; sonic acceptance remains pending owner listening.",
-            "sampleRate" to Dsp.RATE, "bitDepth" to 16, "noteRange" to if (ensembleOnly) "C4" else "C3–C5", "audioStartsOff" to true,
+            "sampleRate" to Dsp.RATE, "bitDepth" to 16,
+            "noteRange" to if (holdComparisonOnly) "C3–C4" else if (ensembleOnly) "C4" else "C3–C5", "audioStartsOff" to true,
             "listeningTarget" to LISTENING_TARGET, "listeningPeakCeiling" to LISTENING_CEILING,
             "loudness" to "Linear full-clip gain targets loudest-200-ms RMS 0.12 with a 0.90 peak ceiling. Source taps inherit full-reference gain. Raw PCM safety reductions, if needed, are explicit in exportSafetyGain.",
             "velocityContract" to "Host velocity changes finite modal impulse and transient stack displacement within EXCITE's contact character.",
@@ -489,9 +524,9 @@ object NimbusAuditionGenerator {
             manifest are embedded; all WAVs and mechanical records use local relative paths.
             Audio starts off and only plays after a user request. Stop all or Escape stops playback.
 
-            ${if (quick) "Begin with RING at C4, then compare the other default C4 voices and their settled powered HOLD clips. This tooling subset checks finite playback and sustain transport; the connected-ensemble front section is included in the ordinary full audition." else "Begin with the Hear the stack section: RING and GATHER at C4 expose the unchanged whole mix, selected connected contribution, selected-muted whole and other five cymbals. Every aligned stem uses one whole-reference gain with common headroom; quiet sources keep their actual balance. The edited build replays short aligned excerpts and adds actual readouts; it is explicitly not the instrument's natural onset. Return to Whole to judge whether multiple cymbal characters are present in the musical response."}
+            ${if (compareHold || compareHoldAll) "Begin with HOLD before / revised: compare low-note dominance, piercing upper metal and slow sustained movement across several repeated cycles. The previous PCM stays unchanged; both versions use the same note, controls, event velocity and RMS 0.12 listening target. Does gentler movement preserve pitch and several cymbal characters? Listening acceptance remains open." else if (quick) "Begin with RING at C4, then compare the other default C4 voices and their settled powered HOLD clips. This tooling subset checks finite playback and sustain transport; the connected-ensemble front section is included in the ordinary full audition." else "Begin with the Hear the stack section: RING and GATHER at C4 expose the unchanged whole mix, selected connected contribution, selected-muted whole and other five cymbals. Every aligned stem uses one whole-reference gain with common headroom; quiet sources keep their actual balance. The edited build replays short aligned excerpts and adds actual readouts; it is explicitly not the instrument's natural onset. Return to Whole to judge whether multiple cymbal characters are present in the musical response."}
 
-            ${if (quick) "Use ordinary full generation for the C3–C5 pitch/velocity matrix, factory presets, macro sweeps, interaction grids and mechanical diagnostics." else if (ensembleOnly) "This compact package contains only connected-ensemble evidence; it does not contain the full pitch, velocity, control or HOLD matrix." else "The voice/velocity matrix covers C3, C4 and C5, all five timbral controls have five-step sweeps on every voice, and the five required interactions have 3 × 3 grids. Full-tail voices/presets and powered HOLD remain available below the ensemble section."}
+            ${if (holdComparisonOnly) "This focused prototype contains seven settled HOLD before/revised pairs: all six default voices at C4 and the close-rim CONTACT recipe at C3. It omits the finite, ensemble, velocity and control matrices; use the full audition for those. The finite ensemble stems cannot establish contribution balance in these settled sustains." else if (quick) "Use ordinary full generation for the C3–C5 pitch/velocity matrix, factory presets, macro sweeps, interaction grids and mechanical diagnostics." else if (ensembleOnly) "This compact package contains only connected-ensemble evidence; it does not contain the full pitch, velocity, control or HOLD matrix." else "The voice/velocity matrix covers C3, C4 and C5, all five timbral controls have five-step sweeps on every voice, and the five required interactions have 3 × 3 grids. Hear the stack contains finite RING/GATHER connected contributions at one shared gain; those stems do not establish the balance of a settled HOLD cycle. Full-tail voices/presets and powered HOLD remain available below the ensemble section."}
 
             Identity descriptions express intended sound, not a completed listening verdict.
 
@@ -511,14 +546,19 @@ object NimbusAuditionGenerator {
             Tooling smoke subset: ./gradlew :synth:generateNimbusAudition -PnimbusQuick=true
             Compact ensemble demonstration: pass --ensemble-only and a separate output directory
             to this generator; no baseline or quick flag is needed.
+            Focused HOLD prototype: pass --hold-comparison-only, --compare-hold-all, the baseline
+            options below and a separate output directory; this renders only fourteen paired cards.
             Refresh descriptions/controls only: ./gradlew :synth:generateNimbusAudition -PnimbusRefreshPage=true
 
-            ${if (comparison == null) "" else "A previous/revised listening comparison is included. Original WAVs are copied unchanged from source revision $baselineRevision; the previous manifest and each source WAV/mechanical record are SHA-256 identified. Revised partners reuse the new default renders at the same requested note and event velocity. Each card shows its own recipe, so changed defaults remain visible. The common listening target is RMS 0.12 with a 0.90 peak ceiling; no comparison constitutes a listening verdict."}
+            ${if (comparison == null) "" else "A previous/revised listening comparison is included. Original WAVs are copied unchanged from source revision $baselineRevision; the previous manifest and each source WAV/mechanical record are SHA-256 identified. Revised partners reuse same-recipe revised renders at the same requested note and event velocity. Each card shows its recipe, so matched controls remain visible. The common listening target is RMS 0.12 with a 0.90 peak ceiling; no comparison constitutes a listening verdict."}
 
             Optional baseline comparison: pass --baseline-dir=/absolute/path/to/preserved-audition
             and --baseline-revision=<full clean source Git SHA> to this generator. Add --compare-hold
-            for SHIMMER/SUSPEND C4 HOLD and the difficult settled C3 CONTACT pair. Standard
-            generation does not depend on a preserved baseline. To reproduce the original source,
+            for SHIMMER/SUSPEND C4 HOLD and the difficult settled C3 CONTACT pair (363 full cards).
+            Alternatively add --compare-hold-all for all six default C4 HOLD voices and that C3
+            CONTACT pair (371 full cards). Full generation has 345 cards without a baseline and
+            357 with only the six finite before/revised pairs. Standard generation does not depend
+            on a preserved baseline. To reproduce the original source,
             check out the recorded SHA separately, run its ordinary generateNimbusAudition task,
             and preserve that output directory before rendering the revision elsewhere. Baselines
             may contain only the selected clips, their mechanical records and original manifest rows.
@@ -587,6 +627,7 @@ object NimbusAuditionGenerator {
     /** Preserve source PCM byte-for-byte and reuse revised renders, with no extra DSP simulation. */
     private fun appendComparison(
         root: File, clips: MutableList<Clip>, baselineDir: File, revision: String, compareHold: Boolean,
+        compareHoldAll: Boolean, includeFinitePairs: Boolean = true,
     ): Map<String, Any?> {
         val manifestFile = File(baselineDir, "manifest.json")
         val baseline = Json.parse(manifestFile.readText()).obj()
@@ -597,8 +638,12 @@ object NimbusAuditionGenerator {
         val rows = baseline.getValue("clips").arr().associate { row ->
             row.obj().getValue("id").str() to row.obj()
         }
-        val sourceIds = NimbusVoice.entries.map { "${it.name.lowercase()}_middle" } +
-            if (!compareHold) emptyList() else listOf("shimmer_hold", "suspend_hold", "contact_hold_settled_rims_c3")
+        val sourceIds = (if (includeFinitePairs) NimbusVoice.entries.map { "${it.name.lowercase()}_middle" } else emptyList()) +
+            when {
+                compareHoldAll -> NimbusVoice.entries.map { "${it.name.lowercase()}_hold" } + "contact_hold_settled_rims_c3"
+                compareHold -> listOf("shimmer_hold", "suspend_hold", "contact_hold_settled_rims_c3")
+                else -> emptyList()
+            }
         fun asset(path: String): File = File(baselineDir, path).canonicalFile.also {
             require(it.toPath().startsWith(baselineDir.canonicalFile.toPath()) && it.isFile) {
                 "missing or unsafe baseline asset: $path"
@@ -658,11 +703,12 @@ object NimbusAuditionGenerator {
                     "baselineSourceRevision" to revision, "baselineSourceClipId" to sourceId,
                     "baselineSourceAudioSha256" to sha256(previousWav), "baselineSourceEventSha256" to sha256(previousEvent),
                     "baselineSourceManifestSha256" to sha256(manifestFile),
-                ) else linkedMapOf("currentSourceClipId" to sourceId, "currentSourceAudioSha256" to sha256(wav))
+                ) else linkedMapOf((if (includeFinitePairs) "currentSourceClipId" else "currentSourceRecipeId") to sourceId,
+                    "currentSourceAudioSha256" to sha256(wav))
                 clips += Clip(evidence + linkedMapOf(
                     "id" to id, "title" to "${if (version == "before") "BEFORE" else "REVISED"} · $voice · $note${if (held) " · HOLD" else ""}",
                     "description" to comparisonDescription(version, voice, held, revision),
-                    "category" to "comparison", "group" to group, "path" to path, "eventPath" to eventPath,
+                    "category" to (if (held) "hold-comparison" else "comparison"), "group" to group, "path" to path, "eventPath" to eventPath,
                     "comparisonVersion" to version, "comparisonBaselineRevision" to revision,
                     "renderMilliseconds" to 0.0,
                 ) + provenance)
@@ -672,6 +718,7 @@ object NimbusAuditionGenerator {
             "baselineSourceRevision" to revision, "baselineManifestSha256" to sha256(manifestFile),
             "baselineOriginalManifestSha256" to originalManifestHash,
             "clipCount" to sourceIds.size * 2, "sourceClipIds" to sourceIds,
+            "includeFinitePairs" to includeFinitePairs, "revisedSourceReferencesIncluded" to includeFinitePairs,
             "sameNoteMacrosAndVelocity" to true, "baselineAudioUnchanged" to true,
             "description" to "Preserved BEFORE PCM beside reused REVISED renders at the same requested note, macro recipe and event velocity. Both use the same RMS 0.12 listening target and 0.90 ceiling. Listening verdict remains open.",
         )
@@ -682,14 +729,9 @@ object NimbusAuditionGenerator {
         val context = if (version == "before")
             "Preserved previous version from ${revision.take(12)}, copied without changing its PCM audio or listening gain. Compare the revised partner at the same note, controls and event velocity."
         else "Listening revision using the same note, controls and event velocity as the previous partner."
-        val question = if (held) {
-            val texture = when (voice) {
-                "SHIMMER" -> "fine sustained upper texture"
-                "CONTACT" -> "sustained rim and upper texture"
-                else -> "supported sustained upper texture"
-            }
-            "How do the $texture and motion compare across several repeated cycles? Does the shared requested note stay recognizable throughout?"
-        } else when (voice) {
+        val question = if (held)
+            "Across several repeated cycles, is the low note less dominant and the upper metal less piercing? Does slower, gentler metal movement preserve the requested pitch and several cymbal characters? Compare at the same playback volume and listening target; these settled cycles omit the attack and finite tail."
+        else when (voice) {
             "RING" -> "Can you hear distinct metal weight and upper-mode responses around the same note? Compare the attack, body and tail."
             "SHIMMER" -> "Does the fine upper-mode response and tail give SHIMMER a recognizable character? Compare the attack, body and tail."
             "GATHER" -> "Does the attack lead to an audible spread and gathering gesture? Compare the body and tail."
@@ -701,8 +743,9 @@ object NimbusAuditionGenerator {
     }
 
     private val categories = linkedMapOf(
+        "hold-comparison" to ("HOLD before / revised" to "Compare the preserved and revised settled sustain at identical note, controls and event velocity, with the same RMS 0.12 listening target and playback volume. Across repeated cycles, is the unbroken low note less dominant and the upper metal less piercing? Does slow metal movement preserve recognizable pitch and several cymbal characters? These are listening questions, not an acceptance claim. The attack and finite tail are excluded; movement comes from supplied magnetic power, not browser processing."),
         "ensemble" to ("Hear the stack: whole and real contributions" to "Begin with the natural whole instrument. Then hear the selected cymbal, the same whole with that contribution muted, and the other five cymbals alone. All come from one connected event at one common gain. Six named contributions and an explicitly edited build expose the actual balance; they are listening evidence, not a claim that the natural response succeeds."),
-        "comparison" to ("Previous and revised: hear the connected stack" to "Compare each preserved previous default with the revised default at the same note and velocity. Listen to attack, body and tail on finite pairs; compare sustained upper texture, motion and common-note recognition across repeated cycles on HOLD pairs. Do multiple cymbal characters now remain audible in the whole musical response? Both versions use the same listening target; recipes and source hashes remain visible. Listening acceptance is open."),
+        "comparison" to ("Previous and revised: hear the connected stack" to "Compare each preserved previous finite default with the revised default at the same note, controls and velocity. Listen to attack, body and tail. Do multiple cymbal characters remain audible in the whole musical response? Both versions use the same listening target; recipes and source hashes remain visible. Listening acceptance is open."),
         "voices" to ("Six voices, three registers" to "Begin with defaults at C3, C4 and C5. Every voice keeps six persistent cymbal identities around the requested root; compare the selected attack and the gathering tail."),
         "presets" to ("Nine factory starting points" to "The exact saved dry recipes in SnipSnap. HELD METAL uses explicit powered sustain; its loop starts after the isolated attack."),
         "energy" to ("Physical velocity across the note range" to "Quiet and medium events at every voice/register complement the strong voice cards. Matched playback exposes modal excitation and stack movement rather than gain alone."),
@@ -721,8 +764,14 @@ object NimbusAuditionGenerator {
             .replace("<!-- NIMBUS_CARDS -->", sectionsHtml(clips, cacheKey))
             .replace("href=\"manifest.json\"", "href=\"${assetUrl("manifest.json", cacheKey)}\"")
             .replace("href=\"README.md\"", "href=\"${assetUrl("README.md", cacheKey)}\"")
+            .replace("<!-- NIMBUS_HOLD_COMPARISON_NOTE -->", if (clips.none { it.category == "hold-comparison" }) "" else "<p class=\"comparison-note\"><strong>HOLD listening revision.</strong> <a href=\"#hold-comparison\">Begin with HOLD before / revised.</a> Is the sustained low note less dominant and the upper metal less piercing, with slower movement and recognizable pitch? Same note, controls, event velocity and listening target; the verdict stays open.</p>")
             .replace("<!-- NIMBUS_ENSEMBLE_NOTE -->", if (clips.none { it.category == "ensemble" }) "" else "<p class=\"comparison-note\"><strong>Hear the six-cymbal stack.</strong> <a href=\"#ensemble\">Start with Whole, then compare the actual connected contributions.</a> Every source uses the same mix gain; the labeled build is an edited demonstration. Judge the natural response on Whole.</p>")
             .replace("<!-- NIMBUS_COMPARISON_NOTE -->", if (clips.none { it.category == "comparison" }) "" else "<p class=\"comparison-note\"><strong>Listening revision.</strong> <a href=\"#comparison\">Start with the previous / revised pairs.</a> Compare the six C4 voices for distinct attacks and tails while the requested note stays recognizable. These clips ask for a listening verdict; they do not claim acceptance.</p>")
+            .replace("<!-- NIMBUS_START_GUIDE -->", when {
+                clips.any { it.category == "hold-comparison" } -> "Begin with HOLD before / revised and compare several repeated cycles at the same playback volume. Listen for sustained balance, slower metal movement and recognizable pitch; the finite ensemble stems do not measure the settled sustain's contribution balance."
+                clips.any { it.category == "ensemble" } -> "Begin with the natural whole instrument at C4. Compare its selected contribution, selected-muted mix and other five cymbals at the same playback level."
+                else -> "Begin with RING at C4, then compare the other default voices and settled HOLD clips at the same playback level."
+            })
             .replace("<!-- NIMBUS_SECTION_FILTER_OPTIONS -->", categories.keys.filter { category -> clips.any { it.category == category } }
                 .joinToString("") { category -> "<option value=\"$category\">${h(sectionLabel(category))}</option>" })
             .replace("<!-- NIMBUS_SECTION_NAV -->", categories.keys.filter { category -> clips.any { it.category == category } }
@@ -730,6 +779,7 @@ object NimbusAuditionGenerator {
             .replace("<!-- NIMBUS_MANIFEST -->", "<script type=\"application/json\" id=\"nimbus-manifest\">${manifestText.replace("<", "\\u003c")}</script>"))
     }
     private fun sectionLabel(category: String) = when (category) {
+        "hold-comparison" -> "HOLD before / revised"
         "ensemble" -> "Hear the stack"
         "comparison" -> "Before / revised"
         "voices" -> "Voices and registers"

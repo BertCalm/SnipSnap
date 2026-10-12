@@ -238,6 +238,9 @@ object Velocity {
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
         is AlloyPatch -> Alloy.macrosFor(patch.voice)
+        is ContourPatch -> ContourEngine.macrosFor(patch.voice)
+        is StoopPatch -> Stoop.macrosFor(patch.voice)
+        is LacquerPatch -> Lacquer.macrosFor(patch.voice)
     }
 
     /**
@@ -306,13 +309,16 @@ object Velocity {
      * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
      * ALLOY scales generated attack energy and modulation work with its stored material and routing.
+     * CONTOUR changes attack energy, filter motion and edge emphasis in the saved table pair.
+     * LACQUER changes source energy, edge strength and filter articulation while keeping its layer recipe.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is MurmurPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch
+            patch is PitchwheelPatch || patch is MurmurPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch ||
+            patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -351,6 +357,10 @@ object Velocity {
                 is MurmurPatch -> patch.copy(velocity = v).render()
                 is PrismPatch -> patch.copy(velocity = v).render()
                 is AlloyPatch -> patch.copy(velocity = v).render()
+                is ContourPatch -> patch.copy(velocity = v).render()
+                // Source registration, shadow gesture and chord voicing belong to this exact recipe.
+                is StoopPatch -> patch.copy(velocity = v).render()
+                is LacquerPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 else -> error("no velocity render for ${patch.engine}")

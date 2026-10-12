@@ -29,7 +29,11 @@ full-stack source taps, coupling/funnel/
 contact switches, geometry corners, finite decay and difficult held loops.
 Generated files are ignored by Git; source, tests and templates are tracked.
 
-Start with the ensemble demonstration at C4. For both RING and GATHER,
+When HOLD before/revised is present, start there. Compare the sustained
+low drone, piercing upper tones and gentle motion at the same listening
+target, then replay several cycles to check continuity.
+
+Use the ensemble demonstration at C4 next. For both RING and GATHER,
 the whole event, selected connected component, selected-muted event,
 other five cymbals and six named taps come from one simulation at one
 shared gain. The selected-muted event retains the chamber, contacts and
@@ -99,8 +103,8 @@ clean source revision:
 ```sh
 ./gradlew --no-daemon :synth:generateNimbusAudition \
   -PnimbusBaselineDir=/absolute/path/to/preserved-nimbus-audition \
-  -PnimbusBaselineRevision=c95bfdf0055daa7723914825e61e391c146aa0d9 \
-  -PnimbusCompareHold=true
+  -PnimbusBaselineRevision=98a02845627c735f9257d8ea7bbf807c343b461f \
+  -PnimbusCompareHoldAll=true
 ```
 
 The example uses the preserved previous audio source. For another baseline,
@@ -114,8 +118,17 @@ Supplying the baseline directory and revision adds six C4 default pairs,
 for 357 clips. `nimbusCompareHold=true` adds SHIMMER and SUSPEND at C4 plus
 the difficult settled CONTACT rim case at C3, for 363 clips. Comparison
 partners use the same note, controls, velocity and listening target.
-Normal 345-clip regeneration needs no preserved baseline. Page refresh
-uses the existing manifest and retains its comparison section.
+`nimbusCompareHoldAll=true` includes all six default C4 HOLD voices plus
+the settled CONTACT rim case at C3, for 371 clips. Their previous/revised
+section comes first so a sustain revision can be judged directly. Both
+versions use the same controls and listening target; the previous PCM is
+preserved unchanged. Normal 345-clip regeneration needs no preserved baseline.
+Page refresh uses the existing manifest and retains its comparison section.
+
+For a smaller development comparison, invoke the generator with
+`--hold-comparison-only --compare-hold-all`, both baseline arguments and an
+explicit separate output directory. This renders only the seven HOLD pairs;
+it cannot replace the full audition directory.
 
 ## Host contract
 
@@ -211,6 +224,14 @@ HOLD at .99 and above returns a settled repeating region. Both use weak
 modal forcing, distinct from stabilization. Voice and selected-material
 weights also shape the sustained upper modes. The settled drive retains
 multiple material contributions after the finite onset-transfer path drains. The
+continuous force uses a separately normalized native-body vector with a
+smooth ratio and frequency taper, so high strike partials receive less
+permanent excitation. A smaller principal target and alternating drive
+phases reduce the coherent common-note bed while retaining relative rim
+motion. Each plate's supplied force breathes at a staggered phase over one
+exact loop period; the work ledger accounts for every velocity increment.
+These changes affect powered sustain, while HOLD at zero retains the
+accepted finite event and its original random sequence. The
 seamless region follows bounded preroll of the complete acoustic and
 mechanical state. The probe retains an independently rendered preceding
 cycle for the current `Keys.seamError` metric; a copied boundary cannot serve

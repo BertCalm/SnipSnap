@@ -65,17 +65,17 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (21 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, MURMUR, REVEL, PRISM and ALLOY,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (24 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, MURMUR, REVEL, PRISM, ALLOY, CONTOUR, STOOP and LACQUER,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 28 engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has 31 engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, MURMUR, REVEL, PRISM and ALLOY.
-CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, MURMUR, REVEL, PRISM and ALLOY also provide
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, MURMUR, REVEL, PRISM, ALLOY, CONTOUR, STOOP and LACQUER.
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, MURMUR, REVEL, PRISM, ALLOY, CONTOUR, STOOP and LACQUER also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
@@ -85,6 +85,12 @@ starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
 precedes further preset expansion.
 ALLOY adds six attack-driven PM voices, twelve provisional presets and a dry
 sixteen-pad starter kit; its first listening set also awaits owner approval.
+CONTOUR adds six wavetable voices with SCAN, OFFSET, MOTION, FILTER,
+DRIVE and HOLD. Loading, editing and saving a preset retains its authored
+table pair, layer relationship and envelopes along with the macros.
+STOOP saves its source, shadow and chord recipe beside the six macros; its root
+can be changed by semitone or octave without resetting that recipe. Its 48
+provisional presets and dry starter kit await listening.
 GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here
@@ -165,6 +171,27 @@ logcat tag to grab when something is wrong.
   layout change mid-note should go silent, never stick. The zones load
   off the main thread, so the first key after opening may be silent for
   a moment on a big instrument.
+- **A MIDI keyboard (KEYS and PLAY)**: plug a USB keyboard into the
+  phone on an OTG cable (Bluetooth MIDI is not wired yet: pairing in the
+  phone's settings does not make a BLE keyboard visible to `MidiManager`
+  without a scan and permissions this app lacks). The line under KEYS' grid should change from NO
+  MIDI KEYBOARD to `MIDI · <its name>` without leaving the screen, and
+  on PLAY the hint row becomes that same line with a map chip beside
+  it. On KEYS, keys play the instrument at the keyboard's own velocity
+  (a soft touch is quiet, not clamped to the grid's floor), the sustain
+  pedal holds let-go notes until it lifts, a grid note and a keyboard
+  note share the eight voices, and a panic button on the controller (All
+  Notes Off) silences everything. On PLAY the chip reads MPC NOTES by
+  default: note 36 fires A02 (the kick), 38 A06, 42 A03, exactly as the
+  exported kit answers on the Live III. Tap it to A01 = C1 and C1 walks
+  up the slots a semitone a pad, which is what a melodic kit wants.
+  Unplug mid-note: nothing should stick, and the line should go back to
+  NO MIDI KEYBOARD. A phone that reports no `android.software.midi`
+  draws neither line; `MidiInput.open` returns false there. If a
+  plugged-in keyboard never shows, logcat's `MidiInput` tag says whether
+  the device or one of its ports refused to open. Clock and transport
+  sync are **not** part of this — `docs/MIDI_SYNC.md` gates those behind
+  bench items S1–S4 that still need the phone.
 - **SNAP**: open a kit, tap SNAP, TAKE PHOTO. The system camera should
   open and hand back a thumbnail; the LCD then shows the picture with its
   LUM/SAT/HUE/DETAIL numbers, the sliders jump to what those numbers
