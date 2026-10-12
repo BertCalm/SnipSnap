@@ -106,7 +106,7 @@ class PadSheetTest {
         assertNull(PadSheet.segmentFor("phone"))
     }
 
-    // ---- rows two through six: the regroup ----
+    // ---- the card's rows: the regroup (rows two through six) and the pedals (row seven) ----
 
     @Test
     fun `the card reads in zones, and holds every chip`() {
@@ -163,7 +163,7 @@ class PadSheetTest {
         for (segment in PadSheet.PEDAL_SEGMENTS) {
             val t = PadSheet.treatmentFor(segment)!!
             assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is not treatmentFor's inverse for $segment")
-            assertTrue(t.name in com.snipsnap.synth.Treatments.names, "$segment names a character the rack does not have")
+            assertTrue(t.name in Treatments.names, "$segment names a character the rack does not have")
         }
     }
 

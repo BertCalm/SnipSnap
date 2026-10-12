@@ -100,10 +100,11 @@ object PadSheet {
     val PEDAL_SEGMENTS: List<String> = listOf("DRIVE", "COMP", "WAH")
 
     /**
-     * All rows, in drawing order. Grouped by what an effect *does*, not by
-     * which family implements it: ROLL and GATE are keyed treatments sitting
-     * on the TIME row because that is what they sound like, the way TUNE has
-     * always sat among the characters.
+     * All rows, in drawing order. Six of the seven are grouped by what an
+     * effect *does*, not by which family implements it: ROLL and GATE are
+     * keyed treatments sitting on the TIME row because that is what they
+     * sound like, the way TUNE has always sat among the characters. The
+     * seventh, the pedals, is grouped by what an effect *is*.
      */
     val ROWS: List<List<String>> = listOf(
         SEGMENTS, ANATOMY_SEGMENTS, CHARACTER_SEGMENTS, TIME_SEGMENTS, TRANSPORT_SEGMENTS, KEYED_SEGMENTS, PEDAL_SEGMENTS,
