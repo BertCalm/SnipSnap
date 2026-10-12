@@ -10,6 +10,7 @@ import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -209,6 +210,34 @@ class NimbusTest {
             if (p.bodyTransfers.isNotEmpty()) deficient += "$voice repeatedly schedules gathering attacks inside settled HOLD"
         }
         assertTrue(deficient.isEmpty(), "Powered HOLD lost the settled ensemble: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
+    fun `held force supports the native middle body with slow variation across registers`() {
+        // The previous HOLD split into a dominant shared principal or continuously driven
+        // high partials. These balance and slow-envelope bounds guard that failure without
+        // asserting a listening preference. Measure the complete returned interval.
+        val deficient = mutableListOf<String>()
+        for (voice in NimbusVoice.entries) for (tune in floatArrayOf(0f, .5f, 1f)) {
+            val label = "$voice TUNE $tune"
+            val p = Nimbus.probe(voice, mapOf("TUNE" to tune, "HOLD" to 1f),
+                options = Nimbus.ProbeOptions(recordDiagnostics = false))
+            val tone = heldTone(p.samples, p.rootHz.toDouble())
+            val breathing = heldBreathing(p.samples)
+            val cents = FineTuning.cents(FineTuning.measuredHz(p.samples, Dsp.RATE, p.rootHz, .08f, .45f), p.rootHz.toDouble())
+            println("NIMBUS $label held body: low=${tone.low} middle=${tone.middle} high=${tone.high} above3k=${tone.above3k} principal=${tone.principal}, RMS100msCV=${breathing.cv} oneCycleDepth=${breathing.depth}, root=$cents cents seam=${p.seamError}")
+            if (tone.low > .45 || tone.middle < .35 || tone.high > .35 || tone.above3k > .15) {
+                deficient += "$label sustained body lost balance: low=${tone.low} middle=${tone.middle} high=${tone.high} above3k=${tone.above3k}"
+            }
+            if (breathing.cv < .03 || breathing.cv > .30 || breathing.depth < .04) {
+                deficient += "$label lacks gentle slow supplied-power variation: CV=${breathing.cv} oneCycleDepth=${breathing.depth}"
+            }
+            if (tone.principal < .01 || abs(cents) > 10.0) deficient += "$label lost its material requested root: share=${tone.principal} cents=$cents"
+            if (p.previousCycle.size != p.samples.size || p.seamError >= Keys.MAX_SEAM_ERROR) {
+                deficient += "$label slow held body did not retain a genuine preceding cycle: seam=${p.seamError}"
+            }
+        }
+        assertTrue(deficient.isEmpty(), "Sustained native body regression: ${deficient.joinToString("; ")}")
     }
 
     @Test
@@ -604,6 +633,66 @@ class NimbusTest {
         val rootShare: Double, val upperShare: Double, val highShare: Double,
         val upperOccupied: Int, val profile: DoubleArray, val upperPower: Double,
     )
+
+    private data class HeldTone(val low: Double, val middle: Double, val high: Double, val above3k: Double, val principal: Double)
+
+    private fun heldTone(samples: FloatArray, root: Double): HeldTone {
+        var n = 1
+        while (n < samples.size) n *= 2
+        // A rectangular complete-cycle capture avoids weighting one breathing phase more
+        // heavily. Zero padding supplies the radix-2 FFT; shares use the same power sum.
+        val re = samples.copyOf(n)
+        val im = FloatArray(n)
+        Fft.forward(re, im)
+        var total = 0.0
+        var low = 0.0
+        var middle = 0.0
+        var high = 0.0
+        var above3k = 0.0
+        var principal = 0.0
+        for (k in 1 until n / 2) {
+            val hz = k.toDouble() * Dsp.RATE / n
+            if (hz > 20000) break
+            val power = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            total += power
+            when {
+                hz < 1.35 * root -> low += power
+                hz < 4.0 * root -> middle += power
+                else -> high += power
+            }
+            if (hz >= 3000) above3k += power
+            if (hz in .94 * root..1.06 * root) principal += power
+        }
+        val denominator = total.coerceAtLeast(1e-30)
+        return HeldTone(low / denominator, middle / denominator, high / denominator, above3k / denominator, principal / denominator)
+    }
+
+    private data class HeldBreathing(val cv: Double, val depth: Double)
+
+    private fun heldBreathing(samples: FloatArray): HeldBreathing {
+        val width = (.1 * Dsp.RATE).roundToInt()
+        val energy = DoubleArray(samples.size + width + 1)
+        for (i in 0 until energy.lastIndex) {
+            val sample = samples[i % samples.size].toDouble()
+            energy[i + 1] = energy[i] + sample * sample
+        }
+        val values = DoubleArray(128) { index ->
+            val start = (index * samples.size.toDouble() / 128).roundToInt()
+            sqrt((energy[start + width] - energy[start]).coerceAtLeast(0.0) / width)
+        }
+        val mean = values.average().coerceAtLeast(1e-30)
+        val cv = sqrt(values.sumOf { (it - mean) * (it - mean) } / values.size) / mean
+        var cosine = 0.0
+        var sine = 0.0
+        for (i in values.indices) {
+            val phase = 2 * PI * i / values.size
+            cosine += (values[i] - mean) * cos(phase)
+            sine += (values[i] - mean) * sin(phase)
+        }
+        // The one-cycle component isolates slow breathing from ordinary carrier beating.
+        val depth = 2 * sqrt(cosine * cosine + sine * sine) / (values.size * mean)
+        return HeldBreathing(cv, depth)
+    }
 
     private fun bands(samples: FloatArray, root: Double, start: Double, end: Double, upperCutoff: Double = 1.8): Bands {
         val from = (start * Dsp.RATE).roundToInt()

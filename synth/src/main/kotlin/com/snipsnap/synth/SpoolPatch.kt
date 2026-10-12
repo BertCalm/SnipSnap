@@ -66,7 +66,7 @@ data class SpoolMachine(
     val holdMode: SpoolHoldMode = SpoolHoldMode.FROZEN_SNAPSHOT,
     val seed: Int = 26,
     val writeDelaySamples: Int = 32,
-    val reengage: Boolean = true,
+    val reengage: Boolean = false,
 ) {
     init {
         require(roster.isEmpty() || roster.size == 3) { "SPOOL needs three source strips" }
