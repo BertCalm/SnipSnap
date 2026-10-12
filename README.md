@@ -243,6 +243,16 @@ listening set, or omit the property for the full raw/matched and diagnostic
 gate. [Implementation notes](docs/SUTURE.md) explain the model and HOLD's
 settled-loop format. The sound awaits the owner's listening verdict.
 
+SPOOL is a returning recording machine: three original synthesized string,
+choir, flute or brass performances share a loaded transport and diagonal
+pickup heads. STRAIN bends the tape journey, RETURN supplies the backward
+answer, IMPRINT leaves delayed traces in neighboring strips and SPLICE
+reorders short sections. Six dry presets, a sixteen-pad starter, the synth
+picker and CLI use the same serialized machine. HOLD loops an explicitly
+frozen imprint snapshot. Run `./gradlew :synth:generateSpoolAudition` for the
+first listening pack; [implementation notes](docs/SPOOL.md) explain its
+export semantics. The proposed 36-preset library awaits dry sonic approval.
+
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
 the gesture. Six voices, eight presets and a dry sixteen-pad kit use MATERIAL,
@@ -254,6 +264,16 @@ contains 297 dry clips and diagnostics. The sound awaits the owner's listening
 verdict; [implementation notes](docs/TESSERA.md) describe the render, saving
 and export contracts.
 
+STOOP is an original groove module with six families: BASS, TINE, CLAV,
+ORGAN, LEAD and CHORD. TOUCH, COLOR, SHADOW, WEAR and LENGTH shape dry,
+preset-first sounds; HOLD exports settled loops. Recipes save an explicit
+MIDI root, velocity, source configuration, independently articulated
+shadow and explicit chord intervals. A provisional 48-preset roster and
+dry sixteen-pad starter kit share the phone and CLI renderer. Run
+`./gradlew :synth:generateStoopAudition` for presets, phrases, macro
+comparisons and repeated-loop listening. The owner's listening verdict
+is pending; [implementation notes](docs/STOOP.md) record the contracts.
+
 PITCHWHEEL is a pitched wooden wheel whose teeth catch flexible fingers while
 resin filaments stretch, bow and release. CLUNK, PLUCK, DRAW, RECOIL, THAWED
 and TURN share PUSH, TOOTH, ADHESION, HEAT, BODY and HOLD. Patches retain an
@@ -261,7 +281,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 19 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 26 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -275,6 +295,18 @@ fixed until then.
 [The audition page](https://pitchwheel-audition.bertcalm.chatgpt.site) opens with
 six isolated catches and includes the previous defaults for comparison.
 [Implementation notes](docs/PITCHWHEEL.md) record the provisional model and limits.
+
+LACQUER is a layered-tone engine for finished keys, glass, synthetic brass,
+bass, plucks and broad sustains. RELIEF separates independent body, edge and
+trail articulation; SHEEN, BODY, CONTOUR and GLUE shape their common finish.
+Eight provisional patches retain explicit layer models, MIDI root and velocity.
+HOLD's top step supplies settled loop material, with periodic layer contours
+preserving RELIEF after the initial arrivals have passed. Run
+`./gradlew :synth:generateLacquerAudition` for native/matched samples, layer solos,
+macro sweeps and interaction grids. [Implementation notes](docs/LACQUER.md)
+describe the contracts. The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
+is private to the owner's account and includes the dry sixteen-pad MPC kit.
+Dry sonic approval precedes the full preset expansion.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -299,6 +331,55 @@ listening matrix, or add `-Pquick` for a first listening set. The
 [private audition](https://snipsnap-revel-audition.bertcalm.chatgpt.site)
 is the owner's sonic acceptance gate;
 [implementation notes](docs/REVEL.md) describe the model and validation limits.
+
+PRISM is a preset-first additive engine: 32 partials in five groups make keys,
+plucks, organs, basses, glass and sustained veils whose harmonics develop at
+different rates. GRAIN, DRIFT, SHAPE, STRIKE and BODY shape the dry note; HOLD
+exports settled periodic loops. Eight audition presets, a dry sixteen-pad kit,
+patch recipes, CLI and the phone picker share the Kotlin renderer. Run
+`./gradlew :synth:generatePrismAudition` for raw/matched voices, macro sweeps,
+interaction grids, velocity and loop probes. The
+[published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
+awaits the owner's dry listening verdict before expanding the preset roster.
+[Implementation notes](docs/PRISM.md) describe the controls and contracts.
+
+ALLOY is an original attack-driven four-operator PM engine: generated wood,
+tine/string and breath/contact attacks enter the tonal body through a bounded
+modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
+EDGE, BODY, LENGTH, TUNE and HOLD. Twelve provisional presets, saved operator and
+material recipes, native velocity and a dry sixteen-pad kit use the same renderer.
+Run `./gradlew :synth:generateAlloyAudition` for voice/register/velocity coverage,
+five-point sweeps, interactions, FUSE ablation and settled loop listening. The
+[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) awaits
+the owner's sonic verdict before expansion to the proposed 36 presets.
+[Implementation notes](docs/ALLOY.md) describe the render and export contracts.
+
+CONTOUR is an original wavetable instrument: a stable body carries the note while
+a related edge takes a different spectral path. BASS, KEY, PLUCK, LEAD, HOLLOW
+and SWELL share SCAN, OFFSET, MOTION, FILTER, DRIVE and HOLD, plus host TUNE.
+Eight generated table families, nine provisional dry recipes, a sixteen-pad kit,
+excitation-sensitive velocity and settled HOLD loops use the existing pipeline;
+held keygroup export (MAKE INSTRUMENT, `--instrument`) does not route CONTOUR yet.
+The existing CONTOUR rack filter keeps its saved effect recipes. Run
+`./gradlew :synth:generateContourAudition` for the listening matrix; the proposed
+36-preset expansion waits for sonic approval. Listen on the
+[published audition page](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
+(owner-private). [Implementation notes](docs/CONTOUR.md)
+cover the patch format, controls and verification.
+
+SKITTER is a pitched electronic circuit inspired by the EDP Wasp: two oscillators
+depart and recover at unequal speeds, while their edges and seeded noise provoke
+a nonlinear filter with signal history and bounded flutter. BASS, LEAD, HOLLOW,
+FLUTTER, CHIRP and FRAY share BUZZ, SKITTER, AGITATE, VENT, STATIC and HOLD.
+Patches save an explicit MIDI root (24–84), excitation velocity and seed.
+Thirty-six provisional dry presets, a sixteen-pad kit, FRESH TAPE, CLI rendering
+and the phone synth picker use the same engine. Run
+`./gradlew :synth:generateSkitterAudition` for the listening matrix, raw/matched
+WAVs and diagnostic evidence under `testkit/skitter-audition/`.
+The [audition page](https://skitter-snipsnap-audition.bertcalm.chatgpt.site)
+supports the owner's listening verdict; [implementation notes](docs/SKITTER.md)
+describe the coupled model and HOLD approximation. Sonic approval and device
+validation remain open.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
@@ -524,8 +605,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, TANGLE, REVEL and GRAINS round out the lineup —
-twenty-six engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE and GRAINS round out the lineup —
+thirty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -708,11 +789,11 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, TANGLE, REVEL, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, TANGLE and REVEL are also in the picker, preset roster and starter kits;
-the CLI's `--midi` and `--velocity` options set their note and playing energy directly.
+CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL, SKITTER and TANGLE are also in the picker, preset roster and starter kits;
+the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
 

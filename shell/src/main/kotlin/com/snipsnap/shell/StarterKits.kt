@@ -149,6 +149,48 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.pitchwheel() },
         Starter(
+            "prism", "PRISM",
+            "Harmonic keys, glass and separating partials in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.prism() },
+        Starter(
+            "alloy", "ALLOY",
+            "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.alloy() },
+        Starter(
+            "contour", "CONTOUR",
+            "A solid wavetable body and moving digital edge in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.contour() },
+        Starter(
+            "stoop", "STOOP",
+            "Bass, keys and compact chords in C minor pentatonic. Warm grooves with quiet answers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.stoop() },
+        Starter(
+            "lacquer", "LACQUER",
+            "Polished keys, glass, brass and soft layers in C minor pentatonic. Separate arrivals, one finished tone.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.lacquer() },
+        Starter(
+            "spool", "SPOOL",
+            "Recorded strings, choir, flute and brass in C minor pentatonic. Diagonal heads and backward answers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.spool() },
+        Starter(
+            "skitter", "SKITTER",
+            "Recovering oscillator pairs provoke a fluttering circuit in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.skitter() },
+        Starter(
             "tangle", "TANGLE",
             "Oscillators catch and escape in C minor pentatonic. Rooted bass, crawling pulses and metal.",
             seeded = false,

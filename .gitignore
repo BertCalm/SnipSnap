@@ -151,6 +151,8 @@ testkit/undertow-audition/
 
 # SUTURE listening clips, mechanical traces and local listening page.
 testkit/suture-audition/
+testkit/spool-audition/
+testkit/spool-audition-site/
 testkit/suture-first-listen/
 
 # Tessera's generated listening matrix, diagnostic traces and kit audio.
@@ -159,8 +161,18 @@ testkit/SnipSnap Tessera Kit/
 
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
 testkit/pitchwheel-audition/
+
+# PRISM raw/matched WAVs, listening manifest and diagnostics are rendered locally.
+testkit/prism-audition/
 testkit/SnipSnap Pitchwheel Kit/
 
+# Stoop's generated audio, manifest and listening page.
+testkit/stoop-audition/
+testkit/SnipSnap Stoop Kit/
+# Lacquer listening evidence and MPC acceptance audio are regenerated locally.
+testkit/lacquer-audition/
+testkit/SnipSnap Lacquer Kit/
+testkit/SnipSnap-Lacquer-Kit.zip
 # Tangle's regenerated audition WAVs, diagnostic manifest, page and kit audio.
 testkit/tangle-audition/
 testkit/SnipSnap Tangle Kit/
@@ -168,3 +180,13 @@ testkit/SnipSnap Tangle Kit/
 # REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
 testkit/revel-audition/
 testkit/SnipSnap Revel Kit/
+# Alloy generated listening matrix, audio, recipes, and native MPC kit.
+testkit/alloy-audition/
+testkit/SnipSnap Alloy Kit/
+# CONTOUR's generated dry listening matrix and kit audio.
+testkit/contour-audition/
+testkit/SnipSnap Contour Kit/
+
+# Skitter's generated dry WAVs, diagnostic traces and listening page.
+testkit/skitter-audition/
+testkit/SnipSnap Skitter Kit/
