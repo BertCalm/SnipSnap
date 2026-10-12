@@ -129,6 +129,12 @@ this module owns that folder's whole life.
 - **Velocity layers** — a pad can carry up to four velocity zones
   (`KitLayer`), written through to the XPM's per-layer velocity windows, so
   soft hits sound soft on hardware, not just quiet.
+- **`MidiGroove` / `MidiWire`** — MIDI on disk and on the wire. The first
+  reads and writes Standard MIDI Files for grooves; the second reads the
+  live byte stream a keyboard sends (running status, real-time bytes
+  mid-message, a message split across deliveries) into typed note and
+  controller events, which `:shell`'s `MidiKeys` and `MidiPads` turn into
+  what KEYS and PLAY do with them.
 - **`XpnPackager`** — the same expansion as a single deterministic `.xpn`
   ZIP, for one-file kit sharing, in the layout real commercial archives use:
   `Expansion.xml` at the archive root, bare sample names (no real program
