@@ -235,6 +235,9 @@ object Velocity {
         is RevelPatch -> Revel.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
+        is PrismPatch -> Prism.macrosFor(patch.voice)
+        is AlloyPatch -> Alloy.macrosFor(patch.voice)
+        is ContourPatch -> ContourEngine.macrosFor(patch.voice)
         is StoopPatch -> Stoop.macrosFor(patch.voice)
     }
 
@@ -301,13 +304,16 @@ object Velocity {
      * preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
+     * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
+     * ALLOY scales generated attack energy and modulation work with its stored material and routing.
+     * CONTOUR changes attack energy, filter motion and edge emphasis in the saved table pair.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is RevelPatch || patch is StoopPatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -343,6 +349,9 @@ object Velocity {
                 is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
                 is PitchwheelPatch -> patch.copy(velocity = v).render()
+                is PrismPatch -> patch.copy(velocity = v).render()
+                is AlloyPatch -> patch.copy(velocity = v).render()
+                is ContourPatch -> patch.copy(velocity = v).render()
                 // Source registration, shadow gesture and chord voicing belong to this exact recipe.
                 is StoopPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)

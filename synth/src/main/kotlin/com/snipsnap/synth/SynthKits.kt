@@ -623,6 +623,41 @@ object SynthKits {
     }
 
     /**
+     * Eight dry harmonic keys in C minor pentatonic followed by the eight
+     * curated spectral recipes. Each note rebuilds its own partial phases
+     * and contours; finite notes are TONAL and the held veil is LOOP.
+     */
+    fun prism(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = PrismPatch(
+            "Prism $n", PrismVoice.KEY,
+            PrismPresets.forVoice(PrismVoice.KEY).first().macros +
+                ("TUNE" to semitone / Prism.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
+        val presets = PrismPresets.all()
+        val finite = presets.filterNot { Prism.isLoop(it.macros.getValue("HOLD")) }
+        val held = presets.filter { Prism.isLoop(it.macros.getValue("HOLD")) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            (finite + held).map { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
+     * Sixteen dry hybrid pads: eight KEY notes in C minor pentatonic, one finite
+     * candidate from each voice, and the two settled held STRING/SOFT candidates.
+     * Every pad saves the generated attack, PM routing, envelopes, root and energy.
+     */
+    fun alloy(): List<ArrangedPad?> {
+        val key = AlloyPresets.forVoice(AlloyVoice.KEY).first()
+        fun landed(patch: AlloyPatch) = pad(patch, Alloy.drumClassFor(patch.voice, patch.macros))
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            landed(key.copy(name = "Alloy ${i + 1}", midi = Alloy.DEFAULT_MIDI + semitone))
+        }
+        val finite = AlloyVoice.entries.map { landed(AlloyPresets.forVoice(it).first()) }
+        val held = AlloyPresets.all().filter { Alloy.isLoop(it.macros.getValue("HOLD")) }.map { landed(it) }
+        return scale + finite + held
+
+    }
+
+    /**
      * A dry groove kit: bass in the bottom row, tines above it, then clipped keys,
      * organ, lead and explicit root/fifth/octave chords. The final two pads hold.
      * Exact note, source registration, answer and chord voicing stay in every recipe.
@@ -750,5 +785,19 @@ object SynthKits {
             preset("Skin Conversation"), preset("Close Pass"), preset("Two Directions"), preset("Three Listeners"),
             preset("Flower Path"), preset("Elastic Answer"), preset("Rolling Floor"), preset("Held Revel"),
         )
+    }
+
+    /**
+     * Sixteen dry tonal pads: seven KEY notes in C minor pentatonic, followed by
+     * all nine first-listen recipes. HOLD contains the settled sustain alone.
+     */
+    fun contour(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = ContourPatch(
+            "Contour $n", ContourVoice.KEY,
+            ContourEngine.defaults(ContourVoice.KEY) +
+                ("TUNE" to (.5f + semitone / (2f * ContourEngine.TUNE_SEMITONES))),
+        ).let { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(7).mapIndexed { i, semitone -> note(i + 1, semitone) } +
+            ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
     }
 }

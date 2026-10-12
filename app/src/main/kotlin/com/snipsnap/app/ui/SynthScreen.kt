@@ -173,6 +173,12 @@ import com.snipsnap.synth.TesseraVoice
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.Prism
+import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.PrismVoice
+import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.StoopVoice
@@ -194,6 +200,9 @@ import com.snipsnap.synth.ForkVoice
 import com.snipsnap.synth.Circuit
 import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
+import com.snipsnap.synth.Alloy
+import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.AlloyVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -240,7 +249,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL and STOOP, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR and STOOP, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -302,7 +311,10 @@ fun SynthScreen(
     val macros = macrosByVoice.getValue(engine to voice)
     // FLOTILLA, CISTERN, PITCHWHEEL and STOOP carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
-    // Keep that state through preview, editing, saving and placing.
+    // PRISM also preserves its spectral/envelope template and strike velocity,
+    // ALLOY its synthesis configuration, and CONTOUR its authored table pair and
+    // trajectory configuration. Keep that state through preview, editing, saving
+    // and placing by editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1115,10 +1127,13 @@ fun SynthScreen(
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.ALLOY && spec.name == "HOLD" && Alloy.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.PITCHWHEEL && spec.name == "HOLD" && Pitchwheel.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.PRISM && spec.name == "HOLD" && Prism.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CONTOUR && spec.name == "HOLD" && ContourEngine.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.STOOP && spec.name == "HOLD" && Stoop.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1956,7 +1971,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, STOOP;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -1978,6 +1993,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaVoice.entries
         CISTERN -> CisternVoice.entries
         CIRCUIT -> CircuitVoice.entries
+        ALLOY -> AlloyVoice.entries
         MURK -> MurkVoice.entries
         NIMBUS -> NimbusVoice.entries
         THAW -> ThawVoice.entries
@@ -1987,6 +2003,8 @@ private enum class Engine {
         REVEL -> RevelVoice.entries
         TESSERA -> TesseraVoice.entries
         PITCHWHEEL -> PitchwheelVoice.entries
+        PRISM -> PrismVoice.entries
+        CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
     }
 
@@ -2007,6 +2025,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         CISTERN -> Cistern.macrosFor(voice as CisternVoice)
         CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
+        ALLOY -> Alloy.macrosFor(voice as AlloyVoice)
         MURK -> Murk.macrosFor(voice as MurkVoice)
         NIMBUS -> Nimbus.macrosFor(voice as NimbusVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
@@ -2016,6 +2035,8 @@ private enum class Engine {
         REVEL -> Revel.macrosFor(voice as RevelVoice)
         TESSERA -> Tessera.macrosFor(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
+        PRISM -> Prism.macrosFor(voice as PrismVoice)
+        CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
     }
 
@@ -2036,6 +2057,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         CISTERN -> Cistern.defaults(voice as CisternVoice)
         CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
+        ALLOY -> Alloy.defaults(voice as AlloyVoice)
         MURK -> Murk.defaults(voice as MurkVoice)
         NIMBUS -> Nimbus.defaults(voice as NimbusVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
@@ -2045,6 +2067,8 @@ private enum class Engine {
         REVEL -> Revel.defaults(voice as RevelVoice)
         TESSERA -> Tessera.defaults(voice as TesseraVoice)
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
+        PRISM -> Prism.defaults(voice as PrismVoice)
+        CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
     }
 
@@ -2065,6 +2089,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         CISTERN -> Cistern.scramble(voice as CisternVoice, random)
         CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
+        ALLOY -> Alloy.scramble(voice as AlloyVoice, random)
         MURK -> Murk.scramble(voice as MurkVoice, random)
         NIMBUS -> Nimbus.scramble(voice as NimbusVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
@@ -2074,6 +2099,8 @@ private enum class Engine {
         REVEL -> Revel.scramble(voice as RevelVoice, random)
         TESSERA -> Tessera.scramble(voice as TesseraVoice, random)
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
+        PRISM -> Prism.scramble(voice as PrismVoice, random)
+        CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
     }
 
@@ -2099,6 +2126,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.render(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
+        ALLOY -> Alloy.render(voice as AlloyVoice, macros)
         MURK -> Murk.render(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.render(voice as NimbusVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
@@ -2108,6 +2136,8 @@ private enum class Engine {
         REVEL -> Revel.render(voice as RevelVoice, macros)
         TESSERA -> Tessera.render(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
+        PRISM -> Prism.render(voice as PrismVoice, macros)
+        CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
     }
 
@@ -2134,6 +2164,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.drumClassFor(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
+        ALLOY -> Alloy.drumClassFor(voice as AlloyVoice, macros)
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.drumClassFor(voice as NimbusVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
@@ -2143,6 +2174,8 @@ private enum class Engine {
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         TESSERA -> Tessera.drumClassFor(voice as TesseraVoice, macros)
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
+        PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
+        CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
     }
 
@@ -2163,6 +2196,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         CISTERN -> CisternPatch(name, voice as CisternVoice, macros)
         CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
+        ALLOY -> AlloyPatch(name, voice as AlloyVoice, macros)
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
         NIMBUS -> NimbusPatch(name, voice as NimbusVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
@@ -2172,6 +2206,8 @@ private enum class Engine {
         REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         TESSERA -> TesseraPatch(name, voice as TesseraVoice, macros)
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
+        PRISM -> PrismPatch(name, voice as PrismVoice, macros)
+        CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)
     }
 
