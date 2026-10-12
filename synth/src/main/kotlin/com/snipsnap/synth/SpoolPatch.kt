@@ -165,7 +165,7 @@ data class SpoolPatch(
     companion object {
         const val ENGINE = "SPOOL"
         const val VERSION = Patches.VERSION
-        const val MODEL_VERSION = 1
+        const val MODEL_VERSION = Spool.MODEL_VERSION
 
         fun fromJsonValue(value: JsonValue): Patch {
             val obj = value.obj()
