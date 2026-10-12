@@ -176,11 +176,11 @@ class InstrumentEngineTest {
     fun `a loop that closes exactly plays as one unbroken sine across many wraps`() {
         val engine = InstrumentEngine(looped(), rate)
         assertTrue(engine.noteOn(57))
-        val seconds = 3f // 22050-frame file, 17640-frame loop: five wraps
+        val seconds = 3f // 22050-frame file, 17640-frame loop: seven wraps
         val out = render(engine, seconds)
         var worst = 0.0
         for (i in 0 until out.frameCount) {
-            val want = 0.35 * 0.8 * Math.sin(2 * Math.PI * 220.0 * i / rate)
+            val want = InstrumentEngine.VOICE_LEVEL * 0.8 * Math.sin(2 * Math.PI * 220.0 * i / rate)
             worst = maxOf(worst, abs(out.samples[i * 2] - want))
         }
         assertTrue(worst < 2e-5, "the held note leaves its sine by $worst")
@@ -199,12 +199,12 @@ class InstrumentEngineTest {
         for (i in 4 until 64) assertTrue(out.samples[i * 2] in heard(7.99f)..heard(9.01f), "frame $i read ${out.samples[i * 2]}")
     }
 
-    /** A loop that starts on the last frame is no loop: it plays once and ends, as it always did. */
+    /** A loop of fewer than two frames (one that starts on the last frame) is not a loop: it plays once and ends, as it always did. */
     @Test
-    fun `a loop with no frames to repeat plays once and ends`() {
+    fun `a loop of fewer than two frames plays once and ends`() {
         val engine = InstrumentEngine(ramp(10, 9), rate)
         assertTrue(engine.noteOn(57))
         render(engine, 30f / rate)
-        assertTrue(engine.activeNotes.isEmpty(), "the empty loop ended")
+        assertTrue(engine.activeNotes.isEmpty(), "the one-frame loop ended")
     }
 }

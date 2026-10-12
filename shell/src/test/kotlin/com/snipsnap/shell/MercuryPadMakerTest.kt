@@ -153,7 +153,7 @@ class MercuryPadMakerTest {
     /**
      * What `MercuryHeldTest` holds of the FILE, held of the phone's player: a zone that closes exactly plays its wrap as a
      * step the loop makes everywhere else. (The reference player used to wrap one frame early, skipping the last frame,
-     * so the step across the wrap was 1.06 to 1.86 of the loop's steepest step at the top zones: a faint tick every loop,
+     * so the step across the wrap was 1.04 to 1.86 of the loop's steepest step at the top zones: a faint tick every loop,
      * most audible on the highest keys.) The top zone of every voice is the worst case, played at its root; the steepest
      * step is read from the file's own loop, the wrap pair excluded, and every step the player makes in three loops past
      * the first pass must be inside it.
