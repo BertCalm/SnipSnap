@@ -123,9 +123,9 @@ class DeterminismTest {
         assertContentEquals(shamisen.render().samples, shamisen.render().samples)
     }
 
-    // BORE seeds its turbulence from Dsp.seedFor per voice and note (Bore.blow), and its LOOP step
-    // runs a measure-and-correct retune on top of the render - both are deterministic or a saved
-    // recipe would not regenerate. One per voice, one-shot and LOOP.
+    // BORE seeds its turbulence from Dsp.seedFor per voice and note (Bore.blow), and its LOOP is cut from
+    // a held one-shot by a length search (bestLength, an argmax over correlations) and a settle rule
+    // (settledFrame) - all deterministic or a saved recipe would not regenerate. One per voice, one-shot and LOOP.
     @Test
     fun `BORE is byte-identical across renders, both voices, one-shot and loop`() {
         for (voice in BoreVoice.entries) {

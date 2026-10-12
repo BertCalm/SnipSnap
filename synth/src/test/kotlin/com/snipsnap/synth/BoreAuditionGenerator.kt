@@ -1,8 +1,10 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -75,18 +77,25 @@ object BoreAuditionGenerator {
             val loop = Snip(r.loop, channels = 1, sampleRate = Dsp.RATE)
             val passes = Snip(r.loop + r.loop + r.loop, channels = 1, sampleRate = Dsp.RATE)
             val shot = Bore.render(voice, m + mapOf("HOLD" to Bore.LOOP_HOLD))
-            for ((id, snip) in listOf("${tag}_0_loop" to loop, "${tag}_1_passes" to passes, "${tag}_2_oneshot" to shot)) {
-                WavWriter.write(File(loopDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+            // The loop and its passes are levelled the house way; the one-shot to the same loudness on its plateau (the middle half of
+            // it, past the attack and before the release), not on its loudest 200 ms, which may be the attack's: the pair is for A/B.
+            val levelled = AuditionLevel.level(loop)
+            val middle = Snip(shot.samples.copyOfRange(shot.samples.size / 4, shot.samples.size * 3 / 4), channels = 1, sampleRate = Dsp.RATE)
+            var shotGain = Loudness.of(levelled) / Loudness.of(middle).coerceAtLeast(1e-9f)
+            shotGain = minOf(shotGain, 0.99f / shot.samples.maxOf { abs(it) })
+            val shotLevelled = Snip(FloatArray(shot.samples.size) { shot.samples[it] * shotGain }, channels = 1, sampleRate = Dsp.RATE)
+            for ((id, snip) in listOf("${tag}_0_loop" to levelled, "${tag}_1_passes" to AuditionLevel.level(passes), "${tag}_2_oneshot" to shotLevelled)) {
+                WavWriter.write(File(loopDir, "$id.wav"), snip, WavWriter.BitDepth.PCM_16)
                 count++
             }
             fun bite(s: Snip) = if (voice == BoreVoice.SAX) ", bite %+.1f dB".format(java.util.Locale.ROOT, BoreMeasure.biteDb(s, hz, fromSec = 0.5f)) else ""
-            val measured = "%.2f s, step across the join %.1fx the steepest ordinary step, level in the blend %+.2f dB, the blended waves correlate %.3f%s".format(
+            val measured = "%.2f s, step across the join %.2fx the steepest ordinary step, level in the blend %+.2f dB, the blended waves correlate %.3f%s".format(
                 java.util.Locale.ROOT, j.lengthFrames.toDouble() / Dsp.RATE, j.junctionStep / j.steepestStep, j.blendDipDb, j.correlation, bite(loop),
             )
             return listOf(
                 Clip("${tag}_0_loop", "$name LOOP", "cut from a held one-shot and closed by a blend: $measured"),
                 Clip("${tag}_1_passes", "$name LOOP x3", "the same loop three times end to end, so the wrap is heard twice without the page's REPEAT"),
-                Clip("${tag}_2_oneshot", "$name ONE-SHOT", "the one-shot of this note it is cut from, for reference%s".format(bite(shot))),
+                Clip("${tag}_2_oneshot", "$name ONE-SHOT", "the one-shot of the same note, at the loop's loudness on its plateau, for reference%s".format(bite(shot))),
             )
         }
         val solo = BorePresets.forVoice(BoreVoice.SAX).first { it.name == "SOLO LOOP" }.macros
@@ -99,6 +108,7 @@ object BoreAuditionGenerator {
         val noteClips = notes.flatMap { (name, tune) ->
             loopClips("note_${name.lowercase()}", BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to tune), name)
         }
+        val weakClips = loopClips("weak", BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to 0f, "LIP" to 0.5f, "BREATH" to 0.75f), "WEAKEST")
         sections.append(
             sectionJson(
                 id = "LOOP", display = "THE LOOPS", body = "held notes: the SOLO LOOP was heard as a cheap keyboard while its one-shot was good, so a loop is now cut from the held middle of a long one-shot, with the one-shot's vibrato and breath",
@@ -111,6 +121,7 @@ object BoreAuditionGenerator {
                     Group("PAD REED", key = true, clips = padClips),
                     Group("THE FLUTE'S STEADY LOOP (NOT HEARD BEFORE)", key = false, clips = fluteClips),
                     Group("THE DEFAULT KNOBS AT THREE NOTES", key = false, clips = noteClips),
+                    Group("THE WEAKEST JOIN MEASURED (C3, LIP 0.5, BREATH 0.75)", key = false, clips = weakClips),
                 ),
             ),
         )

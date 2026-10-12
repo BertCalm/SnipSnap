@@ -140,8 +140,8 @@ object Bore {
      * clean. The drive runs from 1 (a gentle bend) to 1 + [RASP_DRIVE].
      *
      * **A LOOP carries it too**: a LOOP is cut from a held one-shot rendered through this very chain
-     * ([renderLoopMeasured]). (Rounds 1.2 to 1.5 built the LOOP as a periodic stretch that had to close by
-     * whole periods, where the rasp multiplied whatever the wrap got wrong by about four; see the design doc's
+     * ([renderLoopMeasured]). (R1 built the LOOP as a periodic stretch that had to close by
+     * whole periods, and Round 1.5 gave it the rasp, which multiplied whatever the wrap got wrong by about four; see the design doc's
      * "Round 1.5: the loop" and "Round 1.7: the loop, cut from the one-shot".)
      */
     const val RASP_DRIVE = 3f
@@ -491,7 +491,7 @@ object Bore {
     // ---- the LOOP step -----------------------------------------------------
 
     /**
-     * A LOOP is about this long, so it is over the classifier's line with room. (ARCO's is exactly this long in whole
+     * A LOOP is about this long, so it is over the classifier's line with room. (ARCO's is at least this long, in whole
      * periods, [planLoop]; BORE's is searched within [LOOP_SLACK_SECONDS] of it.)
      */
     const val LOOP_SECONDS = 2f
@@ -500,19 +500,22 @@ object Bore {
      * A LOOP is cut from the held middle of one long one-shot and closes by a blend, not by a period: the owner
      * heard the one-shot of a note as good and its periodic loop as a cheap keyboard (Round 1.6). The held note is
      * rendered by the one-shot's own path at this HOLD, which sets the vibrato's depth and nothing else
-     * ([VIBRATO_MAX_CENTS] times HOLD over [LOOP_THRESHOLD]: about 10 cents at 0.5, the breath the one-shot the owner
+     * ([VIBRATO_MAX_CENTS] times HOLD over [LOOP_THRESHOLD]: about 10 cents at 0.5, the HOLD the one-shot the owner
      * called good was heard at), for this long after its attack, [LOOP_HELD_SECONDS]. The loop's stretch starts once
-     * the note's level has settled and no sooner than [LOOP_START_SECONDS] (the overshoot is under 0.1% by 0.64 s, the
-     * vibrato is full at 0.26 s, the tongue's seed and the chiff's burst are long gone). The stretch's length is
+     * the note's level has settled and no sooner than [LOOP_START_SECONDS]. The floor is not for the onset (the overshoot is
+     * under 0.1% by 0.64 s, the vibrato is full at 0.26 s, the tongue's seed and the chiff's burst are gone by then) but for
+     * the *shape*: a loose reed at C3 has settled its level by 0.65 s and is still settling its waveform, so the stretch's head
+     * and the continuation correlate 0.62 there, 0.95 from 1.0 s and 0.99 from 1.5 s (19 corners, the level test cannot see it).
+     * The stretch's length is
      * searched within [LOOP_SLACK_SECONDS] of [LOOP_SECONDS] for the one where its first [LOOP_BLEND_SECONDS] best
      * match the [LOOP_BLEND_SECONDS] of the held note that follow its end, which also lines the vibrato's phase up
      * (a whole number of its 5.2 Hz cycles falls inside the window); those first [LOOP_BLEND_SECONDS] are then
-     * replaced by a linear fade from that following material into the stretch's own start, so the loop's last
-     * sample runs on into its first. The final [LOOP_MARGIN_SECONDS] before the release are never used.
+     * replaced by a power-constant fade ([assembleLoop]) from that following material into the stretch's own start, so the
+     * loop's last sample runs on into its first. The final [LOOP_MARGIN_SECONDS] before the release are never used.
      */
     const val LOOP_HOLD = 0.5f
     const val LOOP_HELD_SECONDS = 4.5f
-    const val LOOP_START_SECONDS = 0.65f
+    const val LOOP_START_SECONDS = 1.5f
     const val LOOP_SLACK_SECONDS = 0.12f
     const val LOOP_BLEND_SECONDS = 0.3f
     const val LOOP_MARGIN_SECONDS = 0.05f
@@ -529,11 +532,14 @@ object Bore {
     /**
      * What a LOOP must show at its join, or [renderLoop] refuses it (a render that cannot close throws; a click or
      * a swell shipped silently is the worse failure): the normalised correlation of the two waves being blended is
-     * at least [LOOP_MIN_CORRELATION] (a linear blend of equal-power waves with correlation r dips to (1 + r) / 2 in
-     * power at its midpoint), and the quietest 50 ms level inside the blend is no more than [LOOP_MAX_DIP_DB] under
-     * the level outside it.
+     * at least [LOOP_MIN_CORRELATION] (the floor refuses a join whose two waves are too unlike to blend without an audible
+     * smear: a stretch cut while the note's waveform is still settling correlates 0.62 with its continuation, and the weakest
+     * of the 1,071 loops measured from [LOOP_START_SECONDS] on correlates 0.984), and the quietest 50 ms level inside the
+     * blend is no more than [LOOP_MAX_DIP_DB] under the level outside it (the deepest of those dips 0.49 dB, the breath that
+     * differs between the two passes fading across). The two are separate guards: the blend holds the power of waves that
+     * correlate by any amount, so the dip does not follow from the correlation.
      */
-    const val LOOP_MIN_CORRELATION = 0.5
+    const val LOOP_MIN_CORRELATION = 0.9
     const val LOOP_MAX_DIP_DB = 1.0
 
     /**
@@ -788,8 +794,8 @@ object Bore {
         val cap = if (flute) FLUTE_PRESSURE_HIGH * 1.3f else closing * CAP_SHARE
 
         // The jet's transit time is a *fractional* delay (linear interpolation): rounded to a whole
-        // sample it moved the played pitch in steps of about a quarter of a percent, and a LOOP that
-        // corrects the pitch by measuring it oscillated instead of converging.
+        // sample it moved the played pitch in steps of about a quarter of a percent (and the periodic LOOP of R1, which
+        // corrected the pitch by measuring it, oscillated instead of converging).
         val jetDelay = (JET_RATIO * rate / hz).coerceAtLeast(2f)
         val jet = FloatArray(ceil(jetDelay).toInt() + 2)
         var jw = 0
@@ -873,8 +879,8 @@ object Bore {
      * The output chain every melodic engine ends in - and not [Punch], which is
      * the drum engines' and boosts a hit's first two milliseconds under a breath
      * attack that has none: the steep band limit at the oversampled rate, the
-     * decimator, the DC removed twice. The level and the tail come after, on the
-     * kept part ([finish]), so a LOOP's warm-up never counts in its loudness.
+     * decimator, the DC removed twice. The level and the tail come after: [finish] for a
+     * one-shot, and for a LOOP its own levelling, after the blend ([renderLoopMeasured]).
      */
     internal fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing): FloatArray {
         raspBend(raw, rate, rasp)
@@ -1069,6 +1075,15 @@ object Bore {
 
         val attack = (attackSeconds(m.getValue("CHIFF")) * RATE).toInt()
         val usableEnd = minOf(x.size, attack + (LOOP_HELD_SECONDS * RATE).toInt() - (LOOP_MARGIN_SECONDS * RATE).toInt())
+        return cutLoop(x, usableEnd, name)
+    }
+
+    /**
+     * The loop cut from [x], a held note conditioned like the one-shot, using it up to [usableEnd]: where the stretch starts
+     * ([loopStart]), how long it is ([bestLength]), the blend that closes it ([assembleLoop]), the turn onto a crossing
+     * ([rotateOntoCrossing]) and the level, with the join read off the result. [name] is the note, for the refusals.
+     */
+    internal fun cutLoop(x: FloatArray, usableEnd: Int, name: String): LoopRender {
         val blend = (LOOP_BLEND_SECONDS * RATE).toInt()
         val lengthLow = ((LOOP_SECONDS - LOOP_SLACK_SECONDS) * RATE).toInt()
         val lengthHigh = ((LOOP_SECONDS + LOOP_SLACK_SECONDS) * RATE).toInt()
@@ -1079,11 +1094,9 @@ object Bore {
         val loop = assembleLoop(x, start, length, blend, correlation)
         val dip = blendDipDb(loop, blend)
 
-        val cut = Siren.bestCut(loop, length)
-        val rotated = loop.copyOfRange(cut, length) + loop.copyOfRange(0, cut)
+        val (rotated, junction) = rotateOntoCrossing(loop)
         Dsp.levelTo(rotated, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
 
-        val junction = if (cut == 0) 0 else length - cut
         val junctionStep = abs(rotated[junction] - rotated[(junction - 1 + length) % length]).toDouble()
         val steps = FloatArray(length - 1) { abs(rotated[it + 1] - rotated[it]) }
         steps.sort()
@@ -1104,19 +1117,22 @@ object Bore {
      * The held note as one loop. It is refused, by name, if its join does not hold: a loop whose two blended waves
      * barely correlate would dip or phase-cancel at the blend, and a swell every two seconds is no better than a click.
      */
-    internal fun renderLoop(voice: BoreVoice, macros: Map<String, Float>): FloatArray {
+    internal fun renderLoop(voice: BoreVoice, macros: Map<String, Float>, minCorrelation: Double = LOOP_MIN_CORRELATION, maxDipDb: Double = LOOP_MAX_DIP_DB): FloatArray {
         val r = renderLoopMeasured(voice, macros)
-        checkJoin("BORE $voice ${midiFor(voice, settled(macros, voice).getValue("TUNE"))}", r.join)
+        checkJoin("BORE $voice ${midiFor(voice, settled(macros, voice).getValue("TUNE"))}", r.join, minCorrelation, maxDipDb)
         return r.loop
     }
 
-    /** Throws, naming [name], if [join] does not hold: its waves barely correlate ([LOOP_MIN_CORRELATION]) or the level dips inside its blend ([LOOP_MAX_DIP_DB]). */
-    internal fun checkJoin(name: String, join: LoopJoin) {
-        require(join.correlation >= LOOP_MIN_CORRELATION) {
-            "$name: the loop's join does not hold (the waves blended correlate %.3f, floor %.2f)".format(java.util.Locale.ROOT, join.correlation, LOOP_MIN_CORRELATION)
+    /**
+     * Throws, naming [name], if [join] does not hold: its waves barely correlate (under [minCorrelation], [LOOP_MIN_CORRELATION] unless
+     * a test says otherwise) or the level dips inside its blend (by more than [maxDipDb], [LOOP_MAX_DIP_DB]).
+     */
+    internal fun checkJoin(name: String, join: LoopJoin, minCorrelation: Double = LOOP_MIN_CORRELATION, maxDipDb: Double = LOOP_MAX_DIP_DB) {
+        require(join.correlation >= minCorrelation) {
+            "$name: the loop's join does not hold (the waves blended correlate %.3f, floor %.2f)".format(java.util.Locale.ROOT, join.correlation, minCorrelation)
         }
-        require(join.blendDipDb >= -LOOP_MAX_DIP_DB) {
-            "$name: the loop dips %.2f dB inside its blend (limit %.1f)".format(java.util.Locale.ROOT, -join.blendDipDb, LOOP_MAX_DIP_DB)
+        require(join.blendDipDb >= -maxDipDb) {
+            "$name: the loop dips %.2f dB inside its blend (limit %.1f)".format(java.util.Locale.ROOT, -join.blendDipDb, maxDipDb)
         }
     }
 
@@ -1139,6 +1155,17 @@ object Bore {
             loop[i] = ((Math.sin(t) / k) * x[start + i] + (Math.cos(t) / k) * x[start + length + i]).toFloat()
         }
         return loop
+    }
+
+    /**
+     * [loop] turned so that it starts where its two neighbours are smallest ([Siren.bestCut]'s rule: the tone's own edge, so a
+     * pad that plays it once through does not start or end on a step), and the frame of the result where [loop]'s own first
+     * frame has moved to: that is where the blend closes it. The turn is circular, so the loop stays continuous everywhere,
+     * the wrap at the new start included.
+     */
+    internal fun rotateOntoCrossing(loop: FloatArray): Pair<FloatArray, Int> {
+        val cut = Siren.bestCut(loop, loop.size)
+        return (loop.copyOfRange(cut, loop.size) + loop.copyOfRange(0, cut)) to (if (cut == 0) 0 else loop.size - cut)
     }
 
     /** The mean-square level of [n] frames of [x] from [from], in dB. */
@@ -1213,7 +1240,7 @@ object Bore {
     }
 
     /** The quietest 50 ms level in the first [blend] frames of [loop] minus the median 50 ms level in the rest, in dB. */
-    private fun blendDipDb(loop: FloatArray, blend: Int): Double {
+    internal fun blendDipDb(loop: FloatArray, blend: Int): Double {
         val window = (0.05 * RATE).toInt()
         val hop = window / 2
         val inside = ArrayList<Double>()
