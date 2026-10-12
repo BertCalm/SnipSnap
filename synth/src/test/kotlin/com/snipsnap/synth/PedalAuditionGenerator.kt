@@ -3,14 +3,18 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * Renders the pedal board's Stage 0 listening clips under testkit/pedal-audition/ (gitignored),
  * for the gate in docs/superpowers/specs/2026-10-04-pedal-board-design.md: DRIVE, COMP and WAH on a
  * snare and a choir, and on both MAGNET guitar pads two ways (as the pad sheet does it, on the pad's
- * baked audio, and as a rig would, the chip's section in front of the landing amp: COMP and WAH only,
- * because a rack chain has one VALVE). Each chip at AMT 0.7 (the pad sheet's default) and 1. Every clip
- * shares one loudness ([AuditionLevel]). Writes manifest.json. Run via `./gradlew :synth:generatePedalAudition`.
+ * baked audio, and as a rig would, the chip in front of the landing amp: COMP and WAH as a section
+ * of the landing chain, DRIVE as two renders in a row, the pedal and then the amp, because a rack
+ * chain has one VALVE and an offline render is not limited to it). Each chip at AMT 0.7 (the pad
+ * sheet's default) and 1. The snare and the choir also carry the card's PUNCH and the AMPED
+ * character at AMT 0.7, to hear COMP and DRIVE beside what the rack already has. Every clip shares
+ * one loudness ([AuditionLevel]). Writes manifest.json. Run via `./gradlew :synth:generatePedalAudition`.
  */
 object PedalAuditionGenerator {
 
@@ -18,13 +22,19 @@ object PedalAuditionGenerator {
     private val CHIPS = linkedMapOf("DRIVE" to "driven", "COMP" to "compressed", "WAH" to "quacked")
     private val AMOUNTS = listOf(0.7f, 1f)
 
-    private fun idOf(chip: String, amount: Float) = chip.lowercase() + "_" + (amount * 100).toInt()
+    private fun pct(amount: Float) = (amount * 100).roundToInt()
+
+    private fun idOf(chip: String, amount: Float) = chip.lowercase() + "_" + pct(amount)
 
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/pedal-audition")
         root.mkdirs()
         val entries = mutableListOf<String>()
+        // AuditionLevel meters a stereo clip on its mono fold and keeps both
+        // channels, so the fold here is not for levelling: the listening page
+        // and the phone play mono, so CHOIR is folded (averaged, never summed)
+        // to what the listener would hear.
         fun mono(s: Snip): Snip =
             if (s.channels == 1) s
             else Snip(FloatArray(s.frameCount) { f -> 0.5f * (s.samples[f * 2] + s.samples[f * 2 + 1]) }, 1, s.sampleRate)
@@ -38,8 +48,10 @@ object PedalAuditionGenerator {
         for ((name, dry) in plain) {
             write(name, "dry", "$name DRY", dry)
             for ((chip, character) in CHIPS) for (amount in AMOUNTS) {
-                write(name, idOf(chip, amount), "$name $chip AMT ${(amount * 100).toInt()}", Treatments.apply(character, dry, amount).snip)
+                write(name, idOf(chip, amount), "$name $chip AMT ${pct(amount)}", Treatments.apply(character, dry, amount).snip)
             }
+            write(name, "punched_70", "$name PUNCH AMT 70 (THE CARD'S OWN PUNCH, TO HEAR COMP BESIDE)", Treatments.apply("punched", dry, 0.7f).snip)
+            write(name, "amped_70", "$name AMPED AMT 70 (THE RACK'S AMP CHARACTER, TO HEAR DRIVE BESIDE)", Treatments.apply("amped", dry, 0.7f).snip)
         }
         for (voice in MagnetVoice.values()) {
             val name = voice.name
@@ -47,16 +59,20 @@ object PedalAuditionGenerator {
             val baked = Magnet.landingChain(voice).process(dry)
             write(name, "baked", "$name AS A KIT PAD (THE DRY ENGINE THROUGH ITS LANDING AMP)", baked)
             for ((chip, character) in CHIPS) for (amount in AMOUNTS) {
-                write(name, "sheet_" + idOf(chip, amount), "$name $chip AMT ${(amount * 100).toInt()}, ON THE BAKED PAD (AS THE PAD SHEET DOES IT)", Treatments.apply(character, baked, amount).snip)
+                write(name, "sheet_" + idOf(chip, amount), "$name $chip AMT ${pct(amount)}, ON THE BAKED PAD (AS THE PAD SHEET DOES IT)", Treatments.apply(character, baked, amount).snip)
             }
             for (chip in listOf("COMP", "WAH")) for (amount in AMOUNTS) {
                 val board = Treatments.chain(CHIPS.getValue(chip), amount)
                 var rig = Magnet.landingChain(voice)
                 for (section in FxChain.SECTION_NAMES) board.section(section)?.let { rig = rig.withSection(section, it) }
-                write(name, "rig_" + idOf(chip, amount), "$name $chip AMT ${(amount * 100).toInt()}, IN FRONT OF ITS LANDING AMP (A RIG)", rig.process(dry))
+                write(name, "rig_" + idOf(chip, amount), "$name $chip AMT ${pct(amount)}, IN FRONT OF ITS LANDING AMP (A RIG)", rig.process(dry))
+            }
+            for (amount in AMOUNTS) {
+                val pedal = Treatments.apply(CHIPS.getValue("DRIVE"), dry, amount).snip
+                write(name, "rig_" + idOf("DRIVE", amount), "$name DRIVE AMT ${pct(amount)}, IN FRONT OF ITS LANDING AMP (A RIG: THE PEDAL, THEN THE AMP)", Magnet.landingChain(voice).process(pedal))
             }
         }
-        check(entries.size == 36) { "expected 36 clips (2 plain sources x 7, 2 guitars x 11), wrote ${entries.size}" }
+        check(entries.size == 44) { "expected 44 clips (2 plain sources x 9, 2 guitars x 13), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         println("pedal audition: ${entries.size} clips under ${root.absolutePath}")
     }
