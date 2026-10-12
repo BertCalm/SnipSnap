@@ -10,17 +10,32 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.synth.Alloy
+import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.Lacquer
+import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.Prism
+import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Stoop
+import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.Spool
+import com.snipsnap.synth.SpoolPatch
+import com.snipsnap.synth.SpoolVoice
 import com.snipsnap.synth.Revel
 import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Skitter
@@ -56,7 +71,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and SKITTER) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL and SKITTER) override
  * the preset's note and strike energy for a pad audition.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
@@ -84,13 +99,25 @@ object SynthCommand {
         val noteRange = if (noteFlags.isEmpty()) null else {
             if (instrument || drone) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
+                AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
+                LacquerPatch.ENGINE -> Lacquer.MIDI_MIN..Lacquer.MIDI_MAX
+                StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
+                SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL and SKITTER, got $engine")
+                PrismPatch.ENGINE -> {
+                    val prismVoice = PrismVoice.valueOf(voice)
+                    val root = Prism.rootMidi(prismVoice)
+                    root..(root + Prism.TUNE_SEMITONES)
+                }
+                ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
+                    (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
+                }
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL and SKITTER, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -139,12 +166,32 @@ object SynthCommand {
             else -> listOf(presets.first())
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
+                is AlloyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is StoopPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is LacquerPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is SpoolPatch -> patch.copy(
+                    macros = midiOverride?.let { midi ->
+                        patch.macros + ("TUNE" to (midi - Spool.rootMidi(patch.voice)) / Spool.TUNE_SEMITONES.toFloat())
+                    } ?: patch.macros,
+                    velocity = velocityOverride ?: patch.velocity,
+                )
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
+                is PrismPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (midiOverride - Prism.rootMidi(patch.voice)) / Prism.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
+                is ContourPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (.5f + (midiOverride - ContourEngine.rootMidi(patch.voice)) /
+                            (2f * ContourEngine.TUNE_SEMITONES))),
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is SkitterPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)

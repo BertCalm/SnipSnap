@@ -40,6 +40,17 @@ tasks.test {
     }
 }
 
+/** Stoop's reproducible dry listening pack; -Pquick selects the smoke pack. */
+tasks.register<JavaExec>("generateStoopAudition") {
+    group = "distribution"
+    description = "Render STOOP presets, phrases, macro comparisons and held loops under testkit/stoop-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StoopAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/stoop-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
 /** REVEL's dry acceptance matrix and standalone listening page; -Pquick selects first-listen evidence. */
 tasks.register<JavaExec>("generateRevelAudition") {
     group = "distribution"
@@ -687,6 +698,80 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/pitchwheel-audition")
     if (project.hasProperty("pitchwheelFull")) args("--full")
+}
+
+/** Render Spool's original recordings, causal transport evidence, sweeps, loops and 16-pad MPC kit. */
+tasks.register<JavaExec>("generateSpoolAudition") {
+    group = "distribution"
+    description = "Render SPOOL dry native/matched WAVs, mechanical traces, manifest and 16-pad MPC kit under testkit/spool-audition/. -PspoolQuick selects a smaller development pack."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SpoolAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/spool-audition")
+    if (project.hasProperty("spoolQuick")) args("--quick")
+}
+
+/** Render Prism's dry register/velocity, macro, interaction and HOLD matrix. */
+tasks.register<JavaExec>("generatePrismAudition") {
+    group = "distribution"
+    description = "Render PRISM prelevel raw and matched WAVs, metrics and manifest under testkit/prism-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-audition")
+}
+
+/** Render Alloy's provisional dry hybrid patches, causal FUSE comparisons and held-loop listening pack. */
+tasks.register<JavaExec>("generateAlloyAudition") {
+    group = "distribution"
+    description = "Render ALLOY matched WAVs, raw diagnostics, patch JSONs, an MPC kit and an accessible listening page under testkit/alloy-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AlloyAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/alloy-audition")
+    if (project.hasProperty("alloyFull")) args("--full")
+    if (project.hasProperty("alloyRefreshPage")) args("--refresh-page")
+}
+
+/** Render Contour's original tables, related layers and complete dry listening matrix. */
+tasks.register<JavaExec>("generateContourAudition") {
+    group = "distribution"
+    description = "Render CONTOUR raw/matched WAVs, shared-level references, diagnostics, HOLD repeats and an accessible page under testkit/contour-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args("${rootDir}/testkit/contour-audition")
+    if (providers.gradleProperty("contourQuick").orNull == "true") args("--quick")
+    if (providers.gradleProperty("contourRefreshPage").orNull == "true") args("--refresh-page")
+    providers.gradleProperty("contourComparisonBaseline").orNull?.let {
+        args("--comparison-baseline=$it")
+    }
+}
+
+/** Render Lacquer's provisional bank, layer solos, macro grids and held loops. */
+tasks.register<JavaExec>("generateLacquerAudition") {
+    group = "distribution"
+    description = "Render LACQUER dry audition WAVs, measured evidence and a listening page under testkit/lacquer-audition/."
+    maxHeapSize = "512m"
+    dependsOn("generateLacquerKit")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LacquerAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/lacquer-audition")
+}
+
+tasks.register<JavaExec>("generateLacquerKit") {
+    group = "distribution"
+    description = "Export the sixteen dry LACQUER starter pads as MPC 3 with an MPC 2 program twin."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LacquerKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
 }
 
 /** Full dry SKITTER listening matrix, with a smaller optional development pack. */
