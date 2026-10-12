@@ -64,7 +64,7 @@ def main():
             earlier = copy.deepcopy(original)
             earlier.update(id="before_" + before_version + "_" + original["id"], section="transition-comparison",
                            label=f"Before · {original['label']} · {context}",
-                           description="Earlier sequential pickup version, preserved for comparison. " + original["description"],
+                           description="Previous coherent overlapping version, preserved for comparison. " + original["description"],
                            provenance=dict(before.get("provenance", {}), sourceCommit=before.get("sourceCommit")))
             for field in ("rawPath", "matchedPath"):
                 source = (before_root / original[field]).resolve()
@@ -76,7 +76,19 @@ def main():
                 earlier[field] = relative.as_posix()
                 assets.add(relative)
             earlier["file"] = earlier["matchedPath"]
-            for field in ("tracePath", "eventsPath"):
+            for stem in earlier.get("stems", {}).values():
+                for field in ("rawPath", "matchedPath"):
+                    if not stem.get(field):
+                        continue
+                    source = (before_root / stem[field]).resolve()
+                    if before_root not in source.parents or not source.is_file():
+                        raise ValueError(f"Missing or invalid comparison pickup: {stem[field]}")
+                    relative = Path("comparison/before") / stem[field]
+                    (output / relative).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, output / relative)
+                    stem[field] = relative.as_posix()
+                    assets.add(relative)
+            for field in ("tracePath", "eventsPath", "pickupTracePath"):
                 previous = original.get("diagnostics", {}).get(field)
                 if not previous:
                     continue
@@ -90,13 +102,13 @@ def main():
             updated = copy.deepcopy(current[original["id"]])
             updated.update(id="after_" + after_version + "_" + original["id"], section="transition-comparison",
                            label=f"After · {updated['label']} · {context}",
-                           description="Overlapping forward and backward pickup version. " + updated["description"])
+                           description="Clearer backward swells with gentle shared wow/flutter. " + updated["description"])
             pairs.extend((earlier, updated))
         clips.extend(pairs)
         manifest["comparison"] = {"beforeSourceCommit": before.get("sourceCommit"),
                                   "beforeProvenance": before.get("provenance", {}),
                                   "pairs": len(pairs) // 2,
-                                  "description": "Compare the earlier sequential and revised overlapping pickups at the same audition level."}
+                                  "description": "Compare the previous coherent overlap with clearer reverse articulation and shared tape flutter at the same audition level."}
     engine = root / "synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"
     manifest["dspSourceSha256"] = hashlib.sha256(engine.read_bytes()).hexdigest()
     rendered_hash = manifest.get("provenance", {}).get("sourceSha256")

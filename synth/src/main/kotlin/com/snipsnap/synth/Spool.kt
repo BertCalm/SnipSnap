@@ -47,6 +47,7 @@ object Spool {
     const val OVERLAY_CEILING = .65f
     const val GENERATION_RETENTION = .40f
     const val MAX_DURATION_SECONDS = 8f
+    const val MAX_TAPE_CENTS = 16f
     private const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val CONTROL_STRIDE = 88
     private const val SOURCE_BANDWIDTH = 3_400f
@@ -63,6 +64,7 @@ object Spool {
     private const val GRAIN_HOP_SECONDS = .030
     private const val GRAIN_GUARD_FRAMES = 64
     private const val SPLICE_OVERLAP = .032
+    private val maxTapeRate = 2.0.pow(MAX_TAPE_CENTS / 1200.0)
     private data class ReadKernel(val radius: Int, val weights: FloatArray)
     // Positive normalized Gaussian kernels: l-infinity gain <=1, no box-filter rebound
     // lobes. Sigma scales with complete coordinate speed, not just motor speed. The
@@ -84,10 +86,10 @@ object Spool {
 
     fun macrosFor(voice: SpoolVoice): List<MacroSpec> {
         val d = when (voice) {
-            SpoolVoice.STRING -> floatArrayOf(.15f, .10f, .20f, .15f, .05f)
-            SpoolVoice.CHOIR -> floatArrayOf(.25f, .15f, .30f, .20f, .05f)
-            SpoolVoice.FLUTE -> floatArrayOf(.20f, .10f, .25f, .15f, .10f)
-            SpoolVoice.BRASS -> floatArrayOf(.20f, .15f, .20f, .15f, .10f)
+            SpoolVoice.STRING -> floatArrayOf(.15f, .10f, .40f, .15f, .05f)
+            SpoolVoice.CHOIR -> floatArrayOf(.25f, .15f, .45f, .20f, .05f)
+            SpoolVoice.FLUTE -> floatArrayOf(.20f, .10f, .40f, .15f, .10f)
+            SpoolVoice.BRASS -> floatArrayOf(.20f, .15f, .40f, .15f, .10f)
             SpoolVoice.PALIMPSEST -> floatArrayOf(.65f, .40f, .65f, .70f, .25f)
             SpoolVoice.CUT -> floatArrayOf(.55f, .35f, .50f, .45f, .75f)
         }
@@ -127,6 +129,7 @@ object Spool {
         val reverseSupports: List<Float>,
         // Read rates describe actual grain branches; physical varispeed is a separate blend.
         val physicalRates: List<Float> = emptyList(), val varispeedBlend: Float = 0f,
+        val tapeRate: Float = 1f,
     )
     data class Diagnostics(
         val rate: Int, val gateSeconds: Float, val durationSeconds: Float, val returnEndSeconds: Float,
@@ -204,7 +207,10 @@ object Spool {
                             SpoolSourceFamily.FLUTE -> when (h) { 1 -> 1.0; 2 -> .16 + .09 * evolution; 3 -> .055; else -> .025 / h }
                             SpoolSourceFamily.BRASS -> h.toDouble().pow(-.98) * exp(-f / (1100 + 1700 * evolution))
                         }
-                        gain[h - 1] = a * if (h == 1) 1.0 else (.65 + .35 * velocity)
+                        // The recording has a bright, decaying attack. Reading this same
+                        // immutable articulation backwards produces a growing breath/bow swell.
+                        val bloom = .68 + .32 * exp(-t / .24)
+                        gain[h - 1] = a * if (h == 1) 1.0 else (.65 + .35 * velocity) * bloom
                     }
                 }
                 var y = 0.0
@@ -224,7 +230,8 @@ object Spool {
                 val env = smooth(t / attack) * smooth((machine.sourceSeconds - t) / .16)
                 val gesture = (.90 + .07 * sin(2 * PI * .75 * t + strip * .45)) *
                     (1 - .09 * exp(-((t - .38 - strip * .09) / .13).pow(2)))
-                out[i] = (.36 * y * env * gesture * (.60 + .40 * velocity)).toFloat()
+                val articulation = .55 + .45 * exp(-t / .32)
+                out[i] = (.36 * y * env * gesture * articulation * (.60 + .40 * velocity)).toFloat()
             }
             val sourceFilters = Array(4) { Dsp.OnePole(INTERNAL_RATE) }
             for (j in out.indices) {
@@ -399,14 +406,19 @@ object Spool {
         private val pickupTrace = ArrayList<PickupFrame>()
         private var overlapFrames = 0L
         private val phase = DoubleArray(3) { Random(Dsp.seedFor("SPOOL-TRANSPORT", machine.seed, it)).nextDouble() * 2 * PI }
+        private val tapePhases = Random(Dsp.seedFor("SPOOL-TAPE", machine.seed)).let { random ->
+            DoubleArray(3) { random.nextDouble() * 2 * PI }
+        }
+        private var carrierTime = 0.0
+        private var tapeRate = 1.0
         private var released = false
 
         private data class Grain(
-            val startFrame: Int, val length: Int, val dryStart: Double, val firstStart: Double,
+            val startFrame: Int, val carrierStart: Double, val length: Int, val dryStart: Double, val firstStart: Double,
             val secondStart: Double, val blend: Double, val wet: Double, val support: Double,
         )
 
-        /** Independent virtual pickup: timeline anchors move, carrier direction stays +1/-1. */
+        /** Independent anchors; both pickup carriers follow the same integrated tape clock. */
         private inner class PitchHead(private val strip: Int, private val direction: Int) {
             private val grains = arrayOfNulls<Grain>(3)
             private var slot = 0
@@ -420,16 +432,16 @@ object Spool {
             private val guard = GRAIN_GUARD_FRAMES.toDouble() / INTERNAL_RATE
             private val phaseOffset = if (direction > 0) 0.0 else (PI - 2 * material.rootPhases[strip]) * period / (2 * PI)
 
-            private fun launch(frame: Int, time: Double, center: Double, canvas: Double, geometry: Double) {
+            private fun launch(frame: Int, center: Double, canvas: Double, geometry: Double) {
                 val usable = canvas - 2 * guard - 2 * period
-                val length = min(2 * hopFrames, (usable * INTERNAL_RATE).toInt())
+                val length = min(2 * hopFrames, (usable / maxTapeRate * INTERNAL_RATE).toInt())
                 if (length < (2 * period * INTERNAL_RATE).toInt()) return
-                val duration = length.toDouble() / INTERNAL_RATE
+                val duration = length.toDouble() / INTERNAL_RATE * maxTapeRate
                 val low = if (direction > 0) guard else duration + guard
                 val high = if (direction > 0) canvas - duration - guard else canvas - guard
-                // Forward a-t_start=0 (mod period). Reverse a+t_start=(pi-2phi)/omega.
-                // Thus both output fundamentals have the original's +omega*t+phi phase.
-                val origin = direction * time + phaseOffset
+                // Both directions use the SAME integrated playback clock. Its gentle wow
+                // and flutter move their fundamental together, rather than detuning layers.
+                val origin = direction * carrierTime + phaseOffset
                 val loCycle = ceil((low - origin) / period)
                 val hiCycle = floor((high - origin) / period)
                 if (loCycle > hiCycle) return
@@ -440,17 +452,17 @@ object Spool {
                 }
                 val desiredCenter = center.coerceIn(duration / 2 + guard, canvas - duration / 2 - guard)
                 val p = pickup(desiredCenter, canvas, splice, machine.spliceSchedule, sourceLength)
-                grains[slot] = Grain(frame, length, anchor(desiredCenter), anchor(p.first), anchor(p.second),
+                grains[slot] = Grain(frame, carrierTime, length, anchor(desiredCenter), anchor(p.first), anchor(p.second),
                     p.blend, smooth(splice) * geometry, canvas)
                 slot = (slot + 1) % grains.size
             }
 
-            fun step(frame: Int, time: Double, center: Double, canvas: Double, active: Boolean, geometry: Double): Float {
+            fun step(frame: Int, center: Double, canvas: Double, active: Boolean, geometry: Double): Float {
                 overlayRead = 0f; readRate = 0f; coordinate = 0.0; minCoordinate = Double.POSITIVE_INFINITY
                 maxCoordinate = 0.0; support = 0.0
                 if (!active) { minCoordinate = 0.0; return 0f }
                 if (nextLaunch < 0 || frame >= nextLaunch) {
-                    launch(frame, time, center, canvas, geometry)
+                    launch(frame, center, canvas, geometry)
                     nextLaunch = frame + hopFrames
                 }
                 var original = 0.0; var inherited = 0.0; var weightSum = 0.0
@@ -459,15 +471,16 @@ object Spool {
                     val age = frame - grain.startFrame
                     if (age < 0 || age >= grain.length) continue
                     val w = sin(PI * age / grain.length).pow(2)
-                    val offset = direction * age.toDouble() / INTERNAL_RATE
+                    val offset = direction * (carrierTime - grain.carrierStart)
                     val dry = grain.dryStart + offset
                     val first = grain.firstStart + offset
                     val second = grain.secondStart + offset
                     fun encounter(buffer: FloatArray, overlay: Boolean): Float {
-                        val a = read(buffer, dry, direction.toDouble(), overlay)
+                        val rate = direction * tapeRate
+                        val a = read(buffer, dry, rate, overlay)
                         if (grain.wet <= 0 || first == dry && second == dry) return a
-                        val b = read(buffer, first, direction.toDouble(), overlay) * (1 - grain.blend) +
-                            read(buffer, second, direction.toDouble(), overlay) * grain.blend
+                        val b = read(buffer, first, rate, overlay) * (1 - grain.blend) +
+                            read(buffer, second, rate, overlay) * grain.blend
                         return (a * (1 - grain.wet) + b * grain.wet).toFloat()
                     }
                     original += w * encounter(material.originals[strip], false)
@@ -481,7 +494,7 @@ object Spool {
                 // Positive Hann overlaps are normalized only downwards. A newly opened or very
                 // short canvas fades in; quiet material is never normalized to a loud new note.
                 val normalization = max(1.0, weightSum)
-                if (weightSum > 1e-9) readRate = direction.toFloat()
+                if (weightSum > 1e-9) readRate = (direction * tapeRate).toFloat()
                 overlayRead = (inherited / normalization).toFloat()
                 coordinate /= max(weightSum, 1e-12)
                 if (!minCoordinate.isFinite()) minCoordinate = 0.0
@@ -600,6 +613,12 @@ object Spool {
                 val inReturn = released && t < returnEnd
                 val inReread = !cycle && rereadLength > 0 && t >= rereadStart && t < rereadStart + rereadLength
                 if (i % CONTROL_STRIDE == 0) {
+                    // Common capstan motion remains audible at clean STRAIN: a slow wow
+                    // plus two faster flutter components. No strip gets independent detuning.
+                    val cents = (5 * sin(2 * PI * .73 * t + tapePhases[0]) +
+                        3 * sin(2 * PI * 6.7 * t + tapePhases[1]) +
+                        sin(2 * PI * 12.1 * t + tapePhases[2])) * (1 + .75 * strain)
+                    tapeRate = 2.0.pow(cents / 1200)
                     if (t < gate) forward(t, CONTROL_STRIDE * dt)
                     else if (inReturn) returning(t)
                     else if (inReread) {
@@ -647,7 +666,9 @@ object Spool {
                     val stopped = inReturn && t >= gate + returnStops[k]
                     val returnCanvas = if (t < gate) previewTravel[k] else travel[k]
                     val previewProgress = ((t - previewStart) / max(.01, gate - previewStart)).coerceIn(0.0, 1.0)
-                    val returnCenter = if (t < gate) previewTravel[k] * (.85 - .20 * previewProgress) else positions[k]
+                    // Traverse the captured attack as well as its sustain. The reversed
+                    // recorded decay can now swell towards the original onset before release.
+                    val returnCenter = if (t < gate) previewTravel[k] * (.94 - .86 * previewProgress) else positions[k]
                     val forwardCanvas = if (t < gate || inReread) sourceLength else travel[k]
                     val forwardCenter = if (t < gate || inReread) positions[k] + hopFrames.toDouble() / INTERNAL_RATE
                         else travel[k] - hopFrames.toDouble() / INTERNAL_RATE - period
@@ -656,9 +677,9 @@ object Spool {
                         val a = machine.headOffsets[k].toDouble().coerceIn(-.12 * canvas, .12 * canvas)
                         return center + head * a * sin(PI * center / max(.12, canvas)) * geometry
                     }
-                    var forwardPickup = forwardHeads[k].step(i, t, shifted(forwardCenter, forwardCanvas), forwardCanvas,
+                    var forwardPickup = forwardHeads[k].step(i, shifted(forwardCenter, forwardCanvas), forwardCanvas,
                         forwardOpen, geometry)
-                    var backwardPickup = reverseHeads[k].step(i, t, shifted(returnCenter, returnCanvas), returnCanvas,
+                    var backwardPickup = reverseHeads[k].step(i, shifted(returnCenter, returnCanvas), returnCanvas,
                         reverseOpen && !stopped, geometry)
                     var forwardOverlay = forwardHeads[k].overlayRead
                     var returnOverlay = reverseHeads[k].overlayRead
@@ -761,10 +782,11 @@ object Spool {
                         reverseHeads.map { it.readRate }, forwardGains.map { it.toFloat() }, reverseGains.map { it.toFloat() },
                         forwardHeads.map { it.minCoordinate.toFloat() }, forwardHeads.map { it.maxCoordinate.toFloat() },
                         reverseHeads.map { it.minCoordinate.toFloat() }, reverseHeads.map { it.maxCoordinate.toFloat() },
-                        reverseHeads.map { it.support.toFloat() }, rates.map { it.toFloat() }, pitchBlend.toFloat()))
+                        reverseHeads.map { it.support.toFloat() }, rates.map { it.toFloat() }, pitchBlend.toFloat(), tapeRate.toFloat()))
                     trace.add(TransportFrame(t.toFloat(), motor.toFloat(), positions.map { it.toFloat() },
                         rates.map { it.toFloat() }, coords.map { it.toFloat() }, spring.toFloat(), motorWork.toFloat(), frictionLoss.toFloat()))
                 }
+                carrierTime += tapeRate * dt
             }
             val output = raw.copyOf(used - used % Dsp.OVERSAMPLE)
             val peak = material.overlays.maxOf { b -> b.maxOf { abs(it) } }
@@ -777,7 +799,7 @@ object Spool {
                 travel.map { it.toFloat() }, material.originals[0].size, bytes, !writes,
                 if (splice > 0 && machine.spliceSchedule.isNotEmpty()) (1 + 3 * splice).toInt().coerceIn(1, machine.spliceSchedule.size) else 0,
                 trace, events, pickupTrace = pickupTrace, overlapSeconds = overlapFrames.toFloat() / INTERNAL_RATE,
-                pitchMode = if (pitchBlend <= 0) "PITCH_PRESERVING" else "TRANSPORT_BLEND"),
+                pitchMode = if (pitchBlend <= 0) "COHERENT_TAPE" else "TAPE_TRANSPORT_BLEND"),
                 forwardRaw?.copyOf(output.size), reverseRaw?.copyOf(output.size))
         }
     }

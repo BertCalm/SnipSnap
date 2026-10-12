@@ -8,6 +8,7 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
@@ -261,11 +262,104 @@ class SpoolTest {
                     "reverse grain/kernel exceeded captured support: gate=$gate $frame")
                 assertTrue(support <= d.returnTravel[k] + .001f,
                     "reverse pickup revealed future tape: gate=$gate $frame")
-                if (frame.reverseMaxCoordinates[k] > frame.reverseMinCoordinates[k])
-                    assertEquals(-1f, frame.reverseReadRates[k], "clean reverse grain did not run backward")
+                // A newly launched Hann grain still has a kernel footprint at zero weight.
+                // Its documented read rate is zero until it contributes actual pickup audio.
+                if (frame.reverseReadRates[k] != 0f)
+                    assertEquals(-frame.tapeRate, frame.reverseReadRates[k], "clean reverse grain did not follow the backward tape clock")
+                if (frame.forwardReadRates[k] != 0f)
+                    assertEquals(frame.tapeRate, frame.forwardReadRates[k], "clean forward grain did not follow the forward tape clock")
             }
+            assertTrue(d.pickupTrace.any { frame -> frame.forwardReadRates.indices.any { k ->
+                frame.forwardReadRates[k] > 0f && frame.forwardGains[k] > 0f
+            } }, "no forward pickup actually activated: gate=$gate")
+            assertTrue(d.pickupTrace.any { frame -> frame.reverseReadRates.indices.any { k ->
+                frame.reverseReadRates[k] < 0f && frame.reverseGains[k] > 0f
+            } }, "no backward pickup actually activated: gate=$gate")
         }
     }
+
+    @Test
+    fun `clean pickup audio has shared gentle wow and audible faster flutter`() {
+        val machine = singleStripMachine()
+        for (midi in listOf(48, 60, 72)) {
+            val macros = mapOf("TUNE" to (midi - 48) / 24f, "HEAD" to 0f, "STRAIN" to 0f,
+                "SPLICE" to 0f, "IMPRINT" to 0f, "RETURN" to .65f)
+            val p = Spool.renderProbe(SpoolVoice.STRING, macros, machine, writes = false)
+            val from = p.diagnostics.gateSeconds * .58
+            val until = p.diagnostics.returnEndSeconds - .20
+            val wanted = Keys.midiHz(midi).toDouble()
+            val f = SpoolTapeListeningMeasure.pitchMotion(requireNotNull(p.forwardStem), wanted, from, until)
+            val r = SpoolTapeListeningMeasure.pitchMotion(requireNotNull(p.reverseStem), wanted, from, until)
+            for ((name, motion) in listOf("forward" to f, "reverse" to r)) {
+                val label = "MIDI $midi $name $motion"
+                assertTrue(abs(motion.meanCents) < 6, "$label shifted the clean note's center")
+                assertTrue(motion.motionRmsCents in 2.0..7.0 && motion.maximumCents < 15,
+                    "$label omitted gentle tape motion or bent the clean note excessively")
+                assertTrue(motion.fastRmsCents >= .60,
+                    "$label moved only slowly, without audible faster flutter")
+            }
+            val disagreement = sqrt(f.cents.indices.sumOf { i ->
+                val difference = f.cents[i] - r.cents[i]
+                difference * difference
+            } / f.cents.size)
+            assertTrue(disagreement < 2.0,
+                "MIDI $midi pickups fluttered independently into beating: $disagreement cents RMS")
+        }
+    }
+
+    @Test
+    fun `backward pickup reverses a recorded decay into an audible brightening swell`() {
+        // Strip isolation removes changing companion mix and imprint as explanations for the
+        // gesture. Both measured reverse windows follow the pickup's contact fade-in.
+        val macros = mapOf("TUNE" to .5f, "HEAD" to 0f, "STRAIN" to 0f, "SPLICE" to 0f,
+            "IMPRINT" to 0f, "RETURN" to .65f)
+        val p = Spool.renderProbe(SpoolVoice.STRING, macros, singleStripMachine(), writes = false)
+        val f = requireNotNull(p.forwardStem)
+        val r = requireNotNull(p.reverseStem)
+        val forwardAttack = phraseRms(f, .16, .28)
+        val forwardLater = phraseRms(f, 1.10, 1.24)
+        val reverseEarlier = phraseRms(r, .76, .90)
+        val reverseLater = phraseRms(r, 1.12, 1.26)
+        assertTrue(forwardLater < forwardAttack * .90,
+            "original performance did not contain a recognizable decay: $forwardAttack -> $forwardLater")
+        assertTrue(reverseLater > reverseEarlier * 1.15,
+            "backward pickup did not turn recorded decay into a swell: $reverseEarlier -> $reverseLater")
+        val wanted = Keys.midiHz(60).toDouble()
+        val forwardBrightness = SpoolTapeListeningMeasure.brightness(f, wanted, 1.10, 1.24) /
+            SpoolTapeListeningMeasure.brightness(f, wanted, .16, .28)
+        val reverseBrightness = SpoolTapeListeningMeasure.brightness(r, wanted, 1.12, 1.26) /
+            SpoolTapeListeningMeasure.brightness(r, wanted, .76, .90)
+        assertTrue(forwardBrightness < .98 && reverseBrightness > 1.04,
+            "pickup reversal changed only loudness rather than reversing articulation: $forwardBrightness / $reverseBrightness")
+    }
+
+    @Test
+    fun `reverse preview joins physical return without a gate gap or abrupt level reset`() {
+        val cases = listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)
+            .map { it to 60 } + listOf(SpoolVoice.CHOIR to 48, SpoolVoice.CHOIR to 72)
+        for ((voice, midi) in cases) {
+            val macros = mapOf("TUNE" to (midi - 48) / 24f, "HEAD" to .2f, "STRAIN" to .1f,
+                "SPLICE" to 0f, "IMPRINT" to 0f, "RETURN" to .65f)
+            val p = Spool.renderProbe(voice, macros, writes = false)
+            val gate = p.diagnostics.gateSeconds.toDouble()
+            val mixed = phraseWindows(p.samples, gate - .12, gate + .12)
+            val forward = phraseWindows(requireNotNull(p.forwardStem), gate - .12, gate + .12)
+            val reverse = phraseWindows(requireNotNull(p.reverseStem), gate - .12, gate + .12)
+            val label = "$voice MIDI $midi"
+            assertTrue(mixed.min() > mixed.max() * .5,
+                "$label dropped more than 6dB around the preview-to-return handoff")
+            val largestStepDb = mixed.zipWithNext().maxOf { (a, b) -> abs(20 * ln(b / a) / ln(10.0)) }
+            assertTrue(largestStepDb < 3,
+                "$label reset its level abruptly at the gate: $largestStepDb dB per 5ms")
+            assertTrue(reverse.indices.all { i -> reverse[i] > forward[i] * .10 },
+                "$label backward pickup disappeared during the handoff")
+        }
+    }
+
+    private fun singleStripMachine(): SpoolMachine = SpoolMachine(
+        roster = List(3) { i -> SpoolStrip(SpoolSourceFamily.STRING, gain = if (i == 0) 1f else 0f, doubling = 0f) },
+        headOffsets = listOf(0f, 0f, 0f), spliceSchedule = emptyList(),
+    )
 
     @Test
     fun `held clean phrases remain connected across the actual repeat boundary`() {
@@ -479,6 +573,82 @@ class SpoolTest {
             assertEquals(DrumClass.TONAL, Spool.drumClassFor(voice, macros))
             assertEquals(DrumClass.LOOP, Spool.drumClassFor(voice, macros + ("HOLD" to 1f)))
         }
+    }
+}
+
+/** Audio-derived tape motion; no transport trace or known modulation signal enters these meters. */
+internal object SpoolTapeListeningMeasure {
+    private const val RATE = 44100
+
+    data class PitchMotion(val cents: List<Double>, val meanCents: Double, val motionRmsCents: Double,
+                           val fastRmsCents: Double, val maximumCents: Double) {
+        override fun toString() = "mean=$meanCents, motion=$motionRmsCents, fast=$fastRmsCents, max=$maximumCents cents"
+    }
+
+    /**
+     * Isolate the fundamental as an analytic signal, then measure its phase advance over 20ms.
+     * The broad band retains wow/flutter sidebands while rejecting upper harmonics. Sampling
+     * every 10ms distinguishes ordinary slow drift from several cycles of audible flutter.
+     */
+    fun pitchMotion(s: FloatArray, wanted: Double, fromSeconds: Double, untilSeconds: Double): PitchMotion {
+        var n = 1
+        while (n < s.size) n *= 2
+        val re = s.copyOf(n)
+        val im = FloatArray(n)
+        Fft.forward(re, im)
+        val lo = (wanted * .82 * n / RATE).toInt()
+        val hi = (wanted * 1.18 * n / RATE).toInt()
+        for (i in re.indices) {
+            if (i in lo..hi) { re[i] *= 2f; im[i] *= 2f }
+            else { re[i] = 0f; im[i] = 0f }
+        }
+        Fft.inverse(re, im)
+        val half = (RATE * .01).toInt()
+        val hop = half
+        val first = (fromSeconds * RATE).toInt() + half
+        val end = (untilSeconds * RATE).toInt() - half
+        val omega = 2 * PI * wanted / RATE
+        val cents = (first until end step hop).map { at ->
+            val a = at - half
+            val b = at + half
+            val cross = re[a].toDouble() * im[b] - im[a].toDouble() * re[b]
+            val dot = re[a].toDouble() * re[b] + im[a].toDouble() * im[b]
+            val phaseError = atan2(sin(atan2(cross, dot) - omega * (b - a)),
+                cos(atan2(cross, dot) - omega * (b - a)))
+            val frequency = wanted + phaseError * RATE / (2 * PI * (b - a))
+            1200 * ln(frequency / wanted) / ln(2.0)
+        }
+        require(cents.size > 30)
+        val mean = cents.average()
+        val motion = sqrt(cents.sumOf { (it - mean).pow(2) } / cents.size)
+        // A 150ms local mean follows sub-Hz wow but removes very little 6-12Hz flutter.
+        val radius = 7
+        val fast = (radius until cents.size - radius).map { i ->
+            cents[i] - (i - radius..i + radius).map { cents[it] }.average()
+        }
+        return PitchMotion(cents, mean, motion, sqrt(fast.sumOf { it * it } / fast.size), cents.maxOf { abs(it) })
+    }
+
+    /** Upper harmonic energy relative to the fundamental rejects a plain gain-only swell. */
+    fun brightness(s: FloatArray, wanted: Double, fromSeconds: Double, untilSeconds: Double): Double {
+        val first = (fromSeconds * RATE).toInt()
+        val count = ((untilSeconds - fromSeconds) * RATE).toInt()
+        var n = 1
+        while (n < count) n *= 2
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) re[i] = s[first + i] * (.5 - .5 * cos(2 * PI * i / (count - 1))).toFloat()
+        Fft.forward(re, im)
+        fun band(low: Double, high: Double): Double {
+            val from = (low * n / RATE).toInt().coerceAtLeast(1)
+            val until = (high * n / RATE).toInt().coerceAtMost(n / 2 - 1)
+            return (from..until).sumOf { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        }
+        val root = band(wanted * .88, wanted * 1.12)
+        val upper = (2..(6000 / wanted).toInt()).sumOf { harmonic ->
+            band(wanted * (harmonic - .12), wanted * (harmonic + .12))
+        }
+        return upper / root.coerceAtLeast(1e-30)
     }
 }
 
