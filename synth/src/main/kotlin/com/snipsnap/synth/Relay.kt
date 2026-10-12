@@ -22,8 +22,6 @@ enum class RelayVoice { KEY, BASS, PLUCK, ORGAN, CHIME, FLOW }
  */
 object Relay {
     const val TUNE_SEMITONES = 24
-    const val MIDI_MIN = 24
-    const val MIDI_MAX = 72
     const val LOOP_THRESHOLD = .99f
     const val SCRAMBLE_HOLD_CEILING = .95f
     private const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
@@ -412,6 +410,12 @@ object Relay {
         return table[index] + fraction * (table[index + 1] - table[index])
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
+    // and the frame loop polls it so a stale render stops instead of finishing unwanted.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("RELAY render no longer wanted")
+    }
+
     fun render(voice: RelayVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
                normalize: Boolean = true, phrase: RelayPhrase = phraseFor(voice)): Snip =
         inspect(voice, macros, velocity, normalize, phrase).snip
@@ -530,6 +534,7 @@ object Relay {
         val first = contours(0, currentWeights, currentEnvelopes)
         global = first.first; accent = first.second; filterA = first.third
         for (frame in 0 until warm + frames) {
+            if (frame % 8192 == 0) stopIfUnwanted()
             if (frame % CONTROL_BLOCK == 0) {
                 if (frame != 0) {
                     nextWeights.copyInto(currentWeights); nextEnvelopes.copyInto(currentEnvelopes)
@@ -564,6 +569,7 @@ object Relay {
             if (phase >= 1.0) phase -= 1.0
         }
 
+        stopIfUnwanted()
         val conditioned = raw.copyOf()
         Tide.bandLimit(conditioned, INTERNAL_RATE)
         val finished = Dsp.decimate(conditioned, Dsp.RATE)
