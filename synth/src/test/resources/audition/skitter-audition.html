@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111511">
+<meta name="description" content="Audition Skitter in SnipSnap: six coupled circuit voices, 36 patches, macro probes and measured held loops. Real dry Kotlin renders.">
+<title>SKITTER — SnipSnap listening laboratory</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+:root{color-scheme:dark;--bg:#111511;--surface:#191e18;--raised:#20261e;--line:#384133;--muted:#aeb7a5;--text:#f0f2e9;--acid:#d5f75a;--coral:#ff8f76;--mono:'DM Mono',monospace;--sans:'Space Grotesk',system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5}body:before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(#e9ffbd03 1px,transparent 1px),linear-gradient(90deg,#e9ffbd03 1px,transparent 1px);background-size:44px 44px}button,input,select{font:inherit}button,a,input,select,audio{touch-action:manipulation}button{cursor:pointer}button:disabled{cursor:default;opacity:.45}a{color:inherit;text-underline-offset:4px}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,audio:focus-visible,summary:focus-visible{outline:3px solid var(--acid);outline-offset:4px}button{color:var(--text)}.skip{position:fixed;top:-80px;left:16px;background:var(--acid);color:var(--bg);padding:12px;z-index:99}.skip:focus{top:12px}.wrap{max-width:1440px;margin:auto;padding:0 44px}.top{height:86px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);gap:16px}.wordmark{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;text-decoration:none}.mark{display:grid;grid-template-columns:repeat(2,6px);gap:3px;transform:rotate(-9deg)}.mark i{width:6px;height:6px;background:var(--acid)}.topright{display:flex;align-items:center;gap:24px}.eyebrow,.tiny,.status,.tabs,.pill,.meta,.counter,.label,.macroline,.download,.meter,.footer{font-family:var(--mono)}.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}.status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--acid);white-space:nowrap}.status:before{content:'';width:6px;height:6px;border-radius:50%;background:var(--acid)}.stop{border:1px solid var(--line);background:transparent;border-radius:6px;padding:9px 13px;font-size:12px;display:flex;align-items:center;gap:8px}.stop i{background:var(--coral);width:7px;height:7px}.hero{display:grid;grid-template-columns:1.2fr 1fr;align-items:center;min-height:380px;gap:32px;padding:52px 0 48px}.edition{display:flex;align-items:center;gap:10px;margin-bottom:15px}.edition .line{width:34px;height:1px;background:var(--coral)}h1{font-size:clamp(76px,9.2vw,134px);letter-spacing:-.085em;line-height:.93;margin:0 0 24px;font-weight:600;color:var(--acid)}.hero h2{margin:0 0 13px;font-size:23px;letter-spacing:-.025em;font-weight:500}.hero p{font-size:15px;color:var(--muted);max-width:475px;margin:0}.specs{display:flex;gap:25px;margin-top:26px}.specs span{display:block;font-family:var(--mono);font-size:11px;color:var(--muted)}.specs b{font-size:19px;font-weight:500;color:var(--text);display:block}.circuit{border:1px solid var(--line);border-radius:8px;position:relative;aspect-ratio:1.6;background:radial-gradient(ellipse at 50% 50%,#d5f75a0b,transparent 65%),#141913;overflow:hidden}.circuit-head,.circuit-foot{display:flex;justify-content:space-between;font:10px var(--mono);color:var(--muted);position:absolute;left:18px;right:18px}.circuit-head{top:16px}.circuit-foot{bottom:15px}.circuit svg{width:100%;height:100%;padding:40px 0}.circuit .wave{stroke:var(--acid);stroke-width:2;fill:none}.circuit .wire{stroke:var(--line);stroke-width:1;fill:none}.circuit .node{fill:var(--bg);stroke:var(--acid)}.circuit .warm{stroke:var(--coral)}.circuit text{font:9px var(--mono);fill:var(--muted)}.notice{display:flex;gap:16px;align-items:start;border:1px solid #6d563c;border-radius:7px;background:#ff8f7607;padding:17px 20px;margin-bottom:34px;font-size:13px;color:#d4d9cd}.notice .pill{margin-top:2px;white-space:nowrap;color:var(--coral);border:1px solid #ff8f7650;border-radius:4px;padding:3px 7px;font-size:9px;letter-spacing:.08em}.notice p{margin:0}.notice a{color:var(--coral)}.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding-bottom:0;scrollbar-width:thin}.tabs button{border:0;border-bottom:2px solid transparent;background:transparent;font-size:11px;white-space:nowrap;color:var(--muted);padding:15px 17px;margin-bottom:-1px}.tabs button:first-child{padding-left:0}.tabs button[aria-selected=true]{color:var(--acid);border-bottom-color:var(--acid)}.tabs button:hover{color:var(--text)}.bench{padding:28px 0 38px;min-height:470px}.bench-top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:24px}.bench-top h2{font-size:26px;font-weight:500;letter-spacing:-.035em;margin:0 0 5px}.bench-top p{margin:0;font-size:13px;color:var(--muted);max-width:750px}.counter{font-size:11px;color:var(--muted);white-space:nowrap}.filters{display:flex;align-items:center;gap:12px;margin:0 0 26px;flex-wrap:wrap}.search{position:relative;flex:1;max-width:330px}.search:before{content:'⌕';position:absolute;left:12px;top:7px;color:var(--muted);font-size:23px}.search input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px 10px 36px;font-size:12px;color:var(--text)}.filters select,.player select{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:10px 12px;border-radius:6px;font:11px var(--mono)}.filters .hint{font:10px var(--mono);color:var(--muted);margin-left:auto}.groups{display:flex;flex-direction:column;gap:30px}.group-heading{font:11px var(--mono);color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin:0 0 12px;display:flex;gap:12px;align-items:center}.group-heading:after{content:'';flex:1;height:1px;background:var(--line)}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:19px;transition:border-color .16s}.card:hover{border-color:#647456}.card.active{border-color:var(--acid);background:#d5f75a08}.card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.voicetag{font:9px var(--mono);letter-spacing:.1em;color:var(--acid);display:flex;align-items:center;gap:6px}.voicetag:before{content:'';background:var(--acid);height:5px;width:5px}.heldtag{font:9px var(--mono);color:var(--coral);border:1px solid #ff8f7640;padding:2px 5px;border-radius:3px}.card h3{margin:0 0 5px;font-size:19px;font-weight:500;letter-spacing:-.025em}.card p{font-size:12px;color:var(--muted);margin:0 0 14px;min-height:36px}.meta{font-size:10px;color:var(--muted);display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.meta span+span:before{content:'·';margin-right:7px}.macroline{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:15px 0 18px}.macrocell{font-size:8px;color:var(--muted)}.macrocell b{display:block;font-size:10px;color:var(--text);font-weight:400;margin-top:4px}.macrocell i{display:block;height:2px;background:#3f4938;margin-top:6px;overflow:hidden}.macrocell i span{display:block;height:100%;background:var(--acid)}.card-actions{display:flex;align-items:center;gap:9px}.play{background:var(--acid);color:var(--bg);border:0;border-radius:5px;padding:9px 12px;display:flex;align-items:center;gap:7px;font:11px var(--mono);min-width:80px;justify-content:center}.play:before{content:'▶';font-size:10px}.play.playing:before{content:'Ⅱ'}.seam{border:1px solid #ff8f7650;color:var(--coral);background:transparent;border-radius:5px;padding:8px 10px;font:10px var(--mono)}.download{margin-left:auto;font-size:10px;color:var(--muted);text-decoration:none;border-bottom:1px solid #647456}.card details{margin-top:15px;border-top:1px solid var(--line);padding-top:11px}.card summary{font:10px var(--mono);color:var(--muted);cursor:pointer}.metricgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0;font:9px var(--mono);color:var(--muted)}.metricgrid b{display:block;font-weight:400;color:var(--text);font-size:11px;margin-top:3px}.filelinks{display:flex;gap:12px;flex-wrap:wrap;font:10px var(--mono);color:var(--muted)}.empty{border:1px dashed var(--line);border-radius:8px;padding:35px;color:var(--muted);text-align:center}.underbench{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:60px;padding:31px 0 34px}.underbench h3{font-size:16px;font-weight:500;margin:0 0 9px}.underbench p{font-size:12px;color:var(--muted);margin:0 0 12px;max-width:560px}.underbench .links{display:flex;gap:20px;flex-wrap:wrap;font:10px var(--mono)}.footer{border-top:1px solid var(--line);padding:21px 0 132px;display:flex;justify-content:space-between;gap:20px;font-size:10px;color:var(--muted)}.player{position:fixed;bottom:0;left:0;right:0;background:#1a2018f5;backdrop-filter:blur(12px);border-top:1px solid #5a684c;z-index:10}.player-inner{max-width:1440px;margin:auto;padding:16px 44px;display:grid;grid-template-columns:minmax(190px,1fr) minmax(280px,1.3fr) auto;gap:26px;align-items:center}.now-label{font:9px var(--mono);letter-spacing:.1em;color:var(--acid);margin-bottom:3px}.now-title{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.now-meta{font:10px var(--mono);color:var(--muted);margin-top:3px}.player audio{width:100%;height:37px}.player-options{display:flex;gap:13px;align-items:center}.player-options select{width:109px;padding:9px;font-size:10px}.repeat-label{font:10px var(--mono);color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}.repeat-label input{accent-color:var(--acid);width:14px;height:14px}.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.live{font:11px var(--mono);color:var(--coral);margin-top:8px}.hidden{display:none!important}
+@media(min-width:1440px){.cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:1050px){.wrap{padding:0 28px}.hero{gap:25px;min-height:340px}.specs{gap:20px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.player-inner{padding:14px 28px;gap:18px;grid-template-columns:minmax(170px,1fr) minmax(220px,1.3fr)}.player-options{grid-column:1/-1;justify-content:flex-end;margin-top:-6px}.footer{padding-bottom:166px}.topright{gap:15px}}
+@media(max-width:680px){.wrap{padding:0 19px}.top{height:71px}.topright .status{display:none}.hero{grid-template-columns:1fr;gap:29px;padding:37px 0 28px}.hero h2{font-size:20px}.hero p{font-size:14px}h1{font-size:clamp(72px,22vw,92px)}.wordmark .eyebrow{display:none}.circuit{aspect-ratio:2.1}.notice{padding:14px;gap:10px;display:block;font-size:12px}.notice .pill{display:inline-block;margin:0 0 7px}.notice{margin-bottom:20px}.tabs button{padding:13px 14px}.bench{padding-top:22px}.bench-top{align-items:flex-start;gap:12px}.bench-top h2{font-size:23px}.counter{font-size:9px;margin-top:8px}.filters .hint{display:none}.search{max-width:none;flex-basis:100%}.filters select{flex:1}.cards{grid-template-columns:1fr}.card p{min-height:0}.underbench{grid-template-columns:1fr;gap:24px}.footer{font-size:9px;flex-direction:column;gap:8px;padding-bottom:199px}.player-inner{padding:12px 19px;grid-template-columns:1fr;gap:10px}.now-meta{display:none}.player-options{grid-column:1;justify-content:space-between;margin:0}.player audio{height:34px}.player-options select{width:126px}.player .now-title{font-size:12px}.now-label{font-size:8px;display:inline;margin-right:8px}.now-title{display:inline}.group-heading{font-size:10px}.stop{font-size:10px}.wordmark{font-size:16px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#bench">Skip to listening bench</a>
+<div class="wrap">
+<header class="top"><a class="wordmark" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>SnipSnap <span class="eyebrow">/ sound laboratory</span></a><div class="topright"><span class="status">LISTENING VERDICT PENDING</span><button class="stop" id="stop" type="button"><i aria-hidden="true"></i>Stop all</button></div></header>
+<section class="hero" aria-labelledby="hero-title"><div><div class="edition"><span class="line" aria-hidden="true"></span><span class="eyebrow">Engine 28 · audition 01</span></div><h1 id="hero-title">SKITTER</h1><h2>A circuit with a memory.</h2><p>Sharp edges. Unequal returns. A filter that reacts to what came before. Explore six pitched voices from a quiet recovering bass to a frayed, restless sustain.</p><div class="specs"><div><b>06</b><span>VOICES</span></div><div><b>36</b><span>FACTORY PATCHES</span></div><div><b>4×</b><span>OVERSAMPLED</span></div></div></div>
+<div class="circuit" role="img" aria-label="Diagram of oscillator edges and unequal pitch recovery feeding a filter with history and agitation feedback"><div class="circuit-head"><span>COUPLED CIRCUIT / DRY SIGNAL</span><span style="color:var(--coral)">● REACTIVE</span></div><svg viewBox="0 0 500 220" aria-hidden="true"><path class="wire" d="M30 75H160V110H320M30 155H160V110M320 110H460M345 130V185H210V130M210 185H95V165"/><path class="wave" d="M30 75l8-1 5-15 6 37 5-40 7 39 5-35 7 22 6-5h70"/><path class="wave warm" d="M30 155l8-1 6-13 7 26 6-20 7 12 9-4h76"/><rect x="179" y="85" width="72" height="49" rx="5" class="node"/><rect x="306" y="75" width="78" height="69" rx="5" class="node"/><path class="wave" d="M315 110c7-28 14 27 20 0s14 27 20 0 13 26 20-1M398 110l6-8 7 18 7-25 7 29 6-19 7 6h22"/><circle cx="210" cy="185" r="4" class="node warm"/><circle cx="160" cy="110" r="4" class="node"/><text x="33" y="45">EXCITATION A</text><text x="33" y="185">UNEQUAL RETURN B</text><text x="191" y="106">HISTORY</text><text x="193" y="119">+ DRIVE</text><text x="320" y="161">FILTER</text><text x="230" y="206">AGITATION FEEDBACK</text><text x="405" y="87">VENT</text></svg><div class="circuit-foot"><span>EDGES → HISTORY → REACTION</span><span>NO RACK FX</span></div></div></section>
+<aside class="notice"><span class="pill">PROVISIONAL</span><p>These are real, dry renders from the Kotlin engine. Measurements support the audition; the owner's listening verdict is still required. HOLD uses periodic gestures and noise with measured state convergence. <a href="#listening-notes">Read listening notes</a>.</p></aside>
+<nav class="tabs" role="tablist" aria-label="Audition sections" id="tabs"></nav>
+<main class="bench" id="bench" tabindex="-1"><div class="bench-top"><div><h2 id="bench-title">Six circuit personalities</h2><p id="bench-description"></p></div><div class="counter" id="counter"></div></div>
+<div class="filters"><div class="search"><label class="sr" for="search">Search clips or presets</label><input id="search" type="search" placeholder="Find a voice, patch or probe…" autocomplete="off"></div><label class="sr" for="voice">Filter by voice</label><select id="voice"><option value="ALL">All voices</option><option>BASS</option><option>LEAD</option><option>HOLLOW</option><option>FLUTTER</option><option>CHIRP</option><option>FRAY</option></select><label class="sr" for="held">Filter finite or held</label><select id="held"><option value="ALL">Finite + held</option><option value="finite">Finite samples</option><option value="held">Held loops</option></select><span class="hint">ONE PLAYER · MATCHED BY DEFAULT</span></div>
+<div class="groups" id="groups" role="tabpanel" aria-labelledby="bench-title"></div><div class="live" id="error" role="alert"></div><noscript><div class="empty">Enable JavaScript to browse the listening bench. The <a href="manifest.json">clip manifest</a> lists all WAV and patch downloads.</div></noscript></main>
+<section class="underbench" id="listening-notes"><div><h3>Listen to the reaction.</h3><p>BUZZ changes the excitation. SKITTER exposes unequal recovery. AGITATE reacts to history. VENT reveals different parts of that reaction. STATIC should provoke irregular behavior while retaining pitch. Compare the causal ablations to hear what each mechanism contributes.</p><p>Matched playback uses one quiet, shared loudest-window level. Ablations share the intact circuit’s gain across all five raw renders, with one common peak budget, preserving audible source noise gain. Native plays the engine's melodic level. Raw is the DC-removed source before leveling. Change the level mode, then press Play to compare. Source patch downloads carry the standard engine recipe; ablation and reference settings are in the trace JSON.</p></div><div><h3>Hold the boundary up to the light.</h3><p>The orange Seams button plays four direct repeats of the final held period. Listen for clicks, extra attacks, pitch movement and distracting noise repetition. Enable Repeat for a longer check. The PCM-24 seam is measured against the required &lt; 1e−3 threshold.</p><p>Loop forcing is a documented approximation: gesture timing and noise are periodic, with capped preroll and measured convergence. Numeric thresholds, register coverage and a render-cost budget remain provisional; pitch detection can disagree with a complex pitched texture. The first-1.4-second classifier is a heuristic diagnostic: cropping a pitched sound can produce false percussion labels. Full samples longer than 1.5 seconds automatically receive a LOOP label, so the classifier does not prove pitch.</p><div class="links"><a href="manifest.json" download>Clip manifest ↗</a><a href="measurements.json" download>All measurements ↗</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source repository ↗</a></div></div></section>
+<footer class="footer"><span>SNIPSNAP / SKITTER · COUPLED CIRCUIT SYNTHESIS</span><span id="pack-footer">REPRODUCIBLE KOTLIN WAVs · LISTENING ACCEPTANCE PENDING</span></footer>
+</div>
+<section class="player" aria-label="Audio player"><div class="player-inner"><div><div class="now-label">NOW AT THE BENCH</div><div class="now-title" id="now-title">Select a voice to listen</div><div class="now-meta" id="now-meta">Dry circuit · no autoplay</div></div><audio id="audio" controls preload="none" aria-label="Selected audition clip"></audio><div class="player-options"><label class="sr" for="mode">Playback level</label><select id="mode"><option value="matched">Matched level</option><option value="native">Native level</option><option value="raw">Raw level</option></select><label class="repeat-label"><input type="checkbox" id="repeat">Repeat</label></div></div><span class="sr" role="status" aria-live="polite" id="announcement"></span></section>
+<script>
+'use strict';
+const manifest = /* SKITTER_MANIFEST */null;
+const views = [
+ {id:'voices',label:'01 Voices',title:'Six circuit personalities',prefix:'DEFAULTS'},
+ {id:'presets',label:'02 Presets',title:'36 starting points',prefix:'PRESETS'},
+ {id:'register',label:'03 Register',title:'Register × velocity',prefix:'RANGE_'},
+ {id:'macros',label:'04 Macros',title:'Five timbral controls',prefix:'SWEEPS_'},
+ {id:'interactions',label:'05 Interactions',title:'Four coupled reactions',prefix:'INTERACTIONS'},
+ {id:'ablations',label:'06 Ablations',title:'Causal listening bench',prefix:'ABLATIONS'},
+ {id:'hold',label:'07 HOLD',title:'Repeated seams',prefix:'HOLD'},
+ {id:'limits',label:'08 Limits + reference',title:'Extremes and higher-rate reference',prefix:['EXTREMES','REFERENCE']}
+];
+const $ = id => document.getElementById(id);
+const audio = $('audio');
+let activeView = 'voices', selected = null, isSeam = false, playbackSerial = 0, activeAssetUrl = null, disposed = false;
+const decodedAssets = new Map(), pendingAssets = new Map(), downloadUrls = new Set();
+const MAX_DECODED_ASSETS = 8, MAX_DECODED_BYTES = 48 * 1024 * 1024;
+const clips = new Map();
+const allClips = manifest ? manifest.sections.flatMap(s=>s.groups.flatMap(g=>g.clips.map(c=>({ ...c, key:s.id+'/'+c.id })))) : [];
+allClips.forEach(c=>clips.set(c.key,c));
+const escape = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const number = (value, places=3) => value == null || !Number.isFinite(value) ? '—' : value.toFixed(places);
+const scientific = value => value == null || !Number.isFinite(value) ? '—' : value.toExponential(2);
+const macroNames = ['BUZZ','SKITTER','AGITATE','VENT','STATIC'];
+function href(value){ return escape(value); }
+function encodedWav(path){return path.endsWith('.wav.pcm24d2.gz');}
+function wavName(path){return path.split('/').pop().replace(/\.pcm24d2\.gz$/,'');}
+function wavLink(path,label){return `<a href="${href(path)}" data-wav="${escape(path)}" download="${escape(wavName(path))}">${label}</a>`;}
+// The transport preserves RIFF headers and chunks. Only unsigned 24-bit data words contain a second difference.
+function restorePcm24(buffer){
+ const bytes=new Uint8Array(buffer), view=new DataView(buffer);
+ const tag=offset=>String.fromCharCode(...bytes.subarray(offset,offset+4));
+ if(bytes.length<12||tag(0)!=='RIFF'||tag(8)!=='WAVE'||view.getUint32(4,true)+8!==bytes.length)throw new Error('Invalid lossless WAV transport');
+ let position=12, format=null;
+ const chunks=[];
+ while(position<bytes.length){
+  if(position+8>bytes.length)throw new Error('Truncated WAV chunk');
+  const name=tag(position), size=view.getUint32(position+4,true), start=position+8;
+  if(start+size>bytes.length)throw new Error('Truncated WAV data');
+  if(name==='fmt '){if(size<16)throw new Error('Invalid WAV format');format={code:view.getUint16(start,true),channels:view.getUint16(start+2,true),bits:view.getUint16(start+14,true),align:view.getUint16(start+12,true)};}
+  if(name==='data'){if(size%3)throw new Error('Incomplete PCM-24 word');chunks.push({start,size});}
+  position=start+size+(size%2);
+ }
+ if(position!==bytes.length||!format||format.code!==1||format.channels!==1||format.bits!==24||format.align!==3||!chunks.length)throw new Error('Unsupported lossless WAV format');
+ for(const chunk of chunks){
+  let previous=0, previousPrevious=0;
+  for(let offset=chunk.start;offset<chunk.start+chunk.size;offset+=3){
+   const difference=bytes[offset]|(bytes[offset+1]<<8)|(bytes[offset+2]<<16);
+   const sample=(difference+2*previous-previousPrevious)&0xffffff;
+   bytes[offset]=sample&255;bytes[offset+1]=(sample>>>8)&255;bytes[offset+2]=(sample>>>16)&255;
+   previousPrevious=previous;previous=sample;
+  }
+ }
+ return buffer;
+}
+function trimDecodedAssets(){
+ let bytes=Array.from(decodedAssets.values()).reduce((sum,asset)=>sum+asset.blob.size,0);
+ for(const [path,asset] of decodedAssets){
+  if(decodedAssets.size<=MAX_DECODED_ASSETS&&bytes<=MAX_DECODED_BYTES)break;
+  if(asset.url===activeAssetUrl)continue;
+  URL.revokeObjectURL(asset.url);decodedAssets.delete(path);bytes-=asset.blob.size;
+ }
+}
+async function audioAsset(path){
+ if(!encodedWav(path))return {url:path,blob:null};
+ if(decodedAssets.has(path)){const asset=decodedAssets.get(path);decodedAssets.delete(path);decodedAssets.set(path,asset);return asset;}
+ if(pendingAssets.has(path))return pendingAssets.get(path).promise;
+ const controller=new AbortController();
+ const promise=(async()=>{
+  const response=await fetch(path,{signal:controller.signal});
+  if(!response.ok)throw new Error('Audio download failed: '+response.status);
+  let buffer=await response.arrayBuffer();
+  const first=new Uint8Array(buffer);
+  // A host may already have decompressed a response carrying Content-Encoding: gzip.
+  if(first[0]===0x1f&&first[1]===0x8b){
+   if(typeof DecompressionStream==='undefined')throw new Error('Lossless playback needs a current browser with gzip decompression support');
+   buffer=await new Response(new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  }
+  restorePcm24(buffer);
+  if(disposed)throw new DOMException('Page closed','AbortError');
+  const blob=new Blob([buffer],{type:'audio/wav'}), asset={blob,url:URL.createObjectURL(blob)};
+  decodedAssets.set(path,asset);trimDecodedAssets();return asset;
+ })();
+ pendingAssets.set(path,{promise,controller});
+ try{return await promise;}finally{if(pendingAssets.get(path)?.promise===promise)pendingAssets.delete(path);}
+}
+async function downloadWav(path,link){
+ if(link.dataset.loading)return;
+ const label=link.textContent;link.dataset.loading='true';link.setAttribute('aria-busy','true');link.textContent='Preparing WAV…';
+ try{
+  const asset=await audioAsset(path), url=asset.blob?URL.createObjectURL(asset.blob):asset.url;
+  if(asset.blob){downloadUrls.add(url);setTimeout(()=>{URL.revokeObjectURL(url);downloadUrls.delete(url);},30000);}
+  const anchor=document.createElement('a');anchor.href=url;anchor.download=wavName(path);anchor.hidden=true;
+  document.body.appendChild(anchor);anchor.click();anchor.remove();
+  $('announcement').textContent='Original WAV download ready: '+wavName(path);
+ }catch(error){if(error.name!=='AbortError')$('error').textContent=error.message||'This WAV could not be prepared. Try again.';}
+ finally{delete link.dataset.loading;link.removeAttribute('aria-busy');link.textContent=label;}
+}
+function releaseAudioAssets(){
+ disposed=true;playbackSerial++;audio.pause();audio.removeAttribute('src');audio.load();activeAssetUrl=null;
+ pendingAssets.forEach(item=>item.controller.abort());pendingAssets.clear();
+ decodedAssets.forEach(asset=>URL.revokeObjectURL(asset.url));decodedAssets.clear();
+ downloadUrls.forEach(url=>URL.revokeObjectURL(url));downloadUrls.clear();
+}
+function card(c){
+ const m=c.metrics, d=m.mechanism, playing=selected?.key===c.key&&!audio.paused&&!isSeam;
+ const values=[['Playback match',m.matchTreatment],['Raw peak',number(m.raw.peak)],['Raw RMS',number(m.raw.rms)],['Raw DC',scientific(m.raw.dc)],['Centroid',number(m.centroidHz,0)+' Hz'],['Pitch error',number(m.pitchCents,1)+' ¢'],['Pitch confidence',number(m.pitchConfidence,2)],['Classifier / cropped heuristic',m.classification+' / '+m.bodyClassification],['Render cost',number(d.renderMillis,0)+' ms'],['History peak',number(d.historyPeak)],['Agitation peak',number(d.agitationPeak)],['Filter state peak',number(d.filterStatePeak)],['Recovery gestures',d.gestureCount]];
+ if(c.held)values.push(['PCM seam',scientific(m.pcm24LoopSeam)],['Preroll / convergence',d.loopPrerollPeriods+' / '+(d.loopConverged?'yes':'no')]);
+ if(m.macroDistanceRms!=null)values.push(['Matched waveform distance',number(m.macroDistanceRms,5)]);
+ return `<article class="card ${selected?.key===c.key?'active':''}" data-card="${escape(c.key)}"><div class="card-top"><span class="voicetag">${escape(c.voice)}</span>${c.held?'<span class="heldtag">HELD CIRCUIT</span>':'<span class="eyebrow" style="font-size:9px">DRY / '+c.oversample+'×</span>'}</div><h3>${escape(c.name)}</h3><p>${escape(c.description)}</p><div class="meta"><span>${escape(c.note)} / MIDI ${c.midi}</span><span>VEL ${number(c.velocity,2)}</span><span>${number(m.durationSeconds,2)} s</span></div>${!m.pitchedClassifier?`<p style="color:var(--coral);min-height:0;font:10px var(--mono)">Full-sample classifier: ${escape(m.classification)}</p>`:m.bodyPercussionDiagnostic?`<p style="color:var(--muted);min-height:0;font:10px var(--mono)">Cropped heuristic: ${escape(m.bodyClassification)}</p>`:""}<div class="macroline">${macroNames.map(name=>`<div class="macrocell">${name}<b>${number(c.macros[name],2)}</b><i><span style="width:${Math.max(0,Math.min(100,c.macros[name]*100))}%"></span></i></div>`).join('')}</div><div class="card-actions"><button class="play ${playing?'playing':''}" type="button" data-play="${escape(c.key)}" aria-label="${playing?'Pause':'Play'} ${escape(c.name)}">${playing?'Pause':'Play'}</button>${c.held?`<button class="seam" type="button" data-seam="${escape(c.key)}" aria-label="Play repeated seams for ${escape(c.name)}">Seams ↻</button>`:''}<a class="download" href="${href(c.patch)}" download>Source patch ↓</a></div><details><summary>Measurements + downloads</summary><div class="metricgrid">${values.map(([label,value])=>`<div>${escape(label)}<b>${escape(value)}</b></div>`).join('')}</div><div class="filelinks">${wavLink(c.matched,'Matched WAV ↓')}${wavLink(c.native,'Native WAV ↓')}${wavLink(c.raw,'Raw WAV ↓')}${c.repeat?wavLink(c.repeat,'Seams WAV ↓'):''}<a href="${href(c.diagnostics)}" download>Trace JSON ↓</a></div></details></article>`;
+}
+function render(){
+ const view=views.find(v=>v.id===activeView), voice=$('voice').value, held=$('held').value, search=$('search').value.trim().toLowerCase();
+ $('tabs').querySelectorAll('button').forEach(b=>{b.setAttribute('aria-selected',String(b.dataset.view===activeView));b.tabIndex=b.dataset.view===activeView?0:-1;});
+ const sections=manifest.sections.filter(s=>Array.isArray(view.prefix)?view.prefix.includes(s.id):s.id.startsWith(view.prefix));
+ $('groups').setAttribute('aria-labelledby','tab-'+activeView);
+ $('bench-title').textContent=view.title;
+ $('bench-description').textContent=sections.map(s=>s.description).filter((s,i,a)=>a.indexOf(s)===i).join(' ');
+ let visible=0, total=0;
+ const output=sections.flatMap(section=>section.groups.map(group=>{
+   total+=group.clips.length;
+   const list=group.clips.map(c=>clips.get(section.id+'/'+c.id)).filter(c=>(voice==='ALL'||c.voice===voice)&&(held==='ALL'||c.held===(held==='held'))&&(!search||[c.name,c.voice,c.description,c.note,group.label].join(' ').toLowerCase().includes(search)));
+   visible+=list.length;
+   if(!list.length)return '';
+   const heading=sections.length>1?section.title+' / '+group.label:group.label;
+   return `<section aria-label="${escape(heading)}"><h3 class="group-heading">${escape(heading)}</h3><div class="cards">${list.map(card).join('')}</div></section>`;
+ })).join('');
+ $('groups').innerHTML=output||'<div class="empty">No clips match these filters. Try another voice or clear the search.</div>';
+ $('counter').textContent=visible+' / '+total+' CLIPS';
+}
+function selectView(id){activeView=id;$('search').value='';$('voice').value=id==='macros'?'LEAD':'ALL';$('held').value='ALL';render();history.replaceState(null,'','#'+id);}
+function updateButtons(){
+ $('groups').querySelectorAll('[data-card]').forEach(element=>{
+   const selectedCard=selected?.key===element.dataset.card, playing=selectedCard&&!audio.paused&&!isSeam;
+   element.classList.toggle('active',selectedCard);
+   const button=element.querySelector('[data-play]');
+   button.classList.toggle('playing',playing);button.textContent=playing?'Pause':'Play';
+   const clip=clips.get(element.dataset.card);button.setAttribute('aria-label',(playing?'Pause ':'Play ')+clip.name);
+ });
+}
+async function setSource(){
+ if(!selected)return null;
+ const serial=++playbackSerial, clip=selected, seam=isSeam, mode=$('mode').value;
+ audio.pause();audio.removeAttribute('src');audio.load();activeAssetUrl=null;
+ $('mode').disabled=seam;
+ $('now-title').textContent=clip.name+(seam?' · repeated seams':'');
+ $('now-meta').textContent='Preparing WAV…';$('announcement').textContent='Loading '+clip.name;
+ $('error').textContent='';updateButtons();
+ try{
+  const asset=await audioAsset(seam?clip.repeat:clip[mode]);
+  if(serial!==playbackSerial||disposed)return null;
+  activeAssetUrl=asset.url;audio.src=asset.url;
+  $('now-meta').textContent=clip.voice+' · '+clip.note+' · velocity '+number(clip.velocity,2)+' · '+(seam?'matched / four periods':$('mode').selectedOptions[0].textContent);
+  trimDecodedAssets();return serial;
+ }catch(error){
+  if(serial!==playbackSerial||error.name==='AbortError')return null;
+  $('error').textContent=error.message||'This audio file could not be loaded. Try again.';
+  return null;
+ }
+}
+async function play(key,seam=false){
+ const clip=clips.get(key);if(!clip)return;
+ if(selected?.key===key&&isSeam===seam&&!audio.paused){playbackSerial++;audio.pause();return;}
+ selected=clip;isSeam=seam;const serial=await setSource();if(serial==null)return;
+ try{await audio.play();if(serial!==playbackSerial)return;$('announcement').textContent='Playing '+clip.name+(seam?' repeated seams':'');}
+ catch(error){if(serial!==playbackSerial||error.name==='AbortError')return;$('error').textContent='Playback could not start. Use the player controls or download this WAV.';}
+ updateButtons();
+}
+if(manifest){
+ $('tabs').innerHTML=views.map(v=>`<button id="tab-${v.id}" type="button" role="tab" aria-controls="groups" aria-selected="false" data-view="${v.id}">${v.label}</button>`).join('');
+ $('tabs').addEventListener('click',event=>{const b=event.target.closest('[data-view]');if(b)selectView(b.dataset.view);});
+ $('tabs').addEventListener('keydown',event=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(event.key))return;event.preventDefault();let i=views.findIndex(v=>v.id===activeView);i=event.key==='Home'?0:event.key==='End'?views.length-1:(i+(event.key==='ArrowRight'?1:-1)+views.length)%views.length;selectView(views[i].id);$('tabs').querySelector('[data-view="'+activeView+'"]').focus();});
+ $('search').addEventListener('input',render);$('voice').addEventListener('change',render);$('held').addEventListener('change',render);
+ $('groups').addEventListener('click',event=>{const link=event.target.closest('[data-wav]');if(link&&encodedWav(link.dataset.wav)){event.preventDefault();downloadWav(link.dataset.wav,link);return;}const button=event.target.closest('[data-play],[data-seam]');if(button)play(button.dataset.play||button.dataset.seam,Boolean(button.dataset.seam));});
+ $('mode').addEventListener('change',async()=>{isSeam=false;const serial=await setSource();if(serial!=null)$('announcement').textContent='Playback level changed. Press Play to compare.';});
+ $('repeat').addEventListener('change',()=>{audio.loop=$('repeat').checked;});
+ $('stop').addEventListener('click',()=>{playbackSerial++;audio.pause();if(audio.src)audio.currentTime=0;$('announcement').textContent='All playback stopped';updateButtons();});
+ ['play','pause','ended'].forEach(event=>audio.addEventListener(event,updateButtons));
+ audio.addEventListener('error',()=>{$('error').textContent='This audio file could not be loaded. The WAV download is available in the clip measurements.';});
+ window.addEventListener('pagehide',releaseAudioAssets);window.addEventListener('pageshow',()=>{disposed=false;});
+ const initial=location.hash.slice(1);selectView(views.some(v=>v.id===initial)?initial:'voices');
+ $('pack-footer').textContent=manifest.variants+' VARIANTS / '+manifest.wavFiles+' WAVs · '+(manifest.quick?'DEVELOPMENT SMOKE PACK':'FULL LISTENING MATRIX');
+ if(manifest.quick){document.querySelector('.notice p').insertAdjacentText('afterbegin','This is the smaller development pack. ');}
+}else{$('error').textContent='The generated clip manifest is missing. Regenerate the audition page with the Kotlin generator.';}
+</script>
+</body>
+</html>
