@@ -873,9 +873,7 @@ object SynthKits {
      */
     fun relay(): List<ArrangedPad?> {
         fun arranged(patch: RelayPatch) = pad(patch, Relay.drumClassFor(patch.voice, patch.macros))
-        // The FIRST HANDOFF seed below already plays KEY at its root octave (TUNE .5 is
-        // semitone 12), so the scale run skips that degree to keep all sixteen pads distinct.
-        val notes = PENTATONIC.take(9).filter { it != 12 }.mapIndexed { index, semitone ->
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
             RelayPatch(
                 "Handoff ${index + 1}", RelayVoice.KEY,
                 Relay.defaults(RelayVoice.KEY) + ("TUNE" to semitone / Relay.TUNE_SEMITONES.toFloat()),
