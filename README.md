@@ -250,9 +250,10 @@ gate. [Implementation notes](docs/SUTURE.md) explain the model and HOLD's
 settled-loop format. The sound awaits the owner's listening verdict.
 
 SPOOL is a returning recording machine: three original synthesized string,
-choir, flute or brass performances share a loaded transport and diagonal
-pickup heads. STRAIN bends the tape journey, RETURN supplies the backward
-answer, IMPRINT leaves delayed traces in neighboring strips and SPLICE
+choir, flute or brass performances share a loaded transport and overlapping
+forward/backward pickup heads. Clean settings keep both layers on the requested
+note. STRAIN shapes their journey, RETURN sets the backward layer,
+IMPRINT leaves delayed traces in neighboring strips and SPLICE
 reorders short sections. Six dry presets, a sixteen-pad starter, the synth
 picker and CLI use the same serialized machine. HOLD loops an explicitly
 frozen imprint snapshot. Run `./gradlew :synth:generateSpoolAudition` for the
