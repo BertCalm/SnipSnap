@@ -72,15 +72,19 @@ object Treatments {
         // SECTION together toward their neutrals, so a lower AMT is the chorus
         // coming in under the same six players, all of it shallower and narrower).
         // RATE is left at its
-        // centre, its neutral, as "ensembled" leaves it. Appended last: the
-        // names list is pinned in order.
+        // centre, its neutral, as "ensembled" leaves it. The names list is pinned
+        // in order, so the three pedal recipes below follow it.
         "sectioned" to FxChain(ensemble = mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)),
-        // A drive pedal: VALVE with a middling DRIVE and only part of a speaker. TONE is left out (its
-        // centre is its neutral, so AMT could never move it); CAB is set above its neutral (0, no
-        // cabinet) so it can move. DRIVE and SAG are starting shape values, heard at the pedal board's
-        // Stage 0 listen (docs/superpowers/specs/2026-10-04-pedal-board-design.md). On a pad that is
-        // already through an amp this is a second amp, not a pedal in front of one.
-        "driven" to FxChain(valve = mapOf("DRIVE" to 0.45f, "SAG" to 0.2f, "CAB" to 0.3f)),
+        // A drive pedal: a hot-ish VALVE with the speaker barely in. DRIVE 0.6 is gain 2.5 into the
+        // tube (the lowest of 0.6, 0.7, 0.8 and 0.9 that makes 3 percent harmonics on a steady sine at
+        // the pad sheet's AMT 0.7 and 15 at AMT 1: TreatmentsTest measures it). CAB 0.08 is small
+        // and above its neutral (0, no cabinet) so AMT can move it; the network is fully in at 0.25.
+        // CAB cannot be left out: a missing macro is VALVE's default (0.6) and AMT could not fade it.
+        // TONE is left out (its centre is its neutral, so AMT could never move it). The numbers are
+        // starting shape values, heard at the pedal board's Stage 0 listen
+        // (docs/superpowers/specs/2026-10-04-pedal-board-design.md). On a pad that is already through
+        // an amp this is a second amp, not a pedal in front of one.
+        "driven" to FxChain(valve = mapOf("DRIVE" to 0.6f, "SAG" to 0.3f, "CAB" to 0.08f)),
         // A compressor pedal: SQUASH alone, leaning on the body for sustain. The bank's "punched" is
         // SQUASH plus CRUNCH; this has no crunch.
         "compressed" to FxChain(squash = mapOf("AMOUNT" to 0.7f, "ATTACK" to 0.55f)),

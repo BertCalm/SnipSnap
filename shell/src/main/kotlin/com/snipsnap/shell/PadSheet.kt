@@ -215,7 +215,7 @@ object PadSheet {
         "ENSEMBLE" to "ensembled",
         // The same section as six independent players: one instrument swirled, or several playing.
         "SECTION" to "sectioned",
-        // A drive pedal: VALVE with a middling DRIVE and part of a speaker.
+        // A drive pedal: a hot-ish VALVE with the speaker barely in.
         "DRIVE" to "driven",
         // A compressor pedal: SQUASH alone, for sustain.
         "COMP" to "compressed",
