@@ -57,6 +57,14 @@ Open a kit, tap PLAY, drum on it with two thumbs for a minute.
 - Swap kits mid-roll. Silence is correct. A crash is not.
 - Header reads NO STREAM? The device refused every open — grab the
   logcat line tagged `PadEngine`.
+- **With a USB MIDI keyboard** (added 2026-10-11, after A1 closed): the
+  hint row should become `MIDI · <name>` with an MPC NOTES chip. Play
+  note 36 (C1 on most keyboards): A02, the kick? Note 42: the closed
+  hat on A03, and does it still choke an open one played from the
+  grid? Tap the chip to A01 = C1 and play C1 upward: A01, A02, A03 in
+  order? A keyboard note should glow its pad and count on VOICES
+  exactly as a tap does; a difference is a bug in the routing, not the
+  engine.
 
 → **2026-09-08, the exit test passes.** Tight enough to play. The header
 read **8–11 MS** with no `SHARED` after it, so the device opened the
@@ -122,6 +130,17 @@ broken; make one first. There are two doors, both on a pad's own sheet
 - The first key after opening may be silent for a moment on a big
   instrument — the zones load off the main thread. Longer than a moment
   is a bug.
+- **With a USB MIDI keyboard on an OTG cable** (added 2026-10-11, the
+  note-input half of `MIDI_SYNC.md` — none of the clock half): does the
+  line under the grid name it the moment it is plugged in, and go back
+  to NO MIDI KEYBOARD when it is pulled? Play the same note from the
+  grid and the keyboard: same pitch? Soft keys quiet, hard keys loud?
+  Sustain pedal down, play and let go of a chord, pedal up: does the
+  chord hold until the pedal lifts and then release together? Pull the
+  cable with a note held: silence or a tail, never a note that stays.
+  Write down whether a keyboard note feels as tight as a grid tap: the
+  bytes cross one extra thread (`MidiInput`'s KDoc says why), and only
+  a hand can say whether that is heard.
 
 →
 
