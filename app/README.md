@@ -164,8 +164,9 @@ logcat tag to grab when something is wrong.
   off the main thread, so the first key after opening may be silent for
   a moment on a big instrument.
 - **A MIDI keyboard (KEYS and PLAY)**: plug a USB keyboard into the
-  phone on an OTG cable (a Bluetooth one must be paired in the phone's
-  own settings first). The line under KEYS' grid should change from NO
+  phone on an OTG cable (Bluetooth MIDI is not wired yet: pairing in the
+  phone's settings does not make a BLE keyboard visible to `MidiManager`
+  without a scan and permissions this app lacks). The line under KEYS' grid should change from NO
   MIDI KEYBOARD to `MIDI · <its name>` without leaving the screen, and
   on PLAY the hint row becomes that same line with a map chip beside
   it. On KEYS, keys play the instrument at the keyboard's own velocity

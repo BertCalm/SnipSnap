@@ -17,8 +17,11 @@ import com.snipsnap.kit.MidiWire
  * A keyboard plugged into the phone, as events on the main thread.
  *
  * The phone's `MidiManager` lists every MIDI device the system knows -
- * a USB keyboard on an OTG cable the moment it is plugged in, a
- * Bluetooth one once it has been paired - and hands each over as ports.
+ * a USB keyboard on an OTG cable the moment it is plugged in - and hands
+ * each over as ports. A Bluetooth keyboard is not among them until some
+ * app opens it with `openBluetoothDevice` after a scan, with Bluetooth
+ * permissions this app does not hold; nothing here does that, so only
+ * USB is wired.
  * A keyboard's *output* port is where its notes come out (the naming is
  * the device's point of view), so [open] connects a receiver to every
  * output port of every device, and keeps doing so as devices come and go.
