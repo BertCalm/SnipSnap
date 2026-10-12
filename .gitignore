@@ -176,6 +176,9 @@ testkit/SnipSnap-Lacquer-Kit.zip
 # Tangle's regenerated audition WAVs, diagnostic manifest, page and kit audio.
 testkit/tangle-audition/
 testkit/SnipSnap Tangle Kit/
+# Relay's rendered raw/matched listening matrix and diagnostics.
+testkit/relay-audition/
+testkit/SnipSnap Relay Kit/
 
 # REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
 testkit/revel-audition/

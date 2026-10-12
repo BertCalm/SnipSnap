@@ -162,6 +162,10 @@ object Presets {
             val v = TangleVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TanglePresets.forVoice(v)
         }
+        RelayPatch.ENGINE -> {
+            val v = RelayVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            RelayPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -194,5 +198,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all()
 }

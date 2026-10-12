@@ -638,6 +638,19 @@ listening pack; [SPOOL.md](SPOOL.md) describes integration and its limits.
 Published auditions and numerical probes support that review; device and
 release-name validation remain outstanding.
 
+RELAY follows as S30, ported from [the supplied engineering specification](RELAY_SPEC.md).
+KEY, BASS, PLUCK, ORGAN, CHIME and FLOW share four original generated roles:
+rounded pluck, harmonic body, bell detail and soft tone. Source-order schedules
+morph continuously at a fixed phrase clock; independent accents place rhythmic
+emphasis without changing the requested root. TUNE, ORDER, PULSE, BLEND, COLOR,
+LENGTH and HOLD use the pitched host conventions. The port includes complete
+phrase serialization, native velocity, six dry identity presets,
+`SynthKits.relay()`, the phone picker, a FRESH TAPE starter and
+`generateRelayAudition`. HOLD exports repeating material without a separate
+attack region. [RELAY.md](RELAY.md) records the integration and listening pack.
+**Awaiting the owner's sonic verdict.** The proposed 36-preset roster remains
+deferred until the dry identities are heard and approved.
+
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
 

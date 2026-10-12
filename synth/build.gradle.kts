@@ -797,3 +797,16 @@ tasks.register<JavaExec>("generateSkitterAudition") {
     args("${rootDir}/testkit/skitter-audition")
     if (project.hasProperty("quick")) args("--quick")
 }
+
+/** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
+tasks.register<JavaExec>("generateRelayAudition") {
+    group = "distribution"
+    description = "Render RELAY native/matched WAVs, scheduling evidence, metrics and a listening page under testkit/relay-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RelayAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/relay-audition")
+    if (project.hasProperty("relayQuick")) args("--quick")
+    if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
+}

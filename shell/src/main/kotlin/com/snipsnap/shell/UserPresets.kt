@@ -18,6 +18,7 @@ import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
 import java.io.File
 import java.util.Locale
@@ -350,7 +351,8 @@ object UserPresets {
      * recipe and velocity. STOOP retains its source, answer and chord recipe and
      * its render-model version. LACQUER carries its entire layered recipe through
      * the JSON constructor. SPOOL writes its complete machine constructor, including
-     * recording roster and HOLD memory mode. The name is a Kotlin string literal, escaped.
+     * recording roster and HOLD memory mode. RELAY retains its complete source and
+     * phrase schedules. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is LacquerPatch) {
@@ -394,6 +396,11 @@ object UserPresets {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is RelayPatch -> {
+                val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                    .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+                ".let { RelayPatch.fromJsonText(\"$json\") }"
+            }
             is RevelPatch -> {
                 val c = patch.configuration
                 fun values(items: List<*>, literal: (Any?) -> String): String =

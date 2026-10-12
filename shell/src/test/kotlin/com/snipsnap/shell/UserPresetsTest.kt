@@ -23,6 +23,11 @@ import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Relay
+import com.snipsnap.synth.RelayAccent
+import com.snipsnap.synth.RelayLoop
+import com.snipsnap.synth.RelayPatch
+import com.snipsnap.synth.RelayVoice
 import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
@@ -159,6 +164,7 @@ class UserPresetsTest {
                 "STOOP" to StoopVoice.entries.map { it.name },
                 "SKITTER" to SkitterVoice.entries.map { it.name },
                 "TANGLE" to TangleVoice.entries.map { it.name },
+                "RELAY" to RelayVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -311,6 +317,33 @@ class UserPresetsTest {
             assertTrue("loopSeconds = ${patch.config.loopSeconds}f" in line)
             assertTrue("velocity = 0.3f, model = ${patch.model}" in line)
             assertEquals("ContourPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved Relay keeps its source schedule and excitation when promoted`() {
+        val root = shelf()
+        try {
+            val base = Relay.phraseFor(RelayVoice.KEY)
+            val phrase = base.copy(
+                sources = base.sources.mapIndexed { index, source -> if (index == 0) source.copy(gain = .42f) else source },
+                orderRoster = base.orderRoster.reversed(),
+                accents = listOf(RelayAccent(.5f, .8f), RelayAccent(2.5f, .4f)),
+                tempoBpm = 120f,
+                loop = RelayLoop(prerollCycles = 3, wrapFrames = 1536),
+            )
+            val source = RelayPatch("MY RELAY", RelayVoice.KEY, Relay.defaults(RelayVoice.KEY), phrase, velocity = .3f)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "all state outside the macro map survives the shelf")
+            val line = UserPresets.rosterLine(saved.patch)
+            val literal = line.substringAfter("RelayPatch.fromJsonText(").substringBeforeLast(") }")
+            val promoted = RelayPatch.fromJsonText(Json.parse(literal).str())
+            assertEquals(source, promoted, "the pasteable roster line retains source, order, accent, tempo and loop configuration")
+            assertTrue(source.render().samples.contentEquals(promoted.render().samples), "promotion regenerates the saved sound")
+            assertEquals("RelayPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
         } finally {
             root.deleteRecursively()
         }
