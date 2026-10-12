@@ -50,8 +50,10 @@ object PedalAuditionGenerator {
             for ((chip, character) in CHIPS) for (amount in AMOUNTS) {
                 write(name, idOf(chip, amount), "$name $chip AMT ${pct(amount)}", Treatments.apply(character, dry, amount).snip)
             }
-            write(name, "punched_70", "$name PUNCH AMT 70 (THE CARD'S OWN PUNCH, TO HEAR COMP BESIDE)", Treatments.apply("punched", dry, 0.7f).snip)
-            write(name, "amped_70", "$name AMPED AMT 70 (THE RACK'S AMP CHARACTER, TO HEAR DRIVE BESIDE)", Treatments.apply("amped", dry, 0.7f).snip)
+            // The card's own references at the pad sheet's default AMT, to hear COMP and DRIVE beside.
+            val reference = AMOUNTS.first()
+            write(name, "punched_${pct(reference)}", "$name PUNCH AMT ${pct(reference)} (THE CARD OWN PUNCH, TO HEAR COMP BESIDE)", Treatments.apply("punched", dry, reference).snip)
+            write(name, "amped_${pct(reference)}", "$name AMPED AMT ${pct(reference)} (THE RACK AMP CHARACTER, TO HEAR DRIVE BESIDE)", Treatments.apply("amped", dry, reference).snip)
         }
         for (voice in MagnetVoice.values()) {
             val name = voice.name
