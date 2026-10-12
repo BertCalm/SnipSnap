@@ -50,7 +50,7 @@ import kotlin.math.log10
  * The manifest (JSON, UTF-8; every text in it is what the page shows; no number, no `box`, no EQ words, nothing on direction: [guardWords] throws on one):
  *  - `phase` "arco_r1j", `storagePrefix` "arco-bell-gate:" and `docs`: `{prefix: "verdicts/arco_r1j_", overallKey: "overall"}`. There is ONE db doc, at `docs.prefix + docs.overallKey`, and its local copy is under
  *    `arco-bell-gate:arco_r1j:overall`. The R1h voice docs (chips, reactions) are gone: there are no chips.
- *  - `intro`: the honesty text, three short paragraphs: headphones, where to say what else is used, and one steady volume for the whole page; two low cello notes in several versions, nobody has listened, some may sound better than
+ *  - `intro`: the honesty text, three short paragraphs: headphones, where to say what else is used, and one steady volume, set on the first pair played, for the whole page; two low cello notes in several versions, nobody has listened, some may sound better than
  *    THE PLAIN ONE and some worse, where to write anything odd; the clips are not level on purpose, choose what sounds fuller whether or not it is louder, and where to tap SAVE VERDICT. How a pair is answered is not in the intro:
  *    it is said on the pair (`pair.lockedText`) and in the opening text of the first section (`body`).
  *  - `groups`: `[{id, voice, note, label, body, clips: [[id, name, desc]]}]`, C2 then F#2, in the page's order. `voice` is "CELLO" and the file of a clip is `<voice>/<id>.wav`. `body` is the text that opens the section.
@@ -1079,7 +1079,7 @@ object ArcoBellGateGenerator {
     private const val DOT = "·"
 
     private val INTRO = listOf(
-        "Headphones, please. No headphones? Say what you use in the first question. Set your volume once, so THE PLAIN ONE is easy to hear, and leave it there for the whole page.",
+        "Headphones, please. No headphones? Say what you use in the first question. Set your volume once, on the first pair you play, and leave it there for the whole page.",
         "Two low cello notes, each in several versions. Nobody has listened to them yet: some may sound better than THE PLAIN ONE (nothing added) and some worse. Anything odd, write it in the last field.",
         "The clips are not the same loudness, on purpose: the other versions add sound, so they are louder than THE PLAIN ONE. Choose what sounds fuller to you, whether or not it is louder. Tap SAVE VERDICT at the very bottom when you are done.",
     )
@@ -1130,7 +1130,7 @@ object ArcoBellGateGenerator {
             "required" to arr(requiredIds().map { q(it) }),
             "counter" to obj(
                 "some" to v("{n} REQUIRED QUESTIONS UNANSWERED"), "one" to v("ONE REQUIRED QUESTION UNANSWERED"), "none" to v("ALL REQUIRED QUESTIONS ANSWERED"),
-                "unsent" to v("ALL ANSWERED. NOW TAP SAVE VERDICT AT THE BOTTOM"),
+                "unsent" to v("ALL REQUIRED ANSWERED. NOW TAP SAVE VERDICT AT THE BOTTOM"),
             ),
             "save" to obj("some" to v("SAVE VERDICT $DOT {n} UNANSWERED"), "one" to v("SAVE VERDICT $DOT ONE UNANSWERED"), "none" to v("SAVE VERDICT")),
             "device" to obj(

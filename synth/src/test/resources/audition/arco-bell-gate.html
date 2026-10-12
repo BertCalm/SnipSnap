@@ -1095,11 +1095,19 @@
   // A call to the store that never answers (a dropped connection, a phone that slept in the middle of the
   // call) must not freeze saving for good: after STORE_WAIT_MS it counts as failed, the ten second retry
   // sends it again, and an answer that comes after that is ignored. Twenty seconds is not a listening value.
-  // Known and accepted: the store cannot call a request back, so a request that timed out may still land
-  // later. It could land after a newer save only if the owner changed an answer and saved again while the
-  // first save was stuck for over twenty seconds; the store would then hold the older answers while the
-  // page says SAVED. No read-back is added for that.
+  // The store cannot call a request back, so a request that timed out may still land later, after a newer
+  // write, and overwrite it. Plainly: the plays-only write the page sends by itself after each play carries
+  // the answers the store held then (blank before the first SAVE). If that write is stuck for over twenty
+  // seconds and lands after the owner's SAVE, the store holds blank answers while the page says SAVED, and
+  // a reload then shows the blanks; an older SAVE landing after a newer one does the same with the older
+  // answers. So a write that fails with the timeout sets lateRisk. The next write the store acknowledges
+  // starts a wait of STORE_WAIT_MS + 10000 ms (the stuck request has had time to land or die), and then
+  // the page sends the document it treats as stored (the plays, and the answers that were SAVEd) once
+  // more, through the same queue and so with the same twenty second limit. lateRisk is cleared only when
+  // that resend is acknowledged. A resend that fails leaves it set, and the next acknowledged write starts
+  // the wait again. Until the resend, the store may hold the older document. No read-back is added.
   var STORE_WAIT_MS = 20000;
+  var lateRisk = false, resendTimer = 0;
   function within(promise) {
     return new Promise(function (resolve, reject) {
       var t = setTimeout(function () {
@@ -1281,7 +1289,7 @@
   // One write. The flags are cleared only after the store accepted it, and only
   // if nothing changed since it began (a newer persist follows in that case);
   // a failed write leaves every flag set, for the next persist or connect.
-  function write() {
+  function write(again) {
     var draft = submit;
     var data = snapshotOf(draft), at = ver, sat = submitVer, pat = playsVer;
     busy++;
@@ -1298,16 +1306,29 @@
         if (playsVer === pat) playsPending = false;
         saveLocal();
         refresh();
+        // the resend of a write that timed out: this one, once acknowledged, ends the risk; any other
+        // acknowledged write starts the wait for it (one timer, never two)
+        if (again) lateRisk = false;
+        else if (lateRisk && !resendTimer) resendTimer = setTimeout(resend, STORE_WAIT_MS + 10000);
         // SAVED only when nothing else is still owed
         if (due() && !busy) setStatus('warn', 'NOT ALL SAVED' + DOT + 'TRYING AGAIN');
         else setStatus('ok', (!draft && pending ? 'PLAYS SAVED ' : 'SAVED ') + clock());
       }, function (e) {
         busy--;
+        // a request that timed out may still land: the wait for the resend starts again at the next acknowledged write
+        if (e && e.code === 'timeout') { lateRisk = true; clearTimeout(resendTimer); resendTimer = 0; }
         setStatus('warn', 'SAVE FAILED' + DOT + String((e && e.code) || 'unavailable').toUpperCase());
         // one retry every ten seconds while something is still owed, so a dropped connection mends itself
         clearTimeout(timers.retry);
         timers.retry = setTimeout(function () { if (due() && !busy) write(); }, 10000);
       });
+  }
+
+  // The resend, read at the moment it fires (the owner may have saved again since). A write still in flight
+  // means no second send: that write's own answer starts the wait again.
+  function resend() {
+    resendTimer = 0;
+    if (!busy) write(true);
   }
 
   // A change to keep. The local record first, with its flags; the store only when
