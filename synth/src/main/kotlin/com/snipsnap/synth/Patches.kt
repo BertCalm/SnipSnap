@@ -84,6 +84,7 @@ object Patches {
             ContourPatch.ENGINE -> ContourPatch.fromJsonValue(value)
             StoopPatch.ENGINE -> StoopPatch.fromJsonValue(value)
             LacquerPatch.ENGINE -> LacquerPatch.fromJsonValue(value)
+            SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

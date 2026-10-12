@@ -185,6 +185,9 @@ import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.Skitter
+import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
@@ -255,7 +258,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR and STOOP, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP and SKITTER, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -315,13 +318,13 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP and LACQUER carry note and velocity outside the macro map;
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER and SKITTER carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
-    // trajectory configuration, and SPOOL its tape-machine configuration and
-    // velocity. Keep that state through preview, editing, saving and placing by
-    // editing the loaded patch rather than constructing anew.
+    // trajectory configuration, SPOOL its tape-machine configuration and
+    // velocity, and SKITTER its noise seed. Keep that state through preview,
+    // editing, saving and placing by editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1143,6 +1146,7 @@ fun SynthScreen(
                                 engine == Engine.CONTOUR && spec.name == "HOLD" && ContourEngine.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.STOOP && spec.name == "HOLD" && Stoop.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.LACQUER && spec.name == "HOLD" && Lacquer.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.SKITTER && spec.name == "HOLD" && Skitter.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1980,7 +1984,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2017,6 +2021,7 @@ private enum class Engine {
         STOOP -> StoopVoice.entries
         LACQUER -> LacquerVoice.entries
         SPOOL -> SpoolVoice.entries
+        SKITTER -> SkitterVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -2051,6 +2056,7 @@ private enum class Engine {
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
         LACQUER -> Lacquer.macrosFor(voice as LacquerVoice)
         SPOOL -> Spool.macrosFor(voice as SpoolVoice)
+        SKITTER -> Skitter.macrosFor(voice as SkitterVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -2085,6 +2091,7 @@ private enum class Engine {
         STOOP -> Stoop.defaults(voice as StoopVoice)
         LACQUER -> Lacquer.defaults(voice as LacquerVoice)
         SPOOL -> Spool.defaults(voice as SpoolVoice)
+        SKITTER -> Skitter.defaults(voice as SkitterVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2119,6 +2126,7 @@ private enum class Engine {
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
         LACQUER -> Lacquer.scramble(voice as LacquerVoice, random)
         SPOOL -> Spool.scramble(voice as SpoolVoice, random)
+        SKITTER -> Skitter.scramble(voice as SkitterVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2158,6 +2166,7 @@ private enum class Engine {
         STOOP -> Stoop.render(voice as StoopVoice, macros)
         LACQUER -> Lacquer.render(voice as LacquerVoice, macros)
         SPOOL -> Spool.render(voice as SpoolVoice, macros)
+        SKITTER -> Skitter.render(voice as SkitterVoice, macros)
     }
 
     /**
@@ -2198,6 +2207,7 @@ private enum class Engine {
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
         LACQUER -> Lacquer.drumClassFor(voice as LacquerVoice, macros)
         SPOOL -> Spool.drumClassFor(voice as SpoolVoice, macros)
+        SKITTER -> Skitter.drumClassFor(voice as SkitterVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2232,6 +2242,7 @@ private enum class Engine {
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)
         LACQUER -> LacquerPatch(name, voice as LacquerVoice, macros)
         SPOOL -> SpoolPatch(name, voice as SpoolVoice, macros)
+        SKITTER -> SkitterPatch(name, voice as SkitterVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

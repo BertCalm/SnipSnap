@@ -288,7 +288,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 24 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 25 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -370,6 +370,20 @@ The existing CONTOUR rack filter keeps its saved effect recipes. Run
 [published audition page](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
 (owner-private). [Implementation notes](docs/CONTOUR.md)
 cover the patch format, controls and verification.
+
+SKITTER is a pitched electronic circuit inspired by the EDP Wasp: two oscillators
+depart and recover at unequal speeds, while their edges and seeded noise provoke
+a nonlinear filter with signal history and bounded flutter. BASS, LEAD, HOLLOW,
+FLUTTER, CHIRP and FRAY share BUZZ, SKITTER, AGITATE, VENT, STATIC and HOLD.
+Patches save an explicit MIDI root (24–84), excitation velocity and seed.
+Thirty-six provisional dry presets, a sixteen-pad kit, FRESH TAPE, CLI rendering
+and the phone synth picker use the same engine. Run
+`./gradlew :synth:generateSkitterAudition` for the listening matrix, raw/matched
+WAVs and diagnostic evidence under `testkit/skitter-audition/`.
+The [audition page](https://skitter-snipsnap-audition.bertcalm.chatgpt.site)
+supports the owner's listening verdict; [implementation notes](docs/SKITTER.md)
+describe the coupled model and HOLD approximation. Sonic approval and device
+validation remain open.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
 oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
@@ -595,8 +609,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL and GRAINS round out the lineup —
-thirty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER and GRAINS round out the lineup —
+thirty-two engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -779,10 +793,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER and SPOOL are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL and SKITTER are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.

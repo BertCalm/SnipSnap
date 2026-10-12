@@ -183,3 +183,7 @@ testkit/SnipSnap Alloy Kit/
 # CONTOUR's generated dry listening matrix and kit audio.
 testkit/contour-audition/
 testkit/SnipSnap Contour Kit/
+
+# Skitter's generated dry WAVs, diagnostic traces and listening page.
+testkit/skitter-audition/
+testkit/SnipSnap Skitter Kit/

@@ -15,6 +15,7 @@ import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RevelPatch
 import java.io.File
@@ -338,9 +339,9 @@ object UserPresets {
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, PITCHWHEEL and STOOP also copy the saved
+     * bytes the phone heard. CISTERN, PITCHWHEEL, STOOP and SKITTER also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well. REVEL retains its
+     * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
@@ -422,6 +423,7 @@ object UserPresets {
                 ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
             }
             is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is SkitterPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"

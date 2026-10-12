@@ -367,6 +367,26 @@ is published with owner-private access and all 477 cases.
 The owner's sonic verdict precedes expansion to the proposed 36 presets;
 Android/device, MPC hardware and release naming checks remain open.
 
+### SKITTER — provoke, flutter, settle
+
+SKITTER ports the [engineering specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
+into the deterministic melodic pipeline. BASS, LEAD, HOLLOW, FLUTTER, CHIRP and
+FRAY share two oscillators with unequal pitch recovery, a seeded noise exciter,
+signal-history detectors, bounded agitation and one nonlinear multimode filter.
+BUZZ, SKITTER, AGITATE, VENT and STATIC act inside that coupled system; HOLD
+selects periodic sustained material.
+
+Patches retain MIDI root 24–84, velocity and seed. Thirty-six dry presets and
+`SynthKits.skitter()` provide the initial roster and sixteen-pad kit. Patch
+recipes, physical velocity, CLI, FRESH TAPE and the phone synth picker expose
+the same engine. `./gradlew :synth:generateSkitterAudition` renders the
+voice/register/velocity matrix, macro sweeps and interactions, causal ablations,
+raw/matched clips and held boundaries. The [published audition](https://skitter-snipsnap-audition.bertcalm.chatgpt.site)
+is the listening gate; [SKITTER](SKITTER.md) records the implementation,
+measurements and explicit HOLD approximation. The owner's sonic verdict and
+phone/MPC checks remain open. The history and agitation model is a new design,
+not a reconstruction of the historical Wasp circuit.
+
 ### CRUNCH — the character processor (not a synth, the secret weapon)
 
 Vintage sampler character as a per-pad effect: bit-depth reduction to ~12-bit,

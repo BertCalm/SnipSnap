@@ -702,6 +702,24 @@ object SynthKits {
     }
 
     /**
+     * SKITTER's dry pitched kit. The first eight pads walk BASS up C minor
+     * pentatonic from C3; the remaining pads expose clean, hollow, fluttering,
+     * chirping and frayed reactions, ending with two seamless held recipes.
+     */
+    fun skitter(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = SkitterPatch(
+            "Circuit $n", SkitterVoice.BASS, Skitter.defaults(SkitterVoice.BASS),
+            midi = Skitter.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Skitter.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = SkitterPresets.all().first { it.name == name }
+            .let { pad(it, Skitter.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(
+            preset("Quiet Circuit"), preset("Nervous Wire"), preset("Open Interval"), preset("Aftershock"),
+            preset("Pitched Chirp"), preset("Soft Fray"), preset("Held Flutter"), preset("Frayed Sustain"),
+        )
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

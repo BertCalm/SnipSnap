@@ -774,3 +774,15 @@ tasks.register<JavaExec>("generateLacquerKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+/** Full dry SKITTER listening matrix, with a smaller optional development pack. */
+tasks.register<JavaExec>("generateSkitterAudition") {
+    group = "distribution"
+    description = "Render SKITTER native/raw/matched WAVs, patch JSON, traces and listening page under testkit/skitter-audition/. -Pquick selects the smoke pack."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
