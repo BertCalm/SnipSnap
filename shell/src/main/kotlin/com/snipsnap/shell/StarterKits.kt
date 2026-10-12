@@ -155,6 +155,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.prism() },
         Starter(
+            "alloy", "ALLOY",
+            "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.alloy() },
+        Starter(
             "spool", "SPOOL",
             "Recorded strings, choir, flute and brass in C minor pentatonic. Diagonal heads and backward answers.",
             seeded = false,
