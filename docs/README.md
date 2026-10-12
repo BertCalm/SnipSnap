@@ -25,3 +25,10 @@ tree moves on. [`CONCEPT.md`](CONCEPT.md)'s "deliberately v2" section is
 the original MVP cut. [`SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) measures a
 gap from before the preset library; its counts are that gap, not the
 current roster.
+
+**Tangle.** [`TANGLE.md`](TANGLE.md) records the implemented experimental
+engine, six controls, patch and kit contracts, and held-loop limits. The
+[private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
+awaits the owner's listening verdict. The supplied
+[`engineering specification`](superpowers/specs/2026-10-11-tangle-engine-engineering-spec.md)
+is preserved unchanged as the proposal rather than an acceptance record.

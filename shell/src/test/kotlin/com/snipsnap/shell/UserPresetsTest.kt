@@ -24,6 +24,8 @@ import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.TideVoice
+import com.snipsnap.synth.TanglePatch
+import com.snipsnap.synth.TangleVoice
 import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
@@ -156,6 +158,7 @@ class UserPresetsTest {
                 "CONTOUR" to ContourVoice.entries.map { it.name },
                 "STOOP" to StoopVoice.entries.map { it.name },
                 "SKITTER" to SkitterVoice.entries.map { it.name },
+                "TANGLE" to TangleVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -234,6 +237,29 @@ class UserPresetsTest {
                 "the pasteable factory line reconstructs the saved sound, including its non-default note and energy",
             )
             assertEquals("CisternPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved tangle retains requested root and playing velocity when promoted`() {
+        val root = shelf()
+        try {
+            val source = TanglePatch(
+                "LOW TANGLE", TangleVoice.HOLLOW,
+                linkedMapOf("CATCH" to .73f, "CHASE" to .21f), midi = 31, velocity = .3f,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "the shelf retains state outside the six macros")
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(TangleVoice.HOLLOW, \"LOW TANGLE\", \"CATCH\" to 0.73f, \"CHASE\" to 0.21f).copy(midi = 31, velocity = 0.3f),",
+                line,
+            )
+            assertEquals("TanglePresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            assertTrue(source.render().samples.contentEquals(saved.patch.render().samples), "saved pitch and energy reproduce the same sound")
         } finally {
             root.deleteRecursively()
         }

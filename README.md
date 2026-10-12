@@ -288,7 +288,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 25 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 26 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -322,6 +322,17 @@ macro sweeps and interaction grids. [Implementation notes](docs/LACQUER.md)
 describe the contracts. The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
 is private to the owner's account and includes the dry sixteen-pad MPC kit.
 Dry sonic approval precedes the full preset expansion.
+
+TANGLE is an experimental pitched engine whose two oscillators influence,
+catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
+TANGLE, CHASE, CATCH, BITE, WEIGHT and HOLD, with explicit MIDI 24–84 roots
+and velocity. Thirty-six provisional presets and a dry sixteen-pad C minor
+pentatonic kit are registered in the picker, preset/recipe pipeline and
+FRESH TAPE. Run `./gradlew :synth:generateTangleAudition` for its dry clips
+and capture/control diagnostics. The
+[private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
+awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
+describe the six controls, saved format and held-loop constraints.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One
@@ -609,8 +620,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER and GRAINS round out the lineup —
-thirty-two engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE and GRAINS round out the lineup —
+thirty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -793,10 +804,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL and SKITTER are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL, SKITTER and TANGLE are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
