@@ -1,6 +1,6 @@
 # The pedal board: guitar-pedal effects for the FX rack
 
-**Status:** design, reviewed section by section with the owner on 2026-10-04; not yet planned or built.
+**Status:** Stage 0 built; awaiting its listening gate.
 **Builds on:** VALVE (the rack's amp section, `2026-09-29-magnet-valve-design.md`) and the MAGNET guitar engine (PR #438). Nothing in this design starts until #438 has merged.
 **Roadmap row:** to be assigned when the first stage is planned (the table is numbered by arrival).
 
