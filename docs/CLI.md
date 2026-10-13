@@ -169,8 +169,8 @@ ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
 `--instrument` and `--drone` are RESIN only: a held nine-zone instrument
 (`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
 hold on the phone's MAKE INSTRUMENT; this command refuses them. An
-engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR)
-still renders here.
+engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR,
+AEROSTAT) still renders here.
 
 LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
 eight-preset audition bank. `--midi 24..96` and `--velocity 0..1` override

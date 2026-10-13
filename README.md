@@ -839,12 +839,14 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
+GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
 SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR are also in the picker, preset roster and starter kits;
-the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR
+are in the picker and the preset roster, and each but FLOTILLA has a starter kit;
+the CLI's `--midi` and `--velocity` options set their note and strike energy directly
+(each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
 
