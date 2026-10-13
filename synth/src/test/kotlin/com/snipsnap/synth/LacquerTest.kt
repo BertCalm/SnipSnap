@@ -11,6 +11,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** Dry causal and numerical gates; the published audition supplies the listening gate. */
@@ -299,5 +300,23 @@ class LacquerTest {
             real * real + imaginary * imaginary
         }
         return energies[0] / energies.sum().coerceAtLeast(1e-30)
+    }
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // tick loop, the band limit, the decimation, the seam and the level must stop on that flag.
+        for (render in listOf<() -> Unit>(
+            { Lacquer.render(LacquerVoice.KEY) },
+            { Lacquer.render(LacquerVoice.KEY, mapOf("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException> { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Lacquer.render(LacquerVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
 }
