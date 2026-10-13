@@ -219,6 +219,25 @@ class LacquerTest {
     }
 
     @Test
+    fun `held voices repeat their preceding cycle up to the frames the wrap writes`() {
+        // seamError, and the assertion on it above, compares the previous cycle's last 256 frames
+        // with the loop's last 256 after the wrap has copied the first over the second: zero by
+        // construction. unwrappedSeamError is real, but play() check()s it below the same bar, so
+        // an assertion on it cannot fail either. Compare the preceding cycle with the exported loop
+        // on the 256 frames ending where the wrap starts writing, the last min(1280, cycle / 3).
+        val cases = LacquerVoice.entries.map { LacquerPatch("$it defaults", it, Lacquer.defaults(it) + ("HOLD" to 1f)) } +
+            LacquerPresets.all().filter { Lacquer.isLoop(it.macros.getValue("HOLD")) }
+        for (patch in cases) {
+            val p = Lacquer.renderProbe(patch.voice, patch.macros, patch.midi, patch.velocity, patch.profile, normalize = true)
+            val cycle = p.previousCycle.size
+            val seam = HeldSeams.beforeWrap(p.previousCycle, p.samples, cycle - minOf(1280, cycle / 3))
+            println("LACQUER HOLD ${patch.name}: exported seam before the wrap $seam over a $cycle-frame cycle")
+            assertTrue(seam < Keys.MAX_SEAM_ERROR,
+                "${patch.name} exported loop does not repeat its preceding cycle before the wrap: seam $seam")
+        }
+    }
+
+    @Test
     fun `bright high notes keep held spectral energy near the legal harmonic neighborhoods`() {
         for (voice in listOf(LacquerVoice.BRASS, LacquerVoice.GLASS)) {
             val p = Lacquer.renderProbe(voice, mapOf("HOLD" to 1f, "RELIEF" to 1f, "SHEEN" to 1f,
