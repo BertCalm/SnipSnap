@@ -20,6 +20,15 @@ import kotlin.test.assertTrue
 /** Audio evidence for the dry pitched voice, before shared loudness can hide excitation changes. */
 class MurmurTest {
     private val timbre = listOf("MOUTH", "EDGE", "BREATH", "MOTION", "BODY")
+    /** The authored MOUTH, EDGE, BREATH, MOTION and BODY defaults of each voice; HOLD defaults to 0. */
+    private val authoredDefaults = mapOf(
+        MurmurVoice.BASS to listOf(.25f, .35f, .08f, .25f, .75f),
+        MurmurVoice.KEY to listOf(.40f, .40f, .12f, .25f, .55f),
+        MurmurVoice.PLUCK to listOf(.35f, .55f, .10f, .35f, .45f),
+        MurmurVoice.LEAD to listOf(.55f, .45f, .20f, .45f, .50f),
+        MurmurVoice.CHOIR to listOf(.45f, .20f, .30f, .30f, .65f),
+        MurmurVoice.METAL to listOf(.35f, .75f, .15f, .40f, .40f),
+    )
 
     private fun rms(samples: FloatArray, from: Int = 0, to: Int = samples.size): Double =
         sqrt((from until to).sumOf { samples[it].toDouble() * samples[it] } / (to - from).coerceAtLeast(1))
@@ -134,7 +143,10 @@ class MurmurTest {
             val specs = Murmur.macrosFor(voice)
             assertEquals(timbre + "HOLD", specs.map { it.name })
             assertTrue(specs.all { it.default in 0f..1f && it.neutral in 0f..1f })
-            assertEquals(specs.associate { it.name to it.default }, Murmur.defaults(voice))
+            // A saved patch may omit macros, which then render at the voice default, so these defaults are part of
+            // what a saved pad sounds like. Comparing defaults() with the specs it is built from could never fail.
+            assertEquals(timbre.zip(authoredDefaults.getValue(voice)).toMap() + ("HOLD" to 0f), Murmur.defaults(voice),
+                "$voice authored defaults changed")
         }
     }
 
@@ -305,13 +317,21 @@ class MurmurTest {
         for (voice in MurmurVoice.entries) for (extra in listOf(emptyMap(), mapOf("EDGE" to 1f, "BREATH" to 1f, "MOTION" to 1f))) {
             val macros = Murmur.defaults(voice) + extra + ("HOLD" to 1f)
             val probe = Murmur.probe(voice, macros)
-            val previous = assertNotNull(probe.previousCycle, "$voice HOLD did not retain a settled preceding cycle")
+            // previousCycle is a non-null array that defaults to empty, so a null check could never fail.
+            val previous = probe.previousCycle
+            assertEquals(probe.samples.size, previous.size, "$voice HOLD did not retain a whole settled preceding cycle")
             assertTrue(previous.size >= 256 && probe.samples.size >= 256)
             val both = previous + probe.samples
             val seam = Keys.seamError(both, previous.size)
-            println("MURMUR HOLD $voice $extra: adjacent-cycle seam $seam, reported ${probe.seamError}")
+            // probe() reports this same expression on the same arrays, so comparing the two could never fail. What
+            // can: the same measurement with the join moved half a root period. Cycles that genuinely repeat are
+            // seamless only at the true join, so a misjoin must read far above the bar.
+            val half = kotlin.math.round(Dsp.RATE / probe.rootHz / 2).toInt()
+            val misjoined = Keys.seamError(previous.copyOfRange(0, previous.size - half) + probe.samples, previous.size - half)
+            println("MURMUR HOLD $voice $extra: adjacent-cycle seam $seam, reported ${probe.seamError}, half a root period off $misjoined")
             assertTrue(seam.isFinite() && seam < 1e-3, "$voice held formants or breath do not repeat: $seam")
-            assertTrue(abs(seam - probe.seamError) < 1e-9, "$voice reports a different seam than its captured cycles")
+            assertTrue(misjoined > 100 * Keys.MAX_SEAM_ERROR,
+                "$voice seam metric cannot tell its true join from one half a root period off: $misjoined")
             assertTrue(rms(probe.samples) > .001, "$voice closes its loop by going silent")
             assertTrue(probe.samples.maxOf { abs(it) } < 1f, "$voice held native output clips the audition PCM export")
             assertContentEquals(probe.samples, Murmur.probe(voice, macros).samples, "$voice held seed is nondeterministic")
