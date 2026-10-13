@@ -14,6 +14,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** Raw bounds and gain-independent spectra verify the dry engine before shared leveling. */
@@ -21,6 +22,26 @@ class PrismTest {
     private val timbral = listOf("GRAIN", "DRIFT", "SHAPE", "STRIKE", "BODY")
     private val controls = listOf("TUNE") + timbral + "HOLD"
     private val internalRate = Dsp.RATE * Dsp.OVERSAMPLE
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        val voice = PrismVoice.KEY
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "finite" to { Prism.render(voice) },
+            "held" to { Prism.render(voice, Prism.defaults(voice) + ("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertFailsWith<java.util.concurrent.CancellationException>("the export cancel callback still stops a held render") {
+            Prism.renderLoop(voice, cancelled = { true })
+        }
+        assertTrue(Prism.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 
     private fun rms(samples: FloatArray, from: Int = 0, until: Int = samples.size): Double {
         var energy = 0.0
