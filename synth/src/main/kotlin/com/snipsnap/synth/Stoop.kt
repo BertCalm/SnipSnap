@@ -239,8 +239,28 @@ object Stoop {
         val second = (p - duty + 1.0) % 1.0
         return (if (p < duty) 1.0 else -1.0) - (2.0 * duty - 1.0) + blep(p, dt) - blep(second, dt)
     }
+    /**
+     * ORGAN's harmonic registration reads only the tone and its gesture's constants, so each
+     * gesture computes it once per tone with the oscillator's own expression; index h is harmonic h.
+     */
+    private fun organAmplitudes(t: Tone, touch: Double, color: Double, source: StoopSource, held: Boolean,
+        velocity: Double): DoubleArray {
+        val count = min(12, floor(SOURCE_CEILING / t.hz).toInt()).coerceAtLeast(1)
+        val shape = source.shape.toDouble()
+        val tilt = source.harmonicTilt.toDouble()
+        val heldContact = if (held) 1.0 else 0.0
+        val bright = (.16 + .72 * color) * (.58 + .42 * velocity)
+        val amplitudes = DoubleArray(count + 1)
+        for (h in 2..count) {
+            val registration = if (h % 2 == 0) .22 + .60 * shape else .60 - .25 * shape
+            val contactRegistration = 1.0 + heldContact * .34 * touch * (h - 1) / count
+            amplitudes[h] = registration * contactRegistration * (.16 + .84 * bright) / h.toDouble().pow(.6 + 1.2 * (1.0 - tilt))
+        }
+        return amplitudes
+    }
     private fun oscillator(voice: StoopVoice, t: Tone, age: Double, warpedAge: Double,
-        touch: Double, color: Double, source: StoopSource, length: Double, held: Boolean, velocity: Double): Double {
+        touch: Double, color: Double, source: StoopSource, length: Double, held: Boolean, velocity: Double,
+        organ: DoubleArray?): Double {
         if (t.hz >= SOURCE_CEILING) return 0.0
         val p = (warpedAge * t.hz + t.phase) % 1.0
         val phase = TAU * p
@@ -289,11 +309,7 @@ object Stoop {
                         val damping = if (held) exp(-h * (.10 + .23 * (1.0 - length)))
                             else .15 * exp(-age / (.18 + .70 * length)) + .85 * exp(-h * age / (.025 + .26 * length))
                         (.22 + .66 * bright + .20 * touch) * pick * damping / h.toDouble().pow(.65 + .8 * (1.0 - tilt))
-                    } else {
-                        val registration = if (h % 2 == 0) .22 + .60 * shape else .60 - .25 * shape
-                        val contactRegistration = 1.0 + heldContact * .34 * touch * (h - 1) / count
-                        registration * contactRegistration * (.16 + .84 * bright) / h.toDouble().pow(.6 + 1.2 * (1.0 - tilt))
-                    }
+                    } else organ!![h]
                     sum += amplitude * hs
                     weight += amplitude
                 }
@@ -381,6 +397,9 @@ object Stoop {
                 .coerceIn(min(baseHz * 1.5, 11_000.0), 11_000.0)
             var cutoff = cutoffBase
             var transient = 0.0
+            val organ = if (p.voice == StoopVoice.ORGAN) Array(g.tones.size) { n ->
+                organAmplitudes(g.tones[n], g.touch, g.color, p.source, held, p.velocity.toDouble())
+            } else null
             for (i in startFrame until end) {
                 if ((i - startFrame) % 8192 == 0) stopIfUnwanted()
                 val seconds = i.toDouble() / INTERNAL_RATE
@@ -395,9 +414,12 @@ object Stoop {
                 }
                 val warped = warp(seconds) - warp(g.start)
                 var value = 0.0
-                for (tone in g.tones) value += (if (g.tones.size > 1 && !tone.root) .76 else 1.0) *
-                    oscillator(p.voice, tone, age, warped, g.touch, g.color,
-                        p.source, length, held, p.velocity.toDouble())
+                for (n in 0 until g.tones.size) {
+                    val tone = g.tones[n]
+                    value += (if (g.tones.size > 1 && !tone.root) .76 else 1.0) *
+                        oscillator(p.voice, tone, age, warped, g.touch, g.color,
+                            p.source, length, held, p.velocity.toDouble(), organ?.get(n))
+                }
                 // Root keeps more weight in a chord, and each note retains its own source state.
                 value /= sqrt(g.tones.size.toDouble())
                 filter.process(value.toFloat(), cutoff.toFloat(), (1.55 - .34 * g.color).toFloat())
