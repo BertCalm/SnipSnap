@@ -530,6 +530,26 @@ class SpoolTest {
     }
 
     @Test
+    fun `every held voice joins the last frame of its cycle to its first at its defaults`() {
+        // renderProbe's previousCycle is a second traversal of the same frozen snapshot, byte-identical
+        // to the loop by determinism, so its seamError and the seam assertion above are zero without
+        // reading the join. A held machine restarts at its reference state for each powered cycle:
+        // there is no continuous second cycle to compare with, and the played join is the seam.
+        // Measure the step and slope from the cycle's last frame into its first, against the cycle's
+        // power, at every voice's defaults and every factory preset that reaches LOOP_THRESHOLD,
+        // under the bar this file holds every held boundary to.
+        val cases = SpoolVoice.entries.map { SpoolPatch("$it defaults", it, Spool.defaults(it) + ("HOLD" to 1f)) } +
+            SpoolPresets.all().filter { Spool.isLoop(it.macros.getValue("HOLD")) }
+        for (patch in cases) {
+            val loop = Spool.renderLoop(patch.voice, patch.macros, patch.machine, patch.velocity)
+            assertTrue(loop.all { it.isFinite() } && rms(loop) > 1e-5, "${patch.name} silent/nonfinite HOLD")
+            val boundary = boundaryError(loop)
+            println("SPOOL HOLD ${patch.name}: last-to-first boundary step/slope $boundary over ${loop.size} frames")
+            assertTrue(boundary < 1e-3, "${patch.name} HOLD steps or kinks where the cycle wraps: boundary $boundary")
+        }
+    }
+
+    @Test
     fun `complete recipes roundtrip routing timing velocity and exact sound through the shared dispatcher`() {
         val machine = SpoolMachine.forVoice(SpoolVoice.PALIMPSEST).copy(sourceSeconds = 2.7f, gateSeconds = .8f, seed = 411,
             routes = listOf(SpoolRoute(0, 2, .3f), SpoolRoute(2, 1, .4f), SpoolRoute(1, 0, .25f)),
