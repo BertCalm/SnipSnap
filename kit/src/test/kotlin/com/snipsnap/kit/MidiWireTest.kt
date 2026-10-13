@@ -112,7 +112,14 @@ class MidiWireTest {
 
     @Test
     fun `the window is checked`() {
-        assertFailsWith<IllegalArgumentException> { MidiWire().feed(bytes(0x90, 60), offset = 1, count = 5) }
+        // Each refusal must be the window guard's own. With the guard gone, the first of these still throws, but an
+        // ArrayIndexOutOfBoundsException, and a negative count reads nothing and answers an empty list.
+        for ((offset, count) in listOf(1 to 5, 0 to -1, -1 to 1, 3 to 0)) {
+            val refused = assertFailsWith<IllegalArgumentException>("window $offset+$count") {
+                MidiWire().feed(bytes(0x90, 60), offset = offset, count = count)
+            }
+            assertEquals("window $offset+$count is outside 2 bytes", refused.message)
+        }
     }
 
     @Test
