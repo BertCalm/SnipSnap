@@ -332,13 +332,23 @@ class RevelTest {
             RevelVoice.CIRCLE to mapOf("HOLD" to 1f, "ORBIT" to .01f, "PLAY" to .2f),
             RevelVoice.SPIRO to mapOf("HOLD" to 1f, "ORBIT" to 1f, "WEAVE" to 1f, "REACH" to 1f, "PLAY" to 1f),
         )) {
-            val report = Revel.inspect(voice, macros)
+            // The worker never reads its flag as set; it only counts how often the render looks at it.
+            val worker = LateInterrupt(clearLooks = Int.MAX_VALUE)
+            val report = worker.run { Revel.inspect(voice, macros) }
             val loop = requireNotNull(report.loop)
             println("REVEL HOLD $voice: seam ${loop.seamError}, acoustic convergence ${loop.convergenceError}, state ${loop.stateConvergenceError}, cycles ${loop.prerollCycles}")
             assertTrue(loop.seamError.isFinite() && loop.seamError < Keys.MAX_SEAM_ERROR, "$voice seam ${loop.seamError}")
             assertTrue(loop.convergenceError < 1e-3, "$voice preceding acoustic period did not settle")
             assertTrue(loop.stateConvergenceError < 1e-3, "$voice complete state did not settle")
             assertTrue(loop.prerollCycles in 1..16)
+            assertEquals(3, loop.prerollCycles, "$voice: docs/REVEL.md promises three hidden preroll periods")
+            // The sample loop looks once every 8192 internal samples, so the looks measure how many internal
+            // periods the render actually ran, independently of the count it reports. The few looks outside the
+            // loop are a small fraction of one period at these loop lengths and round away.
+            val periodN = report.snip.samples.size * Dsp.OVERSAMPLE
+            val renderedPeriods = kotlin.math.round(worker.looks * 8192.0 / periodN).toInt()
+            assertEquals(loop.prerollCycles + 2, renderedPeriods,
+                "$voice ran $renderedPeriods internal periods (${worker.looks} looks, $periodN samples each), not its reported preroll and two candidates")
             assertTrue(report.rates.orbitHz > 0.0, "nonzero slow orbit rounded to stationary")
             val cycles = report.rates.orbitHz * report.rates.loopSeconds
             assertTrue(abs(cycles - kotlin.math.round(cycles)) < 1e-5, "base microphone path does not close")
