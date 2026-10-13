@@ -359,13 +359,22 @@ object Skitter {
         }
         for(i in kernel.indices) kernel[i]/=norm
         val out=FloatArray(raw.size/oversample)
+        val n=raw.size
         for(i in out.indices) {
             if(i%8192==0) stopIfUnwanted()
             var y=0.0
-            for(j in -radius..radius) {
-                val p=i*oversample+j
-                val at=if(periodic) (p%raw.size+raw.size)%raw.size else p
-                if(at in raw.indices) y+=raw[at]*kernel[j+radius]
+            val centre=i*oversample
+            if(periodic) {
+                // The wrapped tap index advances by one per tap; only its start needs a modulo.
+                var at=((centre-radius)%n+n)%n
+                for(j in -radius..radius) {
+                    y+=raw[at]*kernel[j+radius]
+                    at++
+                    if(at==n) at=0
+                }
+            } else {
+                // Taps outside the note are skipped, never summed as zero: visit only the in-bounds ones.
+                for(j in max(-radius,-centre)..min(radius,n-1-centre)) y+=raw[centre+j]*kernel[j+radius]
             }
             out[i]=y.toFloat()
         }
