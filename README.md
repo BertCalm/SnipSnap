@@ -604,8 +604,11 @@ CANYON supplies asymmetric mono paths and bounded replies at authored answer
 opportunities. A common energy scale keeps accepted replies in the phrase.
 Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
 clips. HOLD at .99 returns its settled procession without an opening gesture.
-The full R4 audition pack is complete: 370 variants, 740 raw/matched WAVs and
-39 unique checks passed. The owner's listening verdict remains pending.
+The owner heard R4 (stone, wood and breath overpowered the sound) and R5
+(“I think it's still a bit too abrupt”); the current candidate, R6, eases
+force onset and release. The completed-pack evidence in docs/CIRCUIT.md is
+R4's, which it marks historical: it does not verify R6. R6 calibration and
+verification are in progress, and the owner's listening verdict remains pending.
 Contract and audition commands:
 [`docs/CIRCUIT.md`](docs/CIRCUIT.md).
 
