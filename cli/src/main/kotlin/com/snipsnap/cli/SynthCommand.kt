@@ -21,6 +21,8 @@ import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.Orphica
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
@@ -81,11 +83,12 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and ORPHICA) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE's --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
+ * ORPHICA accepts `--seed N` for repeatable string excitation and grain scheduling.
  */
 object SynthCommand {
 
@@ -121,6 +124,7 @@ object SynthCommand {
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                OrphicaPatch.ENGINE -> Orphica.MIDI_MIN..Orphica.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
                 SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
@@ -132,7 +136,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and ORPHICA, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -144,10 +148,16 @@ object SynthCommand {
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
         fun skitterSeed(flag: String): Int? = opts[flag]?.let { raw ->
-            if (engine != SkitterPatch.ENGINE) throw CliError("$flag is only supported by SKITTER, got $engine")
+            if (engine != SkitterPatch.ENGINE) {
+                val supported = if (flag == "--seed") "SKITTER and ORPHICA" else "SKITTER"
+                throw CliError("$flag is only supported by $supported, got $engine")
+            }
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
-        val seedOverride = skitterSeed("--seed")
+        val seedOverride = if (engine == OrphicaPatch.ENGINE) null else skitterSeed("--seed")
+        val orphicaSeedOverride = opts["--seed"]?.takeIf { engine == OrphicaPatch.ENGINE }?.let { raw ->
+            raw.toLongOrNull() ?: throw CliError("--seed wants a 64-bit integer seed, got '$raw'")
+        }
         val scrambleRandom = skitterSeed("--scramble")?.let { Random(it) }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
@@ -204,6 +214,13 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OrphicaPatch -> patch.copy(
+                    config = patch.config.copy(
+                        midi = midiOverride ?: patch.config.midi,
+                        velocity = velocityOverride ?: patch.config.velocity,
+                    ),
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to .5f),
+                )
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
@@ -232,6 +249,8 @@ object SynthCommand {
                     name = "Scrambled ${withSeed.name}",
                     macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
                 )
+            } else if (withNote is OrphicaPatch && orphicaSeedOverride != null) {
+                withNote.copy(config = withNote.config.copy(seed = orphicaSeedOverride))
             } else withNote
         }
 

@@ -648,6 +648,13 @@ the owner's listening review. Audition: `./gradlew :synth:generateCorollaAuditio
 Individual presets can also be rendered with
 `./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
 
+ORPHICA is a first-listen microsound-harp prototype: each tuned pluck disperses
+into grains of its own recent history. CLEAR, STUTTER, SCATTER, REVERSE and
+captured FREEZE are deterministic stereo renders, with dry attacks and no
+added reverb. Run `./gradlew :synth:generateOrphicaAudition` for the raw/matched
+listening pack. Patches and CLI rendering are integrated; phone picker and
+held-instrument work follow the listening verdict. See [ORPHICA](docs/ORPHICA.md).
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best

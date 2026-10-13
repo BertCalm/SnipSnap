@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** First-listen microsound-harp prototype: dry attack, causal grains and captured tails. */
+tasks.register<JavaExec>("generateOrphicaAudition") {
+    group = "distribution"
+    description = "Render ORPHICA raw/matched WAVs, replayable patches, manifest and listening page under testkit/orphica-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OrphicaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/orphica-audition")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"

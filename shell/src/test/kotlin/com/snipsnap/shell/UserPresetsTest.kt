@@ -16,6 +16,10 @@ import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerRole
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.OrphicaConfig
+import com.snipsnap.synth.OrphicaMaterial
+import com.snipsnap.synth.OrphicaMode
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -214,6 +218,8 @@ class UserPresetsTest {
             val line = UserPresets.rosterLine(preset)
             if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is OrphicaPatch) {
+                assertEquals(preset, orphicaFromRosterLine(line), "${preset.name}: complete microsound recipe promotion")
             } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
                 assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
@@ -474,6 +480,26 @@ class UserPresetsTest {
         return LacquerPatch.fromJsonText(json)
     }
 
+    private fun orphicaFromRosterLine(line: String): OrphicaPatch {
+        assertTrue(line.startsWith("OrphicaPatch.fromJsonText(\"") && line.endsWith("\"),"), line)
+        val literal = line.removePrefix("OrphicaPatch.fromJsonText(").removeSuffix("),")
+        val json = Json.parse(literal.replace("\\\$", "\$")).str()
+        return OrphicaPatch.fromJsonText(json)
+    }
+
+    @Test
+    fun `Orphica promotion preserves the entire saved cloud and escapes the recipe as text`() {
+        val patch = OrphicaPatch("CLOUD \"\$X\"", OrphicaConfig(
+            material = OrphicaMaterial.CRYSTAL, mode = OrphicaMode.FREEZE,
+            midi = 67, velocity = .42f, pluck = .81f, fracture = .73f,
+            grainSizeMs = 39f, grainRateHz = 51f, scatter = .64f, damping = .19f,
+            seconds = .8f, seed = Long.MIN_VALUE, captureSeconds = .11f,
+        ), macros = mapOf("PLUCK" to .7f, "TUNE" to .6f))
+        assertEquals(patch, orphicaFromRosterLine(UserPresets.rosterLine(patch)))
+        assertEquals("OrphicaMaterial", UserPresets.voiceEnum(patch.engine))
+        assertEquals("OrphicaPresets.kt", UserPresets.rosterFile(patch.engine))
+    }
+
     @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
@@ -487,6 +513,10 @@ class UserPresetsTest {
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
                     assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
                 }
+            } else if (engine == OrphicaPatch.ENGINE) {
+                assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
+                val patchSource = File("../" + UserPresets.ROSTER_DIR + "OrphicaPatch.kt").readText(Charsets.UTF_8)
+                assertTrue("fun fromJsonText(" in patchSource, "ORPHICA's promoted line uses its typed recipe decoder")
             } else {
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
