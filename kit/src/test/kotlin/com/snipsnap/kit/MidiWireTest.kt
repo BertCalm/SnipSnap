@@ -127,4 +127,35 @@ class MidiWireTest {
         val wire = MidiWire()
         assertEquals(listOf(Event.NoteOff(0, 60)), wire.feed(bytes(0x11, 0x80, 60, 0, 0x90), offset = 1, count = 3))
     }
+
+    @Test
+    fun `a status byte ends a SysEx that lost its end-of-exclusive, so the notes after it are heard`() {
+        val wire = MidiWire()
+        assertEquals(listOf(Event.NoteOn(0, 60, 100 / 127f)), wire.feed(bytes(0x90, 60, 100)))
+        // A SysEx whose 0xF7 never comes, then the held key's note-off.
+        assertEquals(
+            listOf(Event.NoteOff(0, 60)),
+            wire.feed(bytes(0xF0, 0x7E, 0x7F, 0x80, 60, 0)),
+            "a channel status byte must end a SysEx with no 0xF7, or the held key's note-off is swallowed",
+        )
+        assertEquals(listOf(Event.NoteOff(0, 62)), wire.feed(bytes(62, 0)), "the status that ended the SysEx is the running status after it")
+        // A SysEx left open at the end of one delivery ends at the next delivery's status byte.
+        assertEquals(emptyList(), wire.feed(bytes(0xF0, 0x43, 0x10)))
+        assertEquals(
+            listOf(Event.NoteOn(1, 64, 90 / 127f)),
+            wire.feed(bytes(0x91, 64, 90)),
+            "a channel status byte must end a SysEx left open by the last delivery",
+        )
+    }
+
+    @Test
+    fun `real-time bytes inside a SysEx are stepped over, and its data stays skipped`() {
+        val wire = MidiWire()
+        assertEquals(listOf(Event.NoteOn(0, 60, 100 / 127f)), wire.feed(bytes(0x90, 60, 100)))
+        // Clock and active sensing between the SysEx's data bytes: none of its data becomes a note.
+        // This pins output only: 0xF0 clears running status, so a real-time byte that wrongly ended
+        // the SysEx would still leave its data bytes with no status to complete.
+        assertEquals(emptyList(), wire.feed(bytes(0xF0, 0xF8, 60, 0xFE, 100, 0xF8, 62, 100)), "a real-time byte inside a SysEx")
+        assertEquals(listOf(Event.NoteOn(0, 64, 100 / 127f)), wire.feed(bytes(0xF7, 0x90, 64, 100)))
+    }
 }
