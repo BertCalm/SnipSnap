@@ -211,3 +211,6 @@ testkit/SnipSnap Contour Kit/
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
 testkit/SnipSnap Skitter Kit/
+
+# VENT's regenerated dry audio, recipes, diagnostics and audition archive.
+testkit/vent-audition/
