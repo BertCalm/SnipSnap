@@ -429,13 +429,15 @@ object Murmur {
             val p1 = phases[1] * 2.0 * PI
             val p2 = phases[2] * 2.0 * PI
             val p3 = phases[3] * 2.0 * PI
+            // One carrier sine serves both the ramp's fundamental removal and the anchor.
+            val sinP0 = sin(p0)
             val fm = when (config.routing) {
                 MurmurRouting.PARALLEL -> .78 * sin(p0 + index * (.65 * sin(p1) + .35 * sin(p2))) + .22 * sin(p3)
                 MurmurRouting.PAIRS -> .74 * sin(p0 + index * sin(p1)) + .26 * sin(p2 + .6 * index * sin(p3))
                 MurmurRouting.STACK -> sin(p0 + .8 * index * sin(p1 + .55 * index * sin(p2 + .35 * index * sin(p3))))
             }
             val ramp = 2.0 * phases[0] - 1.0 - polyBlep(phases[0], steps[0])
-            val upperRamp = ramp + (2.0 / PI) * sin(p0)
+            val upperRamp = ramp + (2.0 / PI) * sinP0
             val voiced = (.55 * fm + (.40 + .20 * sqrt(motion)) * upperRamp) * (.94 - .18 * breath)
             val n = repeatedNoise?.get(cycleFrame)?.toDouble() ?: noise.next().toDouble()
             noiseLow = noiseA * noiseLow + (1.0 - noiseA) * n
@@ -445,7 +447,7 @@ object Murmur {
             val drive = voiced + unvoiced
             var formant = 0.0
             for (band in bands) formant += band.next(drive)
-            val anchor = sin(p0) * (.30 + .20 * fullness)
+            val anchor = sinP0 * (.30 + .20 * fullness)
             // Chesty support contains pitched second/third harmonics, not an added sub or a
             // louder sine. Thin BODY keeps the existing upper carrier and a clearer FM edge;
             // full BODY supports low mids and rounds away upper-formant/direct brightness.
