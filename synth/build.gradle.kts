@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Dry PIPE/MUSETTE prototypes, exact engine loops and existing organ references. */
+tasks.register<JavaExec>("generateRegistersAudition") {
+    group = "distribution"
+    description = "Render REGISTERS dry raw/matched 24-bit WAVs, regenerable recipes, diagnostics and the audition page."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/registers-audition")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"
