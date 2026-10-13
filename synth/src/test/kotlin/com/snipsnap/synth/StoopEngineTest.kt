@@ -23,6 +23,16 @@ class StoopEngineTest {
         assertTrue(Stoop.render(StoopVoice.entries.first()).samples.any { it != 0f }, "an uninterrupted render still completes")
     }
 
+    @Test fun `an interrupted held render stops instead of finishing beside its replacement`() {
+        // The held path warms its loop before the passes; it must stop on the flag as the finite one does.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException> { Stoop.render(StoopVoice.entries.first(), mapOf("HOLD" to 1f)) }
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
     @Test fun `source rejects invalid independent configurations`() {
         assertFailsWith<IllegalArgumentException> { StoopSource(fmRatio = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { StoopSource(sub = 1.01f) }
