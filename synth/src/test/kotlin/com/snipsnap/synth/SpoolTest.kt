@@ -499,6 +499,59 @@ class SpoolTest {
     }
 
     @Test
+    fun `each positive imprint step changes the inherited reread beyond output gain`() {
+        val voice = SpoolVoice.CHOIR
+        val machine = SpoolMachine.forVoice(voice).let { defaults ->
+            defaults.copy(
+                roster = defaults.roster.mapIndexed { i, strip -> strip.copy(gain = if (i == 0) 1f else 0f) },
+                routes = listOf(SpoolRoute(2, 0, .55f)),
+                reengage = true,
+            )
+        }
+        val macros = mapOf("HEAD" to 0f, "STRAIN" to .1f, "RETURN" to 1f, "SPLICE" to 0f, "HOLD" to 0f)
+        val levels = listOf(0f, .25f, .5f, .75f, 1f)
+        val performances = levels.map { level ->
+            Spool.play(voice, macros + ("IMPRINT" to level), machine, record = true)
+        }
+        val dry = performances.first()
+        val beforeWrite = (dry.diagnostics.gateSeconds * Dsp.RATE * Dsp.OVERSAMPLE).toInt()
+        for ((level, played) in levels.zip(performances)) {
+            val d = played.diagnostics
+            assertEquals(dry.diagnostics.sourceHashes, d.sourceHashes, "IMPRINT $level changed its source recordings")
+            assertContentEquals(dry.raw.copyOf(beforeWrite), played.raw.copyOf(beforeWrite),
+                "IMPRINT $level changed the first encounter before recording began")
+            assertEquals(dry.diagnostics.trace, d.trace, "IMPRINT $level changed the transport")
+            assertEquals(dry.diagnostics.returnEndSeconds, d.returnEndSeconds)
+            assertEquals(dry.diagnostics.reengageSeconds, d.reengageSeconds)
+            assertEquals(dry.raw.size, played.raw.size)
+        }
+        assertTrue(dry.diagnostics.reengageSeconds > .8f, "the finite inherited reread is missing")
+        val from = (dry.diagnostics.returnEndSeconds * Dsp.RATE).toInt()
+        val until = ((dry.diagnostics.returnEndSeconds + dry.diagnostics.reengageSeconds) * Dsp.RATE).toInt()
+        val rereads = performances.map { Spool.finish(it.raw, normalize = false).copyOfRange(from, until) }
+        var previousInheritedRms = 0.0
+        for ((level, read) in levels.drop(1).zip(rereads.drop(1))) {
+            val inherited = FloatArray(read.size) { read[it] - rereads.first()[it] }
+            val inheritedRms = rms(inherited)
+            assertTrue(inheritedRms > previousInheritedRms, "IMPRINT $level failed to strengthen inherited material")
+            previousInheritedRms = inheritedRms
+        }
+        // Testing only silence versus maximum misses a control whose positive values all sound
+        // alike. Remove the best scalar gain before comparing every adjacent positive reread.
+        for (i in 1 until rereads.lastIndex) {
+            val a = rereads[i]
+            val b = rereads[i + 1]
+            val gain = a.indices.sumOf { a[it].toDouble() * b[it] } /
+                a.indices.sumOf { a[it].toDouble() * a[it] }.coerceAtLeast(1e-30)
+            val residual = sqrt(a.indices.sumOf {
+                val difference = b[it] - gain * a[it]
+                difference * difference
+            } / a.size) / rms(b).coerceAtLeast(1e-20)
+            assertTrue(residual >= .07, "IMPRINT ${levels[i]} to ${levels[i + 1]} changed only gain or a masked trace: $residual")
+        }
+    }
+
+    @Test
     fun `every timbral macro changes normal string shape and diagonal heads differ from frozen pickup`() {
         val baseline = mapOf("HEAD" to .25f, "STRAIN" to .2f, "RETURN" to .6f, "IMPRINT" to .4f, "SPLICE" to .2f)
         for (macro in timbral) {

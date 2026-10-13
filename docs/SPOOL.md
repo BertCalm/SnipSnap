@@ -96,6 +96,15 @@ mute continuously. IMPRINT writes a delayed, normalized backward pickup at physi
 coordinates, and the continuing forward and backward heads can hear that inherited trace.
 The write matrix never receives an unbounded sum of the two audible layers.
 
+IMPRINT progresses continuously through its positive settings. Write strength follows the macro
+linearly, while a convex recording filter opens from 120 to 2400 Hz. Once a destination has an
+actual delayed write, its original pickup contribution falls by up to 85%, with a 35 ms onset;
+the inherited contribution retains its existing bounded gain. This makes successive settings
+change the depth and detail of the inherited recording instead of adding nearly identical faint
+traces. An unrouted donor stays unchanged. Explicit write-history flags survive into frozen HOLD
+snapshots and never depend on whether the written audio happens to be silent. Original source
+buffers and all pickup/transport timing remain intact.
+
 Separate precolor stems make the overlap measurable and directly auditionable. Twelve checks
 cover the four clean families at C3, C4 and C5, with HEAD=.2, STRAIN=.1, SPLICE=0,
 IMPRINT=.15 and RETURN=.65. The checks require substantial simultaneous audibility across the
@@ -136,6 +145,9 @@ local updates preserve a complete generation-map contraction bound of 0.40, incl
 the write head does not visit. IMPRINT=0 bypasses retention and writes exactly. HOLD prepares
 one finite imprint snapshot and then freezes writes, so it does not claim live periodic
 write-process convergence.
+For a fixed write history, the reduced original contribution is identical between two tapes
+and cancels in their difference; the inherited gain stays at most one and the variable recording
+filter remains convex. The complete contraction bound therefore remains unchanged.
 
 The standard patch dispatcher, factory preset lookup, velocity renderer, phone SYNTH picker,
 FRESH TAPE menu and command-line renderer share the same machine. Macro edits retain the saved
@@ -209,13 +221,14 @@ changes to DSP or recipe defaults require fresh rendering.
 Acceptance checks cover independent layer pitch and harmonic agreement, meaningful simultaneous
 audibility before and after release, actual captured support, deterministic source/memory,
 causal inherited traces, complete feedback bounds, serialization, repeated HOLD waveform
-continuity and seam metrics. There are 24 Spool checks, including independent voice spectra,
+continuity and seam metrics. There are 25 Spool checks, including independent voice spectra,
 fixed-frequency vowel regions, audio-derived wow/flutter, reverse swell/brightness and connected
-release handoff. Buffer accounting and cloud timings are prototype
+release handoff and the gain-independent separation of every adjacent positive IMPRINT step.
+Buffer accounting and cloud timings are prototype
 measurements, not peak JVM memory or phone/MPC performance estimates.
-All 24 Spool checks and the targeted host checks pass. The rendered pack has zero repeated-cycle
-seam error and a maximum boundary difference of 3.00e-12. The largest counted core buffer
-allocation is 31.66 MiB; cloud render time is 1.57 seconds at the median and 7.76 seconds at the
+All 25 Spool checks and the targeted host checks pass. The rendered pack has zero repeated-cycle
+seam error and a maximum boundary difference of 4.74e-13. The largest counted core buffer
+allocation is 31.66 MiB; cloud render time is 1.56 seconds at the median and 9.27 seconds at the
 maximum, measured while validation was also running.
 
 The required baseline is `./gradlew --no-daemon test`. Acceptance also requires listening to the

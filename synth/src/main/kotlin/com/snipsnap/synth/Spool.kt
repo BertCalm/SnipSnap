@@ -57,6 +57,7 @@ object Spool {
     private const val PHASE_HANDOFF_SECONDS = .060
     private const val GEOMETRY_FADE_SECONDS = .200
     private const val REENCOUNTER_RAMP_SECONDS = .060
+    private const val IMPRINT_DEPTH_RAMP_SECONDS = .035
     private const val LOOP_REST_SECONDS = .025
     private const val REST_COORDINATE_SECONDS = .012
     private const val REVERSE_PREVIEW_GATE = .45
@@ -151,7 +152,10 @@ object Spool {
 
     private class Material(val originals: Array<FloatArray>, val overlays: Array<FloatArray>,
                            val strips: List<SpoolStrip>, val hashes: List<Int>, val peak: Float,
-                           val rootPhases: DoubleArray)
+                           val rootPhases: DoubleArray,
+                           // History records actual delayed commits, including silent writes.
+                           // It is independent of overlay amplitudes and survives a frozen snapshot.
+                           val recordedStrips: BooleanArray = BooleanArray(3))
 
     /** A finite performance with an evolving articulation, rather than a repeated static waveform. */
     // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
@@ -407,7 +411,8 @@ object Spool {
         private val strain = m.getValue("STRAIN").toDouble()
         private val head = m.getValue("HEAD").toDouble()
         private val splice = m.getValue("SPLICE").toDouble()
-        private val imprint = sqrt(m.getValue("IMPRINT").toDouble())
+        private val imprint = m.getValue("IMPRINT").toDouble()
+        private val imprintFilterAlpha = 1.0 - exp(-2 * PI * (120.0 + 2280.0 * imprint.pow(1.6)) / INTERNAL_RATE)
         private val answer = m.getValue("RETURN").toDouble()
         private val sourceLength = (material.originals[0].size - 3.0) / INTERNAL_RATE
         private val hold = if (cycle) 0.0 else m.getValue("HOLD").coerceAtMost(.998f).toDouble()
@@ -439,6 +444,10 @@ object Spool {
         private val contact = DoubleArray(3) { material.strips[it].contact * (.52 + .48 * velocity) }
         private val nominalDrag = (0..2).sumOf { contact[it] * .045 * material.strips[it].drag }
         private var overlayAvailable = material.overlays.any { b -> b.any { it != 0f } }
+        private val imprintDepthStart = DoubleArray(3) {
+            if (material.recordedStrips[it]) -IMPRINT_DEPTH_RAMP_SECONDS else Double.POSITIVE_INFINITY
+        }
+        private val pickupDepth = DoubleArray(3)
         private val pitchBlend = smooth((strain - .35) / .55)
         private val period = 1.0 / frequencyFor(voice, m.getValue("TUNE"))
         private val hopFrames = (max(3.0, round(GRAIN_HOP_SECONDS / period)) * period * INTERNAL_RATE).toInt().coerceAtLeast(16)
@@ -542,7 +551,9 @@ object Spool {
                 overlayRead = (inherited / normalization).toFloat()
                 coordinate /= max(weightSum, 1e-12)
                 if (!minCoordinate.isFinite()) minCoordinate = 0.0
-                return ((original + inherited) / normalization).toFloat()
+                // Expose inherited texture by reducing only the dry recording. The overlay
+                // coefficient stays exactly one; write history, never its amplitude, enables depth.
+                return ((original * (1 - pickupDepth[strip]) + inherited) / normalization).toFloat()
             }
         }
 
@@ -633,6 +644,9 @@ object Spool {
             // of its current cell and a routed donor with norm <= .55 of the current bound;
             // induction over commits keeps the bound <= .40 throughout. IMPRINT=0 bypasses
             // this step and all writes exactly. Snapshot loops do not invoke it while playing.
+            // For fixed write history, dry pickup depth is identical for both tapes and does
+            // not depend on audio samples. Its original term cancels in their difference;
+            // inherited pickup gain remains <=1, as does the convex write filter at every setting.
             if (writes && imprint > 0) for (overlay in material.overlays)
                 for (j in overlay.indices) overlay[j] *= GENERATION_RETENTION
             // Allocate to a conservative finite upper bound, trim once after return travel is known.
@@ -653,6 +667,8 @@ object Spool {
                 if (i % 8192 == 0 && Thread.currentThread().isInterrupted)
                     throw java.util.concurrent.CancellationException("SPOOL render no longer wanted")
                 val t = i.toDouble() / INTERNAL_RATE
+                for (k in 0..2) pickupDepth[k] = if (imprint > 0 && material.recordedStrips[k])
+                    .85 * imprint * smooth((t - imprintDepthStart[k]) / IMPRINT_DEPTH_RAMP_SECONDS) else 0.0
                 if (t >= gate && !released) release()
                 val inReturn = released && t < returnEnd
                 val inReread = !cycle && rereadLength > 0 && t >= rereadStart && t < rereadStart + rereadLength
@@ -749,10 +765,12 @@ object Spool {
                         val base = if (!stopped) physical(material.originals[k], false) else 0f
                         val inherited = if (!stopped && overlayAvailable) physical(material.overlays[k], true) else 0f
                         if (t < gate) {
-                            forwardPickup = (forwardPickup * (1 - pitchBlend) + (base + inherited) * pitchBlend).toFloat()
+                            forwardPickup = (forwardPickup * (1 - pitchBlend) +
+                                (base * (1 - pickupDepth[k]) + inherited) * pitchBlend).toFloat()
                             forwardOverlay = (forwardOverlay * (1 - pitchBlend) + inherited * pitchBlend).toFloat()
                         } else {
-                            backwardPickup = (backwardPickup * (1 - pitchBlend) + (base + inherited) * pitchBlend).toFloat()
+                            backwardPickup = (backwardPickup * (1 - pitchBlend) +
+                                (base * (1 - pickupDepth[k]) + inherited) * pitchBlend).toFloat()
                             returnOverlay = (returnOverlay * (1 - pitchBlend) + inherited * pitchBlend).toFloat()
                         }
                     }
@@ -792,13 +810,17 @@ object Spool {
                             }
                             writeCount++
                             overlayAvailable = true
+                            if (!material.recordedStrips[destination]) {
+                                material.recordedStrips[destination] = true
+                                imprintDepthStart[destination] = t
+                            }
                             if (firstWrite == null) firstWrite = t.toFloat()
                         }
                         pendingPositions[destination][slot] = -1.0
                         pending[destination][slot] = 0f
                     }
                     if (inReturn) {
-                        for (source in 0..2) writeFilter[source] += .012 * (heard[source] - writeFilter[source])
+                        for (source in 0..2) writeFilter[source] += imprintFilterAlpha * (heard[source] - writeFilter[source])
                         for (route in machine.routes) {
                             val destination = route.destination
                             if (t >= gate + returnStops[destination]) continue

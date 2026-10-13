@@ -10,7 +10,7 @@
     HEAD: ['Listen for the pickup moving between different voices as it crosses the recording.', 'Aligned', 'Diagonal'],
     STRAIN: ['Both directions share gentle tape wow and flutter. Raising STRAIN adds hesitation, stretch, and recovery.', 'Gentle flutter', 'Competing'],
     RETURN: ['A bright attack swells backwards beneath the forward tone. Raising RETURN brings that reversed layer into focus.', 'No return', 'Strong return'],
-    IMPRINT: ['An earlier pass leaves a trace. Listen for it when the recording is heard again.', 'Original', 'Inherited'],
+    IMPRINT: ['An earlier pass leaves a trace. Raising IMPRINT gives it more depth and recorded detail on the next read.', 'Original', 'Inherited'],
     SPLICE: ['Listen for the attack returning at different points as recorded sections are reordered.', 'Continuous', 'Reordered']
   };
   const PAIR_COPY = {

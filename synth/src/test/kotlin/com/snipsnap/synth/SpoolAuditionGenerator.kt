@@ -328,7 +328,7 @@ object SpoolAuditionGenerator {
                     "A short brass note has a bright attack. Listen for that attack swelling backwards beneath its forward tone as RETURN rises.",
                     focused, machine = isolated(SpoolVoice.BRASS).copy(gateSeconds = .85f))
                 "IMPRINT" -> Case(id, "macros", SpoolVoice.CHOIR, "$macro · $value",
-                    "This is the choir recording's second read, after a flute trace has been written into it. Listen for the quiet inherited undertone as IMPRINT rises.",
+                    "This is the choir recording's second read. Raising IMPRINT brings the inherited flute trace forward and retains more of its recorded detail. Compare each neighboring position.",
                     focused + ("RETURN" to 1f), machine = imprintEncounter, excerptReread = true)
                 "SPLICE" -> Case(id, "macros", SpoolVoice.BRASS, "$macro · $value",
                     "A longer brass recording makes the cuts audible. Listen for its attack returning at new points as SPLICE reorders the recorded sections.",
