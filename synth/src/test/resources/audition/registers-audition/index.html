@@ -22,7 +22,7 @@
       <div class="hero-main">
         <p class="eyebrow"><span class="status-led" aria-hidden="true"></span> NEW ENGINE STUDY <span class="eyebrow-separator">/</span> PROTOTYPE 01</p>
         <h1 id="page-title">Registers<span>.</span></h1>
-        <p class="hero-line">Pipes that speak.<br>Reeds in motion.</p>
+        <p class="hero-line">Pipes that speak.<br> Reeds in motion.</p>
         <p class="hero-description">Pipe speech and Musette beating, adapted for SnipSnap. Two voices, twelve first listens, and one question: do they deserve a place in the kit?</p>
         <a class="hero-action" href="#bench">Listen to the study <span aria-hidden="true">↓</span></a>
       </div>
@@ -52,13 +52,13 @@
           <section class="player" aria-label="Shared audio player">
             <div class="player-top"><span id="player-category">FIRST LISTEN</span><span class="player-format" id="player-format">MONO / 44.1 kHz</span></div>
             <div class="player-title-row"><div><h3 id="player-title">Select a render</h3><p id="player-detail" class="player-detail"></p></div><span class="voice-badge" id="player-voice">PIPE</span></div>
-            <div class="wave-stage"><canvas id="waveform" aria-hidden="true"></canvas><div class="wave-cursor" id="wave-cursor" hidden></div><span id="wave-message" class="wave-message">Select a render to see its waveform.</span><span class="wave-caption" id="wave-caption">THE ACTUAL RENDER</span></div>
+            <div class="wave-stage"><canvas id="waveform" aria-hidden="true"></canvas><div class="wave-cursor" id="wave-cursor" hidden></div><span id="wave-message" class="wave-message">Select a render to see its waveform.</span><span class="wave-caption" id="wave-caption">WAVEFORM · AUTO SCALED</span></div>
             <div class="transport"><button type="button" class="play-button" id="play-button"><span id="play-symbol" aria-hidden="true">▶</span><span id="play-label">Play</span></button><button type="button" class="stop-button" id="stop-button" aria-label="Stop and return to the beginning">■</button><span class="timecode"><span id="current-time">0:00.0</span><span class="time-slash">/</span><span id="duration">0:00.0</span></span><span class="held-indicator" id="held-indicator" hidden>↻ HELD LOOP</span></div>
             <label class="seek-label" id="seek-wrap"><span class="sr-only">Playback position</span><input type="range" id="seek" min="0" max="1" step="0.01" value="0" aria-label="Playback position in seconds"></label>
             <div class="level-row"><span>Listening level</span><div class="segmented" role="group" aria-label="Audio level"><button id="mode-matched" type="button" aria-pressed="true">Matched</button><button id="mode-raw" type="button" aria-pressed="false">Raw</button></div><span class="level-hint" id="level-hint">Matched for comparison</span></div>
             <p id="audio-status" class="audio-status" role="status" aria-live="polite"></p>
             <div class="downloads"><a id="wav-link" download>Download WAV ↓</a><a id="recipe-link" download>Patch JSON ↓</a><span id="selected-tags"></span></div>
-            <details class="native-fallback" id="native-fallback"><summary>Native audio player & playback help</summary><p id="native-help">Use your browser’s player if the main player cannot decode this WAV. Only one player runs at a time.</p><audio id="native-audio" controls preload="none">Your browser does not support audio playback.</audio></details>
+            <details class="native-fallback" id="native-fallback"><summary>Native audio player & playback help</summary><p id="native-help">Use your browser’s player if the main player cannot decode this WAV. Only one player runs at a time.</p><audio id="native-audio" controls preload="none" aria-label="Native player for the selected render">Your browser does not support audio playback.</audio></details>
           </section>
           <aside class="review-panel" aria-labelledby="review-title">
             <div class="review-top"><p class="eyebrow">YOUR LISTENING VERDICT</p><span id="review-count">0 reviewed</span></div>
@@ -78,10 +78,10 @@
       </div>
     </section>
 
-    <section class="guide wrap" aria-labelledby="guide-title"><div class="guide-intro"><p class="eyebrow">02 / WHAT TO LISTEN FOR</p><h2 id="guide-title">Speech.<br>Beating.<br>Belonging.</h2><p>This prototype needs a listening verdict. A convincing mechanism is a starting point; a useful SnipSnap voice is the goal.</p></div><div class="guide-items"><article><span>01</span><div><h3>Let PIPE speak.</h3><p>Listen to the wind, the first hint of chiff, and the body finding its steady tone. Compare restrained and expressive gestures.</p></div></article><article><span>02</span><div><h3>Stay with MUSETTE.</h3><p>Hear the reeds moving against one another. Does the beating feel alive? Does the bellows gesture change the body?</p></div></article><article><span>03</span><div><h3>Check the boundaries.</h3><p>Held renders begin at the settled tone, without an onset. Velocity and control studies expose one change at a time; existing organs provide the reference.</p></div></article></div></section>
+    <section class="guide wrap" aria-labelledby="guide-title"><div class="guide-intro"><p class="eyebrow">02 / WHAT TO LISTEN FOR</p><h2 id="guide-title">Speech.<br> Beating.<br> Belonging.</h2><p>This prototype needs a listening verdict. A convincing mechanism is a starting point; a useful SnipSnap voice is the goal.</p></div><div class="guide-items"><article><span>01</span><div><h3>Let PIPE speak.</h3><p>Listen to the wind, the first hint of chiff, and the body finding its steady tone. Compare restrained and expressive gestures.</p></div></article><article><span>02</span><div><h3>Stay with MUSETTE.</h3><p>Hear the reeds moving against one another. Does the beating feel alive? Does the bellows gesture change the body?</p></div></article><article><span>03</span><div><h3>Check the boundaries.</h3><p>Held renders begin at the settled tone, without an onset. Velocity and control studies expose one change at a time; existing organs provide the reference.</p></div></article></div></section>
   </main>
 
-  <footer class="footer wrap"><div><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap">SNIP/SNAP</a><p>Registers · a pipe & reed audition</p></div><div class="footer-links"><a href="manifest.json">Render manifest ↗</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering ↗</a><span id="manifest-revision">Prototype · awaiting sonic approval</span></div></footer>
+  <footer class="footer wrap"><div><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap">SNIP/SNAP</a><p>Registers · a pipe & reed audition</p></div><div class="footer-links"><a href="manifest.json">Render manifest ↗</a><a href="prototype.patch" download>Prototype source patch ↓</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering ↗</a><span id="manifest-revision">Prototype · awaiting sonic approval</span></div></footer>
   <noscript><div class="noscript">Enable JavaScript to select renders and compare them. The <a href="manifest.json">render manifest</a> lists the WAV downloads.</div></noscript>
 </body>
 </html>

@@ -33,7 +33,7 @@
     manifest: null, selected: null, section: 'identities', mode: 'matched',
     notes: {}, storageKey: '', storageAvailable: true, context: null,
     source: null, gain: null, buffer: null, offset: 0, startedAt: 0,
-    playing: false, nativePlaying: false, preparing: false, playToken: 0,
+    playing: false, nativePlaying: false, preparing: false, playToken: 0, nextStartAt: 0,
     selectionToken: 0, animation: 0, buffers: new Map(), comparison: null
   };
   const manifestUrl = new URL('manifest.json', document.baseURI);
@@ -58,10 +58,12 @@
     ui['audio-status'].textContent = message;
     ui['audio-status'].classList.toggle('error', error);
   };
-  const duration = () => isHeld() ? state.selected.loop.regionSeconds : (state.buffer?.duration || state.selected?.seconds || 0);
+  const duration = () => state.nativePlaying
+    ? (Number.isFinite(nativeAudio.duration) ? nativeAudio.duration : state.selected?.seconds || 0)
+    : isHeld() ? state.selected.loop.regionSeconds : (state.buffer?.duration || state.selected?.seconds || 0);
   const position = () => {
     if (state.nativePlaying) return nativeAudio.currentTime || 0;
-    const value = state.offset + (state.playing && state.context ? state.context.currentTime - state.startedAt : 0);
+    const value = state.offset + (state.playing && state.context ? Math.max(0, state.context.currentTime - state.startedAt) : 0);
     return isHeld() && duration() > 0 ? value % duration() : Math.min(value, duration());
   };
 
@@ -104,12 +106,14 @@
     if (source) {
       source.onended = null;
       const now = state.context.currentTime;
-      if (isHeld() && gain) {
-        // Only settled held tones are ramped. Finite notes keep their authored onset.
+      if (gain) {
+        // A stop ramp prevents transport clicks. Finite ENTRY remains unmodified.
+        const fadeSeconds = isHeld() ? .012 : .005;
         gain.gain.cancelScheduledValues(now);
         gain.gain.setValueAtTime(gain.gain.value, now);
-        gain.gain.linearRampToValueAtTime(0, now + .012);
-        try { source.stop(now + .013); } catch (_) { /* Already ended. */ }
+        gain.gain.linearRampToValueAtTime(0, now + fadeSeconds);
+        try { source.stop(now + fadeSeconds + .001); } catch (_) { /* Already ended. */ }
+        state.nextStartAt = now + fadeSeconds + .002;
         setTimeout(() => { source.disconnect(); gain.disconnect(); }, 40);
       } else {
         try { source.stop(); } catch (_) { /* Already ended. */ }
@@ -134,7 +138,9 @@
     if (!state.context) {
       const Context = window.AudioContext || window.webkitAudioContext;
       if (!Context) throw new Error('This browser does not offer the main audio player.');
-      state.context = new Context();
+      // Decode at the exported rate to keep held-region frame boundaries exact.
+      try { state.context = new Context({ sampleRate: state.manifest?.sampleRate || 44100 }); }
+      catch (_) { state.context = new Context(); }
     }
     return state.context;
   }
@@ -180,7 +186,8 @@
       if (held) { source.loopStart = 0; source.loopEnd = region; }
       source.connect(gain);
       gain.connect(context.destination);
-      const now = context.currentTime;
+      // A previous held tone may have a short stop ramp still scheduled.
+      const now = Math.max(context.currentTime, state.nextStartAt);
       gain.gain.setValueAtTime(held ? 0 : 1, now);
       if (held) gain.gain.linearRampToValueAtTime(1, now + .012);
       if (state.offset >= region) state.offset = 0;
@@ -225,6 +232,9 @@
     const count = isHeld() ? Math.min(data.length, Math.round(state.selected.loop.regionSeconds * buffer.sampleRate)) : data.length;
     const columns = Math.floor(bounds.width);
     const stride = Math.max(1, Math.floor(count / columns));
+    let displayPeak = .000001;
+    for (let sample = 0; sample < count; sample++) displayPeak = Math.max(displayPeak, Math.abs(data[sample]));
+    const displayScale = canvas.height * .42 / displayPeak;
     drawing.strokeStyle = '#bd6377';
     drawing.lineWidth = scale;
     drawing.beginPath();
@@ -235,12 +245,12 @@
       // Preserve the actual range in each display column rather than a decorative curve.
       for (let sample = first; sample < last; sample++) { low = Math.min(low, data[sample]); high = Math.max(high, data[sample]); }
       const x = (column + .5) * scale;
-      drawing.moveTo(x, canvas.height / 2 - high * canvas.height * .42);
-      drawing.lineTo(x, canvas.height / 2 - low * canvas.height * .42);
+      drawing.moveTo(x, canvas.height / 2 - high * displayScale);
+      drawing.lineTo(x, canvas.height / 2 - low * displayScale);
     }
     drawing.stroke();
     ui['wave-message'].hidden = true;
-    ui['wave-caption'].textContent = isHeld() ? 'ONE SETTLED LOOP REGION' : 'THE ACTUAL RENDER';
+    ui['wave-caption'].textContent = isHeld() ? 'HELD REGION · AUTO SCALED' : 'WAVEFORM · AUTO SCALED';
   }
 
   async function prepareWaveform() {
@@ -279,6 +289,7 @@
     }
     if (clip.sha256?.[state.mode]) add('Audio SHA-256', `${clip.sha256[state.mode].slice(0, 16)}…`);
     if (clip.rawOrigin) add('Raw source', clip.rawOrigin);
+    if (Number.isFinite(clip.rawExportGain)) add('Raw export gain', nice(clip.rawExportGain));
     if (clip.diagnostics) {
       if (Number.isFinite(clip.diagnostics.effectiveSpreadHz)) add('Fitted spread', `${nice(clip.diagnostics.effectiveSpreadHz)} Hz`);
       if (Number.isFinite(clip.diagnostics.motionHz)) add('Motion rate', `${nice(clip.diagnostics.motionHz)} Hz`);
@@ -390,8 +401,8 @@
       card.setAttribute('aria-label', `Select ${clip.label}, ${clip.noteName}, ${clip.voice}`);
       const top = node('span', 'clip-card-top');
       top.append(node('span', '', `${String(index + 1).padStart(2, '0')} / ${clip.voice}`), node('span', 'clip-icon', clip.id === state.selected?.id ? '●' : '↗'));
-      const title = node('h4', '', clip.label);
-      const description = node('p', '', clip.description || `${clip.noteName} · ${clip.gesture || clip.setting || 'rendered note'}`);
+      const title = node('span', 'clip-card-title', clip.label);
+      const description = node('span', 'clip-card-description', clip.description || `${clip.noteName} · ${clip.gesture || clip.setting || 'rendered note'}`);
       const foot = node('span', 'clip-card-foot');
       const reviewed = state.notes[clip.id];
       foot.append(node('span', '', `${clip.noteName} · ${isHeld(clip) ? 'HELD' : `${nice(clip.seconds)}s`}`), node('span', 'clip-review', reviewed?.verdict || (reviewed?.note?.trim() ? 'noted' : '')));

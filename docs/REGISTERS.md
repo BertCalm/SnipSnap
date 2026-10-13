@@ -63,3 +63,15 @@ Compare the existing organ references at the shared pitches and repeat the held
 material. Listening notes remain in the browser and can be exported as JSON.
 Numerical checks establish reproducibility, bounds and loop behavior; phone/MPC
 playback and sonic approval remain separate checks.
+
+The first pack contains 56 cases: twelve identity clips, six velocity clips,
+thirty control comparisons, four held tones and four existing-organ references.
+All six prototype tests pass. Independent WAV readback verifies 112 PCM24 files
+and 56 recipe JSONs against their hashes and recorded frame counts. The maximum
+matched peak is .09143 and the loudest-window matching error is below 4.1e-9.
+The prototype's pre-conditioning peak is at most .47740. The two TONEWHEEL raw
+references require a recorded PCM peak guard; prototype clips require none.
+All four held recurrence comparisons are below 3e-13. The held high settings
+fit PIPE spread to .51910 Hz and MUSETTE spread to 4.15279 Hz; the low settings
+fit to zero. These measurements establish the first pack's numerical behavior,
+not its musical acceptance.
