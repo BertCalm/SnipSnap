@@ -341,7 +341,7 @@
     rawButton.classList.toggle('selected', mode === 'raw');
     matchedButton.setAttribute('aria-pressed', mode === 'matched' ? 'true' : 'false');
     rawButton.setAttribute('aria-pressed', mode === 'raw' ? 'true' : 'false');
-    document.getElementById('level-description').textContent = mode === 'matched' ? 'Matched compares color at similar level.' : 'Raw preserves the renderer’s original levels.';
+    document.getElementById('level-description').textContent = mode === 'matched' ? 'Matched compares color at similar level.' : 'Raw preserves source dynamics.';
     updateTransport();
   }
 
