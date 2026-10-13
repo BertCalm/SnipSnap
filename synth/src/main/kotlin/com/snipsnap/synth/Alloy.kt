@@ -270,7 +270,7 @@ object Alloy {
     }
 
     // SynthScreen previews run in runInterruptible: a newer request interrupts this
-    // thread, so the long loops stop instead of finishing beside their replacement.
+    // thread, so the long loops and the passes stop instead of finishing beside their replacement.
     private fun stopIfUnwanted() {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("ALLOY render no longer wanted")
     }
@@ -278,7 +278,9 @@ object Alloy {
     private fun finish(raw: FloatArray, rate: Int): FloatArray {
         stopIfUnwanted()
         Tide.bandLimit(raw, rate)
+        stopIfUnwanted()
         val four = if (rate == INTERNAL_RATE) raw else Resampler.resample(Snip(raw, channels = 1, sampleRate = rate), INTERNAL_RATE).samples
+        stopIfUnwanted()
         return Dsp.decimate(four, RATE)
     }
 
@@ -331,8 +333,10 @@ object Alloy {
         val bodyOut = finish(body, rate).copyOf(frames)
         val directOut = finish(direct, rate).copyOf(frames)
         val projectionOut = finish(projection, rate).copyOf(frames)
+        stopIfUnwanted()
         if (normalize && velocity > 0f) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET * velocity.pow(.4f))
         if (held && seconds == null) {
+            stopIfUnwanted()
             val seam = Keys.seamError(out, period)
             check(seam < Keys.MAX_SEAM_ERROR) { "ALLOY $voice held seam $seam" }
             return Probe(out.copyOfRange(period, period * 2), bodyOut.copyOfRange(period, period * 2),

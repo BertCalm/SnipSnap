@@ -33,6 +33,17 @@ class AlloyTest {
     }
 
     @Test
+    fun `an interrupted held render stops instead of finishing beside its replacement`() {
+        // The held path converges its cycles before the passes; it must stop on the flag as the finite one does.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException> { Alloy.render(AlloyVoice.KEY, mapOf("HOLD" to 1f)) }
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    @Test
     fun `six dry voices reproduce complete inputs and ignore macro insertion order`() {
         assertEquals(setOf("BASS", "KEY", "PLUCK", "BRASS", "STRING", "SOFT"), AlloyVoice.entries.map { it.name }.toSet())
         for (voice in AlloyVoice.entries) {
