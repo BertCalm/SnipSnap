@@ -70,13 +70,16 @@ internal object OspreyV2 {
         val pan = doubleArrayOf(0.0,-.54,.42,-.30,.60,-.64,.25,-.40,.50,-.22,.34,-.48,-.46,.28,-.20,.52)
         val left = DoubleArray(16) { sqrt((1-pan[it])*.5) }
         val right = DoubleArray(16) { sqrt((1+pan[it])*.5) }
-        val bowSources = Array(12) { Oscillator(root*(it+1)) }
+        // Pressure follows the speaking partials of the hybrid material. Keeping this
+        // exciter harmonic while the body retuned to wood created a root-only resonant
+        // hole between Nordic and Mediterranean shores.
+        val bowSources = Array(12) { Oscillator(modes[it].frequency) }
         val bowDrive = OspreyMaterial.coasts[1].drive
         // A broad calm stick contact suppresses upper force harmonics; shorter chop and
         // breaker contacts release them. These are three source force spectra acting before
         // the body, not an EQ on the rendered bow or a change in output loudness.
         val stickWidth=doubleArrayOf(.00022,.00009,.000022)
-        val bowSpectrum=Array(3) { lane -> DoubleArray(12) { i -> exp(-.5*sq(2*PI*root*(i+1)*stickWidth[lane])) } }
+        val bowSpectrum=Array(3) { lane -> DoubleArray(12) { i -> exp(-.5*sq(2*PI*modes[i].frequency*stickWidth[lane])) } }
         val noise = Dsp.Noise(Dsp.seedFor("OSPREY",2,seed,"FORCE"))
         val callers = Array(3) { i -> Caller(Osprey.CreatureKind.entries[i],ecology.creatures[i],
             Dsp.seedFor("OSPREY",2,seed,"CALL",i),sea,motion,depth) }
@@ -134,7 +137,7 @@ internal object OspreyV2 {
             var bowMonitor=.0
             for (i in 0 until 12) {
                 val tone=bowSources[i].next()
-                // Friction is an authored root-synchronous pulse family acting through the
+                // Friction is an authored pressure-driven partial family acting through the
                 // modes. Its pressure window belongs to the Nordic material, never a common
                 // continuously audible fundamental underneath the other four coasts.
                 var harmonicPressure=.0
@@ -259,6 +262,7 @@ internal object OspreyV2 {
     private fun smooth(x:Double):Double {val t=x.coerceIn(0.0,1.0);return t*t*(3-2*t)}
     private class Mode(hz:Double,t60:Double) {
         var x=.0;var v=.0
+        val frequency=hz
         private val omega=2*PI*hz
         private val radius=exp(-6.907755278982137/(t60*RATE))
         val loss=1-radius

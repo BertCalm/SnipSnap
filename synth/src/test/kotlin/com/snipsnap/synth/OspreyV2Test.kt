@@ -151,6 +151,24 @@ class OspreyV2Test {
     }
 
     @Test
+    fun `hybrid coast bodies retain upper modes while bow pressure follows their tuning`() {
+        val failures = mutableListOf<String>()
+        for (shore in listOf(.125f, .30f, .375f, .45f, .625f, .875f)) {
+            for (sea in seas) {
+                val p = probe(shore, sea)
+                val body = spectrum(p.primary)
+                val root = p.rootHz.toDouble()
+                val rootPower = fraction(body, root * .97, root * 1.03)
+                val upperPower = fraction(body, root * 1.5)
+                println("OSPREY R2 hybrid shore=$shore sea=$sea primaryRoot=$rootPower upper=$upperPower")
+                if (rootPower >= .75 || upperPower < .20)
+                    failures += "shore $shore sea $sea lost its blended material: root=$rootPower upper=$upperPower"
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
+    @Test
     fun `neighboring shores differ in both spectrum and gesture at every sea state`() {
         for (sea in seas) {
             val renders = shores.map { probe(it, sea) }
