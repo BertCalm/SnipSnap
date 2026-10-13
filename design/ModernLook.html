@@ -1,7 +1,8 @@
 <!doctype html>
 <!--
   TapeOS Two Looks: the KIT screen in the OG OILSLICK look and in the proposed
-  MODERN / OPENSKY look, side by side. Companion to docs/MODERN_LOOK.md.
+  MODERN / OPENSKY look, side by side, plus the proposed four-places-and-a-dock shape.
+  Companion to docs/MODERN_LOOK.md and docs/MODERN_SHAPE.md.
   Standalone: Google Fonts for the OG side, system faces for the modern side, no scripts.
 -->
 <html lang="en">
@@ -125,6 +126,30 @@ ol,ul{padding-left:20px}li{margin:4px 0;max-width:70ch}
 .md .status>span.q{font:italic 11px var(--serif);letter-spacing:0;color:var(--ink2)}
 .md .status>span b{color:var(--accent);font-weight:400;margin-right:6px}
 
+/* ---------- the proposed shape: four places, three stages, one dock ---------- */
+.shape .win{padding-bottom:0}
+.places{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--g-e);flex:none}
+.places>span{display:flex;align-items:center;justify-content:center;height:40px;font:600 10px var(--sans);letter-spacing:.4px;color:var(--ink2)}
+.places>span.on{color:var(--gray);background:var(--ink);margin:6px 3px;border-radius:2px}
+.stages{display:flex;gap:4px;padding:8px 8px 0;flex:none}
+.stages>span{flex:1;display:flex;align-items:center;justify-content:center;height:30px;font:9px var(--mono);letter-spacing:1.2px;color:var(--ink2);border:1px solid var(--g-e);border-radius:2px;background:var(--field)}
+.stages>span.on{color:var(--accent);border-color:var(--accent)}
+.shape .pad{height:52px}
+.shape .pad .lbl{font-size:11px;bottom:7px}
+.padstrip{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--g-dk);background:var(--field);border-radius:2px;padding:0 10px;height:36px;flex:none}
+.padstrip b{font:9px var(--mono);letter-spacing:1px;color:var(--ink);font-weight:400}
+.padstrip b i{font:italic 12px var(--serif);color:var(--ink);letter-spacing:0;margin:0 6px}
+.padstrip span{font:600 10px var(--sans);color:var(--accent)}
+.dock{background:var(--lcd);color:var(--lcd-ink);margin:auto -8px -8px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;flex:none;position:relative;overflow:hidden}
+.dock::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.18) 2px 3px);pointer-events:none}
+.dock .tr{display:flex;align-items:center;gap:8px;font:10px var(--mono);letter-spacing:1px}
+.dock .tr i{display:grid;place-items:center;width:26px;height:26px;border:1px solid #716c5d;border-radius:50%;font-style:normal;font-size:9px}
+.dock .tr i.go{background:var(--amber);border-color:var(--amber);color:var(--lcd)}
+.dock .st{font:8px var(--mono);letter-spacing:1.1px;color:#c5baa4;display:flex;align-items:center;gap:8px}
+.dock .st b{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber)}
+.dock .np{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:10px;font:600 10px var(--sans)}
+.dock .np span{font:9px var(--mono);letter-spacing:1px;color:var(--amber);white-space:nowrap}
+
 @media (max-width:420px){.wrap{padding-inline:16px}.two{gap:36px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -202,6 +227,61 @@ ol,ul{padding-left:20px}li{margin:4px 0;max-width:70ch}
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <h2>The proposed shape</h2>
+  <p class="lede">The second question was whether the structure should change too. The reviews in <code>docs/</code> fixed everything that could be fixed in place and parked the rest as "an initiative". This frame draws that initiative: four places that always fit, three stages inside KIT, a visible door into the pad sheet, and a dock where sound lives on every screen. The reasoning is in <code>docs/MODERN_SHAPE.md</code>.</p>
+  <div class="two">
+    <div>
+      <div class="frame-head"><b>MODERN · FOUR PLACES AND A DOCK</b><span>KIT ▸ PADS, with A02 selected</span></div>
+      <div class="phone md shape">
+        <div class="orbit o1"></div><div class="orbit o2"></div>
+        <div class="win">
+          <div class="titlebar"><span>SNIP<b></b>SNAP</span><span><i>✳</i>KITCHEN · ⚙</span></div>
+          <div class="places"><span>SHELF</span><span>TAPE</span><span class="on">KIT</span><span>MAKE</span></div>
+          <div class="stages"><span class="on">PADS</span><span>BEAT</span><span>OUT</span></div>
+          <div class="body">
+            <div class="grid">
+              <div class="pad f" style="--c:#3f8cf0"><span class="id">A13</span><span class="lbl">break 1</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A14</span><span class="lbl">lo tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A15</span><span class="lbl">shaker</span></div>
+              <div class="pad"><span class="id">A16</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A09</span><span class="lbl">clap</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A10</span><span class="lbl">hi tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A11</span><span class="lbl">cowbell</span></div>
+              <div class="pad"><span class="id">A12</span></div>
+              <div class="pad f" style="--c:#ffc41f"><span class="id">A05</span><span class="lbl">rim</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A06</span><span class="lbl">open</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A07</span><span class="lbl">snap</span></div>
+              <div class="pad"><span class="id">A08</span></div>
+              <div class="pad f" style="--c:#e8542e"><span class="id">A01</span><span class="lbl">kick</span></div>
+              <div class="pad f" style="--c:#ffc41f;border-color:var(--accent);box-shadow:inset 0 -4px 0 var(--c),0 0 0 1px var(--accent)"><span class="id">A02</span><span class="lbl">snare</span></div>
+              <div class="pad f" style="--c:#1fc6cf"><span class="id">A03</span><span class="lbl">hat</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A04</span><span class="lbl">hat open</span></div>
+            </div>
+            <div class="padstrip"><b>A02<i>snare</i>CRUSH 35% · CHOKE 1</b><span>OPEN ▸</span></div>
+            <div class="dock">
+              <div class="tr"><i class="go">▶</i><i>■</i>94 BPM · 2 BARS</div>
+              <div class="st"><b></b>ARMED · 00:41 ON TAPE · SNIP</div>
+              <div class="np">The pads are loaded. Take the kit out.<span>OUT ▸</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="frame-head"><b>WHAT MOVED</b><span>today's thirteen tabs, placed</span></div>
+      <div class="tblwrap"><table>
+        <tr><th>Place</th><th>Holds</th></tr>
+        <tr><td><b>SHELF</b></td><td>kits, snips, instruments, rooms, bins, starters. Unchanged.</td></tr>
+        <tr><td><b>TAPE</b></td><td>the deck, then <b>CUT</b> (today's CHOP) as its second stage. A cut always knows its tape.</td></tr>
+        <tr><td><b>KIT</b></td><td><b>PADS</b> (grid, PLAY's fullscreen toggle, the benches) · <b>BEAT</b> (GROOVE, ORBIT, SONG) · <b>OUT</b> (EXPORT, SHARE, BOUNCE)</td></tr>
+        <tr><td><b>MAKE</b></td><td>SYNTH, SNAP, SURFACE, KEYS, the instruments. Each lands a pad or a tape in the open kit.</td></tr>
+        <tr><td><b>⚙</b></td><td>SETUP and HELP, one tap from every screen instead of 12th and 13th of 13.</td></tr>
+        <tr><td><b>dock</b></td><td>the BEAT's transport, the capture light and counter, what is playing, and the next-step door that stays until taken.</td></tr>
+      </table></div>
+      <p class="note" style="margin-top:14px">The pad strip under the grid is the tap door the reviews asked for: tap a pad to hear it and select it, read what it carries, OPEN ▸ for its bench. The hold stays as the fast path.</p>
     </div>
   </div>
 
