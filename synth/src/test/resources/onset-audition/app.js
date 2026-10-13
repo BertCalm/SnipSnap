@@ -8,7 +8,9 @@
     KICK: { title: 'Kick', left: 'OSCILLATOR BODY', right: 'MODAL MEMBRANE', description: 'A swept, weighted body meets the ring of a struck membrane. Listen for the attack staying together as the material changes.' },
     HAT_CLOSED: { title: 'Closed hat', left: 'SQUARE CLUSTER', right: 'RESONANT NOISE', description: 'A metallic oscillator cluster meets resonant noise. Listen for a useful shift in texture without losing the short, clear hat.' }
   };
-  const state = { manifest: null, clips: [], selected: null, mode: 'matched', playing: false, loading: false, token: 0, sequence: [], sequenceIndex: 0, sequenceVoice: null, notes: {}, storageAvailable: true };
+  const state = { manifest: null, clips: [], selected: null, mode: 'matched', playing: false, loading: false, token: 0, sequence: [], sequenceIndex: 0, sequenceVoice: null, notes: {}, storageAvailable: true,
+    context: null, buffers: new Map(), source: null, backend: null, frame: 0, startAt: 0, duration: 0 };
+  const OUTPUT_WARMUP_SECONDS = .15;
   const cards = new Map();
   const playButtons = new Map();
   const verdicts = new Map();
@@ -66,8 +68,9 @@
       const button = playButtons.get(clip.id);
       if (button) {
         button.setAttribute('aria-pressed', String(playing));
-        button.setAttribute('aria-label', `${playing ? 'Stop' : 'Play'} ${name(clip)}, ${state.mode === 'matched' ? 'matched' : 'raw'} levels`);
-        button.querySelector('.play-symbol').textContent = playing ? '■' : '▶';
+        const action = state.sequence.length ? 'Play' : playing ? 'Stop' : 'Play';
+        button.setAttribute('aria-label', `${action} ${name(clip)}${state.sequence.length ? ' independently' : ''}, ${state.mode === 'matched' ? 'matched' : 'raw'} levels`);
+        button.querySelector('.play-symbol').textContent = playing ? state.sequence.length ? '↻' : '■' : '▶';
       }
     }
     for (const [voice, button] of sequenceButtons) {
@@ -82,8 +85,8 @@
     $('stop-all').disabled = !state.playing && !state.loading && !state.sequence.length;
     $('replay').disabled = !clip;
     $('replay').classList.toggle('playing', state.playing);
-    $('replay').firstElementChild.textContent = state.playing || state.loading ? '■' : '▶';
-    $('replay').setAttribute('aria-label', `${state.playing || state.loading ? 'Stop' : 'Play'} selected sound`);
+    $('replay').firstElementChild.textContent = state.sequence.length ? '↻' : state.playing || state.loading ? '■' : '▶';
+    $('replay').setAttribute('aria-label', state.sequence.length ? 'Replay selected sound independently' : `${state.playing || state.loading ? 'Stop' : 'Play'} selected sound`);
     $('transport-label').textContent = clip ? `${clip.kind === 'beat' ? 'BEAT' : VOICES[clip.voice]?.title.toUpperCase() || clip.voice} / BLEND ${pct(clip)} / ${state.mode === 'matched' ? 'MATCHED' : 'RAW'}` : 'ONSET / READY';
     $('transport-title').textContent = clip ? name(clip) : 'Choose a sound to listen.';
     const download = $('download-wav');
@@ -101,6 +104,16 @@
   }
   function stop(message = 'Playback stopped.') {
     state.token++;
+    cancelAnimationFrame(state.frame);
+    state.frame = 0;
+    const source = state.source;
+    state.source = null;
+    state.backend = null;
+    if (source) {
+      source.onended = null;
+      try { source.stop(); } catch (_) { /* Source already ended. */ }
+      source.disconnect();
+    }
     audio.pause();
     try { audio.currentTime = 0; } catch (_) { /* No loaded audio yet. */ }
     state.playing = false;
@@ -114,6 +127,63 @@
     announce(message);
   }
   function select(clip) { state.selected = clip; updateNoteEditor(); updateTransport(); }
+  function audioContext() {
+    // Local downloaded pages can play relative WAVs, but browsers block fetching
+    // those files for decoding. Keep native playback for that offline case.
+    const Constructor = window.AudioContext || window.webkitAudioContext;
+    if (!Constructor || location.protocol === 'file:') return null;
+    if (!state.context || state.context.state === 'closed') {
+      state.context = new Constructor();
+      state.buffers.clear();
+    }
+    return state.context;
+  }
+  function decodedBuffer(context, url) {
+    if (state.buffers.has(url)) return state.buffers.get(url);
+    const promise = fetch(url).then((response) => {
+      if (!response.ok) throw new Error('Audio unavailable');
+      return response.arrayBuffer();
+    }).then((bytes) => context.decodeAudioData(bytes)).catch((error) => {
+      // A failed download/decode must be retryable on the next click.
+      if (state.buffers.get(url) === promise) state.buffers.delete(url);
+      throw error;
+    });
+    state.buffers.set(url, promise);
+    return promise;
+  }
+  function started(clip, token) {
+    if (token !== state.token || !state.loading) return;
+    state.loading = false;
+    state.playing = true;
+    announce(state.sequence.length ? `Comparing ${VOICES[clip.voice]?.title || 'sounds'} · ${state.sequenceIndex + 1} of ${state.sequence.length}` : `Playing ${name(clip)}.`);
+    updateTransport();
+  }
+  function trackProgress(clip, source, token) {
+    if (token !== state.token || state.source !== source) return;
+    const elapsed = Math.max(0, state.context.currentTime - state.startAt);
+    if (state.context.currentTime >= state.startAt) started(clip, token);
+    $('playback-progress').value = Math.min(1, elapsed / state.duration);
+    $('transport-time').textContent = time(Math.min(elapsed, state.duration));
+    state.frame = requestAnimationFrame(() => trackProgress(clip, source, token));
+  }
+  function finished(token) {
+    if (token !== state.token) return;
+    state.playing = false;
+    state.loading = false;
+    state.backend = null;
+    if (state.sequence.length && state.sequenceIndex + 1 < state.sequence.length) {
+      updateTransport();
+      announce('A short pause before the next blend.');
+      setTimeout(() => {
+        if (token !== state.token || !state.sequence.length) return;
+        state.sequenceIndex++; play(state.sequence[state.sequenceIndex], true);
+      }, 450);
+    } else {
+      const wasSequence = state.sequence.length > 0;
+      state.sequence = []; state.sequenceVoice = null;
+      updateTransport(); announce(wasSequence ? 'Comparison complete. Replay a point to listen again.' : 'Finished. Choose another blend or replay this sound.');
+    }
+  }
   async function play(clip, preserveSequence = false) {
     if (!preserveSequence) stop('');
     const token = ++state.token;
@@ -121,19 +191,51 @@
     state.playing = false;
     state.loading = true;
     select(clip);
-    audio.src = path(clip);
-    audio.load();
+    const url = path(clip);
     $('playback-progress').value = 0;
     $('transport-time').textContent = '0:00';
     announce(`Opening ${name(clip)}…`);
     updateTransport();
     try {
-      await audio.play();
-      if (token !== state.token) return;
-      state.loading = false;
-      state.playing = true;
-      announce(state.sequence.length ? `Comparing ${VOICES[clip.voice]?.title || 'sounds'} · ${state.sequenceIndex + 1} of ${state.sequence.length}` : `Playing ${name(clip)}.`);
-      updateTransport();
+      const context = audioContext();
+      if (context) {
+        state.backend = 'web';
+        // Call resume in the original click stack, before fetching or awaiting:
+        // mobile browsers require this gesture to unlock their audio route.
+        const resumed = context.resume();
+        const [, buffer] = await Promise.all([resumed, decodedBuffer(context, url)]);
+        if (token !== state.token) return;
+        if (context.state !== 'running') {
+          const error = new Error('Audio context is suspended'); error.name = 'NotAllowedError'; throw error;
+        }
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(context.destination);
+        state.source = source;
+        state.duration = buffer.duration;
+        // The running destination emits silence during this short lead-in. It
+        // gives a cold output route time to open before the kick's first frame.
+        state.startAt = context.currentTime + OUTPUT_WARMUP_SECONDS;
+        source.onended = () => {
+          if (token !== state.token || state.source !== source) return;
+          cancelAnimationFrame(state.frame); state.frame = 0;
+          state.source = null;
+          source.disconnect();
+          $('playback-progress').value = 1;
+          $('transport-time').textContent = time(state.duration);
+          finished(token);
+        };
+        source.start(state.startAt);
+        announce(`Ready to play ${name(clip)}…`);
+        trackProgress(clip, source, token);
+      } else {
+        state.backend = 'media';
+        audio.src = url;
+        audio.load();
+        await audio.play();
+        if (token !== state.token) return;
+        started(clip, token);
+      }
     } catch (error) {
       if (token !== state.token) return;
       stop('');
@@ -141,7 +243,10 @@
     }
   }
   function toggle(clip) {
-    if (state.selected?.id === clip.id && (state.playing || state.loading)) stop();
+    // A pad chosen during comparison becomes an independent hit, including
+    // the pad the sequence is currently playing.
+    if (state.sequence.length) play(clip);
+    else if (state.selected?.id === clip.id && (state.playing || state.loading)) stop();
     else play(clip);
   }
   function makeCard(clip, index) {
@@ -299,29 +404,19 @@
     } catch (_) { exportNotes(); $('note-status').textContent = 'Clipboard unavailable. Notes downloaded instead.'; }
   });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.preventDefault(); stop(); } });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && (state.playing || state.loading)) stop('Playback stopped while this page is in the background.'); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && (state.playing || state.loading || state.sequence.length)) stop('Playback stopped while this page is in the background.'); });
   audio.addEventListener('timeupdate', () => {
+    if (state.backend !== 'media') return;
     $('playback-progress').value = audio.duration > 0 ? audio.currentTime / audio.duration : 0;
     $('transport-time').textContent = time(audio.currentTime);
   });
   audio.addEventListener('ended', () => {
-    state.playing = false; state.loading = false;
-    if (state.sequence.length && state.sequenceIndex + 1 < state.sequence.length) {
-      const token = state.token;
-      updateTransport();
-      announce('A short pause before the next blend.');
-      setTimeout(() => {
-        if (token !== state.token || !state.sequence.length) return;
-        state.sequenceIndex++; play(state.sequence[state.sequenceIndex], true);
-      }, 450);
-    } else {
-      const wasSequence = state.sequence.length > 0;
-      state.sequence = []; state.sequenceVoice = null;
-      updateTransport(); announce(wasSequence ? 'Comparison complete. Replay a point to listen again.' : 'Finished. Choose another blend or replay this sound.');
-    }
+    if (state.backend !== 'media' || !audio.ended) return;
+    $('playback-progress').value = 1;
+    finished(state.token);
   });
   audio.addEventListener('error', () => {
-    if (!state.loading && !state.playing) return;
+    if (state.backend !== 'media' || (!state.loading && !state.playing)) return;
     stop(''); announce('This sound could not load. Try again or download its WAV.', true);
   });
   loadNotes();
