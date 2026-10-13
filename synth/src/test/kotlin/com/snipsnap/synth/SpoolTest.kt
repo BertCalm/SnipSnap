@@ -134,11 +134,26 @@ class SpoolTest {
             val label = "$voice $macros"
             assertTrue(s.isNotEmpty() && s.all { it.isFinite() }, "$label nonfinite output")
             assertTrue(s.size <= Dsp.RATE * 10, "$label exceeded finite host duration")
-            assertTrue(s.maxOf { abs(it) } < 4f && rms(s) > 1e-5, "$label runaway or silent source")
+            // The output passes a tanh saturator whose ceiling is 1/1.12 (.89), so a 4.0 ceiling could never fire.
+            // A runaway would pin the output against that ceiling; these renders peak at .15 to .20, and must stay
+            // in the saturator's near-linear region (under 4% compression), well clear of it.
+            assertTrue(s.maxOf { abs(it) } < .3f && rms(s) > 1e-5, "$label runaway or silent source: peak ${s.maxOf { abs(it) }}")
             assertTrue(abs(s.average()) < .01, "$label DC offset")
             assertTrue(s.takeLast(Dsp.RATE / 100).maxOf { abs(it) } < 1e-3, "$label failed to terminate quietly")
             assertTrue(d.sourcePeak.isFinite() && d.overlayPeak.isFinite() && d.overlayPeak <= 1f, "$label unbounded recording")
             assertTrue(d.feedbackBound in 0f..0.550001f, "$label full write operator exceeds contraction bound")
+            // That range restates SpoolMachine's own routing require. What the diagnostic must also be is the bound of
+            // the write operator actually applied: the recorded write gains arriving at one destination at one time
+            // never sum past it, and with IMPRINT and RETURN at their tops they reach it.
+            val rowWrites = d.imprintEvents.groupBy { it.destination to it.timeSeconds }.values
+                .map { events -> events.sumOf { it.gain.toDouble() } }
+            assertTrue(rowWrites.all { it <= d.feedbackBound + 1e-6 },
+                "$label wrote ${rowWrites.maxOrNull()} into one strip, past its reported bound ${d.feedbackBound}")
+            if (macros.isNotEmpty()) {
+                assertTrue(rowWrites.isNotEmpty(), "$label all-high corner recorded no writes")
+                assertEquals(d.feedbackBound.toDouble(), rowWrites.max(), 1e-6,
+                    "$label reported a write bound its full-strength writes never reach")
+            }
             assertTrue(d.allocatedBytes > 0 && d.allocatedBytes < 64L * 1024 * 1024, "$label unbounded render allocation")
             assertTrue(d.spliceCount in 0..4, "$label exceeded four splice boundaries")
             assertTrue(d.trace.all { frame ->
@@ -208,6 +223,16 @@ class SpoolTest {
         assertTrue(requireNotNull(muted.reverseStem).all { it == 0f }, "RETURN=0 left a backward pickup")
         assertTrue(rms(requireNotNull(audible.reverseStem), from, until) > 1e-4,
             "RETURN did not reveal the independent backward journey")
+        // 1e-4 on an unnormalized stem is about 50 dB under the stem itself, so a backward layer cut by 30 dB still
+        // passed. The layer is measured against the forward pickup in the same window instead: docs/SPOOL.md
+        // reports it at no less than 42% of forward RMS across its clean release cases (this case measures 169%),
+        // and RETURN must keep raising it (.9 measures 1.57 times .45).
+        val backward = rms(requireNotNull(audible.reverseStem), from, until)
+        val forward = rms(requireNotNull(audible.forwardStem), from, until)
+        assertTrue(backward >= .42 * forward, "RETURN .9 backward layer is only ${backward / forward} of forward RMS")
+        val half = Spool.renderProbe(SpoolVoice.STRING, macros + ("RETURN" to .45f), writes = false)
+        val halfBackward = rms(requireNotNull(half.reverseStem), from, until)
+        assertTrue(backward > halfBackward * 1.25, "RETURN .45 to .9 raised the backward layer only from $halfBackward to $backward")
     }
 
     @Test
@@ -256,6 +281,9 @@ class SpoolTest {
             val p = Spool.renderProbe(SpoolVoice.STRING,
                 mapOf("HEAD" to 1f, "RETURN" to 1f, "STRAIN" to .1f, "SPLICE" to 1f), machine)
             val d = p.diagnostics
+            val cleanDepthCents = 9.0 * (1 + .75 * .1)
+            var lowestCents = Double.POSITIVE_INFINITY
+            var highestCents = Double.NEGATIVE_INFINITY
             for (frame in d.pickupTrace) for (k in 0..2) {
                 val support = frame.reverseSupports[k]
                 assertTrue(frame.reverseMinCoordinates[k] >= -1e-6f && frame.reverseMaxCoordinates[k] <= support + 1e-6f,
@@ -264,11 +292,26 @@ class SpoolTest {
                     "reverse pickup revealed future tape: gate=$gate $frame")
                 // A newly launched Hann grain still has a kernel footprint at zero weight.
                 // Its documented read rate is zero until it contributes actual pickup audio.
+                // Every head that reads follows the one shared tape clock exactly, backward or forward, so a per-head
+                // rate written into the trace fails here.
                 if (frame.reverseReadRates[k] != 0f)
                     assertEquals(-frame.tapeRate, frame.reverseReadRates[k], "clean reverse grain did not follow the backward tape clock")
                 if (frame.forwardReadRates[k] != 0f)
                     assertEquals(frame.tapeRate, frame.forwardReadRates[k], "clean forward grain did not follow the forward tape clock")
+                // The depth check pins constants, not behaviour: Spool.kt builds the tape rate as 2^(cents / 1200) from
+                // the 5/3/1-cent wow and flutter docs/SPOOL.md states, scaled by 1 + .75 * STRAIN (here 9.675 cents; the
+                // trace reaches 9.61), so only a change to those constants or that scaling reaches it. That rate is
+                // always positive, so the equalities above already fix each head's read direction.
+                for ((rate, name) in listOf(frame.reverseReadRates[k] to "reverse", frame.forwardReadRates[k] to "forward")) {
+                    if (rate == 0f) continue
+                    val cents = 1200 * ln(abs(rate).toDouble()) / ln(2.0)
+                    assertTrue(abs(cents) <= cleanDepthCents + 1e-3, "clean $name grain left the shared tape clock's depth: gate=$gate $cents cents")
+                    lowestCents = minOf(lowestCents, cents)
+                    highestCents = maxOf(highestCents, cents)
+                }
             }
+            // The clock must actually move: at least the wow's own 5-cent depth across the render (it spans 14.5 to 19.2).
+            assertTrue(highestCents - lowestCents >= 5.0, "clean grains read at a fixed speed: gate=$gate $lowestCents..$highestCents cents")
             assertTrue(d.pickupTrace.any { frame -> frame.forwardReadRates.indices.any { k ->
                 frame.forwardReadRates[k] > 0f && frame.forwardGains[k] > 0f
             } }, "no forward pickup actually activated: gate=$gate")
@@ -571,16 +614,21 @@ class SpoolTest {
 
     @Test
     fun `machine validation refuses instantaneous feedback excessive routing and ambiguous splice geometry`() {
-        assertFailsWith<IllegalArgumentException> { SpoolMachine(writeDelaySamples = 0) }
-        assertFailsWith<IllegalArgumentException> {
+        // Each refusal names its own guard, so one guard removed while another still refuses the input is seen.
+        fun refuses(expected: String, build: () -> Unit) {
+            val refused = assertFailsWith<IllegalArgumentException>(expected) { build() }
+            assertEquals(expected, refused.message)
+        }
+        refuses("SPOOL write delay out of 1..4410 samples: 0") { SpoolMachine(writeDelaySamples = 0) }
+        refuses("SPOOL complete incoming write gain must not exceed .55") {
             SpoolMachine(routes = listOf(SpoolRoute(0, 1, .4f), SpoolRoute(2, 1, .4f)))
         }
-        assertFailsWith<IllegalArgumentException> { SpoolRoute(1, 1) }
-        assertFailsWith<IllegalArgumentException> { SpoolMachine(sourceSeconds = 2f, gateSeconds = 2f) }
-        assertFailsWith<IllegalArgumentException> {
+        refuses("SPOOL route must join two different strips 0..2") { SpoolRoute(1, 1) }
+        refuses("SPOOL gate must be .15..2.5 seconds and fit inside the source") { SpoolMachine(sourceSeconds = 2f, gateSeconds = 2f) }
+        refuses("SPOOL splice boundaries must be ordered and at least .06 apart") {
             SpoolMachine(spliceSchedule = listOf(SpoolSplice(.3f, .1f), SpoolSplice(.32f, -.1f)))
         }
-        assertFailsWith<IllegalArgumentException> { SpoolMachine(roster = listOf(SpoolStrip(SpoolSourceFamily.STRING))) }
+        refuses("SPOOL needs three source strips") { SpoolMachine(roster = listOf(SpoolStrip(SpoolSourceFamily.STRING))) }
     }
 
     @Test
