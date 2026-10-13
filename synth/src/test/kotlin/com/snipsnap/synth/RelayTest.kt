@@ -521,6 +521,41 @@ class RelayTest {
     }
 
     @Test
+    fun `a held phrase repeats across the wrap of its continuous render and up to its cross-fade`() {
+        // The engine's seamError, and the two tests above that read it, compare the previous
+        // cycle's last 256 frames with the exported cycle's last 256 after the wrap has copied the
+        // first over the second: zero whether or not the phrase repeats. Measure the repeat where
+        // nothing was copied, against Keys' bar. raw holds two consecutive generated cycles of one
+        // continuous render, so its seam is taken across the real wrap; on the exported audio the
+        // preceding cycle is compared with the loop up to the first frame the cross-fade writes.
+        data class Case(val label: String, val voice: RelayVoice, val macros: Map<String, Float>,
+                        val phrase: RelayPhrase = Relay.phraseFor(voice))
+        val broad = Relay.phraseFor(RelayVoice.KEY).let { initial ->
+            initial.copy(tempoBpm = 60f,
+                slots = initial.slots.map { it.copy(beats = 0.25f, transitionBeats = 2f) },
+                accents = listOf(RelayAccent(0f, 1f), RelayAccent(0.5f, 0.5f)))
+        }
+        val cases = RelayVoice.entries.map { Case("$it defaults", it, Relay.defaults(it) + ("HOLD" to 1f)) } +
+            RelayPresets.all().filter { Relay.isLoop(it.macros.getValue("HOLD")) }
+                .map { Case("preset ${it.name}", it.voice, it.macros, it.phrase) } +
+            RelayVoice.entries.map { Case("$it PULSE 1 COLOR .8", it, mapOf("HOLD" to 1f, "PULSE" to 1f, "COLOR" to 0.8f)) } +
+            Case("short broad phrase", RelayVoice.KEY, mapOf("HOLD" to 1f, "BLEND" to 1f, "ORDER" to 0.45f), broad)
+        for (case in cases) {
+            val report = Relay.inspect(case.voice, case.macros, phrase = case.phrase)
+            assertTrue(report.loop, "${case.label} HOLD did not select the repeating phrase")
+            val generated = Keys.seamError(report.raw, report.raw.size / 2)
+            val cycle = report.previousCycle.size
+            val untouched = cycle - case.phrase.loop.wrapFrames.coerceAtMost(cycle - 256) - 256
+            val exported = HeldSeams.beforeWrap(report.previousCycle, report.snip.samples, untouched)
+            println("RELAY HOLD ${case.label}: generated wrap seam $generated, exported seam before the cross-fade $exported")
+            assertTrue(generated < Keys.MAX_SEAM_ERROR,
+                "${case.label} generated phrase does not repeat across its wrap: seam $generated")
+            assertTrue(exported < Keys.MAX_SEAM_ERROR,
+                "${case.label} exported loop does not repeat its preceding cycle before the cross-fade: seam $exported")
+        }
+    }
+
+    @Test
     fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
         // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
         // frame loop, the band limit, the decimation, the level and the seam must stop on that flag.
