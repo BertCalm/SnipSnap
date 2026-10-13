@@ -370,17 +370,18 @@ C minor pentatonic FRESH TAPE starter are included. Run
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the renderer, settled HOLD loops and the pending owner listening review.
 
-OSPREY adapts XOsprey into a finite SWELL articulation. Model 2 gives Atlantic,
-Nordic, Mediterranean, Pacific and Southern their own wire, bow, wood, bowl and
-metal bodies; SEA changes wave pressure, chop contacts and breaker clusters.
-SHORE continuously morphs the coast; MOTION, DEPTH, SPACE and finite HOLD shape
-the gesture. Fifteen dry presets, a sixteen-pad starter, the SYNTH picker and
-CLI share saved note/velocity/seed/duration/model recipes. Model 1 remains
-frozen for existing pads. Run `./gradlew :synth:generateOspreyRevisionAudition`
-for paired R1/R2 renders and creature-free body comparisons. The original
-46-clip study remains preserved: its concept was positively received and its
-contrast marked for revision. Model 2 awaits listening review.
-[Implementation notes](docs/OSPREY.md) describe both models and the audition.
+OSPREY adapts XOsprey into a finite SWELL articulation. The original sound was
+positively received, with a request for slightly more distinct voices. R2 was
+rejected as harsh and for losing that character. Model 3 retains the original
+ocean, calls, envelopes and defaults, with a small coast-specific adjustment to
+the existing modal body balance. SHORE, SEA, MOTION, DEPTH, SPACE and finite HOLD
+shape the gesture. Fifteen dry presets, a sixteen-pad starter, the SYNTH picker
+and CLI share saved note/velocity/seed/duration/model recipes. Models 1 and 2
+remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudition`
+for paired R1/R3 renders and creature-muted body comparisons. The original
+46-clip study remains preserved. The [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site)
+awaits owner listening review; measured differences do not imply acceptance.
+[Implementation notes](docs/OSPREY.md) describe the three models and the audition.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One

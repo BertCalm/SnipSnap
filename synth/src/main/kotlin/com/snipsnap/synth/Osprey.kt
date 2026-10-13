@@ -6,30 +6,32 @@ import kotlin.random.Random
 
 enum class OspreyVoice { SWELL }
 
-/** Versioned finite coastal instrument. Saved model-1 recipes use their frozen renderer. */
+/** Versioned finite coastal instrument. Saved models retain their own renderer and defaults. */
 object Osprey {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val DEFAULT_MIDI = 60
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
     const val MAX_SECONDS = 12f
-    private val DEFAULTS = linkedMapOf("SHORE" to 0f, "SEA" to .35f, "MOTION" to .45f,
+    private val MODEL_2_DEFAULTS = linkedMapOf("SHORE" to 0f, "SEA" to .35f, "MOTION" to .45f,
         "DEPTH" to .45f, "SPACE" to .20f, "HOLD" to .35f)
 
     fun supportsModel(modelVersion: Int) = modelVersion in 1..MODEL_VERSION
     fun defaults(voice: OspreyVoice, modelVersion: Int = MODEL_VERSION): Map<String, Float> {
         require(supportsModel(modelVersion)) { "unsupported OSPREY model $modelVersion" }
-        return if (modelVersion == 1) OspreyV1.defaults(voice) else DEFAULTS.toMap()
+        return if (modelVersion == 2) MODEL_2_DEFAULTS.toMap() else OspreyV1.defaults(voice)
     }
     fun macrosFor(voice: OspreyVoice, modelVersion: Int = MODEL_VERSION): List<MacroSpec> =
         defaults(voice, modelVersion).map { (name, value) -> MacroSpec(name, value, value) }
     fun scramble(voice: OspreyVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> =
-        Dsp.scrambleNear(defaults(voice) + (near?.macros?.filterKeys { it in DEFAULTS } ?: emptyMap()), temperature, random)
+        Dsp.scrambleNear(defaults(voice) + (near?.macros?.filterKeys { it in MODEL_2_DEFAULTS } ?: emptyMap()), temperature, random)
     fun frequencyFor(midi: Int): Float = Keys.midiHz(midi)
     fun drumClassFor(@Suppress("UNUSED_PARAMETER") voice: OspreyVoice,
         @Suppress("UNUSED_PARAMETER") macros: Map<String, Float> = emptyMap()): DrumClass = DrumClass.TONAL
+    // This helper belongs to the frozen model-2 renderer, which called it before
+    // the conservative model-3 defaults returned to the original values.
     internal fun settled(voice: OspreyVoice, macros: Map<String, Float>): Map<String, Float> =
-        defaults(voice).mapValues { (name, default) -> (macros[name]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f) }
+        defaults(voice, 2).mapValues { (name, default) -> (macros[name]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f) }
 
     fun render(voice: OspreyVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, seed: Int = 0, durationSeconds: Float = 8f, modelVersion: Int = MODEL_VERSION,
@@ -61,6 +63,7 @@ object Osprey {
         cancelled: () -> Boolean = { false }): Probe {
         require(supportsModel(modelVersion)) { "unsupported OSPREY model $modelVersion" }
         if (modelVersion == 2) return OspreyV2.probe(voice, macros, midi, velocity, seed, durationSeconds, cancelled)
+        if (modelVersion == 3) return OspreyV3.probe(voice, macros, midi, velocity, seed, durationSeconds, cancelled)
         val p = OspreyV1.probe(voice, macros, midi, velocity, seed, durationSeconds, cancelled)
         return Probe(p.samples, p.ocean, p.primary, p.sympathy, p.creatures, p.dry,
             p.callEvents.map { CallEvent(it.timeSeconds, CreatureKind.valueOf(it.kind.name), it.shore, it.activity, it.strength) },

@@ -26,6 +26,19 @@ tasks.register<JavaExec>("generateOspreyRevisionAudition") {
     args("--include-bodies")
 }
 
+/** Compare preserved model 1 with model 3's small modal body-balance refinement. */
+tasks.register<JavaExec>("generateOspreyGentleAudition") {
+    group = "distribution"
+    description = "Render OSPREY R1/R3 pairs, original-gesture lineups and creature-free body diagnostics."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyGentleAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-gentle-audition")
+    project.findProperty("ospreyBaselineDir")?.toString()?.let { args(it) }
+    args("--include-bodies")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"

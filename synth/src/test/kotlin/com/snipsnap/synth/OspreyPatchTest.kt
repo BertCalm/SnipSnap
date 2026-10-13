@@ -20,7 +20,7 @@ class OspreyPatchTest {
 
     @Test
     fun `shared dispatcher roundtrips the complete recipe and repeats exact audio`() {
-        for (model in listOf(1, 2)) {
+        for (model in 1..Osprey.MODEL_VERSION) {
             val original = patch.copy(modelVersion = model)
             val text = original.toJsonText()
             val restored = OspreyPatch.fromJsonText(text)
@@ -71,7 +71,7 @@ class OspreyPatchTest {
     fun `unsupported model and malformed saved field types are refused`() {
         for ((field, value) in listOf(
             "engine" to JsonValue.Str("OTHER"), "voice" to JsonValue.Str("HARBOR"),
-            "version" to JsonValue.Num(2.0), "modelVersion" to JsonValue.Num(3.0),
+            "version" to JsonValue.Num(2.0), "modelVersion" to JsonValue.Num((Osprey.MODEL_VERSION + 1).toDouble()),
             "modelVersion" to JsonValue.Num(1.5), "midi" to JsonValue.Num(60.5),
             "seed" to JsonValue.Num(3.5), "seed" to JsonValue.Num(1e20),
             "velocity" to JsonValue.Str("strong"), "durationSeconds" to JsonValue.Bool(true),
@@ -130,7 +130,7 @@ class OspreyPatchTest {
         assertEquals(presets, Presets.forVoice("OSPREY", "SWELL"))
         assertTrue(Presets.all().containsAll(presets))
         for (preset in presets) {
-            assertEquals(2, preset.modelVersion, "new factory recipes must select model 2 explicitly")
+            assertEquals(Osprey.MODEL_VERSION, preset.modelVersion, "new factory recipes must select the current model")
             assertEquals(0f, preset.macros.getValue("SPACE"))
             assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
             assertEquals(DrumClass.TONAL, Osprey.drumClassFor(preset.voice, preset.macros))
@@ -142,8 +142,8 @@ class OspreyPatchTest {
     }
 
     @Test
-    fun `new recipes select model two while edits keep a legacy recipe on model one`() {
-        assertEquals(2, patch.modelVersion)
+    fun `new recipes select the current model while edits keep a legacy recipe on model one`() {
+        assertEquals(Osprey.MODEL_VERSION, patch.modelVersion)
         val legacy = patch.copy(modelVersion = 1)
         val edited = Patches.edited(legacy, "Old Crossing", legacy.macros + ("SEA" to .2f)) as OspreyPatch
         assertEquals(1, edited.modelVersion)
@@ -154,7 +154,7 @@ class OspreyPatchTest {
 
     @Test
     fun `velocity variants preserve the selected model and the complete seeded recipe`() {
-        for (model in listOf(1, 2)) {
+        for (model in 1..Osprey.MODEL_VERSION) {
             val original = patch.copy(modelVersion = model)
             for (velocity in listOf(.25f, .8f)) {
                 assertContentEquals(original.copy(velocity = velocity).render().samples,

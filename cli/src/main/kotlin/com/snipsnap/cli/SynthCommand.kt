@@ -88,7 +88,7 @@ import kotlin.random.Random
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
- * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2` for a finite SWELL gesture.
+ * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  */
 object SynthCommand {
 

@@ -92,8 +92,8 @@ class OspreyHostIntegrationTest {
         assertContentEquals(source.render().samples, source.copy(macros = legacyDefaults).render().samples,
             "loading a partial legacy recipe with its own defaults must keep its audio")
         assertFalse(source.render().samples.contentEquals(
-            source.copy(macros = Osprey.defaults(source.voice) + source.macros).render().samples),
-            "the current defaults must not be substituted into a legacy recipe")
+            source.copy(macros = Osprey.defaults(source.voice, 2) + source.macros).render().samples),
+            "model two defaults must not be substituted into a legacy recipe")
         assertTrue("modelVersion = 1" in UserPresets.rosterLine(promoted))
     }
 }
