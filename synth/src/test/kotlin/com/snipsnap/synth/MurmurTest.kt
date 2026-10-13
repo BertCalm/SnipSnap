@@ -13,6 +13,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -315,5 +316,23 @@ class MurmurTest {
             assertTrue(probe.samples.maxOf { abs(it) } < 1f, "$voice held native output clips the audition PCM export")
             assertContentEquals(probe.samples, Murmur.probe(voice, macros).samples, "$voice held seed is nondeterministic")
         }
+    }
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // sample loop, the decimation, the seam and the level must stop on that flag instead of finishing.
+        for (render in listOf<() -> Unit>(
+            { Murmur.render(MurmurVoice.KEY) },
+            { Murmur.render(MurmurVoice.KEY, mapOf("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException> { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Murmur.render(MurmurVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
 }
