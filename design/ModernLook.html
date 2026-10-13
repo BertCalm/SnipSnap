@@ -1,0 +1,251 @@
+<!doctype html>
+<!--
+  TapeOS Two Looks: the KIT screen in the OG OILSLICK look and in the proposed
+  MODERN / OPENSKY look, side by side. Companion to docs/MODERN_LOOK.md.
+  Standalone: Google Fonts for the OG side, system faces for the modern side, no scripts.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TapeOS Two Looks</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
+<style>
+/* Layout: an explainer page in the page's own quiet voice, holding two phone
+   frames that are each single-look by construction. The page chrome follows
+   the viewer's theme; the two phones never do, because they ARE the subject. */
+:root{
+  --bg:#f3f1ec; --fg:#1f1e1a; --fg2:#5d5b53; --rule:#d9d5cb; --panel:#ffffff; --acc:#a74c00;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --serif:Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#16161a; --fg:#ebe8e0; --fg2:#a5a29a; --rule:#33333a; --panel:#1f1f25; --acc:#ffa040; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#16161a; --fg:#ebe8e0; --fg2:#a5a29a; --rule:#33333a; --panel:#1f1f25; --acc:#ffa040; color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:1100px;margin:0 auto;padding-block:40px 64px;padding-inline:20px}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,4.5vw,44px);letter-spacing:-.5px;line-height:1.1;margin:0 0 10px;text-wrap:balance}
+h2{font-family:var(--serif);font-weight:400;font-size:26px;letter-spacing:-.3px;margin:48px 0 10px;text-wrap:balance}
+.eyebrow{font:600 10px/1.4 var(--mono);letter-spacing:1.4px;text-transform:uppercase;color:var(--fg2);margin:0 0 14px}
+.lede{max-width:62ch;color:var(--fg2);margin:0 0 28px}
+p{max-width:68ch}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:28px;align-items:start}
+.frame-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--rule);padding-bottom:8px;margin-bottom:12px}
+.frame-head b{font-family:var(--mono);font-size:11px;letter-spacing:1.2px}
+.frame-head span{font-size:12px;color:var(--fg2)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:600 10px/1.4 var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--fg2)}
+td code{font-family:var(--mono);font-size:12px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:6px;border:1px solid rgba(0,0,0,.15)}
+.tblwrap{overflow-x:auto}
+ol,ul{padding-left:20px}li{margin:4px 0;max-width:70ch}
+.note{border-left:3px solid var(--acc);padding:4px 14px;color:var(--fg2);max-width:70ch}
+
+/* ---------- the phone frame, shared ---------- */
+.phone{width:100%;max-width:390px;margin:0 auto;aspect-ratio:390/720;position:relative;overflow:hidden;border-radius:8px;isolation:isolate}
+.phone .win{position:absolute;inset:12px;display:flex;flex-direction:column;overflow:hidden}
+.titlebar{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;flex:none}
+.menu{height:40px;display:flex;align-items:stretch;overflow:hidden;flex:none}
+.menu>span{display:flex;align-items:center;padding:0 9px;white-space:nowrap}
+.body{flex:1;padding:8px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.plaque{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;flex:none}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:none}
+.pad{height:66px;position:relative;padding:5px 6px}
+.pad .id{position:absolute;top:4px;left:6px}
+.pad .lbl{position:absolute;left:6px;right:6px;bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pad .wave{position:absolute;right:6px;top:6px;display:flex;gap:1px;align-items:flex-end;height:14px}
+.pad .wave i{display:block;width:2px}
+.primary{height:52px;display:flex;align-items:center;justify-content:center;gap:10px;flex:none}
+.status{height:26px;display:grid;grid-template-columns:auto auto 1fr;gap:4px;flex:none;margin-top:auto}
+.status>span{display:flex;align-items:center;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- OG: TapeOS OILSLICK, as the tables in Schemes.kt have it ---------- */
+.og{--gray:#221a34;--g-hi:#40306a;--g-e:#2a2044;--g-mid:#120e1a;--g-dk:#060410;--ink:#c8b2f8;--ink2:#8d80ae;--ink3:#584a80;
+    --desk1:#0c0618;--desk2:#140b24;--glow:#2a1050;--lcd:#0a0714;--lcd-ink:#c8b2f8;--amber:#40e0e8;--warn:#ffb000;--field:#161020;--accent:#e040c8;
+    --lcdf:'VT323',monospace;--px:'Silkscreen',monospace;--disp:'Michroma',sans-serif;--mk:'Rock Salt',cursive;
+    background:
+      radial-gradient(ellipse at 50% 110%,var(--glow),transparent 60%),
+      repeating-conic-gradient(var(--desk1) 0 25%,var(--desk2) 0 50%) 0 0/6px 6px;
+    color:var(--ink)}
+.og .win{background:linear-gradient(180deg,#1a1424,#120e1a);border-radius:4px;padding:3px;
+    border:3px solid transparent;
+    background-image:linear-gradient(180deg,#1a1424,#120e1a),conic-gradient(from 210deg at 50% 40%,#5a2ae0,#e040c8 25%,#40e0e8 50%,#8a5af0 75%,#5a2ae0);
+    background-origin:border-box;background-clip:padding-box,border-box}
+.og .titlebar{background:conic-gradient(from 210deg at 50% 40%,#5a2ae0,#e040c8 25%,#40e0e8 50%,#8a5af0 75%,#5a2ae0);border-radius:4px;font:12px var(--disp);letter-spacing:2px;color:#fff}
+.og .menu{font:9px var(--px);letter-spacing:.5px;color:var(--ink2);border-bottom:1px solid var(--g-dk)}
+.og .menu>span.on{color:var(--ink);box-shadow:inset 0 -3px 0 var(--accent)}
+.og .bevel{background:var(--gray);border-radius:4px;box-shadow:inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-dk)}
+.og .plaque{background:var(--lcd);border-radius:6px;position:relative;overflow:hidden;font:21px var(--lcdf);color:var(--lcd-ink);text-shadow:0 0 8px rgba(154,108,240,.9)}
+.og .plaque small{font:19px var(--lcdf);color:var(--amber);text-shadow:0 0 8px rgba(64,224,232,.8)}
+.og .plaque::after,.og .lcdline::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.3) 2px 3px);pointer-events:none}
+.og .pad{background:var(--gray);border-radius:6px;box-shadow:inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-dk)}
+.og .pad.f{border:2px solid var(--c);box-shadow:0 0 14px color-mix(in srgb,var(--c) 60%,transparent);background:linear-gradient(180deg,#221a34,#161020)}
+.og .pad .id{font:8px var(--px);color:var(--ink3)}
+.og .pad.f .id{color:var(--ink2)}
+.og .pad .lbl{font:11px var(--mk);color:color-mix(in srgb,var(--c) 45%,#fff)}
+.og .pad .wave i{background:var(--c);opacity:.4}
+.og .primary{border-radius:6px;padding:2px;background:conic-gradient(from 210deg at 50% 40%,#5a2ae0,#e040c8 25%,#40e0e8 50%,#8a5af0 75%,#5a2ae0);box-shadow:0 0 20px rgba(154,108,240,.35)}
+.og .primary>span{flex:1;height:100%;border-radius:4px;background:linear-gradient(180deg,#1c1430,#120e1e);display:flex;align-items:center;justify-content:center;gap:10px;font:11px var(--disp);letter-spacing:2px;color:var(--ink)}
+.og .primary i{width:12px;height:12px;border-radius:50%;background:#e83a2e;box-shadow:0 0 8px #e83a2e}
+.og .status>span{background:var(--field);border-radius:4px;box-shadow:inset 1px 1px 0 var(--g-dk),inset -1px -1px 0 var(--g-hi);font:8px var(--px);color:var(--ink2);letter-spacing:.5px}
+.og .status>span.q{color:var(--ink3)}
+
+/* ---------- MODERN: the OpenSky audition language, mapped onto the same slots ---------- */
+.md{--gray:#f8f3e9;--g-hi:#ffffff;--g-e:#dbd5c7;--g-mid:#eee6d8;--g-dk:#b4ad9e;--ink:#292820;--ink2:#69675a;--ink3:#817a6b;
+    --desk1:#efe8da;--desk2:#f3eddf;--glow:#ffd350;--lcd:#22211a;--lcd-ink:#f8f3e9;--amber:#ff8c00;--warn:#ff8c00;--field:#fffaf1;--accent:#a74c00;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:Arial,Helvetica,sans-serif;--serif:Georgia,'Times New Roman',serif;
+    background:radial-gradient(circle at 72% 18%,var(--glow) 0,#ffad24 22%,transparent 46%),var(--desk1);color:var(--ink)}
+.md::before{content:'';position:absolute;inset:-60px -40px auto;height:420px;z-index:0;
+    background:repeating-conic-gradient(from 9deg at 72% 22%,transparent 0deg 7deg,rgba(178,116,19,.09) 7deg 7.3deg,transparent 7.3deg 14deg);
+    mask-image:radial-gradient(circle at 72% 22%,transparent 0 14%,#000 16% 50%,transparent 70%);-webkit-mask-image:radial-gradient(circle at 72% 22%,transparent 0 14%,#000 16% 50%,transparent 70%)}
+.md .orbit{position:absolute;left:50%;border:1px solid #b4975e80;border-radius:50%;z-index:0;pointer-events:none}
+.md .o1{width:420px;height:190px;top:40px;transform:translateX(-50%) rotate(-22deg)}
+.md .o2{width:460px;height:250px;top:20px;transform:translateX(-50%) rotate(23deg)}
+.md .win{z-index:1;background:var(--gray);border:1px solid var(--g-dk);border-radius:2px}
+.md .titlebar{border-bottom:1px solid var(--g-e);font:900 15px var(--sans);letter-spacing:-.6px;color:var(--ink)}
+.md .titlebar b{display:inline-block;width:8px;height:8px;background:var(--ink);margin:0 4px;transform:rotate(-10deg)}
+.md .titlebar span{font:9px var(--mono);letter-spacing:1.3px;color:var(--ink2);font-weight:400}
+.md .titlebar span i{color:var(--accent);font-style:normal;margin-right:6px}
+.md .menu{font:600 10px var(--sans);color:var(--ink2);border-bottom:1px solid var(--g-e)}
+.md .menu>span.on{color:var(--gray);background:var(--ink);margin:6px 2px;border-radius:2px}
+.md .plaque{background:var(--lcd);border-radius:2px;position:relative;overflow:hidden;font:italic 21px var(--serif);letter-spacing:-.4px;color:var(--lcd-ink)}
+.md .plaque small{font:10px var(--mono);letter-spacing:1px;color:var(--amber)}
+.md .plaque::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.18) 2px 3px);pointer-events:none}
+.md .pad{background:var(--field);border:1px solid var(--g-e);border-radius:2px}
+.md .pad.f{border-color:var(--g-dk);box-shadow:inset 0 -4px 0 var(--c)}
+.md .pad .id{font:8px var(--mono);letter-spacing:.8px;color:var(--ink3)}
+.md .pad .lbl{font:italic 12px var(--serif);color:var(--ink);bottom:9px}
+.md .pad .wave i{background:var(--c);opacity:.55}
+.md .primary{background:var(--ink);color:var(--gray);border-radius:2px;font:600 11px var(--sans)}
+.md .primary i{width:10px;height:10px;border-radius:50%;background:var(--amber)}
+.md .status{border-top:1px solid var(--g-e);padding-top:4px}
+.md .status>span{font:9px var(--mono);letter-spacing:.6px;color:var(--ink2)}
+.md .status>span.q{font:italic 11px var(--serif);letter-spacing:0;color:var(--ink2)}
+.md .status>span b{color:var(--accent);font-weight:400;margin-right:6px}
+
+@media (max-width:420px){.wrap{padding-inline:16px}.two{gap:36px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="eyebrow">SnipSnap · a second class of schemes</p>
+  <h1>The same KIT screen, in the OG look and in the OpenSky look.</h1>
+  <p class="lede">Left is OILSLICK as the app ships it today. Right is the audition page's language (paper, hairlines, serif italics, mono labels, one orange) poured into the same token slots. Both keep the one rule TapeOS never gives up: the LCD, where sound lives, stays dark.</p>
+
+  <div class="two">
+    <div>
+      <div class="frame-head"><b>OG · OILSLICK</b><span>bevels, pixel type, dithered desk</span></div>
+      <div class="phone og">
+        <div class="win">
+          <div class="titlebar"><span>SNIPSNAP.EXE</span><span style="font:9px var(--px);opacity:.8">NOTE</span></div>
+          <div class="menu"><span>KITS</span><span>TAPE</span><span>CHOP</span><span class="on">KIT</span><span>EXPORT</span><span>PLAY</span><span>GROOVE</span><span>LOOP</span><span>ORBIT</span></div>
+          <div class="body">
+            <div class="plaque"><span>KITCHEN</span><small>12/16 · 94 BPM</small></div>
+            <div class="grid">
+              <div class="pad f" style="--c:#3f8cf0"><span class="id">A13</span><span class="wave"><i style="height:12px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:5px"></i><i style="height:3px"></i></span><span class="lbl">break 1</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A14</span><span class="wave"><i style="height:14px"></i><i style="height:9px"></i><i style="height:5px"></i><i style="height:2px"></i></span><span class="lbl">lo tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A15</span><span class="wave"><i style="height:6px"></i><i style="height:4px"></i><i style="height:3px"></i></span><span class="lbl">shaker</span></div>
+              <div class="pad"><span class="id">A16</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A09</span><span class="wave"><i style="height:13px"></i><i style="height:7px"></i><i style="height:3px"></i></span><span class="lbl">clap</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A10</span><span class="wave"><i style="height:12px"></i><i style="height:8px"></i><i style="height:4px"></i><i style="height:2px"></i></span><span class="lbl">hi tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A11</span><span class="wave"><i style="height:10px"></i><i style="height:4px"></i><i style="height:2px"></i></span><span class="lbl">cowbell</span></div>
+              <div class="pad"><span class="id">A12</span></div>
+              <div class="pad f" style="--c:#ffc41f"><span class="id">A05</span><span class="wave"><i style="height:9px"></i><i style="height:4px"></i><i style="height:2px"></i></span><span class="lbl">rim</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A06</span><span class="wave"><i style="height:8px"></i><i style="height:9px"></i><i style="height:7px"></i><i style="height:5px"></i><i style="height:3px"></i></span><span class="lbl">open</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A07</span><span class="wave"><i style="height:11px"></i><i style="height:5px"></i><i style="height:2px"></i></span><span class="lbl">snap</span></div>
+              <div class="pad"><span class="id">A08</span></div>
+              <div class="pad f" style="--c:#e8542e"><span class="id">A01</span><span class="wave"><i style="height:14px"></i><i style="height:10px"></i><i style="height:6px"></i><i style="height:3px"></i></span><span class="lbl">kick</span></div>
+              <div class="pad f" style="--c:#ffc41f"><span class="id">A02</span><span class="wave"><i style="height:13px"></i><i style="height:8px"></i><i style="height:5px"></i><i style="height:3px"></i></span><span class="lbl">snare</span></div>
+              <div class="pad f" style="--c:#1fc6cf"><span class="id">A03</span><span class="wave"><i style="height:7px"></i><i style="height:3px"></i><i style="height:1px"></i></span><span class="lbl">hat</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A04</span><span class="wave"><i style="height:8px"></i><i style="height:8px"></i><i style="height:6px"></i><i style="height:4px"></i></span><span class="lbl">hat open</span></div>
+            </div>
+            <div class="primary"><span><i></i>RECORD</span></div>
+            <div class="status"><span>12/16</span><span>ARMED</span><span class="q">NOBODY PLAYS LIKE A ROBOT.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="frame-head"><b>MODERN · OPENSKY</b><span>hairlines, serif italics, sun behind the window</span></div>
+      <div class="phone md">
+        <div class="orbit o1"></div><div class="orbit o2"></div>
+        <div class="win">
+          <div class="titlebar"><span>SNIP<b></b>SNAP</span><span><i>✳</i>KIT · A</span></div>
+          <div class="menu"><span>KITS</span><span>TAPE</span><span>CHOP</span><span class="on">KIT</span><span>EXPORT</span><span>PLAY</span><span>GROOVE</span><span>LOOP</span><span>ORBIT</span></div>
+          <div class="body">
+            <div class="plaque"><span>Kitchen</span><small>12 / 16 · 94 BPM</small></div>
+            <div class="grid">
+              <div class="pad f" style="--c:#3f8cf0"><span class="id">A13</span><span class="wave"><i style="height:12px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:5px"></i><i style="height:3px"></i></span><span class="lbl">break 1</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A14</span><span class="wave"><i style="height:14px"></i><i style="height:9px"></i><i style="height:5px"></i><i style="height:2px"></i></span><span class="lbl">lo tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A15</span><span class="wave"><i style="height:6px"></i><i style="height:4px"></i><i style="height:3px"></i></span><span class="lbl">shaker</span></div>
+              <div class="pad"><span class="id">A16</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A09</span><span class="wave"><i style="height:13px"></i><i style="height:7px"></i><i style="height:3px"></i></span><span class="lbl">clap</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A10</span><span class="wave"><i style="height:12px"></i><i style="height:8px"></i><i style="height:4px"></i><i style="height:2px"></i></span><span class="lbl">hi tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A11</span><span class="wave"><i style="height:10px"></i><i style="height:4px"></i><i style="height:2px"></i></span><span class="lbl">cowbell</span></div>
+              <div class="pad"><span class="id">A12</span></div>
+              <div class="pad f" style="--c:#ffc41f"><span class="id">A05</span><span class="wave"><i style="height:9px"></i><i style="height:4px"></i><i style="height:2px"></i></span><span class="lbl">rim</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A06</span><span class="wave"><i style="height:8px"></i><i style="height:9px"></i><i style="height:7px"></i><i style="height:5px"></i><i style="height:3px"></i></span><span class="lbl">open</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A07</span><span class="wave"><i style="height:11px"></i><i style="height:5px"></i><i style="height:2px"></i></span><span class="lbl">snap</span></div>
+              <div class="pad"><span class="id">A08</span></div>
+              <div class="pad f" style="--c:#e8542e"><span class="id">A01</span><span class="wave"><i style="height:14px"></i><i style="height:10px"></i><i style="height:6px"></i><i style="height:3px"></i></span><span class="lbl">kick</span></div>
+              <div class="pad f" style="--c:#ffc41f"><span class="id">A02</span><span class="wave"><i style="height:13px"></i><i style="height:8px"></i><i style="height:5px"></i><i style="height:3px"></i></span><span class="lbl">snare</span></div>
+              <div class="pad f" style="--c:#1fc6cf"><span class="id">A03</span><span class="wave"><i style="height:7px"></i><i style="height:3px"></i><i style="height:1px"></i></span><span class="lbl">hat</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A04</span><span class="wave"><i style="height:8px"></i><i style="height:8px"></i><i style="height:6px"></i><i style="height:4px"></i></span><span class="lbl">hat open</span></div>
+            </div>
+            <div class="primary"><i></i>RECORD</div>
+            <div class="status"><span><b>↳</b>12 / 16</span><span>ARMED</span><span class="q">Nobody plays like a robot.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>What stays, what moves</h2>
+  <p>A TapeOS scheme is a token swap and nothing else. The OpenSky page needs that <em>and</em> a second thing the current system has no slot for: a different way of drawing the same tokens. So the proposal is two axes, not one longer list of schemes.</p>
+  <div class="tblwrap"><table>
+    <tr><th>Axis</th><th>Decides</th><th>OG</th><th>Modern</th></tr>
+    <tr><td><b>Scheme</b> (exists)</td><td>colours only</td><td>METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR</td><td>OPENSKY first; more colourways later</td></tr>
+    <tr><td><b>Look</b> (new)</td><td>surfaces and type</td><td>2dp bevels, dithered desk, scanlines, VT323 / Silkscreen / Michroma / Rock Salt</td><td>1dp hairlines, flat desk with a sun glow, lighter scanlines, system sans / serif italic / mono</td></tr>
+    <tr><td><b>Fixed</b></td><td>never per scheme or look</td><td colspan="2">the eight class colours, record red, the LCD staying dark, the 48dp hit targets, every layout constant</td></tr>
+  </table></div>
+
+  <h2>The OPENSKY token table</h2>
+  <p>Every value is lifted from the audition page's own stylesheet and checked against the contrast tests in <code>:shell</code>. Three laws in those tests assume the chrome is dark; the proposal document says which, and what to do about each.</p>
+  <div class="tblwrap"><table>
+    <tr><th>TapeOS token</th><th>OpenSky source</th><th>Value</th><th>Reads on</th></tr>
+    <tr><td><code>gray</code> (chrome)</td><td>paper</td><td><i class="sw" style="background:#f8f3e9"></i><code>#F8F3E9</code></td><td>the working surface</td></tr>
+    <tr><td><code>field</code>, <code>raised</code></td><td>card</td><td><i class="sw" style="background:#fffaf1"></i><code>#FFFAF1</code></td><td>pads, lists, inputs</td></tr>
+    <tr><td><code>grayEdge</code></td><td>line</td><td><i class="sw" style="background:#dbd5c7"></i><code>#DBD5C7</code></td><td>every hairline</td></tr>
+    <tr><td><code>ink</code> / <code>ink2</code> / <code>ink3</code></td><td>ink / muted / placeholder</td><td><i class="sw" style="background:#292820"></i><code>#292820</code> · <i class="sw" style="background:#69675a"></i><code>#69675A</code> · <i class="sw" style="background:#817a6b"></i><code>#817A6B</code></td><td>13.4 : 1 · 5.2 : 1 · 3.9 : 1 on paper</td></tr>
+    <tr><td><code>accent</code></td><td>deep orange</td><td><i class="sw" style="background:#a74c00"></i><code>#A74C00</code></td><td>selection, on paper (5.5 : 1)</td></tr>
+    <tr><td><code>amber</code>, <code>warn</code></td><td>orange</td><td><i class="sw" style="background:#ff8c00"></i><code>#FF8C00</code></td><td>the LCD only (6.9 : 1 there, 2.1 : 1 on paper)</td></tr>
+    <tr><td><code>lcd</code> / <code>lcdInk</code></td><td>the player dock</td><td><i class="sw" style="background:#22211a"></i><code>#22211A</code> · <i class="sw" style="background:#f8f3e9"></i><code>#F8F3E9</code></td><td>sound, dark in every scheme (14.6 : 1)</td></tr>
+    <tr><td><code>desk1</code>, <code>deskGlow</code></td><td>paper, the sun</td><td><i class="sw" style="background:#efe8da"></i><code>#EFE8DA</code> · <i class="sw" style="background:#ffd350"></i><code>#FFD350</code></td><td>behind the window</td></tr>
+    <tr><td><code>winFrame</code></td><td>the play-button ring</td><td><i class="sw" style="background:#b4ad9e"></i><code>#B4AD9E</code></td><td>1dp, not 3dp, in the modern look</td></tr>
+    <tr><td><code>title1</code>, <code>title2</code>, <code>titleInk</code></td><td>masthead</td><td>paper, paper, ink</td><td>a flat bar with a hairline, the wordmark in heavy sans</td></tr>
+  </table></div>
+
+  <h2>Where the audition page already agrees with TapeOS</h2>
+  <ul>
+    <li><b>Two surfaces.</b> The page's hero is paper and its player dock is near-black with orange for the live light. That is the two-surface rule in a different coat, and it is why the LCD can stay dark without the modern look feeling bolted on.</li>
+    <li><b>Scanlines.</b> The page draws the sun with a 2px-on, 1px-off stripe at low opacity. TapeOS draws its LCD with a 1px line every 3px. The modern LCD keeps the stripe, at the sun's opacity rather than the LCD's.</li>
+    <li><b>Handwriting becomes italic.</b> TapeOS sets everything a person named in a marker face. The page sets its titles in serif italic. In the modern look, a user's own names (kits, pads, cassettes) are the only italic text on screen, so the rule survives with a different face.</li>
+    <li><b>Mono for the machine.</b> The page uses a monospace face for eyebrows, IDs and meta. TapeOS uses Silkscreen for pad IDs, status and hints. Same job, same slot.</li>
+  </ul>
+
+  <h2>Open questions</h2>
+  <ol>
+    <li>Is OPENSKY one scheme in a new look, or the first of a family? The page gives one palette. More colourways (a dusk one, a dark-paper one) are a design job, not a code one.</li>
+    <li>Does the modern look get its own type, or only its own surfaces? Type is the bigger change in code and the bigger change on screen.</li>
+    <li>CLEAR, the light scheme, was cut in August because light shells "didn't land". This look is light. Is the difference (a flat, printed look rather than a pale bevelled one) enough to reopen that?</li>
+  </ol>
+  <p class="note">The mockup draws the KIT screen only. PLAY (all LCD, no chrome) would look nearly the same in both looks, which is the point of the rule.</p>
+</div>
+
+</body>
+</html>
