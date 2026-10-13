@@ -440,6 +440,7 @@ object Relay {
         // excitations. Existing accent envelopes finish naturally through the release;
         // starting a fresh late accent would turn a terminal tail into another attack.
         }.filter { p.held || it.timeSeconds < p.gateSeconds }
+        stopIfUnwanted()
         val lowTables = recipe.sources.mapIndexed { index, source ->
             table(source, max(0.0, color - .55), p.actualHz,
                 Dsp.seedFor("RELAY", voice.name, midiFor(voice, m.getValue("TUNE")), index))

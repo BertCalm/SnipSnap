@@ -37,7 +37,9 @@ class AlloyTest {
         // The held path converges its cycles before the passes; it must stop on the flag as the finite one does.
         Thread.currentThread().interrupt()
         try {
-            assertFailsWith<java.util.concurrent.CancellationException> { Alloy.render(AlloyVoice.KEY, mapOf("HOLD" to 1f)) }
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "ALLOY held render did not stop on the interrupt at its first look in the cycle convergence",
+            ) { Alloy.render(AlloyVoice.KEY, mapOf("HOLD" to 1f)) }
         } finally {
             Thread.interrupted()
         }
@@ -47,13 +49,18 @@ class AlloyTest {
     fun `the conditioning pass looks again after its band limit when the render is no longer wanted`() {
         // The pass looks on entry, so a flag set before it is caught there and says nothing about the looks
         // between its band limit and its decimation; an interrupt that lands after that first look must still stop it.
+        // At the internal rate the resample is skipped, so an uninterrupted pass looks exactly three times: on entry,
+        // after the band limit and after the resample. Removing either later look changes that count.
         val internalRate = Alloy.RATE * Dsp.OVERSAMPLE
+        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+        assertEquals(4096, clear.run { Alloy.finish(FloatArray(Dsp.OVERSAMPLE * 4096), internalRate) }.size, "an uninterrupted pass still conditions")
+        assertEquals(3, clear.looks, "an uninterrupted pass looks on entry, after the band limit and after the resample, before the decimation")
         val late = LateInterrupt(clearLooks = 1)
-        assertFailsWith<java.util.concurrent.CancellationException> {
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "ALLOY's conditioning pass did not stop on the interrupt at its look after the band limit",
+        ) {
             late.run { Alloy.finish(FloatArray(Dsp.OVERSAMPLE * 4096), internalRate) }
         }
-        assertEquals(2, late.looks, "the pass stopped at its look after the band limit")
-        assertEquals(4096, Alloy.finish(FloatArray(Dsp.OVERSAMPLE * 4096), internalRate).size, "an uninterrupted pass still conditions")
     }
 
     @Test

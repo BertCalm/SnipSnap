@@ -265,13 +265,15 @@ class SkitterTest {
     fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
         // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
         // sample loops, the forcing, the decimation and the level must stop on that flag instead of finishing.
-        for (render in listOf<() -> Unit>(
-            { Skitter.render(SkitterVoice.BASS) },
-            { Skitter.render(SkitterVoice.BASS, mapOf("HOLD" to 1f)) },
+        for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+            "SKITTER finite render did not stop on the interrupt at its first look in the sample loop" to
+                { Skitter.render(SkitterVoice.BASS) },
+            "SKITTER held render did not stop on the interrupt at its first look in the held forcing" to
+                { Skitter.render(SkitterVoice.BASS, mapOf("HOLD" to 1f)) },
         )) {
             Thread.currentThread().interrupt()
             try {
-                assertFailsWith<java.util.concurrent.CancellationException> { render() }
+                assertFailsWith<java.util.concurrent.CancellationException>(missing) { render() }
             } finally {
                 Thread.interrupted()
             }
@@ -285,7 +287,9 @@ class SkitterTest {
         // oversampled buffer, so it must look for itself rather than run to the end unwanted.
         Thread.currentThread().interrupt()
         try {
-            assertFailsWith<java.util.concurrent.CancellationException> { Skitter.decimate(FloatArray(4 * 4096), 4, false) }
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "SKITTER's decimation did not stop on the interrupt at its first look in the convolution loop",
+            ) { Skitter.decimate(FloatArray(4 * 4096), 4, false) }
         } finally {
             Thread.interrupted()
         }

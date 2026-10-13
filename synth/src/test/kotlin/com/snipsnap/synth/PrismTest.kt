@@ -32,12 +32,16 @@ class PrismTest {
         )) {
             Thread.currentThread().interrupt()
             try {
-                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "PRISM $label render did not stop on the interrupt at its first look in the synthesis loop",
+                ) { render() }
             } finally {
                 Thread.interrupted()
             }
         }
-        assertFailsWith<java.util.concurrent.CancellationException>("the export cancel callback still stops a held render") {
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "PRISM held render did not stop on the export cancel callback at its first look in the synthesis loop",
+        ) {
             Prism.renderLoop(voice, cancelled = { true })
         }
         assertTrue(Prism.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")

@@ -36,12 +36,16 @@ class NimbusTest {
         )) {
             Thread.currentThread().interrupt()
             try {
-                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "NIMBUS $label render did not stop on the interrupt at its look before the simulation",
+                ) { render() }
             } finally {
                 Thread.interrupted()
             }
         }
-        assertFailsWith<java.util.concurrent.CancellationException>("the export cancel callback still stops a held render") {
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "NIMBUS held render did not stop on the export cancel callback at its look before the simulation",
+        ) {
             Nimbus.renderLoop(voice, emptyMap()) { true }
         }
         assertTrue(Nimbus.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")

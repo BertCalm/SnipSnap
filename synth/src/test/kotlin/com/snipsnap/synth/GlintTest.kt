@@ -1330,7 +1330,9 @@ class GlintTest {
         // frame loop and the passes after it must stop on that flag instead of finishing.
         Thread.currentThread().interrupt()
         try {
-            assertFailsWith<java.util.concurrent.CancellationException> { Glint.render(GlintVoice.SWEEP) }
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "GLINT render did not stop on the interrupt at its first look in the frame loop",
+            ) { Glint.render(GlintVoice.SWEEP) }
         } finally {
             Thread.interrupted()
         }

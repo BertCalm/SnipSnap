@@ -9,6 +9,10 @@ package com.snipsnap.synth
  * limit, its decimation, its level or its seam needs the interrupt to arrive after that look: a render that
  * no longer looks where it should then simply finishes. The engines read the flag through
  * `Thread.currentThread().isInterrupted`, which this worker answers itself; nothing in the render changes.
+ *
+ * Where the interrupt lands, the render stops on the next look, so [looks] after a stop is always one more
+ * than [clearLooks] and proves nothing by itself. With `clearLooks = Int.MAX_VALUE` the flag never reads set
+ * and [looks] is every look an uninterrupted render makes: an exact count that changes when any one is removed.
  */
 internal class LateInterrupt(private val clearLooks: Int) {
     /** How many times the render looked at the flag, counting the look that stopped it. */

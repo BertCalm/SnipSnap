@@ -22,7 +22,9 @@ class CircuitTest {
         )) {
             Thread.currentThread().interrupt()
             try {
-                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "CIRCUIT $label render did not stop on the interrupt at its look on entry to the performance",
+                ) { render() }
             } finally {
                 Thread.interrupted()
             }

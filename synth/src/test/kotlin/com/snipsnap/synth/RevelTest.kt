@@ -30,7 +30,9 @@ class RevelTest {
         )) {
             Thread.currentThread().interrupt()
             try {
-                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "REVEL $label render did not stop on the interrupt at its first look in the sample loop",
+                ) { render() }
             } finally {
                 Thread.interrupted()
             }

@@ -34,7 +34,10 @@ class PitchwheelTest {
         )) {
             Thread.currentThread().interrupt()
             try {
-                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+                val look = if (label.endsWith("held")) "its look before the first settling cycle" else "its first look in the sample loop"
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "PITCHWHEEL $label render did not stop on the interrupt at $look",
+                ) { render() }
             } finally {
                 Thread.interrupted()
             }
