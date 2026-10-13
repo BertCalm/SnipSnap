@@ -1,5 +1,7 @@
 # Pedal Board Stage 0 Implementation Plan
 
+> Superseded for the row's chips and clip counts by `2026-10-13-pedal-board-stage-0-revision.md` (two chips, no WAH, 32 clips); kept as the history of what was first built.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a seventh pad-sheet row, PEDALS, with three recipe chips (DRIVE, COMP, WAH) built from sections the rack already has, and the tooling for the short Stage 0 listening gate.
