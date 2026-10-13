@@ -31,6 +31,12 @@ class InstrumentEngine(
     private val maxVoices: Int = MAX_VOICES,
 ) {
 
+    init {
+        // A step is the sample's rate over this one: at 0 it is infinite and a loop's wrap never ends; below 0 the read walks
+        // off the front of the sample.
+        require(outRate > 0) { "output rate must be positive, got $outRate" }
+    }
+
     /** An instrument with its samples in memory: every zone's mono floats at [sampleRate]. */
     class Loaded(
         val instrument: InstrumentStore.Instrument,
