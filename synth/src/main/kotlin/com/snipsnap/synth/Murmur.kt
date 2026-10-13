@@ -172,6 +172,7 @@ object Murmur {
         val samples = renderRaw(voice, macros, midi, velocity, config)
         val v = cleanVelocity(velocity)
         if (v > 0.0) {
+            stopIfUnwanted()
             Dsp.levelTo(samples, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
             // Excitation still changes bite and softness before leveling; this retains playing dynamics.
             val dynamicGain = v.pow(.65).toFloat()
@@ -267,6 +268,7 @@ object Murmur {
         for (x in samples) mean += x
         val dc = (mean / samples.size).toFloat()
         for (i in samples.indices) { samples[i] -= dc; previous[i] -= dc }
+        stopIfUnwanted()
         val seam = Keys.seamError(previous + samples, previous.size)
         return MurmurProbe(samples, previous, plan!!.root, seam)
     }

@@ -318,9 +318,10 @@ object Stoop {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("STOOP render no longer wanted")
     }
 
-    private fun condition(raw: FloatArray): FloatArray {
+    internal fun condition(raw: FloatArray): FloatArray {
         stopIfUnwanted()
         Tide.bandLimit(raw, INTERNAL_RATE)
+        stopIfUnwanted()
         val out = Dsp.decimate(raw, RATE)
         // Causal DC removal keeps continuous held-state history measurable.
         val dc = Dsp.OnePole(RATE)
@@ -419,6 +420,7 @@ object Stoop {
         // Silence has no discontinuity; every sounding loop still uses the
         // actual continuous history and the unchanged project seam metric.
         val silent = held && previous.all { it == 0f } && samples.all { it == 0f }
+        stopIfUnwanted()
         val seam = if (held && !silent) Keys.seamError(previous + samples, HISTORY) else 0.0
         check(!held || seam < Keys.MAX_SEAM_ERROR) { "STOOP ${p.voice} MIDI ${p.midi} loop seam $seam exceeds ${Keys.MAX_SEAM_ERROR}" }
         if (!held) Dsp.fadeTail(samples)
@@ -434,6 +436,7 @@ object Stoop {
         render(StoopPatch(voice.name, voice, macros, midi = midi, velocity = velocity, source = defaultSource(voice)))
     fun render(patch: StoopPatch): Snip {
         val out = generate(patch, false).samples
+        stopIfUnwanted()
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
@@ -443,6 +446,7 @@ object Stoop {
         val r = generate(patch, true)
         if (normalize) {
             val before = r.samples.maxOfOrNull { abs(it) } ?: 0f
+            stopIfUnwanted()
             Dsp.levelTo(r.samples, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             val after = r.samples.maxOfOrNull { abs(it) } ?: 0f
             val gain = if (before > 0f) after / before else 1f

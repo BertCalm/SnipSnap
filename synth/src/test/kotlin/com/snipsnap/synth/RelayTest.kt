@@ -11,6 +11,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -517,5 +518,45 @@ class RelayTest {
         val hz = report.requestedHz.toFloat()
         val cents = FineTuning.cents(FineTuning.measuredHz(report.snip, hz, 0.07f, 0.4f), hz.toDouble())
         assertTrue(abs(cents) < 5.0, "short broad phrase detunes by $cents cents")
+    }
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // frame loop, the band limit, the decimation, the level and the seam must stop on that flag.
+        for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+            "RELAY finite render did not stop on the interrupt at its look before the wavetables" to
+                { Relay.render(RelayVoice.KEY) },
+            "RELAY held render did not stop on the interrupt at its look before the wavetables" to
+                { Relay.render(RelayVoice.KEY, mapOf("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(missing) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Relay.render(RelayVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
+
+    @Test
+    fun `a render nobody wants any more after its frame loop stops after the band limit too`() {
+        // A finite phrase has no warm-up, so after one look before the wavetables the frame loop looks once per 8192
+        // frames of its raw buffer and the conditioning pass looks once on entry; an interrupt that lands after those
+        // looks must still stop the render before its decimation, its level and its seam instead of finishing unwanted.
+        // An uninterrupted render looks exactly five times outside the loop: before the wavetables, on entry to the
+        // conditioning pass, after the band limit, before the level and before the seam. Removing any one changes the count.
+        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+        val whole = clear.run { Relay.inspect(RelayVoice.KEY) }
+        assertFalse(whole.loop, "the default phrase is finite")
+        val loopLooks = (whole.raw.size + 8191) / 8192
+        assertEquals(loopLooks + 5, clear.looks,
+            "an uninterrupted finite render looks before the wavetables, $loopLooks times in its frame loop, " +
+                "then on entry to the conditioning pass, after the band limit, before the level and before the seam")
+        val late = LateInterrupt(clearLooks = 1 + loopLooks + 1)
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "RELAY finite render did not stop on the interrupt at its look after the band limit, before the decimation",
+        ) { late.run { Relay.inspect(RelayVoice.KEY) } }
     }
 }

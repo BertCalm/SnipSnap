@@ -23,6 +23,33 @@ class StoopEngineTest {
         assertTrue(Stoop.render(StoopVoice.entries.first()).samples.any { it != 0f }, "an uninterrupted render still completes")
     }
 
+    @Test fun `an interrupted held render stops instead of finishing beside its replacement`() {
+        // The held path warms its loop before the passes; it must stop on the flag as the finite one does.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "STOOP held render did not stop on the interrupt at its first look in the gesture synthesis",
+            ) { Stoop.render(StoopVoice.entries.first(), mapOf("HOLD" to 1f)) }
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    @Test fun `the conditioning pass looks again after its band limit when the render is no longer wanted`() {
+        // The pass looks on entry, so a flag set before it is caught there and says nothing about the look
+        // between its band limit and its decimation; an interrupt that lands after that first look must still stop it.
+        // An uninterrupted pass looks exactly twice, on entry and after the band limit; removing the second changes that.
+        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+        assertEquals(4096, clear.run { Stoop.condition(FloatArray(Dsp.OVERSAMPLE * 4096)) }.size, "an uninterrupted pass still conditions")
+        assertEquals(2, clear.looks, "an uninterrupted pass looks on entry and after the band limit, before the decimation")
+        val late = LateInterrupt(clearLooks = 1)
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "STOOP's conditioning pass did not stop on the interrupt at its look after the band limit",
+        ) {
+            late.run { Stoop.condition(FloatArray(Dsp.OVERSAMPLE * 4096)) }
+        }
+    }
+
     @Test fun `source rejects invalid independent configurations`() {
         assertFailsWith<IllegalArgumentException> { StoopSource(fmRatio = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { StoopSource(sub = 1.01f) }

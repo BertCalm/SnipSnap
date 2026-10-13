@@ -11,6 +11,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** Dry causal and numerical gates; the published audition supplies the listening gate. */
@@ -299,5 +300,40 @@ class LacquerTest {
             real * real + imaginary * imaginary
         }
         return energies[0] / energies.sum().coerceAtLeast(1e-30)
+    }
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // tick loop, the band limit, the decimation, the seam and the level must stop on that flag.
+        for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+            "LACQUER finite render did not stop on the interrupt at its first tick" to { Lacquer.render(LacquerVoice.KEY) },
+            "LACQUER held render did not stop on the interrupt at its first preroll tick" to
+                { Lacquer.render(LacquerVoice.KEY, mapOf("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(missing) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Lacquer.render(LacquerVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
+
+    @Test
+    fun `the conditioning pass looks again after its band limit when the render is no longer wanted`() {
+        // The pass looks on entry, so a flag set before it is caught there and says nothing about the look
+        // between its band limit and its decimation; an interrupt that lands after that first look must still stop it.
+        // An uninterrupted pass looks exactly twice, on entry and after the band limit; removing the second changes that.
+        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+        assertEquals(4096, clear.run { Lacquer.finish(FloatArray(Dsp.OVERSAMPLE * 4096)) }.size, "an uninterrupted pass still conditions")
+        assertEquals(2, clear.looks, "an uninterrupted pass looks on entry and after the band limit, before the decimation")
+        val late = LateInterrupt(clearLooks = 1)
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "LACQUER's conditioning pass did not stop on the interrupt at its look after the band limit",
+        ) {
+            late.run { Lacquer.finish(FloatArray(Dsp.OVERSAMPLE * 4096)) }
+        }
     }
 }

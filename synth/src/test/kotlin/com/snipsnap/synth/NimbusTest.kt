@@ -15,6 +15,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -25,6 +26,30 @@ class NimbusTest {
         DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM,
     )
     private val timbralControls = listOf("EXCITE", "SPACING", "HEIGHT", "FIELD", "FUNNEL")
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        val voice = NimbusVoice.RING
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "finite" to { Nimbus.render(voice) },
+            "held" to { Nimbus.render(voice, Nimbus.defaults(voice) + ("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "NIMBUS $label render did not stop on the interrupt at its look before the simulation",
+                ) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "NIMBUS held render did not stop on the export cancel callback at its look before the simulation",
+        ) {
+            Nimbus.renderLoop(voice, emptyMap()) { true }
+        }
+        assertTrue(Nimbus.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 
     @Test
     fun `seeded excitation reproduces the whole stack and changing the seed changes sound`() {

@@ -815,6 +815,7 @@ object Bore {
 
         val out = FloatArray(gate.total)
         for (i in 0 until gate.total) {
+            if (i % 8192 == 0) stopIfUnwanted()
             val env = when {
                 i < gate.attackN -> i.toFloat() / gate.attackN
                 i >= gate.attackN + gate.holdN -> ((gate.total - i).toFloat() / gate.releaseN).coerceAtLeast(0f)
@@ -875,6 +876,12 @@ object Bore {
         }
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the blow, the search and the passes stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("BORE render no longer wanted")
+    }
+
     /**
      * The output chain every melodic engine ends in - and not [Punch], which is
      * the drum engines' and boosts a hit's first two milliseconds under a breath
@@ -883,8 +890,11 @@ object Bore {
      * one-shot, and for a LOOP its own levelling, after the blend ([renderLoopMeasured]).
      */
     internal fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing): FloatArray {
+        stopIfUnwanted()
         raspBend(raw, rate, rasp)
+        stopIfUnwanted()
         Tide.bandLimit(raw, rate)
+        stopIfUnwanted()
         val out = Dsp.decimate(raw, RATE)
         var mean = 0.0
         for (v in out) mean += v
@@ -899,12 +909,14 @@ object Bore {
             bell.peaking(BITE_HZ, biteDb, BITE_Q)
             for (i in out.indices) out[i] = bell.process(out[i])
         }
+        stopIfUnwanted()
         voice(out, voicing)
         return out
     }
 
     internal fun finish(raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f, voicing: Voicing = Voicing.NONE): FloatArray {
         val out = condition(raw, rate, biteDb, rasp, voicing)
+        stopIfUnwanted()
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
         return out
@@ -1088,13 +1100,17 @@ object Bore {
         val lengthLow = ((LOOP_SECONDS - LOOP_SLACK_SECONDS) * RATE).toInt()
         val lengthHigh = ((LOOP_SECONDS + LOOP_SLACK_SECONDS) * RATE).toInt()
 
+        stopIfUnwanted()
         val (start, settledAt) = loopStart(x, usableEnd, lengthHigh, blend, name)
 
         val (length, correlation) = bestLength(x, start, blend, lengthLow, lengthHigh)
+        stopIfUnwanted()
         val loop = assembleLoop(x, start, length, blend, correlation)
         val dip = blendDipDb(loop, blend)
 
+        stopIfUnwanted()
         val (rotated, junction) = rotateOntoCrossing(loop)
+        stopIfUnwanted()
         Dsp.levelTo(rotated, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
 
         val junctionStep = abs(rotated[junction] - rotated[(junction - 1 + length) % length]).toDouble()
@@ -1224,6 +1240,8 @@ object Bore {
         var best = Double.NEGATIVE_INFINITY
         var bestLength = low
         for (length in low..high) {
+            // Every length reads [blend] frames, so one check a length is the house cadence.
+            stopIfUnwanted()
             if (length > low) {
                 val gone = x[start + length - 1].toDouble()
                 val came = x[start + length + blend - 1].toDouble()

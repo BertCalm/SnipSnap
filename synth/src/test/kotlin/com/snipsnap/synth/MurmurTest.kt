@@ -13,6 +13,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -315,5 +316,44 @@ class MurmurTest {
             assertTrue(probe.samples.maxOf { abs(it) } < 1f, "$voice held native output clips the audition PCM export")
             assertContentEquals(probe.samples, Murmur.probe(voice, macros).samples, "$voice held seed is nondeterministic")
         }
+    }
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // sample loop, the decimation, the seam and the level must stop on that flag instead of finishing.
+        for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+            "MURMUR finite render did not stop on the interrupt at its first look in the sample loop" to
+                { Murmur.render(MurmurVoice.KEY) },
+            "MURMUR held render did not stop on the interrupt at its first look in the sample loop" to
+                { Murmur.render(MurmurVoice.KEY, mapOf("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(missing) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Murmur.render(MurmurVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
+
+    @Test
+    fun `a held render nobody wants any more after its decimation stops before the seam and the level`() {
+        // The held synthesis runs two settling periods, three kept periods and the decimator padding, looking every
+        // 8192 internal samples, then looks once more before the decimation; an interrupt that lands after those
+        // looks must still stop the seam measurement and the level instead of letting them finish unwanted.
+        // After the loop an uninterrupted render looks exactly three more times: before the decimation, before the
+        // seam and before the level. Removing any one of those changes the count.
+        val held = mapOf("HOLD" to 1f)
+        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+        val frames = clear.run { Murmur.render(MurmurVoice.KEY, held) }.samples.size
+        val loopLooks = ((5 * frames + 512) * Dsp.OVERSAMPLE + 8191) / 8192
+        assertEquals(loopLooks + 3, clear.looks,
+            "an uninterrupted held render looks $loopLooks times in its sample loop, then before the decimation, the seam and the level")
+        val late = LateInterrupt(clearLooks = loopLooks + 1)
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "MURMUR held render did not stop on the interrupt at its look after the decimation, before the seam",
+        ) { late.run { Murmur.render(MurmurVoice.KEY, held) } }
     }
 }
