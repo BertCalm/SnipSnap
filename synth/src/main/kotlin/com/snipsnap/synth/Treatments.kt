@@ -140,13 +140,16 @@ object Treatments {
      * and a fade ahead of the amp survives the amp (MAGNET's lesson). The fade is the tail's alone:
      * its length follows the amp's lift (see [endFaded]: about a third of the full length at the pad
      * sheet's AMT 0.7, none where the amp does not lift), and it never reaches the first half of a
-     * pad. The full length and shape are measured against the spec's bars and no others: the
-     * shortest, then mildest, fade for which a snare and a choir end at least 53 dB under their
-     * peaks (the spec's 50 dB plus 3 dB of margin) with a DC mean under 1e-4, at AMT 0.7, 0.8, 0.9
-     * and 1. On a grid of 30 to 120 ms (steps of 5 to 10) and powers 2 to 7 that is 95 ms at
-     * power 5: 95 ms at power 4 ends the snare at AMT 1 at -52.0 dB, and 90 ms misses the DC bar at
-     * every power up to 7 (1.02e-4 at best), because a saturated tail the fade has not reached
-     * leaves its tube's asymmetry in the mean.
+     * pad. The full length and shape are chosen against the spec's bars and no others, from a declared grid:
+     * the fade must leave a snare and a choir ending at least 53 dB under their peaks (the spec's 50 dB
+     * plus 3 dB of margin) with a DC mean under 1e-4, at AMT 0.7, 0.8, 0.9 and 1, and the grid is 30 to
+     * 120 ms (steps of 5 to 10) and powers 2 to 7. The first cell of that grid, by length and then by
+     * power, that passes is 95 ms at power 5: 95 ms at power 4 ends the snare at AMT 1 at -52.0 dB, and
+     * 90 ms misses the DC bar at every power up to 7 (1.02e-4 at best), because a saturated tail the
+     * fade has not reached leaves its tube's asymmetry in the mean. Finer cells pass too (94 ms at
+     * power 5 by under 1 percent, 90 ms at power 8): they were not taken, because the DC mean moves a
+     * few percent from one millisecond to the next, so a pass that close to its bar is fragile, and
+     * a power of 8 is not mild. No claim is made of a 1 ms optimum.
      */
     private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 95f, power = 5))
 

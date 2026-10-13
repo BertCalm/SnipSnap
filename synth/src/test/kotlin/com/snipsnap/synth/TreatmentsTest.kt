@@ -245,8 +245,8 @@ class TreatmentsTest {
      * A snare (333 ms, mono) and a choir (1.44 s, stereo) end at least 53 dB under their peaks, the
      * last 20 ms against the whole pad, at the pad sheet's AMT 0.7, at full, and between (the fade's
      * length follows the amp's gain, so the in-between amounts are the law's own cells). Measured at
-     * the shipped fade (95 ms at power 5 at full, the shortest and mildest that passes this test's
-     * two bars): the snare ends 69.81, 74.44, 63.43 and 54.10 dB under its peak at AMT 0.7, 0.8, 0.9
+     * the shipped fade (95 ms at power 5 at full, the first cell of the declared grid in
+     * `Treatments.PRE_AMP_FADE`'s KDoc that passes this test's two bars): the snare ends 69.81, 74.44, 63.43 and 54.10 dB under its peak at AMT 0.7, 0.8, 0.9
      * and 1 (44.36, 32.05, 19.92 and 9.14 with no fade), the choir at least 83 dB; the snare at AMT 1
      * leaves a DC mean of 9.6e-5 (2.5e-4 with no fade), the largest of the eight cells.
      */
