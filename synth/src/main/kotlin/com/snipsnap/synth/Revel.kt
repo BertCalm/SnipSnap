@@ -172,19 +172,20 @@ object Revel {
         val play = m.getValue("PLAY").toDouble()
         val beat = p.rates.phraseSeconds / p.beats
         val out = ArrayList<Event>()
+        // Energy belongs to the performer, before the common floor or pickup.
+        val biases = when (voice) {
+            RevelVoice.CIRCLE -> doubleArrayOf(1.65, .95, .95, 1.10, 1.10, .72)
+            RevelVoice.CLOSE -> doubleArrayOf(1.90, 1.25, 1.20, .85, .85, .65)
+            RevelVoice.CROSSING -> doubleArrayOf(1.65, 1.20, 1.35, 1.35, 1.05, .45)
+            RevelVoice.SPIRO -> doubleArrayOf(1.65, 1.05, 1.15, 1.35, 1.50, .40)
+            RevelVoice.FRICTION -> doubleArrayOf(1.00, .85, .85, .80, .80, .70)
+            RevelVoice.PROCESSION -> doubleArrayOf(1.00, .50, .50, 1.45, 1.25, 1.15)
+        }
         fun add(head: Int, at: Double, kind: String, strength: Double, duration: Double) {
             if (probe.soloHead != null && probe.soloHead != head) return
             val jitter = if (at == 0.0) 0.0 else (random.nextDouble() - .5) * .028 * beat
             val time = (at * beat + jitter).coerceAtLeast(0.0)
-            // Energy belongs to the performer, before the common floor or pickup.
-            val bias = when (voice) {
-                RevelVoice.CIRCLE -> doubleArrayOf(1.65, .95, .95, 1.10, 1.10, .72)[head]
-                RevelVoice.CLOSE -> doubleArrayOf(1.90, 1.25, 1.20, .85, .85, .65)[head]
-                RevelVoice.CROSSING -> doubleArrayOf(1.65, 1.20, 1.35, 1.35, 1.05, .45)[head]
-                RevelVoice.SPIRO -> doubleArrayOf(1.65, 1.05, 1.15, 1.35, 1.50, .40)[head]
-                RevelVoice.FRICTION -> doubleArrayOf(1.00, .85, .85, .80, .80, .70)[head]
-                RevelVoice.PROCESSION -> doubleArrayOf(1.00, .50, .50, 1.45, 1.25, 1.15)[head]
-            }
+            val bias = biases[head]
             val fittedDuration = min(duration, max(.0001, p.rates.phraseSeconds - time - .002))
             out.add(Event(head, family(head), kind, time, fittedDuration,
                 strength * bias * (.40 + .60 * velocity) * velocity * (.88 + .24 * random.nextDouble())))
@@ -267,6 +268,8 @@ object Revel {
         return out.sortedWith(compareBy<Event> { it.timeSeconds }.thenBy { it.head })
     }
 
+    /** sqrt(j) for each skin mode j, read by every stroke sample. */
+    private val modeRoots = DoubleArray(MODES) { sqrt(it.toDouble()) }
     private val stationX = doubleArrayOf(2.0, -.08, .08, -2.0, -2.0, 0.0)
     private val stationY = doubleArrayOf(0.0, 2.0, 2.0, -.08, .08, -2.0)
     private class Geometry(voice: RevelVoice, val m: Map<String, Float>, configuration: RevelConfig, val p: Plan, coincident: Boolean) {
@@ -457,10 +460,10 @@ object Revel {
             val width = duration[h] * DT
             var dot = 0.0
             var norm = 0.0
+            val rootShape = if (kinds[h] == 1) .88 else if (kinds[h] == 2) .72 else 1.0
+            val upperShape = when (kinds[h]) { 1 -> .80; 2 -> .10; 3 -> .90; else -> .42 }
             for (j in 0 until MODES) {
-                val root = if (kinds[h] == 1) .88 else if (kinds[h] == 2) .72 else 1.0
-                val upper = when (kinds[h]) { 1 -> .80; 2 -> .10; 3 -> .90; else -> .42 }
-                val shape = if (j == 0) root else (if (broad) .90 else upper) / sqrt(j.toDouble())
+                val shape = if (j == 0) rootShape else (if (broad) .90 else upperShape) / modeRoots[j]
                 contact[j] = shape
                 dot += im[h * MODES + j] * shape
                 norm += shape * shape
