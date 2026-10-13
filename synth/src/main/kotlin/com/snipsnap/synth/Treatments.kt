@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonValue
+import kotlin.math.ln
 
 /**
  * The rack's named characters, available one pad at a time — the remix
@@ -134,22 +135,43 @@ object Treatments {
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)
 
     /**
-     * Characters that run a hot amp, and how much of the pad's end fades out BEFORE the chain: VALVE
-     * lifts a quiet tail by its own gain (1000 at the top of DRIVE), so a cut nobody hears dry ends
-     * in a click through it, and a fade ahead of the amp survives the amp (MAGNET's lesson). The
-     * length and shape are measured, not chosen: the shortest, mildest fade from 20, 40, 80 and 150 ms
-     * at powers 1 to 3 for which a snare and a choir end at least 53 dB under their peaks at AMT 0.7
-     * and 1, with a DC mean under 1e-4. Only 150 ms at power 3 qualifies (the snare at AMT 1 ends
-     * 56.3 dB under its peak, against 9.1 with no fade and 32.9 for 80 ms at power 2).
+     * Characters that run a hot amp, and the fade that goes ahead of it. VALVE lifts a quiet tail by
+     * its own gain (1000 at the top of DRIVE), so a cut nobody hears dry ends in a click through it,
+     * and a fade ahead of the amp survives the amp (MAGNET's lesson). The fade is the tail's alone:
+     * its length follows the amp's lift (see [endFaded]: about a third of the full length at the pad
+     * sheet's AMT 0.7, none where the amp does not lift), and it never reaches the first half of a
+     * pad. The full length and shape are measured, not chosen: the shortest fade, on grids of 30 to
+     * 120 ms and powers 2 to 7, for which a snare and a choir end at least 54 dB under their peaks
+     * at AMT 0.7 and 1 (the test's bar is 53), with a DC mean under 9e-5 (its bar is 1e-4). That is
+     * 100 ms at power 5. Under 100 ms, no power up to 7 keeps the snare at AMT 1 under that DC
+     * margin: a saturated tail the fade has not reached leaves its tube's asymmetry in the mean.
      */
-    private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 150f, power = 3))
+    private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 100f, power = 5))
 
     private class EndFade(val ms: Float, val power: Int)
 
-    /** [snip] with its last [fade] milliseconds faded to silence by `x^power` (x is 0 at the last frame, 1 at the fade's start). */
-    private fun endFaded(snip: Snip, fade: EndFade): Snip {
+    /** The log of the gain the chain's VALVE DRIVE sets, never under 0: an amp that does not lift needs no fade. */
+    private fun ampLift(fx: FxChain): Double {
+        val drive = fx.section("valve")?.get("DRIVE") ?: Valve.defaults().getValue("DRIVE")
+        return ln(Valve.gainFor(drive).toDouble()).coerceAtLeast(0.0)
+    }
+
+    /**
+     * [snip] with its tail faded ahead of the amp, for a character in [PRE_AMP_FADE] at [amount];
+     * [snip] itself for any other, or where the amp does not lift. The fade is the character's
+     * [EndFade.ms] times the amp's lift at [amount] over its lift at 1 (the dB of the gain DRIVE sets
+     * then, against the dB it sets at the full character), at most the pad's second half, and
+     * shapes the gain by `x^power` (x is 0 at the last frame, 1 at the fade's start). Everything
+     * before the fade is [snip]'s own samples.
+     */
+    internal fun endFaded(snip: Snip, name: String, amount: Float): Snip {
+        val fade = PRE_AMP_FADE[name] ?: return snip
+        if (amount <= 0f) return snip
+        val full = ampLift(chain(name, 1f))
+        if (full <= 0.0) return snip
+        val lift = (ampLift(chain(name, amount)) / full).coerceAtMost(1.0)
         val frames = snip.frameCount
-        val n = minOf(frames, (fade.ms / 1000f * snip.sampleRate).toInt())
+        val n = minOf(frames / 2, (fade.ms / 1000.0 * lift * snip.sampleRate).toInt())
         if (n <= 0) return snip
         val out = snip.samples.copyOf()
         for (d in 0 until n) {
@@ -164,7 +186,6 @@ object Treatments {
         val fx = chain(name, amount)
         val recipe = PadRecipe(fx = fx, treatment = name, amount = amount).toJsonValue()
         if (fx.isBypass) return Treated(snip, recipe)
-        val input = PRE_AMP_FADE[name]?.let { endFaded(snip, it) } ?: snip
-        return Treated(fx.process(input), recipe)
+        return Treated(fx.process(endFaded(snip, name, amount)), recipe)
     }
 }

@@ -241,15 +241,105 @@ class TreatmentsTest {
         return 20.0 * log10(maxOf(end / peak, 1e-12f).toDouble())
     }
 
+    /**
+     * A snare (333 ms, mono) and a choir (1.44 s, stereo) end at least 53 dB under their peaks, the
+     * last 20 ms against the whole pad, at the pad sheet's AMT 0.7, at full, and between (the fade's
+     * length follows the amp's gain, so the in-between amounts are the law's own cells). Measured at
+     * the shipped fade (100 ms at power 5 at full): the snare ends 71.97, 75.73, 63.78 and 55.21 dB
+     * under its peak at AMT 0.7, 0.8, 0.9 and 1 (44.36, 32.05, 19.92 and 9.14 with no fade), the
+     * choir at least 86 dB; the snare at AMT 1 leaves a DC mean of 8.5e-5 (2.5e-4 with no fade).
+     */
     @Test
-    fun `driven ends clean at the pad sheet's AMT and at full, on a short pad and a long one`() {
+    fun `driven ends clean at the pad sheet's AMT, at full and between, on a snare and a choir`() {
         val sources = mapOf("snare" to Thump.render(ThumpVoice.SNARE), "choir" to Vox.render(VoxVoice.CHOIR))
         for ((name, dry) in sources) {
-            for (amount in listOf(0.7f, 1f)) {
+            for (amount in listOf(0.7f, 0.8f, 0.9f, 1f)) {
                 val out = Treatments.apply("driven", dry, amount).snip
                 val end = endDb(out)
                 assertTrue(end <= -53.0, "$name at AMT $amount ends $end dB under its peak, past the -50 bar with 3 dB of margin")
                 assertTrue(abs(out.samples.average()) < 1e-4, "$name at AMT $amount leaves DC")
+            }
+        }
+    }
+
+    private fun ones(frames: Int, rate: Int) = Snip(FloatArray(frames) { 1f }, 1, rate)
+
+    /** The milliseconds from the first frame of [gain] that is not 1 (the fade's start) to its end. */
+    private fun fadeMs(gain: Snip): Double {
+        val first = gain.samples.indexOfFirst { it != 1f }
+        return if (first < 0) 0.0 else (gain.samples.size - first) * 1000.0 / gain.sampleRate
+    }
+
+    /**
+     * The fade is the tail's alone. Read off a pad of ones, so the samples are the gain itself: it is
+     * a fade of tens of milliseconds, at most 110 at full (100 shipped) and 40 at the pad sheet's AMT
+     * 0.7 (35 shipped), shorter at the lower amount; it ends at silence and falls all the way; and it
+     * never reaches the first half of a pad, however short the pad is (a 20 ms pad fades its last 10).
+     */
+    @Test
+    fun `the end fade is the tail's alone - tens of milliseconds, shorter at a lower AMT, never the first half of a pad`() {
+        val rate = WavWriter.MPC_SAMPLE_RATE
+        val long = ones(rate * 1500 / 1000, rate)
+        val seventy = fadeMs(Treatments.endFaded(long, "driven", 0.7f))
+        val full = fadeMs(Treatments.endFaded(long, "driven", 1f))
+        assertTrue(full in 50.0..110.0, "the fade at full is $full ms of a long pad, outside 50 to 110 (100 shipped)")
+        assertTrue(seventy in 10.0..40.0, "the fade at AMT 0.7 is $seventy ms of a long pad, outside 10 to 40 (35 shipped)")
+        assertTrue(seventy < full, "the fade at AMT 0.7 ($seventy ms) is shorter than at full ($full ms)")
+        for (ms in listOf(20, 60, 120, 333, 1500)) {
+            for (amount in listOf(0.7f, 1f)) {
+                val pad = ones(rate * ms / 1000, rate)
+                val out = Treatments.endFaded(pad, "driven", amount).samples
+                val half = pad.frameCount / 2
+                assertTrue((0 until half).all { out[it] == 1f }, "a $ms ms pad at AMT $amount keeps its first half untouched")
+                assertEquals(0f, out[out.size - 1], "a $ms ms pad at AMT $amount ends at silence")
+                val start = out.indexOfFirst { it != 1f }
+                assertTrue(start >= half, "a $ms ms pad at AMT $amount starts its fade at frame $start, before the half at $half")
+                assertTrue((start until out.size - 1).all { out[it] >= out[it + 1] }, "a $ms ms pad at AMT $amount falls from its fade's start to its end")
+            }
+        }
+    }
+
+    /**
+     * Where the amp does not lift (its gain at or under 1, DRIVE up to about 0.46, so AMT up to about
+     * 0.46) there is no fade: the door's output is the chain's, byte for byte. There is no click to
+     * hide there, and a fade ahead of a nearly clean amp would only shorten the pad's tail.
+     */
+    @Test
+    fun `no end fade where the amp does not lift`() {
+        val snare = Thump.render(ThumpVoice.SNARE)
+        for (amount in listOf(0.05f, 0.3f)) {
+            val applied = Treatments.apply("driven", snare, amount).snip
+            val direct = Treatments.chain("driven", amount).process(snare)
+            assertTrue(applied.samples.contentEquals(direct.samples), "driven at AMT $amount is the chain and nothing else")
+        }
+    }
+
+    /**
+     * The body is the amp's own: before the fade starts, the output is the unfaded chain's output (the
+     * measured difference is exactly 0; the bar is a millionth of the peak, and the last 2 ms before
+     * the fade are left out for the amp's filters). On the snare's 333 ms and on an 80 ms slice of it,
+     * which is shorter than the 100 ms fade, at AMT 0.7 and 1: the slice fades its last 40 ms at full
+     * (the half of the pad) and 35 at AMT 0.7, and what comes before is the unfaded chain's.
+     */
+    @Test
+    fun `the end fade leaves a pad's body to the amp, a pad shorter than the fade included`() {
+        val snare = Thump.render(ThumpVoice.SNARE)
+        val pads = mapOf("the snare" to snare, "an 80 ms slice of the snare" to Snip(snare.samples.copyOf(snare.sampleRate * 80 / 1000), 1, snare.sampleRate))
+        for ((name, pad) in pads) {
+            for (amount in listOf(0.7f, 1f)) {
+                val faded = Treatments.apply("driven", pad, amount).snip
+                val unfaded = Treatments.chain("driven", amount).process(pad)
+                val gain = Treatments.endFaded(ones(pad.frameCount, pad.sampleRate), "driven", amount)
+                val first = gain.samples.indexOfFirst { it != 1f }
+                val fadeFrames = if (first < 0) 0 else gain.samples.size - first
+                val body = pad.frameCount - fadeFrames - 2 * pad.sampleRate / 1000
+                assertTrue(body > 0, "$name at AMT $amount has a body before its fade")
+                var peak = 0f
+                for (v in unfaded.samples) if (abs(v) > peak) peak = abs(v)
+                var worst = 0.0
+                for (i in 0 until body) worst = maxOf(worst, abs((faded.samples[i] - unfaded.samples[i]).toDouble()))
+                assertTrue(worst <= 1e-6 * peak, "$name at AMT $amount: the first $body frames differ from the unfaded chain by up to ${worst / peak} of the peak")
+                assertFalse(faded.samples.contentEquals(unfaded.samples), "$name at AMT $amount: the fade does something to the tail")
             }
         }
     }
