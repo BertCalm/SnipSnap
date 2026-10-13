@@ -840,10 +840,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR are also in the picker, preset roster and starter kits;
+CISTERN, PITCHWHEEL, REVEL, PRISM, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR are also in the picker, preset roster and starter kits;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly.
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. Each file's own KDoc names its spec.
@@ -853,6 +853,16 @@ is a topology-preserving (trapezoidal) state-variable filter after Andy
 Simper's Cytomic papers — stable to Nyquist where the Chamberlin design
 went unstable past ~7 kHz. VELVET's CUTOFF, once capped at 5.2 kHz for
 stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
+
+BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
+Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
+contrasting push/pull colors, asymmetric folk reeds, and tracking drones
+with pressure-gated bridge chatter. Eight dry presets, saved player gestures,
+a sixteen-pad starter kit, CLI and the synth picker share the same renderer.
+Run `./gradlew :synth:generateBellowsAudition` for its raw/matched listening
+page and control comparisons. The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
+awaits the owner's sonic verdict; [implementation notes](docs/BELLOWS.md)
+describe expression, drone and HOLD limits.
 
 ### `:mpc3`
 

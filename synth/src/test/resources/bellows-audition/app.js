@@ -1,0 +1,458 @@
+'use strict';
+
+(() => {
+  const audio = document.getElementById('audio');
+  const grid = document.getElementById('clip-grid');
+  const status = document.getElementById('playback-status');
+  const loading = document.getElementById('loading');
+  const roomError = document.getElementById('room-error');
+  const emptyState = document.getElementById('empty-state');
+  const familyLabel = document.getElementById('transport-family');
+  const titleLabel = document.getElementById('transport-title');
+  const bars = document.getElementById('activity-bars');
+  const matchedButton = document.getElementById('matched-button');
+  const rawButton = document.getElementById('raw-button');
+  const volume = document.getElementById('volume');
+  const volumeValue = document.getElementById('volume-value');
+
+  const collections = {
+    'first-listen': {
+      eyebrow: '01 / MEET THE VOICES',
+      title: 'Find your first favorite.',
+      description: 'Two sounds from each family. Listen for the reeds, the air, and the motion.'
+    },
+    control: {
+      eyebrow: '02 / ONE CHANGE AT A TIME',
+      title: 'Follow the change.',
+      description: 'Compare pressure, body, reed beating, direction, and buzz. Keep your ear on what moves.'
+    },
+    notes: {
+      eyebrow: '03 / ACROSS THE KEYBOARD',
+      title: 'Different notes. Different touch.',
+      description: 'Hear how the voices respond across pitch and playing strength.'
+    },
+    hold: {
+      eyebrow: '04 / LET IT SETTLE',
+      title: 'Give the sound some time.',
+      description: 'A pad plays each sound once. Turn on Repeat for a longer listen to a loop; a held keyboard voice needs its own sustain path.'
+    }
+  };
+  const familyNumbers = { CHAMBER: '01', COUNTER: '02', FOLK: '03', WHEEL: '04' };
+  let clips = [];
+  let section = 'first-listen';
+  let family = 'all';
+  let levelMode = 'matched';
+  let selectedId = null;
+  let serial = 0;
+  let isSeeking = false;
+  let loadingAudio = false;
+  let viewCards = new Map();
+  const repeats = new Map();
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function announce(message) {
+    status.textContent = message;
+  }
+
+  function normalizeSection(value) {
+    const normalized = String(value || 'first-listen').toLowerCase().replace(/[_\s]+/g, '-');
+    if (/^(?:first-listen|first|presets?|identity|audition)$/.test(normalized)) return 'first-listen';
+    if (/pitch|velocity|note|touch/.test(normalized)) return 'notes';
+    if (/(?:^|-)(?:held|hold|loop|sustain)(?:-|$)/.test(normalized)) return 'hold';
+    return 'control';
+  }
+
+  function safeFile(value) {
+    if (typeof value !== 'string' || !value.trim() || /^(?:[a-z]+:|\/\/|\/)/i.test(value)) return null;
+    try {
+      const base = new URL('.', window.location.href);
+      const url = new URL(value, base);
+      if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) return null;
+      return value;
+    } catch (_) { return null; }
+  }
+
+  function currentClip() { return clips.find(clip => clip.id === selectedId); }
+  function visibleClips() { return clips.filter(clip => clip.collection === section && (family === 'all' || clip.voice === family)); }
+  function sourceFor(clip) { return levelMode === 'raw' && clip.rawFile ? clip.rawFile : clip.file; }
+  function isLoop(clip) { return clip.collection === 'hold' && (clip.loop !== false && clip.loopable !== false); }
+
+  function timeLabel(seconds) {
+    const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+    return `${Math.floor(safe / 60)}:${Math.floor(safe % 60).toString().padStart(2, '0')}`;
+  }
+
+  function numberLabel(value) {
+    if (typeof value === 'number') return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(3)));
+    if (typeof value === 'boolean') return value ? 'On' : 'Off';
+    if (value && typeof value === 'object') return JSON.stringify(value);
+    return String(value ?? '—');
+  }
+
+  function noteLabel(midi) {
+    const value = Number(midi);
+    if (!Number.isFinite(value)) return null;
+    const notes = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+    const rounded = Math.round(value);
+    return `${notes[((rounded % 12) + 12) % 12]}${Math.floor(rounded / 12) - 1}`;
+  }
+
+  function updateTransport() {
+    const clip = currentClip();
+    const playing = !audio.paused && !audio.ended;
+    if (clip) {
+      familyLabel.textContent = `${clip.voice} / ${levelMode === 'matched' ? 'MATCHED' : clip.rawFile ? 'RAW' : 'MATCHED · RAW UNAVAILABLE'}`;
+      titleLabel.textContent = clip.title;
+    } else {
+      familyLabel.textContent = 'LISTENING ROOM';
+      titleLabel.textContent = 'Pick a sound. Make some air.';
+    }
+    bars.classList.toggle('playing', playing);
+    for (const [id, card] of viewCards) {
+      const selected = id === selectedId;
+      const active = selected && playing;
+      card.root.classList.toggle('selected', selected);
+      card.root.classList.toggle('playing', active);
+      card.seek.hidden = !selected;
+      card.playText.textContent = selected && loadingAudio ? 'Loading' : active ? 'Pause' : 'Play';
+      card.playIcon.textContent = active ? 'Ⅱ' : '▶';
+      card.play.setAttribute('aria-label', `${active ? 'Pause' : 'Play'} ${card.clip.title}`);
+      card.play.setAttribute('aria-pressed', active ? 'true' : 'false');
+      card.stop.disabled = !selected;
+      card.download.href = sourceFor(card.clip);
+      card.download.download = sourceFor(card.clip).split('/').pop();
+      if (card.repeat) card.repeat.setAttribute('aria-pressed', repeats.get(id) ? 'true' : 'false');
+    }
+    updateSeek();
+  }
+
+  function updateSeek() {
+    const card = viewCards.get(selectedId);
+    if (!card) return;
+    const length = Number.isFinite(audio.duration) ? audio.duration : Number(card.clip.durationSeconds) || 0;
+    card.slider.max = length > 0 ? String(length) : '1';
+    card.slider.disabled = !Number.isFinite(audio.duration) || audio.duration <= 0;
+    if (!isSeeking) card.slider.value = String(Math.min(audio.currentTime || 0, length || 0));
+    card.time.textContent = `${timeLabel(audio.currentTime)} / ${timeLabel(length)}`;
+    card.slider.setAttribute('aria-valuetext', `${timeLabel(audio.currentTime)} of ${timeLabel(length)}`);
+  }
+
+  function stopAudio(message = 'Stopped') {
+    serial += 1;
+    loadingAudio = false;
+    audio.pause();
+    try { audio.currentTime = 0; } catch (_) {}
+    announce(message);
+    updateTransport();
+  }
+
+  async function playClip(clip) {
+    const same = selectedId === clip.id && audio.dataset.file === sourceFor(clip);
+    if (same && !audio.paused) {
+      serial += 1;
+      loadingAudio = false;
+      audio.pause();
+      announce('Paused');
+      updateTransport();
+      return;
+    }
+    const request = ++serial;
+    if (!same) {
+      audio.pause();
+      selectedId = clip.id;
+      isSeeking = false;
+      audio.src = sourceFor(clip);
+      audio.dataset.file = sourceFor(clip);
+      audio.load();
+    } else if (audio.ended) {
+      audio.currentTime = 0;
+    }
+    audio.loop = isLoop(clip) && Boolean(repeats.get(clip.id));
+    loadingAudio = true;
+    announce(`Loading ${clip.title}…`);
+    updateTransport();
+    try {
+      await audio.play();
+      if (request !== serial) return;
+      loadingAudio = false;
+      announce(audio.loop ? 'Playing · Repeat on' : 'Playing');
+      updateTransport();
+    } catch (error) {
+      if (request !== serial) return;
+      loadingAudio = false;
+      if (error.name === 'AbortError') announce('Playback stopped');
+      else if (error.name === 'NotAllowedError') announce('Playback was blocked. Press Play to try again.');
+      else announce('This audio could not load. Try another sound or save its WAV.');
+      updateTransport();
+    }
+  }
+
+  function addRecipe(card, clip) {
+    const entries = clip.macros && typeof clip.macros === 'object' ? Object.entries(clip.macros) : [];
+    if (!entries.length && !clip.gesture) return;
+    const details = el('details', 'recipe');
+    details.append(el('summary', '', 'SOUND RECIPE'));
+    const body = el('div', 'recipe-body');
+    if (clip.gesture) {
+      let gesture = clip.gesture;
+      if (typeof gesture === 'object') gesture = Object.entries(gesture).map(([key, value]) => `${key}: ${numberLabel(value)}`).join(' · ');
+      body.append(el('p', '', `Gesture: ${gesture}`));
+    }
+    if (entries.length) {
+      const values = el('dl', 'recipe-values');
+      for (const [name, value] of entries) {
+        const row = el('div');
+        row.append(el('dt', '', name.replace(/[_-]/g, ' ')), el('dd', '', numberLabel(value)));
+        values.append(row);
+      }
+      body.append(values);
+    }
+    details.append(body);
+    card.append(details);
+  }
+
+  function buildCard(clip, index) {
+    const card = el('article', 'clip-card');
+    card.dataset.family = clip.voice;
+    const topline = el('div', 'card-topline');
+    const tag = el('span', 'family-tag');
+    const dot = el('span', 'family-dot');
+    dot.setAttribute('aria-hidden', 'true');
+    tag.append(dot, document.createTextNode(`${familyNumbers[clip.voice] || '—'} / ${clip.voice}`));
+    topline.append(tag, el('span', 'card-number', String(index + 1).padStart(2, '0')));
+    const heading = el('h3', '', clip.title);
+    heading.id = `clip-title-${index}`;
+    card.setAttribute('aria-labelledby', heading.id);
+    card.append(topline, heading, el('p', 'card-description', clip.description || 'A dry voice from the BELLOWS prototype.'));
+    const metadata = el('div', 'clip-metadata');
+    const note = noteLabel(clip.midi);
+    if (note) metadata.append(el('span', '', note));
+    if (clip.velocity !== undefined && clip.velocity !== null) metadata.append(el('span', '', `VEL ${numberLabel(clip.velocity)}`));
+    if (Number.isFinite(Number(clip.durationSeconds))) metadata.append(el('span', '', `${Number(clip.durationSeconds).toFixed(1)} SEC`));
+    if (isLoop(clip)) metadata.append(el('span', '', 'LOOP'));
+    card.append(metadata);
+
+    const controls = el('div', 'card-controls');
+    const play = el('button', 'play-button');
+    play.type = 'button';
+    play.setAttribute('aria-pressed', 'false');
+    const playIcon = el('span', 'play-icon', '▶');
+    playIcon.setAttribute('aria-hidden', 'true');
+    const playText = el('span', '', 'Play');
+    play.append(playIcon, playText);
+    play.addEventListener('click', () => playClip(clip));
+    const stop = el('button', 'clip-stop', '■');
+    stop.type = 'button';
+    stop.setAttribute('aria-label', `Stop ${clip.title}`);
+    stop.addEventListener('click', () => { if (selectedId === clip.id) stopAudio(); });
+    controls.append(play, stop);
+    let repeat;
+    if (isLoop(clip)) {
+      repeat = el('button', 'repeat-button');
+      repeat.type = 'button';
+      repeat.append(el('span', '', '↻'), document.createTextNode('Repeat'));
+      repeat.setAttribute('aria-label', `Repeat ${clip.title}`);
+      repeat.setAttribute('aria-pressed', repeats.get(clip.id) ? 'true' : 'false');
+      repeat.addEventListener('click', () => {
+        const enabled = !repeats.get(clip.id);
+        repeats.set(clip.id, enabled);
+        repeat.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        if (selectedId === clip.id) {
+          audio.loop = enabled;
+          announce(enabled ? 'Repeat on' : 'Repeat off');
+        }
+      });
+      controls.append(repeat);
+    }
+    const download = el('a', 'download-link');
+    download.append(document.createTextNode('WAV'), el('span', 'download-arrow', '↓'));
+    download.setAttribute('aria-label', `Save ${clip.title} as WAV`);
+    controls.append(download);
+    card.append(controls);
+
+    const seek = el('div', 'card-seek');
+    seek.hidden = true;
+    const seekRow = el('div', 'seek-row');
+    const slider = el('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = '1';
+    slider.step = '0.01';
+    slider.value = '0';
+    slider.setAttribute('aria-label', `Playback position for ${clip.title}`);
+    slider.addEventListener('pointerdown', () => { isSeeking = true; });
+    slider.addEventListener('input', () => {
+      if (selectedId !== clip.id || !Number.isFinite(audio.duration)) return;
+      audio.currentTime = Number(slider.value);
+      const length = audio.duration;
+      time.textContent = `${timeLabel(audio.currentTime)} / ${timeLabel(length)}`;
+      slider.setAttribute('aria-valuetext', `${timeLabel(audio.currentTime)} of ${timeLabel(length)}`);
+    });
+    slider.addEventListener('change', () => { isSeeking = false; updateSeek(); });
+    slider.addEventListener('pointerup', () => { isSeeking = false; updateSeek(); });
+    slider.addEventListener('pointercancel', () => { isSeeking = false; updateSeek(); });
+    slider.addEventListener('blur', () => { isSeeking = false; });
+    const time = el('span', 'seek-time', `0:00 / ${timeLabel(Number(clip.durationSeconds))}`);
+    seekRow.append(slider, time);
+    seek.append(seekRow);
+    card.append(seek);
+    addRecipe(card, clip);
+    viewCards.set(clip.id, { root: card, clip, play, playIcon, playText, stop, download, repeat, seek, slider, time });
+    return card;
+  }
+
+  function renderView() {
+    viewCards = new Map();
+    grid.replaceChildren();
+    const visible = visibleClips();
+    visible.forEach((clip, index) => grid.append(buildCard(clip, index)));
+    emptyState.hidden = visible.length > 0 || !clips.length;
+    document.getElementById('collection-eyebrow').textContent = collections[section].eyebrow;
+    document.getElementById('section-title').textContent = collections[section].title;
+    document.getElementById('section-description').textContent = collections[section].description;
+    for (const button of document.querySelectorAll('[data-section]')) {
+      const active = button.dataset.section === section;
+      button.classList.toggle('selected', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+    for (const button of document.querySelectorAll('[data-family]')) {
+      if (!button.classList.contains('family-filter')) continue;
+      const active = button.dataset.family === family;
+      button.classList.toggle('selected', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+    updateTransport();
+  }
+
+  function setLevel(mode) {
+    if (levelMode === mode) return;
+    levelMode = mode;
+    stopAudio(mode === 'raw' ? 'Raw level selected. Press Play to compare.' : 'Matched level selected. Press Play to compare.');
+    audio.removeAttribute('src');
+    delete audio.dataset.file;
+    audio.load();
+    matchedButton.classList.toggle('selected', mode === 'matched');
+    rawButton.classList.toggle('selected', mode === 'raw');
+    matchedButton.setAttribute('aria-pressed', mode === 'matched' ? 'true' : 'false');
+    rawButton.setAttribute('aria-pressed', mode === 'raw' ? 'true' : 'false');
+    document.getElementById('level-description').textContent = mode === 'matched' ? 'Matched compares color at similar level.' : 'Raw preserves the renderer’s original levels.';
+    updateTransport();
+  }
+
+  function setVolume(value) {
+    const safe = Math.max(0, Math.min(1, Number(value) || 0));
+    audio.volume = safe;
+    volume.value = String(safe);
+    volumeValue.textContent = `${Math.round(safe * 100)}%`;
+    try { localStorage.setItem('bellows-volume', String(safe)); } catch (_) {}
+  }
+
+  function addDownloads(manifest) {
+    const zip = safeFile(manifest.firstListenZip);
+    if (zip) {
+      const link = document.getElementById('download-first-listen');
+      link.href = zip;
+      link.download = zip.split('/').pop();
+      link.hidden = false;
+    }
+    let patches = safeFile(manifest.patches);
+    if (!patches && manifest.patches && typeof manifest.patches === 'object') {
+      patches = URL.createObjectURL(new Blob([JSON.stringify(manifest.patches, null, 2)], { type: 'application/json' }));
+    }
+    if (patches) {
+      const link = document.getElementById('download-patches');
+      link.href = patches;
+      link.download = typeof manifest.patches === 'string' ? patches.split('/').pop() : 'bellows-patches.json';
+      link.hidden = false;
+    }
+  }
+
+  for (const button of document.querySelectorAll('.view-tab')) button.addEventListener('click', () => { section = button.dataset.section; renderView(); });
+  for (const button of document.querySelectorAll('.family-filter')) button.addEventListener('click', () => { family = button.dataset.family; renderView(); });
+  matchedButton.addEventListener('click', () => setLevel('matched'));
+  rawButton.addEventListener('click', () => setLevel('raw'));
+  document.getElementById('stop-all').addEventListener('click', () => stopAudio());
+  volume.addEventListener('input', () => setVolume(volume.value));
+  let savedVolume = 0.75;
+  try { const saved = localStorage.getItem('bellows-volume'); if (saved !== null && Number.isFinite(Number(saved))) savedVolume = Number(saved); } catch (_) {}
+  setVolume(savedVolume);
+
+  audio.addEventListener('loadedmetadata', updateSeek);
+  audio.addEventListener('durationchange', updateSeek);
+  audio.addEventListener('timeupdate', updateSeek);
+  audio.addEventListener('playing', () => {
+    loadingAudio = false;
+    if (currentClip()) announce(audio.loop ? 'Playing · Repeat on' : 'Playing');
+    updateTransport();
+  });
+  audio.addEventListener('pause', updateTransport);
+  audio.addEventListener('waiting', () => {
+    if (!audio.paused && currentClip()) { loadingAudio = true; announce('Buffering audio…'); updateTransport(); }
+  });
+  audio.addEventListener('ended', () => {
+    loadingAudio = false;
+    try { audio.currentTime = 0; } catch (_) {}
+    announce('Finished · Pick another sound');
+    updateTransport();
+  });
+  audio.addEventListener('error', () => {
+    if (!audio.error || !audio.dataset.file) return;
+    loadingAudio = false;
+    announce('This audio could not load. Try another sound or save its WAV.');
+    updateTransport();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { stopAudio(); return; }
+    if (event.code !== 'Space' || event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+    const target = event.target;
+    if (target && target.closest('button, a, input, textarea, select, summary, [contenteditable="true"]')) return;
+    const clip = currentClip() || visibleClips()[0];
+    if (!clip) return;
+    event.preventDefault();
+    playClip(clip);
+  });
+
+  async function loadManifest() {
+    try {
+      const response = await fetch('manifest.json', { cache: 'no-cache' });
+      if (!response.ok) throw new Error('Manifest unavailable');
+      const manifest = await response.json();
+      if (!manifest || !Array.isArray(manifest.clips)) throw new Error('Invalid manifest');
+      const ids = new Set();
+      clips = manifest.clips.filter(clip => clip && safeFile(clip.file)).map((clip, index) => {
+        let id = String(clip.id || `clip-${index}`);
+        while (ids.has(id)) id += `-${index}`;
+        ids.add(id);
+        return {
+          ...clip,
+          id,
+          title: String(clip.title || `Audition ${index + 1}`),
+          voice: String(clip.voice || clip.model || 'BELLOWS').toUpperCase(),
+          collection: normalizeSection(clip.section),
+          file: safeFile(clip.file),
+          rawFile: safeFile(clip.rawFile)
+        };
+      });
+      if (!clips.length) throw new Error('No audio in manifest');
+      addDownloads(manifest);
+      for (const count of document.querySelectorAll('[data-count]')) count.textContent = clips.filter(clip => clip.collection === count.dataset.count).length;
+      rawButton.disabled = !clips.some(clip => clip.rawFile);
+      if (rawButton.disabled) rawButton.title = 'Raw renders are unavailable for this audition.';
+      loading.hidden = true;
+      renderView();
+    } catch (_) {
+      loading.hidden = true;
+      roomError.hidden = false;
+      roomError.textContent = 'The audition manifest could not load. Refresh this page to try again. If you opened a downloaded copy, serve the folder through a local web server so the audio manifest can be read.';
+      announce('Listening room unavailable');
+    }
+  }
+
+  loadManifest();
+})();

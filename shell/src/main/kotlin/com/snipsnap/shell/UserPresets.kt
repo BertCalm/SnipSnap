@@ -16,6 +16,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
@@ -407,6 +408,7 @@ object UserPresets {
                 ".let { RelayPatch.fromJsonText(\"$json\") }"
             }
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
+            is BellowsPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = BellowsGesture.${patch.gesture.name})"
             is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is RevelPatch -> {
                 val c = patch.configuration

@@ -29,6 +29,9 @@ import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.EmbouchureVoice
+import com.snipsnap.synth.Bellows
+import com.snipsnap.synth.BellowsPatch
+import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.Prism
@@ -81,8 +84,8 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR) override
- * the preset's note and strike energy for a pad audition. EMBOUCHURE's --midi
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR) override
+ * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
@@ -120,6 +123,7 @@ object SynthCommand {
                 StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
+                BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
@@ -132,7 +136,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -200,6 +204,10 @@ object SynthCommand {
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is EmbouchurePatch -> patch.copy(
+                    midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity,
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
+                )
+                is BellowsPatch -> patch.copy(
                     midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity,
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
