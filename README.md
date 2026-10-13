@@ -633,9 +633,9 @@ The first C4 defaults concentrated nearly all early/body energy in their
 shared root. Revised sixteen-mode cymbals change excitation and upper-mode
 losses to expose rounded rings, thin shimmer, wavering metal, dark chamber
 tone, rim contact and supported sustain. Optional preserved-source pairs
-support direct listening comparisons; normal regeneration remains 323 clips.
-See [NIMBUS](docs/NIMBUS.md) for the contract, comparison command and
-listening procedure.
+support direct listening comparisons; normal regeneration needs no
+preserved baseline. See [NIMBUS](docs/NIMBUS.md) for the contract, the
+clip counts, the comparison command and the listening procedure.
 Listening and device acceptance remain open.
 
 COROLLA is a mechanical flower of coupled metal petals around a powered
