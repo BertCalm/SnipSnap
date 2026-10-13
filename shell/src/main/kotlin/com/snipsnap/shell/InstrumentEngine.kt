@@ -9,7 +9,9 @@ import kotlin.math.pow
  * The phone now plays keys through the native engine (`InstrumentPlayer`
  * over `NativePads`), but the *map* - which zone, what speed, which loop,
  * what release - is this engine's, lifted into [KeyHit] and tested
- * against both; this class stays the reference rendering.
+ * against both; this class stays the reference rendering. Nothing in the
+ * shop plays through it: only `InstrumentEngineTest` and the pad makers'
+ * tests construct and render it.
  *
  * A note picks the zone that covers it, reads the zone's sample at the
  * ratio between the note and the zone's root (times the sample rate
@@ -19,7 +21,9 @@ import kotlin.math.pow
  * that lets go fades over the instrument's release; a zone without a loop
  * plays to its end and stops. [MAX_VOICES] at once, the oldest stolen.
  * Output is interleaved stereo, the same mono in both ears, summed at
- * [VOICE_LEVEL] and soft-clipped so eight notes never crack.
+ * [VOICE_LEVEL] and soft-clipped above 0.9 so eight notes never crack
+ * here. The phone's native bus does not have this stage: it hard-clamps
+ * at full scale (see [KeyHit]).
  */
 class InstrumentEngine(
     private val instrument: Loaded,
@@ -148,7 +152,10 @@ class InstrumentEngine(
     companion object {
         const val MAX_VOICES = 8
 
-        /** Per-voice level: eight full-scale notes sum inside the clip. */
+        /**
+         * Per-voice level: eight full-scale notes sum inside this engine's soft clip. [KeyHit]
+         * hands the same gain to the phone's native bus, which hard-clamps at full scale instead.
+         */
         const val VOICE_LEVEL = 0.35f
     }
 }
