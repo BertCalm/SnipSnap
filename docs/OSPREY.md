@@ -5,9 +5,9 @@ into a reproducible SnipSnap sample generator. One finite sea gesture excites
 pitched resonators; scheduled creature forms answer its activity. Changing SHORE
 morphs the resonator, creature and water profiles together.
 
-The initial voice is `OspreyVoice.SWELL`. This is a first listening proof; sonic
-acceptance remains open. The audition is pending publication at
-[OSPREY · Five Shores](https://snipsnap-osprey-audition.bertcalm.chatgpt.site).
+The initial voice is `OspreyVoice.SWELL`. The published
+[private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site)
+contains 46 actual-engine comparisons. Sonic acceptance remains open.
 The phone synth picker, CLI, saved recipes and a dry sixteen-pad starter kit
 share this renderer. CHOP, a dedicated CALL voice and certified repeating HOLD
 are later work.
