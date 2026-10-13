@@ -70,7 +70,8 @@ class MidiWire {
      * end is kept for the next call.
      */
     fun feed(bytes: ByteArray, offset: Int = 0, count: Int = bytes.size - offset): List<Event> {
-        require(offset >= 0 && count >= 0 && offset + count <= bytes.size) {
+        // `count <= size - offset`, not `offset + count <= size`: the sum can overflow an Int and pass.
+        require(offset >= 0 && count >= 0 && count <= bytes.size - offset) {
             "window $offset+$count is outside ${bytes.size} bytes"
         }
         val out = ArrayList<Event>()

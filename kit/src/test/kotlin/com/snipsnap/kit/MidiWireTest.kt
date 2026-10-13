@@ -158,4 +158,15 @@ class MidiWireTest {
         assertEquals(emptyList(), wire.feed(bytes(0xF0, 0xF8, 60, 0xFE, 100, 0xF8, 62, 100)), "a real-time byte inside a SysEx")
         assertEquals(listOf(Event.NoteOn(0, 64, 100 / 127f)), wire.feed(bytes(0xF7, 0x90, 64, 100)))
     }
+
+    @Test
+    fun `a window whose end overflows an Int is refused by the window guard`() {
+        // offset + count wraps negative here, and a negative end passes a plain `offset + count <= size` and reads nothing.
+        for ((offset, count) in listOf(1 to Int.MAX_VALUE, Int.MAX_VALUE to 1)) {
+            val refused = assertFailsWith<IllegalArgumentException>("window $offset+$count overflows: the window guard must refuse it") {
+                MidiWire().feed(bytes(0x90, 60, 100), offset = offset, count = count)
+            }
+            assertEquals("window $offset+$count is outside 3 bytes", refused.message)
+        }
+    }
 }
