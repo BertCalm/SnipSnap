@@ -6,11 +6,29 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Mechanical acceptance for the invented ensemble; musical acceptance belongs to its auditions. */
 class CircuitTest {
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        val voice = CircuitVoice.ROOT
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "finite" to { Circuit.render(voice) },
+            "held" to { Circuit.render(voice, Circuit.defaults(voice) + ("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Circuit.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 
     @Test
     fun `walking changes paths without changing the scheduled performance`() {

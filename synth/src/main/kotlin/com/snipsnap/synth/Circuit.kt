@@ -309,9 +309,16 @@ object Circuit {
         }
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the long loops stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("CIRCUIT render no longer wanted")
+    }
+
     private fun perform(voice: CircuitVoice, macros: Map<String, Float>, velocity: Float,
                         normalize: Boolean, probe: Probe): Report {
         require(velocity.isFinite() && velocity in 0f..1f) { "CIRCUIT velocity must be finite and in 0..1" }
+        stopIfUnwanted()
         val m = settled(voice, macros)
         val p = plan(m)
         val geometry = Geometry(m, voice, p.rates)
@@ -331,8 +338,10 @@ object Circuit {
         val accents = schedule.filter { it.source == 1 }
         val prior = DoubleArray(3)
         for (cycle in 0 until cycles) {
+            stopIfUnwanted()
             var accentIndex = 0
             for (i in 0 until n) {
+                if (i % 8192 == 0) stopIfUnwanted()
                 val t = i.toDouble() / INTERNAL_RATE
                 val release = min(p.phraseSeconds, probe.inputOffSeconds ?: Double.POSITIVE_INFINITY)
                 val envelope = if (p.held && probe.inputOffSeconds == null) 1.0 else {
@@ -386,6 +395,7 @@ object Circuit {
         // not the throat or material noise chosen afresh at every event timestamp.
         for (event in schedule) {
             if (event.source < 3 || event.energy == 0.0) continue
+            stopIfUnwanted()
             val wave = CircuitInstruments.gesture(CircuitInstruments.Kind.valueOf(event.kind), p.frequency,
                 INTERNAL_RATE, event.energy, Dsp.seedFor("CIRCUIT-PLAYER", voice, event.source,
                     if (event.source == 6) "vocal" else event.kind,
@@ -423,6 +433,7 @@ object Circuit {
         val pathFrames = ArrayList<PathFrame>()
         for (source in 0..6) {
             if (probe.solo != null && probe.solo != source) continue
+            stopIfUnwanted()
             val low = DoubleArray(3)
             var delays = geometry.paths(source, 0.0).map { it * INTERNAL_RATE / SPEED_OF_SOUND }.toDoubleArray()
             var distances = geometry.paths(source, 0.0)
@@ -432,6 +443,7 @@ object Circuit {
             var facingStep = 0.0
             var coefficients = DoubleArray(3)
             for (i in rawInternal.indices) {
+                if (i % 8192 == 0) stopIfUnwanted()
                 val at = i % n
                 val t = at.toDouble() / INTERNAL_RATE
                 if (i % CONTROL_BLOCK == 0) {
@@ -469,6 +481,7 @@ object Circuit {
         var previousOutput = 0.0
         var peak = 0.0
         for (i in rawInternal.indices) {
+            if (i % 8192 == 0) stopIfUnwanted()
             val x = rawInternal[i].toDouble()
             val sound = x + canyonField.tick(x)
             val filtered = sound - previousInput + dcA * previousOutput
@@ -481,8 +494,10 @@ object Circuit {
         var evidence: LoopEvidence? = null
         val raw: FloatArray
         if (p.held) {
+            stopIfUnwanted()
             val two = rawInternal.copyOfRange(n, rawInternal.size)
             val decimated = cyclicDecimate(two)
+            stopIfUnwanted()
             val seam = Keys.seamError(decimated, p.frames)
             var difference = 0.0
             var energy = 0.0
@@ -497,9 +512,11 @@ object Circuit {
             check(evidence.seamError < 1e-3 && convergence < 1e-3) { "CIRCUIT held state did not converge: $evidence" }
             raw = decimated.copyOfRange(p.frames, 2 * p.frames)
         } else {
+            stopIfUnwanted()
             raw = Dsp.decimate(rawInternal, Dsp.RATE)
             Dsp.fadeTail(raw)
         }
+        stopIfUnwanted()
         val out = raw.copyOf()
         if (normalize) Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET, ceiling = .99f)
         return Report(Snip(out, channels = 1, sampleRate = Dsp.RATE), raw, schedule, pathFrames,
