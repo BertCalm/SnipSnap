@@ -11,6 +11,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -517,5 +518,23 @@ class RelayTest {
         val hz = report.requestedHz.toFloat()
         val cents = FineTuning.cents(FineTuning.measuredHz(report.snip, hz, 0.07f, 0.4f), hz.toDouble())
         assertTrue(abs(cents) < 5.0, "short broad phrase detunes by $cents cents")
+    }
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // frame loop, the band limit, the decimation, the level and the seam must stop on that flag.
+        for (render in listOf<() -> Unit>(
+            { Relay.render(RelayVoice.KEY) },
+            { Relay.render(RelayVoice.KEY, mapOf("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException> { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Relay.render(RelayVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
 }

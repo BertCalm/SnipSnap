@@ -411,7 +411,7 @@ object Relay {
     }
 
     // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
-    // and the frame loop polls it so a stale render stops instead of finishing unwanted.
+    // and the frame loop and the passes poll it so a stale render stops instead of finishing unwanted.
     private fun stopIfUnwanted() {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("RELAY render no longer wanted")
     }
@@ -572,6 +572,7 @@ object Relay {
         stopIfUnwanted()
         val conditioned = raw.copyOf()
         Tide.bandLimit(conditioned, INTERNAL_RATE)
+        stopIfUnwanted()
         val finished = Dsp.decimate(conditioned, Dsp.RATE)
         // Nonresonant output DC rejection; preserve the lowest C1 anchor.
         val dc = Dsp.OnePole(Dsp.RATE)
@@ -590,11 +591,13 @@ object Relay {
         } else finished
         val peakBeforeLevel = samples.maxOfOrNull { abs(it) } ?: 0f
         if (normalize) {
+            stopIfUnwanted()
             Dsp.levelTo(samples, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
             val gain = if (peakBeforeLevel > 1e-12f) (samples.maxOfOrNull { abs(it) } ?: 0f) / peakBeforeLevel else 1f
             for (index in previous.indices) previous[index] *= gain
         }
         if (!p.held) Dsp.fadeTail(samples)
+        stopIfUnwanted()
         val seam = if (p.held && samples.any { it != 0f }) Keys.seamError(previous + samples, previous.size) else 0.0
         check(!p.held || seam < Keys.MAX_SEAM_ERROR) { "RELAY phrase does not close: $seam" }
         return Report(Snip(samples, channels = 1, sampleRate = Dsp.RATE), raw, previous, seam,
