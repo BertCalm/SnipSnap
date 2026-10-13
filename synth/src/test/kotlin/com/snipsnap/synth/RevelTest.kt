@@ -14,12 +14,30 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Mechanical and acoustic evidence. The dry audition remains the gate for source character. */
 class RevelTest {
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        val voice = RevelVoice.CIRCLE
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "finite" to { Revel.render(voice) },
+            "held" to { Revel.renderLoop(voice) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>("$label render ignored the interrupt") { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Revel.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
+
     @Test
     fun `host note is separate from the five timbral macros and finite pitched routing`() {
         for (voice in RevelVoice.entries) {
