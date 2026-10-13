@@ -73,24 +73,22 @@ object Treatments {
         // coming in under the same six players, all of it shallower and narrower).
         // RATE is left at its
         // centre, its neutral, as "ensembled" leaves it. The names list is pinned
-        // in order, so the three pedal recipes below follow it.
+        // in order, so the two pedal recipes below follow it.
         "sectioned" to FxChain(ensemble = mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)),
-        // A drive pedal: a hot-ish VALVE with the speaker barely in. DRIVE 0.6 is gain 2.5 into the
-        // tube (the lowest of 0.6, 0.7, 0.8 and 0.9 that makes 3 percent harmonics on a steady sine at
-        // the pad sheet's AMT 0.7 and 15 at AMT 1: TreatmentsTest measures it). CAB 0.08 is small
-        // and above its neutral (0, no cabinet) so AMT can move it; the network is fully in at 0.25.
-        // CAB cannot be left out: a missing macro is VALVE's default (0.6) and AMT could not fade it.
-        // TONE is left out (its centre is its neutral, so AMT could never move it). The numbers are
-        // starting shape values, heard at the pedal board's Stage 0 listen
-        // (docs/superpowers/specs/2026-10-04-pedal-board-design.md). On a pad that is already through
-        // an amp this is a second amp, not a pedal in front of one.
-        "driven" to FxChain(valve = mapOf("DRIVE" to 0.6f, "SAG" to 0.3f, "CAB" to 0.08f)),
-        // A compressor pedal: SQUASH alone, leaning on the body for sustain. The bank's "punched" is
-        // SQUASH plus CRUNCH; this has no crunch.
-        "compressed" to FxChain(squash = mapOf("AMOUNT" to 0.7f, "ATTACK" to 0.55f)),
-        // A wah: the ladder's contour with the resonance up and a deep, fast sweep (a one-shot's
-        // sweep from the hit works as an auto-wah). "contoured" is CUTOFF 0.3, CREAM 0.6, SWEEP 0.7.
-        "quacked" to FxChain(contour = mapOf("CUTOFF" to 0.45f, "CREAM" to 0.85f, "SWEEP" to 0.85f)),
+        // A drive pedal: VALVE at the top of its gain law (DRIVE 1.0 is gain 1000; at the pad sheet's
+        // AMT 0.7 the recipe's DRIVE fades to 0.7, which is VALVE's own default gain 11.3) with little
+        // sag and the speaker barely in. TONE is left out (its centre is its neutral); CAB takes a small
+        // non-neutral value so AMT can move it (a missing macro would be VALVE's default 0.6). The
+        // owner's pick, heard against a hot crunch and a lead tone at the pedal board's round two
+        // (docs/superpowers/specs/2026-10-04-pedal-board-design.md). On a pad that is already through an
+        // amp this is a second amp, not a pedal in front of one. apply() fades the pad's last
+        // milliseconds before it, see PRE_AMP_FADE.
+        "driven" to FxChain(valve = mapOf("DRIVE" to 1.0f, "SAG" to 0.15f, "CAB" to 0.08f)),
+        // A compressor pedal for now: the strongest SQUASH there is (AMOUNT at its top, the fastest
+        // ATTACK that is not its neutral), the owner's pick at round two. The sustain compressor the
+        // owner asked for is its own section (spec, Stage 2); this recipe moves to it then. The bank's
+        // "punched" is SQUASH plus CRUNCH; this has no crunch.
+        "compressed" to FxChain(squash = mapOf("AMOUNT" to 1.0f, "ATTACK" to 0.05f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA
@@ -135,10 +133,38 @@ object Treatments {
 
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)
 
+    /**
+     * Characters that run a hot amp, and how much of the pad's end fades out BEFORE the chain: VALVE
+     * lifts a quiet tail by its own gain (1000 at the top of DRIVE), so a cut nobody hears dry ends
+     * in a click through it, and a fade ahead of the amp survives the amp (MAGNET's lesson). The
+     * length and shape are measured, not chosen: the shortest, mildest fade from 20, 40, 80 and 150 ms
+     * at powers 1 to 3 for which a snare and a choir end at least 53 dB under their peaks at AMT 0.7
+     * and 1, with a DC mean under 1e-4. Only 150 ms at power 3 qualifies (the snare at AMT 1 ends
+     * 56.3 dB under its peak, against 9.1 with no fade and 32.9 for 80 ms at power 2).
+     */
+    private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 150f, power = 3))
+
+    private class EndFade(val ms: Float, val power: Int)
+
+    /** [snip] with its last [fade] milliseconds faded to silence by `x^power` (x is 0 at the last frame, 1 at the fade's start). */
+    private fun endFaded(snip: Snip, fade: EndFade): Snip {
+        val frames = snip.frameCount
+        val n = minOf(frames, (fade.ms / 1000f * snip.sampleRate).toInt())
+        if (n <= 0) return snip
+        val out = snip.samples.copyOf()
+        for (d in 0 until n) {
+            val g = Math.pow(d.toDouble() / n, fade.power.toDouble()).toFloat()
+            val frame = frames - 1 - d
+            for (c in 0 until snip.channels) out[frame * snip.channels + c] *= g
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
+    }
+
     fun apply(name: String, snip: Snip, amount: Float = 1f): Treated {
         val fx = chain(name, amount)
         val recipe = PadRecipe(fx = fx, treatment = name, amount = amount).toJsonValue()
         if (fx.isBypass) return Treated(snip, recipe)
-        return Treated(fx.process(snip), recipe)
+        val input = PRE_AMP_FADE[name]?.let { endFaded(snip, it) } ?: snip
+        return Treated(fx.process(input), recipe)
     }
 }

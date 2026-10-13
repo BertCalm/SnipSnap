@@ -94,10 +94,10 @@ object PadSheet {
     /**
      * Row seven, the pedals: the guitar-pedal words over the rack's own sections (the pedal board's
      * Stage 0, docs/superpowers/specs/2026-10-04-pedal-board-design.md). The one row grouped by what an
-     * effect *is* rather than what it does: a guitarist looks for a pedal by its name. FUZZ, TREM and
-     * FLANGE join it as their sections pass their listening gates.
+     * effect *is* rather than what it does: a guitarist looks for a pedal by its name. WAH, FUZZ, TREM
+     * and FLANGE join it as their sections pass their listening gates.
      */
-    val PEDAL_SEGMENTS: List<String> = listOf("DRIVE", "COMP", "WAH")
+    val PEDAL_SEGMENTS: List<String> = listOf("DRIVE", "COMP")
 
     /**
      * All rows, in drawing order. Six of the seven are grouped by what an
@@ -216,12 +216,10 @@ object PadSheet {
         "ENSEMBLE" to "ensembled",
         // The same section as six independent players: one instrument swirled, or several playing.
         "SECTION" to "sectioned",
-        // A drive pedal: a hot-ish VALVE with the speaker barely in.
+        // A drive pedal: VALVE at the top of its gain law with the speaker barely in.
         "DRIVE" to "driven",
-        // A compressor pedal: SQUASH alone, for sustain.
+        // A compressor pedal for now: the strongest SQUASH there is, alone.
         "COMP" to "compressed",
-        // A wah: CONTOUR's ladder with the resonance up and a fast, deep sweep from the hit.
-        "WAH" to "quacked",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
     )
