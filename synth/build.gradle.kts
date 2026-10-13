@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
+tasks.register<JavaExec>("generateOspreyAudition") {
+    group = "distribution"
+    description = "Render OSPREY shore, weather, morph, component and control comparisons under testkit/osprey-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-audition")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"

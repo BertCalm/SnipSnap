@@ -370,6 +370,16 @@ C minor pentatonic FRESH TAPE starter are included. Run
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the renderer, settled HOLD loops and the pending owner listening review.
 
+OSPREY adapts XOsprey into one finite SWELL articulation: a coherent sea excites
+three shore-colored modal bodies, sympathetic modes and synthesized creatures.
+SHORE continuously links Atlantic, Nordic, Mediterranean, Pacific and Southern
+profiles; SEA, MOTION, DEPTH, SPACE and finite HOLD shape the gesture. Fifteen
+dry presets, a sixteen-pad starter, saved note/velocity/seed/duration recipes,
+the SYNTH picker and CLI share the renderer. Run
+`./gradlew :synth:generateOspreyAudition` for raw/matched shore, weather, morph,
+component and control comparisons. [Implementation notes](docs/OSPREY.md)
+describe the first proof and its pending listening verdict.
+
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One
 to three moving microphones hear the same performance through distinct

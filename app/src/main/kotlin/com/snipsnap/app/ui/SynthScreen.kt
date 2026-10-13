@@ -176,6 +176,9 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.Osprey
+import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -225,6 +228,7 @@ import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.AlloyVoice
 import java.io.File
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -330,14 +334,15 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, EMBOUCHURE and MURMUR carry note and velocity outside the macro map;
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, EMBOUCHURE, MURMUR and OSPREY carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
     // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
     // schedules, EMBOUCHURE its player gesture, and MURMUR its operator routing, formant
-    // targets and envelope definitions. Keep that state through preview, editing, saving and placing by
+    // targets and envelope definitions. OSPREY retains its variation seed, finite duration
+    // and model version. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
@@ -1176,6 +1181,58 @@ fun SynthScreen(
                     )
                 }
 
+                // SWELL is a finite sea gesture. ROOT and VELOCITY are recipe
+                // fields beside its six macros; SECONDS bounds the complete render.
+                if (engine == Engine.OSPREY) {
+                    val ospreyPatch = loadedPatch as? OspreyPatch
+                    val midi = ospreyPatch?.midi ?: Osprey.DEFAULT_MIDI
+                    val velocity = ospreyPatch?.velocity ?: 1f
+                    val seconds = ospreyPatch?.durationSeconds ?: 8f
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (midi - Osprey.MIDI_MIN).toFloat() / (Osprey.MIDI_MAX - Osprey.MIDI_MIN),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val root = (Osprey.MIDI_MIN + value * (Osprey.MIDI_MAX - Osprey.MIDI_MIN)).roundToInt()
+                                .coerceIn(Osprey.MIDI_MIN, Osprey.MIDI_MAX)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OspreyPatch).copy(midi = root)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OspreyPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    MacroSlider(
+                        label = "SECONDS",
+                        value = (seconds - .25f) / (Osprey.MAX_SECONDS - .25f),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = "%.1fs".format(Locale.ROOT, seconds),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val duration = .25f + value.coerceIn(0f, 1f) * (Osprey.MAX_SECONDS - .25f)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OspreyPatch)
+                                    .copy(durationSeconds = duration)
+                        },
+                    )
+                }
+
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
@@ -1189,6 +1246,7 @@ fun SynthScreen(
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
                             readout = when {
+                                engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -2049,7 +2107,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, OSPREY;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2082,6 +2140,7 @@ private enum class Engine {
         PITCHWHEEL -> PitchwheelVoice.entries
         REVEL -> RevelVoice.entries
         MURMUR -> MurmurVoice.entries
+        OSPREY -> OspreyVoice.entries
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
@@ -2121,6 +2180,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
         REVEL -> Revel.macrosFor(voice as RevelVoice)
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
+        OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
@@ -2160,6 +2220,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
         REVEL -> Revel.defaults(voice as RevelVoice)
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
+        OSPREY -> Osprey.defaults(voice as OspreyVoice)
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
@@ -2199,6 +2260,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
         REVEL -> Revel.scramble(voice as RevelVoice, random)
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
+        OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
@@ -2243,6 +2305,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
         REVEL -> Revel.render(voice as RevelVoice, macros)
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
+        OSPREY -> Osprey.render(voice as OspreyVoice, macros)
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
@@ -2288,6 +2351,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
+        OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
@@ -2327,6 +2391,7 @@ private enum class Engine {
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
         REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
+        OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)

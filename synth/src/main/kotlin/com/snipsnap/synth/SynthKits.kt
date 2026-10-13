@@ -661,6 +661,25 @@ object SynthKits {
     }
 
     /**
+     * Fifteen dry shore/sea comparisons and one intermediate coast with extended
+     * excitation. All sixteen pads are finite SWELL gestures at C4, retaining
+     * their note, seed, duration and model in the regenerable recipe.
+     */
+    fun osprey(): List<ArrangedPad?> {
+        val midpoint = OspreyPatch(
+            "BETWEEN SHORES", OspreyVoice.SWELL,
+            Osprey.defaults(OspreyVoice.SWELL) + mapOf(
+                "SHORE" to .375f, "SEA" to .5f, "MOTION" to .45f,
+                "DEPTH" to .55f, "SPACE" to 0f, "HOLD" to 1f,
+            ),
+            seed = 731,
+        )
+        return (OspreyPresets.all() + midpoint).map { patch ->
+            pad(patch, Osprey.drumClassFor(patch.voice, patch.macros))
+        }
+    }
+
+    /**
      * Eight dry harmonic keys in C minor pentatonic followed by the eight
      * curated spectral recipes. Each note rebuilds its own partial phases
      * and contours; finite notes are TONAL and the held veil is LOOP.

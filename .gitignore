@@ -1,4 +1,6 @@
 build/
+testkit/osprey-audition/
+testkit/SnipSnap Osprey Kit/
 .gradle/
 local.properties
 *.iml
