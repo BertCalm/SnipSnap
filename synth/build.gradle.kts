@@ -13,6 +13,19 @@ tasks.register<JavaExec>("generateOspreyAudition") {
     args("${rootDir}/testkit/osprey-audition")
 }
 
+/** Compare preserved model 1 with model 2's coast-specific materials and ocean gestures. */
+tasks.register<JavaExec>("generateOspreyRevisionAudition") {
+    group = "distribution"
+    description = "Render OSPREY R1/R2 pairs, shore and weather lineups, and creature-free body diagnostics."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyRevisionAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-revision-audition")
+    project.findProperty("ospreyBaselineDir")?.toString()?.let { args(it) }
+    args("--include-bodies")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"

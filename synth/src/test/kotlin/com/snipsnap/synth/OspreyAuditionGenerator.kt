@@ -58,6 +58,7 @@ object OspreyAuditionGenerator {
         val workingTreeDirty = git(repository, "status", "--porcelain")?.isNotBlank() ?: true
         val sourceFiles = listOf(
             "synth/src/main/kotlin/com/snipsnap/synth/Osprey.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/OspreyV1.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OspreyShore.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OspreyPresets.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OspreyPatch.kt",
@@ -84,6 +85,7 @@ object OspreyAuditionGenerator {
             val probe = Osprey.probe(
                 OspreyVoice.SWELL, request.macros, midi = request.midi,
                 velocity = request.velocity, seed = REQUEST_SEED, durationSeconds = DURATION_SECONDS,
+                modelVersion = MODEL_VERSION,
             )
             totalRenderNanos += System.nanoTime() - before
             renderCount++

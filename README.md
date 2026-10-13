@@ -370,15 +370,17 @@ C minor pentatonic FRESH TAPE starter are included. Run
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the renderer, settled HOLD loops and the pending owner listening review.
 
-OSPREY adapts XOsprey into one finite SWELL articulation: a coherent sea excites
-three shore-colored modal bodies, sympathetic modes and synthesized creatures.
-SHORE continuously links Atlantic, Nordic, Mediterranean, Pacific and Southern
-profiles; SEA, MOTION, DEPTH, SPACE and finite HOLD shape the gesture. Fifteen
-dry presets, a sixteen-pad starter, saved note/velocity/seed/duration recipes,
-the SYNTH picker and CLI share the renderer. Run
-`./gradlew :synth:generateOspreyAudition` for raw/matched shore, weather, morph,
-component and control comparisons. [Implementation notes](docs/OSPREY.md)
-describe the first proof and its pending listening verdict.
+OSPREY adapts XOsprey into a finite SWELL articulation. Model 2 gives Atlantic,
+Nordic, Mediterranean, Pacific and Southern their own wire, bow, wood, bowl and
+metal bodies; SEA changes wave pressure, chop contacts and breaker clusters.
+SHORE continuously morphs the coast; MOTION, DEPTH, SPACE and finite HOLD shape
+the gesture. Fifteen dry presets, a sixteen-pad starter, the SYNTH picker and
+CLI share saved note/velocity/seed/duration/model recipes. Model 1 remains
+frozen for existing pads. Run `./gradlew :synth:generateOspreyRevisionAudition`
+for paired R1/R2 renders and creature-free body comparisons. The original
+46-clip study remains preserved: its concept was positively received and its
+contrast marked for revision. Model 2 awaits listening review.
+[Implementation notes](docs/OSPREY.md) describe both models and the audition.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One

@@ -5,46 +5,51 @@ into a reproducible SnipSnap sample generator. One finite sea gesture excites
 pitched resonators; scheduled creature forms answer its activity. Changing SHORE
 morphs the resonator, creature and water profiles together.
 
-The initial voice is `OspreyVoice.SWELL`. The published
-[private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site)
-contains 46 actual-engine comparisons. Sonic acceptance remains open.
-The phone synth picker, CLI, saved recipes and a dry sixteen-pad starter kit
-share this renderer. CHOP, a dedicated CALL voice and certified repeating HOLD
-are later work.
+`OspreyVoice.SWELL` gives each shore an invented material and contact pattern in
+model 2. The concept received positive feedback; the original 46-clip study is
+marked **Revise for contrast** and remains preserved. Model 2 awaits listening
+review in its [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site).
+The phone picker, CLI, fifteen dry presets and
+sixteen-pad starter use the versioned renderer. CHOP, a dedicated CALL voice
+and certified repeating HOLD are later work.
 
 ## Controls
 
-All six macros use the range 0–1. The requested musical note is a separate recipe
-field rather than another macro.
+All six macros use 0–1. The musical note is a separate recipe field.
 
 | Control | Behavior |
 | --- | --- |
-| SHORE | Atlantic → Nordic → Mediterranean → Pacific → Southern; interpolates adjacent numerical profiles continuously. |
-| SEA | Raises turbulence and rough excitation, changing the resonators' timbre and the activity available to calls. Calm settings retain pitched excitation. |
+| SHORE | Atlantic → Nordic → Mediterranean → Pacific → Southern; continuously morphs adjacent material, creature and water profiles. |
+| SEA | Moves from sparse swell contacts to rough chop and storm breaker clusters; Nordic also takes bowed pressure. |
 | MOTION | Changes the pace and density of wave movement and creature activity. |
 | DEPTH | Darkens upper-mode radiation, extends sympathetic decay and raises creature presence; zero mutes the creature branch. |
 | SPACE | Adds harbor distance and diffusion; zero is exactly the dry source. |
 | HOLD | Extends the finite excitation gesture within the requested duration. Every setting still renders a one-shot. |
 
-Pure shores lie at SHORE 0, 0.25, 0.5, 0.75 and 1. The four halfway coastlines
-lie at 0.125, 0.375, 0.625 and 0.875. These are interpolated engine profiles,
-not crossfades between rendered endpoint WAVs. SHORE is fixed during each render;
-editing it generates a new sample.
+Pure shores lie at SHORE 0, 0.25, 0.5, 0.75 and 1; halfway coastlines lie at
+0.125, 0.375, 0.625 and 0.875. The engine interpolates profiles within a render.
+SHORE stays fixed during each render; editing it generates a new sample.
 
 ## Sound and timeline
 
-The signal path is seeded excitation → coherent swell/chop/turbulence → primary
-and sympathetic modal resonators → scheduled creature forms → dry mix → SPACE.
-The water history drives both the resonators and activity-sensitive call
-scheduling. Call envelopes and event times fit the finite gesture, while the
-terminal tail lets the modal energy decay.
-Shore wave periods are compressed to sample-scale movement in this proof.
+The signal path is seeded water activity → material excitation → primary and
+sympathetic modal resonators → scheduled creature forms → dry mix → SPACE.
+SEA changes how wave pressure and contacts excite the body. Creature forms
+answer water activity; their events and envelopes fit the finite gesture.
+The terminal tail lets modal energy decay.
 
-Each primary instrument family anchors its first mode to the requested note.
-The remaining musical modal ratios and shore spectral colors create the
-coastline character. Instrument names are synthesis inspiration, and creature
-names identify invented formant forms. These are neither sampled instruments
-nor measured biological models.
+| Shore | Model 2 material and articulation |
+| --- | --- |
+| Atlantic | Wire-like pluck and strum. |
+| Nordic | Sustained bowed body. |
+| Mediterranean | Woody double pick with a short decay. |
+| Pacific | Struck bowl with long ringing upper modes. |
+| Southern | Uneven metal strum. |
+
+One primary mode anchors the requested note; upper modal ratios, damping and
+radiation give each coast its own body. The materials are invented synthesis
+families, and creature names identify invented formant forms. Neither is an
+authentic instrument emulation or measured biological model.
 
 Diagnostic taps expose ocean excitation, primary resonators, sympathetic
 resonators and creatures. Primary + sympathy + creatures reconstruct the dry
@@ -53,8 +58,7 @@ audible layer. SPACE 0 returns that dry source directly.
 
 ## Saved recipe and playback
 
-`OspreyPatch` stores engine `OSPREY`, voice `SWELL`, the common patch `version`,
-name and macros, plus these render fields:
+`OspreyPatch` stores `OSPREY`, `SWELL`, patch `version`, name, macros and:
 
 | Field | Contract |
 | --- | --- |
@@ -62,72 +66,68 @@ name and macros, plus these render fields:
 | `velocity` | Finite 0–1 excitation velocity, default 1. |
 | `seed` | Saved integer variation seed, default 0. |
 | `durationSeconds` | Finite 0.25–12 seconds, default 8. |
-| `modelVersion` | Render model 1; unsupported models are rejected. |
+| `modelVersion` | New patches default to 2; saved models 1 and 2 are supported. |
 
-Every independent render starts with fresh deterministic random, modal and
-spatial state. The same complete recipe regenerates the same sample and event
-schedule. Notes do not share a continuously running ocean across pads. Output
-is interleaved stereo at 44.1 kHz with the requested finite frame count.
+`OspreyV1` preserves the published model-1 math and original defaults. JSON with
+missing or null `modelVersion` still selects 1. Editing a saved model-1 recipe
+retains its model; choosing model 2 is an explicit change. The CLI accepts
+`--model 1|2`; the common patch `version` remains 1.
 
-```json
-{
-  "engine": "OSPREY", "version": 1, "name": "ATLANTIC CALM",
-  "voice": "SWELL", "modelVersion": 1,
-  "midi": 60, "velocity": 1, "seed": 731, "durationSeconds": 8,
-  "macros": {
-    "SHORE": 0, "SEA": 0.1, "MOTION": 0.35,
-    "DEPTH": 0.35, "SPACE": 0, "HOLD": 0
-  }
-}
-```
+Independent renders start with fresh random, modal and spatial state. The same
+complete recipe repeats the sample and events. Pads do not share a live ocean.
+Output is stereo at 44.1 kHz with the requested finite frame count.
 
-Sample playback preserves the rendered history. Repitching a WAV changes wave
-and creature timing together with pitch. HOLD currently provides no periodic
-state contract or seamless-loop claim; sustaining a key cannot continue an
-unrendered sea. The adaptation targets SnipSnap's patch → sample → pad workflow.
+Repitching a WAV changes wave and creature timing together with pitch. HOLD
+provides no periodic state or seamless-loop contract; a sustained key cannot
+continue an unrendered sea. SnipSnap follows patch → sample → pad playback.
 
 ## Audition and checks
 
 Run from the repository root:
 
 ```sh
-./gradlew --no-daemon :synth:generateOspreyAudition
+./gradlew --no-daemon :synth:generateOspreyRevisionAudition
 ./gradlew --no-daemon :synth:test
 ```
 
-`OspreyAuditionGenerator` writes engine-rendered assets into
-`testkit/osprey-audition/`. The separate audition page consumes `manifest.json`;
-the generator preserves the page. The initial matrix contains all five dry
-shores at calm, rough and storm SEA, the four rough-sea midpoints, a complete
-dry sea and its four component taps, three-point MOTION/DEPTH/SPACE comparisons,
-C3/C4/C5, creature-presence comparisons, finite HOLD and velocity comparisons.
-The baseline uses seed 731 and eight-second renders. The listening page begins
-with audio off.
+`OspreyRevisionAuditionGenerator` verifies the preserved published model-1
+library in `testkit/osprey-audition/` and writes separately to
+`testkit/osprey-revision-audition/`. Eleven full R1/R2 pairs compare all five
+rough shores and calm/storm Atlantic, Nordic and Mediterranean. Each pair keeps
+C4, velocity 1, seed 731, eight seconds and the original macros unchanged.
+Two summary pairs use identical 2.4-second excerpts of those full gestures.
+The task also includes five DEPTH-0 body pairs: creatures are
+muted, but modal radiation and decay also change, so these are full diagnostic
+renders rather than isolated taps. This makes 18 paired cards, including the
+two excerpt lineups. The listening page begins with audio off.
 
-Each card has matched and raw 16-bit stereo WAVs plus a saved patch JSON.
-Matched full mixes target the loudest 200 ms stereo RMS at 0.12, subject to a
-0.90 peak ceiling. Anatomy taps inherit the complete dry mix's gain so their
-actual balance remains audible. Raw files retain the engine's amplitude; use
-them to judge velocity response. A tap's saved patch regenerates the complete
-source; its manifest `component` selects the diagnostic audio.
+Full cards include matched/raw 16-bit stereo WAVs and saved patch JSON. Each
+A/B pair shares an achievable loudest-200-ms stereo RMS target of at most 0.12,
+with peaks at most 0.90. Original raw audio and patches are copied with verified
+hashes; matched R1 playback may get a separate lower-target copy. Raw retains
+engine amplitude. Summary excerpts inherit each full clip's gain and record
+their additional lineup gain; montages have no single saved patch.
 
-The manifest records recipes, source provenance, SHA-256 file hashes, amplitude
-measurements, call events and decay/recovery diagnostics. Automated checks cover
-repeatability, root tuning and transposition, continuous shore boundaries,
-audible macro and shore differences, dry/tap reconstruction, finite decay and
-bounded output. These checks establish the render contract; listening decides
-whether the coastlines and creature responses belong to one convincing sea.
+The original `:synth:generateOspreyAudition` task stays explicitly on model 1.
+Its 46-card shore, weather, morph, anatomy and control study remains accessible
+as **Original study**. A new R1 render has new provenance; the revision generator
+requires the preserved published baseline. Original anatomy taps keep their
+complete dry mix's gain and their patches regenerate the full source.
+
+Manifests record recipes, source provenance, file hashes, amplitude measurements,
+call/contact events and decay diagnostics. Tests pin model-1 sample bits and
+check model-2 repeatability, audible coast/weather contrast, root audibility,
+continuous morphs, tap reconstruction and finite bounded output. These checks
+establish the contract; the revised sound still requires listening review.
 
 ## Attribution
 
 The shore instrument, creature and fluid profile data in `OspreyShore.kt` is
 adapted from XO_OX Designs' [ShoreSystem.h](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Source/DSP/ShoreSystem/ShoreSystem.h),
-copyright © 2026 XO_OX Designs, under the MIT license. The source attribution
-and SPDX identifier are retained in the port. OSPREY's finite gesture renderer,
-recipe contract and audition generator are SnipSnap adaptations.
+copyright © 2026 XO_OX Designs, under MIT. The port retains its attribution and
+SPDX identifier. The finite renderer, recipes and audition are SnipSnap work.
 
-The [upstream MIT notice](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/LICENSE)
-applies to the adapted profile data:
+The [upstream MIT notice](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/LICENSE) applies to the adapted data:
 
 > Copyright (c) 2026 XO_OX Designs
 >

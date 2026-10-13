@@ -394,7 +394,11 @@ fun SynthScreen(
         // that "no missing key" invariant - a bare `patch.macros` would
         // otherwise leave PUNCH's slider crashing on getValue the moment
         // someone loaded a pre-PUNCH preset.
-        macrosByVoice[engine to voice] = engine.defaults(voice) + patch.macros
+        // OSPREY's saved model selects its defaults too: filling a partial
+        // legacy recipe with the current model's values would change its sound.
+        val defaults = if (patch is OspreyPatch) Osprey.defaults(patch.voice, patch.modelVersion)
+            else engine.defaults(voice)
+        macrosByVoice[engine to voice] = defaults + patch.macros
         currentPresetByVoice[engine to voice] = patch.name
     }
 

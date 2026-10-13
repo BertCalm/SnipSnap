@@ -88,14 +88,14 @@ import kotlin.random.Random
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
- * OSPREY accepts `--seed N` and `--seconds .25..12` for a finite SWELL gesture.
+ * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2` for a finite SWELL gesture.
  */
 object SynthCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--seconds", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
             boolean = setOf("--all", "--instrument", "--drone"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -161,6 +161,11 @@ object SynthCommand {
             if (engine != OspreyPatch.ENGINE) throw CliError("--seconds is only supported by OSPREY, got $engine")
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .25f..Osprey.MAX_SECONDS }
                 ?: throw CliError("--seconds wants .25..${Osprey.MAX_SECONDS} seconds, got '$raw'")
+        }
+        val modelOverride = opts["--model"]?.let { raw ->
+            if (engine != OspreyPatch.ENGINE) throw CliError("--model is only supported by OSPREY, got $engine")
+            raw.toIntOrNull()?.takeIf { it in 1..Osprey.MODEL_VERSION }
+                ?: throw CliError("--model wants 1..${Osprey.MODEL_VERSION}, got '$raw'")
         }
         val scrambleRandom = skitterSeed("--scramble")?.let { Random(it) }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
@@ -250,6 +255,7 @@ object SynthCommand {
             } else if (withNote is OspreyPatch) withNote.copy(
                 seed = seedOverride ?: withNote.seed,
                 durationSeconds = secondsOverride ?: withNote.durationSeconds,
+                modelVersion = modelOverride ?: withNote.modelVersion,
             ) else withNote
         }
 

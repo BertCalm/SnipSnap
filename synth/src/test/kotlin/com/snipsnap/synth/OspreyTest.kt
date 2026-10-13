@@ -13,13 +13,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Audio measurements complement the diagnostic taps; a changed macro map alone cannot pass. */
+/** Published R1 behavior remains pinned while model 2 has its own acoustic acceptance suite. */
 class OspreyTest {
     private val dry = mapOf("DEPTH" to 0f, "SPACE" to 0f, "HOLD" to 0f)
 
     private fun probe(macros: Map<String, Float> = dry, midi: Int = 60,
         seed: Int = 871, seconds: Float = 6f): Osprey.Probe =
-        Osprey.probe(OspreyVoice.SWELL, macros, midi = midi, seed = seed, durationSeconds = seconds)
+        Osprey.probe(OspreyVoice.SWELL, macros, midi = midi, seed = seed,
+            durationSeconds = seconds, modelVersion = 1)
 
     private fun channel(stereo: FloatArray, channel: Int = 0): FloatArray =
         FloatArray(stereo.size / 2) { stereo[it * 2 + channel] }
@@ -146,7 +147,7 @@ class OspreyTest {
     @Test
     fun `output format is stereo 44100 with the requested finite duration`() {
         for (seconds in listOf(.25f, 2.5f, 8f)) {
-            val snip = Osprey.render(OspreyVoice.SWELL, dry, durationSeconds = seconds)
+            val snip = Osprey.render(OspreyVoice.SWELL, dry, durationSeconds = seconds, modelVersion = 1)
             assertEquals(2, snip.channels)
             assertEquals(44_100, snip.sampleRate)
             assertEquals((seconds * snip.sampleRate).roundToInt(), snip.frameCount)
@@ -162,7 +163,7 @@ class OspreyTest {
         assertTrue(extended.metrics.excitationStopSeconds < 6f, "HOLD excitation never stopped")
         assertEquals(finite.samples.size, extended.samples.size)
         val silent = Osprey.render(OspreyVoice.SWELL, mapOf("DEPTH" to 1f, "SPACE" to 1f),
-            velocity = 0f, durationSeconds = 2f)
+            velocity = 0f, durationSeconds = 2f, modelVersion = 1)
         assertTrue(silent.samples.all { it == 0f }, "zero excitation velocity retained audio")
     }
 

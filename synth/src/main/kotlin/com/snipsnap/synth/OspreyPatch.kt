@@ -8,7 +8,8 @@ import com.snipsnap.json.JsonValue
  * A complete finite OSPREY sea gesture. The requested note, excitation velocity,
  * variation seed, duration and model travel beside the coastline macros so a
  * saved pad regenerates the sample that was auditioned. HOLD extends excitation;
- * it does not certify a repeating loop.
+ * it does not certify a repeating loop. New recipes use the current model;
+ * older JSON without a model retains the first published renderer.
  */
 data class OspreyPatch(
     override val name: String,
@@ -29,12 +30,12 @@ data class OspreyPatch(
         require(durationSeconds.isFinite() && durationSeconds in .25f..Osprey.MAX_SECONDS) {
             "OSPREY duration out of .25..${Osprey.MAX_SECONDS} seconds: $durationSeconds"
         }
-        require(modelVersion == Osprey.MODEL_VERSION) { "unsupported OSPREY model $modelVersion" }
+        require(modelVersion in 1..Osprey.MODEL_VERSION) { "unsupported OSPREY model $modelVersion" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Osprey.render(voice, macros, midi, velocity, seed, durationSeconds)
+    override fun render() = Osprey.render(voice, macros, midi, velocity, seed, durationSeconds, modelVersion = modelVersion)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {

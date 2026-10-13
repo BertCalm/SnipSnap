@@ -75,7 +75,7 @@ object Cli {
         |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/MURMUR/OSPREY: --midi N --velocity 0..1)
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
-        |                        (OSPREY SWELL: --seed N --seconds .25..12;
+        |                        (OSPREY SWELL: --seed N --seconds .25..12 --model 1|2;
         |                        HOLD extends a finite sea gesture)
         |                        (RESIN: --instrument holds a note; --drone
         |                        [--root A1 --motion 0..1 --rate 1|2|4

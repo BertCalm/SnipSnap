@@ -1,10 +1,10 @@
 package com.snipsnap.synth
 
-/** Dry first-listen comparisons: each coastline at calm, rough and storm energy. */
+/** Dry comparisons in the current model: each coastline at calm, rough and storm energy. */
 object OspreyPresets {
-    /** Factory promotion uses this same helper before restoring the saved recipe fields. */
+    /** Missing controls stay absent until the saved render model resolves its defaults. */
     private fun p(voice: OspreyVoice, name: String, vararg macros: Pair<String, Float>) =
-        OspreyPatch(name, voice, Osprey.defaults(voice) + macros.toMap(), seed = 731)
+        OspreyPatch(name, voice, macros.toMap(), seed = 731)
 
     private val shores = listOf(
         "ATLANTIC" to 0f, "NORDIC" to .25f, "MEDITERRANEAN" to .5f,

@@ -1,5 +1,6 @@
 build/
 testkit/osprey-audition/
+testkit/osprey-revision-audition/
 testkit/SnipSnap Osprey Kit/
 .gradle/
 local.properties
