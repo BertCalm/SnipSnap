@@ -3,12 +3,13 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const audio = $('audio');
-  const STORAGE_KEY = 'snipsnap-onset-first-listen-v1';
+  const STORAGE_KEY = 'snipsnap-onset-first-listen-v2';
+  const LEGACY_STORAGE_KEY = 'snipsnap-onset-first-listen-v1';
   const VOICES = {
     KICK: { title: 'Kick', left: 'OSCILLATOR BODY', right: 'MODAL MEMBRANE', description: 'A swept, weighted body meets the ring of a struck membrane. Listen for the attack staying together as the material changes.' },
     HAT_CLOSED: { title: 'Closed hat', left: 'SQUARE CLUSTER', right: 'RESONANT NOISE', description: 'A metallic oscillator cluster meets resonant noise. Listen for a useful shift in texture without losing the short, clear hat.' }
   };
-  const state = { manifest: null, clips: [], selected: null, mode: 'matched', playing: false, loading: false, token: 0, sequence: [], sequenceIndex: 0, sequenceVoice: null, notes: {}, storageAvailable: true,
+  const state = { manifest: null, clips: [], references: [], selected: null, mode: 'matched', playing: false, loading: false, token: 0, sequence: [], sequenceIndex: 0, sequenceVoice: null, notes: {}, legacyNotes: {}, storageAvailable: true,
     context: null, buffers: new Map(), source: null, backend: null, frame: 0, startAt: 0, duration: 0 };
   const OUTPUT_WARMUP_SECONDS = .15;
   const cards = new Map();
@@ -24,20 +25,39 @@
   }
   function pct(clip) { return `${Math.round(clip.blend * 100)}%`; }
   function name(clip) { return clip.title || `${VOICES[clip.voice]?.title || 'Beat'} · Blend ${pct(clip)}`; }
+  function allClips() { return [...state.clips, ...state.references]; }
   function path(clip) { return clip?.[state.mode] || ''; }
   function time(seconds) { const value = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`; }
   function noteFor(id) { return state.notes[id] || { verdict: '', text: '', mode: 'matched' }; }
   function announce(message, isError = false) { $('audio-status').textContent = message; $('audio-status').classList.toggle('error-status', isError); }
-  function loadNotes() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
-        for (const [id, note] of Object.entries(saved)) {
-          if (!note || typeof note !== 'object') continue;
-          state.notes[id] = { verdict: ['keep', 'maybe', 'pass'].includes(note.verdict) ? note.verdict : '', text: typeof note.text === 'string' ? note.text : '', mode: note.mode === 'raw' ? 'raw' : 'matched' };
-        }
+  function readNotes(key) {
+    const saved = JSON.parse(localStorage.getItem(key) || '{}');
+    const notes = {};
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+      for (const [id, note] of Object.entries(saved)) {
+        if (!note || typeof note !== 'object') continue;
+        notes[id] = { verdict: ['keep', 'maybe', 'pass'].includes(note.verdict) ? note.verdict : '', text: typeof note.text === 'string' ? note.text : '', mode: note.mode === 'raw' ? 'raw' : 'matched' };
       }
-    } catch (_) { state.storageAvailable = false; }
+    }
+    return notes;
+  }
+  function loadNotes() {
+    try { state.notes = readNotes(STORAGE_KEY); }
+    catch (_) { state.storageAvailable = false; }
+    try { state.legacyNotes = readNotes(LEGACY_STORAGE_KEY); }
+    catch (_) { /* Earlier notes may be absent or unavailable. */ }
+  }
+  function migrateLegacyNotes() {
+    let copied = false;
+    // Preserve first-pass kick verdicts with the first-pass WAVs. Revised kick
+    // and beat IDs must never inherit a verdict on their previous sound.
+    for (const clip of allClips()) {
+      const oldId = clip.kind === 'reference' ? `kick-${String(Math.round(clip.blend * 100)).padStart(3, '0')}` : clip.voice === 'HAT_CLOSED' ? clip.id : null;
+      if (oldId && state.legacyNotes[oldId] && !Object.hasOwn(state.notes, clip.id)) {
+        state.notes[clip.id] = { ...state.legacyNotes[oldId] }; copied = true;
+      }
+    }
+    if (copied) persistNotes();
   }
   function persistNotes() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.notes)); }
@@ -46,8 +66,9 @@
     updateReviewCount();
   }
   function updateReviewCount() {
-    const count = state.clips.filter((clip) => { const note = noteFor(clip.id); return note.verdict || note.text.trim(); }).length;
-    $('review-count').textContent = `${count} of ${state.clips.length} reviewed`;
+    const clips = allClips();
+    const count = clips.filter((clip) => { const note = noteFor(clip.id); return note.verdict || note.text.trim(); }).length;
+    $('review-count').textContent = `${count} of ${clips.length} reviewed`;
   }
   function updateNoteEditor() {
     const clip = state.selected;
@@ -60,7 +81,7 @@
     $('note-mode').textContent = `Listening: ${state.mode === 'matched' ? 'matched levels' : 'raw levels'}`;
   }
   function updateCards() {
-    for (const clip of state.clips) {
+    for (const clip of allClips()) {
       const selected = state.selected?.id === clip.id;
       const playing = selected && (state.playing || state.loading);
       cards.get(clip.id)?.classList.toggle('selected', selected);
@@ -87,7 +108,8 @@
     $('replay').classList.toggle('playing', state.playing);
     $('replay').firstElementChild.textContent = state.sequence.length ? '↻' : state.playing || state.loading ? '■' : '▶';
     $('replay').setAttribute('aria-label', state.sequence.length ? 'Replay selected sound independently' : `${state.playing || state.loading ? 'Stop' : 'Play'} selected sound`);
-    $('transport-label').textContent = clip ? `${clip.kind === 'beat' ? 'BEAT' : VOICES[clip.voice]?.title.toUpperCase() || clip.voice} / BLEND ${pct(clip)} / ${state.mode === 'matched' ? 'MATCHED' : 'RAW'}` : 'ONSET / READY';
+    const sourceLabel = clip?.kind === 'reference' ? 'PREVIOUS KICK / FIRST PASS' : `${clip?.kind === 'beat' ? 'BEAT' : VOICES[clip?.voice]?.title.toUpperCase() || clip?.voice} / REVISION ${state.manifest?.engine?.version || 2}`;
+    $('transport-label').textContent = clip ? `${sourceLabel} / BLEND ${pct(clip)} / ${state.mode === 'matched' ? 'MATCHED' : 'RAW'}` : 'ONSET / READY';
     $('transport-title').textContent = clip ? name(clip) : 'Choose a sound to listen.';
     const download = $('download-wav');
     if (clip) {
@@ -313,8 +335,11 @@
     });
     const beats = $('beat-cards'); beats.replaceChildren();
     state.clips.filter((clip) => clip.kind === 'beat').sort((a, b) => a.blend - b.blend).forEach((clip, index) => beats.append(makeCard(clip, index)));
+    const references = $('reference-cards'); references.replaceChildren();
+    state.references.slice().sort((a, b) => a.blend - b.blend).forEach((clip, index) => references.append(makeCard(clip, index)));
+    $('previous-kick').hidden = !state.references.length;
     const selector = $('note-clip'); selector.replaceChildren();
-    state.clips.forEach((clip) => { const option = el('option', '', name(clip)); option.value = clip.id; selector.append(option); });
+    allClips().forEach((clip) => { const option = el('option', '', name(clip)); option.value = clip.id; selector.append(option); });
     const comparison = state.manifest.comparison || {};
     $('beat-context').textContent = `${comparison.bpm || 104} BPM · ${comparison.bars || 2} bars\nThe rhythm stays put.`;
     $('beat-context').style.whiteSpace = 'pre-line';
@@ -328,15 +353,16 @@
     const details = $('render-details'); details.replaceChildren();
     details.append(el('p', '', 'The same voice settings and deterministic excitation are used across each five-point row; BLEND is the variable. A shared attack and linked pitch/decay help the partners speak as one sound.'));
     details.append(el('p', '', 'Matched levels are for comparing character. Raw levels retain the renderer’s output balance. Changing the level view stops any sequence and replays the selected sound only if it was playing.'));
-    details.append(el('p', '', 'This first study covers kick and closed hat. It does not demonstrate live morphing, per-step synthesis automation, or cross-voice coupling. The manifest records the rendered settings and measurements.'));
+    details.append(el('p', '', 'Revision 2 revisits the kick’s physical body; the closed hat is unchanged. This study covers kick and closed hat without live morphing, per-step synthesis automation, or cross-voice coupling. The manifest records the rendered settings and measurements.'));
+    if (state.references.length) details.append(el('p', '', 'Previous kick / first pass contains the original revision-1 WAVs, with their original settings and measurements. They use the same player and level-view controls as the current comparisons.'));
     if (state.manifest.engine?.controls?.length) details.append(el('p', '', `Engine controls: ${state.manifest.engine.controls.join(' · ')}.`));
   }
   function notesText() {
-    const lines = ['ONSET — first listening notes', 'Listening question: Does the middle deserve a place in the kit?', ''];
-    state.clips.forEach((clip) => {
+    const lines = [`ONSET — revision ${state.manifest?.engine?.version || 2} listening notes`, 'Listening question: Does the middle deserve a place in the kit?', ''];
+    allClips().forEach((clip) => {
       const note = noteFor(clip.id);
       if (!note.verdict && !note.text.trim()) return;
-      lines.push(`${name(clip)} [${clip.id}]`, `Verdict: ${note.verdict || 'unrated'} · ${note.mode === 'raw' ? 'raw' : 'matched'} levels`);
+      lines.push(`${name(clip)} [${clip.id}]${clip.kind === 'reference' ? ' · first pass / revision 1' : ` · revision ${state.manifest?.engine?.version || 2}`}`, `Verdict: ${note.verdict || 'unrated'} · ${note.mode === 'raw' ? 'raw' : 'matched'} levels`);
       if (note.text.trim()) lines.push(note.text.trim());
       lines.push('');
     });
@@ -359,10 +385,14 @@
   function validateManifest(manifest) {
     if (!Array.isArray(manifest?.clips) || manifest.clips.length !== 13) throw new Error('Expected the complete 13-clip first listening pack');
     const ids = new Set();
-    manifest.clips.forEach((clip) => {
-      if (!clip.id || ids.has(clip.id) || !['hit', 'beat'].includes(clip.kind) || !Number.isFinite(clip.blend) || clip.blend < 0 || clip.blend > 1 || typeof clip.raw !== 'string' || typeof clip.matched !== 'string' || !clip.raw || !clip.matched) throw new Error('Invalid render in manifest');
+    function validateClip(clip, kinds) {
+      if (typeof clip?.id !== 'string' || !clip.id || ids.has(clip.id) || !kinds.includes(clip.kind) || !Number.isFinite(clip.blend) || clip.blend < 0 || clip.blend > 1 || typeof clip.raw !== 'string' || typeof clip.matched !== 'string' || !clip.raw || !clip.matched) throw new Error('Invalid render in manifest');
       if (![clip.raw, clip.matched].every((url) => /^audio\/[a-zA-Z0-9._-]+\.wav$/.test(url))) throw new Error('Unexpected audio path');
       ids.add(clip.id);
+    }
+    manifest.clips.forEach((clip) => {
+      validateClip(clip, ['hit', 'beat']);
+      if (clip.kind === 'hit' ? !Object.hasOwn(VOICES, clip.voice) : clip.voice !== 'KIT') throw new Error('Unknown primary voice');
     });
     for (const voice of Object.keys(VOICES)) {
       const blends = manifest.clips.filter((clip) => clip.kind === 'hit' && clip.voice === voice).map((clip) => clip.blend).sort((a, b) => a - b);
@@ -370,6 +400,15 @@
     }
     const beats = manifest.clips.filter((clip) => clip.kind === 'beat').map((clip) => clip.blend).sort((a, b) => a - b);
     if (beats.join(',') !== '0,0.5,1') throw new Error('Incomplete beat comparison');
+    if (manifest.referenceClips !== undefined) {
+      if (!Array.isArray(manifest.referenceClips) || manifest.referenceClips.length !== 3) throw new Error('Expected three first-pass kick references');
+      manifest.referenceClips.forEach((clip) => {
+        validateClip(clip, ['reference']);
+        if (clip.voice !== 'KICK' || clip.rendererVersion !== 1) throw new Error('Unknown first-pass reference');
+      });
+      const blends = manifest.referenceClips.map((clip) => clip.blend).sort((a, b) => a - b);
+      if (blends.join(',') !== '0,0.5,1') throw new Error('Incomplete first-pass comparison');
+    }
     return manifest;
   }
 
@@ -386,7 +425,7 @@
   $('stop-all').addEventListener('click', () => stop());
   $('replay').addEventListener('click', () => { if (state.selected) toggle(state.selected); });
   $('note-clip').addEventListener('change', () => {
-    const clip = state.clips.find((item) => item.id === $('note-clip').value);
+    const clip = allClips().find((item) => item.id === $('note-clip').value);
     if (!clip) return;
     stop('Selected sound changed. Press play to listen.'); select(clip);
   });
@@ -421,7 +460,8 @@
   });
   loadNotes();
   loadManifest().then(validateManifest).then((manifest) => {
-    state.manifest = manifest; state.clips = manifest.clips;
+    state.manifest = manifest; state.clips = manifest.clips; state.references = manifest.referenceClips || [];
+    migrateLegacyNotes();
     renderBench();
     if (!state.storageAvailable) $('note-status').textContent = 'Browser storage unavailable. Export to keep your notes.';
   }).catch(() => {

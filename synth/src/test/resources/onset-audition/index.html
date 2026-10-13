@@ -4,21 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#eeece3">
-  <meta name="description" content="The first ONSET listening study for SnipSnap. Compare two drum voices across five blend positions, then hear the same beat three ways.">
+  <meta name="description" content="The second ONSET listening study for SnipSnap. Compare a revised kick across five blend positions, hear the same beat three ways, and revisit the first pass.">
   <title>ONSET — Between pulse and skin</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js?v=2" defer></script>
+  <script src="app.js?v=3" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#listen">Skip to the sounds</a>
   <header class="site-header wrap">
     <a class="wordmark" href="index.html" aria-label="ONSET first listen home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>SNIPSNAP<span class="brand-sub">SOUND STUDIES</span></span></a>
-    <span class="edition">FIRST LISTEN <span aria-hidden="true">/</span> 001</span>
+    <span class="edition">FIRST LISTEN <span aria-hidden="true">/</span> 002</span>
   </header>
   <main class="wrap">
     <section class="hero" aria-labelledby="page-title">
       <div class="hero-heading"><p class="eyebrow"><span class="dot" aria-hidden="true"></span> ONSET · PERCUSSIVE SYNTHESIS</p><h1 id="page-title">Between pulse<br>and <em>skin.</em></h1></div>
-      <div class="hero-copy"><p>Two drum voices. Two ways to make each sound. One blend between them.</p><p class="muted">Start with a kick and a closed hat. Hear the endpoints, listen to the space between, then try the same beat three ways.</p><div class="hero-badge">DRY FIRST PASS <span aria-hidden="true">↗</span></div></div>
+      <div class="hero-copy"><p>Two drum voices. Two ways to make each sound. One blend between them.</p><p class="muted">A second pass on the kick’s physical body. Hear the endpoints, listen to the space between, then try the same beat three ways.</p><div class="hero-badge">DRY STUDY · REVISION 2 <span aria-hidden="true">↗</span></div></div>
     </section>
 
     <section id="listen" class="listening-section" aria-labelledby="listening-title">
@@ -32,6 +32,7 @@
       <div id="loading-error" class="notice error" role="alert" hidden></div>
       <noscript><p class="notice error">JavaScript is needed for the comparison controls. Download the WAV pack below to listen directly.</p></noscript>
       <p class="bench-footnote"><span aria-hidden="true">●</span> Five actual renders per voice. The blend moves the sound, not the playback speed.</p>
+      <details id="previous-kick" class="previous-kick" hidden><summary>Previous kick / first pass <span aria-hidden="true">+</span></summary><div class="previous-kick-content"><p class="voice-description">The original kick at 0%, 50% and 100%. Revisit these, then compare with the revised kick above.</p><div id="reference-cards" class="reference-grid" aria-label="Previous kick first-pass comparison"></div></div></details>
     </section>
 
     <section class="beat-section" aria-labelledby="beat-title">
@@ -50,7 +51,7 @@
       </div>
     </section>
 
-    <section class="about-section" aria-labelledby="about-title"><div><p class="eyebrow">A SMALL STUDY FOR SNIPSNAP</p><h2 id="about-title">Make a sound.<br>Put it on a pad.</h2></div><div><p>ONSET explores an electronic drum body alongside a physical-model partner. The kick moves toward a struck membrane; the hat moves toward resonant noise. Pitch, decay and attack stay connected across the blend.</p><p class="muted">This prototype is a first listening decision for a future SnipSnap engine. The rendered WAVs can sit beside your captures in a kit; the experiment is ready to hear here before app integration.</p><details class="render-details"><summary>About this comparison <span aria-hidden="true">+</span></summary><div id="render-details"><p>Loading the render details…</p></div></details></div></section>
+    <section class="about-section" aria-labelledby="about-title"><div><p class="eyebrow">A SMALL STUDY FOR SNIPSNAP</p><h2 id="about-title">Make a sound.<br>Put it on a pad.</h2></div><div><p>ONSET explores an electronic drum body alongside a physical-model partner. The revised kick moves toward a struck membrane; the hat moves toward resonant noise. Pitch, decay and attack stay connected across the blend.</p><p class="muted">This prototype is a listening decision for a future SnipSnap engine. The rendered WAVs can sit beside your captures in a kit; the experiment is ready to hear here before app integration.</p><details class="render-details"><summary>About this comparison <span aria-hidden="true">+</span></summary><div id="render-details"><p>Loading the render details…</p></div></details></div></section>
   </main>
 
   <footer class="site-footer wrap"><p><strong>ONSET</strong><span>Original percussion study · SnipSnap</span></p><div><a href="manifest.json" download>Render manifest <span aria-hidden="true">↓</span></a><a href="onset-audition.zip" download class="pack-link">Download WAV pack <span aria-hidden="true">↓</span></a></div></footer>

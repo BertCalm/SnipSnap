@@ -25,6 +25,7 @@ object OnsetAuditionGenerator {
     private const val PACK_NAME = "onset-audition.zip"
 
     private data class BeatHit(val voice: OnsetVoice, val step: Int, val gain: Float)
+    private data class References(val clips: List<Map<String, Any?>>, val source: JsonValue)
 
     // These events and gains are identical in all three beat examples. No snare or external FX.
     private val beatHits: List<BeatHit> = buildList {
@@ -39,9 +40,18 @@ object OnsetAuditionGenerator {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size <= 1) { "usage: OnsetAuditionGenerator [output-directory]" }
-        val root = File(args.firstOrNull() ?: "../testkit/onset-audition")
+        val directories = args.filterNot { it.startsWith("--") }
+        require(directories.size <= 1 && args.all { !it.startsWith("--") || it.startsWith("--reference-dir=") }) {
+            "usage: OnsetAuditionGenerator [output-directory] [--reference-dir=first-pass-directory]"
+        }
+        require(args.count { it.startsWith("--reference-dir=") } <= 1) { "pass one reference directory" }
+        check(Onset.MODEL_VERSION >= 2) { "kick revision needs an ONSET model 2 renderer" }
+        val root = File(directories.firstOrNull() ?: "../testkit/onset-audition")
         require(root.mkdirs() || root.isDirectory) { "could not create ${root.absolutePath}" }
+        // Read and preserve the first pass before replacing any current audition metadata.
+        val referenceDir = args.singleOrNull { it.startsWith("--reference-dir=") }
+            ?.substringAfter('=')?.let(::File) ?: root
+        val references = preserveReferences(root, referenceDir)
         val clips = mutableListOf<Map<String, Any?>>()
         val renders = linkedMapOf<Pair<OnsetVoice, Float>, Snip>()
 
@@ -52,9 +62,12 @@ object OnsetAuditionGenerator {
                 validateAudio(snip, "${voice.name} at blend $blend")
                 renders[voice to blend] = snip
                 val id = "${voiceId(voice)}-${blendId(blend)}"
+                val fileId = if (voice == OnsetVoice.KICK) "kick-r${Onset.MODEL_VERSION}-${blendId(blend)}" else id
+                val description = if (voice == OnsetVoice.KICK)
+                    "Revised dry kick with independent membrane modes. Only BLEND changes across this row; the other five controls stay fixed."
+                else "The unchanged first-pass closed hat. Only BLEND changes across this row; the other five controls stay fixed."
                 clips += writeClip(root, id, "${voiceTitle(voice)} · ${blendTitle(blend)}", voice.name,
-                    blend, "hit", "One dry hit. Only BLEND changes across this row; the other five controls stay fixed.",
-                    snip, settings(voice, macros))
+                    blend, "hit", description, snip, settings(voice, macros), fileId)
             }
             val row = blendSteps.map { renders.getValue(voice to it) }
             check(row.map { it.frameCount }.distinct().size == 1) { "blend changed ${voice.name} render duration" }
@@ -70,15 +83,18 @@ object OnsetAuditionGenerator {
                 blend, "beat", "The same kick and closed-hat pattern at 104 BPM. Both voices use this BLEND; timing and hit gains are fixed.",
                 beat, linkedMapOf("voices" to OnsetVoice.entries.associate { voice ->
                     voice.name to settings(voice, Onset.defaults(voice) + ("BLEND" to blend))
-                }, "bpm" to BPM, "bars" to BARS, "events" to beatEvents()))
+                }, "bpm" to BPM, "bars" to BARS, "events" to beatEvents()),
+                "beat-r${Onset.MODEL_VERSION}-${blendId(blend)}")
         }
 
         check(clips.size == 13 && clips.map { it.getValue("id") }.distinct().size == 13)
+        verifyUnchangedHats(clips, references.source)
         val sourceIdentity = rendererIdentity()
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1,
-            "title" to "ONSET · first audition",
-            "subtitle" to "Two drum voices, five blend positions, and one unchanged beat. Real dry SnipSnap renders.",
+            "rendererVersion" to Onset.MODEL_VERSION,
+            "title" to "ONSET · kick revision ${Onset.MODEL_VERSION}",
+            "subtitle" to "A revised membrane kick, the unchanged hat, and first-pass kick references. Real dry SnipSnap renders.",
             "engine" to linkedMapOf(
                 "id" to "ONSET", "version" to Onset.MODEL_VERSION,
                 "voices" to OnsetVoice.entries.map { it.name },
@@ -99,6 +115,8 @@ object OnsetAuditionGenerator {
                 "description" to "A single gain per complete clip matches its loudest 200 ms window. Raw files preserve engine balance."),
             "download" to PACK_NAME,
             "clips" to clips,
+            "referenceClips" to references.clips,
+            "referenceSource" to references.source,
         )
         val manifestText = Json.write(json(manifest))
         File(root, "manifest.json").writeText(manifestText + "\n")
@@ -106,22 +124,25 @@ object OnsetAuditionGenerator {
             "schemaVersion" to 1, "engine" to manifest.getValue("engine"),
             "comparison" to manifest.getValue("comparison"),
             "clips" to clips.map { mapOf("id" to it.getValue("id"), "settings" to it.getValue("settings")) },
+            "referenceClips" to references.clips.map { mapOf("id" to it.getValue("id"),
+                "rendererVersion" to 1, "settings" to it.getValue("settings")) },
+            "referenceSource" to references.source,
         ))) + "\n")
         File(root, "README.md").writeText(readme())
         copyPage(root, manifestText)
-        bundle(root, clips)
-        println("Wrote 10 dry hit comparisons, 3 identical-pattern beats, 26 WAVs, settings, manifest and $PACK_NAME under ${root.absolutePath}")
+        bundle(root, clips + references.clips)
+        println("Wrote 10 dry hit comparisons, 3 identical-pattern beats, 3 preserved first-pass kicks, 32 WAVs, settings, manifest and $PACK_NAME under ${root.absolutePath}")
     }
 
     private fun writeClip(root: File, id: String, title: String, voice: String, blend: Float,
                           kind: String, description: String, source: Snip,
-                          settings: Map<String, Any?>): Map<String, Any?> {
+                          settings: Map<String, Any?>, fileId: String = id): Map<String, Any?> {
         validateAudio(source, id)
         val exportGain = minOf(1f, .99f / source.peak().coerceAtLeast(1e-9f))
         val raw = Snip(FloatArray(source.samples.size) { source.samples[it] * exportGain }, source.channels, source.sampleRate)
         val matched = AuditionLevel.level(source)
-        val rawPath = "audio/$id-raw.wav"
-        val matchedPath = "audio/$id-matched.wav"
+        val rawPath = "audio/$fileId-raw.wav"
+        val matchedPath = "audio/$fileId-matched.wav"
         val rawFile = WavWriter.write(File(root, rawPath), raw, WavWriter.BitDepth.PCM_24)
         val matchedFile = WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_24)
         // Measure the delivered PCM, so the listening evidence describes the actual downloads.
@@ -134,6 +155,7 @@ object OnsetAuditionGenerator {
             .99f / source.peak().coerceAtLeast(1e-9f))
         return linkedMapOf(
             "id" to id, "title" to title, "voice" to voice, "blend" to blend,
+            "rendererVersion" to Onset.MODEL_VERSION,
             "kind" to kind, "description" to description,
             "raw" to rawPath, "matched" to matchedPath,
             "durationSeconds" to rawPcm.durationSeconds,
@@ -151,7 +173,8 @@ object OnsetAuditionGenerator {
         val s = Onset.settingsFor(voice, macros)
         return linkedMapOf(
             "voice" to s.voice.name, "macros" to s.macros, "modelVersion" to s.modelVersion,
-            "electronicSource" to "THUMP", "physicalSource" to "SKIN",
+            "voiceModelVersion" to if (voice == OnsetVoice.HAT_CLOSED) 1 else s.modelVersion,
+            "electronicSource" to s.electronicSource, "physicalSource" to s.physicalSource,
             "electronicModel" to s.electronicModel, "physicalModel" to s.physicalModel,
             "rootHz" to s.rootHz, "transpositionSemitones" to s.transpositionSemitones,
             "electronicRootHz" to s.electronicRootHz, "physicalRootHz" to s.physicalRootHz,
@@ -178,6 +201,77 @@ object OnsetAuditionGenerator {
 
     private fun beatEvents(): List<Map<String, Any>> = beatHits.map {
         linkedMapOf("voice" to it.voice.name, "step" to it.step, "gain" to it.gain)
+    }
+
+    private fun preserveReferences(root: File, referenceDir: File): References {
+        val manifestFile = File(referenceDir, "manifest.json")
+        require(manifestFile.isFile) {
+            "first-pass kick references are missing; pass -PonsetReferenceDir=/path/to/model-1-audition"
+        }
+        val previous = Json.parse(manifestFile.readText()).obj()
+        val previousVersion = previous.getValue("engine").obj().getValue("version").int()
+        val isFirstPass = previousVersion == 1
+        val shelf = previous[if (isFirstPass) "clips" else "referenceClips"]?.arr().orEmpty()
+        val selected = listOf(0f, .5f, 1f).map { blend ->
+            val matches = shelf.filter { value ->
+                val c = value.obj()
+                c["voice"]?.str() == "KICK" && c["blend"]?.num()?.toFloat() == blend &&
+                    c["kind"]?.str() == (if (isFirstPass) "hit" else "reference")
+            }
+            require(matches.size == 1) { "expected one model-1 kick reference at blend $blend" }
+            val original = matches.single().obj()
+            require(original.getValue("settings").obj().getValue("modelVersion").int() == 1) {
+                "first-pass kick reference at blend $blend is not model 1"
+            }
+            if (!isFirstPass) require(original["rendererVersion"]?.int() == 1) {
+                "retained kick reference at blend $blend has no model-1 renderer identity"
+            }
+            val retained = LinkedHashMap<String, Any?>(original)
+            for (variant in listOf("raw", "matched")) {
+                val oldPath = original.getValue(variant).str()
+                require(Regex("audio/[A-Za-z0-9._-]+[.]wav").matches(oldPath)) { "invalid reference audio path" }
+                val source = File(referenceDir, oldPath)
+                val expectedHash = original.getValue("sha256").obj().getValue(variant).str()
+                require(source.isFile && sha256(source) == expectedHash) {
+                    "first-pass $variant kick at blend $blend does not match its saved hash"
+                }
+                val targetPath = "audio/previous-kick-r1-${blendId(blend)}-$variant.wav"
+                val target = File(root, targetPath)
+                target.parentFile.mkdirs()
+                if (source.canonicalFile != target.canonicalFile) source.copyTo(target, overwrite = true)
+                check(sha256(target) == expectedHash)
+                validateAudio(WavReader.read(target), "preserved first-pass kick $blend $variant")
+                retained[variant] = targetPath
+            }
+            retained["id"] = "previous-kick-${blendId(blend)}"
+            retained["title"] = "Previous kick · ${blendTitle(blend)}"
+            retained["originalId"] = original["originalId"] ?: original.getValue("id")
+            retained["originalTitle"] = original["originalTitle"] ?: original.getValue("title")
+            retained["originalDescription"] = original["originalDescription"] ?: original.getValue("description")
+            retained["kind"] = "reference"
+            retained["rendererVersion"] = 1
+            retained["description"] = "The unchanged first-pass kick at this BLEND, retained for comparison with the revised kick."
+            retained
+        }
+        val source = if (isFirstPass) json(linkedMapOf(
+            "rendererVersion" to 1, "engine" to previous.getValue("engine"),
+            "manifestSha256" to sha256(manifestFile),
+            "unchangedHatSha256" to shelf.filter { it.obj()["voice"]?.str() == "HAT_CLOSED" }
+                .associate { it.obj().getValue("id").str() to it.obj().getValue("sha256") },
+            "description" to "First-pass kick WAVs copied without rerendering; settings, measures and hashes retained.",
+        )) else requireNotNull(previous["referenceSource"]) { "retained references have no first-pass source metadata" }
+        return References(selected, source)
+    }
+
+    private fun verifyUnchangedHats(clips: List<Map<String, Any?>>, source: JsonValue) {
+        val expected = source.obj().getValue("unchangedHatSha256").obj()
+        val hats = clips.filter { it["voice"] == "HAT_CLOSED" }
+        check(hats.size == 5 && expected.size == 5) { "need five first-pass hat hashes to verify unchanged audio" }
+        for (hat in hats) {
+            check(json(hat.getValue("sha256")) == expected.getValue(hat.getValue("id").toString())) {
+                "closed-hat audio changed from the first pass: ${hat.getValue("id")}"
+            }
+        }
     }
 
     private fun measures(snip: Snip): Map<String, Any?> {
@@ -232,7 +326,7 @@ object OnsetAuditionGenerator {
             "src/main/kotlin/com/snipsnap/synth/Dsp.kt", "src/main/kotlin/com/snipsnap/synth/Punch.kt",
             "src/test/kotlin/com/snipsnap/synth/OnsetAuditionGenerator.kt",
             "src/test/kotlin/com/snipsnap/synth/AuditionLevel.kt")
-        return linkedMapOf("name" to "ONSET first-audition model ${Onset.MODEL_VERSION}", "implementation" to "SnipSnap JVM renderer",
+        return linkedMapOf("name" to "ONSET audition model ${Onset.MODEL_VERSION}", "implementation" to "SnipSnap JVM renderer",
             "sources" to paths.associateWith { path -> File(path).takeIf { it.isFile }?.let(::sha256) })
     }
 
@@ -245,11 +339,14 @@ object OnsetAuditionGenerator {
     private fun blendTitle(blend: Float) = when (blend) { 0f -> "Electronic"; .5f -> "Hybrid"; 1f -> "Physical"; else -> "${(blend * 100).roundToInt()}% physical" }
 
     private fun readme() = """
-        ONSET first audition
-        ====================
+        ONSET kick revision ${Onset.MODEL_VERSION}
+        =====================
 
         Ten dry single-hit comparisons: kick and closed hat at BLEND 0, .25, .5, .75 and 1.
         Three dry two-bar examples at 104 BPM use exactly the same kick/hat events and gains.
+        Three previous-kick references preserve the original raw and matched first-pass files
+        at BLEND 0, .5 and 1. Their settings, measurements and hashes are retained unchanged.
+        Closed-hat audio is unchanged. Revised kick and beat files carry versioned filenames.
         There is no fixed backing, snare, reverb, delay, within-hit blend motion or voice coupling.
 
         These WAVs are rendered by the actual SnipSnap JVM ONSET engine. The browser plays the
@@ -263,10 +360,13 @@ object OnsetAuditionGenerator {
 
         Open index.html from this folder. Its embedded manifest also supports offline listening.
         Reproduce the pack from the repository with: ./gradlew :synth:generateOnsetAudition
+        An initial revision build also needs -PonsetReferenceDir=/path/to/model-1-audition.
+        Later runs reuse the retained first-pass references already present in this folder.
     """.trimIndent() + "\n"
 
     private fun json(value: Any?): JsonValue = when (value) {
         null -> JsonValue.Null
+        is JsonValue -> value
         is String -> JsonValue.Str(value)
         is Boolean -> JsonValue.Bool(value)
         is Number -> JsonValue.Num(value.toDouble().also { require(it.isFinite()) })

@@ -1,4 +1,4 @@
-# ONSET — first listening experiment
+# ONSET — listening experiment
 
 ONSET tests a continuous blend between SnipSnap's electronic and physical
 drum sources. The first scope is two voices: KICK and HAT_CLOSED. Five
@@ -7,12 +7,13 @@ listening gate. The middle should earn its place by sound.
 
 ## Rendering
 
-`Onset.render` uses the unfinished THUMP and SKIN source cores at 4× the
-44.1 kHz output rate. Their original public render paths retain their
-existing mappings and finishing. ONSET suppresses the kick sources'
-individual clicks, blends the bodies with cosine/sine gains, and adds one
-shared transient. A common body shelf and PUNCH shaping precede a single
-decimation and final safety/tail handling.
+`Onset.render` works at 4× the 44.1 kHz output rate. The electronic source
+uses unfinished THUMP voices. The physical hat uses SKIN's resonant noise;
+the revised physical kick uses ONSET's circular-membrane bank. Model 1
+retains the original THUMP/SKIN pairing. Their public render paths keep
+their existing mappings and finishing. ONSET blends the bodies with
+cosine/sine gains and adds one shared transient. A common body shelf and
+PUNCH shaping precede a single decimation and final safety/tail handling.
 
 TUNE resolves to the same 45–62 Hz fundamental for both kick sources.
 Hats have different natural excitation and resonance frequencies; TUNE
@@ -30,8 +31,33 @@ clip, including the full beat.
 
 THUMP is an analog-style oscillator/envelope engine; this experiment
 uses that electronic character rather than claiming detailed circuit
-simulation. SKIN supplies modal membranes and resonant noise. The first
-pass measures the musical value of the blend before expanding its sources.
+simulation. The listening passes measure the musical value of the blend
+before expanding its sources.
+
+## Kick revision 2
+
+The owner's first verdict was that the kick sounded the same at both ends.
+The delivered first-pass PCM supported that observation: after 25 ms,
+both bodies put nearly all their energy below 100 Hz. From 100–200 ms,
+their normalized correlation was approximately 0.999995. The membrane's
+upper-mode decay scales of 0.35 and 0.18 removed its material structure
+quickly, leaving the shared fundamental and pitch trajectory.
+
+Model 2 changes the physical kick's contact projection and independently
+decaying membrane modes. Upper-mode structure can persist through the
+body while the fundamental keeps the shared root, trajectory and decay.
+This is authored modal percussion, rather than a measured acoustic drum.
+The electronic kick and both hat endpoints retain their first-pass audio.
+
+The old electronic, midpoint and physical kick WAVs appear under
+**Previous kick / first pass**. Those references preserve the original
+bytes, levels, settings and measurements. New kick and beat filenames
+include the renderer revision so browser caches cannot substitute the old
+sounds. Notes on the three preserved endpoint and midpoint kicks stay
+with their original reference sounds.
+
+The revised physical body awaits the owner's listening verdict.
+Measured separation and stable rendering do not establish sonic acceptance.
 
 ## Reproduce the audition
 
@@ -39,9 +65,19 @@ pass measures the musical value of the blend before expanding its sources.
 ./gradlew :synth:generateOnsetAudition
 ```
 
+The first revision-2 build needs preserved audition references:
+
+```sh
+./gradlew :synth:generateOnsetAudition -PonsetReferenceDir=/path/to/previous-audition
+```
+
+Subsequent runs reuse the first-pass references retained in the output
+folder. The downloadable audition bundle also carries these references.
+
 Output: `testkit/onset-audition/`, containing ten dry hit comparisons,
-three identical-pattern beats at 104 BPM, raw/matched 24-bit WAVs, the
-listening page, a manifest, resolved settings, source hashes and a ZIP.
+three identical-pattern beats at 104 BPM, three first-pass kick references,
+raw/matched 24-bit WAVs, the listening page, a manifest, resolved settings,
+source hashes and a ZIP.
 The beat uses only these two voices. All audio comes from the JVM renderer.
 
 The page begins with level matching enabled, plays only on request,

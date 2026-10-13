@@ -897,13 +897,14 @@ tasks.register<JavaExec>("generateRelayAudition") {
     if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }
 
-/** ONSET's first dry experiment: two voices, five blend snapshots and one unchanged beat. */
+/** ONSET's dry experiment: two voices, five blend snapshots and preserved first-pass kicks. */
 tasks.register<JavaExec>("generateOnsetAudition") {
     group = "distribution"
-    description = "Render 10 ONSET raw/matched hit comparisons, 3 two-bar beats, manifest and listening page under testkit/onset-audition/."
+    description = "Render 10 ONSET raw/matched hit comparisons, 3 two-bar beats, preserved first-pass kick references and listening page under testkit/onset-audition/."
     maxHeapSize = "512m"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.OnsetAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/onset-audition")
+    providers.gradleProperty("onsetReferenceDir").orNull?.let { args("--reference-dir=$it") }
 }

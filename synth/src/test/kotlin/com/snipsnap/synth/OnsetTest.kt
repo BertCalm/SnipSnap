@@ -1,6 +1,11 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Loudness
+import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -47,14 +52,17 @@ class OnsetTest {
 
     @Test fun `every macro corner is finite audible safe and deterministic`() {
         for (voice in OnsetVoice.entries) {
-            val names = Onset.macrosFor(voice).map { it.name }
+            val names = Onset.macrosFor(voice).map { it.name }.filter { it != "BLEND" }
             for (bits in 0 until (1 shl names.size)) {
-                val macros = names.mapIndexed { i, name -> name to if (bits and (1 shl i) == 0) 0f else 1f }.toMap()
-                val snip = Onset.render(voice, macros)
-                assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice corner $bits unsafe")
-                assertTrue(snip.peak() > 0.005f, "$voice corner $bits inaudible: ${snip.peak()}")
-                assertTrue(snip.peak() < 0.99f, "$voice corner $bits exhausted fixed headroom: ${snip.peak()}")
-                assertTrue(snip.durationSeconds < 1.5f, "$voice corner $bits grew into a loop")
+                for (blend in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+                    val macros = names.mapIndexed { i, name -> name to if (bits and (1 shl i) == 0) 0f else 1f }.toMap() + ("BLEND" to blend)
+                    val snip = Onset.render(voice, macros)
+                    val context = "$voice corner $bits blend=$blend"
+                    assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$context unsafe")
+                    assertTrue(snip.peak() > 0.005f, "$context inaudible: ${snip.peak()}")
+                    assertTrue(snip.peak() < 0.99f, "$context exhausted fixed headroom: ${snip.peak()}")
+                    assertTrue(snip.durationSeconds < 1.5f, "$context grew into a loop")
+                }
             }
             assertContentEquals(Onset.render(voice).samples, Onset.render(voice).samples)
         }
@@ -64,7 +72,7 @@ class OnsetTest {
         for (tune in listOf(0f, 0.5f, 1f)) {
             val p = Onset.probe(OnsetVoice.KICK, mapOf("TUNE" to tune, "DECAY" to 1f, "SNAP" to 0f))
             val root = p.settings.rootHz!!
-            for (source in listOf(p.electronic, p.physical)) {
+            for (source in listOf(p.electronic, p.physicalFundamental!!)) {
                 val from = (0.08f * Onset.RATE * Dsp.OVERSAMPLE).toInt()
                 val to = (0.4f * Onset.RATE * Dsp.OVERSAMPLE).toInt()
                 val crossings = (from + 1 until to).count { source[it - 1] <= 0f && source[it] > 0f }
@@ -85,7 +93,7 @@ class OnsetTest {
         var yy = 0.0
         for (i in range) {
             val x = p.electronic[i].toDouble()
-            val y = p.physical[i].toDouble()
+            val y = p.physicalFundamental!![i].toDouble()
             xy += x * y
             xx += x * x
             yy += y * y
@@ -102,6 +110,57 @@ class OnsetTest {
             // pretending RMS or this small loudness model replaces the listening gate.
             assertTrue(ratio in 0.65f..1.55f, "$voice endpoints unbalanced: $electronic / $physical")
         }
+    }
+
+    @Test fun `membrane modes have body authority after fifty milliseconds across default pitches`() {
+        // R1's endpoints were almost identical after 50 ms; a whole-hit numerical
+        // distance let an onset/level change masquerade as a material difference.
+        // Check frequency-resolved inharmonic body, beyond the shared transient.
+        for (tune in listOf(0f, 0.35f, 0.5f, 1f)) {
+            val p = Onset.probe(OnsetVoice.KICK, mapOf("TUNE" to tune))
+            val old = Onset.probe(OnsetVoice.KICK, mapOf("TUNE" to tune), modelVersion = 1)
+            val root = p.settings.rootHz!!
+            fun materialEnergy(source: FloatArray): Double = listOf(1.5933f, 2.1354f, 2.9172f, 3.5001f)
+                .sumOf { ratio -> projectedAmplitude(source, root * ratio).let { it * it } }
+            val fundamentalEnergy = projectedAmplitude(p.physical, root).let { it * it }
+            val physicalModes = materialEnergy(p.physical)
+            val originalModes = materialEnergy(old.physical)
+            assertTrue(physicalModes / fundamentalEnergy > 0.25, "membrane lost body modes at TUNE=$tune")
+            assertTrue(physicalModes > originalModes * 10.0, "material change stayed confined to onset at TUNE=$tune")
+            val physical = Onset.render(OnsetVoice.KICK, mapOf("TUNE" to tune, "BLEND" to 1f))
+            assertEquals(DrumClass.KICK, Classifier.classify(physical).drumClass, "membrane left kick territory at TUNE=$tune")
+        }
+    }
+
+    @Test fun `revision leaves electronic kick and all hat renders identical to version one`() {
+        for (blend in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+            val macros = mapOf("BLEND" to blend)
+            assertContentEquals(Onset.render(OnsetVoice.HAT_CLOSED, macros, modelVersion = 1).samples,
+                Onset.render(OnsetVoice.HAT_CLOSED, macros, modelVersion = 2).samples)
+        }
+        for (tune in listOf(0f, 0.35f, 1f)) {
+            val macros = mapOf("BLEND" to 0f, "TUNE" to tune)
+            assertContentEquals(Onset.render(OnsetVoice.KICK, macros, modelVersion = 1).samples,
+                Onset.render(OnsetVoice.KICK, macros, modelVersion = 2).samples)
+        }
+    }
+
+    private fun projectedAmplitude(source: FloatArray, hz: Float): Double {
+        val rate = Onset.RATE * Dsp.OVERSAMPLE
+        val from = (0.05f * rate).toInt()
+        val count = (0.10f * rate).toInt()
+        var real = 0.0
+        var imaginary = 0.0
+        var weight = 0.0
+        for (n in 0 until count) {
+            val w = 0.5 - 0.5 * cos(2.0 * PI * n / (count - 1))
+            val angle = 2.0 * PI * hz * (from + n) / rate
+            val sample = source[from + n] * w
+            real += sample * cos(angle)
+            imaginary += sample * sin(angle)
+            weight += w
+        }
+        return 2.0 * sqrt(real * real + imaginary * imaginary) / weight
     }
 
     private fun rms(samples: FloatArray): Float =
