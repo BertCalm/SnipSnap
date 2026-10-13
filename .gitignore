@@ -53,6 +53,14 @@ testkit/glint-paths-audition/
 # and sent to the phone for the listening gate; never committed.
 testkit/glint-depth-audition/
 
+# The GLINT roster candidates (sixteen held pads per voice and their manifest), rendered by
+# :synth:generateGlintRosterAudition and sent to the phone for the owner to pick from; never committed.
+testkit/glint-roster-candidates/
+
+# The GLINT roster's final-listen files (one per preset: the one-shot and three pads), rendered by
+# :synth:generateGlintRosterListen and sent to the phone for the owner's last check; never committed.
+testkit/glint-roster-final/
+
 # The TINES audition phrases and page, rendered by :synth:generateTinesAudition
 # and published as the listening artifact; never committed.
 testkit/tines-audition/
@@ -95,6 +103,9 @@ testkit/arco-warmth-key.json
 # The ARCO R1h BODY gate clips, manifest and page, rendered by :synth:generateArcoBodyGate (the key is a sibling file, never in the published folder)
 testkit/arco-body-gate/
 testkit/arco-body-gate-key.json
+# The ARCO R1j bell gate clips, manifest and page, rendered by :synth:generateArcoBellGate (the key is a sibling file, never in the published folder)
+testkit/arco-bell-gate/
+testkit/arco-bell-gate-key.json
 # The MERCURY audition clips, manifest and page, rendered by :synth:generateMercuryAudition
 # and published as the listening artifact; never committed.
 testkit/mercury-audition/
@@ -155,6 +166,8 @@ testkit/undertow-audition/
 
 # SUTURE listening clips, mechanical traces and local listening page.
 testkit/suture-audition/
+testkit/spool-audition/
+testkit/spool-audition-site/
 testkit/suture-first-listen/
 
 # Tessera's generated listening matrix, diagnostic traces and kit audio.
@@ -171,6 +184,24 @@ testkit/SnipSnap Pitchwheel Kit/
 # Stoop's generated audio, manifest and listening page.
 testkit/stoop-audition/
 testkit/SnipSnap Stoop Kit/
+# Lacquer listening evidence and MPC acceptance audio are regenerated locally.
+testkit/lacquer-audition/
+testkit/SnipSnap Lacquer Kit/
+testkit/SnipSnap-Lacquer-Kit.zip
+# Tangle's regenerated audition WAVs, diagnostic manifest, page and kit audio.
+testkit/tangle-audition/
+testkit/SnipSnap Tangle Kit/
+# Relay's rendered raw/matched listening matrix and diagnostics.
+testkit/relay-audition/
+testkit/SnipSnap Relay Kit/
+# Embouchure dry clips, probes, loops and exports are reproduced by its audition task.
+testkit/embouchure-audition/
+testkit/embouchure-audition-model2/
+testkit/SnipSnap Embouchure Kit/
+# MURMUR's generated listening matrix and export evidence.
+testkit/murmur-audition/
+testkit/SnipSnap Murmur Kit/
+
 # REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
 testkit/revel-audition/
 testkit/SnipSnap Revel Kit/
@@ -180,3 +211,7 @@ testkit/SnipSnap Alloy Kit/
 # CONTOUR's generated dry listening matrix and kit audio.
 testkit/contour-audition/
 testkit/SnipSnap Contour Kit/
+
+# Skitter's generated dry WAVs, diagnostic traces and listening page.
+testkit/skitter-audition/
+testkit/SnipSnap Skitter Kit/

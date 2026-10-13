@@ -5,19 +5,21 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Every note of the knob, not three of them: [Bore.renderLoop] throws when a loop cannot close
- * (a click shipped silently is the worse failure), so a TUNE step or a LIP/BREATH corner the
- * grid in [BoreTest] happened not to visit would be a pad build that crashes. This visits all
- * 25 TUNE steps of both voices, once at the default knobs and once at a seeded random LIP,
- * BREATH and CHIFF, and holds each to the Organ's real bar (`Keys.MAX_SEAM_ERROR`), not the
- * quarter of it the claims test uses. `ResinHeldFuzzTest`'s own idea, at BORE's size.
+ * Every note of the knob, not three of them: a LOOP is cut from the held middle of a long one-shot and closed by a blend
+ * ([Bore.renderLoopMeasured]), and a note the grid in [BoreTest] happened not to visit could be one whose held note never
+ * settles, or whose two blended waves do not match, which would be a pad build that crashes ([Bore.renderLoop] refuses
+ * it by name). This visits all 25 TUNE steps of both voices, once at the default knobs and once at a seeded random LIP,
+ * BREATH and CHIFF, and holds each join to the same bounds [Bore.renderLoop] refuses at. `ResinHeldFuzzTest`'s own idea, at
+ * BORE's size.
  */
 class BoreLoopFuzzTest {
 
     @Test
-    fun `every note of both voices closes as a loop, at the defaults and at a random corner`() {
+    fun `every note of both voices renders as a loop whose join holds, at the defaults and at a random corner`() {
         val random = Random(20260929)
-        var worst = 0.0
+        var worstCorrelation = 1.0
+        var worstDip = 0.0
+        var worstWrap = 0.0
         for (voice in BoreVoice.entries) for (step in 0..Bore.TUNE_SEMITONES) {
             val tune = step / Bore.TUNE_SEMITONES.toFloat()
             val corners = listOf(
@@ -27,11 +29,22 @@ class BoreLoopFuzzTest {
             for (base in corners) {
                 val macros = base + mapOf("TUNE" to tune, "HOLD" to 1f)
                 val r = Bore.renderLoopMeasured(voice, macros)
-                worst = maxOf(worst, r.seam)
-                assertTrue(r.seam < Keys.MAX_SEAM_ERROR, "$voice step $step $macros: the loop does not close (seam ${r.seam})")
-                assertTrue(r.loop.all { it.isFinite() && it in -1f..1f }, "$voice step $step: the loop clips or is not finite")
+                val j = r.join
+                val where = "$voice step $step $macros"
+                worstCorrelation = minOf(worstCorrelation, j.correlation)
+                worstDip = minOf(worstDip, j.blendDipDb)
+                worstWrap = maxOf(worstWrap, j.junctionStep / j.steepestStep)
+                assertTrue(j.correlation >= Bore.LOOP_MIN_CORRELATION, "$where: the blended waves correlate only ${j.correlation}")
+                assertTrue(j.blendDipDb >= -Bore.LOOP_MAX_DIP_DB, "$where: the loop dips ${j.blendDipDb} dB inside its blend")
+                assertTrue(j.junctionStep <= WRAP_OVER_STEEPEST * j.steepestStep, "$where: the step across the join is ${j.junctionStep / j.steepestStep} times the steepest ordinary step")
+                assertTrue(r.loop.all { it.isFinite() && it in -1f..1f }, "$where: the loop clips or is not finite")
             }
         }
-        println("BORE loop fuzz: 100 loops, worst seam %.2e (bar %.0e)".format(worst, Keys.MAX_SEAM_ERROR))
+        println("BORE loop fuzz: 100 loops, worst correlation %.4f, deepest dip %.2f dB, widest join step %.2fx the steepest step".format(java.util.Locale.ROOT, worstCorrelation, worstDip, worstWrap))
+    }
+
+    private companion object {
+        /** The join is a sample step like any other: it must be no larger than the loop's own steepest ordinary one (a tenth over, for the 99.9th percentile). */
+        const val WRAP_OVER_STEEPEST = 1.1
     }
 }

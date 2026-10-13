@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141815">
+  <meta name="description" content="Audition Spool for SnipSnap: six original tape-inspired voices, macro sweeps, transport interactions, and frozen-memory HOLD loops.">
+  <title>Spool / SnipSnap — Audition Workbench</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#voices">Skip to the recordings</a>
+  <header class="site-header wrap">
+    <a class="brand" href="#top" aria-label="Spool audition home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>SPOOL<span class="brand-divider">/</span><span class="brand-host">SNIPSNAP</span></span></a>
+    <nav aria-label="Page navigation"><a href="#voices">Listen</a><a href="#explore">Explore</a><a href="#notes">Review</a><a class="nav-download" href="#downloads">Downloads <span aria-hidden="true">↗</span></a></nav>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="small-rule"></span> AN EXPERIMENTAL RECORDED INSTRUMENT</p>
+        <h1 id="hero-title">A familiar tone.<br>An unfamiliar<br><em>journey.</em></h1>
+        <p class="hero-description">Three recorded strips. One shared motor.<br>A held tone, a backward swell, and a little tape flutter.</p>
+        <div class="hero-actions"><button id="hero-play" class="button button-gold" disabled><span class="play-triangle" aria-hidden="true"></span> Hear Soft Frame</button><a class="text-link" href="#explore">Meet the machine <span aria-hidden="true">↓</span></a></div>
+        <div class="hero-specs"><span>6 prototype voices</span><span>44.1 kHz · mono</span><span>Original generated recordings</span></div>
+      </div>
+      <div class="machine" aria-label="Diagram of three virtual tape strips sharing a motor and crossing a diagonal pickup head" role="img">
+        <div class="machine-top"><span class="micro-label">SPOOL / THREE-STRIP TRANSPORT</span><span class="machine-serial">NO. 026</span></div>
+        <svg class="machine-svg" viewBox="0 0 640 470" aria-hidden="true">
+          <defs>
+            <linearGradient id="tape" x1="0" x2="1"><stop offset="0" stop-color="#494638"/><stop offset=".45" stop-color="#998368"/><stop offset="1" stop-color="#413e32"/></linearGradient>
+            <linearGradient id="reel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#667068"/><stop offset="1" stop-color="#222923"/></linearGradient>
+            <pattern id="texture" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 8L8 0" stroke="#fff" stroke-opacity=".018"/></pattern>
+            <g id="spool"><circle r="47" fill="#1b211c" stroke="#6a7265" stroke-width="1.5"/><circle r="39" fill="url(#reel)" stroke="#a2a78a" stroke-opacity=".35"/><g fill="#181e19" stroke="#a9ac91" stroke-opacity=".25"><path d="M-7-12L-19-29A8 8 0 0 1-7-34L1-14Z"/><path d="M14 1L34-1A8 8 0 0 1 32 13L14 9Z"/><path d="M-7 13L-17 31A8 8 0 0 1-29 22L-14 7Z"/></g><circle r="12" fill="#1d231e" stroke="#909882"/><circle r="4" fill="#c3b384"/></g>
+          </defs>
+          <rect x="18" y="40" width="604" height="357" rx="11" fill="#171d18" stroke="#5c6354" stroke-opacity=".45"/>
+          <rect x="18" y="40" width="604" height="357" rx="11" fill="url(#texture)"/>
+          <g font-family="monospace" font-size="10" fill="#a8af98"><text x="40" y="70">IMMUTABLE SOURCE</text><text x="468" y="70">INHERITED TRACE</text></g>
+          <g fill="none" stroke="#737661" stroke-opacity=".3"><path d="M105 132H535M105 224H535M105 316H535"/><path d="M105 105H535M105 197H535M105 289H535"/></g>
+          <g fill="url(#tape)" stroke="#d0aa76" stroke-opacity=".26"><rect x="105" y="110" width="430" height="20"/><rect x="105" y="202" width="430" height="20"/><rect x="105" y="294" width="430" height="20"/></g>
+          <g stroke="#dbb477" stroke-width="1" opacity=".66"><path d="M154 116v8m6-12v16m6-11v6m6-10v14m6-16v18m6-13v8m6-10v12m6-15v18m6-13v8m6-9v10m6-15v20m6-16v12m6-13v14m6-10v6m6-13v20m6-17v14m6-11v8m6-12v16m6-14v12m6-8v4m6-12v20m6-16v12m6-11v10m6-13v16m6-14v12m6-9v6m6-12v18m6-13v8m6-10v12m6-14v16m6-11v6m6-9v10m6-12v14m6-10v6m6-11v16m6-13v10m6-11v12m6-9v6m6-10v14m6-9v4m6-8v12m6-10v8m6-10v12m6-8v4m6-9v14m6-10v6m6-7v8m6-6v4m6-8v12m6-9v6m6-6v6m6-5v4"/><path d="M154 208v8m9-13v18m9-11v4m9-12v20m9-13v6m9-9v12m9-15v18m9-11v4m9-10v16m9-12v8m9-14v20m9-13v6m9-10v14m9-11v8m9-11v14m9-10v6m9-8v10m9-11v12m9-9v6m9-9v12m9-8v4m9-9v14m9-10v6m9-8v10m9-8v6m9-8v10m9-7v4m9-8v12m9-8v4m9-7v10m9-7v4m9-6v8m9-5v2m9-5v8m9-6v4"/><path d="M154 301v6m8-9v12m8-14v16m8-12v8m8-10v12m8-15v18m8-12v6m8-8v10m8-10v10m8-8v6m8-10v14m8-11v8m8-10v12m8-8v4m8-9v14m8-10v6m8-9v12m8-8v4m8-8v12m8-9v6m8-8v10m8-7v4m8-6v8m8-7v6m8-6v6m8-5v4m8-6v8m8-6v4m8-5v6m8-5v4m8-5v6m8-4v2m8-5v8m8-6v4m8-4v4m8-4v4m8-3v2m8-4v6"/></g>
+          <g><use href="#spool" x="105" y="120"/><use href="#spool" x="535" y="120"/><use href="#spool" x="105" y="212"/><use href="#spool" x="535" y="212"/><use href="#spool" x="105" y="304"/><use href="#spool" x="535" y="304"/></g>
+          <path d="M276 81L361 344" stroke="#090d0a" stroke-width="20" stroke-linecap="round"/><path d="M276 81L361 344" stroke="#c79761" stroke-width="12" stroke-linecap="round"/><path d="M276 81L361 344" stroke="#ecc88a" stroke-width="2" stroke-linecap="round"/>
+          <g fill="#e6c895" stroke="#171d18" stroke-width="3"><circle cx="289" cy="120" r="9"/><circle cx="318" cy="212" r="9"/><circle cx="348" cy="304" r="9"/></g>
+          <g font-family="monospace" font-size="10" letter-spacing="1" fill="#b6bda7"><text x="175" y="158">01 · STRING</text><text x="175" y="250">02 · CHOIR</text><text x="175" y="342">03 · FLUTE</text></g>
+          <path d="M363 80H439" stroke="#bc9668"/><text x="449" y="84" font-family="monospace" font-size="10" fill="#d5b17b">DIAGONAL HEAD</text>
+          <path d="M110 370H501M110 370l6-4m-6 4l6 4" stroke="#b79769" fill="none"/><text x="222" y="387" font-family="monospace" font-size="9" letter-spacing="1.5" fill="#979e8b">FORWARD → / ← RETURN</text>
+          <g fill="#7b836e"><circle cx="35" cy="55" r="3"/><circle cx="605" cy="55" r="3"/><circle cx="35" cy="381" r="3"/><circle cx="605" cy="381" r="3"/></g>
+          <g font-family="monospace" font-size="9" fill="#7e8877"><text x="35" y="436">VIRTUAL MECHANISM · ORIGINAL SYNTHESIZED MATERIAL</text><text x="568" y="436">V0.1</text></g>
+        </svg>
+        <div class="machine-bottom"><span><i class="status-light"></i> MACHINE READY</span><span>DETERMINISTIC / OFFLINE</span></div>
+      </div>
+    </section>
+
+    <div class="session-strip wrap"><div><span class="status-dot"></span><strong>Prototype audition</strong><span class="session-separator">/</span><span>Dry sonic identity awaits owner approval</span></div><a href="#notes">Leave listening notes <span aria-hidden="true">↗</span></a></div>
+
+    <section class="section wrap" id="voices" aria-labelledby="voices-title">
+      <div class="section-heading"><div><p class="eyebrow">01 / THE RECORDINGS</p><h2 id="voices-title">Start with the voice.</h2><p>Six starting points, from a warm held tone to a borrowed memory.</p></div><div class="level-control"><span class="micro-label">LISTENING LEVEL</span><div class="segmented" role="group" aria-label="Recording level"><button data-level="matched" class="is-active" aria-pressed="true">Matched</button><button data-level="raw" aria-pressed="false">Raw</button></div><span class="small-muted">Matched = common audition level</span></div></div>
+      <p id="load-status" class="loading-status" role="status">Loading the audition recordings…</p>
+      <div id="voice-grid" class="voice-grid"></div>
+      <p class="small-muted">Listen for the backward swell under the held tone. Try the RETURN sweep to bring it forward, or Diagnostics below to hear the backward pickup alone. Gentle wow and flutter move both layers together.</p>
+      <div class="recording-footnote"><span class="footnote-number">↳</span><p>These are original synthesized recordings, not acoustic recordings or historical tape-library samples. The overlapping forward/backward gesture is baked into each scheduled one-shot. Each export starts with fresh machine memory.</p></div>
+    </section>
+
+    <section class="section section-explore" id="explore" aria-labelledby="explore-title"><div class="wrap">
+      <div class="section-heading"><div><p class="eyebrow">02 / THE MACHINE</p><h2 id="explore-title">Follow the movement.</h2><p>One control at a time. Five rendered positions. Listen for what changes.</p></div><span class="section-number" aria-hidden="true">05</span></div>
+      <div id="macro-tabs" class="macro-tabs" role="tablist" aria-label="Macro sweeps"></div>
+      <div class="macro-panel" id="macro-panel" role="tabpanel" aria-label="Selected macro sweep"><div class="macro-intro"><div><span id="macro-index" class="micro-label">CONTROL 01</span><h3 id="macro-title">HEAD</h3><p id="macro-description">Aligned pickup becomes a diagonal encounter through track and time.</p></div><div class="macro-direction"><span id="macro-low">Aligned</span><span class="direction-line" aria-hidden="true"></span><span id="macro-high">Diagonal</span></div></div><div id="sweep-grid" class="sweep-grid"></div><p class="small-muted sweep-footnote">Each position is a separate generated recording. Changing this selection does not alter a recording during playback.</p></div>
+
+      <div class="coupling-heading"><div><h3>Then let the controls meet.</h3><p>Hear the required pairings across a 3 × 3 interaction grid.</p></div><label class="select-label">PAIRING<select id="interaction-select" aria-label="Control pairing"></select></label></div>
+      <div class="interaction-panel"><div class="interaction-guide"><span class="micro-label">SHARED TRANSPORT, SEPARATE JOURNEYS</span><p id="interaction-description">Head position changes where an inherited trace is heard.</p><div class="interaction-key"><span>Choose a square to hear its recording.</span><span class="small-muted">Low → medium → high</span></div></div><div class="interaction-matrix"><span id="interaction-y" class="matrix-axis-y">IMPRINT</span><div><div id="interaction-grid" class="interaction-grid"></div><span id="interaction-x" class="matrix-axis-x">HEAD →</span></div></div></div>
+    </div></section>
+
+    <section class="section wrap hold-section" id="hold" aria-labelledby="hold-title"><div class="hold-copy"><p class="eyebrow">03 / HOLD</p><h2 id="hold-title">A memory,<br> <em>held still.</em></h2><p>Forward and backward layers overlap through each repeating transport cycle. IMPRINT shapes a finite snapshot during preroll; writes then freeze for the exported loop.</p><p class="small-muted">HOLD uses <strong>FROZEN_SNAPSHOT</strong> memory. It does not continuously accumulate new tape history.</p><div class="hold-meta"><span class="status-dot"></span> Repeat playback is available in the player</div></div><div id="loop-grid" class="loop-grid"></div></section>
+
+    <section class="section wrap verification-section" aria-labelledby="verification-title"><div class="section-heading compact"><div><p class="eyebrow">04 / THE DETAILS</p><h2 id="verification-title">Listen closer.</h2><p>Registers, velocity, gates, extremes, and the measurements behind each export.</p></div></div>
+      <details class="disclosure"><summary><span>More audition recordings</span><span class="disclosure-caption">Registers · velocity · gates · diagnostics</span><span class="plus" aria-hidden="true">+</span></summary><div class="disclosure-body"><div id="extra-filters" class="extra-filters" role="group" aria-label="Additional recording category"></div><div id="extra-clips" class="extra-clips"></div></div></details>
+      <details class="disclosure" id="measurements"><summary><span>Recording measurements</span><span class="disclosure-caption" id="measurement-label">Select a recording to inspect it</span><span class="plus" aria-hidden="true">+</span></summary><div class="disclosure-body"><div id="metric-grid" class="metric-grid"></div><p id="measurement-context" class="small-muted">Metrics come from the offline renderer. Listening approval remains a separate step.</p><div id="metric-download-links" class="metric-download-links"></div><details id="diagnostic-details" class="nested-disclosure"><summary>Render diagnostics</summary><pre id="diagnostic-json"></pre></details></div></details>
+      <p class="timing-note">External pitch transposition changes both pitch and the timing of the recorded gesture. Playback key release does not trigger a new return; these exports contain the scheduled overlapping layers.</p>
+    </section>
+
+    <section class="review-section" id="notes"><div class="wrap review-layout"><div><p class="eyebrow">05 / YOUR EARS</p><h2>What should<br> <em>stay on tape?</em></h2><p>Review the dry identity before a larger preset library is built. Listen for the recognizable voice, a backward swell you can follow, and tape movement that feels useful.</p><div class="review-status"><span class="status-dot"></span> Six prototype presets · owner review pending</div></div><div class="notes-panel"><label for="listening-notes">LISTENING NOTES <span id="notes-clip-name">/ General review</span></label><textarea id="listening-notes" rows="6" placeholder="Can you follow the backward swell? Does the flutter feel alive or distracting? Which voice deserves another pass?"></textarea><div class="notes-actions"><span id="notes-status" role="status">Saved locally in this browser</span><button id="export-notes" class="button button-outline">Export notes <span aria-hidden="true">↗</span></button></div></div></div></section>
+
+    <section class="downloads wrap" id="downloads" aria-labelledby="downloads-title"><div><p class="eyebrow">TAKE IT WITH YOU</p><h2 id="downloads-title">The recordings. The source.</h2><p>Inspect the implementation and audition the generated exports in your own workflow.</p></div><div id="download-links" class="download-links"><span class="small-muted">Preparing download links…</span></div></section>
+  </main>
+
+  <footer class="site-footer wrap"><a class="brand footer-brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>SPOOL<span class="brand-divider">/</span><span class="brand-host">SNIPSNAP</span></span></a><p>A tape-inspired imaginary instrument. A prototype, ready to be heard.</p><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a></footer>
+
+  <div class="player-shell" id="player-shell" hidden><div class="player" role="region" aria-label="Recording player"><div class="player-track"><span class="player-indicator" aria-hidden="true"></span><div><span id="player-title">Select a recording</span><span id="player-subtitle" class="small-muted">Generated WAV</span></div></div><div class="player-controls"><button id="player-play" class="player-play icon-button" aria-label="Play selected recording"><span class="play-triangle" aria-hidden="true"></span></button><button id="player-stop" class="icon-button stop-button" aria-label="Stop playback"><span aria-hidden="true">■</span></button></div><div class="player-progress"><span id="player-current">0:00</span><label class="visually-hidden" for="player-seek">Playback position</label><input type="range" id="player-seek" min="0" max="1000" value="0"><span id="player-duration">0:00</span></div><button id="player-repeat" class="repeat-button" aria-pressed="false" aria-label="Repeat selected recording"><span aria-hidden="true">↻</span><span>Repeat</span></button><button id="player-close" class="icon-button close-player" aria-label="Close recording player"><span aria-hidden="true">×</span></button></div><p id="player-status" class="player-error" role="status" hidden></p></div>
+  <audio id="audio" preload="none"></audio>
+</body>
+</html>

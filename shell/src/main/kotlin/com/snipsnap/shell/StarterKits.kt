@@ -173,6 +173,48 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.stoop() },
         Starter(
+            "lacquer", "LACQUER",
+            "Polished keys, glass, brass and soft layers in C minor pentatonic. Separate arrivals, one finished tone.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.lacquer() },
+        Starter(
+            "spool", "SPOOL",
+            "Recorded strings, choir, flute and brass in C minor pentatonic. Diagonal heads and backward answers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.spool() },
+        Starter(
+            "skitter", "SKITTER",
+            "Recovering oscillator pairs provoke a fluttering circuit in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.skitter() },
+        Starter(
+            "tangle", "TANGLE",
+            "Oscillators catch and escape in C minor pentatonic. Rooted bass, crawling pulses and metal.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.tangle() },
+        Starter(
+            "relay", "RELAY",
+            "One note, four source roles. Ordered handoffs in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.relay() },
+        Starter(
+            "embouchure", "EMBOUCHURE",
+            "Dry expressive reeds, muted brass, breathy bass and bowed notes in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.embouchure() },
+        Starter(
+            "murmur", "MURMUR",
+            "Talking FM bass, vowel keys and mouth-shaped plucks in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.murmur() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

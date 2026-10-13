@@ -2,21 +2,39 @@ package com.snipsnap.shell
 
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import com.snipsnap.json.Json
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
-import com.snipsnap.synth.ContourPresets
+import com.snipsnap.synth.ContourRelation
+import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
+import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.Lacquer
+import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LacquerRole
+import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Relay
+import com.snipsnap.synth.RelayAccent
+import com.snipsnap.synth.RelayLoop
+import com.snipsnap.synth.RelayPatch
+import com.snipsnap.synth.RelayVoice
+import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.TideVoice
+import com.snipsnap.synth.TanglePatch
+import com.snipsnap.synth.TangleVoice
 import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
@@ -145,9 +163,14 @@ class UserPresetsTest {
                 "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
                 "CISTERN" to CisternVoice.entries.map { it.name },
                 "PITCHWHEEL" to PitchwheelVoice.entries.map { it.name },
+                "REVEL" to RevelVoice.entries.map { it.name },
                 "PRISM" to PrismVoice.entries.map { it.name },
                 "CONTOUR" to ContourVoice.entries.map { it.name },
                 "STOOP" to StoopVoice.entries.map { it.name },
+                "SKITTER" to SkitterVoice.entries.map { it.name },
+                "TANGLE" to TangleVoice.entries.map { it.name },
+                "RELAY" to RelayVoice.entries.map { it.name },
+                "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -189,7 +212,9 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is StoopPatch) {
+            if (preset is LacquerPatch) {
+                assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
                 assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
             } else {
@@ -230,6 +255,29 @@ class UserPresetsTest {
     }
 
     @Test
+    fun `a saved tangle retains requested root and playing velocity when promoted`() {
+        val root = shelf()
+        try {
+            val source = TanglePatch(
+                "LOW TANGLE", TangleVoice.HOLLOW,
+                linkedMapOf("CATCH" to .73f, "CHASE" to .21f), midi = 31, velocity = .3f,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "the shelf retains state outside the six macros")
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(TangleVoice.HOLLOW, \"LOW TANGLE\", \"CATCH\" to 0.73f, \"CHASE\" to 0.21f).copy(midi = 31, velocity = 0.3f),",
+                line,
+            )
+            assertEquals("TanglePresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            assertTrue(source.render().samples.contentEquals(saved.patch.render().samples), "saved pitch and energy reproduce the same sound")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `a saved wheel retains root gesture velocity and model when promoted`() {
         val root = shelf()
         try {
@@ -257,7 +305,17 @@ class UserPresetsTest {
     fun `a saved contour retains its complete spectral recipe when promoted`() {
         val root = shelf()
         try {
-            val source = ContourPresets.all().first { it.name == "Moving Corner" }.copy(name = "MY CORNER", velocity = .3f)
+            val source = ContourPatch(
+                "MY CORNER", ContourVoice.BASS,
+                linkedMapOf("TUNE" to .5f, "SCAN" to .30f, "OFFSET" to .45f, "MOTION" to .48f,
+                    "FILTER" to .58f, "DRIVE" to .20f, "HOLD" to 0f),
+                config = ContourConfig.legacyForVoice(ContourVoice.BASS).copy(
+                    bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER,
+                    relation = ContourRelation.OPPOSED, bodyTravel = .22f, edgeTravel = .60f,
+                    ampDecay = .45f, ampRelease = .42f,
+                ),
+                velocity = .3f,
+            )
             UserPresets.save(root, source, 1L)
             val saved = UserPresets.read(root).single()
             assertEquals(source, saved.patch)
@@ -281,15 +339,96 @@ class UserPresetsTest {
     }
 
     @Test
+    fun `a saved Relay keeps its source schedule and excitation when promoted`() {
+        val root = shelf()
+        try {
+            val base = Relay.phraseFor(RelayVoice.KEY)
+            val phrase = base.copy(
+                sources = base.sources.mapIndexed { index, source -> if (index == 0) source.copy(gain = .42f) else source },
+                orderRoster = base.orderRoster.reversed(),
+                accents = listOf(RelayAccent(.5f, .8f), RelayAccent(2.5f, .4f)),
+                tempoBpm = 120f,
+                loop = RelayLoop(prerollCycles = 3, wrapFrames = 1536),
+            )
+            val source = RelayPatch("MY RELAY", RelayVoice.KEY, Relay.defaults(RelayVoice.KEY), phrase, velocity = .3f)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "all state outside the macro map survives the shelf")
+            val line = UserPresets.rosterLine(saved.patch)
+            val literal = line.substringAfter("RelayPatch.fromJsonText(").substringBeforeLast(") }")
+            val promoted = RelayPatch.fromJsonText(Json.parse(literal).str())
+            assertEquals(source, promoted, "the pasteable roster line retains source, order, accent, tempo and loop configuration")
+            assertTrue(source.render().samples.contentEquals(promoted.render().samples), "promotion regenerates the saved sound")
+            assertEquals("RelayPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a saved circuit retains root excitation velocity and noise seed when promoted`() {
+        val root = shelf()
+        try {
+            val source = SkitterPatch(
+                "LOW CIRCUIT", SkitterVoice.BASS,
+                linkedMapOf("AGITATE" to .73f, "STATIC" to .21f), midi = 36, velocity = .3f, seed = -927,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(SkitterVoice.BASS, \"LOW CIRCUIT\", \"AGITATE\" to 0.73f, \"STATIC\" to 0.21f).copy(midi = 36, velocity = 0.3f, seed = -927),",
+                line,
+            )
+            assertEquals("SkitterPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `saved lacquer promotion retains custom independent layers root velocity and escaped name`() {
+        val root = shelf()
+        try {
+            val profile = Lacquer.profileFor(LacquerVoice.KEY)
+            val custom = profile.copy(layers = profile.layers.map { layer ->
+                if (layer.role == LacquerRole.TRAIL) layer.copy(
+                    gain = layer.gain * .85f,
+                    timing = layer.timing.copy(reliefSeconds = .08f),
+                    envelope = layer.envelope.copy(releaseSeconds = 1.1f),
+                ) else layer
+            })
+            val source = LacquerPatch("COAT \"A\" \$X", LacquerVoice.KEY,
+                linkedMapOf("RELIEF" to .83f, "GLUE" to .21f), midi = 36, velocity = .3f, profile = custom)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(source, lacquerFromRosterLine(line), "the constructor rebuilds every nested field and escaped text")
+            assertEquals("LacquerPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `Contour promotion reconstructs every spectral and edge envelope field exactly`() {
         val root = shelf()
         try {
-            val source = ContourPresets.all().first { it.name == "Moving Corner" }.let {
-                it.copy(name = "MY EDGE", velocity = .3f, config = it.config.copy(
+            val source = ContourPatch(
+                "MY EDGE", ContourVoice.BASS,
+                linkedMapOf("TUNE" to .5f, "SCAN" to .30f, "OFFSET" to .45f, "MOTION" to .48f,
+                    "FILTER" to .58f, "DRIVE" to .20f, "HOLD" to 0f),
+                config = ContourConfig.legacyForVoice(ContourVoice.BASS).copy(
+                    bodyTable = ContourTable.SOFT_SAW, edgeTable = ContourTable.COPPER,
+                    relation = ContourRelation.OPPOSED, bodyTravel = .22f, edgeTravel = .60f,
+                    ampDecay = .45f, ampRelease = .42f,
                     bodyHarmonics = 1.37f, edgeRootLevel = .29f,
                     edgeAttack = .017f, edgeDecay = .91f, edgeSustain = .43f,
-                ))
-            }
+                ),
+                velocity = .3f,
+            )
             UserPresets.save(root, source, 1L)
             val saved = UserPresets.read(root).single().patch as ContourPatch
             assertEquals(source, saved, "all revised fields survive the shelf JSON roundtrip")
@@ -325,6 +464,14 @@ class UserPresetsTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    private fun lacquerFromRosterLine(line: String): LacquerPatch {
+        assertTrue(line.startsWith("LacquerPatch.fromJsonText(\"") && line.endsWith("\"),"), line)
+        val literal = line.removePrefix("LacquerPatch.fromJsonText(").removeSuffix("),")
+        // Kotlin escapes a dollar sign in addition to JSON's ordinary string escapes.
+        val json = Json.parse(literal.replace("\\\$", "\$")).str()
+        return LacquerPatch.fromJsonText(json)
     }
 
     @Test

@@ -907,7 +907,7 @@ the threshold probe put at only ~0.3 of the pressure axis — 0.65–0.8 at
 EMB 0.5, Appendix A11 — so the vibrato would blow the note out on every
 swing). A wind vibrato is pressure, not bore length (F17); the pitch
 component is whatever the reed makes, tested ≤ 30 cents. Off in the LOOP
-render, the organ's rule. Unlike MELLO, vibrato has no rack fallback —
+render, the organ's rule. *(Superseded in Round 1.7: a LOOP is cut from a note held at HOLD 0.5, so it has this vibrato at about 10 cents.)* Unlike MELLO, vibrato has no rack fallback —
 WOBBLE is a tempo-synced filter sweep (`Wobble.kt:8-14`) and TAPE's
 motion is capstan wow at 1.3 / 7.4 Hz (`Tape.kt:35-36`); VOX bakes its
 vibrato with no knob and TONEWHEEL exposes WARBLE for the rotor
@@ -1038,7 +1038,7 @@ brightens), so it is not the axis either. The override stays scoped to
 
 Two things look alike and cost differently.
 
-**The LOOP (round one, behind the seam test).** HOLD's top step renders one
+**The LOOP (round one, behind the seam test).** *(Superseded for BORE in Round 1.7: the loop is cut from a held one-shot and closed by a blend. What follows is the periodic plan, which ARCO still uses and the R2 keygroup below still assumes.)* HOLD's top step renders one
 seamless loop for the SURFACE, and `→ SURFACE ▸` appears beside SEND TO PAD
 exactly as it does for SIREN (`SynthScreen.kt:1063-1069`). This is the
 "fun on a phone" prize — a flute under a finger, pitched by position,
@@ -1211,7 +1211,7 @@ argument anywhere (`Dsp.seedFor` only, F19).
   floor", so that corner is named, not passed.
 - A LOOP whose seam does not close after the retry is refused by name
   (`Keys.requireSeam`'s message), and in R1 the top step is withheld from
-  the readout rather than shipped with a click.
+  the readout rather than shipped with a click. *(Round 1.7: the guard is the join's - the blended waves must correlate and the level must not dip in the blend - and it still refuses by name; there is no retry.)*
 - `drumClassFor` is a cheap macro-only predictor verified against the
   real classifier across ten HOLD steps; it never wishes for TONAL
   (`Fork.kt:239-242`; `fork spec:513-525`).
@@ -1330,7 +1330,7 @@ default.
     cent of miss is 0.3 of a period of slip at the wrap; the seam bar is
     what closes the loop, this bar says the retune step landed —
     bit-identical across two calls; `landingChain` null on a LOOP and a
-    `tape` section otherwise (`SirenTest.kt:379-382`'s shape).
+    `tape` section otherwise (`SirenTest.kt:379-382`'s shape). *(Superseded for BORE in Round 1.7: the loop closes by a blend, in about 2 s and not in whole periods, so no seam bar and no 1-cent bar apply. The test that stands is `a LOOP closes by a blend - no step at its join, no dip in it - across the range`: the step across the join against the steepest ordinary step, the length, the first sample on a crossing, the level, and the join's correlation and dip, with the render bit-identical across two calls. ARCO's loops keep the seam bar.)*
 13. **CHIFF is heard only at the start.** The first 30 ms's centroid
     differs between CHIFF 0 and 1; past 200 ms the spectra agree within
     1 dB per band; the thump's tail is under 1e-3 before it stops.
@@ -1729,13 +1729,15 @@ came out different from the design, and each is in the KDoc of the constant it c
    the reed's own nonlinearity moves the 2nd harmonic 8 dB and the jet's nothing.
 10. **The pitch is pinned**, not budgeted: the nonlinearity pulls SAX flat and FLUTE sharp, and
     a fixed pin (+4 and -3 cents) leaves the worst case in the 175-combination sweep at
-    FLUTE -1.7..+3.5 cents and SAX -3.5..+4.1. The LOOP retunes exactly instead.
+    FLUTE -1.7..+3.5 cents and SAX -3.5..+4.1. The LOOP retunes exactly instead. *(Round 1.7: no longer. A LOOP plays the one-shot's pitch, within about +-4 cents, and its vibrato.)*
 11. **The seam check that meant something.** The obvious check, `Keys.seamError` on the loop
     played twice, is tautological (a loop followed by itself is periodic whatever is in it) and
     reported 0.00 on loops that were two whole periods off. The check that means something
-    compares the kept steady stretch with itself one loop later; see below.
+    compares the kept steady stretch with itself one loop later; see below. *(That is ARCO's and the others' check. BORE's loop closes by a blend since Round 1.7, and neither check applies to it.)*
 
 ### The LOOP step
+
+*(Superseded for BORE in Round 1.7: the loop is cut from a held one-shot, with its vibrato and its breath, and closed by a blend. The paragraphs below are the periodic loop of round one, which Round 1.5 and Round 1.6 report on and ARCO still builds.)*
 
 HOLD's top step is a seamless two-second loop of the held note, in whole periods and whole
 frames, rendered dry: steady pressure, **no turbulence and no vibrato** (a loop cannot carry a
@@ -1805,10 +1807,10 @@ render to the loudness target and hide it.
 - **FLUTE's LIP and BREATH move the timbre by 4-8 dB** in the 2nd-5th harmonics: audible,
   moderate. The breath noise is what BREATH does most.
 - **The LOOP is dry, noiseless and vibrato-free** — a whole-period wrap cannot carry noise.
-  The audition asks whether a breathless loop is a pad or a synth.
+  The audition asks whether a breathless loop is a pad or a synth. *(It was a synth: Round 1.6. Since Round 1.7 a LOOP has the one-shot's breath and vibrato.)*
 - **Guesses waiting for the audition:** the turbulence ranges, the chiff burst, the thump's level,
   the reed's bell, `LANDING_TAPE` (WOBBLE .1 against .2 is on the page), the pop.
-- **CPU:** Phase 0 measured a one-shot at 26-60 ms per second of audio and R1 has not re-measured it; a LOOP takes 0.15-0.43 s to render (it renders 3-5 s of steady stretch, four times, to converge the pitch).
+- **CPU:** Phase 0 measured a one-shot at 26-60 ms per second of audio and R1 has not re-measured it; a LOOP takes 0.15-0.43 s to render (it renders 3-5 s of steady stretch, four times, to converge the pitch). *(Round 1.7: one render of 4.6 s, 0.37 s at the median and 0.46 s at the worst.)*
 
 ## R1, the reed's bite — 2026-09-30
 
@@ -2047,7 +2049,7 @@ enters the bore with the weight (1 - r), about 0.07 where the reed table sits, s
 periods only took C3 to 0.28 s; put into the bore the same tone took it to 0.19 s at 0.2 for four periods and to
 0.10 s for eight. The FLUTE takes no seed (the jet has its own onset, 0.13 s at
 C3, seeded or not), nor does a LOOP's steady stretch: a loop cannot carry a signal that does not repeat, and its
-warm-up is discarded anyway.
+warm-up is discarded anyway. *(Round 1.7: a LOOP is cut from a one-shot rendered with the seed; the seed is in the onset the loop discards.)*
 
 **The classifier, and a first attempt that was wrong.** With the tone arriving in 0.1 s, the first 93 ms (all the
 classifier looks at) is a developed tone, and HIGH STAB, the brightest preset, read 0.63, a
@@ -2102,6 +2104,8 @@ guard was broken alone and a test named it; the list is in the pull request.
 
 ### Round 1.5: the loop — 2026-10-04
 
+*(The record of the periodic build. Round 1.7 replaced its construction: BORE's loop is no longer periodic and closes by a blend. Its pitch estimator stays in the code, because ARCO uses it.)*
+
 The attack was kept (every seeded clip got KEEP, no swell did), and the same listening had one more note, on the kit
 card: "Solo loop sounds like a cheap keyboard". A LOOP carried the bell and nothing after, because Rounds 1.2 and 1.3
 had taken the rasp and the voicing out of loops (they made loops fail to close) and put it down to a wrap that "wants
@@ -2123,7 +2127,7 @@ faint time-varying EQ that is not periodic in the loop's length. The worst voici
 multiple of the 689 Hz block rate: 138, 175 and 234 Hz read 4.6e-3, 2.5e-3 and 1.8e-3 with the follower against
 5.2e-4, 7.3e-4 and 1.3e-4 with the same shelves held at full strength. A LOOP is filed by length (the classifier calls
 anything over 1.5 s a LOOP), so it has no head window to guard and takes the plateau as a plain time-invariant filter
-(`Bore.voice` with `follow` off).
+(`Bore.voice` with `follow` off). *(Superseded in Round 1.7: the loop has the one-shot's loudness-following voicing.)*
 
 *The pitch match.* With the raw stretch shifted by the best fractional lag (the later copy read between its samples),
 the seam falls three to five orders of magnitude (3.0e-5 to 2.9e-9 at C3, 2.7e-5 to 2.0e-6 at the next step): the loop
@@ -2171,7 +2175,7 @@ BREATH .75; TUNE 0 LIP .25 BREATH .75; TUNE 0 LIP .5 BREATH 1; TUNE .25 LIP .25 
 new, with the bell alone as well): their signal is not periodic over the loop's length, and a shift or a longer settle
 cannot change that. `renderLoop` refuses them as it did. This is the "2 of 117" the Round 1.2 note recorded, on a
 different grid; it wants its own investigation (a period-doubled or quasi-periodic regime, where an even number of
-periods might close it) and is not this round's.
+periods might close it) and is not this round's. *(Round 1.7: all four render, at correlations 0.990 to 0.997.)*
 
 **How bright, and a finding about the one-shot.** The loop is brighter than its one-shot at the same knobs, by 7.6 dB of
 bite at C3 and less higher up (loop 13.8, 6.5, 2.5 against one-shot 6.2, 3.9, 1.8 at C3, C4, C5; the bell-only loop read
@@ -2181,7 +2185,7 @@ from its first sample, takes them whole. Whole is the prototype the owner kept (
 rendered reed); the shipped one-shot is milder than what was kept, and the real tenor's bite (about +8.5 dB at this
 pitch, an estimate from the band table in Round 1.3, not measured the way ours is) is between the two. `LOOP_VOICE_SHARE` is 1; the audition puts 0.67 beside it,
 which matches the one-shot at C3 with the default knobs and sits under it at the SOLO LOOP's note (+2.2 dB against its
-one-shot's +4.5; whole is +7.8; before, -14.3).
+one-shot's +4.5; whole is +7.8; before, -14.3). *(Round 1.7: this lapses. A loop cut from the one-shot has the one-shot's voicing, and its bite is the one-shot's to within 0.2 dB.)*
 
 **What it cost, said plainly.**
 
@@ -2228,7 +2232,7 @@ conversation; the audition page's own verdicts for the round (`bore_r15`) were n
 
 **Why the loop is frozen.** The steady stretch takes no turbulence and no vibrato (`blow`, `steady`: "a loop cannot
 carry a signal that does not repeat"). It cannot: the bore is a feedback loop, and noise inside it moves the note's phase,
-so a noisy stretch does not come back to where it started and the seam fails. The result is a perfectly periodic wave.
+so a noisy stretch does not come back to where it started and the seam fails. The result is a perfectly periodic wave. *(True of the periodic build that Round 1.7 replaced.)*
 Measured on the same note, over 0.35-0.85 s of the one-shot's held middle against the loop:
 
 | | one-shot | loop (shipped) |
@@ -2266,7 +2270,7 @@ long, from that following material into the stretch's own start, so the wrap is 
 against -30.24 dB outside it (no dip); between-harmonic energy -41.5 dB (one-shot -42.2), harmonic wobble 0.37 dB (0.50),
 brightness wander 2.32% (2.34%), where the shipped loop reads -77 dB, 0.00 dB and 0.01%. **Not heard as good or bad.**
 
-**If it is picked up.**
+**If it is picked up.** *(Built in Round 1.7, which answers the four corners, the loop length, the render cost, FLUTE and the other notes. It has not been heard, and whether the repeat is audible and how deep a LOOP's vibrato should be are still open.)*
 
 - The loop would be built from a long one-shot's held middle and closed by a crossfade, not by a whole number of periods.
   That replaces `renderLoop`'s periodic construction (the pitch ladder, the retry) and changes what `Keys.seamError`
@@ -2280,6 +2284,131 @@ brightness wander 2.32% (2.34%), where the shipped loop reads -77 dB, 0.00 dB an
 - The scripts were scratch and are not kept. The method above is enough to redo them in an afternoon.
 - The brightness finding of Round 1.5 stands: a whole-strength voicing is brighter than the one-shot's plateau at low
   notes, and a loop cut from the one-shot would have the one-shot's.
+
+### Round 1.7: the loop, cut from the one-shot — 2026-10-11
+
+The owner's notes, in order: the kit card's "Solo loop sounds like a cheap keyboard"; after Round 1.5, "Still sound cheap"; after
+the first prototype of Round 1.6, "Still doesn't sound very good", and asked directly, the one-shot of the same note sounds good
+and only the loops are bad ("too steady or hissy", "buzzy, thin or harsh"). Asked what to do next on BORE, the owner chose "Build
+the loop fix": the loop cut from the one-shot's own held note, the second prototype of Round 1.6, which had no verdict because
+the owner parked it. This round builds it. It has not been heard.
+
+**What was wrong** is Round 1.6's finding: a periodic loop is a frozen tone. The steady stretch took no turbulence and no vibrato
+because a bore with noise in it does not come back to its phase, so the loop could close only by being perfectly periodic.
+
+**What shipped.** `Bore.renderLoopMeasured` (the held note) and `Bore.cutLoop` (the cut), in place of the periodic construction:
+
+- The held note is rendered by the one-shot's own path (`blow` with the gate stretched to `LOOP_HELD_SECONDS` = 4.5 s, then `condition`
+  with the one-shot's loudness-following voicing, not `finish`), with HOLD overridden to `LOOP_HOLD` = 0.5, which sets the vibrato's
+  depth and nothing else (about 10 cents at 5.2 Hz; the loop step's own HOLD 1 would read 20). Nothing is dropped from it: the
+  vibrato, the turbulence, the rasp, the bell and the voicing's plateau are the one-shot's.
+- The stretch starts at `LOOP_START_SECONDS` = 1.5 s, or where the note's 200 ms level has stayed within 0.4 dB of its level at the end
+  of the held part, whichever is later. **The floor is not for the onset** (the overshoot is under 0.1% by 0.64 s, the vibrato is full
+  at 0.26 s, the tongue's seed and the chiff are gone by then, and the level has settled by 0.65 s at every corner of the grid). It is for
+  the *shape*: the level settles before the waveform does. A loose reed at C3 (SAX, TUNE 0, LIP 0, BREATH 0.5) has settled its level at
+  0.65 s and is still changing its waveform: a stretch cut there and the continuation after it correlate 0.62, and 0.945 from 1.0 s and
+  0.989 from 1.5 s. The first build of this round started at 0.65 s, and 11 of its 252 corners correlated under 0.95 (7 under 0.9),
+  all SAX at C3 or a semitone above with a lip of 0.5 or looser. The settle test reads the level only and cannot see it; the floor
+  is the cure, and `a stretch cut while the waveform still settles does not join, though its level has settled` pins the reason.
+- Its length is searched within 0.12 s of `LOOP_SECONDS` for the one where the stretch's first 0.3 s best match (normalised
+  correlation) the 0.3 s of the held note that follow its end. The search lands on a whole number of vibrato cycles by itself: 10
+  cycles (1.92 s) at 122 of the 252 corners, 11 (2.12 s) at the other 130.
+- The first 0.3 s are replaced by a fade from that continuation into the stretch's own start, so the loop's last sample runs on into
+  its first. The fade holds the power constant for two waves that correlate by the measured amount (`assembleLoop`: weights
+  sin t / k and cos t / k with k = sqrt(1 + r sin 2t)). A plain linear fade of two waves that correlate 0.62, as the first build's
+  weakest did, dipped the level 1.34 dB; at the 1.5 s start every corner correlates 0.989 or better and the two laws differ by hardly
+  anything, so the power law is now insurance for the corners nobody has measured, and the correlation floor (below) is what guards them.
+- The loop is rotated to start on a zero crossing (`Siren.bestCut`, as before, so a pad that plays it once through does not start on
+  a step) and levelled on its own, the house way.
+- `renderLoop` still refuses by name (`checkJoin`): the blended waves must correlate by `LOOP_MIN_CORRELATION` = 0.9 (the weakest
+  of 1,071 renders is 0.984; the first build's weakest was 0.62) and the level must not dip more than `LOOP_MAX_DIP_DB` = 1 dB in the blend
+  (the deepest is 0.49). The old refusals, by `Keys.seamError`, lapse with the construction.
+- Removed: the whole-period plan for BORE's loop, the pitch ladder's use here and its up-to-six renders, the retry, `LoopRender.seam`
+  and `attempts`, `LOOP_VOICE_SHARE`, `Gate.steady` and the branches of `blow` that served it, `voice`'s `follow` switch, `stretch`.
+  Kept, untouched, because ARCO uses them and `ArcoFrozenR1cTest` freezes them bit for bit: `measureLoopSamples` and its helpers,
+  `planLoop`, `LoopPlan`, `LOOP_SECONDS`.
+
+**Measured on 252 corners:** the 125 SAX corners of Round 1.5's grid (5 notes by 5 lips by 5 breaths), 27 FLUTE corners (3 by 3 by 3),
+and the 100-loop fuzz (both voices, all 25 notes, at the defaults and at a seeded random LIP, BREATH and CHIFF). Every one renders.
+
+| | min | 5th percentile | median | max |
+|---|---|---|---|---|
+| correlation of the two blended waves | 0.989 | 0.993 | 0.998 | 1.000 |
+| quietest 50 ms in the blend against the rest, dB | -0.49 | -0.28 | -0.04 | -0.01 |
+| step at the join over the steepest ordinary step | 0.00 | 0.00 | 0.04 | 1.01 |
+| loudness against its one-shot, dB | -0.32 | 0.00 | 0.00 | +1.08 |
+| mean pitch against TUNE, cents | -3.5 | -2.1 | +1.0 | +4.4 |
+| render time, ms | 327 | 342 | 368 | 464 |
+
+(The first build, started at 0.65 s, read 0.621 for the weakest correlation and -0.56 dB for the deepest dip.)
+Two corners correlate under 0.99, both SAX at C3 with LIP 0.5 (BREATH 0.75 and 1); 250 correlate 0.99 or better. The join step is read at
+the frame where the blend closes the loop (`junctionFrames`; the rotation put the loop's own wrap at a quiet crossing): SAX 0.00 to 1.01
+and FLUTE 0.00 to 0.90 of the steepest ordinary step. The FLUTE is nearly a sine, whose own steps are all alike, so a join that is as
+steep as the tone ever is reads near 1.0 and is no step at all. The four SAX corners the periodic loop never closed (TUNE .25 LIP 1
+BREATH .75; TUNE 0 LIP .25 BREATH .75; TUNE 0 LIP .5 BREATH 1; TUNE .25 LIP .25 BREATH .5) render, at correlations 0.997, 0.991, 0.990
+and 0.997: the guess of Round 1.6 held.
+
+**Wider than the grid, 819 more renders:** a dense sweep of the thin-margin region of SAX (BREATH 0.25 to 0.8 in steps of 0.025, three
+lips, three notes, CHIFF at 0, 0.4 and 1: 621), three hold-out seeds of the fuzz's draw (150) and the 48 corners of the knob cube. None
+is refused. The weakest correlates 0.984, the deepest dip is 0.46 dB and the widest join step is 0.97 of the steepest ordinary step; the
+latest the level settles is 1.0 s, so the 1.5 s floor, not the settle test, sets the start at every one of the 1,071.
+
+**Life, against the one-shot held the same way** (pitch on 70 ms windows, and the energy between the harmonics from a Hann-windowed
+spectrum; six notes, defaults): the loop's pitch moves 6.06, 5.98, 5.88 and 5.74 cents (std) at SAX TUNE 0, .25, .5 and 1 against the
+held one-shot's 6.04, 5.96, 5.87 and 5.75, and 4.49 and 4.49 for the FLUTE at .25 and .75 against 4.50 and 4.45; between the
+harmonics it reads -33.8, -39.1, -41.0 and -43.6 dB against -36.0, -39.1, -40.6 and -43.5 (FLUTE -40.4 and -38.1 against -40.4 and
+-37.9). The mean pitch of the loop is the one-shot's within 0.5 cents. A perfectly periodic synthetic wave reads under 0.5 cents and
+under -60 dB with the same instruments, which the test pins as a control. (Round 1.6's table gave the periodic loop 0.00 cents and
+-80 dB with other windows.)
+
+**Bite, and Round 1.5's finding about it.** The loop's bite is its one-shot's, measured by the audition on the very clips: 6.6, 3.7 and 1.8 dB at C3, C4 and C5 against the held one-shot's 6.5, 3.7 and 1.8 (the SOLO LOOP's 4.6 against 4.5, the PAD REED's 3.6 against 3.7, the weakest join's 5.6 against 5.7). Round 1.5's loop was brighter than its one-shot (13.8 against 6.2 dB at C3) because
+it took the shelves whole; a loop cut from the one-shot has the one-shot's plateau, and `LOOP_VOICE_SHARE` and the TWO-THIRDS idea lapse.
+
+**Things that did not work, kept so they are not tried again.** The plain linear fade, above. A start at 0.65 s, above: the level
+test is blind to the waveform still settling, and it was the correlation of the join that showed it.
+
+**What it cost, said plainly.**
+
+- **Not heard.** The numbers say the loop has what its one-shot has; whether it stops sounding like a cheap keyboard is the audition's
+  question (the new first section: each loop, the same loop three times end to end, and the one-shot it is cut from, levelled to the
+  loop on its plateau, for the SOLO LOOP, the PAD REED, the flute's STEADY LOOP, which nobody has heard, the defaults at three notes
+  and the weakest join measured).
+- **The guards do not see the breath at the blend.** The blend holds the *total* power constant. What is the same in both passes (the
+  tone) adds; what differs between them (the breath noise, which does not repeat) fades by power, and dips about 3 dB for the 0.3 s of
+  the blend, once every 1.92 or 2.12 s, while the total reads -0.01 to -0.49 dB. Whether that is audible is the audition's question,
+  and it is the thing the owner is asked to listen for; no guard measures it.
+- **The repeat is exact.** The same breath and the same vibrato come round every 1.92 or 2.12 s, and the vibrato's phase is the same at
+  the start of every loop (it runs on absolute time, as in the one-shot). Whether that can be heard is the owner's to say.
+- **Vibrato depth is the one-shot's, not the owner's.** About 10 cents at HOLD 0.5. Whether the owner's ear wants more or less is not
+  known.
+- **The pitch is no longer exactly TUNE.** The periodic loop landed on it to 0.05 cents; this one plays the one-shot's pitch, within
+  about 4.4 cents at SAX and 2.7 at FLUTE (the pin's residual, and a mean over a vibrato that is not a whole number of cycles of the
+  loop). A test pins the mean pitch of the loop against the one-shot's.
+- **R2's held keygroup assumed whole periods** ("Held, and the LOOP", above, and test 12's "within 1 cent of the plan"). BORE no longer
+  makes such a loop; ARCO's `planLoop` and `measureLoopSamples`, and Round 1.5's account, are the way back if R2 needs one.
+- **The house rule "never a crossfade"** (`Keys.kt`, the spec's RESIN row and "Held, and the LOOP") is broken knowingly. It forbids
+  blending the ends to hide a join that failed to close; a held middle has no periodicity to fail. `Keys.kt` stays true for RESIN.
+- **No corner exercises the refusals.** No corner of the 1,071 settles late or joins badly at the shipped start; the settle detector
+  and the join check are pinned on synthetic signals, on a hand-built bad join, and by the early-start test above (the same note cut at
+  0.65 s correlates 0.62, under the 0.9 floor).
+- **The FLUTE's loop changed too**, and was never heard before or after. The kit pads A12 and A16 are regenerated.
+- **Loudness.** The loop and its one-shot are both levelled on their loudest 200 ms, so they agree to 0.05 dB at 218 of the 252 corners
+  by construction. The 34 others are SAX at C3 and nearby, where the 0.99 peak ceiling limited the one-shot's attack (up to +1.08 dB) or,
+  at three corners, the loop (down to -0.32). The loop against the one-shot's *plateau* is not measured here; the audition levels each
+  one-shot to its loop on the plateau, so the pair can be compared by ear.
+- **Render time** fell: one render of 4.6 s of note (0.8 M raw samples), 368 ms median and 464 ms worst, against three renders of
+  0.6 to 0.9 M and, at six per cent of the SAX corners, a retry that more than doubled them.
+
+**Verification.** The full suite (`./gradlew test`) on the code with the default branch merged in: build successful, 3,565 test results, none failing (the first full run, before that merge, had one failure: `ConventionTest`'s stale-count law, on a README line that said FRESH TAPE has 17 starters where the code has 18, which the default branch had already fixed and which is not in `synth`). Each guard was then broken alone, on the final code, with the unbroken baseline first (59 tests in `BoreTest`,
+`BoreLoopFuzzTest` and `BorePresetsTest`, none failing; a baseline that runs no tests aborts the sweep), and a named test failed for 26 of 27:
+
+- *The held note.* Blown at the loop step's HOLD, by dropping the override and by `LOOP_HOLD` = 1 (`a LOOP has the life of its one-shot`, `a LOOP's vibrato is the held note's at half the most`); conditioned without the rasp and the voicing (`a LOOP carries the one-shot's rasp and voicing`).
+- *The start.* No floor on it (15 tests); the floor back at 0.65 s (`a LOOP closes by a blend`, the determinism test and `a stretch cut while the waveform still settles does not join`); any level counted as settled; a note that never settles accepted; one that settles too late accepted (`the settle rule starts the loop after the level has come up`, `the stretch starts after the floor and the settle`).
+- *The length.* No search (14 tests).
+- *The blend.* None, inside `assembleLoop` and at the call site; run the wrong way; a linear fade; without the measured correlation, inside and at the call site (`every note of both voices renders as a loop whose join holds`, `cutLoop puts its pieces together as the join reports`, `the blend holds the power of two waves that correlate by any amount`, `a LOOP holds steady`). The linear fade and the blend without the correlation are caught by the synthetic power test alone: at the 1.5 s start every real corner correlates 0.989 or better, where the two laws differ by hardly anything.
+- *The turn, the level and the join.* No rotation, no levelling, a junction a frame late, a junction read at frame 0 (`the rotation turns the loop onto a crossing`, `cutLoop puts its pieces together as the join reports`, `a LOOP closes by a blend`).
+- *The refusals.* `checkJoin` accepting everything, ignoring the correlation floor alone, ignoring the dip limit alone; `renderLoop` not calling `checkJoin`; `blendDipDb` reading zero; the floor at 0; the dip limit at 6 dB (`a join that does not hold is refused by name`, `renderLoop refuses a real loop at the thresholds it is given`, `the dip measure reads a dip in the blend`, `a stretch cut while the waveform still settles does not join`).
+- ***Survived: the margin.*** `usableEnd` without `LOOP_MARGIN_SECONDS` leaves all 59 tests green. No corner comes near the end of the held note (the stretch, the blend and the margin end at about 3.1 s of 4.45), so the margin guards a case nobody has met: `loopStart`'s too-late refusal is tested with hand-picked ends, and how `renderLoopMeasured` computes `usableEnd` is not tested at all.
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 

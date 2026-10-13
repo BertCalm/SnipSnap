@@ -8,12 +8,20 @@ import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.MurmurConfig
+import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.SpoolPatch
+import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
 import java.io.File
 import java.util.Locale
@@ -336,17 +344,27 @@ object UserPresets {
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, PITCHWHEEL and STOOP also copy the saved
+     * bytes the phone heard. CISTERN, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well; REVEL retains the
+     * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE retains its
+     * MIDI base, velocity, model and selected player gesture; REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
      * energy. CONTOUR retains its table pair, layer relationships, envelopes, loop
      * recipe and velocity. STOOP retains its source, answer and chord recipe and
-     * its render-model version. The name is a Kotlin string literal, escaped.
+     * its render-model version. LACQUER carries its entire layered recipe through
+     * the JSON constructor. SPOOL writes its complete machine constructor, including
+     * recording roster and HOLD memory mode. RELAY retains its complete source and
+     * phrase schedules. MURMUR keeps its root, velocity and complete
+     * operator/formant/envelope definition. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is LacquerPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+        }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         if (patch is StoopPatch) {
             val arguments = buildList {
@@ -368,9 +386,28 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is SpoolPatch) {
+            val m = patch.machine
+            val roster = m.roster.joinToString(", ") {
+                "SpoolStrip(SpoolSourceFamily.${it.family}, gain = ${it.gain}f, tension = ${it.tension}f, drag = ${it.drag}f, contact = ${it.contact}f, doubling = ${it.doubling}f)"
+            }
+            val heads = m.headOffsets.joinToString(", ") { "${it}f" }
+            val splices = m.spliceSchedule.joinToString(", ") { "SpoolSplice(${it.boundary}f, ${it.displacement}f)" }
+            val routes = m.routes.joinToString(", ") { "SpoolRoute(${it.source}, ${it.destination}, ${it.gain}f)" }
+            val machine = "SpoolMachine(roster = listOf($roster), gateSeconds = ${m.gateSeconds}f, sourceSeconds = ${m.sourceSeconds}f, motorTorque = ${m.motorTorque}f, returnSeconds = ${m.returnSeconds}f, headOffsets = listOf($heads), spliceSchedule = listOf($splices), routes = listOf($routes), holdMode = SpoolHoldMode.${m.holdMode}, seed = ${m.seed}, writeDelaySamples = ${m.writeDelaySamples}, reengage = ${m.reengage})"
+            return "SpoolPatch(\"$name\", SpoolVoice.${patch.voice}, mapOf($macros), machine = $machine, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is RelayPatch -> {
+                val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                    .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+                ".let { RelayPatch.fromJsonText(\"$json\") }"
+            }
+            is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
+            is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is RevelPatch -> {
                 val c = patch.configuration
                 fun values(items: List<*>, literal: (Any?) -> String): String =
@@ -402,6 +439,7 @@ object UserPresets {
                 ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
             }
             is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is SkitterPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed})"
             else -> ""
         }
         return "p(${voiceEnum(patch.engine)}.${patch.voiceName}, \"$name\", $macros)$state,"
@@ -422,6 +460,20 @@ object UserPresets {
         "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
         "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
     ).joinToString(", ") + ")"
+
+    private fun murmurConfigLiteral(config: MurmurConfig): String {
+        fun text(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
+        fun values(items: List<Double>) = items.joinToString(", ", "listOf(", ")")
+        val targets = config.targets.joinToString(", ", "listOf(", ")") { target ->
+            "MurmurFormantTarget(name = ${text(target.name)}, centers = ${values(target.centers)}, " +
+                "widths = ${values(target.widths)}, gains = ${values(target.gains)}, sourceBalance = ${target.sourceBalance})"
+        }
+        return "MurmurConfig(routing = MurmurRouting.${config.routing.name}, ratios = ${values(config.ratios)}, " +
+            "trajectory = MurmurTrajectory.${config.trajectory.name}, direction = ${config.direction}, " +
+            "referenceSeconds = ${config.referenceSeconds}, attack = ${config.attack}, decay = ${config.decay}, " +
+            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets)"
+    }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */
     fun renderAll(saved: List<Saved>): String {

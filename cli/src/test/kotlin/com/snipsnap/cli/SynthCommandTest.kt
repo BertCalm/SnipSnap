@@ -8,6 +8,9 @@ import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPresets
 import com.snipsnap.synth.FlotillaVoice
+import com.snipsnap.synth.Lacquer
+import com.snipsnap.synth.LacquerPresets
+import com.snipsnap.synth.LacquerVoice
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -113,6 +116,27 @@ class SynthCommandTest {
     }
 
     @Test
+    fun `lacquer auditions retain full factory layers and honor note and velocity edits`() {
+        val dir = java.nio.file.Files.createTempDirectory("synthlacquer").toFile()
+        try {
+            val out = PrintStream(ByteArrayOutputStream())
+            val preset = LacquerPresets.forVoice(LacquerVoice.PLUCK).single()
+            assertEquals(0, SynthCommand.run(listOf("LACQUER", "PLUCK", "--out", dir.path), out))
+            val original = dir.listFiles { f -> f.extension == "wav" }!!.single()
+            val factory = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }
+            assertContentEquals(factory.toByteArray(), original.readBytes(), "CLI keeps the serialized layer model")
+            original.delete()
+            assertEquals(0, SynthCommand.run(
+                listOf("LACQUER", "PLUCK", "--midi", "57", "--velocity", "0.35", "--out", dir.path), out))
+            val expected = preset.copy(midi = 57, velocity = .35f)
+            val edited = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }
+            assertContentEquals(edited.toByteArray(), dir.listFiles { f -> f.extension == "wav" }!!.single().readBytes())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `bad note and velocity flags are refused before making an output folder`() {
         val temp = java.nio.file.Files.createTempDirectory("synthbadnotes").toFile()
         val dir = File(temp, "not-created")
@@ -120,6 +144,7 @@ class SynthCommandTest {
             for ((engine, voice, range) in listOf(
                 Triple("CISTERN", "FIRST", Cistern.MIDI_MIN..Cistern.MIDI_MAX),
                 Triple("FLOTILLA", "RIPPLE", Flotilla.MIDI_MIN..Flotilla.MIDI_MAX),
+                Triple("LACQUER", "KEY", Lacquer.MIDI_MIN..Lacquer.MIDI_MAX),
             )) {
                 val cases = listOf(
                     "--midi" to listOf("", "NaN", "60.5", "C4", (range.first - 1).toString(), (range.last + 1).toString(), "2147483648"),

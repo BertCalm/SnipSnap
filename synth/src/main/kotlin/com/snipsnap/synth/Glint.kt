@@ -200,8 +200,9 @@ object Glint {
         macrosFor(voice).associate { it.name to it.default }
 
     /**
-     * No preset roster yet — Phase 3 authors one and this gains the
-     * preset-seeded form every other engine uses (see `Resin.scramble`).
+     * SCRAMBLE near a factory preset (see [Thump.scramble]): with no [near] patch and a temperature below 1 the roll
+     * is seeded from a random preset of the voice; at 1 it is the flat roll it always was, and a spent draw there
+     * would shift a seeded Random's whole downstream sequence.
      */
     fun scramble(
         voice: GlintVoice,
@@ -210,7 +211,11 @@ object Glint {
         near: Patch? = null,
     ): Map<String, Float> {
         val base = defaults(voice)
-        val seed = if (near != null) base + near.macros.filterKeys { it in base } else base
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + GlintPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
         return Dsp.scrambleNear(seed, temperature, random)
     }
 

@@ -2,6 +2,29 @@ plugins {
     kotlin("jvm")
 }
 
+/** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
+tasks.register<JavaExec>("generateMurmurAudition") {
+    group = "distribution"
+    description = "Render MURMUR raw/matched WAVs, measurements and the audition page. -PmurmurFull adds the full pitch/velocity and interaction grids."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/murmur-audition")
+    if (project.hasProperty("murmurFull")) args("--full")
+}
+
+/** Export the sixteen first-listen pads through the standard MPC program pipeline. */
+tasks.register<JavaExec>("generateMurmurKit") {
+    group = "distribution"
+    description = "Render the dry MURMUR MPC acceptance kit with regenerable kit.json recipes."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 repositories {
     mavenCentral()
 }
@@ -48,6 +71,17 @@ tasks.register<JavaExec>("generateStoopAudition") {
     mainClass.set("com.snipsnap.synth.StoopAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/stoop-audition")
+}
+
+/** Actual TANGLE renders, listening assets and a reproducible probe report. */
+tasks.register<JavaExec>("generateTangleAudition") {
+    group = "distribution"
+    description = "Render TANGLE matched/raw WAVs, patches, manifest, causal probes and listening page under testkit/tangle-audition/. -Pquick selects a development pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TangleAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/tangle-audition")
     if (project.hasProperty("quick")) args("--quick")
 }
 
@@ -131,6 +165,26 @@ tasks.register<JavaExec>("generateGlintDepthAudition") {
     mainClass.set("com.snipsnap.synth.GlintDepthAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/glint-depth-audition")
+}
+
+/** Render the GLINT roster candidates (16 held pads per voice, WAVs and a manifest) under testkit/glint-roster-candidates/. See GlintRosterAuditionGenerator. */
+tasks.register<JavaExec>("generateGlintRosterAudition") {
+    group = "distribution"
+    description = "Render the GLINT roster candidates (16 held pads per voice) under testkit/glint-roster-candidates/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintRosterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-roster-candidates")
+}
+
+/** Render the GLINT roster's final listen (each preset as a one-shot and three pads, WAVs and a manifest) under testkit/glint-roster-final/. See GlintRosterListenGenerator. */
+tasks.register<JavaExec>("generateGlintRosterListen") {
+    group = "distribution"
+    description = "Render the GLINT roster's final listen (one file per preset) under testkit/glint-roster-final/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintRosterListenGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-roster-final")
 }
 
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
@@ -413,6 +467,36 @@ tasks.register<JavaExec>("decodeArcoBodyGate") {
     mainClass.set("com.snipsnap.synth.ArcoBodyGateDecoder")
     workingDir = projectDir
     args("${rootDir}/testkit/arco-body-gate-key.json")
+    (project.findProperty("gateVerdicts") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.forEach { args(it) }
+}
+
+/**
+ * Render the ARCO R1j bell gate clips, manifest and page under testkit/arco-bell-gate/ and the key beside it. See ArcoBellGateGenerator. The full run refuses a missing or placeholder page;
+ * `-PclipsOnly` is the development mode (clips, manifest and key, no index.html).
+ */
+tasks.register<JavaExec>("generateArcoBellGate") {
+    group = "distribution"
+    description = "Render the ARCO R1j bell gate clips, manifest and listening page under testkit/arco-bell-gate/ and the key to it beside the folder as testkit/arco-bell-gate-key.json. -PclipsOnly skips the page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoBellGateGenerator")
+    jvmArgs("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-bell-gate")
+    if (project.hasProperty("clipsOnly")) args("--clips-only")
+}
+
+/**
+ * Read the saved verdicts of the ARCO R1j bell gate page and print the pre-written reading rules, each comparison, the keep answers, the verdicts and the build map's case line, using the key
+ * testkit/arco-bell-gate-key.json. `-PgateVerdicts=<folder or file>[,<folder or file>...]` names what to read (none: only the rules and the decoder's self-check on invented answers). See ArcoBellGateDecoder.
+ */
+tasks.register<JavaExec>("decodeArcoBellGate") {
+    group = "distribution"
+    description = "Decode the saved verdicts of the ARCO R1j bell gate page (-PgateVerdicts=<folder or file>[,<folder or file>...]) against testkit/arco-bell-gate-key.json."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoBellGateDecoder")
+    jvmArgs("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-bell-gate-key.json")
     (project.findProperty("gateVerdicts") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.forEach { args(it) }
 }
 
@@ -711,6 +795,31 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     if (project.hasProperty("pitchwheelFull")) args("--full")
 }
 
+/** Render Spool's original recordings, causal transport evidence, sweeps, loops and 16-pad MPC kit. */
+tasks.register<JavaExec>("generateSpoolAudition") {
+    group = "distribution"
+    description = "Render SPOOL dry native/matched WAVs, mechanical traces, manifest and 16-pad MPC kit under testkit/spool-audition/. -PspoolQuick selects a smaller development pack."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SpoolAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/spool-audition")
+    if (project.hasProperty("spoolQuick")) args("--quick")
+}
+
+/** Render Embouchure's original dry gestures, control matrix and settled held loops. */
+tasks.register<JavaExec>("generateEmbouchureAudition") {
+    group = "distribution"
+    description = "Render EMBOUCHURE dry WAVs, complete recipes, numerical listening metadata and the audition page under testkit/embouchure-audition/. -PembouchureQuick renders a smaller development pack."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.EmbouchureAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("embouchureOutput").orNull ?: "${rootDir}/testkit/embouchure-audition")
+    if (project.hasProperty("embouchureQuick")) args("--quick")
+    providers.gradleProperty("embouchureReference").orNull?.let { args("--reference-dir=$it") }
+}
+
 /** Render Prism's dry register/velocity, macro, interaction and HOLD matrix. */
 tasks.register<JavaExec>("generatePrismAudition") {
     group = "distribution"
@@ -749,4 +858,51 @@ tasks.register<JavaExec>("generateContourAudition") {
     providers.gradleProperty("contourComparisonBaseline").orNull?.let {
         args("--comparison-baseline=$it")
     }
+}
+
+/** Render Lacquer's provisional bank, layer solos, macro grids and held loops. */
+tasks.register<JavaExec>("generateLacquerAudition") {
+    group = "distribution"
+    description = "Render LACQUER dry audition WAVs, measured evidence and a listening page under testkit/lacquer-audition/."
+    maxHeapSize = "512m"
+    dependsOn("generateLacquerKit")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LacquerAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/lacquer-audition")
+}
+
+tasks.register<JavaExec>("generateLacquerKit") {
+    group = "distribution"
+    description = "Export the sixteen dry LACQUER starter pads as MPC 3 with an MPC 2 program twin."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LacquerKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Full dry SKITTER listening matrix, with a smaller optional development pack. */
+tasks.register<JavaExec>("generateSkitterAudition") {
+    group = "distribution"
+    description = "Render SKITTER native/raw/matched WAVs, patch JSON, traces and listening page under testkit/skitter-audition/. -Pquick selects the smoke pack."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-audition")
+    if (project.hasProperty("quick")) args("--quick")
+}
+
+/** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
+tasks.register<JavaExec>("generateRelayAudition") {
+    group = "distribution"
+    description = "Render RELAY native/matched WAVs, scheduling evidence, metrics and a listening page under testkit/relay-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RelayAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/relay-audition")
+    if (project.hasProperty("relayQuick")) args("--quick")
+    if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }
