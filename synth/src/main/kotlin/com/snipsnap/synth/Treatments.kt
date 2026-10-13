@@ -140,13 +140,15 @@ object Treatments {
      * and a fade ahead of the amp survives the amp (MAGNET's lesson). The fade is the tail's alone:
      * its length follows the amp's lift (see [endFaded]: about a third of the full length at the pad
      * sheet's AMT 0.7, none where the amp does not lift), and it never reaches the first half of a
-     * pad. The full length and shape are measured, not chosen: the shortest fade, on grids of 30 to
-     * 120 ms and powers 2 to 7, for which a snare and a choir end at least 54 dB under their peaks
-     * at AMT 0.7 and 1 (the test's bar is 53), with a DC mean under 9e-5 (its bar is 1e-4). That is
-     * 100 ms at power 5. Under 100 ms, no power up to 7 keeps the snare at AMT 1 under that DC
-     * margin: a saturated tail the fade has not reached leaves its tube's asymmetry in the mean.
+     * pad. The full length and shape are measured against the spec's bars and no others: the
+     * shortest, then mildest, fade for which a snare and a choir end at least 53 dB under their
+     * peaks (the spec's 50 dB plus 3 dB of margin) with a DC mean under 1e-4, at AMT 0.7, 0.8, 0.9
+     * and 1. On a grid of 30 to 120 ms (steps of 5 to 10) and powers 2 to 7 that is 95 ms at
+     * power 5: 95 ms at power 4 ends the snare at AMT 1 at -52.0 dB, and 90 ms misses the DC bar at
+     * every power up to 7 (1.02e-4 at best), because a saturated tail the fade has not reached
+     * leaves its tube's asymmetry in the mean.
      */
-    private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 100f, power = 5))
+    private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 95f, power = 5))
 
     private class EndFade(val ms: Float, val power: Int)
 

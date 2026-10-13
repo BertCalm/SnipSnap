@@ -245,9 +245,10 @@ class TreatmentsTest {
      * A snare (333 ms, mono) and a choir (1.44 s, stereo) end at least 53 dB under their peaks, the
      * last 20 ms against the whole pad, at the pad sheet's AMT 0.7, at full, and between (the fade's
      * length follows the amp's gain, so the in-between amounts are the law's own cells). Measured at
-     * the shipped fade (100 ms at power 5 at full): the snare ends 71.97, 75.73, 63.78 and 55.21 dB
-     * under its peak at AMT 0.7, 0.8, 0.9 and 1 (44.36, 32.05, 19.92 and 9.14 with no fade), the
-     * choir at least 86 dB; the snare at AMT 1 leaves a DC mean of 8.5e-5 (2.5e-4 with no fade).
+     * the shipped fade (95 ms at power 5 at full, the shortest and mildest that passes this test's
+     * two bars): the snare ends 69.81, 74.44, 63.43 and 54.10 dB under its peak at AMT 0.7, 0.8, 0.9
+     * and 1 (44.36, 32.05, 19.92 and 9.14 with no fade), the choir at least 83 dB; the snare at AMT 1
+     * leaves a DC mean of 9.6e-5 (2.5e-4 with no fade), the largest of the eight cells.
      */
     @Test
     fun `driven ends clean at the pad sheet's AMT, at full and between, on a snare and a choir`() {
@@ -272,8 +273,8 @@ class TreatmentsTest {
 
     /**
      * The fade is the tail's alone. Read off a pad of ones, so the samples are the gain itself: it is
-     * a fade of tens of milliseconds, at most 110 at full (100 shipped) and 40 at the pad sheet's AMT
-     * 0.7 (35 shipped), shorter at the lower amount; it ends at silence and falls all the way; and it
+     * a fade of tens of milliseconds, at most 110 at full (95 shipped) and 40 at the pad sheet's AMT
+     * 0.7 (33 shipped), shorter at the lower amount; it ends at silence and falls all the way; and it
      * never reaches the first half of a pad, however short the pad is (a 20 ms pad fades its last 10).
      */
     @Test
@@ -282,8 +283,8 @@ class TreatmentsTest {
         val long = ones(rate * 1500 / 1000, rate)
         val seventy = fadeMs(Treatments.endFaded(long, "driven", 0.7f))
         val full = fadeMs(Treatments.endFaded(long, "driven", 1f))
-        assertTrue(full in 50.0..110.0, "the fade at full is $full ms of a long pad, outside 50 to 110 (100 shipped)")
-        assertTrue(seventy in 10.0..40.0, "the fade at AMT 0.7 is $seventy ms of a long pad, outside 10 to 40 (35 shipped)")
+        assertTrue(full in 50.0..110.0, "the fade at full is $full ms of a long pad, outside 50 to 110 (95 shipped)")
+        assertTrue(seventy in 10.0..40.0, "the fade at AMT 0.7 is $seventy ms of a long pad, outside 10 to 40 (33 shipped)")
         assertTrue(seventy < full, "the fade at AMT 0.7 ($seventy ms) is shorter than at full ($full ms)")
         for (ms in listOf(20, 60, 120, 333, 1500)) {
             for (amount in listOf(0.7f, 1f)) {
@@ -318,8 +319,8 @@ class TreatmentsTest {
      * The body is the amp's own: before the fade starts, the output is the unfaded chain's output (the
      * measured difference is exactly 0; the bar is a millionth of the peak, and the last 2 ms before
      * the fade are left out for the amp's filters). On the snare's 333 ms and on an 80 ms slice of it,
-     * which is shorter than the 100 ms fade, at AMT 0.7 and 1: the slice fades its last 40 ms at full
-     * (the half of the pad) and 35 at AMT 0.7, and what comes before is the unfaded chain's.
+     * which is shorter than the 95 ms fade, at AMT 0.7 and 1: the slice fades its last 40 ms at full
+     * (the half of the pad) and 33 at AMT 0.7, and what comes before is the unfaded chain's.
      */
     @Test
     fun `the end fade leaves a pad's body to the amp, a pad shorter than the fade included`() {
