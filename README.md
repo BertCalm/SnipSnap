@@ -497,6 +497,16 @@ later work. The first listen found the two voices too similar; model 2 revises
 their contrast and awaits another listen. Saved model-1 recipes retain their sound.
 [Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
 
+OVEN is a first audition prototype of a struck keyboard instrument: velocity-sensitive
+stiff strings, restrained paired-string beating, dark fixed body coloration and
+a baked resonance halo. GRAND, FELT, FORGED and BLOOM share TUNE, HAMMER, BODY,
+RING, BLOOM and HALO. Ten starter recipes and a dry sixteen-pad kit use the same
+finite mono renderer; phone picker and live shared resonance remain later work.
+Run `./gradlew :synth:generateOvenAudition` for raw/matched notes, soft/medium/hard
+keyboard samples, five-point sweeps and causal comparisons. The
+[published audition](https://snipsnap-oven-audition.bertcalm.chatgpt.site) is the
+first sonic gate. [Implementation notes](docs/OVEN.md) describe its scope and limits.
+
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
 modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,

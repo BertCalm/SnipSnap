@@ -255,6 +255,7 @@ object Velocity {
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
+        is OvenPatch -> Oven.macrosFor(patch.voice)
     }
 
     /**
@@ -340,6 +341,7 @@ object Velocity {
      * REGISTERS uses its saved note and model while velocity changes rank/reed excitation once.
      * VENT scales the onset perturbation while retaining the saved trajectory controls, note and seed.
      * WICK changes admitted gate charge and excitation effort, retaining the saved note and six controls.
+     * OVEN changes hammer contact and partial excitation while retaining its saved root and body recipe.
      * FLOTILLA renders velocity itself, with its saved MIDI note.
      *
      * Returns null for a voice that takes velocity through [brightnessSpec] or
@@ -387,6 +389,7 @@ object Velocity {
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
+        is OvenPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()

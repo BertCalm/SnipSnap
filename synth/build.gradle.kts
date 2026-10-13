@@ -1136,3 +1136,25 @@ tasks.register<JavaExec>("generateOpenSkyAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/opensky-audition")
 }
+
+/** OVEN's reproducible first dry listening gate, including actual velocity layers. */
+tasks.register<JavaExec>("generateOvenAudition") {
+    group = "distribution"
+    description = "Render OVEN dry raw/matched 16-bit WAVs, exact recipes, keyboard layers, manifest and numerical diagnostics under testkit/oven-audition/."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OvenAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/oven-audition")
+}
+
+/** A dry sixteen-pad starter with native and compatibility MPC exports. */
+tasks.register<JavaExec>("generateOvenKit") {
+    group = "distribution"
+    description = "Render OVEN's regenerable sixteen-pad MPC starter under testkit/oven-kit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OvenKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args("${rootDir}/testkit/oven-kit")
+}

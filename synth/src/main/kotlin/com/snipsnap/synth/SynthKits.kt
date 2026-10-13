@@ -837,6 +837,25 @@ object SynthKits {
     }
 
     /**
+     * OVEN's dry finite-note audition kit. A01–A08 walk GRAND up C minor
+     * pentatonic from C3; the remaining pads expose all four articulations.
+     * Every pad retains its requested root, strike velocity and material model.
+     * Long resonance tails remain TONAL; no pad pretends to be a held loop.
+     */
+    fun oven(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = OvenPatch(
+            "Oven Grand $n", OvenVoice.GRAND, Oven.defaults(OvenVoice.GRAND),
+            midi = Oven.ROOT_MIDI + semitone, velocity = .8f,
+        ).let { pad(it, Oven.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = OvenPresets.all().first { it.name == name }
+            .let { pad(it, Oven.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(
+            preset("Open Lid"), preset("Iron Parlour"), preset("Felt Ledger"), preset("Soft Hearth"),
+            preset("Hammered Iron"), preset("Cold Rivet"), preset("Afterglow"), preset("Hanging Frame"),
+        )
+    }
+
+    /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
      * Eight PLUCK roots walk C minor pentatonic; the remaining eight pads
      * compare the calm BUBBLE default and seven other recipes, including two held buffers.
