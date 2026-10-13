@@ -63,4 +63,35 @@ class EmbouchureModelTest {
             }
         }
     }
+
+    @Test
+    fun `an interrupted model one render, finite or held, stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the frozen
+        // renderer must stop on that flag in its loops and before each of its passes, as model two does.
+        val voice = EmbouchureVoice.entries.first()
+        for (render in listOf<() -> Unit>(
+            { Embouchure.render(voice, Embouchure.defaults(voice), model = 1) },
+            { Embouchure.render(voice, Embouchure.defaults(voice) + ("HOLD" to 1f), model = 1) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException> { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+    }
+
+    @Test
+    fun `model one's conditioning pass stops on its own when the render is no longer wanted`() {
+        // The synthesis loops poll the flag every 8192 samples; the band limit, the decimation and the level
+        // that follow them run over the whole buffer, so the pass itself must look before it starts.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException> { EmbouchureV1.finish(FloatArray(Dsp.OVERSAMPLE * 4096)) }
+        } finally {
+            Thread.interrupted()
+        }
+        assertEquals(4096, EmbouchureV1.finish(FloatArray(Dsp.OVERSAMPLE * 4096)).size, "an uninterrupted pass still conditions")
+    }
 }
