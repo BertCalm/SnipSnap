@@ -13,6 +13,17 @@ tasks.register<JavaExec>("generateVentAudition") {
     args("${rootDir}/testkit/vent-audition")
 }
 
+/** Four longer comparisons with one fixed linear readout and no projection saturation. */
+tasks.register<JavaExec>("generateVentIsolationAudition") {
+    group = "distribution"
+    description = "Render the four VENT isolation native/matched PCM24 WAVs, diagnostic recipes and measurements under testkit/vent-isolation-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentIsolationAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vent-isolation-audition")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"

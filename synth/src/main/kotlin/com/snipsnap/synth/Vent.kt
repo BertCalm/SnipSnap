@@ -27,6 +27,7 @@ data class VentDiagnostics(
     val maxState: Double, val stateRms: Double,
     val integrationFailures: Int, val leashResets: Int,
     val measuredOrbitPeriod: Double, val modelTimeStep: Double,
+    val signalPath: String = "voice-shaped",
 )
 
 /** Raw is 44.1 kHz, after antialias filtering and before the shared melodic level convention. */
@@ -34,6 +35,26 @@ data class VentRender(
     val snip: Snip, val raw: FloatArray,
     val diagnostics: VentDiagnostics, val trace: List<VentTrace>,
 )
+
+/** Fixed conditioning for the listening experiment, separate from model-1 voice recipes. */
+internal object VentIsolationSpec {
+    const val X_WEIGHT = .65 / 12.0
+    const val Y_WEIGHT = .15 / 12.0
+    const val Z_WEIGHT = .30 / 60.0
+    const val GAIN = .25
+    const val FILTER_CUTOFF_HZ = 10_000.0
+    const val DC_CUTOFF_HZ = 12.0
+    const val ATTACK_SECONDS = .006
+    const val RELEASE_START_FRACTION = .72
+    const val RELEASE_FRACTION = .28
+    const val VELOCITY_EXPONENT = .35
+    const val DEFAULT_SECONDS = 8.0
+    val SEED_VOICE = VentVoice.ROUND
+
+    /** A linear state projection: no state-dependent normalization, saturation or Z compression. */
+    fun readout(x: Double, y: Double, z: Double): Double =
+        GAIN * (X_WEIGHT * x + Y_WEIGHT * y + Z_WEIGHT * z)
+}
 
 /**
  * First-listening Rössler instrument. The source is an RK4-integrated trajectory:
@@ -150,6 +171,29 @@ object Vent {
     fun renderDetailed(
         voice: VentVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, seed: Int = 0, model: Int = MODEL,
+    ): VentRender = renderCore(voice, macros, midi, velocity, seed, model)
+
+    /**
+     * Controlled audition of the same orbit and X-only LEASH without voice coloring.
+     * [VentRender.raw] has one fixed linear projection, gain, filter and envelope;
+     * [VentRender.snip] additionally follows the normal shared melodic level convention.
+     * This path is an experiment, not a new saved production model or voice.
+     */
+    internal fun renderIsolation(
+        chaos: Float, leash: Float, midi: Int = DEFAULT_MIDI, velocity: Float = .8f,
+        seed: Int = 17, seconds: Double = VentIsolationSpec.DEFAULT_SECONDS,
+    ): VentRender {
+        require(chaos.isFinite() && chaos in 0f..1f) { "VENT isolation CHAOS must be 0..1" }
+        require(leash.isFinite() && leash in 0f..1f) { "VENT isolation LEASH must be 0..1" }
+        require(seconds.isFinite() && seconds in .02..30.0) { "VENT isolation duration must be .02..30 seconds" }
+        return renderCore(VentIsolationSpec.SEED_VOICE,
+            mapOf("CHAOS" to chaos, "LEASH" to leash, "PUSH" to 0f),
+            midi, velocity, seed, MODEL, seconds)
+    }
+
+    private fun renderCore(
+        voice: VentVoice, macros: Map<String, Float>, midi: Int,
+        velocity: Float, seed: Int, model: Int, isolationSeconds: Double? = null,
     ): VentRender {
         require(midi in MIDI_MIN..MIDI_MAX) { "VENT MIDI must be $MIDI_MIN..$MIDI_MAX" }
         require(velocity.isFinite() && velocity in 0f..1f) { "VENT velocity must be 0..1" }
@@ -162,7 +206,8 @@ object Vent {
         val damp = m.getValue("DAMP").toDouble()
         val push = m.getValue("PUSH").toDouble()
         val vel = velocity.toDouble()
-        val seconds = .18 * 30.0.pow(m.getValue("LENGTH").toDouble())
+        val seconds = isolationSeconds ?: (.18 * 30.0.pow(m.getValue("LENGTH").toDouble()))
+        val isolation = isolationSeconds != null
         val frames = max(1, (seconds * Dsp.RATE).roundToInt())
         val random = Random(Dsp.seedFor("VENT", model, voice, seed))
         val orbit = Orbit(.12+.13*chaos, .2, 3.0+5.8*chaos, random)
@@ -206,9 +251,10 @@ object Vent {
         // Bound the endpoints before mapping, preserving DAMP activity at high notes.
         val lowCutoff = (hz*.85).coerceAtLeast(70.0)
         val highCutoff = (hz*.85*42.0).coerceIn(lowCutoff, 14_000.0)
-        val cutoff = lowCutoff*(highCutoff/lowCutoff).pow(1.0-damp)
+        val cutoff = if (isolation) VentIsolationSpec.FILTER_CUTOFF_HZ
+            else lowCutoff*(highCutoff/lowCutoff).pow(1.0-damp)
         val lowAlpha = 1.0-exp(-2.0*PI*cutoff/INTERNAL_RATE)
-        val dcPole = exp(-2.0*PI*12.0/INTERNAL_RATE)
+        val dcPole = exp(-2.0*PI*(if (isolation) VentIsolationSpec.DC_CUTOFF_HZ else 12.0)/INTERNAL_RATE)
         var low1 = 0.0; var low2 = 0.0
         var dcIn = 0.0; var dcOut = 0.0
         var correction = 0.0; var correctionAge = 1.0
@@ -217,7 +263,8 @@ object Vent {
         val rawInternal = FloatArray(frames*Dsp.OVERSAMPLE)
         val trace = ArrayList<VentTrace>()
         val traceStride = INTERNAL_RATE/200
-        val attack = when (voice) { VentVoice.ROUND -> .006; VentVoice.WIRE -> .004; VentVoice.TEAR -> .003 }
+        val attack = if (isolation) VentIsolationSpec.ATTACK_SECONDS
+            else when (voice) { VentVoice.ROUND -> .006; VentVoice.WIRE -> .004; VentVoice.TEAR -> .003 }
         for (i in rawInternal.indices) {
             if (i % 2048 == 0) stopIfUnwanted()
             repeat(substeps) { orbit.step(dt) }
@@ -238,16 +285,26 @@ object Vent {
             }
             stateSquares += (orbit.x*orbit.x+orbit.y*orbit.y+orbit.z*orbit.z)/3.0
             if (i % traceStride == 0) trace.add(VentTrace(i.toDouble()/INTERNAL_RATE, orbit.x, orbit.y, orbit.z))
-            val projection = (readX*orbit.x+readY*orbit.y)/orbit.c + zWeight*ln(1.0+max(0.0, orbit.z))/zScale
-            val source = .32*tanh(drive*projection)
+            val source = if (isolation) VentIsolationSpec.readout(orbit.x, orbit.y, orbit.z) else {
+                val projection = (readX*orbit.x+readY*orbit.y)/orbit.c + zWeight*ln(1.0+max(0.0, orbit.z))/zScale
+                .32*tanh(drive*projection)
+            }
+            if (isolation) check(source.isFinite() && abs(source) < 1.0) { "VENT isolation readout exceeded headroom" }
             low1 += lowAlpha*(source-low1)
             low2 += lowAlpha*(low1-low2)
             val dc = low2-dcIn+dcPole*dcOut
             dcIn = low2; dcOut = dc
             val t = i.toDouble()/INTERNAL_RATE
             val entry = (t/attack).coerceIn(0.0, 1.0).let { .5-.5*cos(PI*it) }
-            val release = ((t/seconds-.72)/.28).coerceIn(0.0, 1.0).let { .5+.5*cos(PI*it) }
-            rawInternal[i] = (dc*entry*release*vel.pow(.35)).toFloat()
+            val releasePosition = if (isolation)
+                (t/seconds-VentIsolationSpec.RELEASE_START_FRACTION)/VentIsolationSpec.RELEASE_FRACTION
+                else (t/seconds-.72)/.28
+            val release = releasePosition.coerceIn(0.0, 1.0).let { .5+.5*cos(PI*it) }
+            val velocityExponent = if (isolation) VentIsolationSpec.VELOCITY_EXPONENT else .35
+            rawInternal[i] = (dc*entry*release*vel.pow(velocityExponent)).toFloat()
+            if (isolation) check(rawInternal[i].isFinite() && abs(rawInternal[i]) < 1f) {
+                "VENT isolation produced clipped internal audio"
+            }
         }
         stopIfUnwanted()
         val raw = Dsp.decimate(rawInternal, Dsp.RATE)
@@ -257,14 +314,20 @@ object Vent {
             if (i % 8192 == 0) stopIfUnwanted()
             val sample = raw[i].toDouble()
             check(sample.isFinite()) { "VENT produced nonfinite audio" }
+            if (isolation) check(abs(sample) < 1.0) { "VENT isolation produced clipped raw audio" }
             peak = max(peak, abs(sample)); sum += sample; squares += sample*sample
         }
         val output = raw.copyOf()
         Dsp.levelTo(output, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         stopIfUnwanted()
         Dsp.fadeTail(output)
+        if (isolation) {
+            check(orbit.failures == 0) { "VENT isolation required emergency integration resets" }
+            check(output.all { it.isFinite() && abs(it) < 1f }) { "VENT isolation produced invalid leveled audio" }
+        }
         val diagnostics = VentDiagnostics(peak, sqrt(squares/raw.size), sum/raw.size,
-            orbit.maxState, sqrt(stateSquares/rawInternal.size), orbit.failures, resets, period, dt)
+            orbit.maxState, sqrt(stateSquares/rawInternal.size), orbit.failures, resets, period, dt,
+            if (isolation) "isolation-linear" else "voice-shaped")
         return VentRender(Snip(output, 1, Dsp.RATE), raw, diagnostics, trace)
     }
 }

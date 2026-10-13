@@ -143,3 +143,70 @@ are whether the three characters remain distinct, whether CHAOS changes the
 trajectory audibly, and whether reducing LEASH opens useful movement without
 losing the sound's body. Pitch measurements and numerical stability support
 that listening decision; they do not make it.
+
+## Isolation audition
+
+The first audition can read as a lo-fi synth with more distortion at each
+voice step: ROUND, WIRE and TEAR change projection saturation, filtering and
+other settings together. A second diagnostic audition separates two source
+controls while holding the readout steady:
+
+```text
+./gradlew :synth:generateVentIsolationAudition
+```
+
+| Clip | CHAOS | LEASH |
+| --- | ---: | ---: |
+| Low CHAOS · Strong LEASH | .15 | .95 |
+| High CHAOS · Strong LEASH | .8 | .95 |
+| Low CHAOS · Zero LEASH | .15 | 0 |
+| High CHAOS · Zero LEASH | .8 | 0 |
+
+All four are eight-second finite mono passages at C4, MIDI 60, velocity .8
+and seed 17. PUSH is zero. The seed scheme uses ROUND for every condition;
+model-1 equations, calibration, integration and LEASH correction serve every clip.
+The source readout is fixed and linear:
+
+```text
+source = .25 * ((.65 / 12) * X + (.15 / 12) * Y + (.30 / 60) * Z)
+```
+
+The coefficients remain identical at both CHAOS values; they do not depend
+on the orbit's `c` parameter. There is no tanh saturation, logarithmic Z
+compression or voice-specific drive. A fixed two-pole 10 kHz lowpass,
+12 Hz DC blocker and the standard antialias decimation condition the readout.
+Every clip has the same 6 ms raised-cosine attack, velocity exponent `.35`
+and raised-cosine release from 5.76 to 8 seconds. That ending fade is an
+envelope, so it should not be heard as evidence of the attractor losing
+energy on its own.
+
+`testkit/vent-isolation-audition/` contains four native and four matched
+PCM24 WAVs, four standalone experiment recipes, `manifest.json`,
+`diagnostics.json` and `isolation.zip`. Native playback applies the shared
+melodic level convention to the unsaturated readout; it is conditioned audio,
+not unlevelled state data. Matched playback uses the same .03 loudest-200-ms
+RMS audition target and .99 peak guard as the first pack. Each clip gets one
+scalar gain, preserving its evolving waveform and dynamics.
+
+The recipe's `experiment: "VENT_ISOLATION"`, experiment version and engine
+model distinguish this diagnostic path from normal `VentPatch`/`PadRecipe`
+rendering. It saves CHAOS, LEASH, note, velocity, seed, duration and the actual
+fixed readout/filter/envelope specification. The generator parses that
+specification, validates its fixed settings and rerenders through
+`Vent.renderIsolation`. It verifies exact floating-point bits for both raw
+and final samples in a direct repeat and a JSON-recipe replay. It also refuses
+clipped/nonfinite audio or emergency integration resets. SHA-256 hashes and
+Git HEAD/working-tree provenance accompany the assets. Model 1's ordinary
+voice output is unchanged by this separate experiment.
+
+Diagnostics include local pitch estimates, peak/RMS/DC/loudness and six
+500 ms body windows ending before the release. Each window records a local
+250 ms pitch estimate and a power-weighted spectral centroid from overlapping
+4096-point Hann FFTs. These measurements make changes over a sustained note
+inspectable; they do not establish pitch lock, alias freedom or sonic quality.
+
+Listen in Matched mode. Compare low and high CHAOS with the same LEASH first,
+then compare strong and zero LEASH at the same CHAOS. Listen for movement
+within each sustained body, as well as changes between clips. This is a
+listening experiment, not a new factory voice or a musical acceptance claim.
+Its assets and archive are separate from the original twelve-clip audition.

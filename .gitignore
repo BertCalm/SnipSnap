@@ -214,3 +214,6 @@ testkit/SnipSnap Skitter Kit/
 
 # VENT's regenerated dry audio, recipes, diagnostics and audition archive.
 testkit/vent-audition/
+
+# Four controlled, uncoloured VENT trajectory studies; generated for listening.
+testkit/vent-isolation-audition/
