@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.SmplChunk
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
@@ -13,9 +14,11 @@ import com.snipsnap.kit.KitExporter
 import com.snipsnap.kit.KitStore
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
+import java.security.MessageDigest
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.log10
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.Test
@@ -75,16 +78,73 @@ class BellowsTest {
     }
 
     @Test
-    fun `every timbral control changes the source after best-fit scalar gain is removed`() {
+    fun `remaining movement and rank controls change the source after scalar gain is removed`() {
         for (voice in BellowsVoice.entries) {
             val base = Bellows.defaults(voice) + mapOf("HOLD" to .4f, "MOTION" to .7f)
-            for (macro in Bellows.macrosFor(voice).map { it.name }.filter { it !in setOf("TUNE", "HOLD") }) {
+            for (macro in Bellows.macrosFor(voice).map { it.name }.filter { it !in setOf("TUNE", "HOLD", "BODY", "PRESSURE") }) {
                 val low = Bellows.renderRaw(voice, base + (macro to .1f)).samples
                 val high = Bellows.renderRaw(voice, base + (macro to .9f)).samples
                 val residual = BellowsTestAudio.scalarResidual(low, high)
                 println("BELLOWS $voice $macro residual: $residual")
                 assertTrue(residual > .015, "$voice $macro is silent or only a gain control ($residual)")
             }
+        }
+    }
+
+    @Test
+    fun `body and breath endpoints change matched harmonic spectra across C3 C4 and C5`() {
+        for (voice in BellowsVoice.entries) for (midi in listOf(48, 60, 72)) for (control in listOf("BODY", "PRESSURE")) {
+            val base = BellowsTestAudio.diagnosticMacros(voice, tune = 0f)
+            fun spectrum(value: Float, model: Int) = BellowsTestAudio.spectrum(BellowsTestAudio.matchedPcm(
+                Bellows.render(voice, base + (control to value), midi = midi,
+                    gesture = BellowsGesture.STEADY, model = model)).samples, Keys.midiHz(midi).toDouble())
+            val low = spectrum(0f, Bellows.MODEL_VERSION)
+            val high = spectrum(1f, Bellows.MODEL_VERSION)
+            val logDistance = BellowsTestAudio.logDistance(low, high)
+            val centroidFraction = abs(high.centroidHz / low.centroidHz - 1)
+            val legacyDistance = BellowsTestAudio.logDistance(spectrum(0f, 1), spectrum(1f, 1))
+            println("BELLOWS model2 $voice MIDI$midi $control matched: centroid ${low.centroidHz}->${high.centroidHz} Hz, " +
+                "normalized harmonic log distance $logDistance dB (model1 $legacyDistance dB)")
+            // A phase-only change or a scalar gain cannot pass either spectral measure. This is an
+            // engineering regression bar for the stronger map, not a verdict on musical quality.
+            assertTrue(logDistance >= 3.0 || centroidFraction >= .25,
+                "$voice MIDI$midi $control stayed spectrally narrow after matching: $logDistance dB, centroid shift $centroidFraction")
+            assertTrue(low.harmonics.sum() > .99 && high.harmonics.sum() > .99, "$voice $control lost its pitched source")
+        }
+    }
+
+    @Test
+    fun `model one remains byte exact for finite and held recipes and absent model metadata means one`() {
+        val fingerprints = mapOf(
+            BellowsVoice.CHAMBER to listOf("7f15972308274ae073421ffbf6a845df0f48e287a1f0fdd371c31786997066c2", "197a2c570d505a38e157a4bf7492951344dbb0fbf1ec0b1d479d70fcf2deaf69"),
+            BellowsVoice.COUNTER to listOf("de2d5d8fafa2e87a04586cdfd23061cbfe66a4b0bbcbde3be4e01e147073a8e0", "cbb39d6cb35714d2d3457c949625d0af4911bf9d8004e0d6a5cb146521cb4b38"),
+            BellowsVoice.FOLK to listOf("98a26d6d847da232069fbe139ee3b05e230deec3e888e57e76372030e2355d75", "50fa9e9cafd934144a684b56e7ccbb9d95723877c25a3ccea0fcbaec61ee99dd"),
+            BellowsVoice.WHEEL to listOf("e7eb3710ede5d0e9f0f89e365d257dc1a582b9c1c0ad11d3731bebb1f380814d", "1464b8071946af54df86970a3c24394c7868917791b6df1944ed130b41909b28"),
+        )
+        for (voice in BellowsVoice.entries) for ((index, hold) in listOf(.3f, 1f).withIndex()) {
+            if (index == 0) assertContentEquals(
+                Bellows.render(voice, BellowsV1.defaults(voice), model = 1).samples,
+                Bellows.render(voice, Bellows.defaults(voice), model = Bellows.MODEL_VERSION).samples,
+                "$voice original default source/body anchors changed between models",
+            )
+            val values = mapOf("TUNE" to .5f, "PRESSURE" to .6f, "BODY" to .7f, "MOTION" to .35f,
+                "HOLD" to hold, "REGISTER" to .5f, "BEAT" to .3f, "DIRECTION" to .7f, "DRONE" to .4f, "BUZZ" to .5f)
+            val macros = values.filterKeys { it in BellowsV1.defaults(voice) }
+            val patch = BellowsPatch("Legacy $voice", voice, macros, velocity = .7f, model = 1, gesture = BellowsGesture.ACCENT)
+            val raw = Bellows.renderRaw(voice, macros, velocity = .7f, model = 1, gesture = BellowsGesture.ACCENT)
+            assertContentEquals(BellowsV1.renderRaw(voice, macros, velocity = .7f, gesture = BellowsGesture.ACCENT).samples, raw.samples)
+            val digest = MessageDigest.getInstance("SHA-256")
+            for (sample in raw.samples) {
+                val bits = sample.toRawBits()
+                for (shift in listOf(24, 16, 8, 0)) digest.update((bits ushr shift).toByte())
+            }
+            val hash = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+            assertEquals(fingerprints.getValue(voice)[index], hash, "$voice HOLD $hold changed its published model1 source")
+            val json = JsonValue.Obj(LinkedHashMap(patch.toJsonValue().entries).also { it.remove("model") })
+            val restored = BellowsPatch.fromJsonValue(json) as BellowsPatch
+            assertEquals(1, restored.model)
+            assertEquals(patch, restored)
+            assertContentEquals(patch.render().samples, PadRecipe.fromJsonText(PadRecipe(restored).toJsonText()).render().samples)
         }
     }
 
@@ -199,6 +259,66 @@ class BellowsTest {
 
 /** Measures audio rather than comparing a duplicated loop with itself. Shared with the audition manifest. */
 internal object BellowsTestAudio {
+    fun matchedPcm(snip: Snip): Snip {
+        val bytes = ByteArrayOutputStream().also {
+            WavWriter.write(it, AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+        }.toByteArray()
+        return WavReader.read(bytes)
+    }
+
+    fun diagnosticMacros(voice: BellowsVoice, tune: Float = .5f): Map<String, Float> =
+        Bellows.defaults(voice) + mapOf("HOLD" to .45f, "TUNE" to tune, "MOTION" to 0f) +
+            Bellows.defaults(voice).keys.filter { it in setOf("BEAT", "DRONE", "BUZZ") }.associateWith { 0f }
+
+    data class Spectrum(val centroidHz: Double, val harmonics: DoubleArray)
+
+    /** Body-window magnitudes: insensitive to phase, with a shared note/seed and gain normalization. */
+    fun spectrum(samples: FloatArray, hz: Double): Spectrum {
+        val from = minOf((.35 * Dsp.RATE).toInt(), samples.size / 4)
+        val n = minOf((.3 * Dsp.RATE).toInt(), samples.size - from)
+        require(n > 1)
+        val windowed = DoubleArray(n) { i -> samples[from + i] * (.5 - .5 * cos(2 * PI * i / (n - 1))) }
+        var fftSize = 1
+        while (fftSize < n) fftSize *= 2
+        val real = FloatArray(fftSize)
+        val imaginary = FloatArray(fftSize)
+        for (i in windowed.indices) real[i] = windowed[i].toFloat()
+        Fft.forward(real, imaginary)
+        var energy = 0.0
+        var weightedHz = 0.0
+        for (bin in 1 until fftSize / 2) {
+            val magnitude = sqrt(real[bin].toDouble() * real[bin] + imaginary[bin].toDouble() * imaginary[bin])
+            energy += magnitude
+            weightedHz += magnitude * bin * Dsp.RATE / fftSize
+        }
+        val harmonics = DoubleArray(20) { k ->
+            var re = 0.0
+            var im = 0.0
+            for (i in 0 until n) {
+                val phase = 2 * PI * hz * (k + 1) * i / Dsp.RATE
+                re += windowed[i] * cos(phase)
+                im += windowed[i] * sin(phase)
+            }
+            sqrt(re * re + im * im)
+        }
+        val sum = harmonics.sum().coerceAtLeast(1e-15)
+        for (i in harmonics.indices) harmonics[i] /= sum
+        return Spectrum(weightedHz / energy.coerceAtLeast(1e-15), harmonics)
+    }
+
+    /** Weighted RMS dB distance after normalizing harmonic amplitudes; a -60 dB floor avoids noise-floor claims. */
+    fun logDistance(a: Spectrum, b: Spectrum): Double {
+        var weighted = 0.0
+        var weight = 0.0
+        for (i in a.harmonics.indices) {
+            val w = (a.harmonics[i] + b.harmonics[i]) * .5
+            val db = 20 * log10(a.harmonics[i].coerceAtLeast(.001) / b.harmonics[i].coerceAtLeast(.001))
+            weighted += w * db * db
+            weight += w
+        }
+        return sqrt(weighted / weight.coerceAtLeast(1e-15))
+    }
+
     fun rms(x: FloatArray, from: Int = 0, to: Int = x.size): Double {
         val a = from.coerceIn(0, x.size)
         val b = to.coerceIn(a, x.size)

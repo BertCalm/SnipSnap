@@ -18,45 +18,56 @@ import kotlin.math.roundToInt
 /** Dry, reproducible source renders for listening. The website reads manifest.json directly. */
 object BellowsAuditionGenerator {
     private data class Clip(val id: String, val title: String, val section: String,
-        val description: String, val patch: BellowsPatch)
+        val description: String, val patch: BellowsPatch, val comparison: Comparison? = null,
+        val joinedWith: BellowsPatch? = null)
+    private data class Comparison(val parameter: String, val endpoint: String, val value: Float?,
+        val pairId: String, val lowLabel: String, val highLabel: String)
+    private const val COMPARISON_GAP_SECONDS = .25
 
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.none { it.startsWith("--") }) { "BELLOWS audition accepts an output directory only" }
         val root = File(args.firstOrNull() ?: "../testkit/bellows-audition").also { it.mkdirs() }
         File(root, "wav").mkdirs()
-        val specs = firstListen() + comparisons()
+        val specs = bodyBreathComparisons() + firstListen() + comparisons()
         val clips = ArrayList<JsonValue>()
         val patches = ArrayList<JsonValue>()
         val firstListenFiles = ArrayList<File>()
+        val bodyBreathFiles = ArrayList<File>()
         for ((index, spec) in specs.withIndex()) {
             val p = spec.patch
+            val id = "${spec.id}-m${p.model}"
             val rawSource = Bellows.renderRaw(p.voice, p.macros, p.midi, p.velocity, p.gesture, p.model)
             val nativeSource = p.render()
+            val secondRaw = spec.joinedWith?.let { Bellows.renderRaw(it.voice, it.macros, it.midi, it.velocity, it.gesture, it.model) }
+            val secondNative = spec.joinedWith?.render()
             require(rawSource.sampleRate == 44_100 && nativeSource.sampleRate == 44_100) { "${spec.id}: wrong sample rate" }
             require(rawSource.channels == 1 && nativeSource.channels == 1) { "${spec.id}: wrong channel count" }
             require(rawSource.samples.all { it.isFinite() && abs(it) <= 1f }) { "${spec.id}: unsafe raw PCM" }
             require(nativeSource.samples.all { it.isFinite() && abs(it) <= 1f }) { "${spec.id}: unsafe native PCM" }
+            require(secondRaw?.samples?.all { it.isFinite() && abs(it) <= 1f } != false) { "${spec.id}: unsafe second raw PCM" }
+            require(secondNative?.samples?.all { it.isFinite() && abs(it) <= 1f } != false) { "${spec.id}: unsafe second native PCM" }
             val held = Bellows.isLoop(p.macros.getValue("HOLD"))
             // Four passes give ears time to catch a click or a loop that loses its motion.
-            val raw = if (held) repeat(rawSource, 4) else rawSource
-            val native = if (held) repeat(nativeSource, 4) else nativeSource
-            val matched = AuditionLevel.level(native)
+            val raw = if (secondRaw != null) join(rawSource, secondRaw) else if (held) repeat(rawSource, 4) else rawSource
+            val native = if (secondNative != null) join(nativeSource, secondNative) else if (held) repeat(nativeSource, 4) else nativeSource
+            // Each A/B note reaches the same shared loudest-window target before concatenation.
+            val matched = if (secondNative != null) join(AuditionLevel.level(nativeSource), AuditionLevel.level(secondNative)) else AuditionLevel.level(native)
             val midi = p.midi + (p.macros.getValue("TUNE") * Bellows.TUNE_SEMITONES).roundToInt()
             val sampler = SmplChunk(midi,
                 if (held) SmplChunk.Loop(nativeSource.frameCount.toLong(), native.frameCount.toLong()) else null)
-            val file = "wav/${spec.id}.wav"
-            val rawFile = "wav/${spec.id}-raw.wav"
+            val file = "wav/$id.wav"
+            val rawFile = "wav/$id-raw.wav"
             WavWriter.write(File(root, file), matched, WavWriter.BitDepth.PCM_16, smpl = sampler)
             WavWriter.write(File(root, rawFile), raw, WavWriter.BitDepth.PCM_16, smpl = sampler)
             val decoded = WavReader.read(File(root, file))
             require(decoded.samples.all { it.isFinite() && abs(it) <= 1f }) { "${spec.id}: exported PCM failed" }
             val metrics = linkedMapOf<String, JsonValue>(
-                "peak" to num(nativeSource.peak()), "rms" to num(BellowsTestAudio.rms(nativeSource.samples)),
-                "loudest200ms" to num(Loudness.of(nativeSource)), "rawPeak" to num(rawSource.peak()),
-                "rawRms" to num(BellowsTestAudio.rms(rawSource.samples)), "matchedPeak" to num(decoded.peak()),
+                "peak" to num(native.peak()), "rms" to num(BellowsTestAudio.rms(native.samples)),
+                "loudest200ms" to num(Loudness.of(native)), "rawPeak" to num(raw.peak()),
+                "rawRms" to num(BellowsTestAudio.rms(raw.samples)), "matchedPeak" to num(decoded.peak()),
                 "matchedLoudest200ms" to num(Loudness.of(decoded)), "finite" to JsonValue.Bool(true),
-                "sourceDurationSeconds" to num(nativeSource.frameCount.toDouble() / 44_100),
+                "sourceDurationSeconds" to num((if (secondNative != null) native.frameCount else nativeSource.frameCount).toDouble() / 44_100),
             )
             if (held) {
                 val quantizedLoop = decoded.samples.copyOfRange(0, nativeSource.frameCount)
@@ -71,11 +82,13 @@ object BellowsAuditionGenerator {
                 metrics["measuredHz"] = num(hz)
                 metrics["pitchCents"] = num(FineTuning.cents(hz, expected))
             }
-            val pressure = (0..400).map { Bellows.pressureAt(p.voice, p.macros, it / 400.0, p.velocity, p.gesture, held) }
+            val pressure = (listOf(p) + listOfNotNull(spec.joinedWith)).flatMap { source ->
+                (0..400).map { Bellows.pressureAt(source.voice, source.macros, it / 400.0, source.velocity, source.gesture, held) }
+            }
             metrics["pressureMin"] = num(pressure.min())
             metrics["pressureMax"] = num(pressure.max())
-            clips += JsonValue.Obj(linkedMapOf(
-                "id" to str(spec.id), "title" to str(spec.title), "voice" to str(p.voice.name),
+            val clipFields = linkedMapOf<String, JsonValue>(
+                "id" to str(id), "title" to str(spec.title), "voice" to str(p.voice.name),
                 "section" to str(spec.section), "description" to str(spec.description),
                 "file" to str(file), "rawFile" to str(rawFile),
                 "durationSeconds" to num(decoded.frameCount.toDouble() / 44_100),
@@ -84,30 +97,67 @@ object BellowsAuditionGenerator {
                 "loopStartFrame" to num(if (held) nativeSource.frameCount else 0),
                 "macros" to JsonValue.Obj(LinkedHashMap(p.macros.mapValues { num(it.value) })),
                 "metrics" to JsonValue.Obj(metrics),
-            ))
-            patches += JsonValue.Obj(linkedMapOf("id" to str(spec.id), "patch" to p.toJsonValue()))
+            )
+            spec.comparison?.let { comparison ->
+                val fields = linkedMapOf<String, JsonValue>(
+                    "parameter" to str(comparison.parameter), "endpoint" to str(comparison.endpoint),
+                    "value" to (comparison.value?.let { num(it) } ?: JsonValue.Null), "pairId" to str(comparison.pairId),
+                    "lowLabel" to str(comparison.lowLabel), "highLabel" to str(comparison.highLabel),
+                )
+                val lowSpectrum = BellowsTestAudio.spectrum(decoded.samples.copyOfRange(0, nativeSource.frameCount), Keys.midiHz(midi).toDouble())
+                if (secondNative != null) {
+                    val secondStart = nativeSource.frameCount + (COMPARISON_GAP_SECONDS * 44_100).roundToInt()
+                    val highSpectrum = BellowsTestAudio.spectrum(decoded.samples.copyOfRange(secondStart, decoded.samples.size), Keys.midiHz(midi).toDouble())
+                    metrics["lowSpectralCentroidHz"] = num(lowSpectrum.centroidHz)
+                    metrics["highSpectralCentroidHz"] = num(highSpectrum.centroidHz)
+                    metrics["comparisonHarmonicLogDistanceDb"] = num(BellowsTestAudio.logDistance(lowSpectrum, highSpectrum))
+                    val firstSeconds = nativeSource.frameCount.toDouble() / 44_100
+                    fields["segments"] = JsonValue.Arr(listOf(
+                        JsonValue.Obj(linkedMapOf("label" to str("A · ${comparison.lowLabel}"), "startSeconds" to num(0),
+                            "durationSeconds" to num(firstSeconds), "value" to num(0))),
+                        JsonValue.Obj(linkedMapOf("label" to str("B · ${comparison.highLabel}"),
+                            "startSeconds" to num(firstSeconds + COMPARISON_GAP_SECONDS),
+                            "durationSeconds" to num(secondNative.frameCount.toDouble() / 44_100), "value" to num(1))),
+                    ))
+                    fields["patches"] = JsonValue.Arr(listOf(p.toJsonValue(), requireNotNull(spec.joinedWith).toJsonValue()))
+                    clipFields["pairSegments"] = fields.getValue("segments")
+                } else metrics["matchedSpectralCentroidHz"] = num(lowSpectrum.centroidHz)
+                clipFields["comparison"] = JsonValue.Obj(fields)
+            }
+            clips += JsonValue.Obj(clipFields)
+            val patchFields = linkedMapOf<String, JsonValue>("id" to str(id), "patch" to p.toJsonValue())
+            spec.joinedWith?.let { patchFields["joinedWith"] = it.toJsonValue() }
+            patches += JsonValue.Obj(patchFields)
             if (spec.section == "first-listen") {
                 firstListenFiles += File(root, file)
                 firstListenFiles += File(root, rawFile)
             }
-            println("BELLOWS ${index + 1}/${specs.size}: ${spec.id} (${String.format(Locale.ROOT, "%.2f", decoded.frameCount.toDouble() / 44_100)} s)")
+            if (spec.section == "body-breath") bodyBreathFiles += listOf(File(root, file), File(root, rawFile))
+            println("BELLOWS ${index + 1}/${specs.size}: $id (${String.format(Locale.ROOT, "%.2f", decoded.frameCount.toDouble() / 44_100)} s)")
         }
-        val patchFile = File(root, "patches.json")
+        val patchFile = File(root, "patches-m${Bellows.MODEL_VERSION}.json")
         patchFile.writeText(Json.write(JsonValue.Obj(linkedMapOf(
             "engine" to str("BELLOWS"), "model" to num(Bellows.MODEL_VERSION), "patches" to JsonValue.Arr(patches),
         ))))
+        patchFile.copyTo(File(root, "patches.json"), overwrite = true)
         val manifest = JsonValue.Obj(linkedMapOf(
             "engine" to str("BELLOWS"), "title" to str("Bellows — first listen"),
             "model" to num(Bellows.MODEL_VERSION), "sampleRate" to num(44_100), "bitDepth" to num(16),
             "rawSourceHeadroom" to num(Bellows.RAW_SOURCE_HEADROOM),
             "description" to str("Four original reed-and-wheel voices, dry from the SnipSnap Kotlin engine. Matched clips share the repository's audition loudness; raw clips preserve source dynamics. Gestures are rendered performances, and held examples repeat a settled source loop four times."),
-            "firstListenZip" to str("Bellows-first-listen.zip"), "patches" to str("patches.json"),
+            "firstListenZip" to str("Bellows-first-listen-m${Bellows.MODEL_VERSION}.zip"),
+            "bodyBreathZip" to str("Bellows-body-breath-m${Bellows.MODEL_VERSION}.zip"), "patches" to str(patchFile.name),
             "clips" to JsonValue.Arr(clips),
         ))
         File(root, "manifest.json").writeText(Json.write(manifest))
         val firstListenManifest = File(root, "first-listen-manifest.json").also {
             it.writeText(Json.write(JsonValue.Obj(LinkedHashMap(manifest.entries).also { fields ->
-                fields["clips"] = JsonValue.Arr(clips.take(8))
+                fields["clips"] = JsonValue.Arr(clips.filter { it.obj()["section"]?.str() == "first-listen" })
+            })))
+        }
+        val focusedManifest = File(root, "body-breath-manifest.json").also {
+            it.writeText(Json.write(JsonValue.Obj(LinkedHashMap(manifest.entries).also { fields ->
+                fields["clips"] = JsonValue.Arr(clips.filter { it.obj()["section"]?.str() == "body-breath" })
             })))
         }
         File(root, "README.txt").writeText("""
@@ -115,23 +165,22 @@ object BellowsAuditionGenerator {
             Eight original dry presets from SnipSnap, plus their raw source renders.
             WAV: mono, 44.1 kHz, PCM16. Matched uses AuditionLevel.level, the shared repository listening rule.
             Raw preserves source excitation dynamics before the engine's output leveling.
+            Body & breath compares true 0/1 endpoints and 0/.25/.5/.75/1 sweeps with STEADY gesture,
+            MOTION/BEAT/DRONE/BUZZ at zero and the other controls held at voice defaults.
+            Joined files play matched A (zero), a 250 ms gap, then matched B (full).
+            BODY zero bypasses enclosure coloring; PRESSURE zero means gentle excitation, not silence.
             No external rack effects or external sound source was applied. Nonlinearity inside a voice is part of its source model.
-            patches.json records every audition recipe, including MIDI base, velocity, gesture and model.
+            ${patchFile.name} records every audition recipe, including MIDI base, velocity, gesture and model.
             The manifest's MIDI field is the sounded root after TUNE. The patch's MIDI field is its saved base.
             Held clips play four source periods; WAV smpl metadata carries root and loop frames.
             WHEEL's tracking octave/fifth bed is a rendered source component. When a sampler repitches the whole WAV,
             that bed follows it. These examples do not implement a separate global drone or live bellows input.
             Reproduce: ./gradlew :synth:generateBellowsAudition
         """.trimIndent() + "\n")
-        ZipOutputStream(File(root, "Bellows-first-listen.zip").outputStream().buffered()).use { zip ->
-            val files = firstListenFiles + listOf(patchFile, firstListenManifest, File(root, "README.txt"))
-            for (file in files.sortedBy { it.relativeTo(root).invariantSeparatorsPath }) {
-                val entry = ZipEntry(file.relativeTo(root).invariantSeparatorsPath).also { it.time = 0 }
-                zip.putNextEntry(entry)
-                file.inputStream().use { it.copyTo(zip) }
-                zip.closeEntry()
-            }
-        }
+        writeZip(root, "Bellows-first-listen-m${Bellows.MODEL_VERSION}.zip",
+            firstListenFiles + listOf(patchFile, firstListenManifest, File(root, "README.txt")))
+        writeZip(root, "Bellows-body-breath-m${Bellows.MODEL_VERSION}.zip",
+            bodyBreathFiles + listOf(patchFile, focusedManifest, File(root, "README.txt")))
         for (asset in listOf("index.html", "styles.css", "app.js")) {
             val resource = BellowsAuditionGenerator::class.java.getResourceAsStream("/bellows-audition/$asset")
                 ?: error("missing BELLOWS audition resource /bellows-audition/$asset")
@@ -150,6 +199,40 @@ object BellowsAuditionGenerator {
         Clip("preset-${i + 1}-${slug(p.name)}", p.name, "first-listen", explanation, p)
     }
 
+    /** Same phase seed and player contour at every control position; only the named macro changes. */
+    private fun bodyBreathComparisons(): List<Clip> {
+        val joined = ArrayList<Clip>()
+        val steps = ArrayList<Clip>()
+        for (voice in BellowsVoice.entries) for (macro in listOf("BODY", "PRESSURE")) {
+            val parameter = slug(macro)
+            val pairId = "${slug(voice.name)}-$parameter-m${Bellows.MODEL_VERSION}"
+            val lowLabel = if (macro == "BODY") "No body" else "Gentle breath"
+            val highLabel = if (macro == "BODY") "Full body" else "Full breath"
+            val base = BellowsPatch("${display(voice.name)} ${if (macro == "BODY") "body" else "breath"}", voice,
+                BellowsTestAudio.diagnosticMacros(voice), gesture = BellowsGesture.STEADY)
+            fun patch(value: Float) = base.copy(macros = base.macros + (macro to value))
+            joined += Clip("${slug(voice.name)}-$parameter-ab", "${display(voice.name)} · $lowLabel → $highLabel",
+                "body-breath", "A plays $lowLabel at ${macro}=0, then a 250 ms gap, then B plays $highLabel at ${macro}=1. " +
+                    "Each note uses the same matched loudness and fixed player gesture; compare the tone, not its volume.",
+                patch(0f), Comparison(parameter, "joined", null, pairId, lowLabel, highLabel), patch(1f))
+            for (value in listOf(0f, .25f, .5f, .75f, 1f)) {
+                val percent = (value * 100).roundToInt()
+                val label = when (value) {
+                    0f -> lowLabel
+                    1f -> highLabel
+                    else -> "${if (macro == "BODY") "Body" else "Breath"} $percent%"
+                }
+                steps += Clip("${slug(voice.name)}-$parameter-step-$percent", "${display(voice.name)} · $label",
+                    "body-breath", "${macro}=$value. STEADY player, no motion, reed beat, drone or bridge buzz; all other controls stay at the voice's defaults. " +
+                        if (macro == "PRESSURE" && value == 0f) "Zero is gentle positive excitation, so the reed can still be compared at matched loudness." else
+                            "Compare the source spectrum at the same listening level.",
+                    patch(value), Comparison(parameter, if (value == 0f) "low" else if (value == 1f) "high" else "step",
+                        value, pairId, lowLabel, highLabel))
+            }
+        }
+        return joined + steps
+    }
+
     private fun comparisons(): List<Clip> = buildList {
         fun base(voice: BellowsVoice) = BellowsPatch("Audition $voice", voice,
             Bellows.defaults(voice) + mapOf("HOLD" to .45f, "TUNE" to .5f))
@@ -161,12 +244,6 @@ object BellowsAuditionGenerator {
             }
         }
         for (voice in BellowsVoice.entries) {
-            addPair(voice, "PRESSURE", .18f, .85f, "Light breath", "Strong breath",
-                "Compare reed color and onset at light excitation. The matched file removes the simple loudness advantage.",
-                "Listen for upper reeds opening and the firmer breath; compare raw files to hear the source dynamics.")
-            addPair(voice, "BODY", .12f, .88f, "Small body", "Full body",
-                "Listen for a drier, smaller resonant enclosure around the same note.",
-                "Listen for the body resonances reshaping the same reed source.")
             addPair(voice, "MOTION", 0f, .85f, "Still motion", "Moving breath",
                 "Listen to the still source before adding periodic breath or wrist movement.",
                 "Listen for motion within the sustained note; its rate is independent of the TUNE pitch.")
@@ -229,6 +306,26 @@ object BellowsAuditionGenerator {
 
     private data class Threshold(val id: String, val title: String, val pressure: Float, val motion: Float,
         val gesture: BellowsGesture)
+
+    private fun join(first: Snip, second: Snip): Snip {
+        require(first.sampleRate == second.sampleRate && first.channels == second.channels)
+        val gap = (COMPARISON_GAP_SECONDS * first.sampleRate).roundToInt() * first.channels
+        val samples = FloatArray(first.samples.size + gap + second.samples.size)
+        first.samples.copyInto(samples)
+        second.samples.copyInto(samples, first.samples.size + gap)
+        return Snip(samples, first.channels, first.sampleRate)
+    }
+
+    private fun writeZip(root: File, name: String, files: List<File>) {
+        ZipOutputStream(File(root, name).outputStream().buffered()).use { zip ->
+            for (file in files.sortedBy { it.relativeTo(root).invariantSeparatorsPath }) {
+                val entry = ZipEntry(file.relativeTo(root).invariantSeparatorsPath).also { it.time = 0 }
+                zip.putNextEntry(entry)
+                file.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+    }
 
     private fun repeat(snip: Snip, count: Int): Snip = Snip(FloatArray(snip.samples.size * count) {
         snip.samples[it % snip.samples.size]

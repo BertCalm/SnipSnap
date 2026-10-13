@@ -16,30 +16,35 @@
   const volumeValue = document.getElementById('volume-value');
 
   const collections = {
+    'body-breath': {
+      eyebrow: '01 / BODY & BREATH',
+      title: 'Hear the full range.',
+      description: 'The same note and gesture at both ends of each control. Play A and B separately, or listen to A then B.'
+    },
     'first-listen': {
-      eyebrow: '01 / MEET THE VOICES',
+      eyebrow: '02 / MEET THE VOICES',
       title: 'Find your first favorite.',
       description: 'Two sounds from each family. Listen for the reeds, the air, and the motion.'
     },
     control: {
-      eyebrow: '02 / ONE CHANGE AT A TIME',
+      eyebrow: '03 / ONE CHANGE AT A TIME',
       title: 'Follow the change.',
       description: 'Compare pressure, body, reed beating, direction, and buzz. Keep your ear on what moves.'
     },
     notes: {
-      eyebrow: '03 / ACROSS THE KEYBOARD',
+      eyebrow: '04 / ACROSS THE KEYBOARD',
       title: 'Different notes. Different touch.',
       description: 'Hear how the voices respond across pitch and playing strength.'
     },
     hold: {
-      eyebrow: '04 / LET IT SETTLE',
+      eyebrow: '05 / LET IT SETTLE',
       title: 'Give the sound some time.',
       description: 'A pad plays each sound once. Turn on Repeat for a longer listen to a loop; a held keyboard voice needs its own sustain path.'
     }
   };
   const familyNumbers = { CHAMBER: '01', COUNTER: '02', FOLK: '03', WHEEL: '04' };
   let clips = [];
-  let section = 'first-listen';
+  let section = 'body-breath';
   let family = 'all';
   let levelMode = 'matched';
   let selectedId = null;
@@ -62,6 +67,7 @@
 
   function normalizeSection(value) {
     const normalized = String(value || 'first-listen').toLowerCase().replace(/[_\s]+/g, '-');
+    if (/^(?:body-breath|body-and-breath)$/.test(normalized)) return 'body-breath';
     if (/^(?:first-listen|first|presets?|identity|audition)$/.test(normalized)) return 'first-listen';
     if (/pitch|velocity|note|touch/.test(normalized)) return 'notes';
     if (/(?:^|-)(?:held|hold|loop|sustain)(?:-|$)/.test(normalized)) return 'hold';
@@ -82,6 +88,34 @@
   function visibleClips() { return clips.filter(clip => clip.collection === section && (family === 'all' || clip.voice === family)); }
   function sourceFor(clip) { return levelMode === 'raw' && clip.rawFile ? clip.rawFile : clip.file; }
   function isLoop(clip) { return clip.collection === 'hold' && (clip.loop !== false && clip.loopable !== false); }
+  function comparisonName(comparison) { return comparison.parameter === 'pressure' ? 'BREATH' : 'BODY'; }
+  function comparisonDescription(comparison) {
+    if (comparison.endpoint === 'joined') return 'First A, a short pause, then B. The same note and playing gesture.';
+    if (comparison.endpoint === 'step') return 'An intermediate setting between the two endpoints. Follow the change by ear.';
+    if (comparison.parameter === 'body') return comparison.endpoint === 'low' ? 'The direct voice, with the enclosure bypassed.' : 'The same note through the full enclosure.';
+    return comparison.endpoint === 'low' ? 'Gentle breath still plays a pitched note.' : 'The same note at the top of the breath control.';
+  }
+  function downloadName(file) {
+    try { return decodeURIComponent(new URL(file, window.location.href).pathname.split('/').pop()); }
+    catch (_) { return String(file).split('/').pop().split('?')[0]; }
+  }
+
+  function normalizeComparison(value, voice) {
+    if (!value || typeof value !== 'object' || !['body', 'pressure'].includes(String(value.parameter).toLowerCase())) return null;
+    const parameter = String(value.parameter).toLowerCase();
+    const endpoint = String(value.endpoint || 'step').toLowerCase();
+    const numericValue = value.value !== null && value.value !== undefined ? Number(value.value) : null;
+    return {
+      ...value,
+      parameter,
+      endpoint: ['low', 'high', 'joined', 'step'].includes(endpoint) ? endpoint : 'step',
+      value: Number.isFinite(numericValue) ? numericValue : null,
+      pairId: String(value.pairId || `${voice.toLowerCase()}-${parameter}`),
+      lowLabel: String(value.lowLabel || (parameter === 'body' ? 'No body' : 'Gentle breath')),
+      highLabel: String(value.highLabel || (parameter === 'body' ? 'Full body' : 'Full breath')),
+      segments: Array.isArray(value.segments) ? value.segments.filter(segment => segment && Number.isFinite(Number(segment.startSeconds)) && Number.isFinite(Number(segment.durationSeconds))).map(segment => ({ ...segment, startSeconds: Number(segment.startSeconds), durationSeconds: Number(segment.durationSeconds), label: String(segment.label || '') })) : []
+    };
+  }
 
   function timeLabel(seconds) {
     const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
@@ -120,14 +154,18 @@
       card.root.classList.toggle('selected', selected);
       card.root.classList.toggle('playing', active);
       card.seek.hidden = !selected;
-      card.playText.textContent = selected && loadingAudio ? 'Loading' : active ? 'Pause' : 'Play';
+      card.playText.textContent = selected && loadingAudio ? 'Loading' : active ? 'Pause' : card.clip.comparison?.endpoint === 'joined' ? 'A → B' : 'Play';
       card.playIcon.textContent = active ? 'Ⅱ' : '▶';
       card.play.setAttribute('aria-label', `${active ? 'Pause' : 'Play'} ${card.clip.title}`);
       card.play.setAttribute('aria-pressed', active ? 'true' : 'false');
       card.stop.disabled = !selected;
       card.download.href = sourceFor(card.clip);
-      card.download.download = sourceFor(card.clip).split('/').pop();
+      card.download.download = downloadName(sourceFor(card.clip));
       if (card.repeat) card.repeat.setAttribute('aria-pressed', repeats.get(id) ? 'true' : 'false');
+      if (!selected || !playing) for (const segment of card.segments) {
+        segment.node.classList.remove('active');
+        segment.node.removeAttribute('aria-current');
+      }
     }
     updateSeek();
   }
@@ -141,6 +179,12 @@
     if (!isSeeking) card.slider.value = String(Math.min(audio.currentTime || 0, length || 0));
     card.time.textContent = `${timeLabel(audio.currentTime)} / ${timeLabel(length)}`;
     card.slider.setAttribute('aria-valuetext', `${timeLabel(audio.currentTime)} of ${timeLabel(length)}`);
+    for (const segment of card.segments) {
+      const active = audio.currentTime >= segment.startSeconds && audio.currentTime < segment.startSeconds + segment.durationSeconds && !audio.paused;
+      segment.node.classList.toggle('active', active);
+      if (active) segment.node.setAttribute('aria-current', 'true');
+      else segment.node.removeAttribute('aria-current');
+    }
   }
 
   function stopAudio(message = 'Stopped') {
@@ -219,6 +263,9 @@
 
   function buildCard(clip, index) {
     const card = el('article', 'clip-card');
+    const comparison = clip.collection === 'body-breath' ? clip.comparison : null;
+    if (comparison) card.classList.add('comparison-card');
+    if (comparison?.endpoint === 'joined') card.classList.add('joined-card');
     card.dataset.family = clip.voice;
     const topline = el('div', 'card-topline');
     const tag = el('span', 'family-tag');
@@ -226,10 +273,33 @@
     dot.setAttribute('aria-hidden', 'true');
     tag.append(dot, document.createTextNode(`${familyNumbers[clip.voice] || '—'} / ${clip.voice}`));
     topline.append(tag, el('span', 'card-number', String(index + 1).padStart(2, '0')));
-    const heading = el('h3', '', clip.title);
+    let cardTitle = clip.title;
+    if (comparison?.endpoint === 'low') cardTitle = comparison.lowLabel;
+    if (comparison?.endpoint === 'high') cardTitle = comparison.highLabel;
+    if (comparison?.endpoint === 'joined') cardTitle = 'A then B';
+    if (comparison?.endpoint === 'step') cardTitle = `${comparisonName(comparison)} ${Math.round(comparison.value * 100)}%`;
+    const heading = el('h3', '', cardTitle);
     heading.id = `clip-title-${index}`;
     card.setAttribute('aria-labelledby', heading.id);
-    card.append(topline, heading, el('p', 'card-description', clip.description || 'A dry voice from the BELLOWS prototype.'));
+    card.append(topline);
+    if (comparison) {
+      const marker = comparison.endpoint === 'joined' ? `${comparisonName(comparison)} / FULL-RANGE A–B` : `${comparison.endpoint === 'low' ? 'A / ' : comparison.endpoint === 'high' ? 'B / ' : ''}${comparisonName(comparison)} ${comparison.value === null ? '' : `${Math.round(comparison.value * 100)}%`}`;
+      card.append(el('div', 'endpoint-marker', marker));
+    }
+    card.append(heading, el('p', 'card-description', comparison ? comparisonDescription(comparison) : clip.description || 'A dry voice from the BELLOWS prototype.'));
+    const segments = [];
+    if (comparison?.endpoint === 'joined') {
+      const route = el('div', 'comparison-route');
+      const labels = [comparison.lowLabel, comparison.highLabel];
+      for (let segmentIndex = 0; segmentIndex < 2; segmentIndex += 1) {
+        if (segmentIndex) route.append(el('span', 'route-arrow', '→'));
+        const segment = comparison.segments[segmentIndex];
+        const label = el('span', 'route-segment', segment?.label || `${segmentIndex ? 'B' : 'A'} · ${labels[segmentIndex]}`);
+        route.append(label);
+        if (segment) segments.push({ node: label, startSeconds: segment.startSeconds, durationSeconds: segment.durationSeconds });
+      }
+      card.append(route);
+    }
     const metadata = el('div', 'clip-metadata');
     const note = noteLabel(clip.midi);
     if (note) metadata.append(el('span', '', note));
@@ -244,7 +314,7 @@
     play.setAttribute('aria-pressed', 'false');
     const playIcon = el('span', 'play-icon', '▶');
     playIcon.setAttribute('aria-hidden', 'true');
-    const playText = el('span', '', 'Play');
+    const playText = el('span', '', comparison?.endpoint === 'joined' ? 'A → B' : 'Play');
     play.append(playIcon, playText);
     play.addEventListener('click', () => playClip(clip));
     const stop = el('button', 'clip-stop', '■');
@@ -303,15 +373,62 @@
     seek.append(seekRow);
     card.append(seek);
     addRecipe(card, clip);
-    viewCards.set(clip.id, { root: card, clip, play, playIcon, playText, stop, download, repeat, seek, slider, time });
+    viewCards.set(clip.id, { root: card, clip, play, playIcon, playText, stop, download, repeat, seek, slider, time, segments });
     return card;
+  }
+
+  function renderComparisons(visible) {
+    const groups = new Map();
+    const ungrouped = [];
+    for (const clip of visible) {
+      if (!clip.comparison) { ungrouped.push(clip); continue; }
+      const key = `${clip.voice}:${clip.comparison.pairId}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(clip);
+    }
+    let cardIndex = 0;
+    let groupIndex = 0;
+    for (const groupClips of groups.values()) {
+      const reference = groupClips[0];
+      const comparison = reference.comparison;
+      const group = el('section', 'comparison-group');
+      const header = el('div', 'comparison-pair-header');
+      const title = el('h3', '', `${reference.voice} / ${comparisonName(comparison)}`);
+      title.id = `comparison-title-${groupIndex++}`;
+      group.setAttribute('aria-labelledby', title.id);
+      const route = el('p', '', `${comparison.lowLabel} → ${comparison.highLabel}`);
+      const note = el('span', 'small-label', 'SAME NOTE · SAME GESTURE');
+      const headerCopy = el('div');
+      headerCopy.append(title, route);
+      header.append(headerCopy, note);
+      group.append(header);
+      const pair = el('div', 'comparison-pair-clips');
+      const ordering = { low: 0, high: 1, joined: 2, step: 3 };
+      const sorted = [...groupClips].sort((a, b) => ordering[a.comparison.endpoint] - ordering[b.comparison.endpoint] || (a.comparison.value || 0) - (b.comparison.value || 0));
+      const steps = sorted.filter(clip => clip.comparison.endpoint === 'step');
+      for (const clip of sorted.filter(clip => clip.comparison.endpoint !== 'step')) pair.append(buildCard(clip, cardIndex++));
+      group.append(pair);
+      if (steps.length) {
+        const details = el('details', 'comparison-steps');
+        details.append(el('summary', '', `More steps · ${steps.map(clip => `${Math.round(clip.comparison.value * 100)}%`).join(' / ')}`));
+        const stepGrid = el('div', 'comparison-step-grid');
+        for (const clip of steps) stepGrid.append(buildCard(clip, cardIndex++));
+        details.append(stepGrid);
+        group.append(details);
+      }
+      grid.append(group);
+    }
+    for (const clip of ungrouped) grid.append(buildCard(clip, cardIndex++));
   }
 
   function renderView() {
     viewCards = new Map();
     grid.replaceChildren();
     const visible = visibleClips();
-    visible.forEach((clip, index) => grid.append(buildCard(clip, index)));
+    grid.classList.toggle('comparison-grid', section === 'body-breath');
+    document.getElementById('focus-guide').hidden = section !== 'body-breath';
+    if (section === 'body-breath') renderComparisons(visible);
+    else visible.forEach((clip, index) => grid.append(buildCard(clip, index)));
     emptyState.hidden = visible.length > 0 || !clips.length;
     document.getElementById('collection-eyebrow').textContent = collections[section].eyebrow;
     document.getElementById('section-title').textContent = collections[section].title;
@@ -354,11 +471,18 @@
   }
 
   function addDownloads(manifest) {
+    const focusZip = safeFile(manifest.bodyBreathZip);
+    if (focusZip) {
+      const link = document.getElementById('download-body-breath');
+      link.href = focusZip;
+      link.download = downloadName(focusZip);
+      link.hidden = false;
+    }
     const zip = safeFile(manifest.firstListenZip);
     if (zip) {
       const link = document.getElementById('download-first-listen');
       link.href = zip;
-      link.download = zip.split('/').pop();
+      link.download = downloadName(zip);
       link.hidden = false;
     }
     let patches = safeFile(manifest.patches);
@@ -368,7 +492,7 @@
     if (patches) {
       const link = document.getElementById('download-patches');
       link.href = patches;
-      link.download = typeof manifest.patches === 'string' ? patches.split('/').pop() : 'bellows-patches.json';
+      link.download = typeof manifest.patches === 'string' ? downloadName(patches) : 'bellows-patches.json';
       link.hidden = false;
     }
   }
@@ -420,7 +544,7 @@
 
   async function loadManifest() {
     try {
-      const response = await fetch('manifest.json', { cache: 'no-cache' });
+      const response = await fetch('manifest.json?v=2', { cache: 'no-store' });
       if (!response.ok) throw new Error('Manifest unavailable');
       const manifest = await response.json();
       if (!manifest || !Array.isArray(manifest.clips)) throw new Error('Invalid manifest');
@@ -429,17 +553,20 @@
         let id = String(clip.id || `clip-${index}`);
         while (ids.has(id)) id += `-${index}`;
         ids.add(id);
+        const voice = String(clip.voice || clip.model || 'BELLOWS').toUpperCase();
         return {
           ...clip,
           id,
           title: String(clip.title || `Audition ${index + 1}`),
-          voice: String(clip.voice || clip.model || 'BELLOWS').toUpperCase(),
+          voice,
           collection: normalizeSection(clip.section),
           file: safeFile(clip.file),
-          rawFile: safeFile(clip.rawFile)
+          rawFile: safeFile(clip.rawFile),
+          comparison: normalizeComparison(clip.comparison, voice)
         };
       });
       if (!clips.length) throw new Error('No audio in manifest');
+      if (!clips.some(clip => clip.collection === 'body-breath')) section = 'first-listen';
       addDownloads(manifest);
       for (const count of document.querySelectorAll('[data-count]')) count.textContent = clips.filter(clip => clip.collection === count.dataset.count).length;
       rawButton.disabled = !clips.some(clip => clip.rawFile);

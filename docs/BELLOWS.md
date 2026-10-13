@@ -9,6 +9,18 @@ The source reference is [XOleg's engine implementation](https://github.com/BertC
 Chamber and buzz concepts carry their MIT attribution in `Bellows.kt`.
 These are original instrument-inspired voices, not acoustic reconstructions.
 
+## Body and breath range
+
+Renderer model 2 gives BODY a true bypass at zero and a much stronger enclosed
+response at full. PRESSURE spans rounded, gently excited reeds through richer,
+sharper reed harmonics and a wider filter opening. These changes happen before
+the shared loudness pass, so matched comparisons retain their tone differences.
+The per-voice defaults remain reference points within the expanded mappings.
+
+Model-1 recipes use the frozen `BellowsV1` renderer, retaining the first
+audition's sound. New patches and factory presets use model 2. A JSON recipe
+without a renderer-model field continues to load as model 1.
+
 ## Voices and controls
 
 | Voice | Identity | Family controls |
@@ -38,7 +50,8 @@ from a deterministic engine/voice/note seed. Sources run at 4x, through
 band-limited oscillators, source nonlinearities, chamber/body filtering,
 DC conditioning and anti-alias filtering before shared decimation to
 44.1 kHz mono. A fixed 0.125 source-reference gain leaves PCM headroom for
-raw comparison files without per-patch limiting. The production path uses the shared melodic level reference
+raw comparison files without per-patch limiting. The production path uses the
+shared melodic level reference
 and retains velocity dynamics. `renderRaw` exposes the conditioned source
 before that level matching for audition comparisons.
 
@@ -73,8 +86,13 @@ manifest under `testkit/bellows-audition/`.
 
 The eight starting sounds are Amber Breath, Silver Ranks, Midnight Pull,
 Forward Push, Village Stab, Dancing Reeds, Quiet Wheel and Wrist Sparks.
-The comparison set isolates controls, gestures, pitch, velocity, threshold
-behavior and repeated held material. Playback starts only on request.
+The opening Body & breath view gives each voice immediate true 0/full endpoint
+clips and a joined A-to-B comparison, with quarter-step sweeps available under
+More steps. Those comparisons fix the playing gesture and disable motion,
+beating, drones and buzz where present. Matched playback removes a simple level
+advantage; raw playback preserves the source dynamics. The other collections
+isolate controls, gestures, pitch, velocity, threshold behavior and repeated
+held material. Playback starts only on request.
 
 The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
 is the listening gate. Numerical checks cover reproducibility, supported

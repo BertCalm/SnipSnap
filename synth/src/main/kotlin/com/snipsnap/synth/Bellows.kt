@@ -26,6 +26,12 @@ enum class BellowsGesture { STEADY, SWELL, ACCENT, PULSE }
  * has a wheel-bowed melody, optional tracking octave/fifth drones and pressure-gated buzz.
  * These are instrument-inspired synthesizers, not reconstructed acoustic instruments.
  *
+ * Model 2 widens PRESSURE at the reed source: its low end uses phase-aligned rounded ranks;
+ * its upper end uses biting asymmetric reeds, including the COUNTER pull bank. Brightness
+ * follows pressure over a broad root-aware range. BODY zero bypasses chamber/formant/enclosure;
+ * its upper end replaces the direct sound with a dark, hollow low-mid resonant enclosure.
+ * The original default source/body positions anchor these maps and keep seed 1. Model 1 is
+ * frozen in [BellowsV1], so saved first-audition recipes retain their exact renderer.
  * PRESSURE changes source level, harmonic response and brightness. BODY changes model-specific
  * resonance; MOTION changes breathing, pitch/wheel motion and gesture depth. HOLD below .999
  * controls the finite note's gate; its final step exports one settled repeating period. Each
@@ -44,7 +50,7 @@ enum class BellowsGesture { STEADY, SWELL, ACCENT, PULSE }
  * renderRaw supplies the same conditioned source before matching for honest audition A/Bs.
  */
 object Bellows {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
     /** Fixed model headroom for source-unit PCM: preserves all gesture/velocity ratios.
@@ -56,7 +62,7 @@ object Bellows {
     private const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val CONTROL_STRIDE = 64
 
-    fun supportsModel(model: Int): Boolean = model == MODEL_VERSION
+    fun supportsModel(model: Int): Boolean = model == 1 || model == MODEL_VERSION
     @Suppress("UNUSED_PARAMETER")
     fun rootMidi(voice: BellowsVoice): Int = ROOT_MIDI
     @Suppress("UNUSED_PARAMETER")
@@ -81,7 +87,7 @@ object Bellows {
         return listOf(
             MacroSpec("TUNE", .5f, neutral = .5f),
             MacroSpec("PRESSURE", pressure, neutral = .5f),
-            MacroSpec("BODY", if (voice == BellowsVoice.CHAMBER) .62f else .45f, neutral = .45f),
+            MacroSpec("BODY", if (voice == BellowsVoice.CHAMBER) .62f else .45f, neutral = 0f),
             MacroSpec("MOTION", if (voice == BellowsVoice.WHEEL) .42f else .25f, neutral = 0f),
             MacroSpec("HOLD", if (voice == BellowsVoice.FOLK) .20f else .38f, neutral = 0f),
         ) + when (voice) {
@@ -111,6 +117,8 @@ object Bellows {
 
     private fun unit(x: Float, fallback: Float = 0f): Float = if (x.isFinite()) x.coerceIn(0f, 1f) else fallback
     private fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
+    private fun relative(value: Double, anchor: Double): Double =
+        if (value < anchor) (value - anchor) / anchor else (value - anchor) / (1.0 - anchor)
     private fun wrap(x: Double): Double = x - floor(x)
     private fun flush(x: Double): Double = if (abs(x) < 1e-25) 0.0 else x
     private fun checkCancelled(cancelled: () -> Boolean) {
@@ -180,7 +188,10 @@ object Bellows {
         private val absorption = Filter(2800.0 - 1400.0 * body, 1.5)
         private val ap1 = Allpass((INTERNAL_RATE * .0011).roundToInt(), .43)
         private val ap2 = Allpass((INTERNAL_RATE * .0017).roundToInt(), .37)
-        private val depth = .10 + .64 * body
+        private val anchor = .62f.toDouble()
+        private val center = .10 + .64 * anchor
+        private val depth = if (body <= anchor) center * smooth(body / anchor) else
+            center + (.98 - center) * smooth((body - anchor) / (1.0 - anchor))
         fun step(x: Double): Double {
             val delayed = delay[at]
             delay[at] = x + .48 * absorption.step(delayed)
@@ -257,21 +268,41 @@ object Bellows {
         val raw = FloatArray(warm + n + margin)
         if (velocity == 0f) return raw
         val body = m.getValue("BODY").toDouble()
+        val bodyAnchor = (if (voice == BellowsVoice.CHAMBER) .62f else .45f).toDouble()
+        val deepBody = if (body <= bodyAnchor) 0.0 else smooth((body - bodyAnchor) / (1.0 - bodyAnchor))
+        val pressureAnchor = defaults(voice).getValue("PRESSURE").toDouble()
+        val pressureAuthority = relative(m.getValue("PRESSURE").toDouble(), pressureAnchor)
+        val sourceAuthority = (pressureAuthority - .55 * (1.0 - velocity.toDouble().pow(.55))).coerceIn(-1.0, 1.0)
         val motion = m.getValue("MOTION").toDouble()
         val register = m["REGISTER"]?.toDouble() ?: .5
         val direction = m["DIRECTION"]?.toDouble() ?: .5
         val drone = m["DRONE"]?.toDouble() ?: 0.0
         val buzz = m["BUZZ"]?.toDouble() ?: 0.0
-        val phases = Dsp.phases(4, Dsp.seedFor("BELLOWS", MODEL_VERSION, voice, playedMidi))
+        val phases = Dsp.phases(4, Dsp.seedFor("BELLOWS", 1, voice, playedMidi))
         val shifted = DoubleArray(4)
         val steps = DoubleArray(4) { p.frequencies[it] / INTERNAL_RATE }
         val main = Filter(4000.0, 1.4)
-        val formant = Filter(when (voice) {
+        val originalFormantHz = when (voice) {
             BellowsVoice.CHAMBER -> 1200.0 - 500.0 * body
             BellowsVoice.COUNTER -> 850.0 + 800.0 * body
             BellowsVoice.FOLK -> 550.0 + 1600.0 * body
             BellowsVoice.WHEEL -> 450.0 + 1200.0 * body
-        }, 1.5 - .8 * body)
+        }
+        val keyTrack = (p.hz / 261.625565).pow(.40)
+        val deepFormantHz = when (voice) {
+            BellowsVoice.CHAMBER -> 420.0
+            BellowsVoice.COUNTER -> 520.0
+            BellowsVoice.FOLK -> 780.0
+            BellowsVoice.WHEEL -> 640.0
+        } * keyTrack
+        val formant = Filter(originalFormantHz * (1.0 - deepBody) + deepFormantHz * deepBody,
+            (1.5 - .8 * body) * (1.0 - deepBody) + .58 * deepBody)
+        val enclosure = Filter(when (voice) {
+            BellowsVoice.CHAMBER -> 680.0
+            BellowsVoice.COUNTER -> 820.0
+            BellowsVoice.FOLK -> 1150.0
+            BellowsVoice.WHEEL -> 930.0
+        } * keyTrack, 1.45)
         val chamber = if (voice == BellowsVoice.CHAMBER) Chamber(body) else null
         val extraction = Filter(350.0, 1.1)
         val rattle = Filter(600.0 + 650.0 * body, .9)
@@ -305,12 +336,17 @@ object Bellows {
                     ((t + CONTROL_STRIDE.toDouble() / INTERNAL_RATE) / p.gate).coerceAtMost(1.0)
                 val target = pressureScale * gestureLevel(gesture, next, motion, p.motionCycles, p.loop)
                 pressureStep = (target.coerceIn(0.0, 1.4) - pressure) / hop
-                val cutoff = when (voice) {
+                val originalCutoff = when (voice) {
                     BellowsVoice.CHAMBER -> 1300.0 + 4000.0 * register + 3000.0 * pressure
                     BellowsVoice.COUNTER -> 850.0 + 2500.0 * register + 1600.0 * direction + 2800.0 * pressure
                     BellowsVoice.FOLK -> 1500.0 + 4200.0 * register + 3000.0 * pressure
                     BellowsVoice.WHEEL -> 1900.0 + 3300.0 * pressure
                 }
+                val lowCutoff = max(p.hz * 1.20, 310.0 * keyTrack)
+                val highCutoff = max(p.hz * 24.0, 11000.0 * keyTrack)
+                val cutoff = if (pressureAuthority < 0.0)
+                    originalCutoff * (1.0 + pressureAuthority) - lowCutoff * pressureAuthority else
+                    originalCutoff * (1.0 - pressureAuthority) + highCutoff * pressureAuthority
                 main.coefficients(cutoff * (p.hz / 261.625565).pow(.30), if (voice == BellowsVoice.FOLK) 1.05 else 1.45)
             }
             pressure = (pressure + pressureStep).coerceIn(0.0, 1.4)
@@ -322,7 +358,7 @@ object Bellows {
             val breathing = sin(2.0 * PI * u) * motion * .035
             for (k in shifted.indices) shifted[k] = wrap(phases[k] +
                 (if (k == 0 || voice != BellowsVoice.WHEEL) vibrato + breathing else 0.0))
-            val signal = when (voice) {
+            var signal = when (voice) {
                 BellowsVoice.CHAMBER -> {
                     val rank = .48 * saw(shifted[0], steps[0]) + .25 * saw(shifted[1], steps[1]) +
                         .20 * saw(shifted[2], steps[2]) + .07 * pulse(shifted[0], steps[0], .45)
@@ -342,12 +378,43 @@ object Bellows {
                 BellowsVoice.WHEEL -> .76 * saw(shifted[0], steps[0]) + drone *
                     (.16 * saw(shifted[1], steps[1]) + .14 * saw(shifted[2], steps[2]))
             }
+            if (sourceAuthority != 0.0) {
+                val mellow = sourceAuthority < 0.0
+                val width = .22 + .12 * (1.0 - register)
+                // Waveform phases align their fundamentals; changing breath adds harmonics,
+                // not an accidental cancellation, an octave jump or another pitched layer.
+                fun sawRank(k: Int): Double = if (mellow)
+                    triangle(wrap(shifted[k] + .75), steps[k]) else
+                    pulse(wrap(shifted[k] + .25 + .5 * width), steps[k], width)
+                fun triangleRank(k: Int): Double = if (mellow) triangle(shifted[k], steps[k]) else
+                    pulse(wrap(shifted[k] + .5 + .5 * width), steps[k], width)
+                val shapedRank = when (voice) {
+                    BellowsVoice.CHAMBER -> (1.0 - .23 * register) *
+                        (.55 * sawRank(0) + .25 * sawRank(1) + .20 * sawRank(2)) + .23 * register * sawRank(3)
+                    BellowsVoice.COUNTER -> {
+                        val pull = .68 * triangleRank(0) + .32 * triangleRank(1)
+                        val push = .48 * triangleRank(0) + .52 * sawRank(1)
+                        (pull * (1.0 - direction) + push * direction) * (1.0 - .22 * register) +
+                            .22 * register * triangleRank(2)
+                    }
+                    BellowsVoice.FOLK -> {
+                        val duty = .28 + .15 * (1.0 - register)
+                        fun folkRank(k: Int): Double = if (mellow)
+                            triangle(wrap(shifted[k] + .5 - .5 * duty), steps[k]) else
+                            pulse(wrap(shifted[k] + .5 * (width - duty)), steps[k], width)
+                        .48 * folkRank(0) + .27 * folkRank(1) + .15 * sawRank(2) + .10 * register * sawRank(3)
+                    }
+                    BellowsVoice.WHEEL -> .76 * sawRank(0) + drone * (.16 * sawRank(1) + .14 * sawRank(2))
+                }
+                val amount = abs(sourceAuthority)
+                signal = signal * (1.0 - amount) + shapedRank * amount
+            }
             for (k in phases.indices) phases[k] = wrap(phases[k] + steps[k])
             val breath = pressure * env
             var x = signal * breath * sourceGain
             if (voice == BellowsVoice.FOLK) x = tanh(x * (1.25 + 2.2 * pressure)) / 1.65
             if (voice == BellowsVoice.COUNTER) x = .76 * x + .24 * tanh(x * (1.0 + 1.6 * pressure))
-            if (chamber != null) x = chamber.step(x)
+            if (chamber != null && body > 0.0) x = chamber.step(x)
             if (voice == BellowsVoice.WHEEL) {
                 extraction.step(x)
                 // Small smooth pressure transition avoids a discontinuous gate at threshold .52.
@@ -358,12 +425,16 @@ object Bellows {
                 rattle.step(impact)
                 x += buzz * (.55 * impact + .45 * rattle.band) * gate
             }
-            formant.step(x)
-            x += formant.band * body * when (voice) {
-                BellowsVoice.CHAMBER -> .20
-                BellowsVoice.COUNTER -> .24
-                BellowsVoice.FOLK -> .40
-                BellowsVoice.WHEEL -> .28
+            if (body > 0.0) {
+                formant.step(x)
+                val directTint = x + formant.band * body * when (voice) {
+                    BellowsVoice.CHAMBER -> .20
+                    BellowsVoice.COUNTER -> .24
+                    BellowsVoice.FOLK -> .40
+                    BellowsVoice.WHEEL -> .28
+                }
+                val enclosed = .10 * x + .52 * enclosure.step(x) + .58 * formant.band
+                x = directTint * (1.0 - deepBody) + enclosed * deepBody
             }
             x = main.step(x)
             dc = flush(dc + dcCoeff * (x - dc)); x -= dc
@@ -379,6 +450,7 @@ object Bellows {
                   velocity: Float = 1f, gesture: BellowsGesture = gestureFor(voice), model: Int = MODEL_VERSION,
                   cancelled: () -> Boolean = { false }): Snip {
         require(supportsModel(model)) { "unsupported bellows model $model" }
+        if (model == 1) return BellowsV1.renderRaw(voice, macros, midi, velocity, gesture, model, cancelled)
         require(velocity.isFinite() && velocity in 0f..1f) { "BELLOWS velocity out of 0..1: $velocity" }
         val m = settled(macros, voice)
         val played = midi + (m.getValue("TUNE") * TUNE_SEMITONES).roundToInt()
@@ -406,6 +478,7 @@ object Bellows {
     fun render(voice: BellowsVoice, macros: Map<String, Float> = emptyMap(), midi: Int = ROOT_MIDI,
                velocity: Float = 1f, gesture: BellowsGesture = gestureFor(voice), model: Int = MODEL_VERSION,
                cancelled: () -> Boolean = { false }): Snip {
+        if (model == 1) return BellowsV1.render(voice, macros, midi, velocity, gesture, model, cancelled)
         val raw = renderRaw(voice, macros, midi, velocity, gesture, model, cancelled)
         val out = raw.samples
         Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
