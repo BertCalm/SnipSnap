@@ -15,7 +15,8 @@ import kotlin.math.roundToInt
  * the amp, because a rack chain has one VALVE and an offline render is not limited to it). Each chip
  * at AMT 0.7 (the pad sheet's default) and 1. The snare and the choir also carry the card's PUNCH
  * and the AMPED character at AMT 0.7, to hear COMP and DRIVE beside what the rack already has. Every
- * clip shares one loudness ([AuditionLevel]). Writes manifest.json. Run via
+ * clip shares one loudness ([AuditionLevel]). Clears any .wav and manifest.json already under its
+ * output folder first, then writes manifest.json. Run via
  * `./gradlew :synth:generatePedalAudition`.
  */
 object PedalAuditionGenerator {
@@ -31,6 +32,8 @@ object PedalAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/pedal-audition")
+        // A rerun must not leave a stale clip beside the new manifest (a clip this run no longer writes).
+        root.walkTopDown().filter { it.isFile && (it.extension == "wav" || it.name == "manifest.json") }.forEach { it.delete() }
         root.mkdirs()
         val entries = mutableListOf<String>()
         // AuditionLevel meters a stereo clip on its mono fold and keeps both
@@ -65,11 +68,11 @@ object PedalAuditionGenerator {
             for ((chip, character) in CHIPS) for (amount in AMOUNTS) {
                 write(name, "sheet_" + idOf(chip, amount), "$name $chip AMT ${pct(amount)}, ON THE BAKED PAD (AS THE PAD SHEET DOES IT)", Treatments.apply(character, baked, amount).snip)
             }
-            for (chip in listOf("COMP")) for (amount in AMOUNTS) {
-                val board = Treatments.chain(CHIPS.getValue(chip), amount)
+            for (amount in AMOUNTS) {
+                val board = Treatments.chain(CHIPS.getValue("COMP"), amount)
                 var rig = Magnet.landingChain(voice)
                 for (section in FxChain.SECTION_NAMES) board.section(section)?.let { rig = rig.withSection(section, it) }
-                write(name, "rig_" + idOf(chip, amount), "$name $chip AMT ${pct(amount)}, IN FRONT OF ITS LANDING AMP (A RIG)", rig.process(dry))
+                write(name, "rig_" + idOf("COMP", amount), "$name COMP AMT ${pct(amount)}, IN FRONT OF ITS LANDING AMP (A RIG)", rig.process(dry))
             }
             for (amount in AMOUNTS) {
                 val pedal = Treatments.apply(CHIPS.getValue("DRIVE"), dry, amount).snip

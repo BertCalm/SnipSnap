@@ -244,17 +244,21 @@ class TreatmentsTest {
     /**
      * A snare (333 ms, mono) and a choir (1.44 s, stereo) end at least 53 dB under their peaks, the
      * last 20 ms against the whole pad, at the pad sheet's AMT 0.7, at full, and between (the fade's
-     * length follows the amp's gain, so the in-between amounts are the law's own cells). Measured at
+     * length follows the amp's gain, so the in-between amounts are the law's own cells), and at AMT
+     * 0.5 and 0.6, where the fade is only 4 to 13 ms and the amp's own end carries the bar. Measured at
      * the shipped fade (95 ms at power 5 at full, the first cell of the declared grid in
      * `Treatments.PRE_AMP_FADE`'s KDoc that passes this test's two bars): the snare ends 69.81, 74.44, 63.43 and 54.10 dB under its peak at AMT 0.7, 0.8, 0.9
-     * and 1 (44.36, 32.05, 19.92 and 9.14 with no fade), the choir at least 83 dB; the snare at AMT 1
-     * leaves a DC mean of 9.6e-5 (2.5e-4 with no fade), the largest of the eight cells.
+     * and 1 (44.36, 32.05, 19.92 and 9.14 with no fade), and 58.02 and 54.88 at AMT 0.5 and 0.6 (58.02
+     * and 54.58 with no fade); the choir at least 69 dB at any of the six; the snare at AMT 1
+     * leaves a DC mean of 9.6e-5 (2.5e-4 with no fade), the largest of the twelve cells. The cells
+     * are a snare and a choir: a pad shorter than about 200 to 250 ms is not covered here (its fade
+     * is capped at half of it, see the spec).
      */
     @Test
     fun `driven ends clean at the pad sheet's AMT, at full and between, on a snare and a choir`() {
         val sources = mapOf("snare" to Thump.render(ThumpVoice.SNARE), "choir" to Vox.render(VoxVoice.CHOIR))
         for ((name, dry) in sources) {
-            for (amount in listOf(0.7f, 0.8f, 0.9f, 1f)) {
+            for (amount in listOf(0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1f)) {
                 val out = Treatments.apply("driven", dry, amount).snip
                 val end = endDb(out)
                 assertTrue(end <= -53.0, "$name at AMT $amount ends $end dB under its peak, past the -50 bar with 3 dB of margin")
@@ -345,11 +349,19 @@ class TreatmentsTest {
         }
     }
 
+    /**
+     * Every character but `driven` goes through the door as the bare chain: on a snare at full, the
+     * door's output equals the chain's, sample for sample, for each name in [Treatments.names].
+     */
     @Test
     fun `the end fade is driven's alone`() {
         val snare = Thump.render(ThumpVoice.SNARE)
-        val applied = Treatments.apply("compressed", snare, 1f).snip
-        val direct = Treatments.chain("compressed", 1f).process(snare)
-        assertTrue(applied.samples.contentEquals(direct.samples), "compressed is not faded: the door applies the chain and nothing else")
+        val others = Treatments.names.filter { it != "driven" }
+        assertEquals(Treatments.names.size - 1, others.size, "driven is a name, and the only one left out")
+        for (name in others) {
+            val applied = Treatments.apply(name, snare, 1f).snip
+            val direct = Treatments.chain(name, 1f).process(snare)
+            assertTrue(applied.samples.contentEquals(direct.samples), "$name is not faded: the door applies the chain and nothing else")
+        }
     }
 }
