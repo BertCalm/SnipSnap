@@ -178,8 +178,14 @@ class RelayTest {
             val report = Relay.inspect(voice, macros, normalize = false)
             val rawRms = rms(report.raw)
             assertTrue(report.raw.isNotEmpty() && report.raw.all { it.isFinite() }, "$voice $macros invalid raw audio")
-            assertTrue(report.rawPeak.isFinite() && report.rawPeak in 0.00001..4.0,
-                "$voice $macros uncontrolled or silent raw peak ${report.rawPeak}")
+            // The engine throws at full scale (|raw| >= 1), so a 4.0 ceiling could never fire, and by construction
+            // the stage peaks below .85 (tables trimmed to 1.5, output gain .42, rhythmic lift at most 1.35, two
+            // convex one-poles). These cases measure .15 to .38. The stage must keep 6 dB of headroom under the
+            // engine's check and stay within 26 dB of full scale, so a level drift either way is named here
+            // instead of passing silently or surfacing as the engine's own exception.
+            println("RELAY raw $voice $macros peak ${report.rawPeak} rms $rawRms")
+            assertTrue(report.rawPeak.isFinite() && report.rawPeak in 0.05..0.5,
+                "$voice $macros raw peak ${report.rawPeak} left the stage's headroom (0.05..0.5)")
             assertTrue(rawRms > 1e-6, "$voice $macros silent raw source")
             assertTrue(abs(report.raw.average()) < rawRms * 0.02 + 1e-5,
                 "$voice $macros raw DC ${report.raw.average()} at RMS $rawRms")
@@ -406,7 +412,12 @@ class RelayTest {
         assertTrue(held.accents.any { it.timeSeconds >= held.gateSeconds }, "held fixture did not exercise accents beyond its articulation gate")
         assertTrue(matchedDifference(held.snip.samples, Relay.render(voice, heldMacros, phrase = earlierOnly).samples) > 0.01,
             "late serialized accents disappeared from held audio")
-        assertEquals(4, phrase.accents.size, "rendering mutated the saved accent roster")
+        // phrase.accents is a fixed-size listOf, so its size could never change. The beats check above already holds
+        // every saved accent at its beat; at PULSE 1 and full velocity each must also keep its saved strength.
+        for ((saved, rendered) in phrase.accents.zip(held.accents)) {
+            assertEquals(saved.strength.toDouble(), rendered.strength, 1e-9,
+                "held render changed the saved strength of the accent at beat ${saved.beat}")
+        }
     }
 
     @Test
