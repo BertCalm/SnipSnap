@@ -3,6 +3,12 @@
 *Status: proposal, 2026-10-13. Nothing in `:shell` or `:app` changes with this
 document. The side-by-side mockup is [`../design/ModernLook.html`](../design/ModernLook.html).*
 
+> **Decided, later the same day — see [`DIRECTION_2026_10.md`](DIRECTION_2026_10.md).**
+> The modern look is the direction, not a second class beside the first; the
+> OG look stays as CLASSIC. A dark colourway, VENT, joins OPENSKY and passes
+> every scheme law as written, so it ships first. The questions in §6 are
+> answered there. The token table and the build order below still hold.
+
 The OpenSky audition page (Round 3, October 2026) has a visual language of its
 own: paper, one orange, hairlines instead of edges, a serif italic for the
 words that matter, a monospace face for the words the machine says, and a dark

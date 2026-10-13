@@ -1,5 +1,12 @@
 # A second shape for SnipSnap — four places and a dock
 
+> **Decided, later the same day — see [`DIRECTION_2026_10.md`](DIRECTION_2026_10.md).**
+> The unit of work is the project, not the kit; kits live on the SHELF and are
+> shared by every project. The third place is therefore **PROJECT**, not KIT,
+> and its PADS stage shows the active kit with a switcher above the grid. The
+> dock holds capture state. The audience is the novice and the Koala user
+> first, with the MPC owner's benefits kept. Everything else below stands.
+
 *Status: proposal, 2026-10-13. Companion to [`MODERN_LOOK.md`](MODERN_LOOK.md),
 which covers colour and surface. This document covers structure: what the
 top level of the app is, where things live, and how you get between them.

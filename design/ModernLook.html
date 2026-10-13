@@ -1,8 +1,8 @@
 <!doctype html>
 <!--
   TapeOS Two Looks: the KIT screen in the OG OILSLICK look and in the proposed
-  MODERN / OPENSKY look, side by side, plus the proposed four-places-and-a-dock shape.
-  Companion to docs/MODERN_LOOK.md and docs/MODERN_SHAPE.md.
+  MODERN look (OPENSKY paper and VENT dark), plus the proposed four-places-and-a-dock shape.
+  Companion to docs/MODERN_LOOK.md, docs/MODERN_SHAPE.md and docs/DIRECTION_2026_10.md.
   Standalone: Google Fonts for the OG side, system faces for the modern side, no scripts.
 -->
 <html lang="en">
@@ -150,6 +150,25 @@ ol,ul{padding-left:20px}li{margin:4px 0;max-width:70ch}
 .dock .np{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:10px;font:600 10px var(--sans)}
 .dock .np span{font:9px var(--mono);letter-spacing:1px;color:var(--amber);white-space:nowrap}
 
+/* ---------- VENT: the dark colourway of the same look, mapped onto the same slots ---------- */
+.vent{--gray:#1d1e1b;--g-hi:#393b33;--g-e:#2d2f28;--g-mid:#181916;--g-dk:#45473c;--ink:#eeeadd;--ink2:#b3b4a6;--ink3:#929587;
+    --desk1:#151614;--desk2:#151614;--glow:#2a1e18;--lcd:#0f100e;--lcd-ink:#eeeadd;--amber:#e08a68;--warn:#e08a68;--field:#232420;--accent:#e08a68;
+    background:radial-gradient(circle at 72% 18%,var(--glow) 0,transparent 42%),var(--desk1)}
+.vent::before{display:none}
+.vent .orbit{border-color:#393b3380}
+.vent .win{border-color:var(--g-dk)}
+.vent .titlebar b{background:var(--ink)}
+.vent .titlebar span i{color:var(--accent)}
+.vent .places>span.on{color:var(--gray);background:var(--ink)}
+.vent .stages>span.on{color:var(--accent);border-color:var(--accent)}
+.vent .pad .lbl{color:var(--ink)}
+.vent .pad.f{border-color:var(--g-hi)}
+.vent .padstrip{border-color:var(--g-hi)}
+.vent .padstrip b,.vent .padstrip b i{color:var(--ink)}
+.vent .dock{border-top:1px solid var(--g-hi)}
+.vent .dock .tr i{border-color:#55564b}
+.vent .dock .st{color:var(--ink2)}
+
 @media (max-width:420px){.wrap{padding-inline:16px}.two{gap:36px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -231,10 +250,10 @@ ol,ul{padding-left:20px}li{margin:4px 0;max-width:70ch}
   </div>
 
   <h2>The proposed shape</h2>
-  <p class="lede">The second question was whether the structure should change too. The reviews in <code>docs/</code> fixed everything that could be fixed in place and parked the rest as "an initiative". This frame draws that initiative: four places that always fit, three stages inside KIT, a visible door into the pad sheet, and a dock where sound lives on every screen. The reasoning is in <code>docs/MODERN_SHAPE.md</code>.</p>
+  <p class="lede">The second question was whether the structure should change too. The reviews in <code>docs/</code> fixed everything that could be fixed in place and parked the rest as "an initiative". These two frames draw that initiative in both colourways: four places that always fit, three stages inside the open project, a visible door into the pad sheet, and a dock where sound lives on every screen. The reasoning is in <code>docs/MODERN_SHAPE.md</code>; the decisions, the VENT tokens and the accessibility read are in <code>docs/DIRECTION_2026_10.md</code>.</p>
   <div class="two">
     <div>
-      <div class="frame-head"><b>MODERN · FOUR PLACES AND A DOCK</b><span>KIT ▸ PADS, with A02 selected</span></div>
+      <div class="frame-head"><b>MODERN · OPENSKY</b><span>four places and a dock, A02 selected</span></div>
       <div class="phone md shape">
         <div class="orbit o1"></div><div class="orbit o2"></div>
         <div class="win">
@@ -271,12 +290,53 @@ ol,ul{padding-left:20px}li{margin:4px 0;max-width:70ch}
       </div>
     </div>
     <div>
+      <div class="frame-head"><b>MODERN · VENT</b><span>the dark colourway, PROJECT ▸ PADS</span></div>
+      <div class="phone md vent shape">
+        <div class="orbit o1"></div><div class="orbit o2"></div>
+        <div class="win">
+          <div class="titlebar"><span>SNIP<b></b>SNAP</span><span><i>✳</i>LATE SET · ⚙</span></div>
+          <div class="places"><span>SHELF</span><span>TAPE</span><span class="on">PROJECT</span><span>MAKE</span></div>
+          <div class="stages"><span class="on">PADS</span><span>BEAT</span><span>OUT</span></div>
+          <div class="body">
+            <div class="padstrip" style="height:30px"><b>KITCHEN ▾<i>2 kits in this project</i></b><span>+ FROM SHELF</span></div>
+            <div class="grid">
+              <div class="pad f" style="--c:#3f8cf0"><span class="id">A13</span><span class="lbl">break 1</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A14</span><span class="lbl">lo tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A15</span><span class="lbl">shaker</span></div>
+              <div class="pad"><span class="id">A16</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A09</span><span class="lbl">clap</span></div>
+              <div class="pad f" style="--c:#9a6cf0"><span class="id">A10</span><span class="lbl">hi tom</span></div>
+              <div class="pad f" style="--c:#8fd424"><span class="id">A11</span><span class="lbl">cowbell</span></div>
+              <div class="pad"><span class="id">A12</span></div>
+              <div class="pad f" style="--c:#ffc41f"><span class="id">A05</span><span class="lbl">rim</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A06</span><span class="lbl">open</span></div>
+              <div class="pad f" style="--c:#e8409f"><span class="id">A07</span><span class="lbl">snap</span></div>
+              <div class="pad"><span class="id">A08</span></div>
+              <div class="pad f" style="--c:#e8542e"><span class="id">A01</span><span class="lbl">kick</span></div>
+              <div class="pad f" style="--c:#ffc41f;border-color:var(--accent);box-shadow:inset 0 -4px 0 var(--c),0 0 0 1px var(--accent)"><span class="id">A02</span><span class="lbl">snare</span></div>
+              <div class="pad f" style="--c:#1fc6cf"><span class="id">A03</span><span class="lbl">hat</span></div>
+              <div class="pad f" style="--c:#7adfe4"><span class="id">A04</span><span class="lbl">hat open</span></div>
+            </div>
+            <div class="padstrip"><b>A02<i>snare</i>CRUSH 35% · CHOKE 1</b><span>OPEN ▸</span></div>
+            <div class="dock">
+              <div class="tr"><i class="go">▶</i><i>■</i>94 BPM · 2 BARS</div>
+              <div class="st"><b></b>ARMED · 00:41 ON TAPE · SNIP</div>
+              <div class="np">Kitchen is on A. Two bars of swing.<span>BEAT ▸</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two" style="margin-top:28px">
+    <div>
       <div class="frame-head"><b>WHAT MOVED</b><span>today's thirteen tabs, placed</span></div>
       <div class="tblwrap"><table>
         <tr><th>Place</th><th>Holds</th></tr>
         <tr><td><b>SHELF</b></td><td>kits, snips, instruments, rooms, bins, starters. Unchanged.</td></tr>
         <tr><td><b>TAPE</b></td><td>the deck, then <b>CUT</b> (today's CHOP) as its second stage. A cut always knows its tape.</td></tr>
-        <tr><td><b>KIT</b></td><td><b>PADS</b> (grid, PLAY's fullscreen toggle, the benches) · <b>BEAT</b> (GROOVE, ORBIT, SONG) · <b>OUT</b> (EXPORT, SHARE, BOUNCE)</td></tr>
+        <tr><td><b>PROJECT</b></td><td>the unit of work, decided 13 Oct. <b>PADS</b> (the active kit's grid, a kit switcher above it, PLAY's fullscreen toggle, the benches) · <b>BEAT</b> (GROOVE, ORBIT, SONG, now the project's) · <b>OUT</b> (EXPORT, SHARE, BOUNCE, the session). Kits live on the SHELF and are shared by every project.</td></tr>
         <tr><td><b>MAKE</b></td><td>SYNTH, SNAP, SURFACE, KEYS, the instruments. Each lands a pad or a tape in the open kit.</td></tr>
         <tr><td><b>⚙</b></td><td>SETUP and HELP, one tap from every screen instead of 12th and 13th of 13.</td></tr>
         <tr><td><b>dock</b></td><td>the BEAT's transport, the capture light and counter, what is playing, and the next-step door that stays until taken.</td></tr>
