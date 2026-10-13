@@ -1029,4 +1029,34 @@ class BoreTest {
         }
         assertTrue(Bore.render(BoreVoice.FLUTE).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
+
+    @Test
+    fun `a macro that is not finite renders as its default, as ALLOY's settled has it`() {
+        // An infinite macro is not a turn of the knob to its end; it is absent, as it is in ALLOY.
+        val nonFinite = mapOf(
+            "TUNE" to Float.POSITIVE_INFINITY, "BREATH" to Float.NEGATIVE_INFINITY, "LIP" to Float.NaN,
+            "CHIFF" to Float.POSITIVE_INFINITY, "HOLD" to Float.POSITIVE_INFINITY,
+        )
+        for (voice in BoreVoice.entries) {
+            assertEquals(Bore.defaults(voice), Bore.settled(nonFinite, voice), "$voice: settled must treat every non-finite macro as absent, as ALLOY's does")
+            // Past settled a NaN reaches the blow, where it moves the note, the length or every sample, or trips a
+            // guard deep in the render; so each macro, NaN on its own, must render exactly as the default does.
+            val default = Bore.render(voice).samples
+            for (name in Bore.defaults(voice).keys) {
+                val rendered = runCatching { Bore.render(voice, mapOf(name to Float.NaN)) }.getOrElse {
+                    throw AssertionError("$voice: a NaN $name must render as the default, and the render refused: ${it.message}", it)
+                }
+                assertContentEquals(default, rendered.samples, "$voice: a NaN $name must render as the default")
+            }
+        }
+    }
+
+    @Test
+    fun `a HOLD that is not finite lands as the default does, the one-shot settled plays`() {
+        val default = Bore.landingChain(emptyMap())
+        assertNotNull(default, "the default HOLD is a one-shot, so this test guards nothing")
+        for (hold in listOf(Float.POSITIVE_INFINITY, Float.NaN, Float.NEGATIVE_INFINITY)) {
+            assertEquals(default, Bore.landingChain(mapOf("HOLD" to hold)), "HOLD $hold: landingChain must count a non-finite HOLD as absent, as settled does")
+        }
+    }
 }
