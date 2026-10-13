@@ -56,9 +56,11 @@ import kotlin.random.Random
  * proved the loop; R1 measured the knobs: a print-only probe swept BREATH, LIP
  * and TUNE per voice at the raw rate (Hann-windowed harmonics, autocorrelation
  * pitch, onset envelopes) and the numbers in the KDoc of each constant are what
- * it read. Nothing here was *listened to* — the audition gate is what decides
- * whether the tone is a woodwind, and every value marked "listening" is a first
- * guess for it.
+ * it read. R1 set them without listening. The owner's notes since have set
+ * some and added others (each round is in the design doc, from "R1, the reed's
+ * bite" on; [VOICE_HIGH_DB]'s lift is one the owner picked by ear); the audition
+ * gate is what decides whether the tone is a woodwind, and every value still
+ * marked "listening" is a first guess for it.
  *
  * The engine renders **dry**. The spec's tape stage (MELLO) is the rack's TAPE
  * by another name; a BORE pad *lands* with it in its recipe ([landingChain]) the

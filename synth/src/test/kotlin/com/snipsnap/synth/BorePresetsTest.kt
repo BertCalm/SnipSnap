@@ -13,8 +13,8 @@ import kotlin.test.assertTrue
  * BORE's factory roster: eight per voice, the same identity/sanity/round-trip/names/
  * blocklist/spread contract every `<Engine>PresetsTest` holds (`ForkPresetsTest`'s own
  * shape). These prove the roster is *sound* - renders clean, files honestly, round-trips.
- * They cannot prove it is *good*: nothing in it was listened to, and the audition
- * page is where that is decided.
+ * They cannot prove it is *good*: the audition page is where that is decided,
+ * and [BorePresets]'s KDoc says what of BORE has been heard so far.
  */
 class BorePresetsTest {
 
