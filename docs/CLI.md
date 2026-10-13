@@ -381,13 +381,12 @@ a note reads as several playing and not one swirled),
 `amped` (a tube amp and its speaker on a hit that was never a guitar:
 DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
 cabinet — run four times over inside so a hot tube folds back far less),
-`driven` (a drive pedal: the same tube run hot-ish with the speaker
-barely in, enough harmonics at the pad sheet's default amount to read as
-a pedal and not as a speaker), `compressed` (a compressor pedal: SQUASH
-alone, the body leaned on so the tail stands up; `punched` is the same
-section plus CRUNCH, this has no crunch) and `quacked` (a wah: the
-ladder's contour with the resonance up and a fast, deep sweep from the
-hit, a short quack and not a slow wah).
+`driven` (a drive pedal: the tube at the top of its gain law with the
+speaker barely in, the last stretch of the pad faded ahead of the amp so
+a quiet tail is not lifted into a click) and `compressed` (a compressor
+pedal, for now: SQUASH at its strongest, the body leaned on so the tail
+stands up; `punched` is the same section plus CRUNCH, this has no
+crunch).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
@@ -403,7 +402,7 @@ GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
-the pedals (DRIVE · COMP · WAH — `driven`, `compressed` and `quacked`),
+the pedals (DRIVE · COMP — `driven` and `compressed`),
 grouped by what an effect *is*, because a guitarist looks for a pedal by
 its name; tapping any
 of them changes every file the pad references, velocity layers included.

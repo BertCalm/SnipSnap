@@ -6,20 +6,22 @@ import java.io.File
 import kotlin.math.roundToInt
 
 /**
- * Renders the pedal board's Stage 0 listening clips under testkit/pedal-audition/ (gitignored),
- * for the gate in docs/superpowers/specs/2026-10-04-pedal-board-design.md: DRIVE, COMP and WAH on a
- * snare and a choir, and on both MAGNET guitar pads two ways (as the pad sheet does it, on the pad's
- * baked audio, and as a rig would, the chip in front of the landing amp: COMP and WAH as a section
- * of the landing chain, DRIVE as two renders in a row, the pedal and then the amp, because a rack
- * chain has one VALVE and an offline render is not limited to it). Each chip at AMT 0.7 (the pad
- * sheet's default) and 1. The snare and the choir also carry the card's PUNCH and the AMPED
- * character at AMT 0.7, to hear COMP and DRIVE beside what the rack already has. Every clip shares
- * one loudness ([AuditionLevel]). Writes manifest.json. Run via `./gradlew :synth:generatePedalAudition`.
+ * Renders the pedal board's Stage 0 (revised) listening clips under testkit/pedal-audition/
+ * (gitignored), for the owner's listen to the shipped row in
+ * docs/superpowers/specs/2026-10-04-pedal-board-design.md: DRIVE and COMP (the WAH chip is held
+ * back for its own section) on a snare and a choir, and on both MAGNET guitar pads two ways (as the
+ * pad sheet does it, on the pad's baked audio, and as a rig would, the chip in front of the landing
+ * amp: COMP as a section of the landing chain, DRIVE as two renders in a row, the pedal and then
+ * the amp, because a rack chain has one VALVE and an offline render is not limited to it). Each chip
+ * at AMT 0.7 (the pad sheet's default) and 1. The snare and the choir also carry the card's PUNCH
+ * and the AMPED character at AMT 0.7, to hear COMP and DRIVE beside what the rack already has. Every
+ * clip shares one loudness ([AuditionLevel]). Writes manifest.json. Run via
+ * `./gradlew :synth:generatePedalAudition`.
  */
 object PedalAuditionGenerator {
 
     /** The pad sheet's chip words and the characters they draw. */
-    private val CHIPS = linkedMapOf("DRIVE" to "driven", "COMP" to "compressed", "WAH" to "quacked")
+    private val CHIPS = linkedMapOf("DRIVE" to "driven", "COMP" to "compressed")
     private val AMOUNTS = listOf(0.7f, 1f)
 
     private fun pct(amount: Float) = (amount * 100).roundToInt()
@@ -63,7 +65,7 @@ object PedalAuditionGenerator {
             for ((chip, character) in CHIPS) for (amount in AMOUNTS) {
                 write(name, "sheet_" + idOf(chip, amount), "$name $chip AMT ${pct(amount)}, ON THE BAKED PAD (AS THE PAD SHEET DOES IT)", Treatments.apply(character, baked, amount).snip)
             }
-            for (chip in listOf("COMP", "WAH")) for (amount in AMOUNTS) {
+            for (chip in listOf("COMP")) for (amount in AMOUNTS) {
                 val board = Treatments.chain(CHIPS.getValue(chip), amount)
                 var rig = Magnet.landingChain(voice)
                 for (section in FxChain.SECTION_NAMES) board.section(section)?.let { rig = rig.withSection(section, it) }
@@ -74,7 +76,7 @@ object PedalAuditionGenerator {
                 write(name, "rig_" + idOf("DRIVE", amount), "$name DRIVE AMT ${pct(amount)}, IN FRONT OF ITS LANDING AMP (A RIG: THE PEDAL, THEN THE AMP)", Magnet.landingChain(voice).process(pedal))
             }
         }
-        check(entries.size == 44) { "expected 44 clips (2 plain sources x 9, 2 guitars x 13), wrote ${entries.size}" }
+        check(entries.size == 32) { "expected 32 clips (2 plain sources x 7, 2 guitars x 9), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         println("pedal audition: ${entries.size} clips under ${root.absolutePath}")
     }
