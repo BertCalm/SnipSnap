@@ -537,4 +537,17 @@ class RelayTest {
         }
         assertTrue(Relay.render(RelayVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
+
+    @Test
+    fun `a render nobody wants any more after its frame loop stops after the band limit too`() {
+        // A finite phrase has no warm-up, so the frame loop looks once per 8192 frames of its raw buffer and the
+        // conditioning pass looks once on entry; an interrupt that lands after those looks must still stop the render
+        // before its decimation, its level and its seam instead of finishing unwanted.
+        val whole = Relay.inspect(RelayVoice.KEY)
+        assertFalse(whole.loop, "the default phrase is finite")
+        val loopLooks = (whole.raw.size + 8191) / 8192
+        val late = LateInterrupt(clearLooks = loopLooks + 1)
+        assertFailsWith<java.util.concurrent.CancellationException> { late.run { Relay.inspect(RelayVoice.KEY) } }
+        assertEquals(loopLooks + 2, late.looks, "the render stopped at its look after the band limit")
+    }
 }

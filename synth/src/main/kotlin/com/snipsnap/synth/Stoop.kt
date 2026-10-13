@@ -318,7 +318,7 @@ object Stoop {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("STOOP render no longer wanted")
     }
 
-    private fun condition(raw: FloatArray): FloatArray {
+    internal fun condition(raw: FloatArray): FloatArray {
         stopIfUnwanted()
         Tide.bandLimit(raw, INTERNAL_RATE)
         stopIfUnwanted()

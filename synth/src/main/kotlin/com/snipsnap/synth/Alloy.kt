@@ -275,7 +275,7 @@ object Alloy {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("ALLOY render no longer wanted")
     }
 
-    private fun finish(raw: FloatArray, rate: Int): FloatArray {
+    internal fun finish(raw: FloatArray, rate: Int): FloatArray {
         stopIfUnwanted()
         Tide.bandLimit(raw, rate)
         stopIfUnwanted()

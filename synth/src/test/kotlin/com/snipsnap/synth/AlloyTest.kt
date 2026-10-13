@@ -44,6 +44,19 @@ class AlloyTest {
     }
 
     @Test
+    fun `the conditioning pass looks again after its band limit when the render is no longer wanted`() {
+        // The pass looks on entry, so a flag set before it is caught there and says nothing about the looks
+        // between its band limit and its decimation; an interrupt that lands after that first look must still stop it.
+        val internalRate = Alloy.RATE * Dsp.OVERSAMPLE
+        val late = LateInterrupt(clearLooks = 1)
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            late.run { Alloy.finish(FloatArray(Dsp.OVERSAMPLE * 4096), internalRate) }
+        }
+        assertEquals(2, late.looks, "the pass stopped at its look after the band limit")
+        assertEquals(4096, Alloy.finish(FloatArray(Dsp.OVERSAMPLE * 4096), internalRate).size, "an uninterrupted pass still conditions")
+    }
+
+    @Test
     fun `six dry voices reproduce complete inputs and ignore macro insertion order`() {
         assertEquals(setOf("BASS", "KEY", "PLUCK", "BRASS", "STRING", "SOFT"), AlloyVoice.entries.map { it.name }.toSet())
         for (voice in AlloyVoice.entries) {

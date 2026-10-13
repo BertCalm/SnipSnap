@@ -343,7 +343,7 @@ object Skitter {
     }
 
     /** Blackman-windowed sinc, 48 output-sample support, >70 dB far-stopband rejection. */
-    private fun decimate(raw: FloatArray, oversample: Int, periodic: Boolean): FloatArray {
+    internal fun decimate(raw: FloatArray, oversample: Int, periodic: Boolean): FloatArray {
         val radius=24*oversample
         val kernel=DoubleArray(2*radius+1)
         var norm=0.0

@@ -325,7 +325,7 @@ object Lacquer {
         if (Thread.currentThread().isInterrupted) throw CancellationException("LACQUER render cancelled")
     }
 
-    private fun finish(raw: FloatArray): FloatArray {
+    internal fun finish(raw: FloatArray): FloatArray {
         // The tick loop polls the preview thread's interrupt; the band limit and the decimation
         // each pass over the full 4x buffer and are long enough to deserve their own check first.
         stopIfUnwanted()

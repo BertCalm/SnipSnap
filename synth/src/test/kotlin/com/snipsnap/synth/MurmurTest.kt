@@ -335,4 +335,17 @@ class MurmurTest {
         }
         assertTrue(Murmur.render(MurmurVoice.KEY).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
+
+    @Test
+    fun `a held render nobody wants any more after its decimation stops before the seam and the level`() {
+        // The held synthesis runs two settling periods, three kept periods and the decimator padding, looking every
+        // 8192 internal samples, then looks once more before the decimation; an interrupt that lands after those
+        // looks must still stop the seam measurement and the level instead of letting them finish unwanted.
+        val held = mapOf("HOLD" to 1f)
+        val frames = Murmur.render(MurmurVoice.KEY, held).samples.size
+        val loopLooks = ((5 * frames + 512) * Dsp.OVERSAMPLE + 8191) / 8192
+        val late = LateInterrupt(clearLooks = loopLooks + 1)
+        assertFailsWith<java.util.concurrent.CancellationException> { late.run { Murmur.render(MurmurVoice.KEY, held) } }
+        assertEquals(loopLooks + 2, late.looks, "the render stopped at its first look after the decimation")
+    }
 }

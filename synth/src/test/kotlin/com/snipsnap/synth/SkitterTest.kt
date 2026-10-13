@@ -279,6 +279,19 @@ class SkitterTest {
         assertTrue(Skitter.render(SkitterVoice.BASS).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
 
+    @Test
+    fun `the decimation stops on its own when the render is no longer wanted`() {
+        // The sample loops look every 8192 samples, but the sinc decimation that follows them convolves the whole
+        // oversampled buffer, so it must look for itself rather than run to the end unwanted.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException> { Skitter.decimate(FloatArray(4 * 4096), 4, false) }
+        } finally {
+            Thread.interrupted()
+        }
+        assertEquals(4096, Skitter.decimate(FloatArray(4 * 4096), 4, false).size, "an uninterrupted decimation still returns every frame")
+    }
+
     private companion object {
         // Round-three register sweep (216 cases): peak .0386.. .5307, DC/RMS <= .00456,
         // no emergency state-bound hits. Margins preserve the pre-level gain budget.

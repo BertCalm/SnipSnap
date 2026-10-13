@@ -33,6 +33,17 @@ class StoopEngineTest {
         }
     }
 
+    @Test fun `the conditioning pass looks again after its band limit when the render is no longer wanted`() {
+        // The pass looks on entry, so a flag set before it is caught there and says nothing about the look
+        // between its band limit and its decimation; an interrupt that lands after that first look must still stop it.
+        val late = LateInterrupt(clearLooks = 1)
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            late.run { Stoop.condition(FloatArray(Dsp.OVERSAMPLE * 4096)) }
+        }
+        assertEquals(2, late.looks, "the pass stopped at its look after the band limit")
+        assertEquals(4096, Stoop.condition(FloatArray(Dsp.OVERSAMPLE * 4096)).size, "an uninterrupted pass still conditions")
+    }
+
     @Test fun `source rejects invalid independent configurations`() {
         assertFailsWith<IllegalArgumentException> { StoopSource(fmRatio = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { StoopSource(sub = 1.01f) }
