@@ -7,11 +7,11 @@
   const VOICES = ['STRING', 'CHOIR', 'FLUTE', 'BRASS', 'PALIMPSEST', 'CUT'];
   const VOICE_NAMES = { STRING: 'Soft Frame', CHOIR: 'Returning Choir', FLUTE: 'Flute Memory', BRASS: 'Worn Brass', PALIMPSEST: 'Ghost Copy', CUT: 'Short Splice' };
   const MACRO_COPY = {
-    HEAD: ['Aligned pickup becomes a diagonal encounter through track and recorded time.', 'Aligned', 'Diagonal'],
+    HEAD: ['Listen for the pickup moving between different voices as it crosses the recording.', 'Aligned', 'Diagonal'],
     STRAIN: ['Both directions share gentle tape wow and flutter. Raising STRAIN adds hesitation, stretch, and recovery.', 'Gentle flutter', 'Competing'],
-    RETURN: ['Listen for the backward swell rising through the held forward tone. Raising RETURN brings that reversed layer into focus.', 'Silent', 'Pronounced'],
-    IMPRINT: ['A delayed neighboring trace is softly written, then heard during a finite reread.', 'Original', 'Inherited'],
-    SPLICE: ['The continuous recording becomes a deterministic sequence of overlapped, reordered sections.', 'Continuous', 'Reordered']
+    RETURN: ['A bright attack swells backwards beneath the forward tone. Raising RETURN brings that reversed layer into focus.', 'No return', 'Strong return'],
+    IMPRINT: ['An earlier pass leaves a trace. Listen for it when the recording is heard again.', 'Original', 'Inherited'],
+    SPLICE: ['Listen for the attack returning at different points as recorded sections are reordered.', 'Continuous', 'Reordered']
   };
   const PAIR_COPY = {
     head_imprint: 'Head position changes where an inherited trace is heard.',
@@ -66,13 +66,13 @@
   function renderMacros() {
     $('#macro-tabs').innerHTML = MACROS.map((macro) => `<button role="tab" id="tab-${macro.toLowerCase()}" data-macro="${macro}" aria-selected="${macro === state.macro}" aria-controls="macro-panel" tabindex="${macro === state.macro ? 0 : -1}">${macro}</button>`).join('');
     const [copy, low, high] = MACRO_COPY[state.macro];
+    const clips = state.clips.filter((c) => c.section === 'macros' && String(c.macro || '').toUpperCase() === state.macro).sort((a, b) => Number(a.value) - Number(b.value));
     $('#macro-index').textContent = `CONTROL ${String(MACROS.indexOf(state.macro) + 1).padStart(2, '0')}`;
     $('#macro-title').textContent = state.macro;
-    $('#macro-description').textContent = copy;
+    $('#macro-description').textContent = clips[0]?.description || copy;
     $('#macro-low').textContent = low;
     $('#macro-high').textContent = high;
     $('#macro-panel').setAttribute('aria-labelledby', `tab-${state.macro.toLowerCase()}`);
-    const clips = state.clips.filter((c) => c.section === 'macros' && String(c.macro || '').toUpperCase() === state.macro).sort((a, b) => Number(a.value) - Number(b.value));
     $('#sweep-grid').innerHTML = clips.length ? clips.map((clip) => `<article class="sweep-point" data-card-id="${esc(clip.id)}"><div class="sweep-value">${percent(clip.value)}<span>%</span></div><div class="sweep-meter" aria-hidden="true"><i style="--value:${percent(clip.value)}%"></i></div>${clipButton(clip)}<span class="clip-time">${duration(clip)} · ${esc(clip.voice)}</span></article>`).join('') : empty('This macro sweep is not present in the audition pack.');
     updateButtons();
   }
@@ -130,7 +130,7 @@
     $('#measurement-context').textContent = `${clip.description || ''} ${state.level === 'raw' ? `Raw measurements describe native engine output before PCM export${rawGain < 1 ? ` (export gain ${rawGain.toFixed(4)})` : ''}.` : 'Matched files use the common quiet audition level of 0.03 over the loudest 200 ms.'} Listening approval remains a separate step.`;
     $('#measurement-context').classList.add('measurement-context');
     $('#diagnostic-details').hidden = !clip.diagnostics;
-    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, forwardPitch: clip.forwardPitch, overlap: clip.overlap, stems: clip.stems, provenance: clip.provenance || state.manifest.provenance }, null, 2);
+    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, auditionWindow: clip.auditionWindow, recipe: clip.recipe, forwardPitch: clip.forwardPitch, overlap: clip.overlap, stems: clip.stems, provenance: clip.provenance || state.manifest.provenance }, null, 2);
   }
   function updateButtons() {
     const playing = !!state.selected && !audio.paused && !audio.ended;

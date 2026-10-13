@@ -56,14 +56,18 @@ object SpoolAuditionGenerator {
         val macro: String? = null,
         val value: Float? = null,
         val groupKey: String? = null,
+        val machine: SpoolMachine? = null,
+        val excerptReread: Boolean = false,
     )
 
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/spool-audition")
         val quick = "--quick" in args
+        val movementOnly = "--movement-only" in args
+        require(!(quick && movementOnly)) { "Movement refresh requires all five sweep positions" }
         require(root.isDirectory || root.mkdirs()) { "Could not create ${root.absolutePath}" }
-        val cases = cases(quick)
+        val cases = cases(quick).filter { !movementOnly || it.section == "macros" }
         check(cases.map { it.id }.distinct().size == cases.size)
         val source = listOf(File("src/main/kotlin/com/snipsnap/synth/Spool.kt"), File("synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"))
             .first { it.isFile }
@@ -77,11 +81,26 @@ object SpoolAuditionGenerator {
                 "$path changed during rendering; regenerate one consistent pack"
             }
         }
-        val entries = mutableListOf<JsonValue>()
+        val previous = if (movementOnly) {
+            require(File(root, "manifest.json").isFile) { "Movement refresh needs an existing complete pack" }
+            Json.parse(File(root, "manifest.json").readText()).obj()
+        } else null
+        if (previous != null) {
+            require(previous.getValue("provenance").obj().getValue("sourceFilesSha256") == j(sourceFileHashes)) {
+                "DSP or factory geometry changed; regenerate the complete pack"
+            }
+            val oldClips = previous.getValue("clips").arr().map { it.obj() }
+            require(timbral.all { macro -> oldClips.count {
+                it["section"]?.str() == "macros" && it["macro"]?.str() == macro
+            } == 5 }) { "Movement refresh needs an existing complete five-position pack" }
+        }
+        val entries = previous?.getValue("clips")?.arr()?.filter {
+            it.obj().getValue("section").str() != "macros"
+        }?.toMutableList() ?: mutableListOf()
         for ((index, case) in cases.withIndex()) {
             verifySources()
             val macros = Spool.defaults(case.voice) + case.macros + ("TUNE" to ((case.midi - 48) / 24f))
-            val geometry = SpoolMachine.forVoice(case.voice).copy(gateSeconds = case.gate, sourceSeconds = case.sourceSeconds, motorTorque = case.motorTorque)
+            val geometry = case.machine ?: SpoolMachine.forVoice(case.voice).copy(gateSeconds = case.gate, sourceSeconds = case.sourceSeconds, motorTorque = case.motorTorque)
             val machine = if (case.companionLoad) geometry.copy(roster = geometry.roster.mapIndexed { i, strip ->
                 if (i == 2) strip.copy(tension = 2f, drag = 1f) else strip
             }) else geometry
@@ -92,7 +111,15 @@ object SpoolAuditionGenerator {
             val renderMs = (System.nanoTime() - start) / 1_000_000.0
             require(result.samples.isNotEmpty() && result.samples.all { it.isFinite() }) { "Invalid clip ${case.id}" }
             val held = Spool.isLoop(macros.getValue("HOLD"))
-            val samples = if (case.repeatedCopies == 1) result.samples else
+            val rereadStart = if (case.excerptReread) (result.diagnostics.returnEndSeconds * Dsp.RATE).toInt() else 0
+            val rereadEnd = if (case.excerptReread)
+                ((result.diagnostics.returnEndSeconds + result.diagnostics.reengageSeconds) * Dsp.RATE).toInt().coerceAtMost(result.samples.size)
+                else result.samples.size
+            require(!case.excerptReread || !held && case.repeatedCopies == 1 && rereadEnd > rereadStart) {
+                "A reread excerpt needs a finite reengagement"
+            }
+            val samples = if (case.excerptReread) result.samples.copyOfRange(rereadStart, rereadEnd)
+                else if (case.repeatedCopies == 1) result.samples else
                 FloatArray(result.samples.size * case.repeatedCopies) { result.samples[it % result.samples.size] }
             val native = Snip(samples, 1, Dsp.RATE)
             val nativeMetrics = metrics(native)
@@ -153,6 +180,7 @@ object SpoolAuditionGenerator {
                 "overlapSeconds" to d.overlapSeconds, "overlapMeasure" to "active grain/contact time; audible RMS overlap is in the stem measurements", "carrierRateMeaning" to "grain branches share an integrated wow/flutter clock; physical transport is in the transport trace",
                 "tapeMotion" to "common 0.73 Hz wow and 6.7/12.1 Hz flutter; both heads stay together",
                 "tapeExcursionBoundCents" to Spool.MAX_TAPE_CENTS,
+                "audioStartSeconds" to rereadStart.toDouble() / Dsp.RATE,
 
             )
             val entry = linkedMapOf<String, Any?>(
@@ -217,6 +245,11 @@ object SpoolAuditionGenerator {
                 }
             }
             if (case.macro != null) entry["macro"] = case.macro
+            if (case.section == "macros") entry["recipe"] = SpoolPatch(case.label, case.voice, macros, machine, case.velocity).toJsonValue()
+            if (case.excerptReread) entry["auditionWindow"] = mapOf(
+                "kind" to "finite second read after the causal write pass", "startFrame" to rereadStart,
+                "endFrame" to rereadEnd, "performanceFrames" to result.samples.size,
+                "description" to "An excerpt of the actual second read; trace times refer to the full performance.")
             if (case.value != null) entry["value"] = case.value
             if (case.groupKey != null) entry["groupKey"] = case.groupKey
             if (case.section in setOf("voices", "registers")) entry["forwardPitch"] = forwardPitch(samples, Keys.midiHz(case.midi))
@@ -225,7 +258,7 @@ object SpoolAuditionGenerator {
             println("Spool audition ${index + 1}/${cases.size}: ${case.id} (${"%.0f".format(Locale.ROOT, renderMs)} ms)")
         }
         verifySources()
-        val kit = exportKit(root)
+        val kit = previous?.getValue("kit") ?: j(exportKit(root))
         verifySources()
         val patches = SpoolPresets.all().map { it.toJsonValue() }
         File(root, "patches.json").writeText(Json.write(JsonValue.Arr(patches)) + "\n")
@@ -270,9 +303,40 @@ object SpoolAuditionGenerator {
                 identityControls, midi = midi, groupKey = "identity_$midi"))
         }
         val baseline = mapOf("HEAD" to .25f, "STRAIN" to .2f, "RETURN" to .6f, "IMPRINT" to .4f, "SPLICE" to .2f)
+        val focused = mapOf("HEAD" to 0f, "STRAIN" to .1f, "RETURN" to 0f,
+            "IMPRINT" to 0f, "SPLICE" to 0f, "HOLD" to 0f)
+        fun isolated(voice: SpoolVoice) = SpoolMachine.forVoice(voice).let { machine ->
+            machine.copy(roster = machine.roster.mapIndexed { i, strip -> strip.copy(gain = if (i == 0) 1f else 0f) })
+        }
+        val crossingHead = SpoolMachine.forVoice(SpoolVoice.PALIMPSEST).let { machine ->
+            machine.copy(roster = machine.roster.mapIndexed { i, strip ->
+                strip.copy(gain = listOf(.70f, .20f, .10f)[i])
+            }, headOffsets = listOf(.12f, -.35f, .35f))
+        }
+        val imprintEncounter = isolated(SpoolVoice.CHOIR).copy(
+            routes = listOf(SpoolRoute(2, 0, .55f)), reengage = true)
+        val attackSplices = isolated(SpoolVoice.BRASS).copy(gateSeconds = 2.2f,
+            spliceSchedule = listOf(SpoolSplice(.12f, -.12f), SpoolSplice(.27f, -.27f),
+                SpoolSplice(.40f, -.40f), SpoolSplice(.55f, -.40f)))
         for (macro in timbral) for (value in if (quick) listOf(0f, .5f, 1f) else listOf(0f, .25f, .5f, .75f, 1f)) {
-            add(Case("sweep_${macro.lowercase(Locale.ROOT)}_${(value * 100).toInt()}", "macros", SpoolVoice.STRING,
-                "$macro · $value", macroDescriptions.getValue(macro), baseline + (macro to value), macro = macro, value = value))
+            val id = "sweep_${macro.lowercase(Locale.ROOT)}_${(value * 100).toInt()}"
+            val demo = when (macro) {
+                "HEAD" -> Case(id, "macros", SpoolVoice.PALIMPSEST, "$macro · $value",
+                    "A bowed recording shares the pickup with choir and flute. Listen for the vowel and air becoming more prominent as HEAD crosses the recordings.",
+                    focused + ("RETURN" to .6f), machine = crossingHead)
+                "RETURN" -> Case(id, "macros", SpoolVoice.BRASS, "$macro · $value",
+                    "A short brass note has a bright attack. Listen for that attack swelling backwards beneath its forward tone as RETURN rises.",
+                    focused, machine = isolated(SpoolVoice.BRASS).copy(gateSeconds = .85f))
+                "IMPRINT" -> Case(id, "macros", SpoolVoice.CHOIR, "$macro · $value",
+                    "This is the choir recording's second read, after a flute trace has been written into it. Listen for the quiet inherited undertone as IMPRINT rises.",
+                    focused + ("RETURN" to 1f), machine = imprintEncounter, excerptReread = true)
+                "SPLICE" -> Case(id, "macros", SpoolVoice.BRASS, "$macro · $value",
+                    "A longer brass recording makes the cuts audible. Listen for its attack returning at new points as SPLICE reorders the recorded sections.",
+                    focused, machine = attackSplices)
+                else -> Case(id, "macros", SpoolVoice.STRING, "$macro · $value",
+                    macroDescriptions.getValue(macro), baseline)
+            }
+            add(demo.copy(macros = demo.macros + (macro to value), macro = macro, value = value))
         }
         val pairs = listOf("HEAD" to "IMPRINT", "STRAIN" to "RETURN", "RETURN" to "IMPRINT", "HEAD" to "SPLICE", "STRAIN" to "SPLICE")
         for ((a, b) in pairs) for (av in if (quick) listOf(0f, 1f) else listOf(0f, .5f, 1f)) for (bv in if (quick) listOf(0f, 1f) else listOf(0f, .5f, 1f)) {

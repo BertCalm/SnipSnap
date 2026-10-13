@@ -172,6 +172,24 @@ dry/level-matched audio and machine probes for the owner's review. The static si
 the publishable audition; publishing does not change the rendering or imply sonic approval.
 The optional comparison flag adds labelled before/after pairs for each voice's finite note,
 HOLD cycle and three repeated cycles, retaining the earlier pack's source provenance.
+
+**Follow the movement** uses material chosen for each control: a string/choir/flute crossing for
+HEAD, a short brass attack for RETURN, and a longer brass recording with attack-revisiting cuts
+for SPLICE. IMPRINT plays the actual finite second read of a choir recording after a delayed
+flute-donor write. Its manifest records the excerpt's frame window relative to the complete
+serialized performance and its diagnostic traces. Each sweep keeps its voice, machine and
+companion controls fixed; only the named macro varies. STRAIN retains the original string sweep.
+All 25 movement entries include complete serialized recipes. These demonstration machines do
+not replace the factory voice recipes.
+
+When only movement examples change, refresh their 25 clips without replacing unrelated audio:
+
+```sh
+./gradlew :synth:generateSpoolAudition -PspoolMovementOnly
+```
+
+This requires an existing five-position pack and matching hashes for all three DSP/factory
+source files. Changes to the engine or factory geometry require a complete render.
 Individual sounds can also be rendered with:
 
 ```sh
