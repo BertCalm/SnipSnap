@@ -13,6 +13,7 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -258,6 +259,24 @@ class SkitterTest {
             assertTrue(result.diagnostics.rawRms > 0.0)
             assertEquals(0, result.diagnostics.boundHits)
         }
+    }
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // sample loops, the forcing, the decimation and the level must stop on that flag instead of finishing.
+        for (render in listOf<() -> Unit>(
+            { Skitter.render(SkitterVoice.BASS) },
+            { Skitter.render(SkitterVoice.BASS, mapOf("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException> { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Skitter.render(SkitterVoice.BASS).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
 
     private companion object {
