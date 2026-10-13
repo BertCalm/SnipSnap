@@ -50,7 +50,8 @@ object Glint {
     /**
      * The musical ceiling. Aliasing is not what bounds this: the burst is
      * generated at `Dsp.RATE * Dsp.OVERSAMPLE`, so folding starts only above
-     * `k·f0 ≈ 88 kHz` — k ≈ 1443 at A1, ≈ 361 at A3, ≈ 76 at C6.
+     * that rate's Nyquist, `k·f0` = 88.2 kHz — k ≈ 1604 at A1, ≈ 401 at A3,
+     * ≈ 84 at C6.
      */
     const val K_MAX = 40f
 
