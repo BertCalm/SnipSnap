@@ -184,6 +184,34 @@ class StoopEngineTest {
         }
     }
 
+    @Test fun `every held loop is cut at whole cycles of its fitted oscillators`() {
+        // The held seam is genuine: generate() compares the 256 frames before the kept region with
+        // its last 256, both from one continuous render. But it check()s that seam below Keys' bar,
+        // so the bar assertions on it here and in StoopAcceptanceTest cannot fail before the engine
+        // throws, and assertEquals(r.seamError, measured) recomputes it. Nor can a test tell that
+        // history from a copy of the loop's tail: the render repeats to float precision, and the two
+        // windows are usually bit-identical. What the bar does not see is a cut one frame short,
+        // which moves the seam only to 1.9e-4..9.8e-4 at every voice's defaults. The planner fits
+        // every oscillator to whole cycles of the loop, so check the exported length against them.
+        val cases = StoopVoice.entries.map { StoopPatch("$it defaults", it, Stoop.defaults(it) + ("HOLD" to 1f)) } +
+            StoopPresets.all().filter { Stoop.isLoop(it.macros.getValue("HOLD")) }
+        for (p in cases) {
+            val r = Stoop.renderProbe(p)
+            // sourceFrequencies holds (frequency, FM modulator, detuned twin) for each tone. The
+            // modulator is fitted only where TINE uses it, so the frequency and twin are checked.
+            val fitted = r.sourceFrequencies.chunked(3).flatMap { listOf(it[0], it[2]) }
+            val worst = fitted.maxOf { f ->
+                val cycles = r.samples.size * f / Stoop.RATE
+                abs(cycles - round(cycles))
+            }
+            val tail = r.samples.copyOfRange(r.samples.size - 256, r.samples.size)
+            println("STOOP HOLD ${p.name}: ${r.samples.size} frames, worst fractional cycle $worst over ${fitted.size} oscillators; " +
+                "history bit-identical to the loop's tail ${r.previousCycle.contentEquals(tail)}")
+            assertTrue(worst < 1e-6, "${p.name} loop of ${r.samples.size} frames is not whole cycles of its fitted " +
+                "oscillators $fitted: off by $worst cycles")
+        }
+    }
+
     @Test fun `zero velocity held audio and normalized probes remain exact silence`() {
         for (voice in StoopVoice.entries) {
             val p = patch(voice, mapOf("HOLD" to 1f, "SHADOW" to 1f, "WEAR" to 1f)).copy(velocity = 0f)

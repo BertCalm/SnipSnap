@@ -32,9 +32,13 @@ package com.snipsnap.kit
  * out comes back as the same seven bits.
  *
  * Hostile input is a stream, not a file: a parser is never more than
- * one message behind, holds at most two pending data bytes, and a SysEx
- * with no terminator is skipped byte by byte until one appears, so no
- * input can make it allocate or stall.
+ * one message behind, holds at most two pending data bytes, and skips a
+ * SysEx byte by byte until its 0xF7 or the next status byte that is not
+ * real-time, so no input can make it allocate or stall. MIDI 1.0 asks a
+ * receiver to take that status byte as the end, and it is what keeps a
+ * SysEx that lost its 0xF7 from swallowing every note after it: a
+ * keyboard that sends only channel messages from then on never sends
+ * another byte that would end it.
  */
 class MidiWire {
 
@@ -66,28 +70,34 @@ class MidiWire {
      * end is kept for the next call.
      */
     fun feed(bytes: ByteArray, offset: Int = 0, count: Int = bytes.size - offset): List<Event> {
-        require(offset >= 0 && count >= 0 && offset + count <= bytes.size) {
+        // `count <= size - offset`, not `offset + count <= size`: the sum can overflow an Int and pass.
+        require(offset >= 0 && count >= 0 && count <= bytes.size - offset) {
             "window $offset+$count is outside ${bytes.size} bytes"
         }
         val out = ArrayList<Event>()
         for (i in offset until offset + count) {
             val b = bytes[i].toInt() and 0xFF
             when {
-                // Real-time: one byte, anywhere, changes nothing around it.
+                // Real-time: one byte, anywhere - inside a SysEx too - changes nothing around it.
                 b >= 0xF8 -> {}
                 b >= 0xF0 -> {
                     // System common cancels running status and whatever was
-                    // half-built; a SysEx swallows everything to its end,
-                    // and its end byte is itself system common - a stray
-                    // 0xF7 with no 0xF0 before it cancels exactly the same.
+                    // half-built; a SysEx swallows its data to its end, and
+                    // its end byte is itself system common - a stray 0xF7
+                    // with no 0xF0 before it cancels exactly the same.
                     runningStatus = 0
                     status = 0
                     data0 = -1
                     needed = 0
                     inSysEx = b == SYSEX_START
                 }
+                // A channel status byte ends a SysEx too, whether or not its
+                // 0xF7 came, and starts its own message.
+                b >= 0x80 -> {
+                    inSysEx = false
+                    begin(b)
+                }
                 inSysEx -> {}
-                b >= 0x80 -> begin(b)
                 else -> {
                     if (status == 0) {
                         // Running status: data without a status byte reuses
@@ -134,7 +144,6 @@ class MidiWire {
         private const val PROGRAM_CHANGE = 0xC0
         private const val CHANNEL_PRESSURE = 0xD0
         private const val SYSEX_START = 0xF0
-        private const val SYSEX_END = 0xF7
 
         /** The sustain pedal: at or above [CC_SWITCH_ON] the pedal is down. */
         const val CC_SUSTAIN = 64

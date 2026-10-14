@@ -56,9 +56,11 @@ import kotlin.random.Random
  * proved the loop; R1 measured the knobs: a print-only probe swept BREATH, LIP
  * and TUNE per voice at the raw rate (Hann-windowed harmonics, autocorrelation
  * pitch, onset envelopes) and the numbers in the KDoc of each constant are what
- * it read. Nothing here was *listened to* — the audition gate is what decides
- * whether the tone is a woodwind, and every value marked "listening" is a first
- * guess for it.
+ * it read. R1 set them without listening. The owner's notes since have set
+ * some and added others (each round is in the design doc, from "R1, the reed's
+ * bite" on; [VOICE_HIGH_DB]'s lift is one the owner picked by ear); the audition
+ * gate is what decides whether the tone is a woodwind, and every value still
+ * marked "listening" is a first guess for it.
  *
  * The engine renders **dry**. The spec's tape stage (MELLO) is the rack's TAPE
  * by another name; a BORE pad *lands* with it in its recipe ([landingChain]) the
@@ -563,7 +565,7 @@ object Bore {
 
     internal fun settled(macros: Map<String, Float>, voice: BoreVoice): Map<String, Float> {
         val m = defaults(voice).toMutableMap()
-        for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+        for ((k, v) in macros) if (m.containsKey(k) && v.isFinite()) m[k] = v.coerceIn(0f, 1f)
         return m
     }
 
@@ -712,9 +714,12 @@ object Bore {
         return rolled
     }
 
-    /** The chain SEND TO PAD bakes into a BORE recipe: TAPE on a one-shot, nothing on a LOOP. */
+    /**
+     * The chain SEND TO PAD bakes into a BORE recipe: TAPE on a one-shot, nothing on a LOOP. A HOLD that is
+     * not finite counts as absent, as it does in [settled], so the landing matches what [render] plays.
+     */
     fun landingChain(macros: Map<String, Float>): FxChain? =
-        if (isLoop(macros["HOLD"] ?: DEFAULT_HOLD)) null else FxChain().withSection("tape", LANDING_TAPE)
+        if (isLoop(macros["HOLD"]?.takeIf { it.isFinite() } ?: DEFAULT_HOLD)) null else FxChain().withSection("tape", LANDING_TAPE)
 
     // ---- the blow ----------------------------------------------------------
 

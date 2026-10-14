@@ -169,11 +169,44 @@ ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
 `--instrument` and `--drone` are RESIN only: a held nine-zone instrument
 (`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
 hold on the phone's MAKE INSTRUMENT; this command refuses them. An
-engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR)
-still renders here.
+engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR,
+AEROSTAT) still renders here.
+
+`--midi N` and `--velocity 0..1` set a pad audition's note and strike
+energy on the engines below and are refused on any other, and with
+`--instrument` or `--drone`. The ranges are `SynthCommand`'s note-range
+table; a `--midi` outside the voice's range is refused with the range in
+the message.
+
+| Engine | `--midi` |
+|---|---|
+| ALLOY | 24–96 |
+| CISTERN | 36–84 |
+| FLOTILLA | 36–84 |
+| TESSERA | 48–72 |
+| PITCHWHEEL | 24–96 |
+| REVEL | 48–72 |
+| PRISM | BASS 24–48; ORGAN 36–60; KEY, PLUCK, VEIL 48–72; GLASS 60–84 |
+| CONTOUR | BASS 12–60; HOLLOW, SWELL 24–72; KEY, PLUCK, LEAD 36–84 |
+| STOOP | 24–96 |
+| LACQUER | 24–96 |
+| SPOOL | 48–72 |
+| SKITTER | 24–84 |
+| TANGLE | 24–84 |
+| RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
+| EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
+| MURMUR | 36–96 |
+
+ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
+the preset's saved TUNE offset (±12 semitones). EMBOUCHURE resets TUNE to
+zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
+and RELAY rewrite TUNE to land on the note; the rest store the note
+itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
+repeatable macro variation around the chosen preset); both are refused on
+any other engine.
 
 LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
-eight-preset audition bank. `--midi 24..96` and `--velocity 0..1` override
+eight-preset audition bank. `--midi` and `--velocity 0..1` override
 the stored root and strike energy, while TUNE remains the saved ±12-semitone
 offset. For example:
 
@@ -186,8 +219,8 @@ native/matched comparison page come from `:synth:generateLacquerAudition`;
 `:synth:generateLacquerKit` exports the dry starter pads as an MPC 3 track
 with an MPC 2 twin. These remain provisional sounds pending the owner's audition.
 
-RELAY auditions use the complete saved phrase at the requested root: `--midi`
-accepts 48–72 for KEY, PLUCK, ORGAN, CHIME and FLOW, or 24–48 for BASS.
+RELAY auditions use the complete saved phrase at the requested root (each
+voice's `--midi` range is in the table above).
 `--velocity 0..1` changes excitation and accent energy. Its six dry factory
 seeds each cover one voice; rendered pulse timing follows sample transposition.
 
@@ -891,6 +924,16 @@ k-th pattern), mixer wired, samples pooled per-kit-prefixed in
 `_[ProjectData]/`. `--mixdown` also renders the whole session — every
 kit playing its groove, summed and peak-limited — as `<Name>.wav`
 beside the `.xpj`: the beat as a file you can send anywhere.
+
+`--project <shelf>/Projects/<name>` takes a stored project instead of
+kit folders ([`DIRECTION_2026_10.md`](DIRECTION_2026_10.md) §2): its
+held kits, in its order, resolved against the shelf two folders up; its
+**beat on the active kit's track** in place of that kit's own grooves
+(the others keep theirs); its tempo on the session; its name, made
+card-safe, as the session's unless `--name` says otherwise. A held kit
+whose folder is gone is refused by name before anything is written.
+`--mixdown` plays the beat's first pattern on the active kit the same
+way. Kit folders and `--project` are two ways in, not one command line.
 
 ### `sidea <kit-dir>... --title NAME` — the beat tape
 

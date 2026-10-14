@@ -18,9 +18,18 @@ import kotlin.test.assertTrue
  * <.015 exported DC, <25-cent clean-root error and the project's <1e-3 exported HOLD seam.
  * Extreme textures retain their measurements in the audition; they do not inherit clean-tone
  * autocorrelation confidence requirements. Listening acceptance remains a separate owner decision.
+ *
+ * The engine enforces the .10–.90 pulse width, the oscillator ceiling and the filter's bound of 8
+ * itself (clamps and a check), so asserting those contracts here could never fail. The budget test
+ * holds the measured envelopes instead, each well inside its contract, so a change that moves the
+ * modulation depth or the filter's gain shows up before a clamp hides it or the check throws.
  */
 class TangleTest {
     private val timbral = listOf("TANGLE", "CHASE", "CATCH", "BITE", "WEIGHT")
+
+    /** B's whole-number ratio to A for each voice (Tangle's voice table); B runs that many times A's rate. */
+    private val ratio = mapOf(TangleVoice.BASS to 1, TangleVoice.LEAD to 2, TangleVoice.HOLLOW to 2,
+        TangleVoice.PULSE to 1, TangleVoice.METAL to 3, TangleVoice.KNOT to 1)
 
     @Test
     fun `voice defaults and control order render sample-identically`() {
@@ -44,9 +53,17 @@ class TangleTest {
             assertTrue(probe.raw.all { it.isFinite() }, "$voice/$midi/$high raw non-finite")
             assertTrue(probe.samples.all { it.isFinite() }, "$voice/$midi/$high output non-finite")
             assertTrue(d.rawPeak < 1.5, "$voice/$midi/$high raw peak ${d.rawPeak}")
-            assertTrue(d.minFrequencyHz > 0.0 && d.maxFrequencyHz < probe.sampleRate * 0.5, "$voice instantaneous frequency ${d.minFrequencyHz}..${d.maxFrequencyHz}")
-            assertTrue(d.minPulseWidth >= 0.10 - 1e-6 && d.maxPulseWidth <= 0.90 + 1e-6, "$voice pulse width ${d.minPulseWidth}..${d.maxPulseWidth}")
-            assertTrue(d.maxFilterState.isFinite() && d.maxFilterState < 8.0, "$voice runaway filter ${d.maxFilterState}")
+            // Measured over this matrix on 2026-10-13: A never fell below .29 of the root (PULSE MIDI 24, all
+            // high) against its clamp at .25, and neither oscillator rose above 1.51 times its own nominal
+            // rate (BASS MIDI 24, all high) against a ceiling of 12 kHz the matrix never approaches.
+            val hz = Keys.midiHz(midi).toDouble()
+            assertTrue(d.minFrequencyHz >= .27 * hz && d.maxFrequencyHz <= 1.75 * ratio.getValue(voice) * hz,
+                "$voice/$midi/$high instantaneous frequency ${d.minFrequencyHz / hz}..${d.maxFrequencyHz / hz} times the root left its measured FM excursion")
+            // Measured .3075..0.6830 (PULSE); the clamp at .10–.90 never binds.
+            assertTrue(d.minPulseWidth >= 0.25 && d.maxPulseWidth <= 0.75,
+                "$voice/$midi/$high pulse width ${d.minPulseWidth}..${d.maxPulseWidth} left its measured envelope")
+            // Measured at most 1.65 (PULSE MIDI 84, all high); the engine throws at 8.
+            assertTrue(d.maxFilterState.isFinite() && d.maxFilterState < 3.0, "$voice/$midi/$high filter state ${d.maxFilterState} lost its headroom")
             assertTrue(abs(probe.samples.average()) < 0.015, "$voice/$midi/$high accumulating DC ${probe.samples.average()}")
             assertTrue(TangleMeasure.rms(probe.samples) > 1e-4, "$voice/$midi/$high silence")
         }
@@ -184,6 +201,17 @@ class TangleTest {
             assertTrue(a.stateError < 1e-3, "$voice full-state error ${a.stateError}")
             assertTrue(loop.conditioningStateError < 1e-3, "$voice anti-alias / decimation state error ${loop.conditioningStateError}")
             assertTrue(a.seam < 1e-3, "$voice float seam ${a.seam}")
+            // The four bounds above sit at or beyond what the engine already refuses (it throws unless the
+            // state error is under 2e-6 and the seam under 1e-3, and it stops after eight periods), so
+            // they only ever see converged loops. These hold the measured margin instead. The second
+            // period is the first one the engine can compare with a predecessor, and every voice closed
+            // there; full-state error measured at most 1.28e-11 (BASS), the conditioning error exactly
+            // zero and the seam at most 1.7e-18 (PULSE). A convergence regression that still passed the
+            // engine's own bars would need more periods or leave a larger error.
+            assertEquals(2, a.attempts, "$voice needed ${a.attempts} periods to converge, not the first comparison")
+            assertTrue(a.stateError < 1e-8, "$voice full-state error ${a.stateError} lost its measured margin")
+            assertTrue(loop.conditioningStateError < 1e-8, "$voice anti-alias / decimation state error ${loop.conditioningStateError} lost its measured margin")
+            assertTrue(a.seam < 1e-8, "$voice float seam ${a.seam} lost its measured margin")
             assertTrue(a.diagnostics.captureEvents.any { it.state == Tangle.CaptureState.CAUGHT }, "$voice HOLD lost capture")
             val wanted = Keys.midiHz(Tangle.rootMidi(voice))
             val loopPitch = FineTuning.measuredHz(Snip(a.loop, 1, Dsp.RATE), wanted, .12f, .7f)
@@ -199,6 +227,58 @@ class TangleTest {
             } / (exported.size - 1))
             assertTrue(abs(exported.first() - exported.last()) < derivativeRms * 8 + 1e-5, "$voice wrap is an exceptional discontinuity")
         }
+    }
+
+    /**
+     * HOLD is the one TANGLE path that can refuse a render (its phase-fitting, residual, correction and
+     * convergence checks), and it is reached off the root and off the defaults: on the phone SCRAMBLE
+     * moves the timbral macros away from their defaults (to an end when a draw runs past it) and the
+     * HOLD slider then turns the note held, and the CLI's --midi moves a held preset anywhere in 24..84.
+     * Measured 2026-10-13: every corner below closed on its second period with full-state error at
+     * most 2.98e-8 and a float seam at most 6.7e-16.
+     */
+    @Test
+    fun `HOLD converges at both ends of the pitch range at timbral extremes and on every held preset`() {
+        val corners = mutableListOf<Triple<String, TangleVoice, Map<String, Float>>>()
+        for (voice in TangleVoice.entries) for (level in listOf(0f, 1f))
+            corners += Triple("$voice timbral=$level", voice, Tangle.defaults(voice) + timbral.associateWith { level } + ("HOLD" to 1f))
+        val held = TanglePresets.all().filter { Tangle.isLoop(it.macros.getValue("HOLD")) }
+        assertEquals(8, held.size, "the held roster changed; widen this sweep with it")
+        for (preset in held) corners += Triple(preset.name, preset.voice, preset.macros)
+        for ((label, voice, macros) in corners) for (midi in listOf(Tangle.MIN_MIDI, Tangle.MAX_MIDI)) {
+            val a = Tangle.renderLoopMeasured(voice, macros, midi)
+            assertTrue(a.loop.all { it.isFinite() }, "$label MIDI $midi HOLD non-finite")
+            assertTrue(a.loop.size.toDouble() / Dsp.RATE > 1.5, "$label MIDI $midi HOLD period is shorter than the house sustained-loop boundary")
+            assertHeldExportCloses(a, "$label MIDI $midi")
+        }
+    }
+
+    /**
+     * The exported PCM16 loop closes: the independently synthesized preceding period still meets the
+     * loop's end after quantization, and the playback wrap from the last sample to the first is no
+     * larger a step than the loop's own motion.
+     *
+     * The seam context is the engine's own comparison times the levelling gain, and the engine refuses a
+     * float seam at [Keys.MAX_SEAM_ERROR], so holding the PCM16 seam to that bar restated the engine's
+     * check: quantization adds at most one step per frame, 256 LSB² over the 256 frames' energy (1.7e-7
+     * at the quietest join this sweep plays, PULSE at timbral 0 and MIDI 24), so it could fail only for a
+     * float seam already that close to the bar. It is held to 1e-6 instead, above anything rounding alone
+     * can add and a thousand times inside the engine's bar. Measured 2026-10-13 over all 40 renders:
+     * exactly 0, because a float seam of at most 6.7e-16 rounds both sides of every join to the same codes.
+     */
+    private fun assertHeldExportCloses(a: Tangle.LoopRender, label: String) {
+        val bytes = ByteArrayOutputStream().also { WavWriter.write(it, Snip(a.loop, 1, Dsp.RATE), WavWriter.BitDepth.PCM_16) }
+        val exported = WavReader.read(bytes.toByteArray()).samples
+        val context = ByteArrayOutputStream().also { WavWriter.write(it, Snip(a.seamContext, 1, Dsp.RATE), WavWriter.BitDepth.PCM_16) }
+        val exportedContext = WavReader.read(context.toByteArray()).samples
+        val seam = Keys.seamError(exportedContext, a.loopStartFrame)
+        assertTrue(seam < 1e-6, "$label PCM16 independent-period seam $seam lost its margin inside the engine's ${Keys.MAX_SEAM_ERROR}")
+        val derivativeRms = kotlin.math.sqrt((1 until exported.size).sumOf { i ->
+            val difference = exported[i] - exported[i - 1].toDouble()
+            difference * difference
+        } / (exported.size - 1))
+        val wrap = abs(exported.first() - exported.last())
+        assertTrue(wrap < derivativeRms * 8 + 1e-5, "$label wrap step $wrap is an exceptional discontinuity against motion $derivativeRms")
     }
 
     @Test

@@ -14,9 +14,12 @@ import com.snipsnap.xpm.PadNoteMap
  *    sounds the way it will on the Live III, which is the point of the
  *    app.
  *  - [Map.IN_ORDER] walks the slots: C1 (note 36) is A01, C#1 is A02,
- *    up through every bank. A melodic kit - `SynthKits.melodic`'s two
- *    octaves of plucks ascending from A01 - plays as a scale under the
- *    fingers instead of being scattered across the drum map.
+ *    up through every bank. A kit laid out as a scale plays in that order
+ *    under the fingers instead of being scattered across the drum map:
+ *    `SynthKits.melodic` climbs from A01 to A12 (six nylon plucks up the
+ *    A minor pentatonic from A2, five kalimba notes on to A4, a harp crown
+ *    at E5), so notes 36 to 47 rise with it, and its A13-A16 organ stabs,
+ *    on notes 48 to 51, drop back to the root, fourth, fifth and octave.
  *
  * The map is a choice the screen keeps; this object only answers "which
  * slot". A note no pad answers to is null, and the screen's own `hit`

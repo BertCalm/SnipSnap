@@ -63,7 +63,7 @@ fun Modifier.raisedBevel(
  * [Scheme.accent] instead of the neutral bevel highlight/shadow, so a
  * selected control reads as a distinctly thicker, distinctly-hued ring
  * even to someone who can't use the hue at all. See `ContrastTest` for
- * accent-vs-fill ratios (4.08-11.28:1 across all 8 schemes, clearing the
+ * accent-vs-fill ratios (4.08-11.28:1 across every scheme, clearing the
  * 3:1 graphical-object threshold everywhere).
  */
 fun Modifier.pressedBevel(
