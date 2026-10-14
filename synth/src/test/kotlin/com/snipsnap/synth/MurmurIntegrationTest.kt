@@ -80,37 +80,62 @@ class MurmurIntegrationTest {
         val source = patch()
         fun changed(name: String, value: JsonValue) = JsonValue.Obj(
             LinkedHashMap(source.toJsonValue().entries).also { it[name] = value })
-        for ((key, value) in listOf("engine" to JsonValue.Str("GYRE"), "version" to JsonValue.Num(2.0),
-            "voice" to JsonValue.Str("KICK"), "midi" to JsonValue.Num(60.5))) {
-            assertFailsWith<JsonException> { MurmurPatch.fromJsonValue(changed(key, value)) }
+        // Every refusal names the guard it is meant to reach. A type-only check passed for any require() in the
+        // constructor chain, and a fractional midi is refused by the JSON integer reader before MURMUR's range
+        // guard is ever consulted, so the range guard now also gets whole numbers outside it.
+        fun refuses(expected: String, label: String, block: () -> Unit) {
+            val refused = assertFailsWith<IllegalArgumentException>(label) { block() }
+            assertEquals(expected, refused.message, "$label was refused by the wrong guard")
         }
-        assertFailsWith<IllegalArgumentException> { source.copy(name = " ") }
+        fun refusesJson(expected: String, label: String, block: () -> Unit) {
+            val refused = assertFailsWith<JsonException>(label) { block() }
+            assertEquals(expected, refused.message, "$label was refused by the wrong guard")
+        }
+        for ((key, value, expected) in listOf(
+            Triple("engine", JsonValue.Str("GYRE"), "not a MURMUR patch: GYRE"),
+            Triple("version", JsonValue.Num(2.0), "unsupported patch version 2"),
+            Triple("voice", JsonValue.Str("KICK"), "unknown voice KICK"),
+            Triple("midi", JsonValue.Num(60.5), "expected an integer, got 60.5"),
+            Triple("midi", JsonValue.Num(35.0), "MURMUR midi out of 36..96: 35"),
+            Triple("midi", JsonValue.Num(97.0), "MURMUR midi out of 36..96: 97"),
+            Triple("velocity", JsonValue.Num(1.5), "MURMUR velocity out of 0..1: 1.5"),
+        )) {
+            refusesJson(expected, "saved $key $value") { MurmurPatch.fromJsonValue(changed(key, value)) }
+        }
+        refuses("patch name must not be blank", "blank name") { source.copy(name = " ") }
         for (midi in listOf(Murmur.MIN_MIDI - 1, Murmur.MAX_MIDI + 1)) {
-            assertFailsWith<IllegalArgumentException> { source.copy(midi = midi) }
+            refuses("MURMUR midi out of 36..96: $midi", "midi $midi") { source.copy(midi = midi) }
         }
         for (velocity in listOf(-.1f, 1.1f, Float.NaN, Float.POSITIVE_INFINITY)) {
-            assertFailsWith<IllegalArgumentException> { source.copy(velocity = velocity) }
+            refuses("MURMUR velocity out of 0..1: $velocity", "velocity $velocity") { source.copy(velocity = velocity) }
         }
-        for (macros in listOf(mapOf("TUNE" to .5f), mapOf("MOUTH" to -.1f),
-            mapOf("EDGE" to 1.1f), mapOf("BREATH" to Float.NaN))) {
-            assertFailsWith<IllegalArgumentException> { source.copy(macros = macros) }
+        val unknownMacro = assertFailsWith<IllegalArgumentException> { source.copy(macros = mapOf("TUNE" to .5f)) }
+        assertTrue(unknownMacro.message.orEmpty().startsWith("unknown macro TUNE for KEY"), "TUNE refused as: ${unknownMacro.message}")
+        for ((name, value) in listOf("MOUTH" to -.1f, "EDGE" to 1.1f, "BREATH" to Float.NaN)) {
+            refuses("macro $name out of 0..1: $value", "$name $value") { source.copy(macros = mapOf(name to value)) }
         }
         val config = source.config
-        assertFailsWith<IllegalArgumentException> { config.copy(ratios = listOf(1.0, 2.0, 3.0)) }
-        assertFailsWith<IllegalArgumentException> { config.copy(ratios = config.ratios.map { 0.0 }) }
-        assertFailsWith<IllegalArgumentException> { config.copy(direction = 0) }
-        assertFailsWith<IllegalArgumentException> { config.copy(referenceSeconds = Double.NaN) }
-        assertFailsWith<IllegalArgumentException> { config.copy(attack = -1.0) }
-        assertFailsWith<IllegalArgumentException> { config.copy(targets = emptyList()) }
+        refuses("Murmur needs four bounded operator ratios", "three ratios") { config.copy(ratios = listOf(1.0, 2.0, 3.0)) }
+        refuses("Murmur needs four bounded operator ratios", "zero ratios") { config.copy(ratios = config.ratios.map { 0.0 }) }
+        refuses("Murmur's principal carrier must bear the requested root", "carrier ratio 2") {
+            config.copy(ratios = listOf(2.0) + config.ratios.drop(1))
+        }
+        refuses("Murmur trajectory direction must be -1 or +1", "direction 0") { config.copy(direction = 0) }
+        refuses("invalid Murmur trajectory time", "reference NaN") { config.copy(referenceSeconds = Double.NaN) }
+        refuses("invalid Murmur attack", "attack -1") { config.copy(attack = -1.0) }
+        refuses("invalid Murmur decay", "decay 0") { config.copy(decay = 0.0) }
+        refuses("invalid Murmur sustain", "sustain 0") { config.copy(sustain = 0.0) }
+        refuses("invalid Murmur release", "release 0") { config.copy(release = 0.0) }
+        refuses("Murmur needs a consistent spectral-target path", "no targets") { config.copy(targets = emptyList()) }
         val target = config.targets.first()
-        assertFailsWith<IllegalArgumentException> { target.copy(widths = target.widths.map { 0.0 }) }
-        assertFailsWith<IllegalArgumentException> { target.copy(centers = target.centers.map { Double.POSITIVE_INFINITY }) }
-        assertFailsWith<IllegalArgumentException> { target.copy(gains = target.gains.map { -1.0 }) }
-        assertFailsWith<IllegalArgumentException> { target.copy(sourceBalance = 1.1) }
+        refuses("invalid Murmur bandwidth", "zero widths") { target.copy(widths = target.widths.map { 0.0 }) }
+        refuses("invalid Murmur center frequency", "infinite centers") { target.copy(centers = target.centers.map { Double.POSITIVE_INFINITY }) }
+        refuses("invalid Murmur formant gain", "negative gains") { target.copy(gains = target.gains.map { -1.0 }) }
+        refuses("invalid Murmur source balance", "balance 1.1") { target.copy(sourceBalance = 1.1) }
         val badConfig = JsonValue.Obj(LinkedHashMap(source.toJsonValue().entries.getValue("config").obj()).also {
             it["routing"] = JsonValue.Str("CYCLIC_UNBOUNDED")
         })
-        assertFailsWith<JsonException> { MurmurPatch.fromJsonValue(changed("config", badConfig)) }
+        refusesJson("unknown MURMUR routing", "routing CYCLIC_UNBOUNDED") { MurmurPatch.fromJsonValue(changed("config", badConfig)) }
     }
 
     @Test

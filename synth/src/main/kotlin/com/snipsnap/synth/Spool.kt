@@ -365,10 +365,17 @@ object Spool {
         }
     }
 
-    private data class Pickup(val first: Double, val second: Double, val blend: Double)
+    /** Filled in place by [pickup]: the per-frame varispeed read and each grain launch reuse one apiece. */
+    private class Pickup(var first: Double = 0.0, var second: Double = 0.0, var blend: Double = 0.0) {
+        fun set(first: Double, second: Double, blend: Double): Pickup {
+            this.first = first; this.second = second; this.blend = blend
+            return this
+        }
+    }
 
     /** Two matched read windows, not a pointer jump, across each of at most four cuts. */
-    private fun pickup(coordinate: Double, support: Double, amount: Double, schedule: List<SpoolSplice>, sourceLength: Double): Pickup {
+    private fun pickup(coordinate: Double, support: Double, amount: Double, schedule: List<SpoolSplice>, sourceLength: Double,
+                       out: Pickup): Pickup {
         fun folded(x: Double): Double {
             // Smooth reflection near ends preserves position and gain without hard pointer clipping.
             if (support <= 0) return 0.0
@@ -377,10 +384,12 @@ object Spool {
             if (p < 0) p += period
             return if (p <= support) p else period - p
         }
-        if (amount <= 0 || schedule.isEmpty()) return Pickup(folded(coordinate), folded(coordinate), 0.0)
-        val active = schedule.take((1 + 3 * amount).toInt().coerceIn(1, 4))
+        if (amount <= 0 || schedule.isEmpty()) return out.set(folded(coordinate), folded(coordinate), 0.0)
+        // The first one to four cuts in order, read by index rather than through a taken copy.
+        val active = min((1 + 3 * amount).toInt().coerceIn(1, 4), schedule.size)
         var previous = 0.0
-        for (cut in active) {
+        for (c in 0 until active) {
+            val cut = schedule[c]
             // The serialized schedule always refers to immutable recorded time, on both
             // journeys. Only valid read support shrinks on return. Source >=2s and
             // boundary spacing >=.06 guarantee >=120ms between cuts, greater than
@@ -390,12 +399,12 @@ object Spool {
             if (coordinate < boundary - SPLICE_OVERLAP) break
             if (coordinate <= boundary + SPLICE_OVERLAP) {
                 val b = smooth((coordinate - boundary + SPLICE_OVERLAP) / (2 * SPLICE_OVERLAP))
-                return Pickup(folded(coordinate + previous), folded(coordinate + displaced), b)
+                return out.set(folded(coordinate + previous), folded(coordinate + displaced), b)
             }
             previous = displaced
         }
         val p = folded(coordinate + previous)
-        return Pickup(p, p, 0.0)
+        return out.set(p, p, 0.0)
     }
 
     private fun tap(buffer: FloatArray, pickup: Pickup, speed: Double, overlay: Boolean = false): Float =
@@ -465,6 +474,10 @@ object Spool {
         private var carrierTime = 0.0
         private var tapeRate = 1.0
         private var released = false
+        // Per-frame scratch, rewritten in full before each read: head weights, varispeed windows, launch windows.
+        private val headWeightBuffer = DoubleArray(3)
+        private val varispeedWindows = Pickup()
+        private val launchWindows = Pickup()
 
         private data class Grain(
             val startFrame: Int, val carrierStart: Double, val length: Int, val dryStart: Double, val firstStart: Double,
@@ -504,7 +517,7 @@ object Spool {
                     return origin + cycle * period
                 }
                 val desiredCenter = center.coerceIn(duration / 2 + guard, canvas - duration / 2 - guard)
-                val p = pickup(desiredCenter, canvas, splice, machine.spliceSchedule, sourceLength)
+                val p = pickup(desiredCenter, canvas, splice, machine.spliceSchedule, sourceLength, launchWindows)
                 grains[slot] = Grain(frame, carrierTime, length, anchor(desiredCenter), anchor(p.first), anchor(p.second),
                     p.blend, smooth(splice) * geometry, canvas)
                 slot = (slot + 1) % grains.size
@@ -629,11 +642,18 @@ object Spool {
         private fun headWeights(t: Double): DoubleArray {
             val phase = if (frozenHead) 0.0 else 2 * PI * t / max(.4, gate + machine.returnSeconds)
             val q = .5 + .5 * sin(phase)
-            val w = DoubleArray(3) { k -> material.strips[k].gain.toDouble() *
-                if (k == 0) 1 - .46 * head else 1 + head * (1.2 + 1.8 * (if (k == 1) q else 1 - q)) }
+            val w = headWeightBuffer
+            for (k in 0..2) w[k] = material.strips[k].gain.toDouble() *
+                if (k == 0) 1 - .46 * head else 1 + head * (1.2 + 1.8 * (if (k == 1) q else 1 - q))
             val sum = w.sum().coerceAtLeast(1e-12)
             for (k in w.indices) w[k] /= sum
             return w
+        }
+
+        /** Whether any head both carries more than .01 of its gain and is reading, scanned in head order. */
+        private fun reading(gains: DoubleArray, heads: Array<PitchHead>): Boolean {
+            for (k in gains.indices) if (gains[k] > .01 && heads[k].readRate != 0f) return true
+            return false
         }
 
         fun run(): Played {
@@ -754,9 +774,9 @@ object Spool {
                         val coordinate = (positions[k] + head * a * motion * geometry).coerceIn(kernelGuard, support - kernelGuard)
                         val speed = if (frozenHead) rates[k] else rates[k] *
                             (1 + head * a * cos(theta) * PI / max(.12, support) * geometry) + head * a * motion * geometryPrime
-                        val windows = pickup(coordinate, support, splice, machine.spliceSchedule, sourceLength)
-                        val p = Pickup(windows.first.coerceIn(kernelGuard, support - kernelGuard),
-                            windows.second.coerceIn(kernelGuard, support - kernelGuard), windows.blend)
+                        val p = pickup(coordinate, support, splice, machine.spliceSchedule, sourceLength, varispeedWindows)
+                        p.first = p.first.coerceIn(kernelGuard, support - kernelGuard)
+                        p.second = p.second.coerceIn(kernelGuard, support - kernelGuard)
                         val wet = smooth(splice) * geometry
                         fun physical(buffer: FloatArray, overlay: Boolean): Float {
                             val dry = read(buffer, coordinate, speed, overlay)
@@ -785,8 +805,7 @@ object Spool {
                     heard[k] = if (reverseOpen && !stopped) backwardPickup else 0f
                     overlayReads[k] = (abs(forwardOverlay) * forwardGains[k] + abs(returnOverlay) * reverseGains[k]).toFloat()
                 }
-                if (forwardGains.indices.any { forwardGains[it] > .01 && forwardHeads[it].readRate != 0f } &&
-                    reverseGains.indices.any { reverseGains[it] > .01 && reverseHeads[it].readRate != 0f }) overlapFrames++
+                if (reading(forwardGains, forwardHeads) && reading(reverseGains, reverseHeads)) overlapFrames++
                 if (firstOverlayRead == null && overlayReads.any { it > 1e-7f }) firstOverlayRead = t.toFloat()
                 forwardRaw?.set(i, if (velocity == 0f) 0f else forwardSum.toFloat())
                 reverseRaw?.set(i, if (velocity == 0f) 0f else reverseSum.toFloat())
@@ -821,7 +840,9 @@ object Spool {
                     }
                     if (inReturn) {
                         for (source in 0..2) writeFilter[source] += imprintFilterAlpha * (heard[source] - writeFilter[source])
-                        for (route in machine.routes) {
+                        val routes = machine.routes
+                        for (r in 0 until routes.size) {
+                            val route = routes[r]
                             val destination = route.destination
                             if (t >= gate + returnStops[destination]) continue
                             val gain = route.gain * imprint * (.24 + .76 * answer)

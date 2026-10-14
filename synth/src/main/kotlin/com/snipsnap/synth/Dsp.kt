@@ -256,6 +256,43 @@ internal object Dsp {
             band = v1
             high = input - kk * v1 - v2
         }
+
+        /**
+         * [process] (linear, `saturate = false`) at one fixed [freqHz] and [k] over every sample of
+         * [buf], replacing each sample with [low]. The coefficients are computed once, by the same
+         * expressions [process] evaluates on every call, and each sample then runs [process]'s own
+         * arithmetic in its order, so the result is bit for bit that of calling [process] per sample
+         * and reading [low]: it only skips a `tan` per sample for a cutoff that does not move. [band]
+         * and [high] are left as [process] would leave them after the last sample.
+         */
+        fun lowPassInPlace(buf: FloatArray, freqHz: Float, k: Float) {
+            if (buf.isEmpty()) return
+            val g = kotlin.math.tan(PI * (freqHz.coerceIn(10f, rate * 0.49f)) / rate).toFloat()
+            val kk = k.coerceAtLeast(0.1f)
+            val a1 = 1f / (1f + g * (g + kk))
+            val a2 = g * a1
+            val a3 = g * a2
+            var s1 = ic1
+            var s2 = ic2
+            var v1 = 0f
+            var v2 = 0f
+            var input = 0f
+            for (i in buf.indices) {
+                input = buf[i]
+                val v3 = input - s2
+                v1 = a1 * s1 + a2 * v3
+                v2 = s2 + a2 * s1 + a3 * v3
+                s1 = 2f * v1 - s1
+                s2 = 2f * v2 - s2
+                buf[i] = v2
+            }
+            ic1 = s1
+            ic2 = s2
+            low = v2
+            band = v1
+            high = input - kk * v1 - v2
+        }
+
         fun reset() { ic1 = 0f; ic2 = 0f; low = 0f; band = 0f; high = 0f }
     }
 

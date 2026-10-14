@@ -27,8 +27,11 @@ class BrightTonalClassifierTest {
                 assertTrue(features.highRatio > .9f, "$hz Hz does not exercise the bright-family decision")
                 assertEquals(DrumClass.PERC, Classifier.classify(sound).drumClass,
                     "$hz Hz / $seconds s / gain $gain is mistaken for a noise drum")
-                assertEquals(Classifier.classify(sound), Classifier.classify(features),
-                    "audio and feature-only classification disagree")
+                // classify(snip) is classify(extract(snip)), so comparing it with classify(features) could never fail.
+                // What keeps these roots off the snare shelf is their tonality: flatness far under the classifier's
+                // 0.25 noise gate (measured 4e-5 to 2e-4), not their decay.
+                assertTrue(features.flatness < .025f,
+                    "$hz Hz / $seconds s / gain $gain sits near the snare noise gate: flatness ${features.flatness}")
             }
         }
     }
@@ -44,7 +47,9 @@ class BrightTonalClassifierTest {
             assertTrue(features.flatness > .4f, "snare mix $mix seed $seed loses its noise character")
             assertEquals(DrumClass.SNARE, Classifier.classify(sound).drumClass,
                 "snare mix $mix seed $seed gain $gain loses its identity")
-            assertEquals(Classifier.classify(sound), Classifier.classify(features))
+            // The snip and feature paths are one function, so their agreement could never fail. With flatness
+            // above the clap's 0.35, what keeps a snare off the clap shelf is that its one strike reads as one burst.
+            assertEquals(1, features.attackBursts, "snare mix $mix seed $seed gain $gain no longer reads as one strike")
         }
     }
 }

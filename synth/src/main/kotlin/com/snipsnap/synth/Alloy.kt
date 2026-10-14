@@ -270,25 +270,30 @@ object Alloy {
     }
 
     // SynthScreen previews run in runInterruptible: a newer request interrupts this
-    // thread, so the long loops stop instead of finishing beside their replacement.
+    // thread, so the long loops and the passes stop instead of finishing beside their replacement.
     private fun stopIfUnwanted() {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("ALLOY render no longer wanted")
     }
 
-    private fun finish(raw: FloatArray, rate: Int): FloatArray {
+    internal fun finish(raw: FloatArray, rate: Int): FloatArray {
         stopIfUnwanted()
         Tide.bandLimit(raw, rate)
+        stopIfUnwanted()
         val four = if (rate == INTERNAL_RATE) raw else Resampler.resample(Snip(raw, channels = 1, sampleRate = rate), INTERNAL_RATE).samples
+        stopIfUnwanted()
         return Dsp.decimate(four, RATE)
     }
 
     /** Diagnostic render; taps are pre-output DC removal, separately band limited and downsampled.
      * Disabling attackModulation preserves the entire direct layer and conventional PM graph.
-     * A held render has no initial strike: it contains the selected material's cyclic contact. */
+     * A held render has no initial strike: it contains the selected material's cyclic contact.
+     * With [taps] false the body, direct and projection taps are neither kept nor conditioned and
+     * come back empty: [render] and [renderLoop] read only the samples, which [finish] conditions
+     * from the raw sum alone, so skipping the taps leaves every sample as it was. */
     internal fun renderProbe(voice: AlloyVoice, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seconds: Float? = null,
         normalize: Boolean = false, attackModulation: Boolean = true, config: AlloyConfig = configFor(voice),
-        oversample: Int = Dsp.OVERSAMPLE): Probe {
+        oversample: Int = Dsp.OVERSAMPLE, taps: Boolean = true): Probe {
         require(midi in MIDI_MIN..MIDI_MAX) { "ALLOY midi out of $MIDI_MIN..$MIDI_MAX: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "ALLOY velocity out of 0..1: $velocity" }
         require(seconds == null || seconds.isFinite() && seconds in .05f..12f)
@@ -302,7 +307,8 @@ object Alloy {
         val engine = Engine(voice, m, midi, velocity, held, period, config, attackModulation, rate)
         if (velocity == 0f) {
             val frames = if (held && seconds == null) period else ((seconds ?: (engine.duration + .12).toFloat()) * RATE).roundToInt()
-            return Probe(FloatArray(frames), FloatArray(frames), FloatArray(frames), FloatArray(frames),
+            val tapFrames = if (taps) frames else 0
+            return Probe(FloatArray(frames), FloatArray(tapFrames), FloatArray(tapFrames), FloatArray(tapFrames),
                 previousCycle = if (held && seconds == null) FloatArray(frames) else FloatArray(0), diagnostics = engine.diagnostics())
         }
         var cycles = 0
@@ -322,21 +328,25 @@ object Alloy {
         // Actual future samples keep the sinc decimator's truncated-buffer edge away from
         // the exported seam. No tail copying or crossfade is needed to make cycles agree.
         val raw = FloatArray((frames + 256) * oversample)
-        val body = FloatArray(raw.size); val direct = FloatArray(raw.size); val projection = FloatArray(raw.size)
+        val tapSize = if (taps) raw.size else 0
+        val body = FloatArray(tapSize); val direct = FloatArray(tapSize); val projection = FloatArray(tapSize)
         for (i in raw.indices) {
             if (i % 8192 == 0) stopIfUnwanted()
-            raw[i] = engine.tick(); body[i] = engine.bodySample; direct[i] = engine.directSample; projection[i] = engine.conditionedSample
+            raw[i] = engine.tick()
+            if (taps) { body[i] = engine.bodySample; direct[i] = engine.directSample; projection[i] = engine.conditionedSample }
         }
         val out = finish(raw, rate).copyOf(frames)
-        val bodyOut = finish(body, rate).copyOf(frames)
-        val directOut = finish(direct, rate).copyOf(frames)
-        val projectionOut = finish(projection, rate).copyOf(frames)
+        val bodyOut = if (taps) finish(body, rate).copyOf(frames) else body
+        val directOut = if (taps) finish(direct, rate).copyOf(frames) else direct
+        val projectionOut = if (taps) finish(projection, rate).copyOf(frames) else projection
+        stopIfUnwanted()
         if (normalize && velocity > 0f) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET * velocity.pow(.4f))
         if (held && seconds == null) {
+            stopIfUnwanted()
             val seam = Keys.seamError(out, period)
             check(seam < Keys.MAX_SEAM_ERROR) { "ALLOY $voice held seam $seam" }
-            return Probe(out.copyOfRange(period, period * 2), bodyOut.copyOfRange(period, period * 2),
-                directOut.copyOfRange(period, period * 2), projectionOut.copyOfRange(period, period * 2),
+            fun cycle(tap: FloatArray) = if (taps) tap.copyOfRange(period, period * 2) else tap
+            return Probe(out.copyOfRange(period, period * 2), cycle(bodyOut), cycle(directOut), cycle(projectionOut),
                 out.copyOfRange(0, period), seam, stateError, cycles, engine.diagnostics())
         }
         return Probe(out, bodyOut, directOut, projectionOut, stateError = stateError, prerollCycles = cycles, diagnostics = engine.diagnostics())
@@ -344,11 +354,11 @@ object Alloy {
 
     fun renderLoop(voice: AlloyVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, config: AlloyConfig = configFor(voice)): FloatArray =
-        renderProbe(voice, macros + ("HOLD" to 1f), midi, velocity, normalize = true, config = config).samples
+        renderProbe(voice, macros + ("HOLD" to 1f), midi, velocity, normalize = true, config = config, taps = false).samples
 
     fun render(voice: AlloyVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, config: AlloyConfig = configFor(voice)): Snip {
-        val out = renderProbe(voice, macros, midi, velocity, normalize = true, config = config).samples
+        val out = renderProbe(voice, macros, midi, velocity, normalize = true, config = config, taps = false).samples
         if (!isLoop(settled(voice, macros).getValue("HOLD"))) Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }

@@ -91,32 +91,44 @@ class RelayIntegrationTest {
             items[0] = JsonValue.Obj(first.entries + (field to value))
             return alteredPhrase(key, JsonValue.Arr(items))
         }
+        // Each document carries the words of the one guard it is meant to reach. A type-only check passed whenever
+        // anything in the decode or constructor chain refused the document, so deleting the intended guard while
+        // another still tripped went unseen; a row now fails on its own guard by name.
         val malformed = listOf(
-            JsonValue.Obj(root.entries + ("version" to JsonValue.Num(99.0))),
-            JsonValue.Obj(root.entries + ("model" to JsonValue.Num(99.0))),
-            JsonValue.Obj(root.entries + ("velocity" to JsonValue.Num(1.1))),
-            JsonValue.Obj(root.entries + ("voice" to JsonValue.Str("NOT_A_VOICE"))),
-            JsonValue.Obj(root.entries + ("phrase" to JsonValue.Obj(phrase.entries - "slots"))),
-            alteredPhrase("tempoBpm", JsonValue.Num(0.0)),
-            firstObjectChanged("slots", "source", JsonValue.Num(99.0)),
-            firstObjectChanged("slots", "source", JsonValue.Num(0.5)),
-            firstObjectChanged("slots", "beats", JsonValue.Num(0.0)),
-            firstObjectChanged("slots", "transitionBeats", JsonValue.Num(-0.1)),
-            firstObjectChanged("sources", "role", JsonValue.Str("FACTORY_PCM")),
-            firstObjectChanged("sources", "gain", JsonValue.Num(-0.1)),
-            firstObjectChanged("accents", "beat", JsonValue.Num(99.0)),
-            alteredPhrase("orderRoster", JsonValue.Arr(listOf(JsonValue.Arr(List(patch.phrase.slots.size) { JsonValue.Num(0.0) })))),
-            alteredPhrase("loop", JsonValue.Obj(mapOf("prerollCycles" to JsonValue.Num(3.0), "wrapFrames" to JsonValue.Num(0.0)))),
+            JsonValue.Obj(root.entries + ("version" to JsonValue.Num(99.0))) to "unsupported patch version 99",
+            JsonValue.Obj(root.entries + ("model" to JsonValue.Num(99.0))) to "unsupported relay model 99",
+            JsonValue.Obj(root.entries + ("velocity" to JsonValue.Num(1.1))) to "RELAY velocity out of 0..1: 1.1",
+            JsonValue.Obj(root.entries + ("voice" to JsonValue.Str("NOT_A_VOICE"))) to "unknown voice NOT_A_VOICE",
+            JsonValue.Obj(root.entries + ("phrase" to JsonValue.Obj(phrase.entries - "slots"))) to "relay phrase has no slots",
+            alteredPhrase("tempoBpm", JsonValue.Num(0.0)) to "RELAY tempo must be in 60..180 BPM",
+            firstObjectChanged("slots", "source", JsonValue.Num(99.0)) to "RELAY source ID must be in 0..3",
+            firstObjectChanged("slots", "source", JsonValue.Num(0.5)) to "expected an integer, got 0.5",
+            firstObjectChanged("slots", "beats", JsonValue.Num(0.0)) to "RELAY dwell must be positive (.1..4 beats)",
+            firstObjectChanged("slots", "transitionBeats", JsonValue.Num(-0.1)) to "RELAY transition must be in .01..2 beats",
+            firstObjectChanged("sources", "role", JsonValue.Str("FACTORY_PCM")) to "unknown relay source role FACTORY_PCM",
+            firstObjectChanged("sources", "gain", JsonValue.Num(-0.1)) to "RELAY source gain must be in 0..1",
+            firstObjectChanged("accents", "beat", JsonValue.Num(99.0)) to "RELAY accents must lie within the phrase",
+            alteredPhrase("orderRoster", JsonValue.Arr(listOf(JsonValue.Arr(List(patch.phrase.slots.size) { JsonValue.Num(0.0) })))) to
+                "RELAY orders must preserve the slot source IDs and event count",
+            alteredPhrase("loop", JsonValue.Obj(mapOf("prerollCycles" to JsonValue.Num(3.0), "wrapFrames" to JsonValue.Num(0.0)))) to
+                "RELAY wrap must be in 256..2048 frames",
         )
-        for ((index, value) in malformed.withIndex()) {
-            assertFailsWith<JsonException>("malformed phrase $index") { Patches.fromJsonValue(value) }
+        for ((index, row) in malformed.withIndex()) {
+            val (value, guard) = row
+            val refused = assertFailsWith<JsonException>("malformed phrase $index") { Patches.fromJsonValue(value) }
+            assertEquals(guard, refused.message, "malformed phrase $index was refused by the wrong guard")
         }
-        assertFailsWith<JsonException> { RelayPatch.fromJsonText(patch.toJsonText().replace("RELAY", "TREMOR")) }
-        assertFailsWith<IllegalArgumentException> { RelayPatch(" ", RelayVoice.KEY, emptyMap()) }
-        assertFailsWith<IllegalArgumentException> { RelayPatch("x", RelayVoice.KEY, mapOf("TEMPO" to 0.5f)) }
+        val engine = assertFailsWith<JsonException> { RelayPatch.fromJsonText(patch.toJsonText().replace("RELAY", "TREMOR")) }
+        assertEquals("not a RELAY patch: TREMOR", engine.message)
+        val blank = assertFailsWith<IllegalArgumentException> { RelayPatch(" ", RelayVoice.KEY, emptyMap()) }
+        assertEquals("patch name must not be blank", blank.message)
+        val unknown = assertFailsWith<IllegalArgumentException> { RelayPatch("x", RelayVoice.KEY, mapOf("TEMPO" to 0.5f)) }
+        assertTrue(unknown.message.orEmpty().startsWith("unknown macro TEMPO for KEY"), "unknown macro refused as: ${unknown.message}")
         for (value in listOf(-0.01f, 1.01f, Float.NaN, Float.POSITIVE_INFINITY)) {
-            assertFailsWith<IllegalArgumentException> { RelayPatch("x", RelayVoice.KEY, mapOf("ORDER" to value)) }
-            assertFailsWith<IllegalArgumentException> { RelayPatch("x", RelayVoice.KEY, emptyMap(), velocity = value) }
+            val macro = assertFailsWith<IllegalArgumentException> { RelayPatch("x", RelayVoice.KEY, mapOf("ORDER" to value)) }
+            assertEquals("macro ORDER out of 0..1: $value", macro.message)
+            val velocity = assertFailsWith<IllegalArgumentException> { RelayPatch("x", RelayVoice.KEY, emptyMap(), velocity = value) }
+            assertEquals("RELAY velocity out of 0..1: $value", velocity.message)
         }
     }
 
