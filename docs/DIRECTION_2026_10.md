@@ -34,17 +34,24 @@ kits in `snips/`. Instruments and rooms have their own stores.
 
 ### The model
 
+*As built 2026-10-14 (`kit/.../Project.kt`, `ProjectMigration.kt`). The
+first draft of this block moved the kits under a `library/kits/` folder;
+the built one leaves every kit where it is. The shelf root already **is**
+the library, the CLI and the exporters already address kits there, and a
+project is a new folder that points at old ones. Nothing moves.*
+
 ```
-library/                      shared by every project
-  kits/<name>/                 a kit folder, exactly as today
-  snips/                       as today
-  instruments/, rooms/         as today
-projects/<name>/
-  project.json                 name, tempo, key, which kits (by reference), active kit
-  beat/                        patterns and the song: today's groove.json content, moved
-  tapes/                       what was captured in this project (snips still land in the library)
-  out/                         what this project has written: kit folders, sessions, bounces
+<shelf>/<kit>/                  a kit folder, exactly as today; the library
+<shelf>/snips/, Instruments/, Rooms/, .bin/      as today
+<shelf>/Projects/<name>/
+  project.json                   name, kits held (by folder name), the active kit, tempo, key
+  beat/groove.json               the project's patterns, in GrooveStore's own format
+  tapes/, out/                   reserved for what the project captured and what it wrote
 ```
+
+`KitStore.list` only sees a direct child holding a `kit.json`, so
+`Projects/` is invisible to the shelf's kit scan by the same mechanism that
+keeps `Rooms/` and `.bin/` off it. `ProjectStoreTest` pins that.
 
 - **A kit is referenced, not copied.** Edit it in project B and project A
   sees the edit, which is what "the kit should be available" means. A
@@ -55,10 +62,19 @@ projects/<name>/
   a pattern belongs to the project and *plays* a kit, which is also how
   `SessionBuilder` already writes sequences. The export of a bare kit
   keeps embedding its clips, unchanged: a project's patterns that use that
-  kit are what gets embedded.
+  kit are what gets embedded. *As built: the project's beat is a
+  `groove.json` under `beat/` in the groove store's own format, so the
+  exporters need no new codec to read it. In this step the migration
+  **copies** the kit's grooves there and the kit keeps its file, because
+  every exporter still reads the kit-side file; it retires when they take
+  a project as input. `ProjectMigration`'s KDoc carries the same note.*
 - **Migration is one rule.** Every existing kit becomes a project of the
   same name holding that kit, with the kit's `groove.json` as the
-  project's beat. Nothing is lost and nothing asks.
+  project's beat. Nothing is lost and nothing asks. *As built:
+  `ProjectMigration.adopt(shelf)`, idempotent, run on every shelf open. A
+  kit a person already placed in some project is left there; a kit whose
+  name a project already uses for something else is adopted as
+  `<name> 2`.*
 
 ### What it does to the shape
 
@@ -222,6 +238,15 @@ audition pages as easier is what the type-size row predicts.
    the colour half on a phone before anything else.
 2. **The project model** in `:kit` and `:shell` with the migration and
    tests. The biggest change and the one the JVM can prove in full.
+   **Started 2026-10-14**, in `:kit`: `Project` (held kits by folder name,
+   one active kit, tempo, key, with `withKit` / `withoutKit` /
+   `activated`), `ProjectStore` (`Projects/<name>/project.json`, the beat
+   under `beat/`, `kitDirs` and `missingKits` so a project opens with a
+   kit gone), and `ProjectMigration.adopt`. Pinned by `ProjectStoreTest`
+   and `ProjectMigrationTest`. **Still to do**: the shelf (`KitShelf`)
+   listing projects above kits and running the migration on open; the
+   exporters taking a project's `kitDirs` and beat instead of one kit's;
+   `tapes/` and `out/`; and the `:app` wiring, which needs an SDK.
 3. **The shape** in `:app`, in the OG look: four places, the dock, the
    stages, the pad strip. Checked by the UAT sim's tap counts.
 4. **The `Look` axis** and the modern drawing, with the type floor from §5.

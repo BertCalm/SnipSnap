@@ -116,6 +116,13 @@ this module owns that folder's whole life.
   chain). A synth pad regenerates from scratch; a captured pad re-treats its
   raw audio. Tested promise: a kit folder rebuilds its own WAVs bit-for-bit
   from nothing but the sidecar.
+- **`Project` / `ProjectStore` / `ProjectMigration`** — the unit of work
+  ([`docs/DIRECTION_2026_10.md`](docs/DIRECTION_2026_10.md) §2): a folder
+  under `Projects/` beside the kits that holds kits **by folder name**, one
+  of them active, with its own beat under `beat/` in `groove.json`'s
+  format. Kits stay where they are and are shared by every project; the
+  migration adopts every unheld kit into a project of its own name,
+  idempotently, copying its grooves across.
 - **`KitAssembler`** — arranged snips in, kit folder out: the last step of the
   auto-chop pipeline.
 - **`Preflight`** — the export wizard's checklist as real checks. WARNs export;
