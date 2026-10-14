@@ -6,6 +6,7 @@ import com.snipsnap.kit.InstrumentStore
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -206,5 +207,17 @@ class InstrumentEngineTest {
         assertTrue(engine.noteOn(57))
         render(engine, 30f / rate)
         assertTrue(engine.activeNotes.isEmpty(), "the one-frame loop ended")
+    }
+
+    @Test
+    fun `an output rate that is not a rate is refused at the door`() {
+        // Refused before any render: with the door gone, a looped note at rate 0 wraps forever and a negative rate reads
+        // before the sample's first frame.
+        for (outRate in intArrayOf(0, -rate)) {
+            val refused = assertFailsWith<IllegalArgumentException>("output rate $outRate: the engine's door must refuse it") {
+                InstrumentEngine(looped(), outRate)
+            }
+            assertEquals("output rate must be positive, got $outRate", refused.message)
+        }
     }
 }

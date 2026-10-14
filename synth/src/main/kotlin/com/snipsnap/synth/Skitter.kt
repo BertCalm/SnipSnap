@@ -342,7 +342,11 @@ object Skitter {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("SKITTER render no longer wanted")
     }
 
-    /** Blackman-windowed sinc, 48 output-sample support, >70 dB far-stopband rejection. */
+    /**
+     * Blackman-windowed sinc, 48 output-sample support, >70 dB far-stopband rejection: a tone
+     * from the output Nyquist up to the internal one leaves more than 70 dB below a passband
+     * tone, at every oversample [renderProbe] accepts (SkitterDecimatorTest).
+     */
     internal fun decimate(raw: FloatArray, oversample: Int, periodic: Boolean): FloatArray {
         val radius=24*oversample
         val kernel=DoubleArray(2*radius+1)
