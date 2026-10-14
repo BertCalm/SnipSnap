@@ -28,6 +28,14 @@ byte and compare them with model 2 at the same settings and listening level.
 Earlier browser notes remain visible with their original revision and audio
 provenance; new listening edits are saved separately.
 
+The R2 checks pass nine tests, including pre-edit model-1 float hashes,
+unchanged MUSETTE/held samples and an exact settled PIPE tail from 120 ms onward.
+At C4, matched 20–80 ms energy in the 1.8–12 kHz band rises by 8.14 dB at
+defaults, 3.61 dB for the restrained gesture and 13.45 dB for expressive speech.
+The archived comparison metrics use their separately documented first-80-ms
+window; different bands and windows produce different numbers. These are
+transient measurements, not a sonic approval.
+
 ## Playing and saving
 
 The shared controls are COLOR, AIR, EDGE, SPREAD and MOTION, plus TUNE and HOLD.
