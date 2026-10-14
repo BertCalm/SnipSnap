@@ -22,9 +22,10 @@ import kotlin.math.sin
  * are all functions of the oversampled index modulo `OVERSAMPLE·L`.
  *
  * The render runs at `Dsp.OVERSAMPLE`x and decimates through a filter with
- * memory, so it synthesises three breaths and returns the onset, the first
- * breath and the second: by the second, the filter has forgotten the onset,
- * and the third exists only so the second's tail is filtered by real audio.
+ * memory, so it synthesises the onset and two breaths and returns them: by the
+ * second, the filter has forgotten the onset. Past the second it renders only
+ * [TAIL_MARGIN] samples more, the start of the next breath, so the second's
+ * tail is filtered by real audio.
  *
  * `GlintBreatheTest`'s `every voice's breath closes` asserts it over four
  * voices × three BLOOMs × both ends of TUNE: the second breath equals the
@@ -53,6 +54,18 @@ internal object GlintHeld {
     private const val ATTACK_SECONDS = 0.002f
     /** How often the oversampled loop asks whether it is still wanted; the passes after it ask once each. */
     internal const val CANCEL_CHECK_SAMPLES = 4096
+
+    /**
+     * Oversampled samples rendered past the second breath: the decimator's right-hand context for the
+     * last frames it returns. [Dsp.decimate] is two 2:1 [com.snipsnap.audio.Resampler] stages whose
+     * taps run 16 source samples past an output's centre (the 16th weighs exactly zero). The last
+     * returned frame sits at oversampled index `i0 + 2 * loopOs - 4`; its second stage reads first-stage
+     * outputs up to 16 ahead, and those read source samples up to 2 * 16 + 16 = 48 past that index,
+     * so every tap of every returned frame lies inside the buffer. The margin's samples are the start
+     * of the next breath, the same periodic function a full third breath would begin with, so audio
+     * and loop marker are what a whole third breath gave. A whole number of output frames.
+     */
+    internal const val TAIL_MARGIN = 48
 
     data class BreathPlan(val cycles: Int, val loopFrames: Int, val f0: Double)
 
@@ -86,7 +99,7 @@ internal object GlintHeld {
         var w0 = ceil(path.onsetSeconds * rate).toLong().coerceAtLeast(1)
         while (cycleOf(w0) == cycleOf(w0 - 1)) w0++
         val i0 = (w0 + os - 1) / os * os
-        val total = (i0 + 3 * loopOs).toInt()
+        val total = (i0 + 2 * loopOs + TAIL_MARGIN).toInt()
 
         val out = FloatArray(total)
         val k = FloatArray(2)
