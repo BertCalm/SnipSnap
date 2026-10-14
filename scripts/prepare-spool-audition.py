@@ -188,7 +188,9 @@ def main():
     # Keep each hosted download comfortably below the static provider's 25 MiB
     # per-asset limit. Every part carries the manifest and patch roster.
     entries = [(output / relative, relative.as_posix()) for relative in sorted(assets)]
-    for name in ("patches", "kit", "diagnostics"):
+    # The kit has its own complete download above; duplicating it across the
+    # listening parts also duplicates five MiB in the expanded hosted package.
+    for name in ("patches", "diagnostics"):
         entries.extend((path, path.relative_to(output).as_posix())
                        for path in sorted((output / name).rglob("*")) if path.is_file())
     parts, current, size = [], [], 0

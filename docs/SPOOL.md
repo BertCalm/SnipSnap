@@ -249,6 +249,8 @@ python3 scripts/prepare-spool-audition.py --output /path/to/published-page \
 
 The assembler captures their original provenance and refuses to replace a historical asset
 with different bytes. New recordings keep the current render and recipe hashes.
+Listening ZIP parts contain the recordings, recipes and diagnostics. The separate complete
+MPC-kit download avoids hosting a second copy of that kit inside the listening archives.
 
 Acceptance checks cover independent layer pitch and harmonic agreement, meaningful simultaneous
 audibility before and after release, actual captured support, deterministic source/memory,
