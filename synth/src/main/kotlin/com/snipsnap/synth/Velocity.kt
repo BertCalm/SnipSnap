@@ -237,6 +237,7 @@ object Velocity {
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
         is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
+        is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
         is AlloyPatch -> Alloy.macrosFor(patch.voice)
@@ -247,6 +248,7 @@ object Velocity {
         is TanglePatch -> Tangle.macrosFor(patch.voice)
         is RelayPatch -> Relay.macrosFor(patch.voice)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
+        is VentPatch -> Vent.macrosFor(patch.voice)
     }
 
     /**
@@ -315,6 +317,7 @@ object Velocity {
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
      * REVEL scales each phrase event's energy while keeping its saved [RevelConfig].
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
+     * BELLOWS scales reed pressure, harmonic response and level while keeping the saved gesture.
      * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
      * ALLOY scales generated attack energy and modulation work with its stored material and routing.
@@ -328,13 +331,14 @@ object Velocity {
      * while preserving the oscillator recipe and requested note.
      * RELAY scales source excitation and accent energy while retaining its saved phrase.
      * REGISTERS uses its saved note and model while velocity changes rank/reed excitation once.
+     * VENT scales the onset perturbation while retaining the saved trajectory controls, note and seed.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is MurmurPatch || patch is RegistersPatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is RegistersPatch || patch is VentPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -371,6 +375,7 @@ object Velocity {
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
                 is PitchwheelPatch -> patch.copy(velocity = v).render()
                 is EmbouchurePatch -> patch.copy(velocity = v).render()
+                is BellowsPatch -> patch.copy(velocity = v).render()
                 is MurmurPatch -> patch.copy(velocity = v).render()
                 is PrismPatch -> patch.copy(velocity = v).render()
                 is AlloyPatch -> patch.copy(velocity = v).render()
@@ -382,6 +387,7 @@ object Velocity {
                 is TanglePatch -> patch.copy(velocity = v).render()
                 is RelayPatch -> patch.copy(velocity = v).render()
                 is RegistersPatch -> patch.copy(velocity = v).render()
+                is VentPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 is SpoolPatch -> patch.copy(velocity = v).render()

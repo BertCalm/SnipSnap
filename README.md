@@ -258,7 +258,9 @@ settled-loop format. The sound awaits the owner's listening verdict.
 
 SPOOL is a returning recording machine: three original synthesized string,
 choir, flute or brass performances share a loaded transport and overlapping
-forward/backward pickup heads. Clean settings keep both layers on the requested
+forward/backward pickup heads. Bowed harmonics, vowel formants, flute airflow and
+bright brass overtones retain their character through the blend. Clean settings
+keep both layers on the requested
 note together with gentle tape wow/flutter. STRAIN shapes their journey,
 RETURN sets the swelling backward layer,
 IMPRINT leaves delayed traces in neighboring strips and SPLICE
@@ -307,7 +309,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 29 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 30 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -676,8 +678,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, REGISTERS and GRAINS round out the lineup —
-thirty-seven engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS and GRAINS round out the lineup —
+thirty-eight engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -860,21 +862,36 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
-no roster entry. Each file's own KDoc names its spec.
+no roster entry. VENT, a Rössler-attractor synth prototype (not the TapeOS
+scheme of that name), is in the module outside the picker and the preset
+roster: `snipsnap synth VENT` renders its three provisional recipes, and
+`--midi`, `--velocity` and `--seed` set their note, strike energy and
+starting trajectory ([`docs/VENT.md`](docs/VENT.md)).
+Each file's own KDoc names its spec.
 
 The filters got a generational upgrade from the DSP literature: `Dsp.TptSvf`
 is a topology-preserving (trapezoidal) state-variable filter after Andy
 Simper's Cytomic papers — stable to Nyquist where the Chamberlin design
 went unstable past ~7 kHz. VELVET's CUTOFF, once capped at 5.2 kHz for
 stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
+
+BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
+Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
+contrasting push/pull colors, asymmetric folk reeds, and tracking drones
+with pressure-gated bridge chatter. Eight dry presets, saved player gestures,
+a sixteen-pad starter kit, CLI and the synth picker share the same renderer.
+Run `./gradlew :synth:generateBellowsAudition` for its raw/matched listening
+page and control comparisons. The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
+awaits the owner's sonic verdict; [implementation notes](docs/BELLOWS.md)
+describe expression, drone and HOLD limits.
 
 ### `:mpc3`
 

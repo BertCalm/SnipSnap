@@ -201,6 +201,9 @@ import com.snipsnap.synth.RelayVoice
 import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.EmbouchureVoice
+import com.snipsnap.synth.Bellows
+import com.snipsnap.synth.BellowsPatch
+import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
@@ -334,14 +337,14 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, EMBOUCHURE and MURMUR carry note and velocity outside the macro map;
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, EMBOUCHURE, BELLOWS and MURMUR carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // REGISTERS retains its synthesis model, saved pitch and velocity.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
     // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
-    // schedules, EMBOUCHURE its player gesture, and MURMUR its operator routing, formant
+    // schedules, EMBOUCHURE and BELLOWS their player gestures, and MURMUR its operator routing, formant
     // targets and envelope definitions. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
@@ -366,10 +369,12 @@ fun SynthScreen(
     // landing on SYNTH never plays a kick unasked.
     var touched by remember { mutableStateOf(false) }
     fun macroRange(name: String): ClosedFloatingPointRange<Float> {
-        val patch = loadedPatch as? EmbouchurePatch
-        return if (engine == Engine.EMBOUCHURE && name == "TUNE" && patch != null) {
-            0f..((Embouchure.midiRange(patch.voice).last - patch.midi) / Embouchure.TUNE_SEMITONES.toFloat())
-        } else 0f..1f
+        if (name != "TUNE") return 0f..1f
+        return when (val patch = loadedPatch) {
+            is EmbouchurePatch -> 0f..((Embouchure.midiRange(patch.voice).last - patch.midi) / Embouchure.TUNE_SEMITONES.toFloat())
+            is BellowsPatch -> 0f..((Bellows.midiRange(patch.voice).last - patch.midi) / Bellows.TUNE_SEMITONES.toFloat())
+            else -> 0f..1f
+        }
     }
     fun updateMacro(name: String, value: Float) {
         touched = true
@@ -1250,6 +1255,7 @@ fun SynthScreen(
                                 engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.RELAY && spec.name == "HOLD" && Relay.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.EMBOUCHURE && spec.name == "HOLD" && Embouchure.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.BELLOWS && spec.name == "HOLD" && Bellows.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1274,9 +1280,13 @@ fun SynthScreen(
                         touched = true
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
-                        val scrambled = if (engine == Engine.EMBOUCHURE && loadedPatch is EmbouchurePatch) {
-                            Embouchure.scramble(voice as EmbouchureVoice, random, near = loadedPatch)
-                        } else engine.scramble(voice, random)
+                        val scrambled = when {
+                            engine == Engine.EMBOUCHURE && loadedPatch is EmbouchurePatch ->
+                                Embouchure.scramble(voice as EmbouchureVoice, random, near = loadedPatch)
+                            engine == Engine.BELLOWS && loadedPatch is BellowsPatch ->
+                                Bellows.scramble(voice as BellowsVoice, random, near = loadedPatch)
+                            else -> engine.scramble(voice, random)
+                        }
                         macrosByVoice[engine to voice] = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
                     }
                     // Between SCRAMBLE and SEND TO PAD: the sound is kept
@@ -2110,7 +2120,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2153,6 +2163,7 @@ private enum class Engine {
         TANGLE -> TangleVoice.entries
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
+        BELLOWS -> BellowsVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -2193,6 +2204,7 @@ private enum class Engine {
         TANGLE -> Tangle.macrosFor(voice as TangleVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
+        BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -2233,6 +2245,7 @@ private enum class Engine {
         TANGLE -> Tangle.defaults(voice as TangleVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
+        BELLOWS -> Bellows.defaults(voice as BellowsVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2273,6 +2286,7 @@ private enum class Engine {
         TANGLE -> Tangle.scramble(voice as TangleVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
+        BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2318,6 +2332,7 @@ private enum class Engine {
         TANGLE -> Tangle.render(voice as TangleVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
+        BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
     }
 
     /**
@@ -2364,6 +2379,7 @@ private enum class Engine {
         TANGLE -> Tangle.drumClassFor(voice as TangleVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
+        BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2404,6 +2420,7 @@ private enum class Engine {
         TANGLE -> TanglePatch(name, voice as TangleVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
+        BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

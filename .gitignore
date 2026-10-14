@@ -127,6 +127,10 @@ testkit/silk-audition/
 # and published as the listening artifact; never committed.
 testkit/valve-audition/
 
+# The pedal board's Stage 0 listening clips and manifest, rendered by :synth:generatePedalAudition
+# and published as the listening artifact; never committed.
+testkit/pedal-audition/
+
 # The BECOME A1 gate's clips, manifest and page, rendered by :shell:generateBecomeAudition
 # and published as the listening artifact; never committed.
 testkit/become-audition/
@@ -216,3 +220,13 @@ testkit/registers-audition/
 testkit/registers-audition-r2/
 testkit/registers-audition-r3/
 testkit/SnipSnap Skitter Kit/
+
+# BELLOWS dry listening clips and acceptance-kit audio are regenerated locally.
+testkit/bellows-audition/
+testkit/SnipSnap Bellows Kit/
+
+# VENT's regenerated dry audio, recipes, diagnostics and audition archive.
+testkit/vent-audition/
+
+# Four controlled, uncoloured VENT trajectory studies; generated for listening.
+testkit/vent-isolation-audition/
