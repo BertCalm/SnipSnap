@@ -390,7 +390,7 @@ object Keys {
      * Keep the saved note's speaking attack, then enter the engine's measured
      * held region. The first 350 ms are the finite note itself, preserving PIPE
      * chiff and MUSETTE's bellows onset; a 100 ms overlap joins it to the held
-     * render. The loop marker follows a complete held cycle and the loop runs
+     * render. The loop marker selects the final complete held cycle and runs
      * to the end, so both MPC formats and the phone share one loop convention.
      *
      * [Registers.probe] checks independent preceding and exported cycles before

@@ -89,8 +89,8 @@ MAKE INSTRUMENT uses nine C3–C5 zones spaced by minor thirds and the existing
 phone/MPC keygroup package. Each zone retains the first 350 ms of its finite
 speech, then blends over 100 ms into the independently verified held region.
 The held phase advances on the same time axis as the attack to avoid a carrier
-cancellation at the join. A complete held cycle precedes the nonzero loop marker;
-the remaining cycle repeats while the key is held. RELEASE controls the player’s
+cancellation at the join. The nonzero loop marker selects a complete held cycle
+at the end of the sample, which repeats while the key is held. RELEASE controls the player’s
 key-up fade. The original onset-free audition WAVs remain unchanged.
 
 The CLI can render saved presets or write the same instrument package:
