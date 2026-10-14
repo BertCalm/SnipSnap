@@ -71,6 +71,12 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.LoopWrites
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.TapeVoice
+import com.snipsnap.shell.OrphicaPadMaker
+import com.snipsnap.synth.Orphica
+import com.snipsnap.synth.OrphicaConfig
+import com.snipsnap.synth.OrphicaMaterial
+import com.snipsnap.synth.OrphicaMode
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -290,7 +296,7 @@ fun SynthScreen(
     shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
-    // MAKE INSTRUMENT (RESIN, SIREN or GLINT, held) writes beside the kits; App's instrument
+    // MAKE INSTRUMENT writes beside the kits; App's instrument
     // list is not reactive to that folder, so this tells it to re-read -
     // PadSheetScreen's own parameter of the same name, for the same reason.
     onShelfAssetWritten: () -> Unit,
@@ -337,12 +343,14 @@ fun SynthScreen(
     // trajectory configuration, SPOOL its tape-machine configuration and
     // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
     // schedules, EMBOUCHURE its player gesture, and MURMUR its operator routing, formant
-    // targets and envelope definitions. Keep that state through preview, editing, saving and placing by
+    // targets and envelope definitions. ORPHICA retains its material, mode,
+    // capture, seed and physical grain configuration. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
-        Patches.edited(it, name, macros)
+        if (it is OrphicaPatch) orphicaPatchForControls(it, name, macros)
+        else Patches.edited(it, name, macros)
     } ?: engine.buildPatch(name, voice, macros)
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
@@ -379,6 +387,12 @@ fun SynthScreen(
         // answering gesture, chord intervals and velocity.
         loadedPatchesByVoice[engine to voice] = patch.copy(midi = midi.coerceIn(Stoop.MIDI_MIN, Stoop.MIDI_MAX))
     }
+    fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        loadedPatchesByVoice[engine to voice] = patch.copy(config = change(patch.config))
+    }
     fun loadPreset(patch: Patch) {
         touched = true
         loadedPatchesByVoice[engine to voice] = patch
@@ -389,7 +403,10 @@ fun SynthScreen(
         // that "no missing key" invariant - a bare `patch.macros` would
         // otherwise leave PUNCH's slider crashing on getValue the moment
         // someone loaded a pre-PUNCH preset.
-        macrosByVoice[engine to voice] = engine.defaults(voice) + patch.macros
+        // ORPHICA presets keep physical settings in their complete config;
+        // empty macro overrides must leave those authored settings audible.
+        macrosByVoice[engine to voice] = (if (patch is OrphicaPatch) Orphica.macrosFrom(patch.config)
+            else engine.defaults(voice)) + patch.macros
         currentPresetByVoice[engine to voice] = patch.name
     }
 
@@ -538,8 +555,8 @@ fun SynthScreen(
         // (which does join, bounded) is reserved for ON_STOP and teardown,
         // where a one-time bounded wait is the documented intent.
         voicePlayer?.stop()
-        val mono = Cleanup.toMono(target)
-        val v = TapeVoice(mono.samples, mono.sampleRate)
+        val heard = if (engine == Engine.ORPHICA) target else Cleanup.toMono(target)
+        val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
         v.start(0)
     }
@@ -694,7 +711,7 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----
+    // ---- MAKE INSTRUMENT: held synths and ORPHICA's captured sustain ----
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN),
     // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
     // (SIREN) and docs/superpowers/specs/2026-09-29-glint-paths-design.md §3
@@ -727,7 +744,7 @@ fun SynthScreen(
         }
     }
 
-    // MAKE INSTRUMENT's three engines behind one shape, so the render/export
+    // MAKE INSTRUMENT's engines behind one shape, so the render/export
     // orchestration below (identical for all) is written once: RESIN's
     // spec carries an ATTACK; SIREN's LOOP render has none to carry
     // (Keys.sirenPad's own KDoc) and neither does GLINT's (its onset and
@@ -737,6 +754,10 @@ fun SynthScreen(
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, holdRelease))
+        Engine.ORPHICA -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrphicaPatch
+            HeldSpec.Orphica(OrphicaPadMaker.spec(patch.config, patch.macros, holdRelease))
+        }
         else -> null
     }
 
@@ -1139,6 +1160,36 @@ fun SynthScreen(
                         ) { updateStoopRoot(root + 12) }
                     }
                 }
+                if (engine == Engine.ORPHICA) {
+                    val config = (loadedPatch as? OrphicaPatch)?.config
+                        ?: OrphicaConfig(material = voice as OrphicaMaterial)
+                    OrphicaModePicker(config.mode, scheme) { mode ->
+                        updateOrphicaConfig { it.copy(mode = mode) }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ActionButton(
+                            "OCT −", scheme, enabled = config.midi - 12 >= Orphica.MIDI_MIN,
+                            accessibilityLabel = "ROOT OCTAVE DOWN", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi - 12) } }
+                        ActionButton(
+                            "−", scheme, enabled = config.midi > Orphica.MIDI_MIN,
+                            accessibilityLabel = "ROOT DOWN", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi - 1) } }
+                        TapeText("ROOT ${Scales.nameOf(config.midi)}", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.4f))
+                        ActionButton(
+                            "+", scheme, enabled = config.midi < Orphica.MIDI_MAX,
+                            accessibilityLabel = "ROOT UP", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi + 1) } }
+                        ActionButton(
+                            "OCT +", scheme, enabled = config.midi + 12 <= Orphica.MIDI_MAX,
+                            accessibilityLabel = "ROOT OCTAVE UP", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi + 12) } }
+                    }
+                }
                 // MURMUR has five timbral controls and HOLD. Its requested root and
                 // gesture energy are independent patch fields, retained with the full
                 // operator/formant definition through preview, saving and placement.
@@ -1189,6 +1240,7 @@ fun SynthScreen(
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
                             readout = when {
+                                engine == Engine.ORPHICA && spec.name == "HOLD" && Orphica.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1285,13 +1337,13 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
-                // RESIN, SIREN or GLINT, held: the sound as a keys instrument -
-                // the three engines whose held render closes its own loop.
+                // Held synthesis, including ORPHICA's captured sustain:
+                // the sound as a keys instrument with its own closed loop.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
                 // always substitutes the loop-and-release envelope, the
                 // same way it ignores RESIN's one-shot DECAY.
-                if (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT) {
+                if (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.ORPHICA) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
@@ -1716,17 +1768,18 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----------
+// ---------- MAKE INSTRUMENT: held synths and captured sustain ----------
 
 /**
- * MAKE INSTRUMENT's three engines behind one shape, so the render/export
+ * MAKE INSTRUMENT's engines behind one shape, so the render/export
  * orchestration in [SynthScreen] (identical for all — render every zone,
  * show progress, write the package once every zone has landed) is written
  * once. RESIN's spec carries an ATTACK the sheet draws a slider for;
  * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc) and
  * neither does GLINT's (`Keys.glintPad`: the onset and the breath come from
  * the patch), so [Siren.hasAttack] and [Glint.hasAttack] are false and their
- * slider never appears.
+ * slider never appears. ORPHICA similarly keeps its own plucked onset,
+ * with the captured grain cycle supplying the sustain.
  */
 private sealed interface HeldSpec {
     val zoneMidis: List<Int>
@@ -1765,6 +1818,15 @@ private sealed interface HeldSpec {
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = GlintPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = GlintPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<KeyNote>, destRoot: File) = GlintPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    class Orphica(private val spec: OrphicaPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OrphicaPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "CAPTURED SUSTAIN · RELEASE ${OrphicaPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrphicaPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = OrphicaPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = OrphicaPadMaker.export(name, spec, notes, destRoot)
     }
 }
 
@@ -2031,6 +2093,13 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
     }
 }
 
+/** Keep untouched physical grain settings exact, including sub-frame Float values. */
+internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls: Map<String, Float>): OrphicaPatch {
+    val displayed = Orphica.macrosFrom(patch.config) + patch.macros
+    val overrides = controls.filter { (key, value) -> key in patch.macros || value != displayed[key] }
+    return patch.copy(name = name, macros = overrides)
+}
+
 // ---------- the engine adapter ----------
 
 /**
@@ -2049,7 +2118,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2061,6 +2130,7 @@ private enum class Engine {
         VELVET -> VelvetVoice.entries
         VOX -> VoxVoice.entries
         PLUCK -> PluckVoice.entries
+        ORPHICA -> OrphicaMaterial.entries
         TONEWHEEL -> TonewheelVoice.entries
         FATHOM -> FathomVoice.entries
         RESIN -> ResinVoice.entries
@@ -2100,6 +2170,7 @@ private enum class Engine {
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
         VOX -> Vox.macrosFor(voice as VoxVoice)
         PLUCK -> Pluck.macrosFor(voice as PluckVoice)
+        ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
         RESIN -> Resin.macrosFor(voice as ResinVoice)
@@ -2139,6 +2210,7 @@ private enum class Engine {
         VELVET -> Velvet.defaults(voice as VelvetVoice)
         VOX -> Vox.defaults(voice as VoxVoice)
         PLUCK -> Pluck.defaults(voice as PluckVoice)
+        ORPHICA -> Orphica.defaults(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
         RESIN -> Resin.defaults(voice as ResinVoice)
@@ -2178,6 +2250,9 @@ private enum class Engine {
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
         VOX -> Vox.scramble(voice as VoxVoice, random)
         PLUCK -> Pluck.scramble(voice as PluckVoice, random)
+        ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial).associate {
+            it.name to if (it.name == "HOLD") random.nextFloat() * .95f else random.nextFloat()
+        }
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
         RESIN -> Resin.scramble(voice as ResinVoice, random)
@@ -2222,6 +2297,7 @@ private enum class Engine {
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
         VOX -> Vox.render(voice as VoxVoice, macros)
         PLUCK -> Pluck.render(voice as PluckVoice, macros)
+        ORPHICA -> buildPatch(patchDisplayName(voice), voice, macros).render()
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
         RESIN -> Resin.render(voice as ResinVoice, macros)
@@ -2265,6 +2341,7 @@ private enum class Engine {
         VELVET -> (voice as VelvetVoice).drumClass
         VOX -> Vox.drumClassFor(voice as VoxVoice, macros)
         PLUCK -> (voice as PluckVoice).drumClass
+        ORPHICA -> if (Orphica.isLoop(macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
         FATHOM -> (voice as FathomVoice).drumClass
         RESIN -> (voice as ResinVoice).drumClass
@@ -2306,6 +2383,7 @@ private enum class Engine {
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
         VOX -> VoxPatch(name, voice as VoxVoice, macros)
         PLUCK -> PluckPatch(name, voice as PluckVoice, macros)
+        ORPHICA -> OrphicaPatch(name, OrphicaConfig(material = voice as OrphicaMaterial), macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
         RESIN -> ResinPatch(name, voice as ResinVoice, macros)
@@ -2547,6 +2625,34 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                         // doesn't grow only its own cell and leave the row
                         // jagged against its neighbours.
                         TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Ways the harp's own sustain unfolds, separate from its string material. */
+@Composable
+private fun OrphicaModePicker(current: OrphicaMode, scheme: Scheme, onSelect: (OrphicaMode) -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText("MODE", TapeType.pixelSmall, scheme.ink2.tape)
+        for (modes in OrphicaMode.entries.chunked(3)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (mode in modes) {
+                    val chosen = mode == current
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .let { if (chosen) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { selected = chosen }
+                            .tapeClick(label = "MODE ${mode.name}") { onSelect(mode) }
+                            .padding(horizontal = 2.dp, vertical = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        TapeText(mode.name, TapeType.pixelSmall, scheme.ink.tape, maxLines = 1)
+                        TapeText(if (chosen) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                 }
             }

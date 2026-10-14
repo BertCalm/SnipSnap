@@ -472,6 +472,17 @@ object Keys {
         return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
     }
 
+    // ---------- ORPHICA ----------
+
+    /**
+     * A captured microsound-harp note at its zone's exact root. The caller resolves
+     * saved macros first; replacing MIDI here never applies TUNE a second time.
+     * Full HOLD retains the pluck prefix and marks a genuinely periodic sustain.
+     */
+    fun orphicaPad(config: OrphicaConfig, midi: Int = config.midi,
+        cancelled: () -> Boolean = { false }): KeyNote =
+        Orphica.renderHeld(config.copy(midi = midi), cancelled)
+
     // ---------- FORK ----------
     // docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md
 

@@ -28,7 +28,7 @@ data class OrphicaPatch(
     override fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap(Patches.toJsonValue(this).entries)
         obj["model"] = JsonValue.Num(model.toDouble())
-        obj["config"] = encodeConfig(config)
+        obj["config"] = encodeConfig(config, (macros["HOLD"] ?: config.hold) > 0f)
         return JsonValue.Obj(obj)
     }
 
@@ -54,16 +54,24 @@ data class OrphicaPatch(
 
         private fun number(value: Float) = JsonValue.Num(value.toDouble())
 
-        private fun encodeConfig(c: OrphicaConfig): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
-            "material" to JsonValue.Str(c.material.name), "mode" to JsonValue.Str(c.mode.name),
-            "midi" to JsonValue.Num(c.midi.toDouble()), "velocity" to number(c.velocity),
-            "pluck" to number(c.pluck), "fracture" to number(c.fracture),
-            "grainSizeMs" to number(c.grainSizeMs), "grainRateHz" to number(c.grainRateHz),
-            "scatter" to number(c.scatter), "damping" to number(c.damping),
-            "seconds" to number(c.seconds),
-            // JSON numbers are doubles in this codebase; a string preserves all 64 seed bits.
-            "seed" to JsonValue.Str(c.seed.toString()), "captureSeconds" to number(c.captureSeconds),
-        ))
+        private fun encodeConfig(c: OrphicaConfig, sustained: Boolean): JsonValue.Obj {
+            val fields = linkedMapOf(
+                "material" to JsonValue.Str(c.material.name), "mode" to JsonValue.Str(c.mode.name),
+                "midi" to JsonValue.Num(c.midi.toDouble()), "velocity" to number(c.velocity),
+                "pluck" to number(c.pluck), "fracture" to number(c.fracture),
+                "grainSizeMs" to number(c.grainSizeMs), "grainRateHz" to number(c.grainRateHz),
+                "scatter" to number(c.scatter), "damping" to number(c.damping),
+                "seconds" to number(c.seconds),
+                // JSON numbers are doubles in this codebase; a string preserves all 64 seed bits.
+                "seed" to JsonValue.Str(c.seed.toString()), "captureSeconds" to number(c.captureSeconds),
+            )
+            // Missing fields are the original approved finite recipe. Keep those
+            // JSON bytes unchanged while explicitly versioning captured sustain.
+            if (c.hold != 0f || sustained) fields["hold"] = number(c.hold)
+            if (c.hold != 0f || sustained || c.sustainModel != Orphica.SUSTAIN_MODEL_VERSION)
+                fields["sustainModel"] = JsonValue.Num(c.sustainModel.toDouble())
+            return JsonValue.Obj(fields)
+        }
 
         private fun required(obj: Map<String, JsonValue>, key: String): JsonValue =
             obj[key] ?: throw JsonException("ORPHICA recipe has no $key")
@@ -92,6 +100,8 @@ data class OrphicaPatch(
                 grainRateHz = float(obj, "grainRateHz"), scatter = float(obj, "scatter"),
                 damping = float(obj, "damping"), seconds = float(obj, "seconds"),
                 seed = seed, captureSeconds = float(obj, "captureSeconds"),
+                hold = obj["hold"]?.num()?.toFloat() ?: 0f,
+                sustainModel = obj["sustainModel"]?.int() ?: Orphica.SUSTAIN_MODEL_VERSION,
             )
         }
     }

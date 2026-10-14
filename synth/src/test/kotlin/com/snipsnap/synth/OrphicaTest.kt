@@ -10,8 +10,32 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 
 class OrphicaTest {
+    @Test
+    fun `approved model1 finite float PCM remains byte exact with HOLD omitted or off`() {
+        // Captured from e8817b2 compiled classes before adding the sustain model.
+        val approved = mapOf(
+            OrphicaMode.CLEAR to "bc0f8d0fc960034c473d0228b2ef53b0e4817fb275c5591bcf55fb609c1885af",
+            OrphicaMode.STUTTER to "e8485cd32c377acad247d9cffdb515af284e20fa4950aba4c5ba5aabad1057ee",
+            OrphicaMode.SCATTER to "78fb5aa1e4c6727126ed9c2af22e7342341d7932b4ae854d75aa15a51716ded7",
+            OrphicaMode.REVERSE to "23556727abff013bd31c2b30423c6e5e8e9bda551a9929006a3765b918fe3ef5",
+            OrphicaMode.FREEZE to "e75371987d7eb370749e6def209b52f4f00b52bf97ea25bf5483aae9e1acab2f",
+        )
+        for ((mode, hash) in approved) {
+            val config = OrphicaConfig(mode = mode, seconds = .6f, seed = 923748123L)
+            val samples = Orphica.render(config).samples
+            val bytes = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+            for (sample in samples) bytes.putFloat(sample)
+            val actual = MessageDigest.getInstance("SHA-256").digest(bytes.array()).joinToString("") { "%02x".format(it) }
+            assertEquals(hash, actual, "$mode changed the approved model1 sound")
+            assertContentEquals(samples, OrphicaPatch("Off", config, mapOf("HOLD" to 0f)).render().samples)
+        }
+    }
+
     private fun rms(samples: FloatArray): Double =
         sqrt(samples.sumOf { it.toDouble() * it } / samples.size.coerceAtLeast(1))
 

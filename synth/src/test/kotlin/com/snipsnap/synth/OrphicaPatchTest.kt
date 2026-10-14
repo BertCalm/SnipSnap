@@ -6,8 +6,45 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class OrphicaPatchTest {
+    @Test
+    fun `old config JSON stays unchanged and captured sustain is explicitly versioned`() {
+        val legacy = OrphicaPatch("Legacy", OrphicaConfig())
+        val fields = legacy.toJsonValue().entries.getValue("config").obj()
+        assertFalse("hold" in fields)
+        assertFalse("sustainModel" in fields)
+        assertEquals(legacy, OrphicaPatch.fromJsonText(legacy.toJsonText()))
+        assertEquals(0f, OrphicaPatch.fromJsonText(legacy.toJsonText()).config.hold)
+        assertEquals(1, OrphicaPatch.fromJsonText(legacy.toJsonText()).config.sustainModel)
+
+        for (patch in listOf(legacy.copy(config = legacy.config.copy(hold = .8f)),
+            legacy.copy(macros = mapOf("HOLD" to 1f)))) {
+            val heldFields = patch.toJsonValue().entries.getValue("config").obj()
+            assertTrue("hold" in heldFields && "sustainModel" in heldFields)
+            assertEquals(1, heldFields.getValue("sustainModel").int())
+            assertEquals(patch, OrphicaPatch.fromJsonText(patch.toJsonText()))
+            assertContentEquals(patch.render().samples, OrphicaPatch.fromJsonText(patch.toJsonText()).render().samples)
+            val changed = JsonValue.Obj(LinkedHashMap(patch.toJsonValue().entries).also { root ->
+                root["config"] = JsonValue.Obj(LinkedHashMap(heldFields).also { it["sustainModel"] = JsonValue.Num(2.0) })
+            })
+            assertFailsWith<JsonException> { OrphicaPatch.fromJsonValue(changed) }
+        }
+    }
+
+    @Test
+    fun `panel macros preserve saved physical config with neutral tune`() {
+        val config = OrphicaConfig(pluck = .13f, fracture = .81f, grainSizeMs = 93f, damping = .62f, hold = .7f)
+        val macros = Orphica.macrosFrom(config)
+        assertEquals(0f, Orphica.defaults().getValue("HOLD"))
+        assertEquals(.5f, macros.getValue("TUNE"))
+        assertEquals(config, Orphica.configWithMacros(config, macros))
+        assertFailsWith<IllegalArgumentException> { config.copy(hold = 1.1f) }
+        assertFailsWith<IllegalArgumentException> { config.copy(sustainModel = 2) }
+    }
+
     @Test
     fun `complete physical config and all long seed bits round trip with exact audio`() {
         for (seed in listOf(Long.MIN_VALUE, Long.MAX_VALUE, 9007199254740993L)) {

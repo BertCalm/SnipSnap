@@ -3,8 +3,9 @@
 ORPHICA adapts the XOmnibus microsound-harp idea to SnipSnap's deterministic
 offline rendering pipeline. A tuned plucked string supplies each note's own
 recent history. Short windowed grains revisit that history while the initial
-attack stays clear. This is a first listening prototype; sonic acceptance
-remains the owner's decision.
+attack stays clear. On 2026-10-13 the owner heard the published first audition
+and said, "Sounds pretty good to me". That finite sound is the approved working
+baseline; captured HOLD sustain and device behavior are separate validation work.
 
 ## Render contract
 
@@ -42,6 +43,7 @@ renderer settings. Unknown models and invalid controls are refused.
 | FRACTURE | Dry-to-cloud balance; zero is dry |
 | SIZE | Grain length, 8–120 ms |
 | DAMP | String damping; higher darkens and shortens the source |
+| HOLD | Zero retains the approved finite sound; intermediate values blend into captured sustain; the top step returns loop-only material |
 
 An omitted macro retains its saved config value. MIDI is limited to 21–108;
 TUNE saturates at those endpoints. Grain rate is 2–100 Hz, finite notes are
@@ -54,9 +56,46 @@ Reverse Glass and Captured Sustain. CLI rendering is available, for example:
 ./gradlew :cli:run --args="synth ORPHICA NYLON --preset 2 --midi 60 --seed 42 --out /tmp/orphica"
 ```
 
-This prototype is not yet in the phone SYNTH picker. MAKE INSTRUMENT, seamless
-held loops, register-dependent effects and a live chord latch are future
-integration work. FREEZE currently produces a finite captured sustain.
+ORPHICA is available in the phone SYNTH picker after PLUCK, with NYLON, STEEL
+and CRYSTAL materials, five grain modes, explicit root controls and six macros.
+Loading and editing a saved sound preserves its mode, capture time, physical
+grain settings and full-precision seed. Stereo previews retain the same channel
+image as the rendered sample. SCRAMBLE keeps the saved config and stays below
+the loop-only HOLD step.
+
+## Captured sustain and MAKE INSTRUMENT
+
+HOLD defaults to zero. Existing finite recipes without HOLD still use the
+original renderer, and their saved JSON fields remain unchanged. Sustained
+recipes carry a separate `sustainModel` version, currently 1. HOLD below 0.99
+crossfades the finite note toward a captured sustain after capture; HOLD at or
+above 0.99 renders one complete steady cycle for a looping pad.
+
+`Keys.orphicaPad` preserves the pluck attack and places a nonzero loop marker
+after the capture transition has settled. The held renderer averages written
+periods of the same string into a periodic carrier, limits its harmonics below
+Nyquist, and uses a seeded circular grain schedule. Carrier and grain pattern
+both close on the exported cycle; this is an explicit frozen-sustain
+approximation rather than continuing the original string physics indefinitely.
+At very low notes it waits for at least three written periods. If a late
+capture has decayed below numerical usefulness, it retains an earlier
+populated capture of the same note. It never captures a chord played live.
+
+MAKE INSTRUMENT renders stereo zones across the selected audible root plus
+or minus 12 semitones, bounded to MIDI 21–108. Minor-third roots and boundary
+samples limit playback transposition to one semitone. The release control spans
+0.1–1.5 seconds. Export uses the established `.xty`, `.xpm`, looped WAV and
+phone-sidecar package, preserving frame-based loop markers in both generations.
+Making an instrument does not turn the saved finite patch into a held patch.
+At full HOLD both modes revisit a fixed captured source: FREEZE repeats one
+captured phase offset, while SCATTER varies the offset between grains.
+
+```sh
+./gradlew :cli:run --args="synth ORPHICA NYLON --preset 2 --midi 60 --seed 42 --instrument --release 0.6 --out /tmp/orphica-instrument"
+```
+
+Register-dependent effects and a live chord latch remain future work.
+Phone audio and MPC hardware validation still require the owner's devices.
 
 ## Reproduce the listening pack
 
@@ -81,3 +120,29 @@ same native samples, including the audition's common final fade.
 The listening page plays only on request and provides matched/raw selection,
 Stop all, individual WAV/recipe downloads, and browser-local review export.
 Numerical and browser checks do not replace listening or phone/MPC validation.
+
+
+## Integration validation — 2026-10-13
+
+74 focused JVM tests passed across the renderer, held cycles, patch/recipe
+compatibility, keygroup export, CLI, user presets and stereo frame playback.
+Five pre-change native float fingerprints and all 70 published audition WAV
+SHA-256 fingerprints remained exact. Independently evaluated sustain cycles,
+actual per-channel wrap steps/slopes, 24-bit readback, tuning, late/low capture,
+zero velocity and cancellation are covered.
+
+The debug APK assembled for all four native ABIs, its signature verified, and
+Android instrumentation test sources compiled. The three ORPHICA UI tests have
+not run on a phone or emulator. Real phone audio and MPC loading/long-hold/release
+checks remain outstanding.
+
+A generated Gentle Scatter example covers C3–C5 in nine stereo zones with a
+0.6-second release. The complete package includes the native `.xty`, the `.xpm`
+twin, looped WAVs and the phone sidecar. Generated listening/instrument files
+stay out of source control; the render commands recreate them.
+
+Independent analysis of all nine delivered zones found correct stereo frame
+counts and WAV loop metadata, wrap steps/slopes below ordinary waveform
+maxima, and fundamental error below 0.012 cents by FFT and 0.097 cents by
+unconstrained YIN. Stereo side/mid RMS remains 3.54–4.48%. These are waveform
+and format checks, not a phone or MPC listening verdict.

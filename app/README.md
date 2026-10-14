@@ -72,8 +72,8 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 36 engines: THUMP, SKIN, TINES, VELVET,
-VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
+The SYNTH source picker has 37 engines: THUMP, SKIN, TINES, VELVET,
+VOX, PLUCK, ORPHICA, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
 CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
@@ -102,6 +102,14 @@ owner's listening verdict; saved recipes preserve explicit note and velocity.
 RELAY adds six
 dry phrase seeds and a dry sixteen-pad starter; its larger proposed roster
 waits for the same listening approval.
+ORPHICA adds a microsound harp whose finite sound received a positive owner
+listening verdict. Material, grain mode, explicit root and six macros preserve
+its saved physical recipe; stereo previews keep the grain image. HOLD adds
+captured sustain, and MAKE INSTRUMENT exports stereo attack-plus-loop keygroups
+with release control. `:app:assembleDebug` and
+`:app:compileDebugAndroidTestKotlin` passed on 2026-10-13; the three new UI tests
+still need a device run. Those new held sounds and phone/MPC behavior need
+device validation; see [ORPHICA](../docs/ORPHICA.md).
 GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here

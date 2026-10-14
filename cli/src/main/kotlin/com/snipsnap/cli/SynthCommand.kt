@@ -9,6 +9,7 @@ import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
+import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
@@ -75,7 +76,7 @@ import kotlin.random.Random
  * dry: an instrument is nine held zones and a drone a loop, each with its own
  * shape, and neither is a one-shot pad.
  *
- * `--instrument [--attack S] [--release S]` (RESIN only) renders the preset
+ * `--instrument [--attack S] [--release S]` (RESIN; ORPHICA accepts RELEASE) renders the preset
  * held down instead: a keys instrument that sounds while a key is held.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
@@ -84,7 +85,8 @@ import kotlin.random.Random
  * [--loop] times end to end so the wrap can be heard.
  *
  * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and ORPHICA) override
- * the preset's note and strike energy for a pad audition. EMBOUCHURE's --midi
+ * the preset's note and strike energy for a pad audition. ORPHICA also accepts
+ * them with --instrument to set its sampled root and string energy. EMBOUCHURE's --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
@@ -111,7 +113,7 @@ object SynthCommand {
         val drone = opts.has("--drone")
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (instrument || drone) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine != OrphicaPatch.ENGINE)) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
@@ -163,7 +165,8 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine != "RESIN") throw CliError("only RESIN exports a keys instrument here - try snipsnap synth RESIN BRASS --instrument")
+            if (engine != "RESIN" && engine != OrphicaPatch.ENGINE) throw CliError("RESIN and ORPHICA export keys instruments here - try snipsnap synth ORPHICA NYLON --instrument")
+            if (engine == OrphicaPatch.ENGINE && opts["--attack"] != null) throw CliError("ORPHICA keeps the pluck attack; --instrument accepts --release")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
         }
         val droneFlags = listOf("--root", "--motion", "--rate", "--bpm", "--bars", "--loop").filter { opts[it] != null }
@@ -281,6 +284,23 @@ object SynthCommand {
         fun seconds(flag: String, default: Float): Float {
             val raw = opts[flag] ?: return default
             return raw.toFloatOrNull() ?: throw CliError("$flag wants seconds, got '$raw'")
+        }
+        if (patch is OrphicaPatch) {
+            val spec = try {
+                OrphicaPadMaker.Spec(patch.config, patch.macros, seconds("--release", OrphicaPadMaker.RELEASE.default))
+            } catch (e: IllegalArgumentException) {
+                throw CliError(e.message ?: "bad --release")
+            }
+            val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
+            val midis = OrphicaPadMaker.zoneMidis(spec)
+            val notes = midis.mapIndexed { i, midi ->
+                out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+                OrphicaPadMaker.renderZone(spec, midi)
+            }
+            OrphicaPadMaker.export(name, spec, notes, dir)
+            out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+            out.println("${midis.size} stereo zones, captured sustain - RELEASE ${OrphicaPadMaker.secondsLabel(spec.releaseSeconds)}")
+            return 0
         }
         val spec = try {
             ResinPadMaker.Spec(
