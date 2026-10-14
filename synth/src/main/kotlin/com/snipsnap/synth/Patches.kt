@@ -122,9 +122,13 @@ object Patches {
         if (version != VERSION) throw JsonException("unsupported patch version $version")
         val voiceName = obj["voice"]?.str() ?: throw JsonException("patch has no voice")
         val voice = voiceOf(voiceName) ?: throw JsonException("unknown voice $voiceName")
-        val macros = (obj["macros"] as? JsonValue.Obj)?.entries
-            ?.mapValues { (_, v) -> v.num().toFloat() }
-            ?: emptyMap()
+        val macros = when (val raw = obj["macros"]) {
+            // Absent or null is a partial map with nothing in it; the engine fills every macro as it fills any missing one.
+            null, JsonValue.Null -> emptyMap()
+            is JsonValue.Obj -> raw.entries.mapValues { (_, v) -> v.num().toFloat() }
+            // Any other type is a malformed map, not an empty one: read as empty, the patch would load with none of its macros.
+            else -> throw JsonException("patch macros must be an object, got ${raw::class.simpleName}")
+        }
         val name = obj["name"]?.str() ?: throw JsonException("patch has no name")
         return build(name, voice, macros)
     }

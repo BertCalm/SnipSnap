@@ -125,12 +125,19 @@ internal object PitchwheelV1 {
             normalise(pluck); normalise(bow)
         }
         private fun normalise(a: DoubleArray) { val n = sqrt(a.sumOf { it * it }); for (j in a.indices) a[j] /= n }
-        fun energy() = x.indices.sumOf { .5 * (x[it] * x[it] + v[it] * v[it]) }
+        // Plain loops, in sumOf's own order from 0.0: once per solver step and once per
+        // audio tick, an indices.sumOf would allocate an IntRange and its iterator.
+        fun energy(): Double {
+            var sum = 0.0
+            for (j in x.indices) sum += .5 * (x[j] * x[j] + v[j] * v[j])
+            return sum
+        }
         fun excite(energy: Double, bowed: Boolean = false, direction: Int = 1, variation: Double = 1.0) {
             if (energy <= 0.0) return
             val p = if (bowed) bow else pluck
             if (bowed) {
-                val receiving = x.indices.sumOf { .5 * p[it] * (x[it] * x[it] + v[it] * v[it]) }
+                var receiving = 0.0
+                for (j in x.indices) receiving += .5 * p[j] * (x[j] * x[j] + v[j] * v[j])
                 if (receiving > 1e-18) {
                     // Slip work sustains the harmonic subset radially, preserving its
                     // modal phase. A velocity-only maintenance kick shifts low roots.
@@ -166,7 +173,11 @@ internal object PitchwheelV1 {
             }
             return loss
         }
-        fun sample() = x.indices.sumOf { x[it] * pickup[it] }.toFloat()
+        fun sample(): Float {
+            var sum = 0.0
+            for (j in x.indices) sum += x[j] * pickup[j]
+            return sum.toFloat()
+        }
     }
 
     private class Engine(val voice: PitchwheelVoice, val m: Map<String, Float>, val midi: Int,
@@ -220,11 +231,22 @@ internal object PitchwheelV1 {
         private fun event(kind: EventKind, j: Int, dir: Int, energy: Double = 0.0, finger: Int = -1) {
             if (record) events.add(Event(time, kind, j, dir, energy, finger))
         }
-        private fun fingerEnergy() = fingers.filter { it.tooth >= 0 }.sumOf { .5 * stiffness * (angle - it.anchor).pow(2) }
-        private fun filamentEnergy() = filaments.filter { it.tooth >= 0 }.sumOf { .5 * it.stiffness * (angle - it.anchor).pow(2) }
+        // Engaged contacts in array order, summed from 0.0 as filter + sumOf did, without
+        // the list those built several times per solver step.
+        private fun fingerEnergy(): Double {
+            var sum = 0.0
+            for (f in fingers) if (f.tooth >= 0) sum += .5 * stiffness * (angle - f.anchor).pow(2)
+            return sum
+        }
+        private fun filamentEnergy(): Double {
+            var sum = 0.0
+            for (f in filaments) if (f.tooth >= 0) sum += .5 * f.stiffness * (angle - f.anchor).pow(2)
+            return sum
+        }
         fun mechanicalEnergy() = .5 * INERTIA * speed * speed + fingerEnergy() + filamentEnergy()
         fun totalEnergy() = mechanicalEnergy() + wood.energy()
-        private fun crossing(old: Double, now: Double, base: Double, action: (Double) -> Unit) {
+        // Inline: geometry() would otherwise build a capturing lambda per finger tooth and resin site.
+        private inline fun crossing(old: Double, now: Double, base: Double, action: (Double) -> Unit) {
             if (now > old) {
                 var at = base + (floor((old - base) / TAU) + 1) * TAU
                 while (at <= now) { action(at); at += TAU }
@@ -319,7 +341,8 @@ internal object PitchwheelV1 {
             val bowBudget = if (bowSound && nfil > 0) min(frictionWork * .42, max(0.0, slipDrag * step) * .65) else 0.0
             val allowed = max(0.0, before + driveWork - frictionWork)
             val after = mechanicalEnergy()
-            if (after > allowed + 1e-14) {
+            val corrected = after > allowed + 1e-14
+            if (corrected) {
                 val potential = fingerEnergy() + filamentEnergy()
                 if (allowed >= potential) {
                     speed = sign(speed) * sqrt(2 * (allowed - potential) / INERTIA)
@@ -338,7 +361,9 @@ internal object PitchwheelV1 {
                 val removed = max(0.0, after - allowed)
                 correction += removed
             }
-            val retained = mechanicalEnergy()
+            // Without a correction nothing has moved angle, speed, a finger or a filament
+            // since `after` was measured, so it is this same value.
+            val retained = if (corrected) mechanicalEnergy() else after
             // All work lost from mechanics is either heat/loss or acoustic bow work.
             val lost = max(0.0, before + driveWork - retained)
             val send = min(bowBudget, lost)
@@ -356,7 +381,8 @@ internal object PitchwheelV1 {
             temperature = (temperature + min(.6 * dt, warming) - (temperature - heat) * dt / 2.2).coerceIn(0.0, 1.0)
             geometry(old)
             time += dt
-            maxError = max(maxError, max(0.0, totalEnergy() + dissipated - initialEnergy - inputWork))
+            // The ledger error is a diagnostic only: render() keeps none of it, so it is not measured there.
+            if (record) maxError = max(maxError, max(0.0, totalEnergy() + dissipated - initialEnergy - inputWork))
         }
         fun tick(): Float {
             if (sampleIndex % stride == 0L) mechanics()
@@ -388,14 +414,22 @@ internal object PitchwheelV1 {
         }
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the long loops stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("PITCHWHEEL render no longer wanted")
+    }
+
+    /** Band-limits [raw] in place: every caller hands over a buffer it never reads again. */
     internal fun finish(raw: FloatArray, normalize: Boolean = false, fade: Boolean = false): FloatArray {
-        val filtered = raw.copyOf()
-        Tide.bandLimit(filtered, INTERNAL_RATE)
-        val out = Dsp.decimate(filtered, RATE)
+        stopIfUnwanted()
+        Tide.bandLimit(raw, INTERNAL_RATE)
+        stopIfUnwanted()
+        val out = Dsp.decimate(raw, RATE)
         val mean = out.sumOf { it.toDouble() } / out.size.coerceAtLeast(1)
         val hp = Dsp.OnePole(RATE)
         for (i in out.indices) { val x = out[i] - mean.toFloat(); out[i] = x - hp.lp(x, 20f) }
-        if (normalize) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        if (normalize) { stopIfUnwanted(); Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET) }
         if (fade) Dsp.fadeTail(out)
         return out
     }
@@ -403,7 +437,8 @@ internal object PitchwheelV1 {
     internal fun renderProbe(voice: PitchwheelVoice, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seconds: Float? = null,
         normalize: Boolean = false, resin: Boolean = true, bowSound: Boolean = true,
-        snapSound: Boolean = true, solverRate: Int = INTERNAL_RATE, contacts: Boolean = true): Probe {
+        snapSound: Boolean = true, solverRate: Int = INTERNAL_RATE, contacts: Boolean = true,
+        record: Boolean = true): Probe {
         require(midi in MIDI_MIN..MIDI_MAX) { "PITCHWHEEL midi out of $MIDI_MIN..$MIDI_MAX: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "PITCHWHEEL velocity out of 0..1: $velocity" }
         require(seconds == null || seconds.isFinite() && seconds in .1f..30f)
@@ -413,21 +448,27 @@ internal object PitchwheelV1 {
         val hz = frequencyFor(voice, m.getValue("TUNE"), midi).toDouble()
         val duration = TAU / launchSpeed(m.getValue("PUSH").toDouble())
         val period = (round(hz * duration).coerceAtLeast(16.0) * RATE / hz).roundToInt().coerceAtLeast(2048)
-        val engine = Engine(voice, m, midi, velocity, held, period, true, resin, contacts, bowSound, snapSound, solverRate)
+        val engine = Engine(voice, m, midi, velocity, held, period, record, resin, contacts, bowSound, snapSound, solverRate)
         if (velocity == 0f) {
             val frames = seconds?.let { (it * RATE).roundToInt() } ?: if (held) period else RATE / 4
             return Probe(FloatArray(frames), engine.diagnostics(),
                 previousCycle = if (held && seconds == null) FloatArray(frames) else FloatArray(0))
         }
         if (held && seconds == null && velocity > 0f) {
-            var previous = FloatArray(period * Dsp.OVERSAMPLE)
-            var current = previous
+            // Two cycle buffers in turn: the cycle before `previous` is never read again, and
+            // the loop below rewrites every sample of its buffer before anything reads one.
+            val first = FloatArray(period * Dsp.OVERSAMPLE)
+            val second = FloatArray(period * Dsp.OVERSAMPLE)
+            var previous = first
+            var current = first
             var oldState = engine.state()
             var stateError = Double.POSITIVE_INFINITY
             var cycles = 0
             while (cycles < 20) {
+                stopIfUnwanted()
                 previous = current
-                current = FloatArray(period * Dsp.OVERSAMPLE) { engine.tick() }
+                current = if (previous === first) second else first
+                for (i in current.indices) { if (i % 8192 == 0) stopIfUnwanted(); current[i] = engine.tick() }
                 val state = engine.state()
                 stateError = state.indices.maxOf { abs(state[it] - oldState[it]) }
                 oldState = state; cycles++
@@ -443,7 +484,7 @@ internal object PitchwheelV1 {
                 val src = period - need + i; val dst = buffer.size - need + i
                 buffer[dst] = ((1 - w) * buffer[dst] + w * buffer[src]).toFloat()
             }
-            if (normalize) Dsp.levelTo(buffer, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+            if (normalize) { stopIfUnwanted(); Dsp.levelTo(buffer, RATE, Dsp.MELODIC_LOUDNESS_TARGET) }
             val seam = Keys.seamError(buffer, period)
             check(seam < Keys.MAX_SEAM_ERROR) { "PITCHWHEEL $voice held seam $seam" }
             return Probe(buffer.copyOfRange(period, buffer.size), engine.diagnostics(),
@@ -453,6 +494,7 @@ internal object PitchwheelV1 {
         val raw = FloatArray(frames)
         var length = frames
         for (i in raw.indices) {
+            if (i % 8192 == 0) stopIfUnwanted()
             raw[i] = engine.tick()
             if (seconds == null && !held && i > 2 * INTERNAL_RATE && i % 1024 == 0 && engine.totalEnergy() < 1e-10) {
                 length = i + 1; break
@@ -463,7 +505,8 @@ internal object PitchwheelV1 {
     }
 
     fun render(voice: PitchwheelVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI, velocity: Float = 1f): Snip {
-        val p = renderProbe(voice, macros, midi, velocity, normalize = true)
+        // A render keeps only the samples, so it records no diagnostics.
+        val p = renderProbe(voice, macros, midi, velocity, normalize = true, record = false)
         val out = p.samples
         if (!isLoop(settled(voice, macros).getValue("HOLD"))) Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)

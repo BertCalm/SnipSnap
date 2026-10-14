@@ -3,7 +3,15 @@ package com.snipsnap.synth
 /**
  * BORE's factory roster: eight per voice, authored from the R1 measurements
  * (the speaking windows, onsets and timbre spans in [Bore]'s KDoc) - and
- * **provisional**: nothing here was listened to. The audition gate
+ * **provisional**. It was authored before anything in BORE had been heard.
+ * SAX has been heard since, in the listening rounds the BORE design doc
+ * records (`docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md`,
+ * "R1, the reed's bite" to "Round 1.6"; `docs/SYNTH_ROADMAP.md`'s S19 row
+ * sums them up): the owner asked for more reed bite, kept the faster
+ * attack, and on 2026-10-04 called the SOLO LOOP note's one-shot good and
+ * its periodic loop a cheap keyboard. The loop the two LOOP presets play
+ * now (Round 1.7, cut from the held one-shot) has not been heard, and
+ * FLUTE's loop never has been. The audition gate
  * (`./gradlew :synth:generateBoreAudition`, then `testkit/bore-audition/index.html`) is where a human decides which of these
  * is a woodwind and which is only a tone that measures like one; a name that
  * does not survive it is renamed or dropped, not defended.

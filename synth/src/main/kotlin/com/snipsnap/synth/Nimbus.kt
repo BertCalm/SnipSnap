@@ -96,6 +96,12 @@ object Nimbus {
     internal fun renderLoop(voice: NimbusVoice, macros: Map<String, Float>, cancelled: () -> Boolean = { false }): FloatArray =
         probe(voice, macros + ("HOLD" to 1f), options = ProbeOptions(normalize = true, recordDiagnostics = false), cancelled = cancelled).samples
 
+    // SynthScreen previews run in runInterruptible and keygroup exports pass a cancel
+    // callback; either stops a long render instead of letting it finish unwanted.
+    private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
+        if (Thread.currentThread().isInterrupted || cancelled()) throw CancellationException("NIMBUS render no longer wanted")
+    }
+
     internal data class ProbeOptions(
         val normalize: Boolean = false,
         val couplingEnabled: Boolean = true,
@@ -199,14 +205,17 @@ object Nimbus {
         val frames = if (held) (HOLD_PREROLL_CYCLES + 2) * cycle + padding else
             (((options.durationSeconds?.takeIf { it.isFinite() } ?: (5.0f + 1.4f * m.getValue("FIELD") + .5f * m.getValue("FUNNEL") + 1.7f * m.getValue("HOLD"))).coerceIn(.10f, MAX_SECONDS)) * INTERNAL_RATE).roundToInt()
         val seed = Dsp.seedFor("NIMBUS", voice, frequencyFor(voice, m.getValue("TUNE")), velocity, options.seedContext)
+        stopIfUnwanted(cancelled)
         val simulation = Simulation(voice, m, velocity.toDouble(), options, root, seed, cycle, cancelled)
         val result = simulation.run(frames, start)
+        stopIfUnwanted(cancelled)
         val taps = result.taps.map { if (it.isEmpty()) it else Dsp.decimate(it, RATE) }
         val pad = padding / Dsp.OVERSAMPLE
         val previous = if (held) taps[0].copyOfRange(pad, pad + cycleFrames) else FloatArray(0)
         val audio = if (held) taps[0].copyOfRange(pad + cycleFrames, pad + 2 * cycleFrames) else taps[0]
         val rawPeak = audio.maxOfOrNull { abs(it) } ?: 0f
         if (options.normalize) {
+            stopIfUnwanted(cancelled)
             Dsp.levelTo(audio, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
             val gain = if (rawPeak > 1e-12f) (audio.maxOfOrNull { abs(it) } ?: 0f) / rawPeak else 1f
             for (i in previous.indices) previous[i] *= gain
@@ -215,6 +224,7 @@ object Nimbus {
             Dsp.fadeTail(audio, ms = 8f)
             for (i in 1 until taps.size) Dsp.fadeTail(taps[i], ms = 8f)
         }
+        stopIfUnwanted(cancelled)
         val seam = if (held && previous.any { it != 0f }) Keys.seamError(previous + audio, previous.size) else 0.0
         fun tap(i: Int): FloatArray = if (taps[i].isEmpty()) taps[i] else if (held) taps[i].copyOfRange(pad + cycleFrames, pad + 2 * cycleFrames) else taps[i]
         val offset = if (held) (HOLD_PREROLL_CYCLES + 1) * cycle.toFloat() / INTERNAL_RATE else 0f
@@ -684,7 +694,7 @@ object Nimbus {
             var selectedContacts = 0
             if (options.recordDiagnostics) snapshots.add(snapshot(0))
             for (frame in 0 until frames) {
-                if (frame % 8192 == 0 && cancelled()) throw CancellationException("NIMBUS render cancelled")
+                if (frame % 8192 == 0) stopIfUnwanted(cancelled)
                 if (bodyWindow && frame >= BODY_ONSET_SECONDS * INTERNAL_RATE) { bodyWindow = false; load() }
                 if (frame % controlStride == 0) control()
                 for (plate in plates) plate.step()

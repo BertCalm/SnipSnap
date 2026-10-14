@@ -9,11 +9,11 @@ import kotlin.test.assertTrue
 class SchemesTest {
 
     @Test
-    fun `eight dark schemes in picker order, OILSLICK by default`() {
+    fun `nine dark schemes in picker order, OILSLICK by default`() {
         assertEquals(
             listOf(
                 SchemeId.METAL, SchemeId.OILSLICK, SchemeId.PETROL, SchemeId.INFRARED,
-                SchemeId.ACID, SchemeId.SODIUM, SchemeId.ICE, SchemeId.VAPOR,
+                SchemeId.ACID, SchemeId.SODIUM, SchemeId.ICE, SchemeId.VAPOR, SchemeId.VENT,
             ),
             Schemes.ALL.map { it.id },
         )
@@ -116,6 +116,44 @@ class SchemesTest {
         assertEquals(0x1A1424, s.win, "win — window body gradient start")
         assertEquals(0x2A1050, s.deskGlow, "desk-glow — the radial behind everything")
         assertEquals(0x584A80, s.ink3, "ink3 — third text tier")
+    }
+
+    /**
+     * VENT is transcribed from the VENT audition page's `:root`
+     * (`docs/DIRECTION_2026_10.md` §4), the way OILSLICK is from its handoff
+     * table. The slot each page token fills is the thing worth pinning: a
+     * retune that moves `--panel` must move `gray`, not `field`.
+     */
+    @Test
+    fun `VENT matches the audition page's root exactly`() {
+        val s = Schemes.VENT
+        assertEquals("t-vent", s.cssClass)
+        assertEquals(0x1D1E1B, s.gray, "--panel — the chrome")
+        assertEquals(0x232420, s.field, "--raised — fields, pads, the raised fill")
+        assertEquals(s.field, s.raised, "the page has one raised fill")
+        assertEquals(0x393B33, s.grayHi, "--line — the hairline stands in for the bevel highlight")
+        assertEquals(0xEEEADD, s.ink, "--text")
+        assertEquals(0xB3B4A6, s.ink2, "--muted")
+        assertEquals(0x929587, s.ink3, "--quiet")
+        assertEquals(0xE08A68, s.accent, "--accent — selection")
+        assertEquals(s.accent, s.amber, "one ember serves chrome and LCD alike")
+        assertEquals(s.accent, s.warn, "and the needle")
+        assertEquals(0xEEEADD, s.lcdInk, "the dock's text is the page's text")
+        assertEquals(0x151614, s.desk1, "--bg, flat: desk1 == desk2")
+        assertEquals(s.desk1, s.desk2)
+    }
+
+    /**
+     * The first scheme whose third text tier clears AA on its own chrome.
+     * OILSLICK's gap is documented in `ContrastTest`; this pins that VENT
+     * does not inherit it, so the modern look starts from a scheme with no
+     * known text-contrast gap.
+     */
+    @Test
+    fun `VENT's third ink tier clears AA text contrast`() {
+        val s = Schemes.VENT
+        val ratio = Scheme.contrastRatio(s.ink3, s.gray)
+        assertTrue(ratio >= 4.5, "VENT ink3 vs gray = %.2f:1, below AA text".format(ratio))
     }
 
     @Test

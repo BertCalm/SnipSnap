@@ -325,6 +325,7 @@ object Skitter {
         val a=FloatArray(frames); val b=FloatArray(frames); val gesture=FloatArray(frames)
         var sumA=0.0; var sumB=0.0
         for(i in 0 until frames) {
+            if(i%8192==0) stopIfUnwanted()
             a[i]=offset(i,ra,false).toFloat(); b[i]=offset(i,rb,true).toFloat()
             sumA+=2.0.pow(a[i]/1200.0); sumB+=2.0.pow(b[i]/1200.0)
             var kick=0.0
@@ -335,14 +336,18 @@ object Skitter {
             frames/sumA,frames/sumB,events)
     }
 
-    /** Blackman-windowed sinc, 48 output-sample support, >70 dB far-stopband rejection. */
     // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
-    // and the long loops poll it so a stale render stops instead of finishing unwanted.
+    // and the long loops and the passes poll it so a stale render stops instead of finishing unwanted.
     private fun stopIfUnwanted() {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("SKITTER render no longer wanted")
     }
 
-    private fun decimate(raw: FloatArray, oversample: Int, periodic: Boolean): FloatArray {
+    /**
+     * Blackman-windowed sinc, 48 output-sample support, >70 dB far-stopband rejection: a tone
+     * from the output Nyquist up to the internal one leaves more than 70 dB below a passband
+     * tone, at every oversample [renderProbe] accepts (SkitterDecimatorTest).
+     */
+    internal fun decimate(raw: FloatArray, oversample: Int, periodic: Boolean): FloatArray {
         val radius=24*oversample
         val kernel=DoubleArray(2*radius+1)
         var norm=0.0
@@ -354,12 +359,22 @@ object Skitter {
         }
         for(i in kernel.indices) kernel[i]/=norm
         val out=FloatArray(raw.size/oversample)
+        val n=raw.size
         for(i in out.indices) {
+            if(i%8192==0) stopIfUnwanted()
             var y=0.0
-            for(j in -radius..radius) {
-                val p=i*oversample+j
-                val at=if(periodic) (p%raw.size+raw.size)%raw.size else p
-                if(at in raw.indices) y+=raw[at]*kernel[j+radius]
+            val centre=i*oversample
+            if(periodic) {
+                // The wrapped tap index advances by one per tap; only its start needs a modulo.
+                var at=((centre-radius)%n+n)%n
+                for(j in -radius..radius) {
+                    y+=raw[at]*kernel[j+radius]
+                    at++
+                    if(at==n) at=0
+                }
+            } else {
+                // Taps outside the note are skipped, never summed as zero: visit only the in-bounds ones.
+                for(j in max(-radius,-centre)..min(radius,n-1-centre)) y+=raw[centre+j]*kernel[j+radius]
             }
             out[i]=y.toFloat()
         }
@@ -476,8 +491,10 @@ object Skitter {
         stopIfUnwanted()
         val raw=decimate(rawInternal,oversample,held)
         val output=raw.copyOf()
+        stopIfUnwanted()
         Dsp.levelTo(output,RATE,Dsp.MELODIC_LOUDNESS_TARGET)
         if(!held) Dsp.fadeTail(output)
+        stopIfUnwanted()
         val seam=if(held && vel>0.0) Keys.seamError(output,loopStart) else 0.0
         check(!held || seam<Keys.MAX_SEAM_ERROR) { "SKITTER $voice HOLD seam $seam exceeds ${Keys.MAX_SEAM_ERROR}" }
         val peak=raw.maxOfOrNull { abs(it.toDouble()) } ?: 0.0
