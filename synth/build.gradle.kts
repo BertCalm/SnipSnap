@@ -2,6 +2,19 @@ plugins {
     kotlin("jvm")
 }
 
+/** Dry PIPE/MUSETTE prototypes, exact engine loops and existing organ references. */
+tasks.register<JavaExec>("generateRegistersAudition") {
+    group = "distribution"
+    description = "Render REGISTERS dry raw/matched 24-bit WAVs, regenerable recipes, diagnostics and the audition page."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r3")
+    if (project.hasProperty("registersBaseline")) args("--baseline=${project.property("registersBaseline")}")
+    (project.findProperty("registersR2Baseline") ?: project.findProperty("registersPrevious"))?.let { args("--previous=$it") }
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"

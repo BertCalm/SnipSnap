@@ -214,6 +214,11 @@ testkit/SnipSnap Contour Kit/
 
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
+
+# REGISTERS listening packs are reproducible generated audio and manifests.
+testkit/registers-audition/
+testkit/registers-audition-r2/
+testkit/registers-audition-r3/
 testkit/SnipSnap Skitter Kit/
 
 # BELLOWS dry listening clips and acceptance-kit audio are regenerated locally.

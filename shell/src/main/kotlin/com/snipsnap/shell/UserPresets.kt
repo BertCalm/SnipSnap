@@ -19,6 +19,7 @@ import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.TanglePatch
@@ -403,6 +404,7 @@ object UserPresets {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is FlotillaPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
