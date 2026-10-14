@@ -159,6 +159,7 @@ threshold by.
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
+snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
 ```
 
@@ -166,11 +167,14 @@ Renders the voice's factory presets to WAV (`Presets.forVoice`). `--all`
 writes every preset; `--preset N` writes one, counting from 1; with
 neither, the first preset. A string-machine preset that lands with
 ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
-`--instrument` and `--drone` are RESIN only: a held nine-zone instrument
-(`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
-hold on the phone's MAKE INSTRUMENT; this command refuses them. An
-engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR,
-AEROSTAT) still renders here.
+`--instrument` is RESIN or REGISTERS: a held nine-zone instrument (`.xty`
+plus the `.xpm` twin). REGISTERS keeps its speaking attack, so it takes
+`--release` and refuses `--attack`. `--drone` is RESIN only: one loop-grid
+drone. SIREN and GLINT hold on the phone's MAKE INSTRUMENT; this command
+refuses them. An engine with a roster and no picker entry (BORE, ARCO,
+MERCURY, TREMOR, AEROSTAT) still renders here. VENT, a prototype outside
+both the roster and the picker, renders its three provisional recipes
+(`VentPresets`, one each for ROUND, WIRE and TEAR); see [VENT](VENT.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
@@ -187,6 +191,7 @@ the message.
 | PITCHWHEEL | 24–96 |
 | REVEL | 48–72 |
 | PRISM | BASS 24–48; ORGAN 36–60; KEY, PLUCK, VEIL 48–72; GLASS 60–84 |
+| REGISTERS | 24–96 |
 | CONTOUR | BASS 12–60; HOLLOW, SWELL 24–72; KEY, PLUCK, LEAD 36–84 |
 | STOOP | 24–96 |
 | LACQUER | 24–96 |
@@ -195,19 +200,22 @@ the message.
 | TANGLE | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
+| BELLOWS | 48–72 |
 | MURMUR | 36–96 |
 | OSPREY | 36–84 |
+| VENT | 36–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
-the preset's saved TUNE offset (±12 semitones). EMBOUCHURE resets TUNE to
-zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
+the preset's saved TUNE offset (±12 semitones). EMBOUCHURE and BELLOWS
+reset TUNE to zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
 itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
 repeatable macro variation around the chosen preset). OSPREY also takes
 `--seed N` (its sea gesture's variation), `--seconds .25..12` (the length
-of its finite render) and `--model 1|2|3` (the saved renderer). `--seed`
-is refused on any engine but those two; `--scramble`, `--seconds` and
-`--model` on any but their own.
+of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
+`--seed N` for its starting trajectory and refuses `--scramble`. `--seed`
+is supported by SKITTER, OSPREY and VENT; `--scramble` by SKITTER only;
+`--seconds` and `--model` by OSPREY only. Other engines refuse these options.
 
 LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
 eight-preset audition bank. `--midi` and `--velocity 0..1` override
@@ -434,25 +442,34 @@ itself: the same hit, played slower or faster, snapped to semitones),
 machine's back half; its WIDTH widens a mono pad's WAV to stereo),
 `sectioned` (the same section with six independent players in place of
 three locked taps: each drifts, vibratos, enters and sounds on their own, so
-a note reads as several playing and not one swirled) and
+a note reads as several playing and not one swirled),
 `amped` (a tube amp and its speaker on a hit that was never a guitar:
 DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
-cabinet — run four times over inside so a hot tube folds back far less).
+cabinet — run four times over inside so a hot tube folds back far less),
+`driven` (a drive pedal: the tube at the top of its gain law with the
+speaker barely in, the last stretch of the pad faded ahead of the amp so
+a quiet tail is not lifted into a click) and `compressed` (a compressor
+pedal, for now: SQUASH at its strongest, the body leaned on so the tail
+stands up; `punched` is the same section plus CRUNCH, this has no
+crunch).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
 phone the same characters, less `crushed` (CRUSH already draws that era)
 and `amped` (its chip is a later layout decision), sit on the PAD SHEET's
-TREATMENT card, six
-rows grouped by what an effect *does* rather than which family implements
-it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
+TREATMENT card, seven
+rows, six of them grouped by what an effect *does* rather than which family
+implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
 the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its
 character once it is itself (PUNCH · RING · DUB · VINYL · PHASE ·
 CONTOUR), row four what happens to it in time (SLAP · WASH · ROLL ·
 GATE · ENSEMBLE · SECTION), row five
-the machine's own transport (FLIP · STOP · START · PITCH), and row six
+the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
-ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
+ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
+the pedals (DRIVE · COMP — `driven` and `compressed`),
+grouped by what an effect *is*, because a guitarist looks for a pedal by
+its name; tapping any
 of them changes every file the pad references, velocity layers included.
 
 ### `recipe <kit-dir> <pad> --from <kit-dir>:<pad>` — do it again

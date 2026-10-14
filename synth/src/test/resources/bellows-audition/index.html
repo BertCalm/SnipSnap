@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#25261f">
+  <meta name="description" content="A dry listening room for BELLOWS, a reed-and-wheel instrument concept for SnipSnap.">
+  <title>BELLOWS — SnipSnap listening room</title>
+  <link rel="stylesheet" href="styles.css?v=2">
+  <script src="app.js?v=2" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="#main" aria-label="SnipSnap listening room"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>SNIP<span>SNAP</span><small>SOUND LAB</small></a>
+    <div class="masthead-meta"><span class="status-dot" aria-hidden="true"></span> AUDITION 002 <span class="separator">/</span> BELLOWS</div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" aria-label="Listening room information">
+      <div class="sidebar-title"><span class="eyebrow">THE INSTRUMENT</span><p>Four ways<br>to move air.</p></div>
+      <div class="family-heading">SOUND FAMILIES <span>04</span></div>
+      <div id="family-filters" class="family-filters" aria-label="Filter sound family">
+        <button class="family-filter selected" data-family="all" aria-pressed="true"><span class="family-index">00</span><span>All families</span><span class="family-arrow" aria-hidden="true"></span></button>
+        <button class="family-filter" data-family="CHAMBER" aria-pressed="false"><span class="family-index">01</span><span>Chamber<small>Round, layered reeds</small></span><span class="family-arrow">↗</span></button>
+        <button class="family-filter" data-family="COUNTER" aria-pressed="false"><span class="family-index">02</span><span>Counter<small>Push meets pull</small></span><span class="family-arrow">↗</span></button>
+        <button class="family-filter" data-family="FOLK" aria-pressed="false"><span class="family-index">03</span><span>Folk<small>Bright, restless reeds</small></span><span class="family-arrow">↗</span></button>
+        <button class="family-filter" data-family="WHEEL" aria-pressed="false"><span class="family-index">04</span><span>Wheel<small>Strings, drones & buzz</small></span><span class="family-arrow">↗</span></button>
+      </div>
+      <div class="sidebar-note"><span class="small-label">A NOTE ON LISTENING</span><p>Start with Body & breath. Compare the full-range endpoints, then open More steps to follow the change.</p><p class="keyboard-hint"><kbd>SPACE</kbd> play / pause<br><kbd>ESC</kbd> stop</p></div>
+      <a class="manifest-link" href="manifest.json?v=2" download="bellows-audition-manifest.json">Save audition manifest <span aria-hidden="true">↓</span></a>
+      <div class="sidebar-footer">XOLEG → SNIPSNAP<br><span>Concept adaptation · dry audition</span></div>
+    </aside>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="small-line" aria-hidden="true"></span> A NEW INSTRUMENT, IN PROGRESS</div>
+          <h1 id="page-title">BELLOWS<span class="title-period">.</span></h1>
+          <p class="hero-subtitle">SnipSnap listening room</p>
+          <p class="hero-description">Reed banks, moving air, and a wheel that starts to buzz.</p>
+          <p class="revision-note">WIDER BODY & BREATH · FULL-RANGE COMPARISONS</p>
+          <div class="prototype"><span aria-hidden="true">◇</span> PROTOTYPE <span class="prototype-divider">/</span> DRY LISTENING VERDICT PENDING</div>
+        </div>
+        <div class="instrument-figure" aria-hidden="true">
+          <div class="figure-caption"><span>THE PRESSURE IS THE PLAYER</span><span>01—04</span></div>
+          <div class="instrument-drawing"><div class="instrument-left"><i></i><i></i><i></i><i></i><i></i></div><div class="bellows-folds"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="instrument-right"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="figure-baseline"><span>AIR IN</span><span class="baseline-arrow">←&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; →</span><span>SOUND OUT</span></div>
+        </div>
+      </section>
+
+      <section class="audition-section" aria-labelledby="section-title">
+        <div class="view-tabs" id="view-tabs" aria-label="Audition collections">
+          <button class="view-tab selected" data-section="body-breath" aria-pressed="true">Body & breath <span class="tab-count" data-count="body-breath">—</span></button>
+          <button class="view-tab" data-section="first-listen" aria-pressed="false">First listen <span class="tab-count" data-count="first-listen">—</span></button>
+          <button class="view-tab" data-section="control" aria-pressed="false">Controls <span class="tab-count" data-count="control">—</span></button>
+          <button class="view-tab" data-section="notes" aria-pressed="false">Notes & touch <span class="tab-count" data-count="notes">—</span></button>
+          <button class="view-tab" data-section="hold" aria-pressed="false">Hold <span class="tab-count" data-count="hold">—</span></button>
+        </div>
+        <div class="collection-header">
+          <div><div class="eyebrow" id="collection-eyebrow">01 / BODY & BREATH</div><h2 id="section-title">Hear the full range.</h2><p id="section-description">The same note and gesture at both ends of each control. Play A and B separately, or listen to A then B.</p></div>
+          <div class="level-control"><div class="small-label">PLAYBACK LEVEL</div><div class="level-switch" role="group" aria-label="Audio level version"><button class="selected" id="matched-button" aria-pressed="true">Matched</button><button id="raw-button" aria-pressed="false">Raw</button></div><p id="level-description">Matched compares color at similar level.</p></div>
+        </div>
+        <div id="focus-guide" class="focus-guide">
+          <div><span class="small-label">BODY</span><p><strong>No body</strong><span aria-hidden="true">→</span><strong>Full body</strong></p><small>From the direct voice to the full enclosure.</small></div>
+          <div><span class="small-label">BREATH</span><p><strong>Gentle</strong><span aria-hidden="true">→</span><strong>Full breath</strong></p><small>Changes how the reeds are driven. Gentle still plays a pitched note.</small></div>
+          <p class="focus-level-note">Matched keeps loudness similar so extra volume doesn’t decide the comparison. Raw preserves the source dynamics.</p>
+        </div>
+        <div id="loading" class="loading-message" role="status">Loading the listening room…</div>
+        <div id="clip-grid" class="clip-grid"></div>
+        <div id="empty-state" class="empty-state" hidden><span>NO SOUNDS IN THIS VIEW</span><p>Try another collection or sound family.</p></div>
+        <div id="room-error" class="room-error" role="alert" hidden></div>
+      </section>
+
+      <section class="listening-notes" aria-label="About this audition">
+        <div><span class="small-label">01 / KEEP IT DRY</span><p>No added space to hide in. Hear the instrument’s character before effects.</p></div>
+        <div><span class="small-label">02 / FOLLOW THE GESTURE</span><p>Pressure is part of the recipe. A swell, an accent, or a wrist snap changes the voice.</p></div>
+        <div><span class="small-label">03 / KNOW THE HOLD</span><p>A pad plays a finite sound. A sustained loop keeps going only when Repeat is on.</p></div>
+      </section>
+      <section class="audition-downloads" aria-label="Save this audition">
+        <div><span class="small-label">TAKE IT WITH YOU</span><p>Keep the sounds and their recipes.</p></div>
+        <div class="download-buttons"><a id="download-body-breath" href="#" hidden download>Body & breath · WAV ZIP <span aria-hidden="true">↓</span></a><a id="download-first-listen" href="#" hidden download>First listens · WAV ZIP <span aria-hidden="true">↓</span></a><a id="download-patches" href="#" hidden download>Sound recipes <span aria-hidden="true">↓</span></a><a href="manifest.json?v=2" download="bellows-audition-manifest.json">Manifest <span aria-hidden="true">↓</span></a></div>
+      </section>
+      <footer class="page-footer"><span>SNIPSNAP / BELLOWS</span><span>Listen closely. Choose by ear.</span></footer>
+    </main>
+  </div>
+
+  <div class="transport" role="region" aria-label="Playback controls">
+    <div class="transport-current"><div class="activity-bars" id="activity-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><span class="small-label" id="transport-family">LISTENING ROOM</span><p id="transport-title">Pick a sound. Make some air.</p></div></div>
+    <div id="playback-status" class="playback-status" role="status" aria-live="polite">Ready when you are</div>
+    <div class="transport-actions"><label class="volume-control"><span class="volume-icon" aria-hidden="true">◖</span><span class="sr-only">Playback volume</span><input type="range" id="volume" min="0" max="1" step="0.01" value="0.75" aria-label="Playback volume"><output id="volume-value">75%</output></label><button class="stop-all" id="stop-all" aria-label="Stop all audio"><span aria-hidden="true">■</span> STOP ALL</button></div>
+  </div>
+  <audio id="audio" preload="none"></audio>
+</body>
+</html>

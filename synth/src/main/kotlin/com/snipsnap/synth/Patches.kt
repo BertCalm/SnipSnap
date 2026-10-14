@@ -80,6 +80,7 @@ object Patches {
             TesseraPatch.ENGINE -> TesseraPatch.fromJsonValue(value)
             PitchwheelPatch.ENGINE -> PitchwheelPatch.fromJsonValue(value)
             EmbouchurePatch.ENGINE -> EmbouchurePatch.fromJsonValue(value)
+            BellowsPatch.ENGINE -> BellowsPatch.fromJsonValue(value)
             MurmurPatch.ENGINE -> MurmurPatch.fromJsonValue(value)
             OspreyPatch.ENGINE -> OspreyPatch.fromJsonValue(value)
             PrismPatch.ENGINE -> PrismPatch.fromJsonValue(value)
@@ -90,6 +91,8 @@ object Patches {
             SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
             TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
+            RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
+            VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

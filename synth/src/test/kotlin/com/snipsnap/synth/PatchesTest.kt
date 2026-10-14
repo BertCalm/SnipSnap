@@ -36,6 +36,7 @@ class PatchesTest {
     /**
      * One saved sound of every engine: its first factory preset, or for the engines with no roster
      * ([PatchTypes.ROSTERLESS]) one built here, so each carries the fields its own engine requires.
+     * A prototype held outside [Presets] ([PatchTypes.PROTOTYPES]) sends its first provisional recipe.
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
@@ -43,6 +44,7 @@ class PatchesTest {
         SilkPatch("Door", SilkVoice.OUD, emptyMap()),
         GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
+        VentPresets.all().first(),
     )
 
     @Test

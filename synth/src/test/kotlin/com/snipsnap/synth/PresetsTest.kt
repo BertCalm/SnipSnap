@@ -48,6 +48,7 @@ class PresetsTest {
         for (voice in LacquerVoice.entries) assertEquals(LacquerPresets.forVoice(voice), Presets.forVoice("LACQUER", voice.name))
         for (voice in TangleVoice.entries) assertEquals(TanglePresets.forVoice(voice), Presets.forVoice("TANGLE", voice.name))
         for (voice in EmbouchureVoice.entries) assertEquals(EmbouchurePresets.forVoice(voice), Presets.forVoice("EMBOUCHURE", voice.name))
+        for (voice in BellowsVoice.entries) assertEquals(BellowsPresets.forVoice(voice), Presets.forVoice("BELLOWS", voice.name))
         for (voice in MurmurVoice.entries) assertEquals(MurmurPresets.forVoice(voice), Presets.forVoice("MURMUR", voice.name))
         for (voice in OspreyVoice.entries) assertEquals(OspreyPresets.forVoice(voice), Presets.forVoice("OSPREY", voice.name))
         for (voice in RevelVoice.entries) assertEquals(RevelPresets.forVoice(voice), Presets.forVoice("REVEL", voice.name))
@@ -58,6 +59,7 @@ class PresetsTest {
         for (voice in StoopVoice.entries) assertEquals(StoopPresets.forVoice(voice), Presets.forVoice("STOOP", voice.name))
         for (voice in SkitterVoice.entries) assertEquals(SkitterPresets.forVoice(voice), Presets.forVoice("SKITTER", voice.name))
         for (voice in RelayVoice.entries) assertEquals(RelayPresets.forVoice(voice), Presets.forVoice("RELAY", voice.name))
+        for (voice in RegistersVoice.entries) assertEquals(RegistersPresets.forVoice(voice), Presets.forVoice("REGISTERS", voice.name))
     }
 
     /**
@@ -67,7 +69,7 @@ class PresetsTest {
      * [Presets.forVoice] must serve exactly the presets [Presets.all] files under
      * it (none, for a rosterless engine or an empty voice); and every engine with a
      * [Patch] type must either have a roster in [Presets.all] or be one of
-     * [PatchTypes.ROSTERLESS].
+     * [PatchTypes.ROSTERLESS] or [PatchTypes.PROTOTYPES].
      */
     @Test
     fun `forVoice and all agree on every engine and voice`() {
@@ -81,15 +83,23 @@ class PresetsTest {
         }
 
         val rostered = all.map { it.engine }.toSet()
-        val expected = PatchTypes.engines - PatchTypes.ROSTERLESS
+        val expected = PatchTypes.engines - PatchTypes.ROSTERLESS - PatchTypes.PROTOTYPES
         assertEquals(
             expected, rostered,
-            "an engine with a Patch type must have a roster in Presets.all() or be listed as rosterless " +
+            "an engine with a Patch type must have a roster in Presets.all() or be listed as rosterless or a prototype " +
                 "(missing ${expected - rostered}, unexpected ${rostered - expected})",
         )
+        fun rosterClass(engine: String) = "com.snipsnap.synth." + engine.lowercase().replaceFirstChar { it.uppercase() } + "Presets"
         for (engine in PatchTypes.ROSTERLESS) {
-            val roster = "com.snipsnap.synth." + engine.lowercase().replaceFirstChar { it.uppercase() } + "Presets"
+            val roster = rosterClass(engine)
             assertTrue(runCatching { Class.forName(roster) }.isFailure, "$engine is listed as rosterless but $roster exists")
+        }
+        // A prototype is held out of Presets on purpose, not for want of recipes: it keeps
+        // its own provisional roster, and nothing of it is served through the factory one.
+        assertTrue(PatchTypes.PROTOTYPES.intersect(PatchTypes.ROSTERLESS).isEmpty(), "an engine is either rosterless or a prototype")
+        for (engine in PatchTypes.PROTOTYPES) {
+            val roster = rosterClass(engine)
+            assertTrue(runCatching { Class.forName(roster) }.isSuccess, "$engine is listed as a prototype but has no $roster to audition")
         }
     }
 
@@ -121,7 +131,7 @@ class PresetsTest {
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
-            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + MurmurPresets.all() + OspreyPresets.all()
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

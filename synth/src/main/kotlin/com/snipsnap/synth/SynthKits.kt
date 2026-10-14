@@ -640,6 +640,24 @@ object SynthKits {
     }
 
     /**
+     * Sixteen dry bellows pads: eight CHAMBER notes in C minor pentatonic from
+     * C3 and the eight contrasting presets. Each recipe retains its MIDI base,
+     * excitation velocity, model and bellows gesture. Held presets route as LOOP.
+     */
+    fun bellows(): List<ArrangedPad?> {
+        fun landed(patch: BellowsPatch) = pad(patch, Bellows.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName = patch.name)
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            landed(BellowsPatch(
+                "Bellows ${i + 1}", BellowsVoice.CHAMBER,
+                Bellows.defaults(BellowsVoice.CHAMBER) + ("TUNE" to 0f),
+                midi = Bellows.ROOT_MIDI + semitone,
+            ))
+        }
+        return scale + BellowsPresets.all().map(::landed)
+    }
+
+    /**
      * Sixteen dry FM/formant pads for the first audition. A01–A08 walk KEY up
      * C minor pentatonic from C3, with explicit roots rather than a tuning macro.
      * The upper pads contrast all six roles and end with settled held choir.

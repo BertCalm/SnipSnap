@@ -11,6 +11,7 @@ import com.snipsnap.synth.ContourRelation
 import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.EmbouchureVoice
+import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlotillaVoice
@@ -182,6 +183,7 @@ class UserPresetsTest {
                 "TANGLE" to TangleVoice.entries.map { it.name },
                 "RELAY" to RelayVoice.entries.map { it.name },
                 "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
+                "BELLOWS" to BellowsVoice.entries.map { it.name },
                 "MURMUR" to MurmurVoice.entries.map { it.name },
                 "OSPREY" to OspreyVoice.entries.map { it.name },
             )
