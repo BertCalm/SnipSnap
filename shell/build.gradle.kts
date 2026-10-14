@@ -108,3 +108,14 @@ tasks.register<JavaExec>("generateBecomeAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/become-audition")
 }
+
+/** Package the unchanged model-3 OSPREY starter with editable recipes and both MPC generations. */
+tasks.register<JavaExec>("generateOspreyHandoff") {
+    group = "distribution"
+    description = "Package the existing OSPREY R3 starter, source evidence and native/compatibility exports under testkit/osprey-handoff/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OspreyHandoffGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-handoff")
+    args(providers.gradleProperty("ospreyGentleBaselineDir").orElse("${rootDir}/testkit/osprey-gentle-audition").get())
+}

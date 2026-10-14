@@ -348,7 +348,7 @@ object OspreyGentleAuditionGenerator {
         if (includeBodies) sections += section("bodies", "Diagnostic · creatures muted", "Five coast bodies with DEPTH zero in both models. These let the body adjustment be heard without creature forms; both models retain the original water forcing and timing.")
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 2, "engine" to "OSPREY", "title" to "OSPREY · The same sea, a little more color",
-            "description" to "The original sound was positively received; the owner wanted the voices a little more distinct. R2 was rejected as harsh and for losing the original character. R3 returns to the original sea, calls, envelopes and defaults, with only a small change to coast modal body balance. Its listening verdict remains open.",
+            "description" to "The original sound was positively received; the owner wanted the voices a little more distinct. R2 was rejected as harsh and for losing the original character. R3 returns to the original sea, calls, envelopes and defaults, with only a small change to coast modal body balance. Positive owner feedback establishes R3 as the working audio baseline; final listening and on-device acceptance remain open.",
             "renderModel" to 3, "sourceCommit" to currentCommit, "workingTreeDirty" to workingTreeDirty,
             "sourceFilesSha256" to sourceFiles, "currentModel1SourceSha256" to legacySourceHash,
             "baseline" to linkedMapOf("sourceCommit" to HISTORICAL_COMMIT, "manifestSha256" to sha256(baselineManifestFile),
@@ -356,7 +356,10 @@ object OspreyGentleAuditionGenerator {
                 "policy" to "The published R1 library is read-only. Original raw and patch bytes are copied with verified hashes; original matched files are copied unless a lower common A/B listening target requires a distinct playback copy."),
             "reviewStatus" to linkedMapOf("original" to "Positive sound; small voice distinction requested",
                 "rejectedRevision" to "R2 rejected: harsh and lost the original character",
-                "revision" to "Awaiting owner listening review", "concept" to "Original sound positively received",
+                "revision" to "R3 working audio baseline; final acceptance open", "concept" to "Original sound positively received",
+                "workingBaselineModel" to 3,
+                "ownerFeedback" to "We are in a better spot audio wise",
+                "ownerFeedbackDate" to "2026-10-14",
                 "acceptedModels" to emptyList<Int>()),
             "sampleRate" to RATE, "channels" to CHANNELS, "bitDepth" to 16,
             "clipCount" to clips.size, "comparisonPairCount" to pairs.size, "audioFileCount" to clips.size * 2,

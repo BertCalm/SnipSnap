@@ -9,9 +9,11 @@ The original sound received positive feedback, with a request for the voices to
 be a little more distinct. The owner rejected R2 as harsh and for losing the
 original character. Model 3 returns to the original sea, calls, envelopes and
 defaults, making only a small adjustment to the balance of existing modal bodies.
-Its [private R1/R3 audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site)
-awaits listening review. The phone picker, CLI, fifteen dry presets and
-sixteen-pad starter use the versioned renderer. `OspreyVoice.SWELL` is the finite
+After hearing the [private R1/R3 audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
+the owner said, “We are in a better spot audio wise.” R3 is the working audio
+baseline; this positive feedback does not close final listening or hardware
+acceptance. The phone picker, CLI, fifteen dry presets and sixteen-pad starter
+use the versioned renderer. `OspreyVoice.SWELL` is the finite
 articulation; CHOP, a dedicated CALL voice and certified repeating HOLD are later
 work.
 
@@ -81,6 +83,53 @@ Repitching a WAV changes wave and creature timing together with pitch. HOLD
 provides no periodic state or seamless-loop contract; a sustained key cannot
 continue an unrendered sea. SnipSnap follows patch → sample → pad playback.
 
+## Sixteen-pad handoff
+
+Keep R3 fixed while trying it as a kit. From the repository root:
+
+```sh
+./gradlew --no-daemon :shell:generateOspreyHandoff
+```
+
+The task writes `testkit/osprey-handoff/osprey-r3-kit.zip` from the existing
+OSPREY starter: fifteen coast × sea presets followed by
+**BETWEEN SHORES**. Every pad keeps its model-3 recipe, C4 (MIDI 60), velocity 1,
+seed 731 and eight-second finite render. SPACE is zero. These are raw engine
+renders; the audition's matched comparison gains are not applied to the kit.
+The archive has a single `SnipSnap Osprey R3/` root:
+
+| Path | Contents |
+| --- | --- |
+| `snipsnap/` | `kit.json` and sixteen raw 24-bit PCM WAVs. |
+| `mpc/` | `SnipSnap Osprey R3.xtd` and its `SnipSnap Osprey R3_[TrackData]/` folder. The compatibility XPM inside that folder shares the native export's sixteen WAVs. |
+| `recipes/` | `A01.json` through `A16.json`, preserving each complete recipe. |
+| `PAD-MAP.txt`, `README.txt` | Pad order and loading instructions. |
+| `manifest.json`, `validation.json` | File hashes, recipe identity and artifact checks. |
+
+The adjacent `handoff-manifest.json` identifies the complete ZIP by SHA-256 and
+byte count. Checks cover export read-back, recipe regeneration and comparison
+with historical R3 raw audio where an identical published patch exists. They do
+not establish hardware playback. HOLD remains finite even on **BETWEEN SHORES**.
+
+The handoff checks are still open on the phone and MPC Live III:
+
+1. In SYNTH, select OSPREY, preview a preset and send it to a pad. Compare its
+   onset, water movement and creature-call timing with the preview.
+2. Save and reopen the kit, reload the pad's recipe, and render it again. Check
+   that model 3, note, velocity, seed, duration and macros survive, and that
+   the resulting gesture is unchanged.
+3. Export the kit, then load the native `.xtd` and compatibility `.xpm` on the
+   Live III with their sample folders intact. Compare pad order, stereo image,
+   pitch, water and call timing, and the complete one-shot endings.
+4. At the highest comfortable listening volume, check single hits and overlaps
+   for harshness, clicks or unexpectedly cut tails. A held key does not turn
+   these finite samples into loops.
+
+Record the phone/build and MPC firmware, any loading error verbatim, and the
+pad that differs in [the Osprey bench entry](BENCH.md#b8--osprey-r3-handoff).
+Android SDK and browser visual checks were unavailable in the build workspace;
+source and artifact checks do not replace the phone or hardware session.
+
 ## Audition and checks
 
 Run from the repository root:
@@ -121,8 +170,9 @@ Manifests record recipes, source provenance, file hashes, amplitude measurements
 call events and decay diagnostics. Tests pin model-1 sample bits and model-2
 compatibility, then check model-3 repeatability, preservation of the original
 scene, continuous morphs, tap reconstruction and finite bounded output.
-Numerical checks do not establish a listening verdict: R3 remains unaccepted
-until the owner has heard it.
+Numerical checks do not establish a listening verdict. The owner's positive
+R3 feedback establishes the working baseline; final listening and the phone/MPC
+handoff remain open.
 
 ## Attribution
 

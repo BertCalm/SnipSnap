@@ -386,9 +386,13 @@ shape the gesture. Fifteen dry presets, a sixteen-pad starter, the SYNTH picker
 and CLI share saved note/velocity/seed/duration/model recipes. Models 1 and 2
 remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudition`
 for paired R1/R3 renders and creature-muted body comparisons. The original
-46-clip study remains preserved. The [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site)
-awaits owner listening review; measured differences do not imply acceptance.
-[Implementation notes](docs/OSPREY.md) describe the three models and the audition.
+46-clip study remains preserved. After the [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
+the owner said, “We are in a better spot audio wise.” R3 is the working audio
+baseline; final listening and phone/MPC acceptance remain open. Run
+`./gradlew :shell:generateOspreyHandoff` for the existing sixteen-pad starter as
+a SnipSnap working folder, native MPC 3 export and compatibility twin, with raw
+renders, recipes and checks. [Implementation notes](docs/OSPREY.md) describe the
+three models, audition and hardware handoff.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One
