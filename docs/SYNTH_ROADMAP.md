@@ -695,14 +695,16 @@ three loaded strips, diagonal heads, audible spring return, deterministic
 splices and delayed cross-strip imprint. TUNE (C3–C5), HEAD, STRAIN, RETURN,
 IMPRINT, SPLICE and HOLD share that machine. Patch recipes retain gate/source
 duration, source roster and contact/transport/head/splice/write geometry;
-velocity changes the contact gesture. Six dry presets, `SynthKits.spool()`,
-the FRESH TAPE starter, phone picker and CLI expose the first review set.
+velocity changes the contact gesture. Thirty-six dry presets, `SynthKits.spool()`,
+the FRESH TAPE starter, phone picker and CLI expose the full factory bank.
 HOLD explicitly exports a finite `FROZEN_SNAPSHOT` imprint through repeated
 forward/return cycles. `./gradlew :synth:generateSpoolAudition` builds the
 listening pack; [SPOOL.md](SPOOL.md) describes integration and its limits.
-**Awaiting the owner's dry sonic verdict before expanding to 36 presets.**
-Published auditions and numerical probes support that review; device and
-release-name validation remain outstanding.
+The owner accepted the original six sounds and musical audition on 2026-10-14.
+The expanded bank contains eight strings, eight choir, six flute, six brass and
+eight experimental presets; the six originals and starter mapping remain unchanged.
+Published recordings and complete recipes support the new bank's listening pass;
+device and release-name validation remain outstanding.
 
 RELAY follows as S30, ported from [the supplied engineering specification](RELAY_SPEC.md).
 KEY, BASS, PLUCK, ORGAN, CHIME and FLOW share four original generated roles:
