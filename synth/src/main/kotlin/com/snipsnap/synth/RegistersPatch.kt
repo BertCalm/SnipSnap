@@ -17,7 +17,7 @@ data class RegistersPatch(
     val model: Int = Registers.MODEL_VERSION,
 ) {
     init {
-        require(model == Registers.MODEL_VERSION) { "unsupported REGISTERS model $model" }
+        require(Registers.supportsModel(model)) { "unsupported REGISTERS model $model" }
         require(midi in 24..96) { "REGISTERS MIDI must be in 24..96" }
         require(velocity.isFinite() && velocity in 0f..1f) { "REGISTERS velocity must be in 0..1" }
         val defaults = Registers.defaults(voice)
@@ -25,8 +25,8 @@ data class RegistersPatch(
         require(macros.values.all { it.isFinite() && it in 0f..1f }) { "REGISTERS macros must be finite in 0..1" }
     }
 
-    fun render() = Registers.render(voice, macros, midi, velocity)
-    fun probe() = Registers.probe(voice, macros, midi, velocity)
+    fun render() = Registers.render(voice, macros, midi, velocity, model)
+    fun probe() = Registers.probe(voice, macros, midi, velocity, model)
 
     fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
         "format" to JsonValue.Str(FORMAT),
@@ -53,8 +53,8 @@ data class RegistersPatch(
             if (field("format").str() != FORMAT) throw JsonException("not a REGISTERS audition recipe")
             if (field("engine").str() != ENGINE) throw JsonException("unexpected REGISTERS engine")
             if (field("version").int() != VERSION) throw JsonException("unsupported REGISTERS recipe version")
-            val model = field("model").int()
-            if (model != Registers.MODEL_VERSION) throw JsonException("unsupported REGISTERS model $model")
+            val model = obj["model"]?.int() ?: Registers.LEGACY_MODEL_VERSION
+            if (!Registers.supportsModel(model)) throw JsonException("unsupported REGISTERS model $model")
             val voiceName = field("voice").str()
             val voice = RegistersVoice.entries.firstOrNull { it.name == voiceName }
                 ?: throw JsonException("unknown REGISTERS voice $voiceName")

@@ -1,22 +1,29 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.log10
+import kotlin.math.PI
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /** Real Kotlin DSP evidence for a provisional organ/reed family, before application integration. */
 object RegistersAuditionGenerator {
-    private const val REVISION = 1
+    private const val REVISION = "r2-chiff"
+    private const val BASELINE_AUDIO_HASH = "56aa7372cb7bd4e84b7ac9fe8321acfdec17d32c2393fa5d63a3749a1510c513"
+    private const val BASELINE_MANIFEST_HASH = "77ee227bf2855c327008c86c57b9046b8d66dca310357d8c2c561b6314316b5d"
     private const val TARGET = .03
     private const val SEAM_LIMIT = .001
     private const val CYCLE_LIMIT = .00001
@@ -46,14 +53,32 @@ object RegistersAuditionGenerator {
         val loop: Map<String, Any?>? = null,
     )
 
+    private data class Baseline(
+        val root: File,
+        val manifest: JsonValue,
+        val clips: Map<String, Map<String, Any?>>,
+        val recipeHashes: Map<String, String>,
+        val manifestHash: String,
+    )
+
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size <= 1) { "Supply at most one output directory." }
-        val root = File(args.firstOrNull() ?: "../testkit/registers-audition").canonicalFile
+        require(args.count { !it.startsWith("--") } <= 1 && args.count { it.startsWith("--baseline=") } <= 1 &&
+            args.filter { it.startsWith("--") }.all { it.startsWith("--baseline=") }) {
+            "Supply one output directory and optional --baseline=<published R1 archive>."
+        }
+        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/registers-audition").canonicalFile
+        val baseline = loadBaseline(File(args.firstOrNull { it.startsWith("--baseline=") }?.substringAfter('=')
+            ?: "/workspace/scratch/registers-r1"))
+        check(root != baseline.root) { "The R1 archive must remain separate from the output directory." }
         check(root.mkdirs() || root.isDirectory)
         val cases = cases()
         check(cases.size == 56 && cases.map { it.id }.distinct().size == cases.size)
+        val pairedCases = cases.filter { it.voice == "PIPE" && (it.section in listOf("identities", "velocity") || it.macro == "EDGE") }
+        check(pairedCases.size == 12)
+        val pairedIds = pairedCases.map { it.id }.toSet()
         val clips = ArrayList<Map<String, Any?>>(cases.size)
+        var unchangedRows = 0
         for ((index, case) in cases.withIndex()) {
             val rendered = render(case)
             validateSnip(rendered.snip, case.id)
@@ -85,16 +110,32 @@ object RegistersAuditionGenerator {
                 "sourceMetrics" to metrics(rendered.snip), "rawExportGain" to exportGain,
                 "sha256" to mapOf("raw" to sha256(rawFile), "matched" to sha256(matchedFile)),
                 "recipe" to rendered.recipe, "diagnostics" to rendered.diagnostics, "loop" to rendered.loop,
+                "auditionRevision" to REVISION,
             )
+            if (case.id in pairedIds) {
+                clip["comparisonPair"] = case.id
+                clip["comparisonLabel"] = "More chiff R2"
+                clip["comparisonOriginalId"] = "r1_${case.id}"
+            }
+            if (case.voice != "PIPE" || rendered.loop != null) {
+                val originalHashes = baseline.clips.getValue(case.id).getValue("sha256") as Map<*, *>
+                val newHashes = clip.getValue("sha256") as Map<*, *>
+                check(originalHashes["raw"] == newHashes["raw"] && originalHashes["matched"] == newHashes["matched"]) {
+                    "${case.id}: R2 changed a voice, loop or reference outside the finite PIPE revision"
+                }
+                clip["unchangedFromR1"] = true
+                addOriginalReviewScope(clip, case.id)
+                unchangedRows++
+            }
             clips += clip
             println("REGISTERS ${index + 1}/${cases.size}: ${case.id} · ${fmt(raw.durationSeconds.toDouble())} s · raw peak ${fmt(raw.peak().toDouble())} · matched ${fmt((matchedMetrics.getValue("loudestWindowRms") as Number).toDouble())}")
         }
+        check(unchangedRows == 32)
+        val comparisons = preserveOriginals(root, baseline, pairedCases, clips)
+        check(clips.size == 68 && clips.map { it.getValue("id") }.distinct().size == clips.size)
         val repository = repositoryRoot()
         val sources = sourceFingerprints(repository)
-        val audioHash = sha256(clips.sortedBy { it.getValue("id") as String }.joinToString("\n") {
-            val hashes = it.getValue("sha256") as Map<*, *>
-            "${it.getValue("id")}:${hashes["raw"]}:${hashes["matched"]}"
-        }.toByteArray(Charsets.UTF_8))
+        val audioHash = audioHash(clips)
         val manifest = Json.write(json(linkedMapOf(
             "schemaVersion" to 1, "title" to "REGISTERS · Pipe + Musette", "revision" to REVISION,
             "engine" to "REGISTERS", "model" to Registers.MODEL_VERSION,
@@ -108,6 +149,16 @@ object RegistersAuditionGenerator {
             "inspiration" to "https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/octave-engine-architecture.md",
             "repository" to "https://github.com/BertCalm/SnipSnap",
             "metricNotes" to "All WAVs are dry mono 44.1 kHz PCM24 from Kotlin DSP. Raw playback preserves conditioned pre-level engine samples, with any PCM peak guard recorded as rawExportGain. Matched playback uses AuditionLevel: loudest 200 ms RMS 0.03 after SnipSnap's gentle low cut. Playback metrics are measured after reading the exported WAVs; sourceMetrics describe the unscaled float render. First-difference RMS is a brightness proxy, not spectral centroid. Held WAVs contain three exact copies of the actual onset-free engine region. Independent generated cycleError and seamError are checked before export; wrapStep is a normal waveform step, not a continuity test by itself. Baselines use existing FULL TONEWHEEL and ORGAN PRISM DSP before normalization, at exact MIDI 48 and 60. No effects, reverb, browser synthesis, application registry integration or factory presets.",
+            "baseline" to mapOf(
+                "revision" to 1, "audioHash" to BASELINE_AUDIO_HASH,
+                "manifest" to "baseline/r1-manifest.json", "manifestSha256" to baseline.manifestHash,
+                "sourceFingerprint" to baseline.manifest.obj().getValue("sourceFingerprint"),
+                "verifiedWavCount" to 112, "verifiedRecipeCount" to 56,
+                "copiedOriginalCases" to 12, "unchangedMainCases" to unchangedRows,
+                "recipeFingerprints" to baseline.recipeHashes.map { (id, hash) -> mapOf("id" to id, "sha256" to hash) },
+            ),
+            "comparisonPairs" to comparisons,
+            "transientMetricNotes" to "First80ms RMS is measured on the exported PCM samples from 0–80 ms. BandMeanSquare uses a Hann window over those samples, zero-padded to a 4096-point FFT, and sums the two-sided Parseval power of bins from 1.5–8 kHz, divided by FFT size and window squared sum. It describes measured band energy, not a listening verdict. Raw and matched versions are measured independently; Original R1 files are copied byte-identical from the published manifest.",
             "sections" to sections(), "voices" to voices(), "clips" to clips,
             "summary" to mapOf(
                 "wavCount" to clips.size * 2, "heldCases" to clips.count { it["loop"] != null },
@@ -115,6 +166,7 @@ object RegistersAuditionGenerator {
                 "allLoopsPassed" to clips.filter { it["loop"] != null }.all { (it["loop"] as Map<*, *>)["seamPass"] == true },
                 "maxRawPeak" to clips.maxOf { ((it.getValue("metrics") as Map<*, *>)["raw"] as Map<*, *>)["peak"] as Double },
                 "totalAudioSeconds" to clips.sumOf { it.getValue("seconds") as Double },
+                "preservedOriginalPairs" to comparisons.size, "unchangedMainCases" to unchangedRows,
             ),
         ))) + "\n"
         File(root, "manifest.json").writeText(manifest)
@@ -126,7 +178,9 @@ object RegistersAuditionGenerator {
         File(root, "README.md").writeText("""
             # REGISTERS audition · revision $REVISION
 
-            56 dry prototype and reference cases; 112 mono PCM24 WAVs at 44.1 kHz.
+            56 current dry cases plus 12 preserved Original R1 PIPE comparisons;
+            136 mono PCM24 WAVs at 44.1 kHz. R2 changes only the finite PIPE speaking burst.
+            All 32 MUSETTE, held PIPE and reference cases remain byte-identical to R1.
             Serve this directory as a static site. index.html reads manifest.json.
             Audio is rendered by Kotlin DSP; the browser only plays exported WAVs.
 
@@ -145,7 +199,14 @@ object RegistersAuditionGenerator {
             deterministic checks and source/audio SHA-256 fingerprints are in manifest.json.
             Listening approval and SnipSnap application integration remain pending.
 
-            Regenerate: ./gradlew :synth:generateRegistersAudition
+            Original R1 WAVs and recipes are copied byte-identical from the verified
+            published archive. The 12 paired recipes also replay through model 1 to the
+            original WAV hashes. First 80 ms RMS and 1.5–8 kHz band measurements are in
+            comparisonPairs; they are numerical evidence, not sonic approval. R1 review
+            identities are preserved separately from changed R2 audio.
+
+            Regenerate: ./gradlew :synth:generateRegistersAudition -PregistersBaseline=<R1 archive>
+            Published R1 manifest SHA-256: ${baseline.manifestHash}
             Audio fingerprint: $audioHash
         """.trimIndent() + "\n")
         println("Wrote ${clips.size} cases / ${clips.size * 2} WAVs, recipes, manifest and audition page under ${root.absolutePath}")
@@ -226,12 +287,209 @@ object RegistersAuditionGenerator {
         } else null
         val output = if (probe.isLoop) FloatArray(probe.samples.size * 3) { probe.samples[it % probe.samples.size] } else probe.samples
         Render(Snip(output, 1, Dsp.RATE), macros, recipe, mapOf(
+            "model" to patch.model,
             "requestedHz" to probe.requestedHz, "effectiveHz" to probe.effectiveHz,
             "tuningErrorCents" to 1200.0 * ln(probe.effectiveHz / probe.requestedHz) / ln(2.0),
             "rawPeak" to probe.rawPeak, "effectiveSpreadHz" to probe.effectiveSpreadHz,
             "motionHz" to probe.motionHz, "deterministic" to true,
         ), loop)
     } else renderReference(case)
+
+    private fun loadBaseline(directory: File): Baseline {
+        val root = directory.canonicalFile
+        val manifestFile = File(root, "manifest.json")
+        check(manifestFile.isFile) { "Published R1 archive is missing: ${root.path}. Use -PregistersBaseline=<R1 archive>." }
+        val manifestHash = sha256(manifestFile)
+        check(manifestHash == BASELINE_MANIFEST_HASH) { "The R1 manifest is not the preserved published revision: $manifestHash" }
+        val manifest = Json.parse(manifestFile.readText())
+        val obj = manifest.obj()
+        check(obj.getValue("audioHash").str() == BASELINE_AUDIO_HASH && obj.getValue("revision").int() == 1 &&
+            obj.getValue("model").int() == 1 && obj.getValue("clipCount").int() == 56)
+        val clips = linkedMapOf<String, Map<String, Any?>>()
+        val recipeHashes = linkedMapOf<String, String>()
+        for (entry in obj.getValue("clips").arr()) {
+            val clip = entry.obj()
+            val id = clip.getValue("id").str()
+            check(id !in clips)
+            val hashes = clip.getValue("sha256").obj()
+            for (mode in listOf("raw", "matched")) {
+                val file = archiveAsset(root, clip.getValue(mode).str())
+                check(sha256(file) == hashes.getValue(mode).str()) { "R1 $id $mode WAV no longer matches its published hash" }
+            }
+            val recipe = archiveAsset(root, clip.getValue("recipeUrl").str())
+            check(Json.parse(recipe.readText()) == clip.getValue("recipe")) { "R1 $id recipe differs from its published manifest" }
+            recipeHashes[id] = sha256(recipe)
+            @Suppress("UNCHECKED_CAST")
+            val values = plain(entry) as Map<String, Any?>
+            clips[id] = values
+        }
+        check(clips.size == 56)
+        check(audioHash(clips.values.toList()) == BASELINE_AUDIO_HASH) { "R1 audio fingerprint could not be reproduced" }
+        for (source in obj.getValue("sourceFingerprints").arr()) {
+            val fingerprint = source.obj()
+            val file = archiveAsset(root, "source/${fingerprint.getValue("path").str()}")
+            check(sha256(file) == fingerprint.getValue("sha256").str()) { "R1 archived source changed: ${file.path}" }
+        }
+        println("Verified published R1 manifest, 112 WAV hashes, 56 recipes and archived source fingerprints.")
+        return Baseline(root, manifest, clips, recipeHashes, manifestHash)
+    }
+
+    private fun preserveOriginals(
+        root: File,
+        baseline: Baseline,
+        pairedCases: List<Case>,
+        clips: MutableList<Map<String, Any?>>,
+    ): List<Map<String, Any?>> {
+        val manifestCopy = File(root, "baseline/r1-manifest.json")
+        manifestCopy.parentFile.mkdirs()
+        File(baseline.root, "manifest.json").copyTo(manifestCopy, overwrite = true)
+        check(sha256(manifestCopy) == baseline.manifestHash)
+        for (source in baseline.manifest.obj().getValue("sourceFingerprints").arr()) {
+            val fingerprint = source.obj()
+            val path = fingerprint.getValue("path").str()
+            val target = File(root, "baseline/source/$path")
+            target.parentFile.mkdirs()
+            archiveAsset(baseline.root, "source/$path").copyTo(target, overwrite = true)
+            check(sha256(target) == fingerprint.getValue("sha256").str())
+        }
+        val comparisons = ArrayList<Map<String, Any?>>(pairedCases.size)
+        for (case in pairedCases) {
+            val revised = clips.single { it["id"] == case.id }
+            val archived = baseline.clips.getValue(case.id)
+            val original = LinkedHashMap(archived)
+            val originalId = "r1_${case.id}"
+            val originalHashes = archived.getValue("sha256") as Map<*, *>
+            val rawPath = "raw/$originalId.wav"
+            val matchedPath = "matched/$originalId.wav"
+            val recipePath = "recipes/$originalId.json"
+            for ((key, path) in listOf("raw" to rawPath, "matched" to matchedPath, "recipeUrl" to recipePath)) {
+                val source = archiveAsset(baseline.root, archived.getValue(key) as String)
+                val target = File(root, path)
+                target.parentFile.mkdirs()
+                source.copyTo(target, overwrite = true)
+                val expected = if (key == "recipeUrl") baseline.recipeHashes.getValue(case.id) else originalHashes[key] as String
+                check(sha256(target) == expected) { "$originalId $key changed while copying the R1 asset" }
+            }
+            val patch = RegistersPatch.fromJsonText(File(root, recipePath).readText())
+            check(patch.model == 1 && patch.voice == RegistersVoice.PIPE && patch.midi == case.note && patch.velocity == case.velocity)
+            val legacy = Snip(patch.probe().samples, 1, Dsp.RATE)
+            val exportGain = minOf(1f, .99f / legacy.peak().coerceAtLeast(1e-9f))
+            val legacyRaw = Snip(FloatArray(legacy.frameCount) { legacy.samples[it] * exportGain }, 1, Dsp.RATE)
+            check(sha256(wavBytes(legacyRaw)) == originalHashes["raw"] &&
+                sha256(wavBytes(AuditionLevel.level(legacy))) == originalHashes["matched"]) {
+                "${case.id}: model 1 recipe no longer replays the published original WAVs"
+            }
+            check(json(revised.getValue("macros")) == json(archived.getValue("macros")) &&
+                (revised.getValue("note") as Number).toInt() == (archived.getValue("note") as Number).toInt() &&
+                (revised.getValue("velocity") as Number).toFloat() == (archived.getValue("velocity") as Number).toFloat()) {
+                "${case.id}: R1/R2 pair changed pitch, velocity or controls"
+            }
+            val originalRaw = WavReader.read(File(root, rawPath))
+            val originalMatched = WavReader.read(File(root, matchedPath))
+            val revisedRaw = WavReader.read(File(root, revised.getValue("raw") as String))
+            val revisedMatched = WavReader.read(File(root, revised.getValue("matched") as String))
+            val originalTransient = mapOf("raw" to transientMetrics(originalRaw), "matched" to transientMetrics(originalMatched))
+            val revisedTransient = mapOf("raw" to transientMetrics(revisedRaw), "matched" to transientMetrics(revisedMatched))
+            val unchanged = case.macro == "EDGE" && case.setting == "low"
+            if (unchanged) check(originalHashes["raw"] == (revised.getValue("sha256") as Map<*, *>)["raw"] &&
+                originalHashes["matched"] == (revised.getValue("sha256") as Map<*, *>)["matched"]) {
+                "EDGE 0 changed despite the speaking burst being disabled"
+            }
+            original["id"] = originalId
+            original["label"] = "Original R1 · ${case.label}"
+            original["description"] = "Preserved published R1 at the same note, velocity and controls as More chiff R2." +
+                if (unchanged) " EDGE 0 keeps the burst disabled in both revisions." else " Compare the speaking burst at the entrance."
+            original["section"] = "comparisons"
+            original["raw"] = rawPath
+            original["matched"] = matchedPath
+            original["recipeUrl"] = recipePath
+            original["recipeSha256"] = baseline.recipeHashes.getValue(case.id)
+            original["metrics"] = mapOf("raw" to metrics(originalRaw), "matched" to metrics(originalMatched))
+            original["comparisonPair"] = case.id
+            original["comparisonLabel"] = "Original R1"
+            original["comparisonRevisedId"] = case.id
+            original["auditionRevision"] = 1
+            original["provenance"] = mapOf(
+                "kind" to "preserved-published-recording", "sourceClipId" to case.id,
+                "sourceAudioHash" to BASELINE_AUDIO_HASH, "sourceManifest" to "baseline/r1-manifest.json",
+                "sourceManifestSha256" to baseline.manifestHash, "model1ReplayMatched" to true,
+            )
+            addOriginalReviewScope(original, case.id)
+            clips += original
+            comparisons += mapOf(
+                "id" to case.id, "label" to case.label,
+                "originalId" to originalId, "revisedId" to case.id,
+                "description" to if (unchanged) "EDGE 0 control: the speaking burst is disabled, so the files remain identical."
+                    else "Same note, velocity and controls. Original R1 is the preserved published recording; R2 revises the finite PIPE speaking burst.",
+                "expectedUnchanged" to unchanged,
+                "transient" to mapOf("original" to originalTransient, "revised" to revisedTransient),
+                "transientChangeDb" to mapOf(
+                    "raw" to transientChange(originalTransient.getValue("raw"), revisedTransient.getValue("raw")),
+                    "matched" to transientChange(originalTransient.getValue("matched"), revisedTransient.getValue("matched")),
+                ),
+            )
+            println("Preserved Original R1 ${case.id} · model 1 replay matched both published WAV hashes.")
+        }
+        return comparisons
+    }
+
+    private fun addOriginalReviewScope(clip: MutableMap<String, Any?>, id: String) {
+        clip["reviewRevision"] = 1
+        clip["reviewAudioHash"] = BASELINE_AUDIO_HASH
+        clip["reviewClipId"] = id
+    }
+
+    private fun archiveAsset(root: File, path: String): File {
+        val file = File(root, path).canonicalFile
+        check(file.toPath().startsWith(root.toPath()) && file.isFile) { "Invalid archived asset $path" }
+        return file
+    }
+
+    private fun wavBytes(snip: Snip): ByteArray = ByteArrayOutputStream().use { stream ->
+        WavWriter.write(stream, snip, WavWriter.BitDepth.PCM_24)
+        stream.toByteArray()
+    }
+
+    private fun transientMetrics(snip: Snip): Map<String, Any> {
+        val frames = minOf(snip.frameCount, (.08 * snip.sampleRate).roundToInt())
+        val fftSize = 4096
+        val re = FloatArray(fftSize)
+        val im = FloatArray(fftSize)
+        var energy = 0.0
+        var windowSquaredSum = 0.0
+        for (i in 0 until frames) {
+            val sample = snip.samples[i].toDouble()
+            energy += sample * sample
+            val window = .5 - .5 * cos(2.0 * PI * i / (frames - 1))
+            windowSquaredSum += window * window
+            re[i] = (sample * window).toFloat()
+        }
+        Fft.forward(re, im)
+        var bandEnergy = 0.0
+        for (bin in 1 until fftSize / 2) {
+            val hz = bin * snip.sampleRate.toDouble() / fftSize
+            if (hz in 1500.0..8000.0) bandEnergy += 2.0 * (re[bin].toDouble() * re[bin] + im[bin].toDouble() * im[bin])
+        }
+        val bandMeanSquare = bandEnergy / (fftSize * windowSquaredSum)
+        return mapOf(
+            "frames" to frames, "seconds" to frames.toDouble() / snip.sampleRate,
+            "rms" to sqrt(energy / frames), "bandLowHz" to 1500, "bandHighHz" to 8000,
+            "bandMeanSquare" to bandMeanSquare, "bandRms" to sqrt(bandMeanSquare),
+            "method" to "Hann-windowed first 80 ms, 4096-point FFT; two-sided Parseval band power / window squared sum",
+        )
+    }
+
+    private fun transientChange(original: Map<String, Any>, revised: Map<String, Any>) = mapOf(
+        "rms" to 20.0 * log10((revised.getValue("rms") as Number).toDouble().coerceAtLeast(1e-20) /
+            (original.getValue("rms") as Number).toDouble().coerceAtLeast(1e-20)),
+        "bandEnergy" to 10.0 * log10((revised.getValue("bandMeanSquare") as Number).toDouble().coerceAtLeast(1e-30) /
+            (original.getValue("bandMeanSquare") as Number).toDouble().coerceAtLeast(1e-30)),
+    )
+
+    private fun audioHash(clips: List<Map<String, Any?>>): String = sha256(clips.sortedBy { it.getValue("id") as String }.joinToString("\n") {
+        val hashes = it.getValue("sha256") as Map<*, *>
+        "${it.getValue("id")}:${hashes["raw"]}:${hashes["matched"]}"
+    }.toByteArray(Charsets.UTF_8))
 
     private fun renderReference(case: Case): Render {
         val hz = Keys.midiHz(case.note).toDouble()
@@ -319,6 +577,7 @@ object RegistersAuditionGenerator {
     }
 
     private fun sections() = listOf(
+        section("comparisons", "More pipe chiff", "Twelve direct pairs compare the preserved Original R1 with More chiff R2 at the same note, velocity and controls. Start with PIPE C4 expressive; EDGE 0 is the unchanged control."),
         section("identities", "First listen", "PIPE and MUSETTE at C3, C4 and A4, each with restrained and expressive articulation. Start with matched playback, then compare raw energy."),
         section("velocity", "Touch", "The same C4 patch at 25%, 60% and full velocity. Raw reveals dynamics; matched reveals changes in excitation and articulation."),
         section("sweeps", "One control at a time", "Low, default and high COLOR, AIR, EDGE, SPREAD and MOTION. Every other control stays at the voice defaults, with the same finite HOLD."),
@@ -355,6 +614,7 @@ object RegistersAuditionGenerator {
             "audio/src/main/kotlin/com/snipsnap/audio/Loudness.kt",
             "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt",
             "audio/src/main/kotlin/com/snipsnap/audio/WavReader.kt",
+            "audio/src/main/kotlin/com/snipsnap/audio/Fft.kt",
             "json/src/main/kotlin/com/snipsnap/json/Json.kt",
         )
         return paths.map { path -> mapOf("path" to path, "sha256" to sha256(File(repository, path))) }
@@ -365,6 +625,15 @@ object RegistersAuditionGenerator {
         val output = process.inputStream.bufferedReader().readText().trim()
         if (process.waitFor() == 0) output else null
     }.getOrNull()
+
+    private fun plain(value: JsonValue): Any? = when (value) {
+        JsonValue.Null -> null
+        is JsonValue.Str -> value.value
+        is JsonValue.Bool -> value.value
+        is JsonValue.Num -> value.value
+        is JsonValue.Obj -> value.entries.mapValues { plain(it.value) }
+        is JsonValue.Arr -> value.items.map(::plain)
+    }
 
     private fun json(value: Any?): JsonValue = when (value) {
         null -> JsonValue.Null

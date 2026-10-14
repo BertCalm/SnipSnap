@@ -9,6 +9,7 @@ import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.math.tanh
 import kotlin.random.Random
 
@@ -46,7 +47,8 @@ data class RegistersProbe(
  * the same loop, with the carrier adjusted by substantially less than a tenth of a cent.
  */
 object Registers {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    const val LEGACY_MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
     const val LOOP_THRESHOLD = .975f
@@ -55,6 +57,8 @@ object Registers {
     private const val BLOCK = 32
     private const val NOISE_PARTIALS = 28
     private const val TWO_PI = 2.0 * PI
+
+    fun supportsModel(model: Int): Boolean = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION
 
     fun macrosFor(voice: RegistersVoice): List<MacroSpec> = when (voice) {
         RegistersVoice.PIPE -> listOf(MacroSpec("TUNE", .5f), MacroSpec("COLOR", .28f),
@@ -151,7 +155,7 @@ object Registers {
     private fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
 
     private fun synthesize(voice: RegistersVoice, m: Map<String, Float>, velocity: Double,
-        bank: Bank, hz: Double, motionHz: Double, frames: Int, loop: LoopPlan?): FloatArray {
+        bank: Bank, hz: Double, motionHz: Double, frames: Int, loop: LoopPlan?, model: Int, seed: Int): FloatArray {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val out = FloatArray(frames * Dsp.OVERSAMPLE)
         if (velocity == 0.0) return out
@@ -239,7 +243,50 @@ object Registers {
             }
             out[i] = (.58 * velocityGain * (body + wind)).toFloat()
         }
+        if (pipe && loop == null && model >= 2 && edge > 0.0) addSpeakingBurst(out, hz, m, velocity, seed)
         return out
+    }
+
+    /**
+     * Model 2's finite PIPE speaking gesture. The legacy wind/carrier path above is untouched.
+     * A separate seeded noise field feeds a note-relative presence band and broad air band;
+     * normalizing this short projection avoids the 28-oscillator wind bank's RMS dilution.
+     * The 2 ms rise, short crest and smooth fall enclose a 55–60 ms speaking puff.
+     * This is a musical approximation of chiff, not a historical pipe model.
+     */
+    private fun addSpeakingBurst(out: FloatArray, hz: Double, m: Map<String, Float>, velocity: Double, seed: Int) {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val edge = m.getValue("EDGE").toDouble()
+        val air = m.getValue("AIR").toDouble()
+        val seconds = .055 + .005 * air
+        val count = minOf(out.size, (seconds * rate).roundToInt())
+        val projection = FloatArray(count)
+        val noise = Dsp.Noise(seed xor 0x43484632)
+        val presence = Dsp.TptSvf(rate)
+        val high = Dsp.OnePole(rate)
+        val low = Dsp.OnePole(rate)
+        val center = (hz * 5.5).coerceIn(900.0, 6_800.0).toFloat()
+        val lowCut = (hz * 1.6).coerceIn(400.0, 2_200.0).toFloat()
+        val highCut = (hz * 19.0).coerceIn(5_200.0, 12_000.0).toFloat()
+        var peak = 0.0
+        for (i in projection.indices) {
+            val t = i.toDouble() / rate
+            val n = noise.next()
+            presence.process(n, center, .85f)
+            val airBand = high.lp(n, highCut) - low.lp(n, lowCut)
+            val colored = .60 * presence.band + .40 * airBand
+            val onset = smooth(t / .002)
+            val release = 1.0 - smooth((t - (seconds - .012)) / .012)
+            val puff = exp(-(t - .010).coerceAtLeast(0.0) / .032)
+            val value = colored * onset * release * puff
+            projection[i] = value.toFloat()
+            peak = maxOf(peak, abs(value))
+        }
+        if (peak <= 1e-12) return
+        // EDGE controls burst energy; its square root gives the quiet registration a useful
+        // speaking gesture while zero still bypasses the projection completely.
+        val gain = .23 * sqrt(edge) * velocity.pow(.72) / peak
+        for (i in projection.indices) out[i] += (projection[i] * gain).toFloat()
     }
 
     private fun finiteSeconds(m: Map<String, Float>): Double = 2.05 + .72 * m.getValue("HOLD") + .12 * m.getValue("AIR")
@@ -260,7 +307,9 @@ object Registers {
         macros: Map<String, Float> = emptyMap(),
         midi: Int = midiFor(macros["TUNE"] ?: .5f),
         velocity: Float = 1f,
+        model: Int = MODEL_VERSION,
     ): RegistersProbe {
+        require(supportsModel(model)) { "unsupported REGISTERS model $model" }
         require(midi in 24..96) { "REGISTERS audition supports MIDI 24..96, got $midi" }
         val m = settled(voice, macros)
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f).toDouble()
@@ -272,12 +321,14 @@ object Registers {
         val spread = loop?.fit(desiredSpread) ?: desiredSpread
         val desiredMotion = 4.1 + 2.2 * m.getValue("MOTION")
         val motion = loop?.fit(desiredMotion) ?: desiredMotion
-        val seed = Dsp.seedFor("REGISTERS", MODEL_VERSION, voice.name, midi)
+        // Model 2 changes finite PIPE speech only. Pin the shared seed to model 1 so all existing
+        // carrier/wind/reed and held audio remains byte-identical, including explicit legacy replay.
+        val seed = Dsp.seedFor("REGISTERS", LEGACY_MODEL_VERSION, voice.name, midi)
         val b = bank(voice, m, hz, spread, v, seed, loop)
         // Continuous synthesis provides preroll + measured previous cycle + exported cycle.
         // Postroll keeps resampler edges outside the evidence windows.
         val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds(m) * Dsp.RATE).roundToInt()
-        val raw = synthesize(voice, m, v, b, hz, motion, frames, loop)
+        val raw = synthesize(voice, m, v, b, hz, motion, frames, loop, model, seed)
         val peak = raw.maxOfOrNull { abs(it.toDouble()) } ?: 0.0
         check(raw.all { it.isFinite() } && peak <= RAW_PEAK_CEILING) { "REGISTERS raw signal exceeded bound: $peak" }
         Tide.bandLimit(raw, Dsp.RATE * Dsp.OVERSAMPLE)
@@ -299,8 +350,9 @@ object Registers {
         macros: Map<String, Float> = emptyMap(),
         midi: Int = midiFor(macros["TUNE"] ?: .5f),
         velocity: Float = 1f,
+        model: Int = MODEL_VERSION,
     ): Snip {
-        val result = probe(voice, macros, midi, velocity)
+        val result = probe(voice, macros, midi, velocity, model)
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
         if (v > 0f) Dsp.levelTo(result.samples, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET * v.pow(.65f))
         return Snip(result.samples, channels = 1, sampleRate = Dsp.RATE)

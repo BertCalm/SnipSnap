@@ -1,4 +1,4 @@
-# REGISTERS — first organ/reed audition
+# REGISTERS — organ/reed audition
 
 REGISTERS adapts the organ/reed family idea in the
 [XOctave architecture](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/octave-engine-architecture.md)
@@ -11,6 +11,22 @@ combines three odd-harmonic reeds with symmetric frequency offsets, a finite
 bellows swell and excitation-dependent saturation. These are original musical
 approximations, not measured historical instruments or physical free-reed models.
 Neither uses external samples or a room effect.
+
+The [published audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site)
+now opens with Original / More chiff comparisons. The first listening verdict
+asked for more PIPE chiff. Renderer model 2 adds a separate short speaking burst
+to finite PIPE notes. A seeded noise source feeds a note-relative presence band
+and broad air band, with a 2 ms rise and smooth ending. EDGE sets its strength;
+EDGE zero bypasses the addition. The burst lasts roughly 55–60 ms. The original
+tone and wind path remain intact, including the original quieter chiff.
+
+Model 1 remains supported for old recipes. Missing model fields decode to model
+1; new recipes explicitly save model 2. MUSETTE and held PIPE audio retain their
+original bytes. Held material begins at the settled tone and therefore has no
+chiff onset. Twelve comparison pairs preserve the published R1 WAVs byte for
+byte and compare them with model 2 at the same settings and listening level.
+Earlier browser notes remain visible with their original revision and audio
+provenance; new listening edits are saved separately.
 
 ## Playing and saving
 
@@ -49,7 +65,7 @@ cross-note pressure interactions are not part of this sample renderer.
 
 ```text
 ./gradlew :synth:test --tests '*RegistersTest*'
-./gradlew :synth:generateRegistersAudition
+./gradlew :synth:generateRegistersAudition -PregistersBaseline=/path/to/verified-r1-archive
 ```
 
 The output is `testkit/registers-audition/`: actual Kotlin-generated mono
@@ -64,9 +80,15 @@ material. Listening notes remain in the browser and can be exported as JSON.
 Numerical checks establish reproducibility, bounds and loop behavior; phone/MPC
 playback and sonic approval remain separate checks.
 
-The first pack contains 56 cases: twelve identity clips, six velocity clips,
+The R2 pack contains 56 current cases plus twelve preserved original PIPE clips,
+for 68 listening positions and 136 WAVs. The generator verifies the supplied R1
+manifest, audio, recipes and archived source fingerprints before creating pairs.
+The original archive is read only. First-80-ms RMS and band energy are measured
+on both raw and matched PCM exports and accompany the comparison metadata.
+
+The first R1 pack contained 56 cases: twelve identity clips, six velocity clips,
 thirty control comparisons, four held tones and four existing-organ references.
-All six prototype tests pass. Independent WAV readback verifies 112 PCM24 files
+Its six prototype tests passed. Independent WAV readback verified 112 PCM24 files
 and 56 recipe JSONs against their hashes and recorded frame counts. The maximum
 matched peak is .09143 and the loudest-window matching error is below 4.1e-9.
 The prototype's pre-conditioning peak is at most .47740. The two TONEWHEEL raw

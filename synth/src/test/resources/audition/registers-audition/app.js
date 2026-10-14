@@ -14,30 +14,38 @@
     'loop-detail', 'compare-a', 'compare-b', 'play-a', 'play-b', 'assign-a', 'assign-b',
     'section-tabs', 'section-title', 'section-description', 'clip-count', 'voice-filter',
     'note-filter', 'macro-filter', 'macro-filter-wrap', 'reset-filters', 'clip-grid',
-    'empty-filter', 'export-notes', 'manifest-revision'
+    'empty-filter', 'export-notes', 'manifest-revision', 'revision-study',
+    'revision-pair', 'revision-description', 'revision-original', 'revision-revised',
+    'legacy-history', 'legacy-count', 'legacy-list', 'library-filters'
   ].map((id) => [id, $(id)]));
   const nativeAudio = ui['native-audio'];
   const verdictButtons = [...document.querySelectorAll('[data-verdict]')];
   const sectionNames = {
     identities: 'First listen', velocity: 'Velocity', sweeps: 'Controls',
-    loops: 'Held tones', references: 'Organ references'
+    loops: 'Held tones', references: 'Organ references', comparisons: 'More chiff · R1 / R2'
   };
   const sectionCopy = {
     identities: 'PIPE and MUSETTE at three pitches, with restrained and expressive gestures. Start here, then compare the same pitch across voices.',
     velocity: 'A fixed patch at different velocities. Listen for a change in speech and body as well as level.',
     sweeps: 'One control moves at a time. Compare low, default, and high settings to hear what each gesture contributes.',
     loops: 'Settled, onset-free tones. The main player repeats the exact held region; listen for the seam and the persistence of the voice.',
-    references: 'Existing SnipSnap organ voices at matching pitches. Compare what PIPE and MUSETTE add to the kit.'
+    references: 'Existing SnipSnap organ voices at matching pitches. Compare what PIPE and MUSETTE add to the kit.',
+    comparisons: 'Twelve finite PIPE pairs: three pitches with two gestures, three velocities, and three EDGE settings. Original R1 audio is preserved; More chiff R2 changes the first speech.'
   };
   const state = {
     manifest: null, selected: null, section: 'identities', mode: 'matched',
-    notes: {}, storageKey: '', storageAvailable: true, context: null,
+    notes: {}, legacyNotes: {}, legacySources: [], legacyKeys: {}, baselineManifest: null,
+    storageKey: '', storageAvailable: true, context: null, pairId: null,
     source: null, gain: null, buffer: null, offset: 0, startedAt: 0,
     playing: false, nativePlaying: false, preparing: false, playToken: 0, nextStartAt: 0,
     selectionToken: 0, animation: 0, buffers: new Map(), comparison: null
   };
   const manifestUrl = new URL('manifest.json', document.baseURI);
-  const resolveAsset = (path) => new URL(path, manifestUrl).href;
+  const resolveAsset = (path) => {
+    const url = new URL(path, manifestUrl);
+    if (state.manifest?.audioHash) url.searchParams.set('audioHash', state.manifest.audioHash);
+    return url.href;
+  };
   const getClip = (id) => state.manifest?.clips.find((clip) => clip.id === id);
   const clipUrl = (clip = state.selected) => resolveAsset(clip[state.mode]);
   const isHeld = (clip = state.selected) => Boolean(clip?.loop?.regionSeconds > 0);
@@ -278,6 +286,7 @@
     const add = (name, value) => { details.append(node('dt', '', name), node('dd', '', value)); };
     add('Pitch', `${clip.noteName} · MIDI ${clip.note}`);
     add('Velocity', nice(clip.velocity));
+    if (clip.comparisonLabel) add('Version', clip.comparisonLabel);
     if (clip.gesture) add('Gesture', clip.gesture);
     if (clip.macro) add('Study', `${clip.macro} · ${clip.setting || nice(clip.value)}`);
     for (const [name, value] of Object.entries(clip.macros || {})) add(name, nice(value));
@@ -295,39 +304,103 @@
       if (Number.isFinite(clip.diagnostics.motionHz)) add('Motion rate', `${nice(clip.diagnostics.motionHz)} Hz`);
       if (Number.isFinite(clip.diagnostics.effectiveHz)) add('Rendered pitch', `${nice(clip.diagnostics.effectiveHz)} Hz`);
     }
+    const pair = state.manifest.comparisonPairs?.find((entry) => entry.id === clip.comparisonPair);
+    const transient = pair?.transient?.[clip.id === pair.originalId ? 'original' : 'revised']?.[state.mode];
+    if (transient) {
+      if (Number.isFinite(transient.rms)) add('First 80 ms RMS', transient.rms.toFixed(5));
+      if (Number.isFinite(transient.bandRms)) add(`${nice(transient.bandLowHz / 1000)}–${nice(transient.bandHighHz / 1000)} kHz attack RMS`, transient.bandRms.toFixed(5));
+    }
     ui['loop-detail'].textContent = isHeld(clip)
       ? `Onset-free held tone. The WAV contains ${clip.loop.playbackRepetitions || 3} copies; the main player repeats one ${nice(clip.loop.regionSeconds)} s region. Engine seam check: ${clip.loop.seamPass === false ? 'requires review' : clip.loop.seamPass === true ? 'passed' : 'see manifest'}.`
       : 'Finite note: its attack and release are part of the render.';
   }
 
+  function reviewFor(clip) {
+    if (!clip) return {};
+    if (Object.prototype.hasOwnProperty.call(state.notes, clip.id)) return state.notes[clip.id] || {};
+    const baseline = state.manifest?.baseline;
+    if (!baseline || clip.reviewAudioHash !== baseline.audioHash || String(clip.reviewRevision) !== String(baseline.revision)) return {};
+    const originalId = clip.reviewClipId || clip.id;
+    const legacy = state.legacyNotes[originalId];
+    return legacy ? { ...legacy, inherited: true, provenance: {
+      reviewRevision: baseline.revision, auditionAudioHash: baseline.audioHash,
+      soundRevision: baseline.revision, soundAudioHash: baseline.audioHash,
+      sourceClipId: originalId, sourceStorageKey: state.legacyKeys[originalId]
+    } } : {};
+  }
+
   function restoreReview() {
-    const saved = state.notes[state.selected.id] || {};
+    const saved = reviewFor(state.selected);
     ui['listening-note'].value = saved.note || '';
     verdictButtons.forEach((button) => button.setAttribute('aria-pressed', String(saved.verdict === button.dataset.verdict)));
-    ui['save-status'].textContent = state.storageAvailable ? (saved.updatedAt ? 'Saved on this device.' : 'Your ears are the final check.') : 'Device storage unavailable. Export to keep your notes.';
+    ui['save-status'].textContent = !state.storageAvailable ? 'Device storage unavailable. Export to keep your notes.'
+      : saved.inherited ? 'Original R1 note. Edits save separately for this revision.'
+        : saved.updatedAt ? 'Saved on this device for this version.' : 'Your ears are the final check.';
   }
 
   function reviewedCount() {
-    const count = Object.values(state.notes).filter((review) => review.verdict || review.note?.trim()).length;
+    const count = state.manifest.clips.filter((clip) => {
+      const review = reviewFor(clip); return review.verdict || review.note?.trim();
+    }).length;
     ui['review-count'].textContent = `${count} reviewed`;
   }
 
   function saveReview(verdict) {
     if (!state.selected) return;
-    const previous = state.notes[state.selected.id] || {};
-    const review = { ...previous, note: ui['listening-note'].value, updatedAt: new Date().toISOString() };
+    const previous = reviewFor(state.selected);
+    const clip = state.selected;
+    const review = { ...previous, inherited: false, note: ui['listening-note'].value, updatedAt: new Date().toISOString(), provenance: {
+      reviewRevision: state.manifest.revision, auditionAudioHash: state.manifest.audioHash,
+      soundRevision: clip.reviewRevision || state.manifest.revision,
+      soundAudioHash: clip.reviewAudioHash || state.manifest.audioHash,
+      sourceClipId: clip.reviewClipId || clip.id,
+      ...(previous.inherited ? { basedOn: previous.provenance } : previous.provenance?.basedOn ? { basedOn: previous.provenance.basedOn } : {})
+    } };
     if (verdict !== undefined) review.verdict = previous.verdict === verdict ? '' : verdict;
     state.notes[state.selected.id] = review;
     try { localStorage.setItem(state.storageKey, JSON.stringify(state.notes)); state.storageAvailable = true; }
     catch (_) { state.storageAvailable = false; }
     verdictButtons.forEach((button) => button.setAttribute('aria-pressed', String(review.verdict === button.dataset.verdict)));
-    ui['save-status'].textContent = state.storageAvailable ? 'Saved on this device.' : 'Device storage unavailable. Export to keep your notes.';
+    ui['save-status'].textContent = state.storageAvailable ? 'Saved separately for this version.' : 'Device storage unavailable. Export to keep your notes.';
     reviewedCount();
     // Keep keyboard focus on the card rather than rebuilding the render grid.
     document.querySelectorAll('.clip-card').forEach((card) => {
-      const saved = state.notes[card.dataset.clipId];
-      card.querySelector('.clip-review').textContent = saved?.verdict || (saved?.note?.trim() ? 'noted' : '');
+      card.querySelector('.clip-review').textContent = card.dataset.pairId
+        ? pairVerdict(state.manifest.comparisonPairs.find((pair) => pair.id === card.dataset.pairId))
+        : verdictText(reviewFor(getClip(card.dataset.clipId)));
     });
+  }
+
+  const verdictText = (review) => review?.verdict || (review?.note?.trim() ? 'noted' : '');
+  function pairVerdict(pair) {
+    if (!pair) return '';
+    const original = verdictText(reviewFor(getClip(pair.originalId)));
+    const revised = verdictText(reviewFor(getClip(pair.revisedId)));
+    return [original && `R1: ${original}`, revised && `R2: ${revised}`].filter(Boolean).join(' · ');
+  }
+
+  function syncRevisionControls() {
+    const pair = state.manifest?.comparisonPairs?.find((entry) => entry.id === state.pairId);
+    if (!pair) return;
+    ui['revision-pair'].value = pair.id;
+    ui['revision-description'].textContent = pair.description || 'Compare the first speech at the same pitch and gesture. Matched playback keeps the listening level consistent.';
+    ui['revision-original'].setAttribute('aria-pressed', String(state.selected?.id === pair.originalId));
+    ui['revision-revised'].setAttribute('aria-pressed', String(state.selected?.id === pair.revisedId));
+    document.querySelectorAll('[data-pair-id]').forEach((card) => {
+      const selected = card.dataset.pairId === pair.id;
+      card.setAttribute('aria-pressed', String(selected));
+      card.querySelector('.clip-icon').textContent = selected ? '●' : '↗';
+    });
+  }
+
+  function selectRevisionPair(pair, version = 'revised', play = false) {
+    if (!pair) return;
+    state.pairId = pair.id;
+    ui['compare-a'].value = pair.originalId;
+    ui['compare-b'].value = pair.revisedId;
+    selectClip(getClip(version === 'original' ? pair.originalId : pair.revisedId), version === 'original' ? 'a' : 'b');
+    syncRevisionControls();
+    if (play) playSelected();
   }
 
   function selectClip(clip, comparison = null) {
@@ -335,7 +408,10 @@
     stopPlayback();
     state.selected = clip;
     state.comparison = comparison;
-    ui['player-category'].textContent = (sectionNames[clip.section] || clip.section).toUpperCase();
+    if (clip.comparisonPair) state.pairId = clip.comparisonPair;
+    ui['player-category'].textContent = clip.comparisonLabel
+      ? `PIPE ATTACK / ${clip.comparisonLabel.toUpperCase()}`
+      : (sectionNames[clip.section] || clip.section).toUpperCase();
     ui['player-title'].textContent = clip.label;
     ui['player-detail'].textContent = clip.description || '';
     ui['player-voice'].textContent = clip.voice;
@@ -361,6 +437,7 @@
       card.setAttribute('aria-pressed', String(selected));
       card.querySelector('.clip-icon').textContent = selected ? '●' : '↗';
     });
+    syncRevisionControls();
     setStatus(isHeld(clip) ? 'Settled tone, without an attack. Play to repeat the held region.' : 'Ready. The main player preserves the finite note’s onset.');
     updateTransport();
     prepareWaveform();
@@ -386,7 +463,30 @@
     ui['section-title'].textContent = sectionNames[state.section] || selectedSection?.label || state.section;
     ui['section-description'].textContent = sectionCopy[state.section] || selectedSection?.description || '';
     document.querySelectorAll('[data-section]').forEach((button) => button.setAttribute('aria-current', String(button.dataset.section === state.section)));
+    const paired = state.section === 'comparisons' && state.manifest.comparisonPairs?.length;
+    ui['revision-study'].hidden = !paired;
+    ui['library-filters'].hidden = Boolean(paired);
     ui['macro-filter-wrap'].hidden = state.section !== 'sweeps';
+    if (paired) {
+      ui['clip-count'].textContent = `${state.manifest.comparisonPairs.length} pairs`;
+      ui['empty-filter'].hidden = true;
+      ui['clip-grid'].replaceChildren();
+      state.manifest.comparisonPairs.forEach((pair, index) => {
+        const clip = getClip(pair.revisedId);
+        const card = node('button', 'clip-card');
+        card.type = 'button'; card.dataset.pairId = pair.id;
+        card.setAttribute('aria-label', `Choose comparison ${pair.label}`);
+        const top = node('span', 'clip-card-top');
+        top.append(node('span', '', `${String(index + 1).padStart(2, '0')} / PIPE ATTACK`), node('span', 'clip-icon', '↗'));
+        const foot = node('span', 'clip-card-foot');
+        foot.append(node('span', '', `${clip?.noteName || ''} · R1 / R2`), node('span', 'clip-review', pairVerdict(pair)));
+        card.append(top, node('span', 'clip-card-title', pair.label), node('span', 'clip-card-description', pair.description || 'Original R1 and More chiff R2.'), foot);
+        card.addEventListener('click', () => selectRevisionPair(pair));
+        ui['clip-grid'].append(card);
+      });
+      syncRevisionControls();
+      return;
+    }
     const clips = state.manifest.clips.filter((clip) => clip.section === state.section
       && (!ui['voice-filter'].value || clip.voice === ui['voice-filter'].value)
       && (!ui['note-filter'].value || String(clip.note) === ui['note-filter'].value)
@@ -404,7 +504,7 @@
       const title = node('span', 'clip-card-title', clip.label);
       const description = node('span', 'clip-card-description', clip.description || `${clip.noteName} · ${clip.gesture || clip.setting || 'rendered note'}`);
       const foot = node('span', 'clip-card-foot');
-      const reviewed = state.notes[clip.id];
+      const reviewed = reviewFor(clip);
       foot.append(node('span', '', `${clip.noteName} · ${isHeld(clip) ? 'HELD' : `${nice(clip.seconds)}s`}`), node('span', 'clip-review', reviewed?.verdict || (reviewed?.note?.trim() ? 'noted' : '')));
       card.append(top, title, description, foot);
       card.addEventListener('click', () => selectClip(clip));
@@ -421,9 +521,11 @@
   function buildLibrary() {
     const { clips, sections } = state.manifest;
     ui['section-tabs'].replaceChildren();
-    sections.forEach((section) => {
+    const orderedSections = [...sections].sort((a, b) => (a.id === 'comparisons' ? -1 : b.id === 'comparisons' ? 1 : 0));
+    orderedSections.forEach((section) => {
       const button = node('button', ''); button.type = 'button'; button.dataset.section = section.id;
-      button.append(node('span', '', sectionNames[section.id] || section.label), node('span', 'tab-count', clips.filter((clip) => clip.section === section.id).length));
+      const count = section.id === 'comparisons' ? state.manifest.comparisonPairs?.length || 0 : clips.filter((clip) => clip.section === section.id).length;
+      button.append(node('span', '', sectionNames[section.id] || section.label), node('span', 'tab-count', count));
       button.addEventListener('click', () => {
         state.section = section.id;
         // Every study opens with all of its renders visible.
@@ -449,9 +551,61 @@
     const first = clips.find((clip) => clip.section === 'identities' && clip.voice === 'PIPE' && clip.note === 60 && clip.gesture === 'restrained') || clips[0];
     const second = clips.find((clip) => clip.section === 'identities' && clip.voice === 'MUSETTE' && clip.note === first.note && clip.gesture === 'restrained') || clips[1] || first;
     ui['compare-a'].value = first.id; ui['compare-b'].value = second.id;
-    selectClip(first);
+    if (state.manifest.comparisonPairs?.length) {
+      ui['revision-pair'].replaceChildren();
+      state.manifest.comparisonPairs.forEach((pair) => {
+        const option = node('option', '', pair.label); option.value = pair.id; ui['revision-pair'].append(option);
+      });
+      const initialPair = state.manifest.comparisonPairs.find((pair) => pair.revisedId === first.id) || state.manifest.comparisonPairs[0];
+      selectRevisionPair(initialPair);
+    } else selectClip(first);
     renderLibrary();
     reviewedCount();
+    renderLegacyHistory();
+  }
+
+  function renderLegacyHistory() {
+    const reviews = Object.entries(state.legacyNotes).filter(([, review]) => review.verdict || review.note?.trim());
+    ui['legacy-history'].hidden = reviews.length === 0;
+    ui['legacy-count'].textContent = `(${reviews.length})`;
+    ui['legacy-list'].replaceChildren();
+    reviews.forEach(([id, review]) => {
+      const clip = state.baselineManifest?.clips?.find((entry) => entry.id === id);
+      const entry = node('article', 'legacy-entry');
+      const header = node('div', 'legacy-entry-header');
+      header.append(node('h4', '', clip?.label || id.replaceAll('_', ' ')), node('span', '', review.verdict || 'noted'));
+      entry.append(header, node('p', '', review.note || 'No written note.'));
+      const loadable = state.manifest.clips.find((current) => current.reviewClipId === id && current.reviewAudioHash === state.manifest.baseline?.audioHash);
+      if (loadable) {
+        const button = node('button', 'text-button', 'Load original audio ↑'); button.type = 'button';
+        button.addEventListener('click', () => { selectClip(loadable); ui['play-button'].focus(); });
+        entry.append(button);
+      }
+      ui['legacy-list'].append(entry);
+    });
+  }
+
+  function loadLegacyNotes() {
+    const baseline = state.manifest.baseline;
+    state.legacyNotes = {}; state.legacySources = []; state.legacyKeys = {}; state.baselineManifest = null;
+    if (!baseline?.audioHash) return;
+    const keys = [`registers:${baseline.revision}:${baseline.audioHash}`, `snipsnap.registers.notes.v1.${baseline.revision}.${baseline.audioHash}`];
+    keys.forEach((key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return;
+        const records = JSON.parse(raw);
+        if (!records || typeof records !== 'object' || Array.isArray(records)) return;
+        state.legacySources.push({ storageKey: key, notes: records });
+        Object.entries(records).forEach(([id, review]) => {
+          if (review && typeof review === 'object') { state.legacyNotes[id] = review; state.legacyKeys[id] = key; }
+        });
+      } catch (_) { /* Earlier records stay untouched even if a store cannot be read. */ }
+    });
+    if (baseline.manifest) fetch(resolveAsset(baseline.manifest)).then((response) => {
+      if (!response.ok) throw new Error('Baseline metadata unavailable.');
+      return response.json();
+    }).then((manifest) => { state.baselineManifest = manifest; renderLegacyHistory(); }).catch(() => { /* IDs still identify the original notes. */ });
   }
 
   async function revisionKey(manifest) {
@@ -468,21 +622,23 @@
   async function loadManifest() {
     ui['load-status'].hidden = false; ui['load-error'].hidden = true;
     try {
-      const response = await fetch(manifestUrl);
+      const response = await fetch(manifestUrl, { cache: 'no-store' });
       if (!response.ok) throw new Error(`The manifest returned HTTP ${response.status}.`);
       const manifest = await response.json();
       if (!Array.isArray(manifest.clips) || !manifest.clips.length || !Array.isArray(manifest.sections)) throw new Error('The render manifest is missing its clip library.');
       if (manifest.clips.some((clip) => !clip.id || !clip.raw || !clip.matched || !clip.section || !clip.voice)) throw new Error('A render entry is missing its audio files or identity.');
       if (new Set(manifest.clips.map((clip) => clip.id)).size !== manifest.clips.length) throw new Error('The render manifest contains duplicate clip IDs.');
       state.manifest = manifest;
-      state.section = manifest.sections.some((section) => section.id === 'identities') ? 'identities' : manifest.sections[0].id;
+      if (manifest.comparisonPairs?.some((pair) => !getClip(pair.originalId) || !getClip(pair.revisedId))) throw new Error('A comparison is missing its original or revised audio.');
+      state.section = manifest.comparisonPairs?.length ? 'comparisons' : manifest.sections.some((section) => section.id === 'identities') ? 'identities' : manifest.sections[0].id;
       state.storageKey = await revisionKey(manifest);
       try {
         const saved = JSON.parse(localStorage.getItem(state.storageKey) || '{}');
         state.notes = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
       } catch (_) { state.notes = {}; state.storageAvailable = false; }
+      loadLegacyNotes();
       ui['player-format'].textContent = `${manifest.channels === 1 ? 'MONO' : `${manifest.channels || 1} CH`} / ${nice((manifest.sampleRate || 44100) / 1000)} kHz`;
-      ui['manifest-revision'].textContent = `Revision ${manifest.revision || 1} · ${manifest.clips.length} offline renders · awaiting sonic approval`;
+      ui['manifest-revision'].textContent = `Revision ${manifest.revision || 1} · ${manifest.clips.length} offline renders${manifest.baseline ? ' · original R1 preserved' : ''} · awaiting sonic approval`;
       ui['load-status'].hidden = true; ui['loaded-content'].hidden = false;
       buildLibrary();
     } catch (error) {
@@ -501,19 +657,46 @@
 
   function exportNotes() {
     if (!state.manifest) return;
-    const reviews = state.manifest.clips.filter((clip) => state.notes[clip.id]?.verdict || state.notes[clip.id]?.note?.trim()).map((clip) => ({
+    const reviews = state.manifest.clips.filter((clip) => {
+      const review = reviewFor(clip); return review.verdict || review.note?.trim();
+    }).map((clip) => ({
       clipId: clip.id, label: clip.label, voice: clip.voice, note: clip.note, noteName: clip.noteName,
-      section: clip.section, sha256: clip.sha256, ...state.notes[clip.id]
+      section: clip.section, version: clip.comparisonLabel || clip.reviewRevision || state.manifest.revision,
+      sha256: clip.sha256, ...reviewFor(clip)
     }));
-    const review = { schemaVersion: 1, engine: state.manifest.engine || 'REGISTERS', auditionRevision: state.manifest.revision, audioHash: state.manifest.audioHash || null, exportedAt: new Date().toISOString(), reviews };
+    const visibleVersions = state.manifest.clips.map((clip) => ({
+      clipId: clip.id, label: clip.label, section: clip.section,
+      soundRevision: clip.reviewRevision || state.manifest.revision,
+      soundAudioHash: clip.reviewAudioHash || state.manifest.audioHash,
+      comparisonPair: clip.comparisonPair || null, comparisonLabel: clip.comparisonLabel || null, sha256: clip.sha256
+    }));
+    const legacyReviews = state.manifest.baseline ? {
+      revision: state.manifest.baseline.revision, audioHash: state.manifest.baseline.audioHash,
+      manifest: state.manifest.baseline.manifest, sources: state.legacySources,
+      reviews: Object.entries(state.legacyNotes).map(([id, saved]) => ({
+        clipId: id, label: state.baselineManifest?.clips?.find((clip) => clip.id === id)?.label || id,
+        ...saved, provenance: { reviewRevision: state.manifest.baseline.revision,
+          auditionAudioHash: state.manifest.baseline.audioHash, sourceClipId: id, sourceStorageKey: state.legacyKeys[id] }
+      }))
+    } : null;
+    const review = { schemaVersion: 2, engine: state.manifest.engine || 'REGISTERS', auditionRevision: state.manifest.revision, audioHash: state.manifest.audioHash || null, exportedAt: new Date().toISOString(), visibleVersions, reviews, legacyReviews };
     const url = URL.createObjectURL(new Blob([`${JSON.stringify(review, null, 2)}\n`], { type: 'application/json' }));
-    const anchor = node('a', ''); anchor.href = url; anchor.download = `registers-listening-notes-r${state.manifest.revision || 1}.json`;
+    const anchor = node('a', ''); anchor.href = url; anchor.download = `registers-listening-notes-${state.manifest.revision || 1}.json`;
     document.body.append(anchor); anchor.click(); anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     ui['save-status'].textContent = `Exported ${reviews.length} listening review${reviews.length === 1 ? '' : 's'}.`;
   }
 
   ui['retry-load'].addEventListener('click', loadManifest);
+  ui['revision-pair'].addEventListener('change', () => {
+    const previous = state.manifest.comparisonPairs.find((pair) => pair.id === state.pairId);
+    const version = state.selected?.id === previous?.originalId ? 'original' : 'revised';
+    selectRevisionPair(state.manifest.comparisonPairs.find((pair) => pair.id === ui['revision-pair'].value), version);
+  });
+  ['original', 'revised'].forEach((version) => ui[`revision-${version}`].addEventListener('click', () => {
+    const pair = state.manifest.comparisonPairs?.find((entry) => entry.id === state.pairId);
+    selectRevisionPair(pair, version, true);
+  }));
   ui['play-button'].addEventListener('click', playSelected);
   ui['stop-button'].addEventListener('click', () => { stopPlayback(); setStatus('Stopped. Ready from the beginning.'); });
   ui['mode-matched'].addEventListener('click', () => setMode('matched'));

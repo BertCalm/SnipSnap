@@ -2,6 +2,11 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Fft
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
+import java.util.HexFormat
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -69,7 +74,7 @@ class RegistersTest {
         val saved = RegistersPatch.fromJsonText(partial.toJsonText())
         assertEquals(Registers.defaults(RegistersVoice.PIPE).keys, saved.macros.keys)
         assertContentEquals(partial.probe().samples, saved.probe().samples)
-        assertFailsWith<JsonException> { RegistersPatch.fromJsonText(partial.toJsonText().replace("\"model\": 1", "\"model\": 999")) }
+        assertFailsWith<JsonException> { RegistersPatch.fromJsonText(partial.toJsonText().replace("\"model\": ${Registers.MODEL_VERSION}", "\"model\": 999")) }
         assertFailsWith<IllegalArgumentException> { RegistersPatch("Bad", RegistersVoice.PIPE, mapOf("AIR" to Float.NaN)) }
     }
 
@@ -161,5 +166,109 @@ class RegistersTest {
                 assertTrue(energy(p.samples) > 1e-4)
             }
         }
+    }
+
+    private fun sampleHash(samples: FloatArray): String {
+        val bytes = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+        for (sample in samples) bytes.putInt(sample.toRawBits())
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes.array()))
+    }
+
+    @Test
+    fun `model one reproduces float fixtures captured before model two edits`() {
+        // Captured directly from the compiled, published model-1 renderer on 2026-10-14.
+        // SHA256 covers raw IEEE Float32 bits in little-endian order, including signed zero.
+        val fixtures = listOf(
+            Triple(RegistersVoice.PIPE, .35f, listOf(
+                "dd8ab327bf0365fa9c9e38d8b06a324ad33d65a3a87e4dd8317847e409cd1d29",
+                "483cce66a8596a299f4b61d1a0d382f2dc557e12d4a4196ac3a01af71ae3d0fb")),
+            Triple(RegistersVoice.PIPE, 1f, listOf(
+                "beec4899c040215c1803faa99554ee31cccccbc265785a8440c2e1bfdd970cad",
+                "5c1f6056b09019f4e2de3d180f01d9549580b1ed13046cae638c6adddcc01e19")),
+            Triple(RegistersVoice.MUSETTE, .35f, listOf(
+                "3ed254e02112db3c96159d5f5457d275119e3dd36422656f7c852b76bfec5bf0",
+                "852b6824191bb89396ab7383a33182eb52f6b0b805927e4cd4ae7939cf73cbab")),
+            Triple(RegistersVoice.MUSETTE, 1f, listOf(
+                "321f531c21cfe685fd3f500f0aa26da915c6195d26ba72d453f2e4b2a39997a5",
+                "03f269f49e5bc9f27a395f576be9b0844d34650698a39549a06686b6a3ded8b8")),
+        )
+        for ((voice, hold, hashes) in fixtures) {
+            val macros = mapOf("HOLD" to hold)
+            assertEquals(hashes[0], sampleHash(Registers.probe(voice, macros, 60, 1f, model = 1).samples))
+            assertEquals(hashes[1], sampleHash(Registers.render(voice, macros, 60, 1f, model = 1).samples))
+        }
+        val expressive = mapOf("COLOR" to .55f, "AIR" to .72f, "EDGE" to .62f,
+            "SPREAD" to .62f, "MOTION" to .55f, "HOLD" to .35f)
+        assertEquals("0a162f8f09128cec05e314a024b86019b9fb0447fe5d798a4909d533db52925a",
+            sampleHash(Registers.probe(RegistersVoice.PIPE, expressive, 69, .7f, model = 1).samples))
+        assertEquals("ae8c629a59fbcc1c121f036829df37f599d1cd261cad5ad7526d22a80e0808a6",
+            sampleHash(Registers.render(RegistersVoice.PIPE, expressive, 69, .7f, model = 1).samples))
+    }
+
+    private fun onsetBandEnergy(samples: FloatArray): Double {
+        val first = (.020 * Dsp.RATE).roundToInt()
+        val count = (.060 * Dsp.RATE).roundToInt()
+        val n = 8192
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) re[i] = samples[first + i] *
+            (.5 - .5 * cos(2 * PI * i / (count - 1))).toFloat()
+        Fft.forward(re, im)
+        val low = (1_800.0 * n / Dsp.RATE).roundToInt()
+        val high = (12_000.0 * n / Dsp.RATE).roundToInt()
+        return (low..high).sumOf { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+    }
+
+    @Test
+    fun `model two makes finite pipe speech stronger without changing its settled raw tone`() {
+        val gestures = listOf(
+            "default" to emptyMap(),
+            "restrained" to mapOf("COLOR" to .18f, "AIR" to .20f, "EDGE" to .08f,
+                "SPREAD" to .06f, "MOTION" to .05f, "HOLD" to .35f),
+            "expressive" to mapOf("COLOR" to .55f, "AIR" to .72f, "EDGE" to .62f,
+                "SPREAD" to .62f, "MOTION" to .55f, "HOLD" to .35f),
+        )
+        for ((name, macros) in gestures) {
+            val oldRaw = Registers.probe(RegistersVoice.PIPE, macros, 60, model = 1)
+            val newRaw = Registers.probe(RegistersVoice.PIPE, macros, 60, model = 2)
+            val tailStart = (.120 * Dsp.RATE).roundToInt()
+            assertContentEquals(oldRaw.samples.copyOfRange(tailStart, oldRaw.samples.size),
+                newRaw.samples.copyOfRange(tailStart, newRaw.samples.size), "$name settled raw tone changed")
+            val oldMatched = Registers.render(RegistersVoice.PIPE, macros, 60, model = 1).samples
+            val newMatched = Registers.render(RegistersVoice.PIPE, macros, 60, model = 2).samples
+            val ratio = onsetBandEnergy(newMatched) / onsetBandEnergy(oldMatched)
+            println("PIPE $name model2/model1 matched 20–80ms 1.8–12kHz energy ratio: $ratio")
+            assertTrue(ratio > 1.5, "$name speaking-band increase was too small: $ratio")
+            assertTrue(newRaw.rawPeak <= Registers.RAW_PEAK_CEILING)
+        }
+        val silentEdge = mapOf("EDGE" to 0f)
+        assertContentEquals(Registers.probe(RegistersVoice.PIPE, silentEdge, model = 1).samples,
+            Registers.probe(RegistersVoice.PIPE, silentEdge, model = 2).samples, "EDGE 0 must disable the added chiff")
+    }
+
+    @Test
+    fun `model two leaves musette and held pipe bit identical and saves explicit model`() {
+        for (voice in RegistersVoice.entries) for (hold in listOf(.35f, 1f)) {
+            if (voice == RegistersVoice.PIPE && hold < Registers.LOOP_THRESHOLD) continue
+            val macros = mapOf("AIR" to .8f, "EDGE" to .9f, "SPREAD" to .8f, "MOTION" to .7f, "HOLD" to hold)
+            assertContentEquals(Registers.probe(voice, macros, model = 1).samples,
+                Registers.probe(voice, macros, model = 2).samples)
+            assertContentEquals(Registers.render(voice, macros, model = 1).samples,
+                Registers.render(voice, macros, model = 2).samples)
+        }
+        val current = RegistersPatch("New speech", RegistersVoice.PIPE, emptyMap())
+        assertEquals(2, current.model)
+        assertEquals(2, RegistersPatch.fromJsonText(current.toJsonText()).model)
+        val old = current.copy(model = 1)
+        assertEquals(1, RegistersPatch.fromJsonText(old.toJsonText()).model)
+        assertContentEquals(old.render().samples, RegistersPatch.fromJsonText(old.toJsonText()).render().samples)
+        val missingModel = JsonValue.Obj(old.toJsonValue().entries.filterKeys { it != "model" })
+        val decoded = RegistersPatch.fromJsonValue(missingModel)
+        assertEquals(1, decoded.model)
+        assertContentEquals(old.render().samples, decoded.render().samples)
+        assertTrue(Registers.supportsModel(1))
+        assertTrue(Registers.supportsModel(2))
+        assertFalse(Registers.supportsModel(999))
+        assertFailsWith<IllegalArgumentException> { Registers.probe(RegistersVoice.PIPE, model = 999) }
     }
 }

@@ -11,6 +11,7 @@ tasks.register<JavaExec>("generateRegistersAudition") {
     mainClass.set("com.snipsnap.synth.RegistersAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/registers-audition")
+    if (project.hasProperty("registersBaseline")) args("--baseline=${project.property("registersBaseline")}")
 }
 
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
