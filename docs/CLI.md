@@ -430,25 +430,34 @@ itself: the same hit, played slower or faster, snapped to semitones),
 machine's back half; its WIDTH widens a mono pad's WAV to stereo),
 `sectioned` (the same section with six independent players in place of
 three locked taps: each drifts, vibratos, enters and sounds on their own, so
-a note reads as several playing and not one swirled) and
+a note reads as several playing and not one swirled),
 `amped` (a tube amp and its speaker on a hit that was never a guitar:
 DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
-cabinet — run four times over inside so a hot tube folds back far less).
+cabinet — run four times over inside so a hot tube folds back far less),
+`driven` (a drive pedal: the tube at the top of its gain law with the
+speaker barely in, the last stretch of the pad faded ahead of the amp so
+a quiet tail is not lifted into a click) and `compressed` (a compressor
+pedal, for now: SQUASH at its strongest, the body leaned on so the tail
+stands up; `punched` is the same section plus CRUNCH, this has no
+crunch).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
 phone the same characters, less `crushed` (CRUSH already draws that era)
 and `amped` (its chip is a later layout decision), sit on the PAD SHEET's
-TREATMENT card, six
-rows grouped by what an effect *does* rather than which family implements
-it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
+TREATMENT card, seven
+rows, six of them grouped by what an effect *does* rather than which family
+implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
 the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its
 character once it is itself (PUNCH · RING · DUB · VINYL · PHASE ·
 CONTOUR), row four what happens to it in time (SLAP · WASH · ROLL ·
 GATE · ENSEMBLE · SECTION), row five
-the machine's own transport (FLIP · STOP · START · PITCH), and row six
+the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
-ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
+ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
+the pedals (DRIVE · COMP — `driven` and `compressed`),
+grouped by what an effect *is*, because a guitarist looks for a pedal by
+its name; tapping any
 of them changes every file the pad references, velocity layers included.
 
 ### `recipe <kit-dir> <pad> --from <kit-dir>:<pad>` — do it again
