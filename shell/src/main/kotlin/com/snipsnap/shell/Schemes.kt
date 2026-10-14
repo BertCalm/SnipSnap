@@ -6,7 +6,7 @@ import com.snipsnap.audio.DrumClass
 /**
  * The TapeOS scheme system as data — the single Kotlin source for what
  * `design/Schemes.dc.html` keeps as CSS custom properties (`.t-metal` …
- * `.t-vapor`) and what the two working prototypes render live.
+ * `.t-vent`) and what the two working prototypes render live.
  *
  * The app's theme object reads these tables; the design files remain the
  * visual reference, but a colour that exists only in a design file cannot
@@ -132,6 +132,7 @@ enum class SchemeId(val displayName: String) {
     SODIUM("SODIUM"),
     ICE("ICE"),
     VAPOR("VAPOR"),
+    VENT("VENT"),
 }
 
 object Schemes {
@@ -157,8 +158,8 @@ object Schemes {
     val OILSLICK = Scheme(
         SchemeId.OILSLICK, "t-oilslick",
         gray = 0x221A34, grayHi = 0x40306A, grayEdge = 0x2A2044, grayMid = 0x120E1A, grayDark = 0x060410,
-        // ink2 lightened from 0x7A6AA0 (3.47:1 against gray, worst of the
-        // 8 schemes and OILSLICK is Schemes.DEFAULT) to clear 4.5:1. Same
+        // ink2 lightened from 0x7A6AA0 (3.47:1 against gray, the worst of
+        // every scheme then, and OILSLICK is Schemes.DEFAULT) to clear 4.5:1. Same
         // hue/saturation, luminance raised. See ContrastTest.
         ink = 0xC8B2F8, ink2 = 0x8D80AE,
         title1 = 0x5A2AE0, title2 = 0xE040C8, titleInk = 0xFFFFFF,
@@ -236,8 +237,39 @@ object Schemes {
         lcd = 0x06120E, lcdInk = 0xA8F0D8, amber = 0xB27AF8, field = 0x0C1A16,
     )
 
+    /**
+     * VENT — the first scheme of the modern look (`docs/DIRECTION_2026_10.md`
+     * §4), transcribed from the VENT audition page's `:root` and the slots
+     * its components fill: slate chrome, warm off-white ink, one ember
+     * accent that serves chrome and LCD alike. The page draws no bevels and
+     * no gradients, so under today's drawing its bevel highlight is the
+     * page's hairline and its title bar is a dark band (the page's masthead
+     * is the ground with a hairline, which the OG title bar cannot draw);
+     * both read correctly once the modern drawing lands and are honest
+     * until then.
+     *
+     * Every value clears every law in `SchemesTest` and `ContrastTest` as
+     * written — including a third ink tier at 5.48:1, which no earlier
+     * scheme's does — so it ships as data ahead of the look that was
+     * designed for it. Pinned by `SchemesTest`.
+     */
+    val VENT = Scheme(
+        SchemeId.VENT, "t-vent",
+        gray = 0x1D1E1B, grayHi = 0x393B33, grayEdge = 0x2D2F28, grayMid = 0x181916, grayDark = 0x0E0F0D,
+        ink = 0xEEEADD, ink2 = 0xB3B4A6,
+        title1 = 0x0F100E, title2 = 0x232420, titleInk = 0xEEEADD,
+        desk1 = 0x151614, desk2 = 0x151614,
+        lcd = 0x0F100E, lcdInk = 0xEEEADD, amber = 0xE08A68, field = 0x232420,
+        warn = 0xE08A68, ink3 = 0x929587, accent = 0xE08A68,
+        // winFrame is the page's axis stroke (#55564B), not its console
+        // border (#45473C): the border sits exactly 40 luma from gray, on
+        // the floor of SchemesTest's "selection is visible" law, and a
+        // frame drawn 3dp in the OG look needs the margin.
+        raised = 0x232420, win = 0x1D1E1B, winFrame = 0x55564B, deskGlow = 0x2A1E18,
+    )
+
     /** Picker order — the order the design system tells its story in. */
-    val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR)
+    val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR, VENT)
 
     val DEFAULT: Scheme = OILSLICK
 

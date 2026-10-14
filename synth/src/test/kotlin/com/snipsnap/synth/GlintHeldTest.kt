@@ -126,4 +126,42 @@ class GlintHeldTest {
             }
         }
     }
+
+    @Test
+    fun `an interrupted held render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // held loop and the passes after it must stop on that flag as they do on the cancel callback.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "GLINT held render did not stop on the interrupt at its first look in the held loop",
+            ) { Keys.glintPad(GlintVoice.SWEEP, emptyMap(), 57) }
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    @Test
+    fun `a held render nobody wants any more stops after its loop too, before the decimation and the level`() {
+        // The loop asks every CANCEL_CHECK_SAMPLES; a cancellation that only becomes true after the loop's
+        // last ask must still stop the render before the decimation and the level run unwanted.
+        // After the loop an uninterrupted render asks exactly twice more: before the decimation and before the
+        // level. Removing either changes the count.
+        val voice = GlintVoice.SWEEP
+        val m = Glint.defaults(voice)
+        var all = 0
+        val whole = GlintHeld.render(voice, m) { all++; false }
+        val loopFrames = whole.audio.size - whole.loopStart
+        val os = Dsp.OVERSAMPLE
+        // The oversampled loop runs the onset to its first frame boundary, two breaths, then the decimator's margin.
+        val total = (whole.loopStart - loopFrames) * os + 2 * loopFrames * os + GlintHeld.TAIL_MARGIN
+        val loopAsks = (total + GlintHeld.CANCEL_CHECK_SAMPLES - 1) / GlintHeld.CANCEL_CHECK_SAMPLES
+        assertEquals(loopAsks + 2, all, "an uninterrupted render asks $loopAsks times in its loop, then before the decimation and the level")
+        var asks = 0
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "GLINT held render did not stop on the cancel callback at its first ask after the loop, before the decimation",
+        ) {
+            GlintHeld.render(voice, m) { asks++ >= loopAsks }
+        }
+    }
 }
