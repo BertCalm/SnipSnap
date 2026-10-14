@@ -850,7 +850,7 @@ object SynthKits {
         fun preset(name: String) = OvenPresets.all().first { it.name == name }
             .let { pad(it, Oven.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(
-            preset("Open Lid"), preset("Iron Parlour"), preset("Felt Ledger"), preset("Soft Hearth"),
+            preset("Iron Parlour"), preset("Felt Ledger"), preset("Quiet Room"), preset("Bright Ledger"),
             preset("Hammered Iron"), preset("Cold Rivet"), preset("Afterglow"), preset("Hanging Frame"),
         )
     }

@@ -33,6 +33,8 @@ object OvenAuditionGenerator {
     )
     private data class ProbeOptions(val bodyEnabled: Boolean = true, val haloEnabled: Boolean = true)
     private data class Event(val at: Double, val patch: OvenPatch)
+    private data class OriginalPreset(val id: String, val patch: OvenPatch, val rawSha256: String, val matchedSha256: String, val rawGain: Float)
+    private data class RevisionOne(val presets: List<OriginalPreset>, val legacyMatchedHashes: Map<String, String>)
     private data class Case(
         val id: String,
         val title: String,
@@ -45,6 +47,11 @@ object OvenAuditionGenerator {
         val options: ProbeOptions? = null,
         val events: List<Event>? = null,
         val mixGain: Float = 1f,
+        val presetName: String? = null,
+        val revision: String? = null,
+        val audioRevision: Int = 2,
+        val originalId: String? = null,
+        val archive: OriginalPreset? = null,
     )
     private data class Rendered(val case: Case, val snip: Snip, val recipe: JsonValue, val metrics: Map<String, Any?>, val spectrum: DoubleArray)
 
@@ -53,7 +60,13 @@ object OvenAuditionGenerator {
         require(args.size <= 1) { "supply at most one output directory" }
         val root = File(args.firstOrNull() ?: "../testkit/oven-audition")
         root.mkdirs()
-        val cases = cases()
+        val revisionOne = revisionOne()
+        val changedPresets = OvenPresets.all().filter { patch ->
+            revisionOne.presets.firstOrNull { it.patch.name == patch.name }?.let {
+                common(it.patch).voice != common(patch).voice || common(it.patch).macros != common(patch).macros
+            } ?: false
+        }.sortedBy { when (it.name) { "Felt Ledger" -> 0; "Quiet Room" -> 1; else -> 2 } }
+        val cases = cases(revisionOne, changedPresets)
         check(cases.map { it.id }.distinct().size == cases.size) { "duplicate OVEN audition ID" }
         val rendered = cases.mapIndexed { index, case ->
             val snip = render(case)
@@ -73,13 +86,23 @@ object OvenAuditionGenerator {
         val rawGain = minOf(1f, .99f / originalPeak.coerceAtLeast(1e-9f))
         val clips = rendered.map { entry ->
             val case = entry.case
-            val raw = gain(entry.snip, rawGain)
+            val exportGain = case.archive?.rawGain ?: rawGain
+            val raw = gain(entry.snip, exportGain)
             val matched = AuditionLevel.level(entry.snip)
-            val rawPath = "audio/${case.id}-raw.wav"
-            val matchedPath = "audio/${case.id}-matched.wav"
+            // Revision-specific media URLs prevent a browser from serving the
+            // first audition's cached recording under a stable preset ID.
+            val rawPath = "audio/r2/${case.id}-raw.wav"
+            val matchedPath = "audio/r2/${case.id}-matched.wav"
             val recipePath = "patches/${case.id}.json"
             val rawFile = WavWriter.write(File(root, rawPath), raw, WavWriter.BitDepth.PCM_16)
             val matchedFile = WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_16)
+            val rawHash = sha256(rawFile)
+            val matchedHash = sha256(matchedFile)
+            case.archive?.let {
+                check(rawHash == it.rawSha256 && matchedHash == it.matchedSha256) {
+                    "Original published audio changed for ${it.patch.name}; preserve the revision-one DSP before rebuilding this archive"
+                }
+            }
             File(root, recipePath).apply { parentFile.mkdirs(); writeText(Json.write(entry.recipe) + "\n") }
             linkedMapOf<String, Any?>(
                 "id" to case.id, "title" to case.title, "section" to case.section,
@@ -89,14 +112,34 @@ object OvenAuditionGenerator {
                 "velocity" to if (case.events == null) case.patch.velocity else null,
                 "velocityLabel" to case.velocityLabel, "macros" to case.patch.macros,
                 "comparison" to case.comparison, "position" to case.position,
+                "comparisonTitle" to case.presetName, "presetName" to case.presetName,
+                "revision" to case.revision, "revisionLabel" to case.revision?.replaceFirstChar { it.uppercase() },
+                "audioRevision" to case.audioRevision, "originalId" to case.originalId,
                 "raw" to rawPath, "matched" to matchedPath, "recipe" to recipePath,
                 "recipeKind" to when { case.events != null -> "oven-offline-score"; case.options != null -> "oven-probe"; else -> "oven-patch" },
                 "duration" to raw.durationSeconds, "peak" to raw.peak(), "loudness" to Loudness.of(raw),
                 "matchedPeak" to matched.peak(), "matchedLoudness" to Loudness.of(matched),
-                "rawGain" to rawGain, "rawSha256" to sha256(rawFile), "matchedSha256" to sha256(matchedFile),
+                "rawGain" to exportGain, "rawSha256" to rawHash, "matchedSha256" to matchedHash,
                 "rawMetrics" to entry.metrics,
                 "probe" to case.options?.let { mapOf("bodyEnabled" to it.bodyEnabled, "haloEnabled" to it.haloEnabled) },
             )
+        }.toMutableList()
+        // A revised comparison points to its same-note recording, so the two views
+        // cannot diverge and the downloadable pack does not duplicate those WAVs.
+        for (patch in changedPresets) {
+            val tag = slug(patch.name)
+            val commonClip = clips.single { it["id"] == "common_preset_$tag" }
+            val revised = LinkedHashMap(commonClip)
+            revised["id"] = "revision_revised_$tag"
+            revised["title"] = "Revised · ${patch.name}"
+            revised["section"] = "revision"
+            revised["description"] = role(patch.name) + ". Revised recipe at C4 and medium velocity; compare with its original at the same playback level."
+            revised["comparison"] = "revision_$tag"
+            revised["position"] = 1
+            revised["revision"] = "revised"
+            revised["revisionLabel"] = "Revised"
+            revised["originalId"] = "preset_$tag"
+            clips += revised
         }
         val keyboard = (60..72).map { midi ->
             linkedMapOf<String, Any?>("midi" to midi, "note" to noteName(midi)).apply {
@@ -104,14 +147,20 @@ object OvenAuditionGenerator {
             }
         }
         check(keyboard.all { row -> velocities.keys.all { label -> clips.any { it["id"] == row[label] } } })
-        val wavBytes = clips.sumOf { File(root, it.getValue("raw") as String).length() + File(root, it.getValue("matched") as String).length() }
+        val wavPaths = clips.flatMap { listOf(it.getValue("raw") as String, it.getValue("matched") as String) }.distinct()
+        val wavBytes = wavPaths.sumOf { File(root, it).length() }
         check(wavBytes <= 100L * 1024 * 1024) { "OVEN WAV assets exceed 100 MiB: $wavBytes bytes" }
         val diagnostics = diagnostics(rendered, rawGain, wavBytes)
         writeJson(File(root, "diagnostics.json"), diagnostics)
         writeJson(File(root, "manifest.json"), linkedMapOf(
             "engine" to "OVEN", "version" to 1, "model" to Oven.MODEL_VERSION,
+            "audioRevision" to 2,
+            "revisionSummary" to "Preset revision: compare the roster at one pitch, one velocity and a shared playback level, then hear each changed recipe beside its original.",
+            "revisionNotes" to revisionNotes(revisionOne, changedPresets),
+            "commonConditions" to mapOf("midi" to 60, "note" to "C4", "velocity" to .65f, "tune" to .5f, "matchedTarget" to .03),
+            "legacyMatchedHashes" to revisionOne.legacyMatchedHashes,
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 16,
-            "status" to "First dry audition; listening review is pending.",
+            "status" to "Revised dry audition; listening review is pending.",
             "controls" to guides.map { (name, description) -> mapOf("name" to name, "description" to description, "default" to Oven.defaults(OvenVoice.GRAND).getValue(name)) },
             "sections" to sections(), "clips" to clips, "keyboard" to keyboard,
             "rawGain" to rawGain, "matchedTarget" to .03, "matchedPeakCeiling" to .99,
@@ -119,13 +168,31 @@ object OvenAuditionGenerator {
             "downloads" to mapOf("audio" to "oven-audition.zip", "source" to "oven-source.zip", "kit" to "oven-kit.zip"),
             "metricNotes" to METRIC_NOTES,
         ))
-        println("Wrote ${clips.size} cases / ${clips.size * 2} WAVs (${wavBytes / 1048576.0} MiB), exact recipes, manifest and diagnostics under ${root.absolutePath}")
+        println("Wrote ${clips.size} listening entries / ${wavPaths.size} WAVs (${wavBytes / 1048576.0} MiB), exact recipes, manifest and diagnostics under ${root.absolutePath}")
     }
 
-    private fun cases(): List<Case> = buildList {
+    private fun cases(revisionOne: RevisionOne, changedPresets: List<OvenPatch>): List<Case> = buildList {
         for (patch in OvenPresets.all()) add(Case(
             "preset_" + slug(patch.name), patch.name, "first-listen",
-            "${patch.voice.name} at ${noteName(patch.midi)}, velocity ${patch.velocity}. A complete dry saved recipe.", patch,
+            role(patch.name) + ". ${patch.voice.name} at ${noteName(patch.midi)}, velocity ${patch.velocity}.", patch, presetName = patch.name,
+        ))
+        for (patch in OvenPresets.all()) add(Case(
+            "common_preset_" + slug(patch.name), patch.name, "same-note",
+            role(patch.name) + ". C4 at medium velocity and the shared matched playback level.", common(patch), presetName = patch.name,
+        ))
+        for (patch in changedPresets) {
+            val original = revisionOne.presets.single { it.patch.name == patch.name }
+            val tag = slug(patch.name)
+            add(Case("revision_original_$tag", "Original · ${patch.name}", "revision",
+                "The original recipe at C4 and medium velocity. Compare with the revised recipe at the same playback level.",
+                common(original.patch), comparison = "revision_$tag", position = 0, presetName = patch.name,
+                revision = "original", audioRevision = 1, originalId = original.id))
+        }
+        for (original in revisionOne.presets) add(Case(
+            "archived_" + original.id, original.patch.name, "archive",
+            "Original published recording at its saved ${noteName(original.patch.midi)} and velocity ${original.patch.velocity}. Audio hashes are checked against the first audition.",
+            original.patch, presetName = original.patch.name, revision = "original-as-played", audioRevision = 1,
+            originalId = original.id, archive = original,
         ))
         for (midi in listOf(36, 60, 84)) for ((label, velocity) in velocities) {
             val patch = OvenPatch("GRAND ${noteName(midi)} $label", OvenVoice.GRAND, Oven.defaults(OvenVoice.GRAND), midi, velocity)
@@ -295,14 +362,50 @@ object OvenAuditionGenerator {
     }
 
     private fun sections() = listOf(
-        mapOf("id" to "first-listen", "title" to "Ten dry recipes", "description" to "Four articulations share one struck-string core. Start with Open Lid, then hear felt, forged and blooming versions."),
+        mapOf("id" to "first-listen", "title" to "The revised roster", "description" to "Distinct dry recipes share one struck-string core. Start with Open Lid, then hear felt, forged and blooming versions."),
+        mapOf("id" to "same-note", "title" to "The roster at C4", "description" to "Every current preset at C4, velocity 0.65 and neutral TUNE. Matched playback gives each the same loudest-moment level."),
+        mapOf("id" to "revision", "title" to "Original and revised", "description" to "Each changed preset beside its original, both at C4, velocity 0.65 and neutral TUNE. Listen for articulation, body and decay."),
         mapOf("id" to "touch", "title" to "Touch", "description" to "C4 at three real strike velocities. Raw retains dynamics; matched lets you compare color."),
         mapOf("id" to "register", "title" to "Low and high", "description" to "C2 and C6 at soft, medium and hard strikes, with the same GRAND controls."),
         mapOf("id" to "controls", "title" to "One control at a time", "description" to "Five positions, from 0 to 100%, at C4 and medium velocity. Other controls stay fixed."),
         mapOf("id" to "causal", "title" to "Hear the body and halo", "description" to "One identical strike with body and halo DSP paths bypassed in turn."),
         mapOf("id" to "phrases", "title" to "Notes together", "description" to "Offline notes overlap with their independent baked tails. There is no shared live sympathetic network."),
         mapOf("id" to "keyboard", "title" to "C4–C5 keyboard", "description" to "Thirteen individually rendered notes, each at three velocities."),
+        mapOf("id" to "archive", "title" to "Original takes", "description" to "The ten original published preset recordings, at their original notes and velocities. Their raw and matched audio hashes are preserved."),
     )
+
+    /** Tracked original recipes make the comparison pack reproducible without local audit files. */
+    private fun revisionOne(): RevisionOne {
+        val text = OvenAuditionGenerator::class.java.getResourceAsStream("/audition/oven-roster-r1.json")
+            ?.bufferedReader()?.use { it.readText() } ?: error("OVEN revision-one recipe snapshot is missing")
+        val data = Json.parse(text).obj()
+        check(data.getValue("engine").str() == "OVEN" && data.getValue("audioRevision").int() == 1)
+        check(data.getValue("model").int() == Oven.MODEL_VERSION) { "preserve the revision-one model to regenerate the original recordings" }
+        val hashes = data.getValue("legacyMatchedHashes").obj().mapValues { it.value.str() }
+        val presets = data.getValue("presets").arr().map { value ->
+            val entry = value.obj()
+            OriginalPreset(entry.getValue("id").str(), OvenPatch.fromJsonValue(entry.getValue("patch")) as OvenPatch,
+                entry.getValue("rawSha256").str(), entry.getValue("matchedSha256").str(), entry.getValue("rawGain").num().toFloat())
+        }
+        check(presets.map { it.id }.distinct().size == presets.size)
+        check(presets.all { hashes[it.id] == it.matchedSha256 })
+        return RevisionOne(presets, hashes)
+    }
+
+    private fun common(patch: OvenPatch) = patch.copy(midi = 60, velocity = .65f, macros = patch.macros + ("TUNE" to .5f))
+
+    private fun role(name: String): String = OvenPresets.roleDescription(name)?.removeSuffix(".")
+        ?: "An original dry struck-string recipe"
+
+    private fun revisionNotes(original: RevisionOne, changed: List<OvenPatch>): List<String> = buildList {
+        add("The preset comparisons use C4, velocity 0.65 and neutral TUNE; matched playback shares one level.")
+        for (patch in changed) add(patch.name + ": " + role(patch.name).replaceFirstChar { it.lowercase() } + ".")
+        val currentNames = OvenPresets.all().map { it.name }.toSet()
+        for (removed in original.presets.filter { it.patch.name !in currentNames }) {
+            add(removed.patch.name + " remains in Original takes and is removed from the current roster.")
+        }
+        add("The original published recordings and recipes remain available in Original takes, with their audio hashes preserved.")
+    }
 
     private fun gain(snip: Snip, gain: Float) = if (gain == 1f) snip else Snip(FloatArray(snip.samples.size) { snip.samples[it] * gain }, snip.channels, snip.sampleRate)
     private fun noteId(midi: Int, label: String) = "grand_m${midi}_$label"

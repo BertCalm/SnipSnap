@@ -46,6 +46,19 @@ class OvenPatchTest {
     }
 
     @Test
+    fun `a saved first-roster felt recipe retains its controls after factory revision`() {
+        val text = """{"engine":"OVEN","version":1,"name":"Felt Ledger","voice":"FELT","macros":{"TUNE":0.5,"HAMMER":0.18,"BODY":0.58,"RING":0.42,"BLOOM":0.12,"HALO":0.1},"model":1,"midi":60,"velocity":0.7}"""
+        val saved = OvenPatch.fromJsonText(text)
+        val original = OvenPatch("Felt Ledger", OvenVoice.FELT,
+            mapOf("TUNE" to .5f, "HAMMER" to .18f, "BODY" to .58f, "RING" to .42f, "BLOOM" to .12f, "HALO" to .10f),
+            midi = 60, velocity = .7f, model = 1)
+        assertEquals(original, saved)
+        assertEquals(saved, Patches.fromJsonText(saved.toJsonText()))
+        assertContentEquals(original.render().samples, saved.render().samples)
+        assertFalse(saved.macros == OvenPresets.forVoice(OvenVoice.FELT).first { it.name == saved.name }.macros)
+    }
+
+    @Test
     fun `bad tags notes energy models and controls are refused`() {
         val patch = OvenPatch("Saved", OvenVoice.GRAND, Oven.defaults(OvenVoice.GRAND))
         fun changed(name: String, value: JsonValue) = JsonValue.Obj(
@@ -101,7 +114,13 @@ class OvenPatchTest {
             assertEquals(null, Presets.landingFor(patch.engine, patch.voiceName, patch.macros))
             assertEquals(DrumClass.TONAL, Oven.drumClassFor(patch.voice, patch.macros))
             assertFalse("HOLD" in patch.macros, "${patch.name} is a finite strike")
+            assertFalse(OvenPresets.roleDescription(patch.name).isNullOrBlank(), "${patch.name} needs a musical role")
         }
+        assertEquals(null, OvenPresets.roleDescription("MY PIANO"))
+        val openLid = all.first { it.name == "Open Lid" }
+        assertEquals(OvenPatch("Open Lid", OvenVoice.GRAND,
+            mapOf("TUNE" to .5f, "HAMMER" to .55f, "BODY" to .55f, "RING" to .55f, "BLOOM" to 0f, "HALO" to .20f),
+            midi = 60, velocity = .8f, model = 1), openLid, "approved Open Lid stays exactly the same")
     }
 
     @Test
@@ -110,6 +129,8 @@ class OvenPatchTest {
         assertEquals(16, kit.size)
         val voices = mutableSetOf<OvenVoice>()
         val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val identities = listOf("Iron Parlour", "Felt Ledger", "Quiet Room", "Bright Ledger",
+            "Hammered Iron", "Cold Rivet", "Afterglow", "Hanging Frame")
         for ((i, maybePad) in kit.withIndex()) {
             val pad = requireNotNull(maybePad)
             val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
@@ -126,6 +147,10 @@ class OvenPatchTest {
                 assertEquals(OvenVoice.GRAND, patch.voice)
                 assertEquals(Oven.ROOT_MIDI + walk[i], patch.midi)
                 assertEquals(.5f, patch.macros.getValue("TUNE"))
+                assertEquals(.8f, patch.velocity)
+                assertEquals(Oven.defaults(OvenVoice.GRAND), patch.macros)
+            } else {
+                assertEquals(identities[i - walk.size], patch.name)
             }
             if (i in listOf(0, 10, 12, 14)) {
                 assertContentEquals(pad.snip.samples, recipe.render().samples, "A${i + 1} regenerates")

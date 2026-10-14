@@ -11,6 +11,36 @@ The [listening page](https://snipsnap-oven-audition.bertcalm.chatgpt.site) is th
 sonic gate. GRAND, FELT, FORGED and BLOOM are articulations of the same core. Ten
 small starter recipes await the owner's listening verdict.
 
+## Preset revision 2 — 14 October 2026
+
+The first listening verdict accepted the overall sound but found Quiet Room and
+Felt Ledger too similar. Common-condition renders exposed further overlap in the
+first roster: several recipes had nearly the same attack and decay, while their
+different saved notes made those similarities less obvious.
+
+Nine factory recipes now use wider existing macro settings; Open Lid and the DSP
+model stay unchanged. Felt Ledger is a compact muted strike, while Quiet Room is
+a clearer lingering note. The roster also separates an immediate dark body,
+bright medium note, warm rounded rise, hard weighted strike, bright dry hit,
+halo after-ring and a broad slow swell. Saved first-roster recipes retain their
+original sound; the revision changes factory choices rather than their model.
+
+The page's Same note section plays all ten recipes at C4, velocity .65 and neutral
+TUNE. Before / after uses those conditions for each changed recipe, with Felt
+Ledger and Quiet Room first. Original takes preserves the first published preset
+recordings at their saved note and velocity. The generator verifies their raw
+and matched WAV hashes against the tracked `oven-roster-r1.json` snapshot.
+
+The regression screen compares relative upper-harmonic power, attack timing and
+decay, before and after output leveling. It also checks gain/padding invariance,
+the named felt pair and Afterglow's independently stored halo tail. These metrics
+support the next listen; they do not establish universal audible distinctness.
+Earlier browser reviews follow their exact waveform hashes and remain exportable.
+Revised media uses fresh URLs to avoid replaying cached first-roster audio.
+
+The updated MPC starter retains the first eight scale pads and includes Quiet
+Room beside Felt Ledger in its upper eight recipes.
+
 ## Controls and signal
 
 | Control | Behavior |
