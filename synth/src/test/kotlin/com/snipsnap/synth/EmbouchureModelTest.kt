@@ -57,9 +57,9 @@ class EmbouchureModelTest {
             assertEquals(2, fresh.model)
             assertEquals(fresh, Patches.fromJsonText(fresh.toJsonText()))
             for (model in listOf(-1, 0, 3, 99)) {
-                assertFailsWith<IllegalArgumentException> { fresh.copy(model = model) }
+                assertRefused<IllegalArgumentException>("unsupported embouchure model $model") { fresh.copy(model = model) }
                 val unsupported = JsonValue.Obj(fresh.toJsonValue().entries + ("model" to JsonValue.Num(model.toDouble())))
-                assertFailsWith<JsonException> { Patches.fromJsonValue(unsupported) }
+                assertRefused<JsonException>("unsupported embouchure model $model") { Patches.fromJsonValue(unsupported) }
             }
         }
     }

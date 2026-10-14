@@ -886,8 +886,8 @@ private fun PadCell(
             // Full-opacity ink2, not a dimmed copy — the alpha reduction
             // (was 0.6f) put this, the only text naming which of 16 slots
             // an empty pad is, at 2.09-2.99:1 in every scheme (audit
-            // finding 5). ink2 itself now clears 4.5:1 against gray in all
-            // 8 schemes at full opacity — see Schemes.kt and ContrastTest.
+            // finding 5). ink2 itself now clears 4.5:1 against gray in
+            // every scheme at full opacity — see Schemes.kt and ContrastTest.
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(4.dp))
         }
         return

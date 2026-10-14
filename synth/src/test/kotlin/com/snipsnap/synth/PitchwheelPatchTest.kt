@@ -57,7 +57,13 @@ class PitchwheelPatchTest {
             assertEquals(mapOf("ADHESION" to .6f), restored.macros)
             val settled = Pitchwheel.settled(restored.voice, restored.macros)
             assertEquals(.6f, settled.getValue("ADHESION"))
-            assertEquals(Pitchwheel.defaults(restored.voice).getValue("TOOTH"), settled.getValue("TOOTH"))
+            // Pitchwheel.settled overlays the given keys on Pitchwheel.defaults, so comparing an omitted key
+            // with the defaults could not fail, and it is model three's table besides. This recipe is model
+            // one, whose renderer fills omitted macros from its own frozen copy: the partial recipe must
+            // render exactly as the complete one built from that table.
+            val complete = restored.copy(macros = PitchwheelV1.defaults(restored.voice) + ("ADHESION" to .6f))
+            assertContentEquals(complete.render().samples, restored.render().samples,
+                "a model one recipe with omitted macros did not fill them from model one's own defaults")
         }
     }
 

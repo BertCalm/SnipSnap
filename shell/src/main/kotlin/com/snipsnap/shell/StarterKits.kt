@@ -20,11 +20,16 @@ import java.io.File
  * This is the cold-start answer: the app is useful in the first thirty
  * seconds, before anything has been captured, and the empty grid never
  * looks empty. Every starter renders offline through the same pipeline as
- * captured audio (and carries per-pad recipes, so a starter kit's main
- * samples remain editable and regenerable forever - VELOCITY is the one
- * exception, where a pad's recipe rebuilds only the main hit, not the
- * soft velocity layers that define that kit). Seeded starters reroll;
- * fixed ones always land the same beloved kit.
+ * captured audio, and its pads carry per-pad recipes, so a starter kit's
+ * main samples remain editable and regenerable. CLOUD, LUCKY DIP A/B and
+ * VELOCITY qualify that. CLOUD's GRAINS clouds (A07-A16) carry no recipe;
+ * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
+ * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
+ * chain that re-treated each bank-A pad, which re-treat a sound rather
+ * than rebuild one. VELOCITY's pads all carry recipes, but a recipe
+ * rebuilds only the main hit, not the soft velocity layers that define
+ * that kit. Seeded starters reroll; fixed ones always land the same
+ * beloved kit.
  */
 object StarterKits {
 

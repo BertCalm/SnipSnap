@@ -241,6 +241,18 @@ class SkitterTest {
             assertEquals(smpl, WavReader.readSmpl(bytes), "$label WAV loop metadata")
             val exported = WavReader.read(bytes)
             assertTrue(Keys.seamError(exported.samples, held.loopStart) < 1e-3, "$label exported seam")
+            // The engine refuses a held render that has not converged under LOOP_STATE_TOLERANCE, that hit a bound,
+            // or whose leveled seam reaches Keys.MAX_SEAM_ERROR, so the checks above restate it and cannot fail; a
+            // preroll of two cannot occur either, since convergence needs three periods. docs/SKITTER.md records
+            // every held case converging in three periods at state error up to 5.16e-9, with leveled seams below
+            // 1.35e-16. These hold that margin, which a regression can lose while still clearing the engine's bars.
+            // Here the state error reaches 4.3e-10, the leveled seam 1.35e-16 and the 24-bit export 1.6e-15.
+            assertEquals(3, d.loopPrerollPeriods, "$label converged after ${d.loopPrerollPeriods} periods, not three")
+            assertTrue(d.loopStateError < 1e-7, "$label state error ${d.loopStateError} lost its margin under the engine's ${Skitter.LOOP_STATE_TOLERANCE}")
+            val leveledSeam = Keys.seamError(held.snip.samples, held.loopStart)
+            assertTrue(leveledSeam < 1e-9, "$label leveled seam $leveledSeam lost its margin under ${Keys.MAX_SEAM_ERROR}")
+            val exportedSeam = Keys.seamError(exported.samples, held.loopStart)
+            assertTrue(exportedSeam < 1e-9, "$label exported seam $exportedSeam lost its margin under ${Keys.MAX_SEAM_ERROR}")
         }
     }
 
