@@ -195,11 +195,12 @@ the message.
 | TANGLE | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
+| BELLOWS | 48–72 |
 | MURMUR | 36–96 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
-the preset's saved TUNE offset (±12 semitones). EMBOUCHURE resets TUNE to
-zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
+the preset's saved TUNE offset (±12 semitones). EMBOUCHURE and BELLOWS
+reset TUNE to zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
 itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
 repeatable macro variation around the chosen preset); both are refused on
