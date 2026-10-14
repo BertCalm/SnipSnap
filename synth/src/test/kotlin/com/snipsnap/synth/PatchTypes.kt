@@ -41,4 +41,14 @@ internal object PatchTypes {
      * presets. Named here so a new engine has to be either rostered or listed.
      */
     val ROSTERLESS: Set<String> = setOf(SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
+
+    /**
+     * The engines with a [Patch] type and provisional recipes of their own that are
+     * deliberately kept out of [Presets] until the owner's listening verdict. VENT's
+     * three starting points live in [VentPresets] and render only through the CLI;
+     * its factory roster and phone picker stay unchanged while it is a prototype.
+     * Named here so leaving it out is a recorded decision, not a forgotten line:
+     * accepting the engine means filing its recipes in [Presets] and taking it off this list.
+     */
+    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE)
 }

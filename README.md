@@ -858,7 +858,12 @@ are in the picker and the preset roster, and each but FLOTILLA has a starter kit
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
-no roster entry. Each file's own KDoc names its spec.
+no roster entry. VENT, a Rössler-attractor synth prototype (not the TapeOS
+scheme of that name), is in the module outside the picker and the preset
+roster: `snipsnap synth VENT` renders its three provisional recipes, and
+`--midi`, `--velocity` and `--seed` set their note, strike energy and
+starting trajectory ([`docs/VENT.md`](docs/VENT.md)).
+Each file's own KDoc names its spec.
 
 The filters got a generational upgrade from the DSP literature: `Dsp.TptSvf`
 is a topology-preserving (trapezoidal) state-variable filter after Andy

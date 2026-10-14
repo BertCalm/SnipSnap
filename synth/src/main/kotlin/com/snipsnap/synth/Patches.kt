@@ -90,6 +90,7 @@ object Patches {
             SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
             TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
+            VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

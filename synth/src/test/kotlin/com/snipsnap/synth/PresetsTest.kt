@@ -67,7 +67,7 @@ class PresetsTest {
      * [Presets.forVoice] must serve exactly the presets [Presets.all] files under
      * it (none, for a rosterless engine or an empty voice); and every engine with a
      * [Patch] type must either have a roster in [Presets.all] or be one of
-     * [PatchTypes.ROSTERLESS].
+     * [PatchTypes.ROSTERLESS] or [PatchTypes.PROTOTYPES].
      */
     @Test
     fun `forVoice and all agree on every engine and voice`() {
@@ -81,15 +81,23 @@ class PresetsTest {
         }
 
         val rostered = all.map { it.engine }.toSet()
-        val expected = PatchTypes.engines - PatchTypes.ROSTERLESS
+        val expected = PatchTypes.engines - PatchTypes.ROSTERLESS - PatchTypes.PROTOTYPES
         assertEquals(
             expected, rostered,
-            "an engine with a Patch type must have a roster in Presets.all() or be listed as rosterless " +
+            "an engine with a Patch type must have a roster in Presets.all() or be listed as rosterless or a prototype " +
                 "(missing ${expected - rostered}, unexpected ${rostered - expected})",
         )
+        fun rosterClass(engine: String) = "com.snipsnap.synth." + engine.lowercase().replaceFirstChar { it.uppercase() } + "Presets"
         for (engine in PatchTypes.ROSTERLESS) {
-            val roster = "com.snipsnap.synth." + engine.lowercase().replaceFirstChar { it.uppercase() } + "Presets"
+            val roster = rosterClass(engine)
             assertTrue(runCatching { Class.forName(roster) }.isFailure, "$engine is listed as rosterless but $roster exists")
+        }
+        // A prototype is held out of Presets on purpose, not for want of recipes: it keeps
+        // its own provisional roster, and nothing of it is served through the factory one.
+        assertTrue(PatchTypes.PROTOTYPES.intersect(PatchTypes.ROSTERLESS).isEmpty(), "an engine is either rosterless or a prototype")
+        for (engine in PatchTypes.PROTOTYPES) {
+            val roster = rosterClass(engine)
+            assertTrue(runCatching { Class.forName(roster) }.isSuccess, "$engine is listed as a prototype but has no $roster to audition")
         }
     }
 
