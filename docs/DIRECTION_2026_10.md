@@ -129,7 +129,7 @@ slots, every value from its `:root`:
 | `lcd` / `lcdInk` | `#0F100E` / `#EEEADD` | the console's deepest fill | 14.9 : 1 |
 | `desk1` = `desk2` | `#151614` | `--bg` | flat |
 | `deskGlow` | `#2A1E18` | the attractor's warm end, dimmed | a faint warmth behind the window, not a sun |
-| `winFrame` | `#45473C` | `.console` border | 40 luma from `gray`, at the law's floor |
+| `winFrame` | `#55564B` | `.diagram-axis` stroke | 55 luma from `gray`; the `.console` border (`#45473C`) sits exactly on the law's 40-luma floor and `SchemesTest` refused it |
 | `title1` = `title2` / `titleInk` | `#1D1E1B` / `#EEEADD` | masthead | flat bar, hairline under it |
 | destructive text | `#D6694D` | `--red` | 4.8 : 1 on `gray`; the `bin` token §4 of the look proposal asks for |
 
@@ -140,6 +140,44 @@ work can be: VENT as a ninth scheme under the OG drawing (a pure data
 change, provable now), then the `Look` axis, then OPENSKY once the
 light-shell decision is reopened. The user gets the dark modern vibe first
 and the light one second, and the light one carries the only test changes.
+
+### Four pages, one rule
+
+Two more audition pages arrived after the first two: ONSET (paper, rust
+and lime) and OSPREY (paper, ink-blue and sand). Measured the same way, all
+four follow a rule TapeOS already has and the look proposal already kept:
+**one accent that reads on chrome, a second that reads on the dark
+surface.** That is the `accent` slot and the `amber` slot, and the pages
+fill them without having been told to.
+
+| Page | Chrome | Ink | On chrome (`accent`) | On the dark surface (`amber`) | Dark surface |
+|---|---|---|---|---|---|
+| OPENSKY | `#F8F3E9` | `#292820` | `#A74C00` (5.5 : 1) | `#FF8C00` (6.9 : 1) | `#292820` |
+| ONSET | `#EEECE3` | `#252820` | `#AA4B28` (4.7 : 1) | `#D5E17B` lime (10.0 : 1, and **1.2 : 1 on paper**) | `#272D25` |
+| OSPREY | `#F5F1E7` | `#082D44` | `#126D8B` (5.2 : 1) | `#84C3CF` aqua (7.3 : 1, 1.7 : 1 on paper) | `#082D44` |
+| VENT | `#1D1E1B` | `#EEEADD` | `#E08A68` (6.4 : 1) | the same (7.3 : 1) | `#0F100E` |
+
+ONSET makes the point hardest: its lime is unreadable on paper and
+excellent on the dark plate, so the page only ever uses it on the dock,
+the transport and a 3 px blend bar. That is exactly what `MODERN_LOOK.md`
+§4 asked for when it said the `amber` token must never be drawn on chrome
+in the modern look. The rule can now be a test rather than a note: *every
+scheme's `amber` clears 4.5 : 1 on `lcd`; every scheme's `accent` clears
+4.5 : 1 on `gray`.* Today's eight schemes pass it; so do all four pages.
+
+Two further things the pages settle:
+
+- **OSPREY's dock is light.** It is the one page whose player sits on
+  paper-light rather than on a dark plate, with the dark surface used for
+  the hero's ocean plate instead. Under the two-surface rule the app's dock
+  stays dark, so an OSPREY scheme would take its `lcd` from the ocean
+  plate (`#082D44`), which is what the table does.
+- **The accent pairs are the schemes.** Chrome and ink barely move across
+  the three paper pages (paper is paper); what makes each page its own is
+  the accent pair and the temperature of the greys. So a modern scheme is
+  cheaper to author than an OG one: four or five values, not twenty. The
+  roster of the modern look is, at this writing, OPENSKY, ONSET, OSPREY
+  and VENT, with VENT the only one that passes the dark-chrome laws today.
 
 ### The two pages, one look
 
@@ -175,9 +213,13 @@ audition pages as easier is what the type-size row predicts.
 
 ## 6. Order of work, revised
 
-1. **VENT as a scheme** under the OG drawing. Data only; every test passes
-   as written. One day. Proves the colour half on a phone before anything
-   else.
+1. **VENT as a scheme** under the OG drawing. **Done 2026-10-14**: `Schemes.VENT`,
+   ninth in `Schemes.ALL`, pinned to the page's `:root` by `SchemesTest`,
+   with its `.t-vent` row and swatch card in `design/Schemes.dc.html`. Every
+   law passed as written except one, on the floor: the page's console
+   border sat exactly 40 luma from the chrome and the window-frame law
+   wants more, so the frame takes the page's axis stroke instead. Proves
+   the colour half on a phone before anything else.
 2. **The project model** in `:kit` and `:shell` with the migration and
    tests. The biggest change and the one the JVM can prove in full.
 3. **The shape** in `:app`, in the OG look: four places, the dock, the
