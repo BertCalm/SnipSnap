@@ -16,7 +16,7 @@
     'note-filter', 'macro-filter', 'macro-filter-wrap', 'reset-filters', 'clip-grid',
     'empty-filter', 'export-notes', 'manifest-revision', 'revision-study',
     'revision-pair', 'revision-description', 'revision-original', 'revision-revised', 'revision-eyebrow', 'revision-title',
-    'legacy-history', 'legacy-count', 'legacy-list', 'library-filters'
+    'legacy-history', 'legacy-count', 'legacy-list', 'library-filters', 'listen-pipe', 'listen-musette'
   ].map((id) => [id, $(id)]));
   const nativeAudio = ui['native-audio'];
   const verdictButtons = [...document.querySelectorAll('[data-verdict]')];
@@ -43,12 +43,16 @@
     selectionToken: 0, animation: 0, buffers: new Map(), comparison: null
   };
   const manifestUrl = new URL('manifest.json', document.baseURI);
+  const requestedVoice = (new URL(window.location.href).searchParams.get('voice') || '').trim().toUpperCase();
   const resolveAsset = (path) => {
     const url = new URL(path, manifestUrl);
     if (state.manifest?.audioHash) url.searchParams.set('audioHash', state.manifest.audioHash);
     return url.href;
   };
   const getClip = (id) => state.manifest?.clips.find((clip) => clip.id === id);
+  const identityClip = (voice) => state.manifest?.clips.find((clip) => clip.section === 'identities'
+    && clip.voice === voice && clip.note === 60 && clip.gesture === 'restrained')
+    || state.manifest?.clips.find((clip) => clip.section === 'identities' && clip.voice === voice);
   const allPairs = () => [...(state.manifest?.comparisonPairs || []), ...(state.manifest?.comparisonHistoryPairs || [])];
   const sectionPairs = (section = state.section) => section === 'comparisons'
     ? state.manifest?.comparisonPairs || []
@@ -465,13 +469,15 @@
     const pair = pairForClip(clip);
     if (pair) state.pairId = pair.id;
     const versionLabel = clipVersion(clip);
-    ui['player-category'].textContent = versionLabel
+    const inPairStudy = sectionPairs().some((entry) => entry.id === pair?.id);
+    ui['player-category'].textContent = inPairStudy && versionLabel
       ? `${pair?.group === 'airflow' ? 'PIPE AIRFLOW' : 'PIPE ATTACK'} / ${versionLabel.toUpperCase()}`
-      : (sectionNames[clip.section] || clip.section).toUpperCase();
+      : `${(sectionNames[clip.section] || clip.section).toUpperCase()}${clip.auditionRevision && versionLabel ? ` / ${versionLabel.toUpperCase()}` : ''}`;
     ui['player-title'].textContent = versionLabel && clip.comparisonLabel && clip.label.startsWith(`${clip.comparisonLabel} · `)
       ? `${versionLabel} · ${clip.label.slice(clip.comparisonLabel.length + 3)}` : clip.label;
     ui['player-detail'].textContent = clip.description || '';
     ui['player-voice'].textContent = clip.voice;
+    ['PIPE', 'MUSETTE'].forEach((voice) => ui[`listen-${voice.toLowerCase()}`].setAttribute('aria-pressed', String(clip.voice === voice)));
     ui['selected-tags'].textContent = `${clip.noteName} · ${isHeld(clip) ? 'SETTLED' : clip.gesture || `VEL ${nice(clip.velocity)}`}`;
     ui['wav-link'].href = clipUrl(clip);
     ui['wav-link'].download = `${clip.id}-${state.mode}.wav`;
@@ -482,7 +488,7 @@
     ui['native-help'].textContent = isHeld(clip)
       ? 'The main player repeats one exact settled region with entry and stop ramps. This fallback repeats the full held WAV, which contains three copies. Only one player runs at a time.'
       : 'Use your browser’s player if the main player cannot decode this WAV. Only one player runs at a time.';
-    ui['review-prompt'].textContent = pair?.group === 'airflow'
+    ui['review-prompt'].textContent = inPairStudy && pair?.group === 'airflow'
       ? (isHeld(clip) ? 'Listen for soft sustained air, stable pitch, and a clean wrap.' : 'Listen beyond the accepted chiff. Does the airflow give the steady body a useful life?')
       : isHeld(clip)
       ? 'Listen for a clean wrap, a stable pitch, and a body worth holding.'
@@ -581,10 +587,23 @@
     values.forEach(([value, text]) => { const option = node('option', '', text); option.value = value; select.append(option); });
   }
 
+  function openIdentityVoice(voice, play = true) {
+    const clip = identityClip(voice);
+    if (!clip) return;
+    state.section = 'identities';
+    ui['voice-filter'].value = voice;
+    ui['note-filter'].value = ''; ui['macro-filter'].value = '';
+    ui['compare-a'].value = identityClip('PIPE')?.id || clip.id;
+    ui['compare-b'].value = identityClip('MUSETTE')?.id || clip.id;
+    selectClip(clip);
+    renderLibrary();
+    if (play) playSelected();
+  }
+
   function buildLibrary() {
     const { clips, sections } = state.manifest;
     ui['section-tabs'].replaceChildren();
-    const orderedSections = [...sections].sort((a, b) => (a.id === 'comparisons' ? -1 : b.id === 'comparisons' ? 1 : 0));
+    const orderedSections = [...sections].sort((a, b) => (a.id === 'identities' ? -1 : b.id === 'identities' ? 1 : 0));
     orderedSections.forEach((section) => {
       const button = node('button', ''); button.type = 'button'; button.dataset.section = section.id;
       const count = sectionPairs(section.id).length || clips.filter((clip) => clip.section === section.id).length;
@@ -595,6 +614,7 @@
         ui['voice-filter'].value = ''; ui['note-filter'].value = ''; ui['macro-filter'].value = '';
         const pairs = sectionPairs();
         if (pairs.length) selectRevisionPair(pairs.find((pair) => pair.id === state.pairId) || pairs[0]);
+        else if (section.id === 'identities') selectClip(identityClip(state.selected?.voice === 'MUSETTE' ? 'MUSETTE' : 'PIPE'));
         renderLibrary();
       });
       ui['section-tabs'].append(button);
@@ -616,17 +636,14 @@
     const first = clips.find((clip) => clip.section === 'identities' && clip.voice === 'PIPE' && clip.note === 60 && clip.gesture === 'restrained') || clips[0];
     const second = clips.find((clip) => clip.section === 'identities' && clip.voice === 'MUSETTE' && clip.note === first.note && clip.gesture === 'restrained') || clips[1] || first;
     ui['compare-a'].value = first.id; ui['compare-b'].value = second.id;
-    if (state.manifest.comparisonPairs?.length) {
-      ui['revision-pair'].replaceChildren();
-      state.manifest.comparisonPairs.forEach((pair) => {
-        const option = node('option', '', pair.label); option.value = pair.id; ui['revision-pair'].append(option);
-      });
-      const initialPair = state.manifest.comparisonPairs.find((pair) => pair.revisedId === first.id) || state.manifest.comparisonPairs[0];
-      selectRevisionPair(initialPair);
-    } else selectClip(first);
+    if (['PIPE', 'MUSETTE'].includes(requestedVoice) && identityClip(requestedVoice)) openIdentityVoice(requestedVoice, false);
+    else selectClip(first);
     renderLibrary();
     reviewedCount();
     renderLegacyHistory();
+    if (['PIPE', 'MUSETTE'].includes(requestedVoice) && window.location.hash === '#listen') {
+      requestAnimationFrame(() => $('listen').scrollIntoView({ block: 'start' }));
+    }
   }
 
   function renderLegacyHistory() {
@@ -714,7 +731,7 @@
       if (new Set(manifest.clips.map((clip) => clip.id)).size !== manifest.clips.length) throw new Error('The render manifest contains duplicate clip IDs.');
       state.manifest = manifest;
       if (allPairs().some((pair) => !getClip(pair.originalId) || !getClip(pair.revisedId))) throw new Error('A comparison is missing its earlier or revised audio.');
-      state.section = manifest.comparisonPairs?.length ? 'comparisons' : manifest.sections.some((section) => section.id === 'identities') ? 'identities' : manifest.sections[0].id;
+      state.section = manifest.sections.some((section) => section.id === 'identities') ? 'identities' : manifest.sections[0].id;
       state.storageKey = await revisionKey(manifest);
       try {
         const saved = JSON.parse(localStorage.getItem(state.storageKey) || '{}');
@@ -775,6 +792,7 @@
   }
 
   ui['retry-load'].addEventListener('click', loadManifest);
+  ['PIPE', 'MUSETTE'].forEach((voice) => ui[`listen-${voice.toLowerCase()}`].addEventListener('click', () => openIdentityVoice(voice)));
   ui['revision-pair'].addEventListener('change', () => {
     const previous = allPairs().find((pair) => pair.id === state.pairId);
     const version = state.selected?.id === previous?.originalId ? 'original' : 'revised';
