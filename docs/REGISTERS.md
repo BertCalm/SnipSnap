@@ -96,14 +96,21 @@ key-up fade. The original onset-free audition WAVs remain unchanged.
 The CLI can render saved presets or write the same instrument package:
 
 ```text
-./gradlew :cli:run --args="synth REGISTERS PIPE --preset 'Pipe Air' --out /tmp/registers"
-./gradlew :cli:run --args="synth REGISTERS PIPE --preset 'Pipe Air' --instrument --release 0.6 --out /tmp/registers"
+./gradlew :cli:run --args="synth REGISTERS PIPE --preset 1 --out /tmp/registers"
+./gradlew :cli:run --args="synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out /tmp/registers"
 ```
 
 The picker and export adapters leave the model-3 synthesis arithmetic unchanged.
 Rendering accepts cancellation during synthesis so leaving a long instrument
 render does not keep the phone busy. Actual phone and MPC listening remain a
 hardware check after the automated render, package and playback checks.
+
+Integration verification passes 213 synthesis/preset/patch/velocity tests,
+91 shell tests, three CLI tests and ten package/readback tests. Fixed PCM24
+fixtures preserve the published finite and held sounds. Instrument tests check
+the first 80 ms, overlap energy, actual XPM/XTY/WAV loop markers, phone-side
+pitch and sustain/release at 48 kHz, legacy models, silence and cancellation.
+The Android debug APK assembles with all four native targets.
 
 ## Finite notes and held material
 

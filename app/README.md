@@ -16,6 +16,10 @@ There is no `app/src/test`. The on-device Compose suites live in
 packaging; THAW's on-device and listening checks still require a phone or
 emulator.
 
+REGISTERS also passes `:app:assembleDebug` in the cloud on 2026-10-14, including
+all four native targets. Its shared keyboard player passes pitch, sustain and
+release checks at 48 kHz; actual phone and MPC listening remain hardware checks.
+
 ## Building (desktop session or any machine with an Android SDK)
 
 1. Point the build at an SDK — any one of:
