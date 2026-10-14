@@ -122,8 +122,13 @@ class BorePresetsTest {
     @Test
     fun `the roster's HOLD 1 presets are loops and the rest are not`() {
         for (preset in BorePresets.all()) {
-            val loop = preset.macros.getValue("HOLD") >= Bore.LOOP_THRESHOLD
-            assertEquals(loop, Bore.isLoop(preset.macros.getValue("HOLD")))
+            // The roster's intent, not isLoop's own one-line definition: exactly the presets at HOLD 1
+            // loop, and they are the two named as loops. LONG NOTE (0.9) and PAD REED (0.95) sit just
+            // under the line and must stay one-shots.
+            val hold = preset.macros.getValue("HOLD")
+            val loop = Bore.isLoop(hold)
+            assertEquals(hold == 1f, loop, "${preset.name}: HOLD $hold ${if (loop) "is" else "is not"} a LOOP")
+            assertEquals(preset.name.endsWith(" LOOP"), loop, "${preset.name}: its name and its LOOP disagree")
             if (loop) assertTrue(preset.render().frameCount >= 1.5f * Dsp.RATE, "${preset.name}: a LOOP under the classifier's line")
         }
     }

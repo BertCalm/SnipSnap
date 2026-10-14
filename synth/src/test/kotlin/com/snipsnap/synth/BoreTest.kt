@@ -13,6 +13,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -940,6 +941,11 @@ class BoreTest {
         // landing chain never applied, and BorePatch.render() must not know the chain exists.
         val patch = BorePatch("Dry", BoreVoice.FLUTE, Bore.defaults(BoreVoice.FLUTE))
         assertEquals(Bore.render(BoreVoice.FLUTE, patch.macros).samples.toList(), patch.render().samples.toList())
+        // The equality can only catch a patch that applies its own landing if this patch has one and
+        // applying it changes the samples; a LOOP lands dry, and there the equality would hold anyway.
+        val chain = assertNotNull(Bore.landingChain(patch.macros), "the default FLUTE is a LOOP, so this test guards nothing")
+        val dry = Bore.render(BoreVoice.FLUTE, patch.macros)
+        assertFalse(chain.process(dry).samples.contentEquals(dry.samples), "the landing tape leaves the render unchanged")
     }
 
     @Test

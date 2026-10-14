@@ -387,6 +387,34 @@ class CircuitTest {
         assertTrue(relativeDifference(expanseMotion[0].snip.samples, expanseMotion[1].snip.samples) > 1e-4, "HOLD motion rates have the same audio")
     }
 
+    /**
+     * A held loop that does not converge is refused (Circuit's check), which the phone shows as a failed
+     * render, and HOLD can be set at any macro corner. The held cases above leave BREATH and DIAMETER
+     * at their defaults and TUNE at the root, and the endpoint sweeps leave HOLD at 0. This holds every
+     * voice at both ends of TUNE with the five sound macros all at 1 (the canyon's acoustic return
+     * feeding the tanh lips hardest, the widest formation, the busiest playing) and all at 0.
+     * Measured 2026-10-13: every corner converged, the seam at most 9.5e-13 and the convergence error
+     * at most 1.3e-12, with no numerical recovery. The playing pattern's and the formation's whole
+     * cycles are not checked here: Circuit.plan sets both rates to whole cycles of the loop (and the
+     * formation to none at ORBIT 0), so those products are integers at every corner and could not fail.
+     */
+    @Test
+    fun `held loops converge at every voice's macro corners and both ends of TUNE`() {
+        val sound = listOf("BREATH", "DIAMETER", "ORBIT", "PACE", "CANYON")
+        for (voice in CircuitVoice.entries) for (tune in listOf(0f, 1f)) for (level in listOf(1f, 0f)) {
+            val label = "$voice held TUNE $tune sound macros $level"
+            val r = Circuit.inspect(voice, Circuit.defaults(voice) + sound.associateWith { level } + mapOf("TUNE" to tune, "HOLD" to 1f))
+            assertHealthy(r, label)
+            assertVocalSpacing(r, label)
+            assertNotNull(r.loop, "$label returned no loop evidence")
+            assertTrue(rms(r.raw) > 1e-4, "$label passes the seam by being silent")
+            val seamStep = abs(r.snip.samples.last() - r.snip.samples.first())
+            var maxStep = 0f
+            for (i in 1 until r.snip.samples.size) maxStep = maxOf(maxStep, abs(r.snip.samples[i] - r.snip.samples[i - 1]))
+            assertTrue(seamStep <= maxStep, "$label wrap jumps farther than any interior sample: $seamStep against $maxStep")
+        }
+    }
+
     private fun assertVocalSpacing(report: Circuit.Report, label: String) {
         val voice = report.events.filter { it.source == 6 && it.energy > 0.0 }.sortedBy { it.timeSeconds }
         assertTrue(voice.isNotEmpty(), "$label lost its coordination voice")

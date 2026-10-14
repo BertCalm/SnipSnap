@@ -15,7 +15,6 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -46,22 +45,29 @@ class EmbouchureIntegrationTest {
     @Test
     fun `incompatible saved driver gesture and renderer models are refused`() {
         val patch = EmbouchurePresets.all().first()
-        for ((field, value) in listOf(
-            "driver" to JsonValue.Str("NOT_A_DRIVER"),
-            "driver" to JsonValue.Str("LIP"), // valid driver, incompatible with the saved REED voice
-            "gesture" to JsonValue.Str("NOT_A_GESTURE"),
-            "model" to JsonValue.Num(99.0),
+        // An unknown or incompatible field must not silently select another model, and each refusal must
+        // come from the guard for its own field: any JsonException (a missing engine, a version mismatch)
+        // would satisfy a check on the type alone.
+        for ((change, cause) in listOf(
+            ("driver" to JsonValue.Str("NOT_A_DRIVER")) to "EMBOUCHURE ${patch.voice} uses ${patch.driver}, got driver NOT_A_DRIVER",
+            // valid driver, incompatible with the saved REED voice
+            ("driver" to JsonValue.Str("LIP")) to "EMBOUCHURE ${patch.voice} uses ${patch.driver}, got driver LIP",
+            ("gesture" to JsonValue.Str("NOT_A_GESTURE")) to "unknown embouchure gesture NOT_A_GESTURE",
+            ("model" to JsonValue.Num(99.0)) to "unsupported embouchure model 99",
         )) {
-            val changed = JsonValue.Obj(patch.toJsonValue().entries + (field to value))
-            assertFailsWith<JsonException>("unknown $field must not silently select another model") { Patches.fromJsonValue(changed) }
+            val changed = JsonValue.Obj(patch.toJsonValue().entries + change)
+            assertRefused<JsonException>(cause) { Patches.fromJsonValue(changed) }
         }
         val baseline = EmbouchurePatch("Initial defaults", EmbouchureVoice.REED, Embouchure.defaults(EmbouchureVoice.REED))
         val older = JsonValue.Obj(baseline.toJsonValue().entries - setOf("midi", "velocity", "model", "driver", "gesture"))
         assertEquals(baseline.copy(model = 1), Patches.fromJsonValue(older), "omitted new fields retain the initial renderer contract")
         val nullModel = JsonValue.Obj(baseline.toJsonValue().entries + ("model" to JsonValue.Null))
         assertEquals(baseline.copy(model = 1), Patches.fromJsonValue(nullModel), "a null model retains the initial renderer contract")
-        assertFailsWith<IllegalArgumentException> { baseline.copy(velocity = Float.NaN) }
-        assertFailsWith<IllegalArgumentException> { baseline.copy(midi = Embouchure.midiRange(baseline.voice).last + 1) }
+        assertRefused<IllegalArgumentException>("EMBOUCHURE velocity out of 0..1: NaN") { baseline.copy(velocity = Float.NaN) }
+        val range = Embouchure.midiRange(baseline.voice)
+        assertRefused<IllegalArgumentException>("EMBOUCHURE REED midi out of ${range.first}..${range.last}: ${range.last + 1}") {
+            baseline.copy(midi = range.last + 1)
+        }
     }
 
     @Test

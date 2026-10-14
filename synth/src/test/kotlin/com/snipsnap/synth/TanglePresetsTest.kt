@@ -7,7 +7,7 @@ import com.snipsnap.json.JsonValue
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class TanglePresetsTest {
@@ -56,12 +56,15 @@ class TanglePresetsTest {
         val defaults = TanglePatch.fromJsonValue(JsonValue.Obj(fields)) as TanglePatch
         assertEquals(Tangle.rootMidi(TangleVoice.LEAD), defaults.midi)
         assertEquals(1f, defaults.velocity)
-        for (midi in listOf(23, 85)) assertFailsWith<IllegalArgumentException> { patch.copy(midi = midi) }
-        for (velocity in listOf(-.01f, 1.01f, Float.NaN, Float.POSITIVE_INFINITY)) assertFailsWith<IllegalArgumentException> { patch.copy(velocity = velocity) }
-        assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("TUNE" to .5f)) }
-        assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("CATCH" to 1.1f)) }
-        assertFailsWith<JsonException> { TanglePatch.fromJsonValue(JsonValue.Obj(fields + ("midi" to JsonValue.Num(55.5)))) }
-        assertFailsWith<JsonException> { TanglePatch.fromJsonValue(JsonValue.Obj(fields + ("voice" to JsonValue.Str("UNKNOWN")))) }
+        // Each refusal names the guard it reaches: every one of these is an IllegalArgumentException or
+        // a JsonException, so a check on the type alone would pass on whichever guard threw first.
+        for (midi in listOf(23, 85)) assertRefused<IllegalArgumentException>("TANGLE midi out of 24..84: $midi") { patch.copy(midi = midi) }
+        for (velocity in listOf(-.01f, 1.01f, Float.NaN, Float.POSITIVE_INFINITY))
+            assertRefused<IllegalArgumentException>("TANGLE velocity out of 0..1: $velocity") { patch.copy(velocity = velocity) }
+        assertRefused<IllegalArgumentException>("unknown macro TUNE for LEAD") { patch.copy(macros = mapOf("TUNE" to .5f)) }
+        assertRefused<IllegalArgumentException>("macro CATCH out of 0..1: 1.1") { patch.copy(macros = mapOf("CATCH" to 1.1f)) }
+        assertRefused<JsonException>("expected an integer, got 55.5") { TanglePatch.fromJsonValue(JsonValue.Obj(fields + ("midi" to JsonValue.Num(55.5)))) }
+        assertRefused<JsonException>("unknown voice UNKNOWN") { TanglePatch.fromJsonValue(JsonValue.Obj(fields + ("voice" to JsonValue.Str("UNKNOWN")))) }
     }
 
     @Test
@@ -82,6 +85,14 @@ class TanglePresetsTest {
         val patch = TanglePatch("Native", TangleVoice.LEAD, Tangle.defaults(TangleVoice.LEAD), midi = 55, velocity = .9f)
         val rendered = Velocity.atVelocity(patch, .35f)
         assertContentEquals(patch.copy(velocity = .35f).render().samples, rendered.samples)
-        assertEquals(.7f, patch.macros.getValue("BITE"), "native velocity modified the source recipe")
+        // The equality above tells the native route from the others only if they sound different
+        // for this recipe; each would otherwise pass it too. The generic fallback is a low-pass of the
+        // recipe's own render (TANGLE names none of Velocity's brightness macros), and a route that
+        // spent velocity on BITE would scale it toward its floor at the recipe's own velocity.
+        assertFalse(rendered.samples.contentEquals(patch.render().samples), "velocity .35 left the velocity .9 render unchanged")
+        assertFalse(rendered.samples.contentEquals(Velocity.soften(patch.render(), 1f - .35f).samples),
+            "the low-pass fallback renders the same samples, so the native route is unproven")
+        val biteSpent = patch.withMacros(patch.macros + ("BITE" to patch.macros.getValue("BITE") * .35f)).render()
+        assertFalse(rendered.samples.contentEquals(biteSpent.samples), "spending velocity on BITE renders the same samples")
     }
 }

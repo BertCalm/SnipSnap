@@ -589,6 +589,32 @@ class NimbusTest {
         }
     }
 
+    @Test
+    fun `every held voice repeats its preceding cycle over whole principal periods of the requested root`() {
+        // assertEquals(seam, p.seamError) above recomputes probe()'s own expression on the same two
+        // arrays, and previousCycle.size == samples.size holds because both are cut cycleFrames long.
+        // The seam itself is real: a full preceding cycle of one continuous render, no cross-fade and
+        // no check() in the engine. Measure it on the exported audio at every voice's defaults and
+        // every factory preset that reaches LOOP_THRESHOLD, and check the loop against the requested
+        // root rather than against the other cut: whole periods of the fitted root, which stays
+        // within the .03 cents probe() documents.
+        val cases = NimbusVoice.entries.map { NimbusPatch("$it defaults", it, Nimbus.defaults(it) + ("HOLD" to 1f)) } +
+            NimbusPresets.all().filter { Nimbus.isLoop(it.macros["HOLD"] ?: 0f) }
+        for (patch in cases) {
+            val p = Nimbus.probe(patch.voice, patch.macros, options = Nimbus.ProbeOptions(normalize = true, recordDiagnostics = false))
+            val requested = Nimbus.frequencyFor(patch.voice, Nimbus.settled(patch.voice, patch.macros).getValue("TUNE")).toDouble()
+            val fit = FineTuning.cents(p.rootHz.toDouble(), requested)
+            // rootHz is a Float, good to ~1e-7 of a period per period; a one-frame cut moves this by root / RATE.
+            val periods = p.samples.size * p.rootHz.toDouble() / Dsp.RATE
+            val seam = Keys.seamError(p.previousCycle + p.samples, p.previousCycle.size)
+            println("NIMBUS HOLD ${patch.name}: seam $seam, ${p.samples.size} frames = $periods periods of ${p.rootHz} Hz, $fit cents from $requested Hz")
+            assertTrue(abs(fit) < .03, "${patch.name} held root ${p.rootHz} Hz is $fit cents from the requested $requested Hz")
+            assertTrue(abs(periods - periods.roundToInt()) < 2e-4,
+                "${patch.name} loop of ${p.samples.size} frames is $periods periods of its ${p.rootHz} Hz root")
+            assertTrue(seam < Keys.MAX_SEAM_ERROR, "${patch.name} loop does not repeat its genuine preceding cycle: seam $seam")
+        }
+    }
+
     private fun displacement(snapshot: Nimbus.StateSnapshot): Double = sqrt(
         snapshot.heights.indices.sumOf { i ->
             val delta = snapshot.heights[i].toDouble() - snapshot.restingHeights[i]

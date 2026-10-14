@@ -101,7 +101,11 @@ class LacquerTest {
             assertTrue(p.durationSeconds >= p.layerEndSeconds.values.max(), "$voice latest active tail was truncated")
             assertTrue(p.layerEndSeconds.getValue(LacquerRole.TRAIL) > onset + .3,
                 "$voice trail envelope started its lifetime before the scheduled onset")
-            assertEquals(p.samples.size.toDouble() / Dsp.RATE, p.durationSeconds, 1.0 / Dsp.RATE)
+            // A finite probe's durationSeconds is its own sample count over RATE, so comparing the two could
+            // not fail. The length comes from the render's plan instead: the latest layer's end plus the
+            // engine's 35 ms tail pad, to the frame (measured within half a frame on all three voices).
+            val planned = p.layerEndSeconds.values.max() + .035
+            assertEquals(planned, p.samples.size.toDouble() / Dsp.RATE, 1.0 / Dsp.RATE, "$voice finite render length is not its plan")
             val afterOnset = ((onset + .025) * Dsp.RATE).toInt()
             val afterTail = minOf(trail.size, ((onset + .25) * Dsp.RATE).toInt())
             assertTrue(rms(trail, afterOnset, afterTail) > .001, "$voice late independent trail was trimmed away")
@@ -201,7 +205,14 @@ class LacquerTest {
                 assertTrue(p.unwrappedSeamError < Keys.MAX_SEAM_ERROR,
                     "$voice MIDI $midi loop only closes after corrective wrapping: ${p.unwrappedSeamError}")
                 assertTrue(p.raw.all { it.isFinite() } && p.samples.all { it.isFinite() })
-                assertTrue(p.prerollCycles in 1..12, "$voice loop preroll is unbounded")
+                // The bar above is play()'s own check() and cannot fail first. This margin can: the two
+                // independently synthesized cycles agree at the join before any wrapping to at most 8.3e-7
+                // (PLUCK MIDI 36), so oscillators that miss whole cycles of the loop, or state still
+                // settling when the cycles end, fail here before the engine refuses at 1e-3. It does not
+                // guard the preroll count: every state settles inside the first cycle, and 0, 1, 2, 3 and
+                // 6 preroll cycles all measured the same 8.3e-7.
+                assertTrue(p.unwrappedSeamError < 1e-5,
+                    "$voice MIDI $midi consecutive cycles disagree at the join before the wrap: ${p.unwrappedSeamError}")
                 assertTrue(abs(FineTuning.cents(p.renderedHz, p.requestedHz)) < .5, "$voice loop coarsely detunes its root")
             }
             val articulation = aligned.layers.keys.maxOf { role ->
@@ -216,6 +227,26 @@ class LacquerTest {
         }
         println("LACQUER difficult HOLD: worst seam $worstSeam; smallest layer articulation distance $smallestArticulation")
         assertTrue(weakMixes.isEmpty(), weakMixes.joinToString("; "))
+    }
+
+    @Test
+    fun `held voices repeat their preceding cycle up to the frames the wrap writes`() {
+        // seamError, and the assertion on it above, compares the previous cycle's last 256 frames
+        // with the loop's last 256 after the wrap has copied the first over the second: zero by
+        // construction. unwrappedSeamError is real; play() check()s it below the same bar, and the
+        // test above holds it to its 1e-5 margin on the difficult corners. Here, at every voice's
+        // defaults and every looping preset, compare the preceding cycle with the exported loop on
+        // the 256 frames ending where the wrap starts writing, the last min(1280, cycle / 3).
+        val cases = LacquerVoice.entries.map { LacquerPatch("$it defaults", it, Lacquer.defaults(it) + ("HOLD" to 1f)) } +
+            LacquerPresets.all().filter { Lacquer.isLoop(it.macros.getValue("HOLD")) }
+        for (patch in cases) {
+            val p = Lacquer.renderProbe(patch.voice, patch.macros, patch.midi, patch.velocity, patch.profile, normalize = true)
+            val cycle = p.previousCycle.size
+            val seam = HeldSeams.beforeWrap(p.previousCycle, p.samples, cycle - minOf(1280, cycle / 3))
+            println("LACQUER HOLD ${patch.name}: exported seam before the wrap $seam over a $cycle-frame cycle")
+            assertTrue(seam < Keys.MAX_SEAM_ERROR,
+                "${patch.name} exported loop does not repeat its preceding cycle before the wrap: seam $seam")
+        }
     }
 
     @Test

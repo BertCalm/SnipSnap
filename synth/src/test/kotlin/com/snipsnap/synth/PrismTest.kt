@@ -182,7 +182,20 @@ class PrismTest {
         assertEquals(p.partialHz.size, p.groupIndices.size)
         assertTrue(p.partialHz.all { it.isFinite() && it > 0 && it < Dsp.RATE / 2.0 }, "$label out-of-band partial")
         assertTrue(p.partialWeights.all { it.isFinite() && it >= 0f }, "$label invalid spectral weights")
-        assertTrue(p.groupIndices.all { it in 0..5 }, "$label invalid spectral group")
+        // A group outside 0 until GROUPS cannot reach this check (synthesis indexes its five group
+        // envelopes with it and would fail first), so a range check here could never fail. Check the
+        // partition instead: Prism files partial indices 0-1, 2-4, 5-9, 10-17 and 18-31 under groups
+        // 0..4 and the bank keeps the partials in index order (the factory ratios rise with the index),
+        // dropping only those above its bandwidth. So the n partials kept are the first n, and each
+        // group holds exactly its share of them: [2, 3, 5, 8, 14] when all 32 are kept.
+        val bands = intArrayOf(2, 3, 5, 8, 14)
+        assertEquals(Prism.PARTIALS, bands.sum())
+        assertEquals(Prism.GROUPS, bands.size)
+        var first = 0
+        val expected = IntArray(Prism.GROUPS) { g -> (p.groupIndices.size - first).coerceIn(0, bands[g]).also { first += bands[g] } }
+        val counts = IntArray(Prism.GROUPS) { g -> p.groupIndices.count { it == g } }
+        assertContentEquals(expected, counts, "$label spectral groups ${counts.toList()} for ${p.groupIndices.size} partials, expected ${expected.toList()}")
+        assertEquals(p.groupIndices.sorted(), p.groupIndices.toList(), "$label spectral groups out of partial order")
         if (normalized) {
             assertTrue(peak(p.samples) <= .99001, "$label export clips")
             val loudness = Loudness.of(Snip(p.samples, channels = 1, sampleRate = Dsp.RATE))
