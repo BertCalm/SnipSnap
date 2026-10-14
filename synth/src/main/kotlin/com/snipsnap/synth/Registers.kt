@@ -33,6 +33,16 @@ data class RegistersProbe(
     val effectiveSpreadHz: Double,
     val motionHz: Double,
     val previousCycle: FloatArray? = null,
+    /** Model-3 PIPE airflow alone, conditioned like [samples] but before level matching. */
+    val airflowSamples: FloatArray? = null,
+    /** RMS over settled finite sustain (from 300 ms) or the complete exported held cycle. */
+    val airflowRms: Double = 0.0,
+    val bodyRms: Double = 0.0,
+    val airflowAnalysisStartFrame: Int = 0,
+    val airflowAnalysisEndFrame: Int = 0,
+    val airflowPreviousCycle: FloatArray? = null,
+    val airflowCycleError: Double? = null,
+    val airflowSeamError: Double? = null,
 )
 
 /**
@@ -47,7 +57,7 @@ data class RegistersProbe(
  * the same loop, with the carrier adjusted by substantially less than a tenth of a cent.
  */
 object Registers {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val LEGACY_MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
@@ -58,7 +68,7 @@ object Registers {
     private const val NOISE_PARTIALS = 28
     private const val TWO_PI = 2.0 * PI
 
-    fun supportsModel(model: Int): Boolean = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION
+    fun supportsModel(model: Int): Boolean = model in LEGACY_MODEL_VERSION..MODEL_VERSION
 
     fun macrosFor(voice: RegistersVoice): List<MacroSpec> = when (voice) {
         RegistersVoice.PIPE -> listOf(MacroSpec("TUNE", .5f), MacroSpec("COLOR", .28f),
@@ -291,6 +301,67 @@ object Registers {
 
     private fun finiteSeconds(m: Map<String, Float>): Double = 2.05 + .72 * m.getValue("HOLD") + .12 * m.getValue("AIR")
 
+    /**
+     * Soft sustained wind, separate from the accepted model-2 speaking burst. A dense seeded
+     * noise field feeds two low-pass shades and a gentle high-pass, so the result is warm air
+     * rather than a sparse oscillator hiss. A held field repeats its input period while the
+     * filters continue running through three genuinely synthesized cycles; their state is
+     * settled before the measured/exported cycles, and all pressure modulation is periodic.
+     */
+    private fun sustainedAirflow(body: FloatArray, hz: Double, motionHz: Double,
+        m: Map<String, Float>, seed: Int, loop: LoopPlan?): FloatArray? {
+        val air = m.getValue("AIR").toDouble()
+        if (air == 0.0) return null
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val motion = m.getValue("MOTION").toDouble()
+        val noise = Dsp.Noise(seed xor 0x41495233)
+        val period = loop?.let { FloatArray(it.frames * Dsp.OVERSAMPLE) { noise.next() } }
+        val warm = Dsp.OnePole(rate)
+        val bright = Dsp.OnePole(rate)
+        val low = Dsp.OnePole(rate)
+        val warmCut = (hz * 3.0).coerceIn(450.0, 2_600.0).toFloat()
+        val brightCut = (hz * 12.0).coerceIn(2_400.0, 9_000.0).toFloat()
+        val lowCut = (hz * .25).coerceIn(35.0, 240.0).toFloat()
+        val releaseSeconds = .28 + .16 * air
+        val releaseAt = finiteSeconds(m) - releaseSeconds
+        val out = FloatArray(body.size)
+        for (i in out.indices) {
+            val input = period?.get(i % period.size) ?: noise.next()
+            val shaded = .65f * warm.lp(input, warmCut) + .35f * bright.lp(input, brightCut)
+            val colored = shaded - low.lp(shaded, lowCut)
+            val t = i.toDouble() / rate
+            // A little space after the speaking transient keeps the first 80 ms unchanged,
+            // including the decimator's short lookahead. Full airflow arrives by 125 ms.
+            val envelope = if (loop != null) 1.0 else
+                smooth((t - .090) / .035) * (1.0 - smooth((t - releaseAt) / releaseSeconds))
+            val slowHz = loop?.let { 1.0 / it.seconds } ?: .37
+            val pressure = 1.0 + .035 * air * sin(TWO_PI * slowHz * t + .8) +
+                .025 * motion * sin(TWO_PI * motionHz * t + .31)
+            out[i] = (colored * envelope * pressure).toFloat()
+        }
+        val from = loop?.let { 2 * it.frames * Dsp.OVERSAMPLE } ?: (.300 * rate).roundToInt()
+        val until = loop?.let { 3 * it.frames * Dsp.OVERSAMPLE } ?: (releaseAt * rate).roundToInt()
+        val bodyRms = rms(body, from, until)
+        val flowRms = rms(out, from, until)
+        if (bodyRms <= 1e-12) { out.fill(0f); return out }
+        if (flowRms <= 1e-12) return out
+        // Default AIR .36 places wind about 28 dB below the body. The full control remains
+        // useful without becoming a noise bed; velocity follows the body's excitation level.
+        val relative = .040 * (air / .36).pow(.85)
+        val gain = bodyRms * relative / flowRms
+        for (i in out.indices) out[i] = (out[i] * gain).toFloat()
+        return out
+    }
+
+    private fun rms(samples: FloatArray, from: Int = 0, until: Int = samples.size): Double {
+        val first = from.coerceIn(0, samples.size)
+        val last = until.coerceIn(first, samples.size)
+        if (last == first) return 0.0
+        var energy = 0.0
+        for (i in first until last) energy += samples[i].toDouble() * samples[i]
+        return sqrt(energy / (last - first))
+    }
+
     private fun relativeError(a: FloatArray, b: FloatArray, start: Int = 0): Double {
         var error = 0.0
         var energy = 0.0
@@ -329,19 +400,40 @@ object Registers {
         // Postroll keeps resampler edges outside the evidence windows.
         val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds(m) * Dsp.RATE).roundToInt()
         val raw = synthesize(voice, m, v, b, hz, motion, frames, loop, model, seed)
+        val rawAirflow = if (model >= 3 && voice == RegistersVoice.PIPE) sustainedAirflow(raw, hz, motion, m, seed, loop) else null
+        if (rawAirflow != null) for (i in raw.indices) raw[i] += rawAirflow[i]
         val peak = raw.maxOfOrNull { abs(it.toDouble()) } ?: 0.0
         check(raw.all { it.isFinite() } && peak <= RAW_PEAK_CEILING) { "REGISTERS raw signal exceeded bound: $peak" }
         Tide.bandLimit(raw, Dsp.RATE * Dsp.OVERSAMPLE)
         val down = Dsp.decimate(raw, Dsp.RATE)
+        val flowDown = rawAirflow?.let {
+            Tide.bandLimit(it, Dsp.RATE * Dsp.OVERSAMPLE)
+            Dsp.decimate(it, Dsp.RATE)
+        }
         val previous = loop?.let { down.copyOfRange(it.frames, 2 * it.frames) }
         val samples = loop?.let { down.copyOfRange(2 * it.frames, 3 * it.frames) } ?: down
+        val airflow = flowDown?.let { flow -> loop?.let { flow.copyOfRange(2 * it.frames, 3 * it.frames) } ?: flow }
+        val airflowPrevious = flowDown?.let { flow -> loop?.let { flow.copyOfRange(it.frames, 2 * it.frames) } }
         if (loop == null) Dsp.fadeTail(samples)
+        if (loop == null && airflow != null) Dsp.fadeTail(airflow)
         val cycleError = previous?.let { relativeError(it, samples) }
         val seamError = previous?.let { relativeError(it, samples, (it.size - 256).coerceAtLeast(0)) }
         check(cycleError == null || cycleError < 1e-5) { "REGISTERS $voice cycle did not recur: $cycleError" }
         check(seamError == null || seamError < Keys.MAX_SEAM_ERROR) { "REGISTERS $voice loop did not close: $seamError" }
+        val airflowCycleError = airflowPrevious?.let { relativeError(it, requireNotNull(airflow)) }
+        val airflowSeamError = airflowPrevious?.let { relativeError(it, requireNotNull(airflow), (it.size - 256).coerceAtLeast(0)) }
+        check(airflowCycleError == null || airflowCycleError < 1e-5) { "REGISTERS airflow cycle did not recur: $airflowCycleError" }
+        check(airflowSeamError == null || airflowSeamError < Keys.MAX_SEAM_ERROR) { "REGISTERS airflow loop did not close: $airflowSeamError" }
+        val rmsFrom = if (loop != null) 0 else (.300 * Dsp.RATE).roundToInt()
+        val rmsUntil = if (loop != null) samples.size else
+            ((finiteSeconds(m) - (.28 + .16 * m.getValue("AIR"))) * Dsp.RATE).roundToInt()
+        val flowRms = airflow?.let { rms(it, rmsFrom, rmsUntil) } ?: 0.0
+        val bodySamples = if (airflow == null) samples else FloatArray(samples.size) { samples[it] - airflow[it] }
+        val bodyRms = rms(bodySamples, rmsFrom, rmsUntil)
         return RegistersProbe(samples, midi, requestedHz, hz, loop != null, loop?.frames,
-            peak, cycleError, seamError, spread, motion, previous)
+            peak, cycleError, seamError, spread, motion, previous, airflow, flowRms, bodyRms,
+            rmsFrom.coerceIn(0, samples.size), rmsUntil.coerceIn(0, samples.size),
+            airflowPrevious, airflowCycleError, airflowSeamError)
     }
 
     /** Match to SnipSnap's melodic reference while preserving the velocity gesture. */

@@ -257,8 +257,8 @@ class RegistersTest {
                 Registers.render(voice, macros, model = 2).samples)
         }
         val current = RegistersPatch("New speech", RegistersVoice.PIPE, emptyMap())
-        assertEquals(2, current.model)
-        assertEquals(2, RegistersPatch.fromJsonText(current.toJsonText()).model)
+        assertEquals(Registers.MODEL_VERSION, current.model)
+        assertEquals(Registers.MODEL_VERSION, RegistersPatch.fromJsonText(current.toJsonText()).model)
         val old = current.copy(model = 1)
         assertEquals(1, RegistersPatch.fromJsonText(old.toJsonText()).model)
         assertContentEquals(old.render().samples, RegistersPatch.fromJsonText(old.toJsonText()).render().samples)
@@ -268,7 +268,142 @@ class RegistersTest {
         assertContentEquals(old.render().samples, decoded.render().samples)
         assertTrue(Registers.supportsModel(1))
         assertTrue(Registers.supportsModel(2))
+        assertTrue(Registers.supportsModel(3))
         assertFalse(Registers.supportsModel(999))
         assertFailsWith<IllegalArgumentException> { Registers.probe(RegistersVoice.PIPE, model = 999) }
+    }
+
+    @Test
+    fun `model two reproduces float fixtures captured before sustained airflow edits`() {
+        // Captured from the compiled, accepted R2 renderer before model-3 source edits.
+        val fixtures = listOf(
+            Triple(RegistersVoice.PIPE, .35f, listOf(
+                "631cd1e82c487f0a7de15d5dc6b7ecc102490afdae49d158a47f6da76e638d73",
+                "a3e15917476629b24028b2f04a2735748c3cb3b207a790961b25777a4d7cb415")),
+            Triple(RegistersVoice.PIPE, 1f, listOf(
+                "beec4899c040215c1803faa99554ee31cccccbc265785a8440c2e1bfdd970cad",
+                "5c1f6056b09019f4e2de3d180f01d9549580b1ed13046cae638c6adddcc01e19")),
+            Triple(RegistersVoice.MUSETTE, .35f, listOf(
+                "3ed254e02112db3c96159d5f5457d275119e3dd36422656f7c852b76bfec5bf0",
+                "852b6824191bb89396ab7383a33182eb52f6b0b805927e4cd4ae7939cf73cbab")),
+            Triple(RegistersVoice.MUSETTE, 1f, listOf(
+                "321f531c21cfe685fd3f500f0aa26da915c6195d26ba72d453f2e4b2a39997a5",
+                "03f269f49e5bc9f27a395f576be9b0844d34650698a39549a06686b6a3ded8b8")),
+        )
+        for ((voice, hold, hashes) in fixtures) {
+            val macros = mapOf("HOLD" to hold)
+            assertEquals(hashes[0], sampleHash(Registers.probe(voice, macros, 60, 1f, model = 2).samples))
+            assertEquals(hashes[1], sampleHash(Registers.render(voice, macros, 60, 1f, model = 2).samples))
+        }
+        val expressive = mapOf("COLOR" to .55f, "AIR" to .72f, "EDGE" to .62f,
+            "SPREAD" to .62f, "MOTION" to .55f, "HOLD" to .35f)
+        assertEquals("d0f517ea6128b7858de6995386e71b1f2d378023f6bdc1a7d00e0bc98802f6a3",
+            sampleHash(Registers.probe(RegistersVoice.PIPE, expressive, 69, .7f, model = 2).samples))
+        assertEquals("0372cff7ec8ff024b92612685660564184d524148d1f99de727de0286e260b7b",
+            sampleHash(Registers.render(RegistersVoice.PIPE, expressive, 69, .7f, model = 2).samples))
+        val saved = RegistersPatch("Accepted speech", RegistersVoice.PIPE, emptyMap(), model = 2)
+        val decoded = RegistersPatch.fromJsonText(saved.toJsonText())
+        assertEquals(2, decoded.model)
+        assertContentEquals(saved.render().samples, decoded.render().samples)
+    }
+
+    private fun windowRms(samples: FloatArray, from: Int, until: Int): Double =
+        sqrt((from until until).sumOf { samples[it].toDouble() * samples[it] } / (until - from))
+
+    private fun assertBroadColoredAir(samples: FloatArray, hz: Double, from: Int) {
+        val n = 16384
+        val count = 8192
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) re[i] = samples[from + i] *
+            (.5 - .5 * cos(2 * PI * i / (count - 1))).toFloat()
+        Fft.forward(re, im)
+        val binHz = Dsp.RATE.toDouble() / n
+        val powers = DoubleArray(n / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        val bins = powers.indices.filter { it * binHz in 100.0..6_000.0 }
+        val total = bins.sumOf { powers[it] }
+        val offHarmonic = bins.filter { abs(it * binHz - (it * binHz / hz).roundToInt() * hz) > 12.0 }
+            .sumOf { powers[it] } / total
+        assertTrue(offHarmonic > .65, "airflow should add broad nonharmonic energy: $offHarmonic")
+        val active = bins.count { powers[it] > total / bins.size * .15 }
+        assertTrue(active > 400, "airflow is too spectrally sparse: $active active bins")
+        val high = powers.indices.filter { it * binHz > 10_000.0 }.sumOf { powers[it] }
+        assertTrue(high < total * .15, "airflow should remain colored rather than harsh high hiss")
+    }
+
+    @Test
+    fun `sustained pipe airflow preserves accepted attack and adds soft continuous colored energy`() {
+        for (midi in listOf(48, 60, 69)) {
+            val old = Registers.probe(RegistersVoice.PIPE, midi = midi, model = 2)
+            val current = Registers.probe(RegistersVoice.PIPE, midi = midi, model = 3)
+            val attackEnd = (.080 * Dsp.RATE).roundToInt()
+            assertContentEquals(old.samples.copyOf(attackEnd), current.samples.copyOf(attackEnd),
+                "MIDI $midi changed the accepted raw attack")
+            val flow = requireNotNull(current.airflowSamples)
+            assertEquals(current.samples.size, flow.size)
+            assertTrue(flow.take(attackEnd).all { it == 0f })
+            assertBroadColoredAir(flow, current.effectiveHz, (.300 * Dsp.RATE).roundToInt())
+            val from = current.airflowAnalysisStartFrame
+            val until = current.airflowAnalysisEndFrame
+            assertEquals((.300 * Dsp.RATE).roundToInt(), from)
+            val difference = FloatArray(current.samples.size) { current.samples[it] - old.samples[it] }
+            val differenceRms = windowRms(difference, from, until)
+            assertTrue(abs(differenceRms / current.airflowRms - 1.0) < 1e-4,
+                "MIDI $midi added-flow tap disagrees with actual waveform difference")
+            val relativeDb = 20 * ln(current.airflowRms / current.bodyRms) / ln(10.0)
+            println("PIPE MIDI $midi default sustained airflow/body RMS: $relativeDb dB")
+            assertTrue(relativeDb in -32.0..-25.0, "MIDI $midi airflow balance is $relativeDb dB")
+            // Every settled 100 ms interval must retain air, rather than another short puff.
+            val block = (.100 * Dsp.RATE).roundToInt()
+            for (start in from until until - block step block) {
+                val local = windowRms(flow, start, start + block)
+                assertTrue(local > current.airflowRms * .70 && local < current.airflowRms * 1.30,
+                    "MIDI $midi airflow is clumped around frame $start")
+            }
+            val release = flow.copyOfRange(until, flow.size)
+            assertTrue(windowRms(release, (release.size * .75).roundToInt(), release.size) < current.airflowRms * .15)
+            assertTrue(current.rawPeak <= Registers.RAW_PEAK_CEILING)
+        }
+        for (hold in listOf(.35f, 1f)) {
+            val macros = mapOf("AIR" to 0f, "HOLD" to hold)
+            assertContentEquals(Registers.probe(RegistersVoice.PIPE, macros, model = 2).samples,
+                Registers.probe(RegistersVoice.PIPE, macros, model = 3).samples, "AIR 0 must bypass flow exactly")
+            assertContentEquals(Registers.render(RegistersVoice.PIPE, macros, model = 2).samples,
+                Registers.render(RegistersVoice.PIPE, macros, model = 3).samples)
+        }
+    }
+
+    @Test
+    fun `dense held airflow recurs independently while musette stays unchanged`() {
+        for (midi in listOf(48, 60, 69)) {
+            val macros = mapOf("AIR" to .36f, "SPREAD" to .7f, "MOTION" to .8f, "HOLD" to 1f)
+            val old = Registers.probe(RegistersVoice.PIPE, macros, midi, model = 2)
+            val current = Registers.probe(RegistersVoice.PIPE, macros, midi, model = 3)
+            assertEquals(old.loopFrames, current.loopFrames)
+            assertEquals(old.effectiveHz, current.effectiveHz)
+            assertEquals(old.effectiveSpreadHz, current.effectiveSpreadHz)
+            assertEquals(old.motionHz, current.motionHz)
+            assertEquals(0, current.airflowAnalysisStartFrame)
+            assertEquals(current.samples.size, current.airflowAnalysisEndFrame)
+            assertTrue(current.airflowRms > 0.0)
+            assertTrue(20 * ln(current.airflowRms / current.bodyRms) / ln(10.0) in -32.0..-25.0)
+            assertTrue(requireNotNull(current.cycleError) < 1e-5)
+            assertTrue(requireNotNull(current.seamError) < Keys.MAX_SEAM_ERROR)
+            assertTrue(requireNotNull(current.airflowCycleError) < 1e-5)
+            assertTrue(requireNotNull(current.airflowSeamError) < Keys.MAX_SEAM_ERROR)
+            val previousFlow = requireNotNull(current.airflowPreviousCycle)
+            assertFalse(previousFlow === current.airflowSamples)
+            assertEquals(requireNotNull(current.airflowSamples).size, previousFlow.size)
+            val previous = requireNotNull(current.previousCycle)
+            assertFalse(previous === current.samples)
+            assertTrue(energy(FloatArray(current.samples.size) { current.samples[it] - old.samples[it] }) > 1e-5)
+            for (hold in listOf(.35f, 1f)) {
+                val reedMacros = macros + ("HOLD" to hold)
+                assertContentEquals(Registers.probe(RegistersVoice.MUSETTE, reedMacros, midi, model = 2).samples,
+                    Registers.probe(RegistersVoice.MUSETTE, reedMacros, midi, model = 3).samples)
+                assertContentEquals(Registers.render(RegistersVoice.MUSETTE, reedMacros, midi, model = 2).samples,
+                    Registers.render(RegistersVoice.MUSETTE, reedMacros, midi, model = 3).samples)
+            }
+        }
     }
 }

@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#201c1b">
-  <meta name="description" content="Hear more PIPE chiff in Registers for SnipSnap. Compare original and revised Kotlin renders at matched listening levels, then explore PIPE and MUSETTE and keep your listening notes.">
+  <meta name="description" content="Hear soft sustained PIPE airflow in Registers for SnipSnap. Compare Current R2 and With airflow R3 Kotlin renders, revisit the chiff study, and keep your listening notes.">
   <title>Registers — SnipSnap listening bench</title>
-  <link rel="stylesheet" href="styles.css?r2-chiff">
-  <script src="app.js?r2-chiff" defer></script>
+  <link rel="stylesheet" href="styles.css?v=r3-airflow">
+  <script src="app.js?v=r3-airflow" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#bench">Skip to the listening bench</a>
@@ -20,10 +20,10 @@
   <main>
     <section class="hero wrap" aria-labelledby="page-title">
       <div class="hero-main">
-        <p class="eyebrow"><span class="status-led" aria-hidden="true"></span> ENGINE STUDY <span class="eyebrow-separator">/</span> REVISION 02</p>
+        <p class="eyebrow"><span class="status-led" aria-hidden="true"></span> ENGINE STUDY <span class="eyebrow-separator">/</span> REVISION 03</p>
         <h1 id="page-title">Registers<span>.</span></h1>
-        <p class="hero-line">Pipes with more chiff.<br> Reeds in motion.</p>
-        <p class="hero-description">The PIPE attack gets more chiff. Compare twelve original and revised pairs at matched listening levels, then explore the full pipe and Musette study.</p>
+        <p class="hero-line">A little air in the pipe.<br> Reeds in motion.</p>
+        <p class="hero-description">The accepted PIPE speech now carries a little sustained airflow. Compare Current R2 and With airflow R3, then revisit the chiff study and the full pipe and Musette library.</p>
         <a class="hero-action" href="#bench">Listen to the study <span aria-hidden="true">↓</span></a>
       </div>
       <div class="identity-panel" aria-label="Two voices in this audition: PIPE for wind, body and speech; MUSETTE for reeds, bellows and beating">
@@ -42,15 +42,15 @@
     </section>
 
     <section class="bench wrap" id="bench" aria-labelledby="bench-title">
-      <div class="section-heading"><div><p class="eyebrow">01 / AUDITION</p><h2 id="bench-title">Hear the first speech.</h2></div><button type="button" class="text-button" id="export-notes">Export listening notes <span aria-hidden="true">↗</span></button></div>
-      <p class="bench-intro">Compare Original R1 with More chiff R2. Focus on the first breath of a finite PIPE note. Held tones start after the attack and are outside this chiff comparison.</p>
+      <div class="section-heading"><div><p class="eyebrow">01 / AUDITION</p><h2 id="bench-title">Stay with the pipe.</h2></div><button type="button" class="text-button" id="export-notes">Export listening notes <span aria-hidden="true">↗</span></button></div>
+      <p class="bench-intro">Hear the airflow through the body and the held tone. Current R2 and With airflow R3 share the accepted chiff at the start; the AIR control sets the sustained air.</p>
       <div id="load-status" class="load-status" role="status">Opening the render library…</div>
       <div id="load-error" class="load-error" hidden><h3>The render library could not open.</h3><p id="load-error-detail"></p><button type="button" id="retry-load" class="primary-button">Try again</button><a href="manifest.json">Open the manifest</a></div>
 
       <div id="loaded-content" hidden>
         <section class="revision-study" id="revision-study" aria-labelledby="revision-title" hidden>
-          <div class="revision-copy"><p class="eyebrow">R1 → R2 / PIPE ATTACK</p><h3 id="revision-title">More chiff. Same pipe.</h3><p id="revision-description">Compare the first speech at the same pitch and gesture. Matched playback keeps the listening level consistent.</p></div>
-          <div class="revision-controls"><label for="revision-pair">Choose a comparison</label><select id="revision-pair"></select><div class="revision-buttons" role="group" aria-label="Play original or revised PIPE"><button type="button" id="revision-original" aria-pressed="false"><span>Original</span><small>R1</small><i aria-hidden="true">▶</i></button><button type="button" id="revision-revised" aria-pressed="true"><span>More chiff</span><small>R2</small><i aria-hidden="true">▶</i></button></div></div>
+          <div class="revision-copy"><p class="eyebrow" id="revision-eyebrow">R2 → R3 / SUSTAINED AIR</p><h3 id="revision-title">A little air in the pipe.</h3><p id="revision-description">Compare the body and the held tone at the same pitch and gesture. Matched playback keeps the listening level consistent.</p></div>
+          <div class="revision-controls"><label for="revision-pair">Choose a comparison</label><select id="revision-pair"></select><div class="revision-buttons" role="group" aria-label="Play earlier or revised PIPE"><button type="button" id="revision-original" aria-pressed="false"><span>Current</span><small>R2</small><i aria-hidden="true">▶</i></button><button type="button" id="revision-revised" aria-pressed="true"><span>With airflow</span><small>R3</small><i aria-hidden="true">▶</i></button></div></div>
         </section>
         <div class="listening-desk">
           <section class="player" aria-label="Shared audio player">
@@ -79,11 +79,11 @@
         <div class="library-heading"><div><h3 id="section-title">First listen</h3><p id="section-description"></p></div><span id="clip-count" class="clip-count"></span></div>
         <div class="filters" id="library-filters"><label>Voice <select id="voice-filter"><option value="">All voices</option></select></label><label>Pitch <select id="note-filter"><option value="">All pitches</option></select></label><label id="macro-filter-wrap" hidden>Control <select id="macro-filter"><option value="">All controls</option></select></label><button type="button" class="text-button reset-filters" id="reset-filters">Reset filters</button></div>
         <div class="clip-grid" id="clip-grid"></div><p class="empty-filter" id="empty-filter" hidden>No renders match these filters. Try another voice or pitch.</p>
-        <details class="legacy-history" id="legacy-history" hidden><summary>Original R1 listening notes <span id="legacy-count"></span></summary><p>Your earlier notes remain unchanged. Original audio and identical renders show those notes in the player; new edits save separately for this revision. Export includes the complete R1 review history.</p><div id="legacy-list"></div></details>
+        <details class="legacy-history" id="legacy-history" hidden><summary>Earlier R1 & R2 listening notes <span id="legacy-count"></span></summary><p>Your earlier notes remain unchanged. Preserved audio and identical renders show those notes in the player; new edits save separately for this revision. Export includes the complete R1 and R2 review histories.</p><div id="legacy-list"></div></details>
       </div>
     </section>
 
-    <section class="guide wrap" aria-labelledby="guide-title"><div class="guide-intro"><p class="eyebrow">02 / WHAT TO LISTEN FOR</p><h2 id="guide-title">Speech.<br> Beating.<br> Belonging.</h2><p>This prototype needs a listening verdict. A convincing mechanism is a starting point; a useful SnipSnap voice is the goal.</p></div><div class="guide-items"><article><span>01</span><div><h3>Let PIPE speak.</h3><p>Listen to the first breath and the edge of the attack. Does the extra chiff help the pipe speak clearly across pitch, gesture, and velocity?</p></div></article><article><span>02</span><div><h3>Stay with MUSETTE.</h3><p>Hear the reeds moving against one another. Does the beating feel alive? Does the bellows gesture change the body?</p></div></article><article><span>03</span><div><h3>Check the boundaries.</h3><p>Held renders begin at the settled tone, without an onset. Velocity and control studies expose one change at a time; existing organs provide the reference.</p></div></article></div></section>
+    <section class="guide wrap" aria-labelledby="guide-title"><div class="guide-intro"><p class="eyebrow">02 / WHAT TO LISTEN FOR</p><h2 id="guide-title">Speech.<br> Beating.<br> Belonging.</h2><p>This prototype needs a listening verdict. A convincing mechanism is a starting point; a useful SnipSnap voice is the goal.</p></div><div class="guide-items"><article><span>01</span><div><h3>Let PIPE breathe.</h3><p>Listen past the first speech. Does a little colored air make the body feel alive while the pitch stays clear? Compare AIR settings, then hold the tone.</p></div></article><article><span>02</span><div><h3>Stay with MUSETTE.</h3><p>Hear the reeds moving against one another. Does the beating feel alive? Does the bellows gesture change the body?</p></div></article><article><span>03</span><div><h3>Check the boundaries.</h3><p>Held renders begin at the settled tone, without an onset. Revisit Original R1 / More chiff R2 to hear the earlier attack change; existing organs provide the reference.</p></div></article></div></section>
   </main>
 
   <footer class="footer wrap"><div><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap">SNIP/SNAP</a><p>Registers · a pipe & reed audition</p></div><div class="footer-links"><a href="manifest.json">Render manifest ↗</a><a href="prototype.patch" download>Prototype source patch ↓</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering ↗</a><span id="manifest-revision">Prototype · awaiting sonic approval</span></div></footer>

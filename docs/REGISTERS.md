@@ -13,16 +13,16 @@ approximations, not measured historical instruments or physical free-reed models
 Neither uses external samples or a room effect.
 
 The [published audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site)
-now opens with Original / More chiff comparisons. The first listening verdict
+includes Original / More chiff comparisons. The first listening verdict
 asked for more PIPE chiff. Renderer model 2 adds a separate short speaking burst
 to finite PIPE notes. A seeded noise source feeds a note-relative presence band
 and broad air band, with a 2 ms rise and smooth ending. EDGE sets its strength;
 EDGE zero bypasses the addition. The burst lasts roughly 55–60 ms. The original
 tone and wind path remain intact, including the original quieter chiff.
 
-Model 1 remains supported for old recipes. Missing model fields decode to model
-1; new recipes explicitly save model 2. MUSETTE and held PIPE audio retain their
-original bytes. Held material begins at the settled tone and therefore has no
+Models 1 and 2 remain supported for old recipes. Missing model fields decode to
+model 1; new recipes explicitly save their current renderer model. Model 2 left
+MUSETTE and held PIPE audio unchanged. Held material begins at the settled tone and therefore has no
 chiff onset. Twelve comparison pairs preserve the published R1 WAVs byte for
 byte and compare them with model 2 at the same settings and listening level.
 Earlier browser notes remain visible with their original revision and audio
@@ -35,6 +35,28 @@ defaults, 3.61 dB for the restrained gesture and 13.45 dB for expressive speech.
 The archived comparison metrics use their separately documented first-80-ms
 window; different bands and windows produce different numbers. These are
 transient measurements, not a sonic approval.
+
+## Sustained airflow — R3
+
+The next listening verdict accepted the stronger attack and asked for a little
+airflow through the pipe's sustain. Model 3 adds a separate soft wind field under
+PIPE. Dense deterministic noise passes through warm and bright low-pass shades
+and a gentle high-pass, with restrained pressure variation. AIR controls its
+strength; zero bypasses the new layer. The initial model-2 speaking burst and
+harmonic source remain intact. Finite airflow rises from 90–125 ms and follows
+the note's release, leaving the first 80 ms of raw conditioned audio unchanged.
+
+The default airflow is calibrated to approximately 28 dB below the body RMS in
+the settled region. Held notes use a full-period seeded noise field and continuous
+filter state through preroll and independently synthesized candidate cycles.
+The noise must recur with the carrier and modulation before export. The manifest
+records aligned airflow/body RMS taps and their analysis bounds.
+
+The current audition opens with twelve Current R2 / With airflow R3 pairs,
+including two held notes. The earlier R1/R2 chiff comparison remains available
+with its archived WAVs. All three review histories retain their sound identity;
+new feedback stays in the R3 namespace. The original models replay their earlier
+sounds rather than inheriting the new wind layer.
 
 ## Playing and saving
 
@@ -73,7 +95,7 @@ cross-note pressure interactions are not part of this sample renderer.
 
 ```text
 ./gradlew :synth:test --tests '*RegistersTest*'
-./gradlew :synth:generateRegistersAudition -PregistersBaseline=/path/to/verified-r1-archive
+./gradlew :synth:generateRegistersAudition -PregistersBaseline=/path/to/verified-r1-archive -PregistersR2Baseline=/path/to/verified-r2-archive
 ```
 
 The output is `testkit/registers-audition/`: actual Kotlin-generated mono
@@ -88,7 +110,7 @@ material. Listening notes remain in the browser and can be exported as JSON.
 Numerical checks establish reproducibility, bounds and loop behavior; phone/MPC
 playback and sonic approval remain separate checks.
 
-The R2 pack contains 56 current cases plus twelve preserved original PIPE clips,
+The R2 pack contained 56 current cases plus twelve preserved original PIPE clips,
 for 68 listening positions and 136 WAVs. The generator verifies the supplied R1
 manifest, audio, recipes and archived source fingerprints before creating pairs.
 The original archive is read only. First-80-ms RMS and band energy are measured

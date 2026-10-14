@@ -6,7 +6,8 @@ import com.snipsnap.json.JsonValue
 
 /**
  * Versioned standalone audition recipe. It intentionally does not implement [Patch]: listening
- * comes before app/kit/export registration. All macro defaults are saved in full for replay.
+ * comes before app/kit/export registration. All macro defaults and the synthesis model are saved
+ * in full for replay. Missing model metadata means legacy model 1, never the current default.
  */
 data class RegistersPatch(
     val name: String,

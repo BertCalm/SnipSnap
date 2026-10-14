@@ -10,8 +10,9 @@ tasks.register<JavaExec>("generateRegistersAudition") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.RegistersAuditionGenerator")
     workingDir = projectDir
-    args("${rootDir}/testkit/registers-audition")
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r3")
     if (project.hasProperty("registersBaseline")) args("--baseline=${project.property("registersBaseline")}")
+    (project.findProperty("registersR2Baseline") ?: project.findProperty("registersPrevious"))?.let { args("--previous=$it") }
 }
 
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
