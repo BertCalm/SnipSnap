@@ -9,6 +9,7 @@ import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
+import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
@@ -31,6 +32,8 @@ import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -86,20 +89,48 @@ import kotlin.random.Random
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
+ * OPENSKY also accepts a saved `--patch <json>`, `--gate S`, and `--dry` /
+ * `--wet`. The complete source timbre survives those overrides; OPENSKY HALO
+ * can become a held instrument with `--instrument [--release S]`.
  */
 object SynthCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
-            boolean = setOf("--all", "--instrument", "--drone"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate"),
+            boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
             ?: throw CliError("synth wants an engine and a voice: snipsnap synth TINES BELL --all --out <dir>")
         val voice = opts.positional.getOrNull(1)?.uppercase()
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
+
+        val skyFlags = listOf("--patch", "--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
+        if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
+            throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
+        }
+        if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
+        val gateOverride = opts["--gate"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in OpenSkyPatch.GATE_SECONDS_MIN..OpenSkyPatch.GATE_SECONDS_MAX }
+                ?: throw CliError("--gate wants finite seconds in ${OpenSkyPatch.GATE_SECONDS_MIN}..${OpenSkyPatch.GATE_SECONDS_MAX}, got '$raw'")
+        }
+        val wetOverride: Boolean? = when {
+            opts.has("--dry") -> false
+            opts.has("--wet") -> true
+            else -> null
+        }
+        val savedSky = opts["--patch"]?.let { path ->
+            if (opts.has("--all") || opts["--preset"] != null) throw CliError("--patch supplies one sound - cannot combine with --preset or --all")
+            val patch = try {
+                OpenSkyPatch.fromJsonText(File(path).readText())
+            } catch (e: Exception) {
+                throw CliError("could not read --patch '$path': ${e.message ?: "invalid OPENSKY patch"}")
+            }
+            if (patch.voiceName != voice) throw CliError("--patch records OPENSKY ${patch.voiceName}, requested $voice")
+            patch
+        }
 
         val presets = Presets.forVoice(engine, voice)
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
@@ -108,7 +139,7 @@ object SynthCommand {
         val drone = opts.has("--drone")
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (instrument || drone) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine != OpenSkyPatch.ENGINE)) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
@@ -121,6 +152,7 @@ object SynthCommand {
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                OpenSkyPatch.ENGINE -> OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
                 SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
@@ -132,7 +164,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and OPENSKY, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -153,9 +185,18 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine != "RESIN") throw CliError("only RESIN exports a keys instrument here - try snipsnap synth RESIN BRASS --instrument")
+            if (engine != "RESIN" && engine != OpenSkyPatch.ENGINE) throw CliError("only RESIN and OPENSKY HALO export a keys instrument here - try snipsnap synth RESIN BRASS --instrument")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
+            if (engine == OpenSkyPatch.ENGINE) {
+                if (!OpenSkyPadMaker.supports(OpenSkyVoice.valueOf(voice))) throw CliError("--instrument supports OPENSKY HALO; $voice is a finite sound")
+                if (opts["--attack"] != null) throw CliError("--attack is RESIN only; OPENSKY HALO keeps the patch's authored arrival")
+                if (gateOverride != null) throw CliError("--gate shapes a finite OPENSKY sound - cannot combine with --instrument")
+            }
         }
+        val skyInstrumentRelease = if (instrument && engine == OpenSkyPatch.ENGINE) opts["--release"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in OpenSkyPadMaker.RELEASE_MIN_SECONDS..OpenSkyPadMaker.RELEASE_MAX_SECONDS }
+                ?: throw CliError("--release wants finite seconds in ${OpenSkyPadMaker.RELEASE_MIN_SECONDS}..${OpenSkyPadMaker.RELEASE_MAX_SECONDS}, got '$raw'")
+        } else null
         val droneFlags = listOf("--root", "--motion", "--rate", "--bpm", "--bars", "--loop").filter { opts[it] != null }
         if (!drone && droneFlags.isNotEmpty()) {
             throw CliError("${droneFlags.joinToString()} shape a drone - add --drone")
@@ -168,9 +209,9 @@ object SynthCommand {
 
         val dirArg = opts["--out"] ?: throw CliError("--out wants a folder to write the wavs into")
         val dir = File(dirArg)
-        if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
 
         val chosen: List<Patch> = (when {
+            savedSky != null -> listOf(savedSky)
             opts.has("--all") -> presets
             opts["--preset"] != null -> {
                 val n = opts["--preset"]!!.toIntOrNull()
@@ -204,6 +245,7 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OpenSkyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
@@ -226,7 +268,9 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is SkitterPatch) {
+            if (withNote is OpenSkyPatch) {
+                withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
+            } else if (withNote is SkitterPatch) {
                 val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
                 if (scrambleRandom == null) withSeed else withSeed.copy(
                     name = "Scrambled ${withSeed.name}",
@@ -235,6 +279,13 @@ object SynthCommand {
             } else withNote
         }
 
+        val skyInstrumentSpec = if (instrument && engine == OpenSkyPatch.ENGINE) try {
+            OpenSkyPadMaker.Spec(chosen.single() as OpenSkyPatch, releaseSeconds = skyInstrumentRelease ?: OpenSkyPadMaker.RELEASE.default)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("--instrument / --midi: ${e.message ?: "invalid OPENSKY instrument"}")
+        } else null
+        if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
+        if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
         if (drone) return makeDrone(voice, chosen.single(), opts, dir, out)
 
@@ -248,9 +299,28 @@ object SynthCommand {
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
             FileOutputStream(file).use { WavWriter.write(it, snip) }
-            out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s" + if (landing == null) "" else "  (lands with ENSEMBLE, stereo)")
+            val mode = when {
+                patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
+                landing != null -> "  (lands with ENSEMBLE, stereo)"
+                else -> ""
+            }
+            out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s$mode")
         }
         out.println("${chosen.size} rendered into ${dir.path}")
+        return 0
+    }
+
+    private fun makeOpenSkyInstrument(spec: OpenSkyPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val patch = spec.patch
+        val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
+        val midis = OpenSkyPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            OpenSkyPadMaker.renderZone(spec, midi)
+        }
+        OpenSkyPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} zones, each holds - RELEASE ${OpenSkyPadMaker.secondsLabel(spec.releaseSeconds)}, stereo")
         return 0
     }
 

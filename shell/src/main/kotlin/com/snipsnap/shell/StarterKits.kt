@@ -215,6 +215,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.murmur() },
         Starter(
+            "opensky", "OPENSKY",
+            "Wide anthems, clear leads, glowing pads and bells in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.openSky() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

@@ -352,6 +352,24 @@ object Keys {
     fun prismPadMidis(voice: PrismVoice): List<Int> =
         (0..Prism.TUNE_SEMITONES step 3).map { Prism.rootMidi(voice) + it }
 
+    /** Nine minor-third HALO zones centred on the saved native MIDI note. */
+    fun openSkyPadMidis(voice: OpenSkyVoice, rootMidi: Int = OpenSky.DEFAULT_MIDI): List<Int> =
+        OpenSkyKeys.midis(voice, rootMidi)
+
+    /** OPENSKY's actual onset and continuous wet state followed by a measured
+     * sustain region. The instrument program owns the release fade.
+     */
+    fun openSkyPad(
+        voice: OpenSkyVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        velocity: Float = 1f,
+        timbre: OpenSkyTimbre = OpenSkyTimbre(),
+        wet: Boolean = true,
+        loopSeconds: Float = OpenSkyKeys.DEFAULT_LOOP_SECONDS,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote = OpenSkyKeys.render(voice, macros, midi, velocity, timbre, wet, loopSeconds, cancelled)
+
     /**
      * A held additive zone at exact MIDI pitch. HOLD is forced to its
      * seamless region and the saved partial template and velocity remain

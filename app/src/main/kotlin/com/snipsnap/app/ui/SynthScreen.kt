@@ -96,6 +96,7 @@ import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
+import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -176,6 +177,10 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.OpenSky
+import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OpenSkyPresets
+import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -290,7 +295,7 @@ fun SynthScreen(
     shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
-    // MAKE INSTRUMENT (RESIN, SIREN or GLINT, held) writes beside the kits; App's instrument
+    // MAKE INSTRUMENT (RESIN, SIREN, GLINT or OPENSKY HALO, held) writes beside the kits; App's instrument
     // list is not reactive to that folder, so this tells it to re-read -
     // PadSheetScreen's own parameter of the same name, for the same reason.
     onShelfAssetWritten: () -> Unit,
@@ -337,7 +342,8 @@ fun SynthScreen(
     // trajectory configuration, SPOOL its tape-machine configuration and
     // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
     // schedules, EMBOUCHURE its player gesture, and MURMUR its operator routing, formant
-    // targets and envelope definitions. Keep that state through preview, editing, saving and placing by
+    // targets and envelope definitions. OPENSKY retains its authored timbre, note,
+    // velocity, gate, effect mode and model. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
     val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
@@ -538,8 +544,8 @@ fun SynthScreen(
         // (which does join, bounded) is reserved for ON_STOP and teardown,
         // where a one-time bounded wait is the documented intent.
         voicePlayer?.stop()
-        val mono = Cleanup.toMono(target)
-        val v = TapeVoice(mono.samples, mono.sampleRate)
+        val heard = if (engine == Engine.OPENSKY) target else Cleanup.toMono(target)
+        val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
         v.start(0)
     }
@@ -554,9 +560,16 @@ fun SynthScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
+            val previewJob = coroutineContext[Job]
             val rendered = runInterruptible(Dispatchers.Default) {
-                val dry = if (loadedPatch != null) buildCurrentPatch(engine.patchDisplayName(voice)).render()
-                    else engine.render(voice, macros)
+                val patch = if (loadedPatch != null || engine == Engine.OPENSKY) buildCurrentPatch(engine.patchDisplayName(voice)) else null
+                val dry = when {
+                    patch is OpenSkyPatch -> patch.render {
+                        previewJob?.isActive == false || Thread.currentThread().isInterrupted
+                    }
+                    patch != null -> patch.render()
+                    else -> engine.render(voice, macros)
+                }
                 // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
                 // STRINGS / DARK STRINGS) previews through the ENSEMBLE it will land
                 // with, so the audition is the pad and not the bare saw stack. Every
@@ -694,12 +707,13 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----
+    // ---- MAKE INSTRUMENT: RESIN, SIREN, GLINT and OPENSKY HALO, held ----
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN),
     // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
     // (SIREN) and docs/superpowers/specs/2026-09-29-glint-paths-design.md §3
-    // (GLINT). Zones render off the main thread, in parallel, with a
-    // progress bar the whole way (the author's call: a slow phone shows
+    // (GLINT). Zones render off the main thread, with OPENSKY's larger
+    // wet-state renders serialized and the other makers in parallel. A
+    // progress bar stays live (the author's call: a slow phone shows
     // work, it does not drop zones); the package is written once every zone
     // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
@@ -713,6 +727,10 @@ fun SynthScreen(
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
+    val supportsHeldInstrument = engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT ||
+        (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice))
+    val heldInstrumentReady = engine != Engine.OPENSKY ||
+        OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
     val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
     val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
     LaunchedEffect(makingInstrument, holdBase) {
@@ -727,16 +745,20 @@ fun SynthScreen(
         }
     }
 
-    // MAKE INSTRUMENT's three engines behind one shape, so the render/export
+    // MAKE INSTRUMENT's held engines behind one shape, so the render/export
     // orchestration below (identical for all) is written once: RESIN's
     // spec carries an ATTACK; SIREN's LOOP render has none to carry
     // (Keys.sirenPad's own KDoc) and neither does GLINT's (its onset and
-    // breath come from the patch), so [HeldSpec.Siren] and [HeldSpec.Glint]
-    // simply have none.
+    // breath come from the patch). OPENSKY HALO likewise keeps its authored
+    // onset; those three specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, holdRelease))
+        Engine.OPENSKY -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch
+            if (OpenSkyPadMaker.supports(patch)) HeldSpec.OpenSky(OpenSkyPadMaker.spec(patch, holdRelease)) else null
+        }
         else -> null
     }
 
@@ -775,15 +797,29 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    midis.map { midi ->
-                        async(Dispatchers.Default) {
-                            // CANCEL cancels the scope; each zone asks and stops,
-                            // rather than all nine running on for seconds.
-                            val note = spec.renderZone(midi) { !isActive }
+                    if (spec is HeldSpec.OpenSky) {
+                        // Its settled wet state has a larger working buffer.
+                        // Render one zone at a time so phones never hold nine
+                        // independent oversampled states at once; CANCEL and
+                        // the same zone counter remain live between them.
+                        midis.map { midi ->
+                            val note = withContext(Dispatchers.Default) {
+                                spec.renderZone(midi) { !isActive }
+                            }
                             withContext(Dispatchers.Main) { holdDone += 1 }
                             note
                         }
-                    }.awaitAll()
+                    } else {
+                        midis.map { midi ->
+                            async(Dispatchers.Default) {
+                                // CANCEL cancels the scope; each zone asks and stops,
+                                // rather than all nine running on for seconds.
+                                val note = spec.renderZone(midi) { !isActive }
+                                withContext(Dispatchers.Main) { holdDone += 1 }
+                                note
+                            }
+                        }.awaitAll()
+                    }
                 }
                 // Past here the write lands even under CANCEL: a package half
                 // written is worse than a whole one the player can bin.
@@ -1176,6 +1212,75 @@ fun SynthScreen(
                     )
                 }
 
+                // OPENSKY recipes keep their source design outside the four macros.
+                // Edit the full patch so note, energy, gate and effects never reset
+                // its accepted timbre or the saved renderer model.
+                if (engine == Engine.OPENSKY) {
+                    val openSkyPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch
+                    val midiSpan = (OpenSkyPatch.MIDI_MAX - OpenSkyPatch.MIDI_MIN).toFloat()
+                    val gateSpan = OpenSkyPatch.GATE_SECONDS_MAX - OpenSkyPatch.GATE_SECONDS_MIN
+                    MacroSlider(
+                        label = "NOTE",
+                        value = (openSkyPatch.midi - OpenSkyPatch.MIDI_MIN) / midiSpan,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(openSkyPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+                                    .copy(midi = (OpenSkyPatch.MIDI_MIN + value * midiSpan).roundToInt()
+                                        .coerceIn(OpenSkyPatch.MIDI_MIN, OpenSkyPatch.MIDI_MAX))
+                        },
+                    )
+                    MacroSlider(
+                        label = "VEL",
+                        value = openSkyPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    MacroSlider(
+                        label = "GATE",
+                        value = (openSkyPatch.gateSeconds - OpenSkyPatch.GATE_SECONDS_MIN) / gateSpan,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = String.format(java.util.Locale.ROOT, "%.2f s", openSkyPatch.gateSeconds),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+                                    .copy(gateSeconds = (OpenSkyPatch.GATE_SECONDS_MIN + gateSpan * value)
+                                        .coerceIn(OpenSkyPatch.GATE_SECONDS_MIN, OpenSkyPatch.GATE_SECONDS_MAX))
+                        },
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (wet in listOf(false, true)) {
+                            ActionButton(
+                                if (wet) "WET" else "DRY",
+                                scheme,
+                                enabled = true,
+                                lit = openSkyPatch.wet == wet,
+                                modifier = Modifier.weight(1f).semantics { selected = openSkyPatch.wet == wet },
+                                accessibilityLabel = if (wet) "OPENSKY WET" else "OPENSKY DRY",
+                            ) {
+                                touched = true
+                                currentPresetByVoice.remove(engine to voice)
+                                loadedPatchesByVoice[engine to voice] =
+                                    (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch).copy(wet = wet)
+                            }
+                        }
+                    }
+                }
+
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
@@ -1285,21 +1390,29 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
-                // RESIN, SIREN or GLINT, held: the sound as a keys instrument -
-                // the three engines whose held render closes its own loop.
+                // RESIN, SIREN, GLINT or OPENSKY HALO, held: the sound as a
+                // keys instrument when its renderer closes its own loop.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
                 // always substitutes the loop-and-release envelope, the
                 // same way it ignores RESIN's one-shot DECAY.
-                if (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT) {
+                if (supportsHeldInstrument) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
-                        enabled = true,
+                        enabled = heldInstrumentReady,
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "MAKE INSTRUMENT",
                     ) {
                         makingInstrument = true
+                    }
+                    if (!heldInstrumentReady) {
+                        TapeText(
+                            "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}",
+                            TapeType.pixelSmall,
+                            scheme.ink2.tape,
+                            maxLines = 2,
+                        )
                     }
                 }
                 // RESIN or SIREN, droning: the sound as a loop-grid track,
@@ -1402,7 +1515,7 @@ fun SynthScreen(
             BackHandler(onBack = closeBin)
         }
 
-        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT)) {
+        if (makingInstrument && supportsHeldInstrument) {
             // Recomputed here rather than cached: cheap (a Spec is a data
             // class, no rendering), and it must reflect whatever the panel
             // holds right now, the same as every value below it.
@@ -1716,23 +1829,23 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----------
+// ---------- MAKE INSTRUMENT: RESIN, SIREN, GLINT and OPENSKY HALO, held ----------
 
 /**
- * MAKE INSTRUMENT's three engines behind one shape, so the render/export
+ * MAKE INSTRUMENT's held engines behind one shape, so the render/export
  * orchestration in [SynthScreen] (identical for all — render every zone,
  * show progress, write the package once every zone has landed) is written
  * once. RESIN's spec carries an ATTACK the sheet draws a slider for;
  * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc) and
  * neither does GLINT's (`Keys.glintPad`: the onset and the breath come from
- * the patch), so [Siren.hasAttack] and [Glint.hasAttack] are false and their
+ * the patch), nor OPENSKY HALO's authored onset. These expose only release, so their
  * slider never appears.
  */
 private sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
 
-    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec], never the raw stepper fractions again. */
+    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec]/[OpenSkyPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
     fun renderZone(midi: Int, cancelled: () -> Boolean): KeyNote
     fun preview(cancelled: () -> Boolean): Snip
@@ -1766,13 +1879,22 @@ private sealed interface HeldSpec {
         override fun preview(cancelled: () -> Boolean) = GlintPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<KeyNote>, destRoot: File) = GlintPadMaker.export(name, spec, notes, destRoot)
     }
+
+    class OpenSky(private val spec: OpenSkyPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OpenSkyPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${OpenSkyPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OpenSkyPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = OpenSkyPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = OpenSkyPadMaker.export(name, spec, notes, destRoot)
+    }
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN or GLINT): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT or OPENSKY HALO): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
- * slider for an engine with none to dial (SIREN, GLINT); RELEASE always shows,
+ * slider for an engine with none to dial (SIREN, GLINT, OPENSKY HALO); RELEASE always shows,
  * and [knobLabel] spells out whichever of the two apply in seconds. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says
@@ -2049,7 +2171,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, OPENSKY;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2082,6 +2204,7 @@ private enum class Engine {
         PITCHWHEEL -> PitchwheelVoice.entries
         REVEL -> RevelVoice.entries
         MURMUR -> MurmurVoice.entries
+        OPENSKY -> OpenSkyVoice.entries
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
@@ -2121,6 +2244,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
         REVEL -> Revel.macrosFor(voice as RevelVoice)
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
+        OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
@@ -2160,6 +2284,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
         REVEL -> Revel.defaults(voice as RevelVoice)
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
+        OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
@@ -2199,6 +2324,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
         REVEL -> Revel.scramble(voice as RevelVoice, random)
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
+        OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
@@ -2243,6 +2369,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
         REVEL -> Revel.render(voice as RevelVoice, macros)
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
+        OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
@@ -2288,6 +2415,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
+        OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
@@ -2327,6 +2455,7 @@ private enum class Engine {
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
         REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
+        OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)
