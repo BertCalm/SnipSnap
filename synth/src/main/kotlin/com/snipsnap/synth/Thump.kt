@@ -184,9 +184,24 @@ object Thump {
             rate, rootHz, t60Seconds, 1f + snap * 1.5f)
 
     /** Hats share transposition with SKIN, whose resonances have a different natural base. */
-    internal fun onsetHat(baseHz: Float, t60Seconds: Float, edge: Float, rate: Int): FloatArray =
+    internal fun onsetHat(baseHz: Float, t60Seconds: Float, edge: Float, rate: Int, open: Boolean = false): FloatArray =
         hat(defaults(ThumpVoice.HAT_CLOSED) + mapOf("METAL" to edge),
-            open = false, rate = rate, rootHz = baseHz, decaySeconds = t60Seconds)
+            open = open, rate = rate, rootHz = baseHz, decaySeconds = t60Seconds)
+
+    /** THUMP's membrane family without wires or finishing, for ONSET's common wire layer. */
+    internal fun onsetSnareBody(rootHz: Float, t60Seconds: Float, edge: Float, rate: Int, count: Int): FloatArray {
+        val position = Dsp.lin(edge, 0.40f, 0.16f)
+        val modes = Modes.atPosition(Modes.tableFor(Modes.Material.MEMBRANE), position).map { mode ->
+            // Correct the two-pole impulse response's 1/sin(theta) gain analytically.
+            // This keeps the source level physical across root/rate without per-hit
+            // peak normalization or the ~250x resonant-gain problem of a bare bank.
+            val theta = 2.0 * PI * rootHz * mode.ratio / rate
+            mode.copy(gain = mode.gain * sin(theta).toFloat(), t60 = t60Seconds * (mode.t60 / 1.2f))
+        }
+        val strike = FloatArray(count)
+        strike[0] = 1f
+        return Modes.ring(strike, rootHz, modes, rate)
+    }
 
     private fun kick(
         m: Map<String, Float>, rate: Int,

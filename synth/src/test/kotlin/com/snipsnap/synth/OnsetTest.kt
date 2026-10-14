@@ -10,6 +10,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class OnsetTest {
@@ -22,7 +23,7 @@ class OnsetTest {
             assertEquals(1, settings.map { it.electronicGain }.distinct().size)
             assertEquals(1, settings.map { it.physicalGain }.distinct().size)
             for (s in settings) {
-                if (voice == OnsetVoice.KICK) {
+                if (voice == OnsetVoice.KICK || voice == OnsetVoice.SNARE) {
                     assertEquals(s.electronicRootHz, s.physicalRootHz)
                     assertEquals(s.rootHz, s.electronicRootHz)
                 } else {
@@ -145,10 +146,68 @@ class OnsetTest {
         }
     }
 
-    private fun projectedAmplitude(source: FloatArray, hz: Float): Double {
+    @Test fun `model three preserves both accepted voices across all blend positions`() {
+        for (voice in listOf(OnsetVoice.KICK, OnsetVoice.HAT_CLOSED)) {
+            for (blend in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+                for (edge in listOf(0f, 0.5f, 1f)) {
+                    val macros = mapOf("BLEND" to blend, "EDGE" to edge)
+                    assertContentEquals(Onset.render(voice, macros, modelVersion = 2).samples,
+                        Onset.render(voice, macros, modelVersion = 3).samples)
+                }
+            }
+        }
+        assertEquals(0, OnsetVoice.KICK.ordinal)
+        assertEquals(1, OnsetVoice.HAT_CLOSED.ordinal)
+        for (voice in listOf(OnsetVoice.SNARE, OnsetVoice.HAT_OPEN)) {
+            assertFailsWith<IllegalArgumentException> { Onset.render(voice, modelVersion = 2) }
+        }
+    }
+
+    @Test fun `FM snare retains post attack sidebands and body energy alongside common wires`() {
+        for (tune in listOf(0f, 0.4f, 1f)) {
+            val p = Onset.probe(OnsetVoice.SNARE, mapOf("TUNE" to tune))
+            val root = p.settings.rootHz!!
+            val fmSideband = projectedAmplitude(p.physical, root * 3.76f, 0.025f, 0.075f)
+            val electronicAtSideband = projectedAmplitude(p.electronic, root * 3.76f, 0.025f, 0.075f)
+            val carrier = projectedAmplitude(p.physical, root, 0.025f, 0.075f)
+            assertTrue(fmSideband > electronicAtSideband * 5.0, "FM body lost sideband authority at TUNE=$tune")
+            assertTrue(fmSideband > carrier * 0.2, "FM color vanished immediately after the strike at TUNE=$tune")
+            // Raw 4x white noise contains ultrasonic power that the delivered
+            // audition removes. Judge body balance on the same audible bandwidth.
+            val audibleBody = Dsp.decimate(p.physical, Onset.RATE)
+            val audibleWires = Dsp.decimate(p.sharedWires!!, Onset.RATE)
+            val rate = Onset.RATE
+            val range = (0.025f * rate).toInt() until (0.10f * rate).toInt()
+            val bodyEnergy = range.sumOf { audibleBody[it].toDouble() * audibleBody[it] }
+            val wireEnergy = range.sumOf { audibleWires[it].toDouble() * audibleWires[it] }
+            println("ONSET3 SNARE TUNE=$tune postattackBody/Wires=${bodyEnergy / wireEnergy} sideband/carrier=${fmSideband / carrier}")
+            assertTrue(bodyEnergy > wireEnergy * 0.30, "shared hiss masked the authored snare body at TUNE=$tune")
+        }
+    }
+
+    @Test fun `new voices retain their default drum families through every blend`() {
+        for (voice in listOf(OnsetVoice.SNARE, OnsetVoice.HAT_OPEN)) {
+            val family = if (voice == OnsetVoice.SNARE) DrumClass.SNARE else DrumClass.HAT_OPEN
+            val lengths = mutableSetOf<Int>()
+            for (blend in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+                val snip = Onset.render(voice, mapOf("BLEND" to blend))
+                lengths += snip.frameCount
+                val classification = Classifier.classify(snip)
+                println("ONSET3 $voice blend=$blend peak=${snip.peak()} loud=${Loudness.of(snip)} features=${classification.features}")
+                assertEquals(family, classification.drumClass, "$voice left its family at blend=$blend")
+            }
+            assertEquals(1, lengths.size, "BLEND changed $voice length")
+        }
+        val closed = Onset.render(OnsetVoice.HAT_CLOSED)
+        val open = Onset.render(OnsetVoice.HAT_OPEN)
+        assertTrue(open.durationSeconds > closed.durationSeconds * 4f)
+        assertTrue(Classifier.classify(open).features.decayMs > Classifier.classify(closed).features.decayMs * 3f)
+    }
+
+    private fun projectedAmplitude(source: FloatArray, hz: Float, startSeconds: Float = 0.05f, durationSeconds: Float = 0.10f): Double {
         val rate = Onset.RATE * Dsp.OVERSAMPLE
-        val from = (0.05f * rate).toInt()
-        val count = (0.10f * rate).toInt()
+        val from = (startSeconds * rate).toInt()
+        val count = (durationSeconds * rate).toInt()
         var real = 0.0
         var imaginary = 0.0
         var weight = 0.0

@@ -214,9 +214,9 @@ object Skin {
             "TONE" to ((1f - body) * (0.35f + 0.65f * edge))), rate, rootHz, t60Seconds,
             dropDepth = snap * 1.5f, dropSpeed = 90.0)
 
-    internal fun onsetHat(baseHz: Float, t60Seconds: Float, body: Float, edge: Float, rate: Int): FloatArray =
+    internal fun onsetHat(baseHz: Float, t60Seconds: Float, body: Float, edge: Float, rate: Int, open: Boolean = false): FloatArray =
         hat(defaults(SkinVoice.HAT_CLOSED) + mapOf("TONE" to edge, "RING" to (0.35f + 0.6f * body)),
-            open = false, rate = rate, rootHz = baseHz, decaySeconds = t60Seconds)
+            open = open, rate = rate, rootHz = baseHz, decaySeconds = t60Seconds)
 
     private fun kick(
         m: Map<String, Float>, rate: Int, rootHz: Float? = null, decaySeconds: Float? = null,

@@ -5,9 +5,12 @@
   const audio = $('audio');
   const STORAGE_KEY = 'snipsnap-onset-first-listen-v2';
   const LEGACY_STORAGE_KEY = 'snipsnap-onset-first-listen-v1';
+  const VOICE_ORDER = ['KICK', 'SNARE', 'HAT_CLOSED', 'HAT_OPEN'];
   const VOICES = {
-    KICK: { title: 'Kick', left: 'OSCILLATOR BODY', right: 'MODAL MEMBRANE', description: 'A swept, weighted body meets the ring of a struck membrane. Listen for the attack staying together as the material changes.' },
-    HAT_CLOSED: { title: 'Closed hat', left: 'SQUARE CLUSTER', right: 'RESONANT NOISE', description: 'A metallic oscillator cluster meets resonant noise. Listen for a useful shift in texture without losing the short, clear hat.' }
+    KICK: { title: 'Kick', left: 'OSCILLATOR BODY', right: 'MODAL MEMBRANE', partner: 'Membrane', status: 'ACCEPTED KICK · MODEL 2', description: 'The accepted second-pass kick, unchanged. A swept, weighted body meets the ring of a struck membrane.' },
+    SNARE: { title: 'Snare', left: 'TONE + WIRES', right: 'FM BODY + WIRES', partner: 'FM', status: 'NEW VOICE · AWAITING YOUR LISTEN', description: 'A classic tonal body and wires meet a metallic FM body with wires. Listen for the snare staying clear as its body changes.' },
+    HAT_CLOSED: { title: 'Closed hat', left: 'SQUARE CLUSTER', right: 'RESONANT NOISE', partner: 'Resonant noise', status: 'UNCHANGED FROM THE PREVIOUS STUDY', description: 'A metallic oscillator cluster meets resonant noise. Listen for a useful shift in texture without losing the short, clear hat.' },
+    HAT_OPEN: { title: 'Open hat', left: 'SQUARE CLUSTER', right: 'RESONANT NOISE', partner: 'Resonant noise', status: 'NEW VOICE · AWAITING YOUR LISTEN', description: 'The hat opens into a longer metallic tail. Compare the square cluster and resonant noise for wash, ring and a clear attack.' }
   };
   const state = { manifest: null, clips: [], references: [], selected: null, mode: 'matched', playing: false, loading: false, token: 0, sequence: [], sequenceIndex: 0, sequenceVoice: null, notes: {}, legacyNotes: {}, storageAvailable: true,
     context: null, buffers: new Map(), source: null, backend: null, frame: 0, startAt: 0, duration: 0 };
@@ -26,6 +29,13 @@
   function pct(clip) { return `${Math.round(clip.blend * 100)}%`; }
   function name(clip) { return clip.title || `${VOICES[clip.voice]?.title || 'Beat'} · Blend ${pct(clip)}`; }
   function allClips() { return [...state.clips, ...state.references]; }
+  function rendererVersion(clip) {
+    if (clip.kind === 'reference') return 1;
+    if (Number.isInteger(clip.rendererVersion)) return clip.rendererVersion;
+    if (clip.voice === 'KICK') return state.manifest?.comparison?.acceptedKickVersion || 2;
+    if (clip.voice === 'HAT_CLOSED') return 1;
+    return state.manifest?.engine?.version || 3;
+  }
   function path(clip) { return clip?.[state.mode] || ''; }
   function time(seconds) { const value = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`; }
   function noteFor(id) { return state.notes[id] || { verdict: '', text: '', mode: 'matched' }; }
@@ -108,7 +118,7 @@
     $('replay').classList.toggle('playing', state.playing);
     $('replay').firstElementChild.textContent = state.sequence.length ? '↻' : state.playing || state.loading ? '■' : '▶';
     $('replay').setAttribute('aria-label', state.sequence.length ? 'Replay selected sound independently' : `${state.playing || state.loading ? 'Stop' : 'Play'} selected sound`);
-    const sourceLabel = clip?.kind === 'reference' ? 'PREVIOUS KICK / FIRST PASS' : `${clip?.kind === 'beat' ? 'BEAT' : VOICES[clip?.voice]?.title.toUpperCase() || clip?.voice} / REVISION ${state.manifest?.engine?.version || 2}`;
+    const sourceLabel = !clip ? 'ONSET / READY' : clip.kind === 'reference' ? 'PREVIOUS KICK / FIRST PASS' : clip.voice === 'KICK' ? `KICK / ACCEPTED MODEL ${rendererVersion(clip)}` : clip.voice === 'HAT_CLOSED' ? 'CLOSED HAT / UNCHANGED' : `${clip.kind === 'beat' ? 'BEAT' : VOICES[clip.voice]?.title.toUpperCase() || clip.voice} / ROUND ${state.manifest?.engine?.version || 3}`;
     $('transport-label').textContent = clip ? `${sourceLabel} / BLEND ${pct(clip)} / ${state.mode === 'matched' ? 'MATCHED' : 'RAW'}` : 'ONSET / READY';
     $('transport-title').textContent = clip ? name(clip) : 'Choose a sound to listen.';
     const download = $('download-wav');
@@ -283,12 +293,13 @@
     number.lastChild.setAttribute('aria-hidden', 'true');
     button.append(number);
     if (beat) {
-      const title = clip.blend === 0 ? 'Electronic' : clip.blend === 1 ? 'Physical' : 'Hybrid';
-      button.append(el('span', 'beat-title', title), el('span', 'clip-caption', clip.blend === 0 ? 'Oscillator kick. Cluster hat.' : clip.blend === 1 ? 'Modal kick. Resonant noise hat.' : 'Both partners, in one beat.'));
+      const title = clip.blend === 0 ? 'Electronic' : clip.blend === 1 ? 'Algorithmic' : 'Hybrid';
+      button.append(el('span', 'beat-title', title), el('span', 'clip-caption', clip.blend === 0 ? 'Classic bodies. Cluster hats.' : clip.blend === 1 ? 'Membrane kick. FM snare. Resonant hats.' : 'Four voices, both partners.'));
     } else {
       const value = el('span', 'blend-value', String(Math.round(clip.blend * 100)));
       value.append(el('span', 'blend-unit', '%'));
-      button.append(value, el('span', 'clip-caption', clip.blend === 0 ? 'Electronic' : clip.blend === 1 ? 'Physical' : clip.blend === .5 ? 'Hybrid' : clip.blend < .5 ? 'Electronic lean' : 'Physical lean'));
+      const caption = clip.blend === 0 ? 'Electronic' : clip.blend === 1 ? VOICES[clip.voice].partner : clip.blend === .5 ? 'Hybrid' : clip.blend < .5 ? 'X leaning' : 'O leaning';
+      button.append(value, el('span', 'clip-caption', caption));
     }
     button.addEventListener('click', () => toggle(clip));
     const verdict = el('select', 'clip-verdict');
@@ -311,7 +322,8 @@
   }
   function renderBench() {
     const rows = $('voice-rows'); rows.replaceChildren();
-    Object.entries(VOICES).forEach(([voice, info], voiceIndex) => {
+    VOICE_ORDER.forEach((voice, voiceIndex) => {
+      const info = VOICES[voice];
       const clips = state.clips.filter((clip) => clip.kind === 'hit' && clip.voice === voice).sort((a, b) => a.blend - b.blend);
       if (!clips.length) return;
       const section = el('section', 'voice-row');
@@ -331,7 +343,7 @@
       heading.append(title, sequence);
       const axis = el('div', 'blend-axis'); axis.append(el('span', '', info.left), el('span', '', info.right));
       const grid = el('div', 'blend-grid'); clips.forEach((clip, index) => grid.append(makeCard(clip, index)));
-      section.append(heading, el('p', 'voice-description', info.description), axis, grid); rows.append(section);
+      section.append(heading, el('p', 'voice-status', info.status), el('p', 'voice-description', info.description), axis, grid); rows.append(section);
     });
     const beats = $('beat-cards'); beats.replaceChildren();
     state.clips.filter((clip) => clip.kind === 'beat').sort((a, b) => a.blend - b.blend).forEach((clip, index) => beats.append(makeCard(clip, index)));
@@ -343,8 +355,16 @@
     const comparison = state.manifest.comparison || {};
     $('beat-context').textContent = `${comparison.bpm || 104} BPM · ${comparison.bars || 2} bars\nThe rhythm stays put.`;
     $('beat-context').style.whiteSpace = 'pre-line';
-    $('beat-description').textContent = comparison.fixedBacking ? 'ONSET kick and hat change together; the backing stays fixed.' : 'Kick and closed hat together, without effects. Only BLEND changes.';
+    $('beat-description').textContent = comparison.fixedBacking ? 'Four ONSET voices change together; the backing stays fixed.' : 'Kick, snare, closed hat and open hat together, without effects. Only BLEND changes.';
     $('copy-notes').disabled = false; $('export-notes').disabled = false;
+    const kit = state.manifest.kitDownload;
+    if (kit && typeof kit.href === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]*\.zip$/.test(kit.href)) {
+      const link = $('download-kit'); link.href = kit.href;
+      link.replaceChildren(document.createTextNode(typeof kit.title === 'string' ? kit.title : '16-pad MPC kit'), el('span', '', ' ↓'));
+      link.lastChild.setAttribute('aria-hidden', 'true');
+      $('kit-description').textContent = typeof kit.description === 'string' ? kit.description : '';
+      $('kit-download').hidden = false;
+    }
     renderDetails(); updateReviewCount();
     // A selection prepares the notes and download; it never starts audio.
     select(state.clips.find((clip) => clip.voice === 'KICK' && clip.blend === .5) || state.clips[0]);
@@ -353,16 +373,17 @@
     const details = $('render-details'); details.replaceChildren();
     details.append(el('p', '', 'The same voice settings and deterministic excitation are used across each five-point row; BLEND is the variable. A shared attack and linked pitch/decay help the partners speak as one sound.'));
     details.append(el('p', '', 'Matched levels are for comparing character. Raw levels retain the renderer’s output balance. Changing the level view stops any sequence and replays the selected sound only if it was playing.'));
-    details.append(el('p', '', 'Revision 2 revisits the kick’s physical body; the closed hat is unchanged. This study covers kick and closed hat without live morphing, per-step synthesis automation, or cross-voice coupling. The manifest records the rendered settings and measurements.'));
+    details.append(el('p', '', 'Round 3 adds snare and open hat for a first listening verdict. The accepted model-2 kick and existing closed hat are unchanged. The algorithmic partner is voice-specific: a membrane for kick, FM for snare, resonant noise for the hats.'));
+    details.append(el('p', '', 'This study contains rendered sounds without live morphing, per-step synthesis automation, or cross-voice coupling. The manifest records settings, source versions and measurements.'));
     if (state.references.length) details.append(el('p', '', 'Previous kick / first pass contains the original revision-1 WAVs, with their original settings and measurements. They use the same player and level-view controls as the current comparisons.'));
     if (state.manifest.engine?.controls?.length) details.append(el('p', '', `Engine controls: ${state.manifest.engine.controls.join(' · ')}.`));
   }
   function notesText() {
-    const lines = [`ONSET — revision ${state.manifest?.engine?.version || 2} listening notes`, 'Listening question: Does the middle deserve a place in the kit?', ''];
+    const lines = [`ONSET — round ${state.manifest?.engine?.version || 3} listening notes`, 'Listening question: Does the middle deserve a place in the kit?', ''];
     allClips().forEach((clip) => {
       const note = noteFor(clip.id);
       if (!note.verdict && !note.text.trim()) return;
-      lines.push(`${name(clip)} [${clip.id}]${clip.kind === 'reference' ? ' · first pass / revision 1' : ` · revision ${state.manifest?.engine?.version || 2}`}`, `Verdict: ${note.verdict || 'unrated'} · ${note.mode === 'raw' ? 'raw' : 'matched'} levels`);
+      lines.push(`${name(clip)} [${clip.id}]${clip.kind === 'reference' ? ' · first pass / model 1' : ` · renderer model ${rendererVersion(clip)}`}`, `Verdict: ${note.verdict || 'unrated'} · ${note.mode === 'raw' ? 'raw' : 'matched'} levels`);
       if (note.text.trim()) lines.push(note.text.trim());
       lines.push('');
     });
@@ -383,7 +404,7 @@
     return response.json();
   }
   function validateManifest(manifest) {
-    if (!Array.isArray(manifest?.clips) || manifest.clips.length !== 13) throw new Error('Expected the complete 13-clip first listening pack');
+    if (!Array.isArray(manifest?.clips) || manifest.clips.length !== 23) throw new Error('Expected the complete 23-clip four-voice listening pack');
     const ids = new Set();
     function validateClip(clip, kinds) {
       if (typeof clip?.id !== 'string' || !clip.id || ids.has(clip.id) || !kinds.includes(clip.kind) || !Number.isFinite(clip.blend) || clip.blend < 0 || clip.blend > 1 || typeof clip.raw !== 'string' || typeof clip.matched !== 'string' || !clip.raw || !clip.matched) throw new Error('Invalid render in manifest');
@@ -394,7 +415,7 @@
       validateClip(clip, ['hit', 'beat']);
       if (clip.kind === 'hit' ? !Object.hasOwn(VOICES, clip.voice) : clip.voice !== 'KIT') throw new Error('Unknown primary voice');
     });
-    for (const voice of Object.keys(VOICES)) {
+    for (const voice of VOICE_ORDER) {
       const blends = manifest.clips.filter((clip) => clip.kind === 'hit' && clip.voice === voice).map((clip) => clip.blend).sort((a, b) => a - b);
       if (blends.join(',') !== '0,0.25,0.5,0.75,1') throw new Error('Incomplete voice comparison');
     }
