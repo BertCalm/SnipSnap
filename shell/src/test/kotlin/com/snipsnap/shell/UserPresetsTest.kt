@@ -11,11 +11,22 @@ import com.snipsnap.synth.ContourRelation
 import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.EmbouchureVoice
+import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerRole
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.Murmur
+import com.snipsnap.synth.MurmurConfig
+import com.snipsnap.synth.MurmurFormantTarget
+import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.MurmurPresets
+import com.snipsnap.synth.MurmurRouting
+import com.snipsnap.synth.MurmurTrajectory
+import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -171,6 +182,8 @@ class UserPresetsTest {
                 "TANGLE" to TangleVoice.entries.map { it.name },
                 "RELAY" to RelayVoice.entries.map { it.name },
                 "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
+                "BELLOWS" to BellowsVoice.entries.map { it.name },
+                "MURMUR" to MurmurVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -466,6 +479,130 @@ class UserPresetsTest {
         }
     }
 
+    /**
+     * The MURMUR line is hand-built Kotlin, about 600 characters of nested constructor
+     * per preset, and nothing compiles it until the owner pastes it into
+     * MurmurPresets.kt. This saves a mouth whose every config field differs from its
+     * voice's own configuration, with a quote, a backslash and a dollar in a target
+     * name and a gain small enough to print as 5.0E-4, then reads the line back the
+     * way the compiler would ([KotlinLiteral]) and rebuilds the patch from it.
+     */
+    @Test
+    fun `a saved mouth retains root velocity and its complete instrument definition when promoted`() {
+        val root = shelf()
+        try {
+            val held = MurmurPresets.all().first { it.name == "HELD HUM" }
+            val config = MurmurConfig(
+                routing = MurmurRouting.STACK, ratios = listOf(1.0, 1.5, 2.0001, 7.25),
+                trajectory = MurmurTrajectory.ATTACK, direction = 1, referenceSeconds = .35,
+                attack = .0015, decay = 2.75, sustain = .05, release = .3,
+                targets = listOf(
+                    MurmurFormantTarget("Say \"o\" \\ \$x", listOf(300.0, 900.0, 1_600.0, 2_700.0),
+                        listOf(90.0, 170.0, 250.0, 340.0), listOf(1.6, .7, 5.0E-4, .2), .15),
+                    MurmurFormantTarget("Wide", listOf(700.0, 1_200.0, 2_400.0, 3_200.0),
+                        listOf(180.0, 210.0, 310.0, 390.0), listOf(1.2, 1.3, .6, .35), .6),
+                ),
+            )
+            val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "the shelf retains root, velocity and the complete configuration")
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds the saved mouth exactly")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    /** The instance fields of a data class: its constructor properties, the arguments a pasted constructor must name. */
+    private fun fieldsOf(type: Class<*>): Set<String> =
+        type.declaredFields.filterNot { java.lang.reflect.Modifier.isStatic(it.modifiers) || it.isSynthetic }.map { it.name }.toSet()
+
+    /**
+     * [line] as MurmurPresets.kt would build it: `p(voice, name, macros...)` is
+     * `MurmurPatch(name, voice, Murmur.defaults(voice) + macros)`, then `.copy(...)`.
+     * Every literal must have the type its parameter takes, and every constructor
+     * must name exactly the fields of its class, so a field the line drops (or one
+     * added to the class later) fails here rather than in the owner's paste.
+     */
+    private fun murmurFromRosterLine(line: String): MurmurPatch {
+        assertTrue(line.endsWith(","), line)
+        val copy = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+        assertEquals("copy", copy.name, line)
+        val p = copy.receiver as KotlinLiteral.Call
+        assertEquals("p", p.name)
+        assertTrue(p.named.isEmpty(), "the p helper takes positional arguments")
+        val voiceRef = p.positional[0] as KotlinLiteral.Ref
+        assertEquals("MurmurVoice", voiceRef.owner)
+        val voice = MurmurVoice.valueOf(voiceRef.name)
+        val name = (p.positional[1] as KotlinLiteral.Str).value
+        val macros = p.positional.drop(2).associate { arg ->
+            val pair = arg as KotlinLiteral.Pair
+            (pair.first as KotlinLiteral.Str).value to float(pair.second)
+        }
+        assertEquals(fieldsOf(MurmurPatch::class.java) - setOf("name", "voice", "macros"), copy.named.keys, "the copy carries every field p does not")
+        assertTrue(copy.positional.isEmpty())
+        return MurmurPatch(
+            name, voice, Murmur.defaults(voice) + macros,
+            midi = int(copy.named.getValue("midi")),
+            velocity = float(copy.named.getValue("velocity")),
+            config = murmurConfig(copy.named.getValue("config")),
+        )
+    }
+
+    private fun murmurConfig(node: KotlinLiteral.Node): MurmurConfig {
+        val call = node as KotlinLiteral.Call
+        assertEquals("MurmurConfig", call.name)
+        assertTrue(call.receiver == null && call.positional.isEmpty(), "MurmurConfig is built with named arguments")
+        assertEquals(fieldsOf(MurmurConfig::class.java), call.named.keys, "the constructor names every MurmurConfig field")
+        val a = call.named
+        return MurmurConfig(
+            routing = MurmurRouting.valueOf(entry(a.getValue("routing"), "MurmurRouting")),
+            ratios = doubles(a.getValue("ratios")),
+            trajectory = MurmurTrajectory.valueOf(entry(a.getValue("trajectory"), "MurmurTrajectory")),
+            direction = int(a.getValue("direction")),
+            referenceSeconds = double(a.getValue("referenceSeconds")),
+            attack = double(a.getValue("attack")),
+            decay = double(a.getValue("decay")),
+            sustain = double(a.getValue("sustain")),
+            release = double(a.getValue("release")),
+            targets = list(a.getValue("targets")).map { target ->
+                val t = target as KotlinLiteral.Call
+                assertEquals("MurmurFormantTarget", t.name)
+                assertTrue(t.receiver == null && t.positional.isEmpty(), "MurmurFormantTarget is built with named arguments")
+                assertEquals(fieldsOf(MurmurFormantTarget::class.java), t.named.keys, "the constructor names every MurmurFormantTarget field")
+                MurmurFormantTarget(
+                    name = (t.named.getValue("name") as KotlinLiteral.Str).value,
+                    centers = doubles(t.named.getValue("centers")),
+                    widths = doubles(t.named.getValue("widths")),
+                    gains = doubles(t.named.getValue("gains")),
+                    sourceBalance = double(t.named.getValue("sourceBalance")),
+                )
+            },
+        )
+    }
+
+    private fun number(node: KotlinLiteral.Node, type: KotlinLiteral.Num.Type): String {
+        val num = node as? KotlinLiteral.Num ?: error("not a number literal: $node")
+        assertEquals(type, num.type, "${num.text} is a ${num.type} literal where the parameter takes a $type")
+        return num.text
+    }
+    private fun double(node: KotlinLiteral.Node) = number(node, KotlinLiteral.Num.Type.DOUBLE).toDouble()
+    private fun float(node: KotlinLiteral.Node) = number(node, KotlinLiteral.Num.Type.FLOAT).dropLast(1).toFloat()
+    private fun int(node: KotlinLiteral.Node) = number(node, KotlinLiteral.Num.Type.INT).toInt()
+    private fun entry(node: KotlinLiteral.Node, owner: String): String {
+        val ref = node as KotlinLiteral.Ref
+        assertEquals(owner, ref.owner)
+        return ref.name
+    }
+    private fun list(node: KotlinLiteral.Node): List<KotlinLiteral.Node> {
+        val call = node as KotlinLiteral.Call
+        assertTrue(call.receiver == null && call.name == "listOf" && call.named.isEmpty(), "a list is listOf(...): $call")
+        return call.positional
+    }
+    private fun doubles(node: KotlinLiteral.Node): List<Double> = list(node).map(::double)
+
     private fun lacquerFromRosterLine(line: String): LacquerPatch {
         assertTrue(line.startsWith("LacquerPatch.fromJsonText(\"") && line.endsWith("\"),"), line)
         val literal = line.removePrefix("LacquerPatch.fromJsonText(").removeSuffix("),")
@@ -699,5 +836,63 @@ class UserPresetsTest {
         assertEquals("1 KIT LANDED ON THE SHELF.", Copy.landed(1, 0))
         assertEquals("1 KIT LANDED ON THE SHELF. 1 PRESET UNDER YOURS.", Copy.landed(1, 0, 1))
         assertEquals("2 KITS LANDED ON THE SHELF. 3 PRESETS UNDER YOURS. 1 SKIPPED.", Copy.landed(2, 1, 3))
+    }
+
+    /**
+     * FLOTILLA keeps its note and strike velocity outside the macro map, as CISTERN
+     * does, so its promoted line has to carry them. This reads the line back the way
+     * FlotillaPresets.kt would build it ([KotlinLiteral]) and plays it.
+     */
+    @Test
+    fun `a saved flotilla roster line retains its note and strike velocity`() {
+        val root = shelf()
+        try {
+            val source = FlotillaPatch(
+                "LOW WAKE", FlotillaVoice.RIPPLE,
+                linkedMapOf("PULSE" to .2f, "SURFACE" to .4f), midi = 40, velocity = .3f,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "the shelf retains state outside the macros")
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(FlotillaVoice.RIPPLE, \"LOW WAKE\", \"PULSE\" to 0.2f, \"SURFACE\" to 0.4f).copy(midi = 40, velocity = 0.3f),",
+                line,
+                "UserPresets.rosterLine's FLOTILLA branch: the pasteable line carries the saved note and strike velocity",
+            )
+            assertEquals("FlotillaPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            val rebuilt = flotillaFromRosterLine(line)
+            assertEquals(source, rebuilt, "the pasteable line rebuilds the saved patch exactly")
+            assertTrue(source.render().samples.contentEquals(rebuilt.render().samples), "and plays the bytes the phone heard")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    /**
+     * [line] as FlotillaPresets.kt builds it: `p(voice, name, macros...)` is
+     * `FlotillaPatch(name, voice, macros.toMap())`, then `.copy(...)`.
+     */
+    private fun flotillaFromRosterLine(line: String): FlotillaPatch {
+        assertTrue(line.endsWith(","), line)
+        val copy = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+        assertEquals("copy", copy.name, "the line carries no .copy for the fields p does not take: $line")
+        val p = copy.receiver as KotlinLiteral.Call
+        assertEquals("p", p.name)
+        assertTrue(p.named.isEmpty(), "the p helper takes positional arguments")
+        val voiceRef = p.positional[0] as KotlinLiteral.Ref
+        assertEquals("FlotillaVoice", voiceRef.owner)
+        val voice = FlotillaVoice.valueOf(voiceRef.name)
+        val name = (p.positional[1] as KotlinLiteral.Str).value
+        val macros = p.positional.drop(2).associate { arg ->
+            val pair = arg as KotlinLiteral.Pair
+            (pair.first as KotlinLiteral.Str).value to float(pair.second)
+        }
+        // FlotillaPatch's init refuses every model but Flotilla.MODEL_VERSION, which is the default p builds.
+        assertEquals(fieldsOf(FlotillaPatch::class.java) - setOf("name", "voice", "macros", "model"), copy.named.keys,
+            "the copy carries every field p does not")
+        assertTrue(copy.positional.isEmpty())
+        return FlotillaPatch(name, voice, macros,
+            midi = int(copy.named.getValue("midi")), velocity = float(copy.named.getValue("velocity")))
     }
 }

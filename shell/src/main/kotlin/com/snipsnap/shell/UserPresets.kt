@@ -8,6 +8,7 @@ import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
@@ -17,6 +18,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
@@ -347,10 +349,10 @@ object UserPresets {
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
+     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE retains its
-     * MIDI base, velocity, model and selected player gesture; REVEL retains its
+     * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
+     * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
@@ -409,6 +411,7 @@ object UserPresets {
         }
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is FlotillaPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RelayPatch -> {
@@ -417,6 +420,7 @@ object UserPresets {
                 ".let { RelayPatch.fromJsonText(\"$json\") }"
             }
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
+            is BellowsPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = BellowsGesture.${patch.gesture.name})"
             is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is RevelPatch -> {
                 val c = patch.configuration

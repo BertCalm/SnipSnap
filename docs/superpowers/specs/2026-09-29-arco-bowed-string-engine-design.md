@@ -27,6 +27,9 @@ lift on the plain's own gain (R1g); the roadmap row exists, as S20
 the "heard" paragraphs. The paragraphs "R1a, as built" to "R1h heard" under
 "Phasing and gates" hold the state as built, and a sentence below that
 describes ARCO's BODY as R1c's climbing box carries its own note.
+*Extended (R1j, 2026-10-13): the paragraphs now run on to "R1j heard", which
+records that CELLO C2 and F#2 were put to a second page and the lift at
+C2 to G#2 left as built.*
 
 **Date:** 2026-09-29
 **Plan:** to be written per round (`docs/superpowers/plans/2026-09-29-arco-round-N.md`)
@@ -2216,6 +2219,12 @@ finish's levelling had +5.2 dB. INFERRED: "Body doesn't seem to do anything" fit
 *The owner's decisions* (HEARD, 2026-10-04, through the question tool): BODY at the top of the knob is to be **"Louder and fuller, treble untouched"** (the build's brief reads that as: not a GYRE-style tilt); the nine presets and the six
 kit pads that set BODY above the middle may change; the merge was to wait until the owner had heard a listening page (the owner heard one: see "R1h heard").
 
+*Marked in place (R1j, 2026-10-13): R1f's design made two statements about the lowest notes; R1j measured the first and the bell-heavy half of the second, and that half is false.* R1f's design document is not in this tree. It carried a note on the equal split of shelf and bell, "Lever for later, measured
+only at the cap at C2: more bell and less shelf buys A-weighted loudness at the same peak.", and, of the lowest cello notes at the cap, "More would need a lower-crest shape (bell-heavy, or R1c's box at the plain's gain) or a change to
+the bow waveform, which this design does not touch." R1j measured the first sentence and the bell-heavy half of the second (see "R1j scout" below). The first held for the A-weighted ruler (bell only +0.85 dB at C2, MORE BELL +0.33) and costs rms (bell only -1.04 dB, MORE BELL -0.42); the bell-heavy half of the second did not: at the same peak the
+bell-only clip, the most bell-heavy version, has the higher crest, 13.78 dB against 12.74 dB at C2. R1c's box at the plain's gain and a change to the bow waveform were not tried. The same design's "C2 has never been heard in any round" was true of the lift when it was written (C2 had been played only at the plain's BODY, in R1b's held-note gate and R1c's vibrato clips); the R1h page then played C2 under the lift (a void page) and R1j's page played it
+again ("R1j heard").
+
 **R1g built (2026-10-04): BODY above the middle is a lift on the plain.** Only `Arco.kt` changed in `src/main` (the roster's comments aside); `Strings.kt`, `Dsp.kt`, the bow and every preset value are as they were.
 
 * **At and under BODY 0.5 the sound is R1c's, to the sample.** `Arco.finished` takes a branch there (today's statements in today's order), not a 0 dB filter. MEASURED: `ArcoFrozenR1cTest`, a never-edited verbatim copy of R1c's
@@ -2289,12 +2298,121 @@ peak-capped end. *The owner's single chips are noisy* (INFERRED): the top-cut co
 
 The fix map as the decoder printed it, nothing in it argued: TOO MUCH, not triggered (no BODY clip at C3 or C5 was called TOO MUCH); SAME at BODY 0.75, not triggered (SAME at C3 but FULLER at C5; the rule needs both default notes); DULLER on
 BODY 1, not triggered (the condition that stops the build); SAME or not clear at C2, **triggered**: "try more bell and less shelf on the lowest CELLO notes, or R1c's box at the plain's gain on those notes".
+*Marked in place (R1j, 2026-10-13): the first half of that line was taken up and settled. The owner replied "More bell", a second page played it against the lift as built, and the lift stays as built ("R1j scout", "R1j page
+built", "R1j heard" below). The second half, R1c's box at the plain's gain, was not chosen and was not tried.*
 
 The owner's decision after the answers were read (HEARD, 2026-10-04): "Merge it, record the result, fix C2 later." **The owner merged #445 on 2026-10-04 at 14:22 UTC** (MEASURED, GitHub: merged_at 14:22:41Z, merge commit `6887f73c`). The merge's second parent is `3248d883`, the page commit, so the kit regeneration `39bcf87` and this record were not in #445. This record is the result the owner asked for; it merges nothing itself.
 
 *Open, stated*: the C2 to about G#2 steps are peak-capped (about +3 dB rms at C2) and have not been heard in a way that can be read, and the fix map's entry for C2 is the follow-up; ERHU above C5 has been lightly heard (A5: one play of BODY 1.0); the
 6.0 dB top stop was heard on ERHU C5 and, with a 2.2 dB duck, at CELLO F#2 in R1e (and, on the void page, at C3 and C5); the builders did not try the page on Safari, iOS or a real phone, and the device and browser of the owner's own run were not recorded; the R1e generator and candidates stay in the test tree as history, re-pointed at
 `Arco.finished`. The 3.5 and 6.0 dB rungs (`LIFT_HALF_DB`, `LIFT_TOP_DB`), the corners and `PEAK_CAP` are still listening values.
+*Marked in place (R1j, 2026-10-13): "have not been heard in a way that can be read" (at C2 and F#2 only) and "the fix map's entry for C2 is the follow-up" are superseded; "peak-capped" is not.* The C2 follow-up was taken up: R1j's page played C2 (and F#2) against bell-heavier and shelf-heavier splits at the same peak, the owner chose the lift as
+built over the plain once (the other order was "I CAN'T TELL"), no other version was chosen over it in both orders and the more-bell versions were not chosen over it at C2 at all, and C2 stays as built ("R1j heard"). Still true: C2 to G#2 stay peak-capped (C2 +3.02 dB rms), C#2 to F2, G2 and G#2 have still not been played under the lift, ERHU above C5 is lightly heard, and the rungs and `PEAK_CAP`
+are listening values.
+
+**R1j scout (2026-10-06): the owner's choice, and what the ceiling at the lowest notes is made of.** The R1h fix map left C2 as the follow-up. Asked in plain text on 2026-10-04 which of the fix map's two ways to try ("More bell, less shelf"
+or "Old box at the plain's gain"), the owner replied **"More bell"** (HEARD, 2026-10-06). A scout then measured it on the real engine the same day and built nothing. Its tool was a throwaway test-side copy of the lift's two filters in Double with
+the shelf and the bell free to differ, proved equal to `Arco.lifted` to 0.00e+00 of the peak (C2, F#2, C3 and C4; 1, 3, 6, 9 and 12 dB; a control with the bell 0.5 dB too high misses by 3.35e-02 or more) and equal to
+`Arco.finishedMeasured` at BODY 1 on all 25 CELLO steps; and, for each split of the two, the largest bell that keeps the finished peak at `PEAK_CAP`, found the way `liftPlan` finds it. CELLO steps 0 to 24 (C2 to C4), every knob
+at its default. All of it MEASURED unless marked (the scout's tables were session scratch files and are not kept in the tree; the clip key repeats its C2 and F#2 rows to 0.005 dB).
+
+* **Where the cap binds.** On steps 0 to 8 (C2 to G#2), and not from A2 up. In dB per element at BODY 1: C2 2.86, C#2 2.70, D2 3.08, D#2 3.25, E2 3.32, F2 3.40, F#2 3.63, G2 4.06, G#2 5.54, then 6.00 (no cap). The rms rise over
+  the plain is +3.02 dB at C2 (3.025 in the clip key; the decoder below prints it +3.03) against +6.48 dB at C3.
+* **The same peak, spent four ways.** The finished peak is 0.940 in every row; the rises are over the plain at the plain's own gain.
+
+  | version at C2 | shelf / bell dB | rms | A-weighted | `Loudness.of` |
+  |---|---|---|---|---|
+  | TODAY (the engine, equal split) | 2.86 / 2.86 | +3.02 | +2.24 | +2.99 |
+  | MORE BELL (shelf half the bell) | 1.83 / 3.67 | +2.61 | +2.57 | +2.75 |
+  | BELL ONLY | 0 / 4.91 | +1.99 | +3.09 | +2.43 |
+  | MORE SHELF (no bell) | 5.87 / 0 | +4.55 | +1.22 | +4.01 |
+
+  F#2 (cap 3.63 dB, peak 0.940): TODAY 3.63 / 3.63 with +3.79 dB rms and +2.30 A-weighted; MORE BELL 2.29 / 4.57 with +3.14 and +2.54; BELL ONLY 0 / 6.01 with +2.25 and +2.97; MORE SHELF 8.03 / 0 with +6.41 and +1.77.
+* **The rulers disagree.** The A-weighted rise grows with the bell; the rms rise and `Loudness.of` grow with the shelf. At C2 a dB of shelf costs about 2.4 times less peak per rms dB than a dB of bell, and a dB of bell about 2.6
+  times less per A-weighted dB. From the equal split to bell only costs 1.04 dB of rms and 0.56 dB of `Loudness.of` and gains 0.85 dB of A-weighted; to shelf only gains 1.52 dB of rms and loses 1.02 dB of A-weighted. The only
+  heard anchor is an rms one (R1e: every clip called FULLER had +3.2 dB rms or more over the plain, the lowest ERHU's flat louder-only clip at +3.23 dB and the lowest shaped clip at +3.65 dB; R1h's pair of identical clips of C2 as built, +3.02 dB (3.025 in the key), drew FULLER once and SAME once; low confidence), and C2 as built is under R1e's lowest. INFERRED: if the owner's FULLER follows rms, "More bell" moves C2 away from it; which
+  ruler follows the owner's ear is a question for listening, not for measuring.
+* **R1f's note held in one half.** Bell only buys A-weighted rise at the same peak, +0.38 to +0.85 dB on C2 to G2 (+0.85 at C2, +0.67 at F#2), +0.16 dB at G#2 and nothing from A2 up, where the cap does not bind; and it costs rms
+  at every one of the nine notes, -0.84 to -2.90 dB. The lower-crest half did not hold: the bell-only clip has the higher crest (peak over rms, whole clip: 13.78 dB against 12.74 dB for the lift as built and 12.64 dB for the
+  plain at C2; 13.27 against 11.74 and 11.97 dB at F#2), which is the mechanism behind the lost rms (INFERRED).
+* **Where the ceiling is set.** In the held note and not the attack: C2's plain peaks at 754 ms of a 1331 ms note, only 22.1 ms of it is at or above 0.8 of that peak (10.3 ms above 0.9), and the plain's largest sample in the
+  bow's first 100 ms is about 11 percent of its peak (0.074 of 0.656 at C2, 0.072 of 0.625 at F#2). A lift that spared the attack would not avoid the cap. The scout reads the ceiling as a few crest samples of a periodic
+  waveform, one per period of the string, and not a plateau (INFERRED).
+* **Treble.** Every version at both notes has the 1-3 kHz and 3-8 kHz bands at or above the plain (the shelf-only versions by +0.00 to +0.01 dB at two decimals, the others by +0.24 to +0.49 dB at 1-3 kHz and +0.03 to +0.07 dB at
+  3-8 kHz; every split the scout tried reads the same way). Moving the bell's centre buys more
+  A-weighted rise than the split does (C2, bell only, centred at 500 Hz with Q 1.4: +6.56 dB against +3.09 dB; the best cell was on the edge of the grid searched, and the A curve itself favours 500 Hz) but lifts 1-3 kHz by +0.7
+  to +2.5 dB, which leans against the owner's "Louder and fuller, treble untouched". By rms it does not get past the lift as built (the best bell place at C2 with bell only reads +2.81 dB against +3.02 dB). It was not pursued.
+* **Who hears these notes.** MEASURED from the code and the kit for the notes, the BODY values and the default-knob caps; INFERRED that a preset's own BOW, GRIP and HOLD leave those caps where they are: no factory preset and no kit pad plays a note whose lift is held back by the cap.
+  CELLO pads A01 to A08 sit at BODY 0.5, the knee, so they have no lift to hold back. ENDLESS DRAW (G2 at BODY 0.6) asks 1.52 dB per element against a cap of 4.06 dB (its loop rises +1.57 dB in `Loudness.of` over the base commit, about what its ask gives:
+  INFERRED not capped); DEEP PEDAL and CINEMA LOW sit on A2 and A#2, where the default-knob cap is 6.00 dB, idle. A pad is one rendered note and the app has no ARCO screen (no ARCO in `app/src`, `shell/src/main` or `cli/src/main`), so a capped note can only be
+  made by setting TUNE and BODY by hand on a patch, or by a test or a generator (INFERRED).
+* **What the owner had heard.** HEARD, from the saved answers of R1e and R1h: with a shelf and a bell on, below C3 only CELLO F#2 (R1e) and C2 (R1h, a void page). From the R1b and R1c records: C2 had also been played without a lift, in R1b's held notes and R1c's vibrato clips. Every clip at C2 and F#2 had shelf dB equal to bell dB, so no clip with a bell-heavier split had
+  been heard at either note (R1e's CELLO C3 had a bell-only clip, +1.64 dB rms over the plain, SAME on 2 plays, and a shelf-only clip, +2.24 dB, SAME on 1 play; HEARD, MEASURED from the R1e key; neither is a capped note), and "More bell" at the capped notes was a choice of direction and not a heard result.
+
+Shown the numbers (the two rulers disagree) and asked what next, the owner chose **"Listen first (Recommended)"** (HEARD, asked 2026-10-06, answered 2026-10-11), over "Build more bell now", "Try more shelf instead" and "Leave C2 alone": a short page, four
+versions, and build only the winner.
+
+**R1j page built (2026-10-11 to 2026-10-12): four versions side by side, and the review that changed the reading rules before anyone listened.** The page (`generateArcoBellGate`, with its answer-reader `decodeArcoBellGate` and
+the helper `ArcoBellCandidates`; test-side only; the owner merged it as #499 on 2026-10-12 at 23:16:45 UTC, MEASURED, git: merge commit `5784b441`) plays 11 clips. Each is the engine's conditioned note (BODY 1.0, the box frozen
+above the knee) through the lift pair at its own shelf and bell dB, times `Arco.plainGain`, then `Dsp.fadeTail`, then one page gain per note group: the gain that puts THE PLAIN ONE at `Loudness.of` 0.03 (0.1636, -15.73 dB, at
+both notes), the same on every clip of the group, so the versions that add sound are louder than the plain on purpose and the page says so (R1e's and R1h's rule). CELLO C2 has six clips: THE PLAIN ONE; TODAY (the engine,
+`Arco.render` at BODY 1.0); MORE BELL, BELL ONLY and MORE SHELF at the scout's frontier points (1.83 / 3.67, 0 / 4.91 and 5.87 / 0 dB); and a hidden copy of TODAY, the same file under a second name with one SHA-256. CELLO F#2
+has the same five without the copy (2.29 / 4.57, 0 / 6.01 and 8.03 / 0 dB). The owner answers 15 paired comparisons: nine at C2 (THE PLAIN ONE, MORE BELL, BELL ONLY and MORE SHELF each against TODAY, each asked in both orders,
+and the hidden pair) and six at F#2 (the three candidates against TODAY in both orders; optional). Each is "A SOUNDS FULLER", "B SOUNDS FULLER" or "I CAN'T TELL" to the page's question "Which of these two sounds fuller?",
+enabled only after that widget's own PLAY A, THEN B has played to its end. Then one keep question per note, the device question first and required, and one free note. The page shows no number about the sound, no `shelf` or `bell` and no
+direction (its only digits are the unanswered count, the save clock, note names and the "PAIR n OF m" markers). The key is private (`testkit/arco-bell-gate-key.json`, gitignored, never in the published folder).
+
+MEASURED on the build: every lifted clip (nine of the 11) peaks at 0.940 at the plain's gain, and THE PLAIN ONE peaks at 0.656 at C2 and 0.625 at F#2; the achieved rises equal the scout's table to 0.01 dB; THE PLAIN ONE equals `Arco.render` at BODY 0.5 and TODAY equals `Arco.render` at BODY 1.0, sample for
+sample; a reviewer re-derived 124 key numbers from the published files (worst difference 0.0013 dB, or 0.0167 dB with a different A-weighting definition); two complete generator runs were identical in every byte, and all 11 clip
+hashes and the key stayed the same through every review round. The page was driven in headless Chromium with a stand-in store only: no real phone, no Safari or iOS, no real store and no real host wrapper.
+
+The review was five independent lenses (the audio, the contract between generator, page and decoder, the reading rules, the owner's path through the page, and saving), a skeptic on each finding, and the pull request's seven
+automated review comments, all before the page was published. **The lens on the rules found what mattered, and the rules were rewritten before anyone listened.** MEASURED (exact enumeration of the answer combinations, and 200000
+simulated owners, which agree to 0.1 percent): the rules as first written would have changed the engine on 42.6 percent of pages answered by pure guessing, and on one stray answer (17 "I CAN'T TELL" and one "B SOUNDS FULLER"
+made the real decoder print BUILD MORE BELL). The final rules, which the decoder prints word for word before it reads any answer: a candidate qualifies only if it was chosen over TODAY in both orders at C2, and F#2 can only veto
+it (TODAY chosen over it in either F#2 order); the engine's own lift has to be heard over the plain at C2 first (rule P2: TODAY chosen in at least one order and THE PLAIN ONE in neither), else the result is LEAVE, or ASK THE OWNER if THE PLAIN ONE was chosen in at
+least one order and TODAY in neither (a pick of the plain in one order and of TODAY in the other is a CONFLICT and leaves); a lone qualifier is built only if the C2 keep names it, says "I can't say" or is blank, and any other keep answer is ASK THE OWNER; two or three qualifiers need the keep to name one of them; the page is VOID at
+three or more of the four non-identical C2 comparisons in which the same clip was chosen in one order and TODAY in the other (a position habit); the hidden identical pair is never a gate, and an A or B on it is printed as a
+noise sign; a keep answer alone never builds. MEASURED: pure guessing builds on 1.34 percent of pages (449,640 of 33,480,783 answer states, an exact enumeration by an independent reader of the rules) and on 1.24 percent of 5000 random documents run through the real decoder (62 builds); with the real decoder, always-A and
+always-B documents are VOID (0 builds in 600); no document with one decisive answer builds (0 of 56) and the smallest page that builds has three decisive pair answers; a clean MORE SHELF owner gets MORE SHELF built (100 of 100);
+a 0.7 position habit with otherwise random answers builds on 8 of 1000 (exact 0.59 percent), which the rules allow; and an independent reader written from the rules alone agrees with the decoder on all 18,671 complete documents
+tried.
+
+Page changes from the review: a three-paragraph intro with a sentence to set the volume once and leave it; the F#2 section optional (11 required items, "PAIR n OF 9" and "PAIR n OF 6 · OPTIONAL" markers); every one of the 122
+buttons at least 44 by 44 px at 280 to 430 px wide; a 20 second bound on calls to the store, so a store that never answers cannot freeze saving; and, after the last verifier measured the hazard, a resend. A write that times out
+can still land later and overwrite the owner's SAVE with blank answers while the page says SAVED, so the page sends the document it treats as stored once more 30 seconds after the next acknowledged write. A window of about half
+a minute remains, and the page's comment says so (a scenario on a stand-in store: 32 checks pass, and the same scenario on the page before the change ends with the store wiped). Nobody but the owner has listened to it.
+
+**R1j heard (2026-10-12, recorded 2026-10-13): what came back, and what the owner decided.** The owner merged #499, listened on earbuds (`q_device`: "earbuds"; which phone and browser it was is not recorded), saved at 23:45:12
+UTC on 2026-10-12 (`savedAt` 2026-10-12T23:45:12.698Z, `verdicts/arco_r1j_overall`) and wrote "Answered" (HEARD). The device question, all 15 pairs and both keeps were answered, none of the 11 required items was left open, every
+pair answer has its recorded PLAY A, THEN B run (one to three runs each), and the free note was left empty. **By the rules written before the owner listened, nothing is built.** The decoder's one RESULT line: "CASE LINE 1
+applied: LEAVE C2 AS IT IS (QS empty; MORE SHELF C2 1 of 2 over TODAY, 0 TODAY, 1 can't tell; F#2 1 of 2 over TODAY, 0 TODAY, 1 can't tell (F#2 agrees) [weak lean, not enough]; P2 heard; C2 keep MORE SHELF (CLIP D); NOISE SIGN
+no (identical pair: can't tell))". The page was readable (no CONFLICT and no missing answer among the four non-identical C2 comparisons) and the rules read the engine's lift as heard (P2, one pick in one order), but no candidate was chosen over TODAY in both orders
+at C2, so none qualified.
+
+The answers, as HEARD (the page's own words in quotes):
+
+* 11 of the 15 pair answers are "I CAN'T TELL". The four picks are all "B SOUNDS FULLER", that is, the second clip of the run.
+* C2: THE PLAIN ONE against TODAY, TODAY chosen once, when it came second, and "I CAN'T TELL" in the other order (T-LEAN, which rule P2 reads as "heard"); MORE BELL against TODAY, "I CAN'T TELL" in both orders (TIE); BELL ONLY against
+  TODAY, TIE; MORE SHELF against TODAY, chosen once, when it came second, and "I CAN'T TELL" in the other order (X-LEAN); the hidden identical pair, "I CAN'T TELL" (the clean answer; the noise sign is no).
+* F#2 (answered, optional): MORE BELL TIE; BELL ONLY X-LEAN (chosen once, when it came second); MORE SHELF X-LEAN (chosen once, when it came second).
+* Keep: at C2 "CLIP D", which is MORE SHELF, and at F#2 "CLIP J", which is TODAY (HEARD); the decoder notes that the C2 keep goes with the pair readings. MEASURED by the page (a count, not a hearing): CLIP D was played 5 times and CLIP J 8 times; TODAY was the most played clip of each note (15 starts at C2, 8 at F#2).
+
+MEASURED differences, candidate minus TODAY (rms / A-weighted, from the clip key): at C2 MORE BELL -0.42 / +0.33 dB, BELL ONLY -1.04 / +0.85, MORE SHELF +1.52 / -1.02; at F#2 MORE BELL -0.65 / +0.24, BELL ONLY -1.54 / +0.67,
+MORE SHELF +2.63 / -0.53. The decoder's own ruler reads (INFERRED, not a rule and not used by the build map): TODAY over the plain goes with all three rulers; both MORE SHELF picks go with rms and `Loudness.of` and against
+A-weighted; the BELL ONLY pick at F#2 goes against rms and `Loudness.of` and with A-weighted.
+
+Reading (INFERRED). No candidate won in both orders, so nothing is built and C2 stays as it is. MORE BELL, the owner's own choice, could not be told from TODAY in any of its four answers ("I CAN'T TELL" each time); BELL ONLY drew "I CAN'T TELL" three
+times in four. On earbuds, which barely reproduce C2's 65 Hz fundamental, differences under about 1 dB may simply not be heard (MORE BELL is 0.42 dB under TODAY in rms at C2). The picks went to the clip
+louder by rms than its partner in three of four cases (TODAY over the plain, MORE SHELF twice) and once to BELL ONLY at F#2, which is quieter by rms and higher A-weighted; all four were the second clip of a run, so a recency
+habit and a real preference cannot be told apart on this page. The rms-against-A-weighted question stays open.
+
+The owner's decision (HEARD, 2026-10-13), shown the result and asked what next: **"Record it and leave C2 (Recommended)"**, over "One more short round on more shelf" and "Try the other idea instead" (R1c's box at the plain's
+gain). So R1j changes no sound: `Arco.kt` gets three comment edits (its file header, the lift's KDoc and `PEAK_CAP`'s) and no code, `PEAK_CAP` and the equal split stay as they are, and BODY 0.70 to 1.0 stays one sound at C2.
+
+*Open, stated*: the flat top at C2 to G#2 stays (C2 +3.02 dB rms, peak-capped, the engine unchanged); a shelf-heavy rule leaned at both notes (MORE SHELF X-LEAN at C2 and at F#2, and the C2 keep) but never met the bar and was
+not built; R1c's box at the plain's gain was not tried, because the owner did not choose it; the page was heard on earbuds only; ERHU above C5 is still only lightly heard (carried over from R1h); the builders' checks of the page used a stand-in
+store in headless Chromium, and which phone and browser the owner's run used is not recorded; nobody on the team has listened.
 
 **A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
 (`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions

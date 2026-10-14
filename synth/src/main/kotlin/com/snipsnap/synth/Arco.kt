@@ -54,9 +54,10 @@ import kotlin.random.Random
  * was *listened to* when R1b was written. The owner has since heard R1b's held notes, a stab and
  * the knob ends (the bowed note was picked out six times in six; BODY 1, CELLO's BOW 1 and CELLO's
  * vibrato were "nearly"), R1c's retune of those three (the bite, the stab and the vibrato yes;
- * BODY 1 still "doesn't seem to do anything"), and three BODY pages (R1d, R1e and R1h; R1g rebuilt
- * BODY from the answers, and the design record's R1h paragraph says the last page came back void
- * by its own rules). The owner has not heard the presets, the kit or the loops. Every value marked
+ * BODY 1 still "doesn't seem to do anything"), and four BODY pages (R1d, R1e, R1h and R1j; R1g
+ * rebuilt BODY from the answers, the design record's R1h paragraph says R1h's page came back void
+ * by its own rules, and its R1j paragraphs say R1j's page, at C2 and F#2, left the lift as built).
+ * The owner has not heard the presets, the kit or the loops. Every value marked
  * "listening" is provisional: the BODY lift's two sizes were played on R1e's and R1h's pages (the
  * last of them void by its own rules, so it settles little), and the rest are first guesses for
  * ears that have not heard them.
@@ -597,7 +598,8 @@ object Arco {
      * What BODY adds above [BODY_KNEE]: a *lift* on top of the conditioned note, a low shelf and then a broad bell in series, each [liftDbFor] dB, at the plain's own gain (R1e's warmth page played this shape on the plain).
      * Its two sizes are R1e's rungs, per element: [LIFT_HALF_DB] at BODY 0.75 (R1e's small rung) and [LIFT_TOP_DB] at BODY 1 (its large rung). The owner marked some of those clips FULLER and some SAME on R1e's page, with low
      * confidence in the owner's own words. R1h then played this curve on a blind page (CELLO C3 at BODY 0.6, 0.75, 0.9 and 1.0; BODY 0.75 and 1.0 at ERHU C5 and CELLO C2; BODY 1.0 at ERHU A5) that came back void by its own
-     * rules (the design record's R1h paragraph); with that caveat the owner called BODY 1.0 FULLER at C3, C5 and A5 and kept BODY 1.0 at the top of the knob for both voices. Listening values.
+     * rules (the design record's R1h paragraph); with that caveat the owner called BODY 1.0 FULLER at C3, C5 and A5 and kept BODY 1.0 at the top of the knob for both voices. R1j (2026-10-06 to 2026-10-13) then put CELLO C2 and F#2, where the cap holds the lift back,
+     * to a page with the shelf and the bell unequal at the same peak (the design record's R1j paragraphs): the owner could not tell the more-bell split from this equal split, and it stays. Listening values.
      */
     const val LIFT_HALF_DB = 3.5f
     const val LIFT_TOP_DB = 6.0f
@@ -651,7 +653,8 @@ object Arco {
 
     /**
      * What the lift is held to: the bar less 0.01. A note [Dsp.levelTo] limits sits at exactly 0.99 and would fail the bar, so the cap works on the lift and never on the level. Where the plain's own peak is already above
-     * it the plain's peak is the cap instead, so a plain that is already hot gets no lift and there is no step at the knee. It sets how much lift the lowest CELLO notes can have (they are the ones that reach it). Listening value.
+     * it the plain's peak is the cap instead, so a plain that is already hot gets no lift and there is no step at the knee. It sets how much lift the lowest CELLO notes can have (they are the ones that reach it). R1j (2026-10-06 to 2026-10-13) measured
+     * spending this ceiling on the bell instead of the shelf at CELLO C2 and F#2, and the owner listened to it (the design record's R1j paragraphs): the owner could not tell the more-bell split from the lift as built, so the cap and the equal split stay as they are. Listening value.
      */
     internal const val PEAK_CAP = FINISHED_PEAK_BAR - 0.01f
 

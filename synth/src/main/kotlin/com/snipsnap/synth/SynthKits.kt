@@ -258,8 +258,9 @@ object SynthKits {
      * A drum program plays every pad once through, LOOP or not (`Loop=False`, as SIREN's
      * LOOP pads do): the wrap is heard in the audition page's REPEAT, and held on a pad
      * once R2's held instrument exists. Every pad carries its recipe. The presets are
-     * provisional (nothing in BORE has been heard yet); this kit is what the audition
-     * page's first section plays.
+     * provisional ([BorePresets] says what of BORE has been heard: SAX one-shots and the
+     * SOLO LOOP's earlier periodic loop, not the current loop or FLUTE's); this kit is
+     * what the audition page's KIT section plays.
      */
     fun bore(): List<ArrangedPad?> {
         fun note(voice: BoreVoice, n: Int, semitone: Int) = BorePatch(
@@ -636,6 +637,24 @@ object SynthKits {
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
             defaults.map { pad(it, Pitchwheel.drumClassFor(it.voice, it.macros)) } +
             listOf(note(9, PENTATONIC[8]), pad(held, Pitchwheel.drumClassFor(held.voice, held.macros)))
+    }
+
+    /**
+     * Sixteen dry bellows pads: eight CHAMBER notes in C minor pentatonic from
+     * C3 and the eight contrasting presets. Each recipe retains its MIDI base,
+     * excitation velocity, model and bellows gesture. Held presets route as LOOP.
+     */
+    fun bellows(): List<ArrangedPad?> {
+        fun landed(patch: BellowsPatch) = pad(patch, Bellows.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName = patch.name)
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            landed(BellowsPatch(
+                "Bellows ${i + 1}", BellowsVoice.CHAMBER,
+                Bellows.defaults(BellowsVoice.CHAMBER) + ("TUNE" to 0f),
+                midi = Bellows.ROOT_MIDI + semitone,
+            ))
+        }
+        return scale + BellowsPresets.all().map(::landed)
     }
 
     /**

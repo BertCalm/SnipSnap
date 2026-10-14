@@ -2,6 +2,28 @@ plugins {
     kotlin("jvm")
 }
 
+/** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
+tasks.register<JavaExec>("generateVentAudition") {
+    group = "distribution"
+    description = "Render the twelve VENT native/matched PCM24 WAVs, recipes and measurements under testkit/vent-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vent-audition")
+}
+
+/** Four longer comparisons with one fixed linear readout and no projection saturation. */
+tasks.register<JavaExec>("generateVentIsolationAudition") {
+    group = "distribution"
+    description = "Render the four VENT isolation native/matched PCM24 WAVs, diagnostic recipes and measurements under testkit/vent-isolation-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentIsolationAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vent-isolation-audition")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"
@@ -23,6 +45,17 @@ tasks.register<JavaExec>("generateMurmurKit") {
     mainClass.set("com.snipsnap.synth.MurmurKitGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit")
+}
+
+/** Original BELLOWS source models, saved gestures and dry listening comparisons. */
+tasks.register<JavaExec>("generateBellowsAudition") {
+    group = "distribution"
+    description = "Render BELLOWS PCM16 raw/matched WAVs, recipes, measurements and first-listen ZIP under testkit/bellows-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BellowsAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/bellows-audition")
 }
 
 repositories {
@@ -665,6 +698,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/. See PedalAuditionGenerator. */
+tasks.register<JavaExec>("generatePedalAudition") {
+    group = "distribution"
+    description = "Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PedalAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pedal-audition")
+}
+
 tasks.register<JavaExec>("generateFlotillaKit") {
     group = "distribution"
     description = "Render the FLOTILLA acceptance kit under testkit/."
@@ -788,13 +831,15 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
 /** Render Spool's original recordings, causal transport evidence, sweeps, loops and 16-pad MPC kit. */
 tasks.register<JavaExec>("generateSpoolAudition") {
     group = "distribution"
-    description = "Render SPOOL dry native/matched WAVs, mechanical traces, manifest and 16-pad MPC kit under testkit/spool-audition/. -PspoolQuick selects a smaller development pack."
+    description = "Render SPOOL dry native/matched WAVs, mechanical traces, manifest and 16-pad MPC kit under testkit/spool-audition/. -PspoolQuick selects a smaller development pack; -PspoolMovementOnly refreshes sweeps in an unchanged-engine full pack."
     maxHeapSize = "512m"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.SpoolAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/spool-audition")
     if (project.hasProperty("spoolQuick")) args("--quick")
+    if (project.hasProperty("spoolMovementOnly")) args("--movement-only")
+    if (project.hasProperty("spoolMusicalOnly")) args("--musical-only")
 }
 
 /** Render Embouchure's original dry gestures, control matrix and settled held loops. */

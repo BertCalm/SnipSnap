@@ -237,6 +237,7 @@ object Velocity {
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
         is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
+        is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
         is OpenSkyPatch -> OpenSky.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
@@ -247,6 +248,7 @@ object Velocity {
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
         is RelayPatch -> Relay.macrosFor(patch.voice)
+        is VentPatch -> Vent.macrosFor(patch.voice)
     }
 
     /**
@@ -306,29 +308,36 @@ object Velocity {
      * as strike energy, CIRCUIT as event energy, and TREMOR as the blow. MURK uses
      * it as event energy and response reach, preserving the STRIKE contact
      * character. NIMBUS uses it as flex impulse and transient stack displacement,
-     * preserving EXCITE's contact character. THAW uses it as runner gesture energy while retaining
+     * preserving EXCITE's contact character. COROLLA scales pull and contact energy
+     * while PULL keeps its playing character. THAW uses it as runner gesture energy while retaining
      * the selected contact character. TESSERA scales hammer energy while retaining HAMMER's
      * contact character. UNDERTOW uses it as piston work while
      * preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
+     * REVEL scales each phrase event's energy while keeping its saved [RevelConfig].
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
+     * BELLOWS scales reed pressure, harmonic response and level while keeping the saved gesture.
      * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
      * ALLOY scales generated attack energy and modulation work with its stored material and routing.
      * CONTOUR changes attack energy, filter motion and edge emphasis in the saved table pair.
+     * STOOP scales the gain and brightness of its note and its shadow answers while keeping
+     * source registration, shadow gesture and chord voicing.
      * LACQUER changes source energy, edge strength and filter articulation while keeping its layer recipe.
+     * SPOOL scales its recorded source's attack, upper harmonics and level, and its heads' contact.
      * SKITTER changes excitation, oscillator recovery and filter provocation together.
      * TANGLE changes early energy, filter opening and bounded modulation effort
      * while preserving the oscillator recipe and requested note.
      * RELAY scales source excitation and accent energy while retaining its saved phrase.
+     * VENT scales the onset perturbation while retaining the saved trajectory controls, note and seed.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is MurmurPatch || patch is OpenSkyPatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is VentPatch || patch is OpenSkyPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -365,6 +374,7 @@ object Velocity {
                 is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
                 is PitchwheelPatch -> patch.copy(velocity = v).render()
                 is EmbouchurePatch -> patch.copy(velocity = v).render()
+                is BellowsPatch -> patch.copy(velocity = v).render()
                 is MurmurPatch -> patch.copy(velocity = v).render()
                 is OpenSkyPatch -> patch.copy(velocity = v).render()
                 is PrismPatch -> patch.copy(velocity = v).render()
@@ -376,6 +386,7 @@ object Velocity {
                 is SkitterPatch -> patch.copy(velocity = v).render()
                 is TanglePatch -> patch.copy(velocity = v).render()
                 is RelayPatch -> patch.copy(velocity = v).render()
+                is VentPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 is SpoolPatch -> patch.copy(velocity = v).render()

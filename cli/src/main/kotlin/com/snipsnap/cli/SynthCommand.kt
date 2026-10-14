@@ -30,6 +30,9 @@ import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.EmbouchureVoice
+import com.snipsnap.synth.Bellows
+import com.snipsnap.synth.BellowsPatch
+import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.OpenSkyPatch
@@ -56,6 +59,10 @@ import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Velocity
+import com.snipsnap.synth.Vent
+import com.snipsnap.synth.VentPatch
+import com.snipsnap.synth.VentPresets
+import com.snipsnap.synth.VentVoice
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
@@ -84,14 +91,16 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR) override
- * the preset's note and strike energy for a pad audition. EMBOUCHURE's --midi
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and the VENT prototype) override
+ * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
  * OPENSKY also accepts a saved `--patch <json>`, `--gate S`, and `--dry` /
  * `--wet`. The complete source timbre survives those overrides; OPENSKY HALO
  * can become a held instrument with `--instrument [--release S]`.
+ * VENT accepts `--seed N` for its initial trajectory. Its three provisional
+ * starting recipes are available here while remaining outside the factory roster.
  */
 object SynthCommand {
 
@@ -132,7 +141,9 @@ object SynthCommand {
             patch
         }
 
-        val presets = Presets.forVoice(engine, voice)
+        val presets = if (engine == VentPatch.ENGINE) {
+            VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
+        } else Presets.forVoice(engine, voice)
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
 
         val instrument = opts.has("--instrument")
@@ -151,11 +162,13 @@ object SynthCommand {
                 StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
+                BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
                 OpenSkyPatch.ENGINE -> OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
                 SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
+                VentPatch.ENGINE -> Vent.MIDI_MIN..Vent.MIDI_MAX
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
                     val root = Prism.rootMidi(prismVoice)
@@ -164,7 +177,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and OPENSKY, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, VENT and OPENSKY, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -175,12 +188,13 @@ object SynthCommand {
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
-        fun skitterSeed(flag: String): Int? = opts[flag]?.let { raw ->
-            if (engine != SkitterPatch.ENGINE) throw CliError("$flag is only supported by SKITTER, got $engine")
+        fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
-        val seedOverride = skitterSeed("--seed")
-        val scrambleRandom = skitterSeed("--scramble")?.let { Random(it) }
+        val seedOverride = seedFlag("--seed")
+        val scrambleRandom = seedFlag("--scramble")?.let { Random(it) }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
@@ -244,6 +258,10 @@ object SynthCommand {
                     midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity,
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
+                is BellowsPatch -> patch.copy(
+                    midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity,
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
+                )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OpenSkyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RevelPatch -> patch.copy(
@@ -263,6 +281,7 @@ object SynthCommand {
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is SkitterPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is VentPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
                     macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
                 )
@@ -276,7 +295,7 @@ object SynthCommand {
                     name = "Scrambled ${withSeed.name}",
                     macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
                 )
-            } else withNote
+            } else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride) else withNote
         }
 
         val skyInstrumentSpec = if (instrument && engine == OpenSkyPatch.ENGINE) try {

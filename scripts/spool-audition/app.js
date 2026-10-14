@@ -7,11 +7,11 @@
   const VOICES = ['STRING', 'CHOIR', 'FLUTE', 'BRASS', 'PALIMPSEST', 'CUT'];
   const VOICE_NAMES = { STRING: 'Soft Frame', CHOIR: 'Returning Choir', FLUTE: 'Flute Memory', BRASS: 'Worn Brass', PALIMPSEST: 'Ghost Copy', CUT: 'Short Splice' };
   const MACRO_COPY = {
-    HEAD: ['Aligned pickup becomes a diagonal encounter through track and recorded time.', 'Aligned', 'Diagonal'],
+    HEAD: ['Listen for the pickup moving between different voices as it crosses the recording.', 'Aligned', 'Diagonal'],
     STRAIN: ['Both directions share gentle tape wow and flutter. Raising STRAIN adds hesitation, stretch, and recovery.', 'Gentle flutter', 'Competing'],
-    RETURN: ['Listen for the backward swell rising through the held forward tone. Raising RETURN brings that reversed layer into focus.', 'Silent', 'Pronounced'],
-    IMPRINT: ['A delayed neighboring trace is softly written, then heard during a finite reread.', 'Original', 'Inherited'],
-    SPLICE: ['The continuous recording becomes a deterministic sequence of overlapped, reordered sections.', 'Continuous', 'Reordered']
+    RETURN: ['A bright attack swells backwards beneath the forward tone. Raising RETURN brings that reversed layer into focus.', 'No return', 'Strong return'],
+    IMPRINT: ['An earlier pass leaves a trace. Raising IMPRINT gives it more depth and recorded detail on the next read.', 'Original', 'Inherited'],
+    SPLICE: ['Listen for the attack returning at different points as recorded sections are reordered.', 'Continuous', 'Reordered']
   };
   const PAIR_COPY = {
     head_imprint: 'Head position changes where an inherited trace is heard.',
@@ -20,12 +20,13 @@
     head_splice: 'A diagonal encounter meets a reordered recording.',
     strain_splice: 'Transport hesitation stretches the spaces between splices.'
   };
-  const EXTRA_NAMES = { 'transition-comparison': 'Before / after', registers: 'Registers', velocity: 'Velocity', gates: 'Gates', extremes: 'All high', diagnostics: 'Diagnostics', 'repeated-loops': 'Repeated loops', kit: 'Kit' };
+  const EXTRA_NAMES = { 'voice-comparison': 'Voice comparison', 'transition-comparison': 'Before / after', registers: 'Registers', velocity: 'Velocity', gates: 'Gates', extremes: 'All high', diagnostics: 'Diagnostics', 'repeated-loops': 'Repeated loops', kit: 'Kit' };
   const EXTRA_COPY = {
-    'transition-comparison': 'Before is the previous coherent overlapping version. After brings out the backward swell and adds gentle shared wow and flutter. Each pair keeps the same voice and one-shot, loop, or three-cycle form.',
+    'voice-comparison': 'Four source families share identical controls and velocity. Each C3, C4 or C5 group shares a root note; Matched uses the common listening level. Listen for bowed STRING, fixed-vowel CHOIR, airy FLUTE, and bright BRASS.',
+    'transition-comparison': 'Before is the previous reverse-swell and flutter version. After gives STRING, CHOIR, FLUTE, and BRASS clearer source characters while keeping the shared tape movement. Each pair keeps the same voice and one-shot, loop, or three-cycle form.',
     diagnostics: 'Hear the forward and backward pickups on their own. Start with a backward pickup, then return to the full voice to hear its swell in the mix.'
   };
-  const state = { manifest: null, clips: [], selected: null, level: 'matched', macro: 'HEAD', pair: '', extra: 'transition-comparison', repeat: false, notes: readNotes(), loading: false, request: 0 };
+  const state = { manifest: null, clips: [], selected: null, level: 'matched', macro: 'HEAD', pair: '', extra: 'voice-comparison', repeat: false, notes: readNotes(), loading: false, request: 0 };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
   const clamp = (n, low = 0, high = 1) => Math.min(high, Math.max(low, Number(n) || 0));
   const percent = (n) => Math.round(clamp(n) * 100);
@@ -65,14 +66,22 @@
   function renderMacros() {
     $('#macro-tabs').innerHTML = MACROS.map((macro) => `<button role="tab" id="tab-${macro.toLowerCase()}" data-macro="${macro}" aria-selected="${macro === state.macro}" aria-controls="macro-panel" tabindex="${macro === state.macro ? 0 : -1}">${macro}</button>`).join('');
     const [copy, low, high] = MACRO_COPY[state.macro];
+    const clips = state.clips.filter((c) => c.section === 'macros' && String(c.macro || '').toUpperCase() === state.macro).sort((a, b) => Number(a.value) - Number(b.value));
     $('#macro-index').textContent = `CONTROL ${String(MACROS.indexOf(state.macro) + 1).padStart(2, '0')}`;
     $('#macro-title').textContent = state.macro;
-    $('#macro-description').textContent = copy;
+    $('#macro-description').textContent = clips[0]?.description || copy;
     $('#macro-low').textContent = low;
     $('#macro-high').textContent = high;
     $('#macro-panel').setAttribute('aria-labelledby', `tab-${state.macro.toLowerCase()}`);
-    const clips = state.clips.filter((c) => c.section === 'macros' && String(c.macro || '').toUpperCase() === state.macro).sort((a, b) => Number(a.value) - Number(b.value));
     $('#sweep-grid').innerHTML = clips.length ? clips.map((clip) => `<article class="sweep-point" data-card-id="${esc(clip.id)}"><div class="sweep-value">${percent(clip.value)}<span>%</span></div><div class="sweep-meter" aria-hidden="true"><i style="--value:${percent(clip.value)}%"></i></div>${clipButton(clip)}<span class="clip-time">${duration(clip)} · ${esc(clip.voice)}</span></article>`).join('') : empty('This macro sweep is not present in the audition pack.');
+    updateButtons();
+  }
+  function renderMusical() {
+    const clips = state.clips.filter((clip) => clip.section === 'musical-context');
+    $('#musical').hidden = !clips.length;
+    const row = (clip, caption) => `<div class="musical-row" data-card-id="${esc(clip.id)}"><span class="musical-caption">${esc(caption)} <small>${duration(clip)}</small></span>${clipButton(clip)}</div>`;
+    $('#musical-grid').innerHTML = VOICES.filter((voice) => clips.some((clip) => clip.voice === voice && clip.musicalKind !== 'imprint')).map((voice) => `<article class="loop-card"><div class="loop-card-top"><span>${esc(voice)}</span><span>IN CONTEXT</span></div><h3>${esc(VOICE_NAMES[voice] || voice)}</h3>${clips.filter((clip) => clip.voice === voice && clip.musicalKind !== 'imprint').sort((a, b) => a.musicalKind === b.musicalKind ? 0 : a.musicalKind === 'phrase' ? -1 : 1).map((clip) => row(clip, clip.musicalKind === 'phrase' ? 'Melody' : 'Held chord')).join('')}</article>`).join('');
+    $('#musical-memory-grid').innerHTML = clips.filter((clip) => clip.musicalKind === 'imprint').sort((a, b) => macroValue(a, 'IMPRINT') - macroValue(b, 'IMPRINT')).map((clip) => `<article class="loop-card" data-card-id="${esc(clip.id)}"><div class="loop-card-top"><span>CHOIR / INHERITED FLUTE</span></div><h3>IMPRINT ${percent(macroValue(clip, 'IMPRINT'))}%</h3>${row(clip, 'Same phrase')}</article>`).join('');
     updateButtons();
   }
   function renderInteractions() {
@@ -101,6 +110,7 @@
     context.hidden = !EXTRA_COPY[state.extra];
     context.textContent = EXTRA_COPY[state.extra] || '';
     const clips = state.clips.filter((c) => c.section === state.extra);
+    if (state.extra === 'voice-comparison') clips.sort((a, b) => Number(a.midi) - Number(b.midi) || VOICES.indexOf(a.voice) - VOICES.indexOf(b.voice));
     $('#extra-clips').innerHTML = clips.length ? clips.map((clip) => `<div class="extra-clip" data-card-id="${esc(clip.id)}">${clipButton(clip, '')}<div class="extra-clip-copy"><h4>${esc(clip.label)}</h4><p>${duration(clip)} · ${noteName(clip.midi)} · VEL ${Math.round(Number(clip.velocity || 0) * 100)}%</p></div></div>`).join('') : empty('No additional recordings are included.');
     updateButtons();
   }
@@ -118,17 +128,17 @@
     if (!clip) { $('#metric-grid').innerHTML = empty('Play a recording to see its measurements.'); $('#diagnostic-details').hidden = true; return; }
     const metrics = (state.level === 'raw' ? clip.rawMetrics : clip.matchedMetrics) || {};
     const hasSeam = clip.seamError != null && Number.isFinite(Number(clip.seamError));
-    const rows = [ ['Peak', formatDb(metrics.peak), 'dBFS'], ['RMS', formatDb(metrics.rms), 'dBFS'], ['DC offset', Number.isFinite(Number(metrics.dc)) ? Number(metrics.dc).toExponential(1) : '—', ''], ['Duration', Number(clip.seconds || 0).toFixed(2), 's'], ['Render time', Number(clip.renderMs || 0).toFixed(0), 'ms'], [hasSeam ? 'Loop seam error' : 'Requested root', hasSeam ? Number(clip.seamError).toExponential(1) : noteName(clip.midi), ''] ];
+    const rows = [ ['Peak', formatDb(metrics.peak), 'dBFS'], ['RMS', formatDb(metrics.rms), 'dBFS'], ['DC offset', Number.isFinite(Number(metrics.dc)) ? Number(metrics.dc).toExponential(1) : '—', ''], ['Duration', Number(clip.seconds || 0).toFixed(2), 's'], ['Render time', Number(clip.renderMs || 0).toFixed(0), 'ms'], clip.sequence ? ['Note events', String(clip.sequence.noteCount), ''] : [hasSeam ? 'Loop seam error' : 'Requested root', hasSeam ? Number(clip.seamError).toExponential(1) : noteName(clip.midi), ''] ];
     if (clip.forwardPitch && Number.isFinite(Number(clip.forwardPitch.hz))) rows.push(['Forward pitch', Number(clip.forwardPitch.hz).toFixed(1), 'Hz'], ['Pitch offset', Number(clip.forwardPitch.cents).toFixed(1), 'cents'], ['Root power', (Number(clip.forwardPitch.rootPowerShare) * 100).toFixed(1), '%']);
     if (clip.overlap) rows.push(['Audible overlap', Number(clip.overlap.totalSeconds).toFixed(2), 's'], ['Return with both layers', (Number(clip.overlap.postGateFraction) * 100).toFixed(0), '%']);
-    $('#metric-download-links').innerHTML = [[clip.rawPath, 'Raw WAV'], [clip.matchedPath || clip.file, 'Matched WAV'], [clip.stems?.forward?.rawPath, 'Forward pickup WAV'], [clip.stems?.reverse?.rawPath, 'Backward pickup WAV'], [clip.diagnostics?.tracePath, 'Transport trace'], [clip.diagnostics?.pickupTracePath, 'Pickup trace'], [clip.diagnostics?.eventsPath, 'Imprint events']].filter(([path]) => safeUrl(path)).map(([path, label]) => `<a href="${esc(safeUrl(path))}" download>${label} ↓</a>`).join('');
+    $('#metric-download-links').innerHTML = [[clip.rawPath, 'Raw WAV'], [clip.matchedPath || clip.file, 'Matched WAV'], [clip.stems?.forward?.rawPath, 'Forward pickup WAV'], [clip.stems?.reverse?.rawPath, 'Backward pickup WAV'], [clip.diagnostics?.tracePath, 'Transport trace'], [clip.diagnostics?.pickupTracePath, 'Pickup trace'], [clip.diagnostics?.eventsPath, 'Imprint events'], [clip.diagnostics?.sequencePath, 'Note recipes & timing']].filter(([path]) => safeUrl(path)).map(([path, label]) => `<a href="${esc(safeUrl(path))}" download>${label} ↓</a>`).join('');
     $('#metric-grid').innerHTML = rows.map(([label, value, unit]) => `<div class="metric"><span class="metric-label">${esc(label)}</span><span class="metric-value">${esc(value)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>`).join('');
     $('#measurement-label').textContent = `${clip.label} / ${state.level}`;
     const rawGain = Number(clip.rawExportGain ?? 1);
     $('#measurement-context').textContent = `${clip.description || ''} ${state.level === 'raw' ? `Raw measurements describe native engine output before PCM export${rawGain < 1 ? ` (export gain ${rawGain.toFixed(4)})` : ''}.` : 'Matched files use the common quiet audition level of 0.03 over the loudest 200 ms.'} Listening approval remains a separate step.`;
     $('#measurement-context').classList.add('measurement-context');
     $('#diagnostic-details').hidden = !clip.diagnostics;
-    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, forwardPitch: clip.forwardPitch, overlap: clip.overlap, stems: clip.stems, provenance: clip.provenance || state.manifest.provenance }, null, 2);
+    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, auditionWindow: clip.auditionWindow, recipe: clip.recipe, sequence: clip.sequence, forwardPitch: clip.forwardPitch, overlap: clip.overlap, stems: clip.stems, provenance: clip.provenance || state.manifest.provenance }, null, 2);
   }
   function updateButtons() {
     const playing = !!state.selected && !audio.paused && !audio.ended;
@@ -148,7 +158,8 @@
     $('#player-play').innerHTML = playing ? '<span class="pause-mark" aria-hidden="true">Ⅱ</span>' : playIcon;
     $('#player-repeat').setAttribute('aria-pressed', String(state.repeat));
     $('#player-title').textContent = state.selected?.label || 'Select a recording';
-    $('#player-subtitle').textContent = state.selected ? `${state.level.toUpperCase()} · ${noteName(state.selected.midi)} · ${Number(state.manifest.sampleRate || 44100).toLocaleString()} HZ MONO${state.selected.loop ? ' · HOLD' : ''}` : 'Generated WAV';
+    const musicalLabel = { phrase: 'MELODY', chord: 'HELD CHORD', imprint: 'IMPRINT PHRASE' }[state.selected?.musicalKind];
+    $('#player-subtitle').textContent = state.selected ? `${state.level.toUpperCase()} · ${musicalLabel || noteName(state.selected.midi)} · ${Number(state.manifest.sampleRate || 44100).toLocaleString()} HZ MONO${state.selected.loop ? ' · HOLD' : ''}` : 'Generated WAV';
   }
   function playerError(message) { $('#player-status').textContent = message; $('#player-status').hidden = !message; }
   function setRepeat(repeat) { state.repeat = repeat; audio.loop = repeat; updateButtons(); }
@@ -240,7 +251,7 @@
       state.manifest = manifest;
       state.clips = manifest.clips.filter((clip) => clip.id && (clip.rawPath || clip.matchedPath || clip.file));
       $('#load-status').textContent = '';
-      renderVoices(); renderMacros(); renderInteractions(); renderLoops(); renderExtras(); renderDownloads(); renderMetrics();
+      renderVoices(); renderMusical(); renderMacros(); renderInteractions(); renderLoops(); renderExtras(); renderDownloads(); renderMetrics();
     } catch {
       $('#load-status').textContent = 'The audition pack could not be loaded. Reload the page to try again.';
       $('#voice-grid').innerHTML = empty('Recordings are unavailable. The page does not synthesize replacement audio.');

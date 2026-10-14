@@ -417,6 +417,12 @@ object Prism {
 
     internal data class LoopPlan(val frames: Int, val periods: Int, val baseHz: Double)
 
+    // SynthScreen previews run in runInterruptible and keygroup exports pass a cancel
+    // callback; either stops a long render instead of letting it finish unwanted.
+    private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
+        if (Thread.currentThread().isInterrupted || cancelled()) throw CancellationException("PRISM render no longer wanted")
+    }
+
     /** Search whole note periods near the patch duration; fit frames to the pitch with <.1 cent movement. */
     internal fun planLoop(hz: Double, template: PrismTemplate): LoopPlan {
         val step = if (template.spectralId == PrismSpectrum.BELL && template.ratioOverrides.isEmpty()) 4 else 1
@@ -461,7 +467,7 @@ object Prism {
         val increment = DoubleArray(GROUPS)
         for (i in raw.indices) {
             if (i % BLOCK == 0) {
-                if (cancelled()) throw CancellationException("PRISM render cancelled")
+                stopIfUnwanted(cancelled)
                 val t = i.toDouble() / rate
                 for (g in 0 until GROUPS) {
                     current[g] = envelope(t, g, c, m, loop)
@@ -487,7 +493,8 @@ object Prism {
         return raw
     }
 
-    /** Pre-level evidence: genuine adjacent held cycles, precondition 4× samples, and the actual partial bank. */
+    /** Pre-level evidence: genuine adjacent held cycles, precondition 4× samples, and the actual partial bank.
+     * [raw] is empty when [probe] was asked not to keep it. */
     internal data class Probe(
         val samples: FloatArray,
         val raw: FloatArray,
@@ -508,6 +515,7 @@ object Prism {
         normalize: Boolean = false,
         cancelled: () -> Boolean = { false },
         seconds: Float? = null,
+        keepRaw: Boolean = true,
     ): Probe {
         val m = settled(voice, macros)
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
@@ -520,8 +528,11 @@ object Prism {
         // A small postroll keeps the decimator's edge outside the exported loop.
         val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds * RATE).roundToInt().coerceAtLeast(64)
         val raw = synthesize(voice, m, template, bank, contours, frames, loop, cancelled)
-        val conditioned = raw.copyOf()
+        stopIfUnwanted(cancelled)
+        // Only a test reads the unconditioned 4x sum back; a render conditions it in place.
+        val conditioned = if (keepRaw) raw.copyOf() else raw
         Tide.bandLimit(conditioned, RATE * Dsp.OVERSAMPLE)
+        stopIfUnwanted(cancelled)
         val down = Dsp.decimate(conditioned, RATE)
         val out: FloatArray
         var previous: FloatArray? = null
@@ -549,6 +560,7 @@ object Prism {
             // Match timbres to the shared melodic reference while preserving performance dynamics.
             // Use the same gain on the preceding cycle so the measured seam remains meaningful.
             val unlevel = if (previous != null) out.copyOf() else null
+            stopIfUnwanted(cancelled)
             Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET * v.pow(.65f))
             if (previous != null && unlevel != null) {
                 val reference = unlevel.indices.maxByOrNull { abs(unlevel[it]) } ?: 0
@@ -556,7 +568,7 @@ object Prism {
                 for (i in previous.indices) previous[i] *= gain
             }
         }
-        return Probe(out, raw, bank.hz, bank.weights, bank.groups, loop?.baseHz ?: hz, loop?.frames ?: 0, previous, seam)
+        return Probe(out, if (keepRaw) raw else FloatArray(0), bank.hz, bank.weights, bank.groups, loop?.baseHz ?: hz, loop?.frames ?: 0, previous, seam)
     }
 
     fun render(
@@ -564,7 +576,7 @@ object Prism {
         macros: Map<String, Float> = emptyMap(),
         velocity: Float = 1f,
         template: PrismTemplate = templateFor(voice),
-    ): Snip = Snip(probe(voice, macros, velocity, template, normalize = true).samples, channels = 1, sampleRate = RATE)
+    ): Snip = Snip(probe(voice, macros, velocity, template, normalize = true, keepRaw = false).samples, channels = 1, sampleRate = RATE)
 
     fun renderAtMidi(
         voice: PrismVoice,
@@ -584,5 +596,5 @@ object Prism {
         velocity: Float = 1f,
         template: PrismTemplate = templateFor(voice),
         cancelled: () -> Boolean = { false },
-    ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled).samples
+    ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled, keepRaw = false).samples
 }
