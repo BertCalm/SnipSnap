@@ -2,6 +2,28 @@ plugins {
     kotlin("jvm")
 }
 
+/** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
+tasks.register<JavaExec>("generateVentAudition") {
+    group = "distribution"
+    description = "Render the twelve VENT native/matched PCM24 WAVs, recipes and measurements under testkit/vent-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vent-audition")
+}
+
+/** Four longer comparisons with one fixed linear readout and no projection saturation. */
+tasks.register<JavaExec>("generateVentIsolationAudition") {
+    group = "distribution"
+    description = "Render the four VENT isolation native/matched PCM24 WAVs, diagnostic recipes and measurements under testkit/vent-isolation-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentIsolationAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vent-isolation-audition")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"

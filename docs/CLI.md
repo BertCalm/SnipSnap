@@ -170,7 +170,9 @@ ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
 (`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
 hold on the phone's MAKE INSTRUMENT; this command refuses them. An
 engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR,
-AEROSTAT) still renders here.
+AEROSTAT) still renders here. VENT, a prototype outside both the roster
+and the picker, renders its three provisional recipes (`VentPresets`, one
+each for ROUND, WIRE and TEAR); see [VENT](VENT.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
@@ -196,14 +198,16 @@ the message.
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
 | MURMUR | 36–96 |
+| VENT | 36–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE resets TUNE to
 zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
 itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
-repeatable macro variation around the chosen preset); both are refused on
-any other engine.
+repeatable macro variation around the chosen preset). VENT takes
+`--seed N` too, for its starting trajectory, and refuses `--scramble`;
+every other engine refuses both.
 
 LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
 eight-preset audition bank. `--midi` and `--velocity 0..1` override
