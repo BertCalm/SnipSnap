@@ -135,9 +135,11 @@ class SpoolTest {
             assertTrue(s.isNotEmpty() && s.all { it.isFinite() }, "$label nonfinite output")
             assertTrue(s.size <= Dsp.RATE * 10, "$label exceeded finite host duration")
             // The output passes a tanh saturator whose ceiling is 1/1.12 (.89), so a 4.0 ceiling could never fire.
-            // A runaway would pin the output against that ceiling; these renders peak at .15 to .20, and must stay
-            // in the saturator's near-linear region (under 4% compression), well clear of it.
-            assertTrue(s.maxOf { abs(it) } < .3f && rms(s) > 1e-5, "$label runaway or silent source: peak ${s.maxOf { abs(it) }}")
+            // A runaway would pin the output against that ceiling. With each family's partials phase-aligned and held
+            // to one amplitude budget, these renders peak at .18 (BRASS all-high) to .40 (CHOIR defaults), at most 7%
+            // compression; they must stay under .5 (12% compression), well clear of the ceiling. Doubling the
+            // saturator's input reaches .59 on the first case and .67 on CHOIR.
+            assertTrue(s.maxOf { abs(it) } < .5f && rms(s) > 1e-5, "$label runaway or silent source: peak ${s.maxOf { abs(it) }}")
             assertTrue(abs(s.average()) < .01, "$label DC offset")
             assertTrue(s.takeLast(Dsp.RATE / 100).maxOf { abs(it) } < 1e-3, "$label failed to terminate quietly")
             assertTrue(d.sourcePeak.isFinite() && d.overlayPeak.isFinite() && d.overlayPeak <= 1f, "$label unbounded recording")
@@ -225,7 +227,7 @@ class SpoolTest {
             "RETURN did not reveal the independent backward journey")
         // 1e-4 on an unnormalized stem is about 50 dB under the stem itself, so a backward layer cut by 30 dB still
         // passed. The layer is measured against the forward pickup in the same window instead: docs/SPOOL.md
-        // reports it at no less than 42% of forward RMS across its clean release cases (this case measures 169%),
+        // reports it at no less than 42% of forward RMS across its clean release cases (this case measures 160%),
         // and RETURN must keep raising it (.9 measures 1.57 times .45).
         val backward = rms(requireNotNull(audible.reverseStem), from, until)
         val forward = rms(requireNotNull(audible.forwardStem), from, until)
