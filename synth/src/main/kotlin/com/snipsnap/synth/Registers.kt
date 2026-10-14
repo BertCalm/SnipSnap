@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.DrumClass
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -46,7 +47,7 @@ data class RegistersProbe(
 )
 
 /**
- * REGISTERS is an audition-first renderer, deliberately outside the product's engine registry.
+ * REGISTERS renders original pipe and reed voices for SnipSnap.
  * PIPE blends twelve harmonic partials with registration-inspired dark/principal weighting,
  * staggered speech, chiff and seeded wind. MUSETTE
  * combines three odd-harmonic reeds whose symmetric Hz offsets produce audible beating.
@@ -90,6 +91,17 @@ object Registers {
         (((tune.takeIf { it.isFinite() } ?: .5f).coerceIn(0f, 1f)) * TUNE_SEMITONES).roundToInt()
 
     fun isLoop(hold: Float): Boolean = hold.isFinite() && hold >= LOOP_THRESHOLD
+
+    fun drumClassFor(voice: RegistersVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
+        if (isLoop(settled(voice, macros).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
+
+    /** Keep a scrambled audition finite; sustained material is a deliberate HOLD choice. */
+    fun scramble(voice: RegistersVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = base + (near as? RegistersPatch)?.forEditing()?.macros.orEmpty().filterKeys { it in base }
+        val amount = (temperature.takeIf { it.isFinite() } ?: .35f).coerceIn(0f, 1f)
+        return Dsp.scrambleNear(seed, amount, random) + ("HOLD" to 0f)
+    }
 
     private data class LoopPlan(val frames: Int, val hz: Double) {
         val seconds get() = frames.toDouble() / Dsp.RATE
