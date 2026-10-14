@@ -22,7 +22,19 @@ class PadRecipeTest {
         temp.deleteRecursively()
     }
 
-    private fun onePatchPerEngine(): List<Patch> = listOf(
+    /**
+     * One patch of every engine [Patches] reads. The hand-built ones carry the state a
+     * factory preset would not exercise (a SNAP table, a drawn GYRE, saved roots and
+     * velocities) and cover the engines with no roster; every other engine is its first
+     * factory preset, so an engine that ships a roster is covered without a new line here.
+     */
+    private fun onePatchPerEngine(): List<Patch> {
+        val handBuilt = handBuiltPatches()
+        val covered = handBuilt.map { it.engine }.toSet()
+        return handBuilt + Presets.all().filter { it.engine !in covered }.distinctBy { it.engine }
+    }
+
+    private fun handBuiltPatches(): List<Patch> = listOf(
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
         SkinPatch("Room Kick Test", SkinVoice.KICK, mapOf("TUNE" to 0.3f)),
         TinesPatch("Bell Test", TinesVoice.BELL, mapOf("RATIO" to 0.9f)),
@@ -56,7 +68,13 @@ class PadRecipeTest {
 
     @Test
     fun `every engine's patch dispatches through the same door`() {
-        for (patch in onePatchPerEngine()) {
+        val patches = onePatchPerEngine()
+        val covered = patches.map { it.engine }.toSet()
+        assertEquals(
+            PatchTypes.engines, covered,
+            "no patch of ${PatchTypes.engines - covered} goes through the door; a rosterless engine needs a hand-built patch",
+        )
+        for (patch in patches) {
             val back = Patches.fromJsonText(patch.toJsonText())
             assertEquals(patch, back, "${patch.engine} did not round-trip")
             assertTrue(

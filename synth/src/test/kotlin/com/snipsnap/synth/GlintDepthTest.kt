@@ -116,6 +116,42 @@ class GlintDepthTest {
         }
     }
 
+    /**
+     * The first sample above is zero whatever the window does: the envelope is 0 at t = 0 and every
+     * term is sin(2π·k·0). The window's own zeros matter at every later wrap, where k changes and the
+     * spec says the output is exactly zero (§2.2). A sample lands within one phase step of each wrap,
+     * not on it, so this measures the burst at the samples either side of every wrap in the note: with
+     * the window falling to 0 at the wrap, the sample before it is at most about a phase step of the
+     * burst's peak (measured 0.82 step on VOWEL at the tiniest DEPTH, the saw-like edge); from DEPTH
+     * 0.25 the rounded attack also brings the sample after it to near zero (measured at most 0.018
+     * step). At the tiniest DEPTH the window still opens like the saw, at full height right after the
+     * wrap, so the sample after it is only checked once the edge is rounded. The sine above DEPTH 0.5
+     * is continuous through the wrap rather than zero there; the law test pins its share, so it is
+     * subtracted out here and only the burst pair is measured.
+     */
+    @Test
+    fun `the burst closes to zero at every wrap in the note at every DEPTH`() {
+        for (voice in GlintVoice.entries) {
+            val f0 = Glint.frequencyFor(voice, Glint.defaults(voice).getValue("TUNE"))
+            val step = f0.toDouble() / rate
+            val sine = raw(voice, 1f)
+            for (depth in listOf(Float.MIN_VALUE, 0.25f, 0.5f, 0.75f, 0.9f)) {
+                val out = raw(voice, depth)
+                val u = if (depth <= 0.5f) 0.0 else 2.0 * depth - 1.0
+                val burst = DoubleArray(out.size) { out[it] - u * sine[it] }
+                val peak = burst.maxOf { abs(it) }
+                val starts = cycleStarts(f0, out.size).filter { it in 1 until out.size }
+                assertTrue(starts.size > 20, "$voice DEPTH $depth: too few wraps to measure")
+                val before = starts.maxOf { abs(burst[it - 1]) } / peak
+                assertTrue(before < 2 * step, "$voice DEPTH $depth: the burst reaches the wrap at $before of its peak, ${before / step} phase steps")
+                if (depth >= 0.25f) {
+                    val after = starts.maxOf { abs(burst[it]) } / peak
+                    assertTrue(after < 2 * step, "$voice DEPTH $depth: the burst leaves the wrap at $after of its peak, ${after / step} phase steps")
+                }
+            }
+        }
+    }
+
     @Test
     fun `a patch naming DEPTH is accepted and round-trips, and DEPTH out of range is refused`() {
         for (voice in GlintVoice.entries) {

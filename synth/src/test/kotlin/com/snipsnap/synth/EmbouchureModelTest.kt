@@ -57,10 +57,45 @@ class EmbouchureModelTest {
             assertEquals(2, fresh.model)
             assertEquals(fresh, Patches.fromJsonText(fresh.toJsonText()))
             for (model in listOf(-1, 0, 3, 99)) {
-                assertFailsWith<IllegalArgumentException> { fresh.copy(model = model) }
+                assertRefused<IllegalArgumentException>("unsupported embouchure model $model") { fresh.copy(model = model) }
                 val unsupported = JsonValue.Obj(fresh.toJsonValue().entries + ("model" to JsonValue.Num(model.toDouble())))
-                assertFailsWith<JsonException> { Patches.fromJsonValue(unsupported) }
+                assertRefused<JsonException>("unsupported embouchure model $model") { Patches.fromJsonValue(unsupported) }
             }
         }
+    }
+
+    @Test
+    fun `an interrupted model one render, finite or held, stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the frozen
+        // renderer must stop on that flag in its loops and before each of its passes, as model two does.
+        val voice = EmbouchureVoice.entries.first()
+        for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+            "EMBOUCHURE model 1 finite render did not stop on the interrupt at its first look in the sample loop" to
+                { Embouchure.render(voice, Embouchure.defaults(voice), model = 1) },
+            "EMBOUCHURE model 1 held render did not stop on the interrupt at its first look in the first loop pass" to
+                { Embouchure.render(voice, Embouchure.defaults(voice) + ("HOLD" to 1f), model = 1) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(missing) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+    }
+
+    @Test
+    fun `model one's conditioning pass stops on its own when the render is no longer wanted`() {
+        // The synthesis loops poll the flag every 8192 samples; the band limit, the decimation and the level
+        // that follow them run over the whole buffer, so the pass itself must look before it starts.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "EMBOUCHURE model 1's conditioning pass did not stop on the interrupt at its look before the band limit",
+            ) { EmbouchureV1.finish(FloatArray(Dsp.OVERSAMPLE * 4096)) }
+        } finally {
+            Thread.interrupted()
+        }
+        assertEquals(4096, EmbouchureV1.finish(FloatArray(Dsp.OVERSAMPLE * 4096)).size, "an uninterrupted pass still conditions")
     }
 }

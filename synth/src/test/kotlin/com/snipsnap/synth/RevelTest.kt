@@ -14,12 +14,32 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Mechanical and acoustic evidence. The dry audition remains the gate for source character. */
 class RevelTest {
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        val voice = RevelVoice.CIRCLE
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "finite" to { Revel.render(voice) },
+            "held" to { Revel.renderLoop(voice) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "REVEL $label render did not stop on the interrupt at its first look in the sample loop",
+                ) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Revel.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
+
     @Test
     fun `host note is separate from the five timbral macros and finite pitched routing`() {
         for (voice in RevelVoice.entries) {
@@ -312,13 +332,23 @@ class RevelTest {
             RevelVoice.CIRCLE to mapOf("HOLD" to 1f, "ORBIT" to .01f, "PLAY" to .2f),
             RevelVoice.SPIRO to mapOf("HOLD" to 1f, "ORBIT" to 1f, "WEAVE" to 1f, "REACH" to 1f, "PLAY" to 1f),
         )) {
-            val report = Revel.inspect(voice, macros)
+            // The worker never reads its flag as set; it only counts how often the render looks at it.
+            val worker = LateInterrupt(clearLooks = Int.MAX_VALUE)
+            val report = worker.run { Revel.inspect(voice, macros) }
             val loop = requireNotNull(report.loop)
             println("REVEL HOLD $voice: seam ${loop.seamError}, acoustic convergence ${loop.convergenceError}, state ${loop.stateConvergenceError}, cycles ${loop.prerollCycles}")
             assertTrue(loop.seamError.isFinite() && loop.seamError < Keys.MAX_SEAM_ERROR, "$voice seam ${loop.seamError}")
             assertTrue(loop.convergenceError < 1e-3, "$voice preceding acoustic period did not settle")
             assertTrue(loop.stateConvergenceError < 1e-3, "$voice complete state did not settle")
             assertTrue(loop.prerollCycles in 1..16)
+            assertEquals(3, loop.prerollCycles, "$voice: docs/REVEL.md promises three hidden preroll periods")
+            // The sample loop looks once every 8192 internal samples, so the looks measure how many internal
+            // periods the render actually ran, independently of the count it reports. The few looks outside the
+            // loop are a small fraction of one period at these loop lengths and round away.
+            val periodN = report.snip.samples.size * Dsp.OVERSAMPLE
+            val renderedPeriods = kotlin.math.round(worker.looks * 8192.0 / periodN).toInt()
+            assertEquals(loop.prerollCycles + 2, renderedPeriods,
+                "$voice ran $renderedPeriods internal periods (${worker.looks} looks, $periodN samples each), not its reported preroll and two candidates")
             assertTrue(report.rates.orbitHz > 0.0, "nonzero slow orbit rounded to stationary")
             val cycles = report.rates.orbitHz * report.rates.loopSeconds
             assertTrue(abs(cycles - kotlin.math.round(cycles)) < 1e-5, "base microphone path does not close")

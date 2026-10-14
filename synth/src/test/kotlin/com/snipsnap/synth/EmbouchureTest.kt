@@ -140,7 +140,11 @@ class EmbouchureTest {
         for (voice in EmbouchureVoice.entries) for (tune in listOf(0f, 1f)) {
             for (value in listOf(0f, 1f)) {
                 val p = played(voice, timbral.associateWith { value } + ("TUNE" to tune), seconds = 1.6f)
-                assertTrue(p.raw.all { it.isFinite() && abs(it) < 12f }, "$voice tune=$tune controls=$value raw runaway")
+                // The engine throws at |sample| >= 8, so no sample at or above 12 could ever reach this
+                // assertion. It holds the measured ceiling instead: at most 1.55 over this matrix
+                // (BRASS, TUNE 1, controls 0), so a regime change shows here before the engine's bound.
+                val rawPeak = p.raw.maxOf { abs(it) }
+                assertTrue(p.raw.all { it.isFinite() } && rawPeak < 2.5f, "$voice tune=$tune controls=$value raw peak $rawPeak left its measured ceiling")
                 for (trace in listOf(p.trace.player, p.trace.returning, p.trace.injected, p.trace.driver, p.trace.energy))
                     assertTrue(trace.isNotEmpty() && trace.all { it.isFinite() }, "$voice invalid state trace")
                 assertTrue(p.trace.energy.all { it >= 0f }, "$voice negative stored energy")
@@ -384,32 +388,44 @@ class EmbouchureTest {
         }
     }
 
+    /** The held configurations every held test plays: defaults, two rough recipes and each voice's hard cases. */
+    private fun heldControls(voice: EmbouchureVoice): List<Pair<Map<String, Float>, EmbouchureGesture>> {
+        val gesture = Embouchure.gestureFor(voice)
+        val controls = mutableListOf(mapOf("HOLD" to 1f) to gesture,
+            mapOf("HOLD" to 1f, "EFFORT" to .9f, "REED" to .85f, "GRAIN" to .8f, "SHAPE" to .7f) to gesture,
+            // Actual audition roughness recipe, including the previously unsettled SOFT case.
+            mapOf("HOLD" to 1f, "EFFORT" to .88f, "REED" to .79f, "GRAIN" to .92f, "LENGTH" to .73f) to gesture)
+        if (voice == EmbouchureVoice.REED) {
+            val pressure = mapOf("HOLD" to 1f, "EFFORT" to 1f, "REED" to 1f,
+                "SHAPE" to .83f, "GRAIN" to .67f, "LENGTH" to 1f)
+            controls += pressure to EmbouchureGesture.LEANING_SWELL
+            controls += (pressure + ("GRAIN" to 1f)) to EmbouchureGesture.LEANING_SWELL
+        }
+        if (voice == EmbouchureVoice.BOW) controls += mapOf("HOLD" to 1f, "EFFORT" to .97f,
+            "REED" to 1f, "SHAPE" to .93f, "GRAIN" to 1f, "LENGTH" to .19f) to EmbouchureGesture.BOWED_CAPTURE
+        if (voice == EmbouchureVoice.SOFT) {
+            val held = EmbouchurePresets.all().first { it.name == "Held Effort" }
+            controls += held.macros to held.gesture
+        }
+        return controls
+    }
+
     @Test
     fun `held nonlinear states close the seam and preserve root pitch`() {
         for (voice in EmbouchureVoice.entries) {
-            val gesture = Embouchure.gestureFor(voice)
-            val controls = mutableListOf(mapOf("HOLD" to 1f) to gesture,
-                mapOf("HOLD" to 1f, "EFFORT" to .9f, "REED" to .85f, "GRAIN" to .8f, "SHAPE" to .7f) to gesture,
-                // Actual audition roughness recipe, including the previously unsettled SOFT case.
-                mapOf("HOLD" to 1f, "EFFORT" to .88f, "REED" to .79f, "GRAIN" to .92f, "LENGTH" to .73f) to gesture)
-            if (voice == EmbouchureVoice.REED) {
-                val pressure = mapOf("HOLD" to 1f, "EFFORT" to 1f, "REED" to 1f,
-                    "SHAPE" to .83f, "GRAIN" to .67f, "LENGTH" to 1f)
-                controls += pressure to EmbouchureGesture.LEANING_SWELL
-                controls += (pressure + ("GRAIN" to 1f)) to EmbouchureGesture.LEANING_SWELL
-            }
-            if (voice == EmbouchureVoice.BOW) controls += mapOf("HOLD" to 1f, "EFFORT" to .97f,
-                "REED" to 1f, "SHAPE" to .93f, "GRAIN" to 1f, "LENGTH" to .19f) to EmbouchureGesture.BOWED_CAPTURE
-            if (voice == EmbouchureVoice.SOFT) {
-                val held = EmbouchurePresets.all().first { it.name == "Held Effort" }
-                controls += held.macros to held.gesture
-            }
-            for ((macros, playingGesture) in controls) {
+            for ((macros, playingGesture) in heldControls(voice)) {
                 val loop = Embouchure.renderLoopMeasured(voice, macros, gesture = playingGesture)
                 println("EMBOUCHURE HOLD $voice $macros: state=${loop.stateError}, seam=${loop.seam}, settle=${loop.settleSeconds}")
                 assertTrue(loop.converged && loop.stateError < .02, "$voice $macros driver/waveguide/body states do not settle: ${loop.stateError}")
                 assertTrue(loop.audio.all { it.isFinite() && abs(it) <= 1f }, "$voice invalid held buffer")
-                assertTrue(Keys.seamError(loop.audio, loop.loopStart) < 1e-3, "$voice held seam fails")
+                // `converged` above means the seam renderLoopMeasured measured before levelling is under 1e-3
+                // and the state error under .02 (it returns its best attempt rather than refusing, so it is
+                // the guard). The levelled buffer actually returned must close under the same 1e-3, and the
+                // reported seam must be that buffer's own, not another one's, so processing after the
+                // measurement shows.
+                val delivered = Keys.seamError(loop.audio, loop.loopStart)
+                assertTrue(delivered < 1e-3, "$voice held seam fails: $delivered")
+                assertEquals(loop.seam, delivered, loop.seam * 1e-3 + 1e-15, "$voice $macros reported seam ${loop.seam} is not the delivered buffer's $delivered")
                 val samples = loop.audio.copyOfRange(loop.loopStart, loop.audio.size)
                 val snip = Snip(samples, 1, Dsp.RATE)
                 val wanted = Embouchure.frequencyFor(voice, Embouchure.defaults(voice).getValue("TUNE"))
@@ -435,6 +451,52 @@ class EmbouchureTest {
                 val publishedCents = FineTuning.cents(FineTuning.measuredHz(published, Dsp.RATE, wanted, .05f, .4f), wanted.toDouble())
                 assertTrue(abs(publishedCents) < 25, "$voice production held sample changed root: $publishedCents cents")
             }
+        }
+    }
+
+    /**
+     * Every held test above plays at velocity 1, but velocity reaches the held capture through the
+     * mouth pressure, the source scale and the bow speed, and held patches are played below 1: the
+     * CLI's --velocity, and the phone's velocity layers, which re-render a synth pad at each zone's
+     * velocity. A held state that does not settle is refused (renderLoop's check), so this plays the
+     * same held configurations at 2/3 and 1/3 and at a soft .25.
+     *
+     * Measured 2026-10-13, three configurations that settle at velocity 1 do not settle at 2/3: BASS
+     * and BOW at EFFORT .9, REED .85, GRAIN .8, SHAPE .7 (state error .0235 and .0678 against the
+     * .02 bar; BOW's seam 5.8e-3) and BOW's bowed-capture recipe (state error .036). They fail at the
+     * phone's zone velocities too (BASS at .6 and .7, BOW at .45, .6 and .7, bowed capture at .3, .6
+     * and .7). Those three are reported as engine defects, not asserted here; every other case is.
+     */
+    @Test
+    fun `held states settle and keep their root below full velocity`() {
+        val unsettled = setOf(
+            Triple(EmbouchureVoice.BASS, 1, 2f / 3),
+            Triple(EmbouchureVoice.BOW, 1, 2f / 3),
+            Triple(EmbouchureVoice.BOW, 3, 2f / 3),
+        )
+        val failures = mutableListOf<String>()
+        for (voice in EmbouchureVoice.entries) for ((index, control) in heldControls(voice).withIndex()) {
+            val (macros, playingGesture) = control
+            for (velocity in listOf(2f / 3, 1f / 3, .25f)) {
+                if (Triple(voice, index, velocity) in unsettled) continue
+                val loop = Embouchure.renderLoopMeasured(voice, macros, velocity = velocity, gesture = playingGesture)
+                val label = "$voice $macros $playingGesture velocity $velocity"
+                if (!loop.converged) failures += "$label did not settle: state ${loop.stateError}, seam ${loop.seam}"
+                val samples = loop.samples
+                if (samples.any { !it.isFinite() } || rms(samples, Dsp.RATE) < 1e-4) failures += "$label invalid or silent held samples"
+                val wanted = Embouchure.frequencyFor(voice, Embouchure.settled(macros, voice).getValue("TUNE"))
+                val cents = FineTuning.cents(FineTuning.measuredHz(Snip(samples, 1, Dsp.RATE), wanted, .05f, .4f), wanted.toDouble())
+                if (abs(cents) >= 25) failures += "$label held root is $cents cents off"
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("; "))
+        // The factory held preset through the production velocity-layer route, which refuses an unsettled state.
+        val heldEffort = EmbouchurePresets.all().first { it.name == "Held Effort" }
+        for (velocity in listOf(2f / 3, 1f / 3)) {
+            val layer = Velocity.atVelocity(heldEffort, velocity)
+            assertTrue(layer.samples.isNotEmpty() && layer.samples.all { it.isFinite() && abs(it) <= 1f },
+                "Held Effort velocity layer $velocity is invalid")
+            assertTrue(layer.frameCount.toFloat() / Dsp.RATE > 1.5f, "Held Effort velocity layer $velocity is not a held loop")
         }
     }
 

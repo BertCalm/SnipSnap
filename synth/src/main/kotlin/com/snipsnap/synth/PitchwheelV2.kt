@@ -455,14 +455,22 @@ internal object PitchwheelV2 {
         }
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the long loops stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("PITCHWHEEL render no longer wanted")
+    }
+
     internal fun finish(raw: FloatArray, normalize: Boolean = false, fade: Boolean = false): FloatArray {
+        stopIfUnwanted()
         val filtered = raw.copyOf()
         Tide.bandLimit(filtered, INTERNAL_RATE)
+        stopIfUnwanted()
         val out = Dsp.decimate(filtered, RATE)
         val mean = out.sumOf { it.toDouble() } / out.size.coerceAtLeast(1)
         val hp = Dsp.OnePole(RATE)
         for (i in out.indices) { val x = out[i] - mean.toFloat(); out[i] = x - hp.lp(x, 20f) }
-        if (normalize) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        if (normalize) { stopIfUnwanted(); Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET) }
         if (fade) Dsp.fadeTail(out)
         return out
     }
@@ -506,8 +514,9 @@ internal object PitchwheelV2 {
             var stateError = Double.POSITIVE_INFINITY
             var cycles = 0
             while (cycles < 20) {
+                stopIfUnwanted()
                 previous = current
-                current = FloatArray(period * Dsp.OVERSAMPLE) { engine.tick() }
+                current = FloatArray(period * Dsp.OVERSAMPLE) { if (it % 8192 == 0) stopIfUnwanted(); engine.tick() }
                 val state = engine.state()
                 stateError = state.indices.maxOf { abs(state[it] - oldState[it]) }
                 oldState = state; cycles++
@@ -523,7 +532,7 @@ internal object PitchwheelV2 {
                 val src = period - need + i; val dst = buffer.size - need + i
                 buffer[dst] = ((1 - w) * buffer[dst] + w * buffer[src]).toFloat()
             }
-            if (normalize) Dsp.levelTo(buffer, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+            if (normalize) { stopIfUnwanted(); Dsp.levelTo(buffer, RATE, Dsp.MELODIC_LOUDNESS_TARGET) }
             val seam = Keys.seamError(buffer, period)
             check(seam < Keys.MAX_SEAM_ERROR) { "PITCHWHEEL $voice held seam $seam" }
             return Probe(buffer.copyOfRange(period, buffer.size), engine.diagnostics(),
@@ -533,6 +542,7 @@ internal object PitchwheelV2 {
         val raw = FloatArray(frames)
         var length = frames
         for (i in raw.indices) {
+            if (i % 8192 == 0) stopIfUnwanted()
             raw[i] = engine.tick()
             if (seconds == null && !held && i > 2 * INTERNAL_RATE && i % 1024 == 0 && engine.totalEnergy() < 1e-10) {
                 length = i + 1; break

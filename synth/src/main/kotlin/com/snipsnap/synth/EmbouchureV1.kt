@@ -445,14 +445,19 @@ internal object EmbouchureV1 {
 
     /** The production path is band-limited before decimation; diagnostic velocity never gets normalised. */
     internal fun finish(raw: FloatArray, normalize: Boolean=true, loop: Boolean=false, rate: Int=INTERNAL_RATE): FloatArray {
+        // The synthesis loops poll the preview thread's interrupt; the band limit, the decimation
+        // and the level each pass over the whole buffer and deserve their own check first.
+        if(Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("EMBOUCHURE render no longer wanted")
         val copy=raw.copyOf()
         Tide.bandLimit(copy,rate)
+        if(Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("EMBOUCHURE render no longer wanted")
         val out=if(rate==INTERNAL_RATE) Dsp.decimate(copy,Dsp.RATE) else if(rate==Dsp.RATE) copy else
             Resampler.resample(Snip(copy,channels=1,sampleRate=rate),Dsp.RATE).samples
         if(loop) {
             val mean=out.sumOf { it.toDouble() }/max(1,out.size)
             for(i in out.indices) out[i]-=mean.toFloat()
         }
+        if(Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("EMBOUCHURE render no longer wanted")
         if(normalize) Dsp.levelTo(out,Dsp.RATE,target=Dsp.MELODIC_LOUDNESS_TARGET)
         if(!loop) Dsp.fadeTail(out)
         // Passive conditioning/decimation can create new subnormal tails after the model's
@@ -501,10 +506,13 @@ internal object EmbouchureV1 {
                 if(i==warm-1) stateA=e.state()
                 if(i==warm+period-1) stateB=e.state()
             }
+            // The period measurement and the seam each read the whole buffer: a stale loop stops before them.
+            if(Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("EMBOUCHURE loop no longer wanted")
             val measured=Bore.measureLoopSamples(raw,warm,period.toDouble(),cycles)
             val ratio=if(pass<2) measured/period else phaseRatio(raw,warm,period,cycles)
             val conditioned=finish(raw,normalize=false,loop=true)
             val kept=conditioned.copyOfRange(warm/Dsp.OVERSAMPLE,warm/Dsp.OVERSAMPLE+frames*2)
+            if(Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("EMBOUCHURE loop no longer wanted")
             val seam=Keys.seamError(kept,frames)
             val a=stateA!!; val b=stateB!!
             var diff=0.0; var norm=0.0
@@ -512,6 +520,7 @@ internal object EmbouchureV1 {
             val stateError=sqrt(diff/max(1e-12,norm))
             val rms=sqrt(raw.sliceArray(warm until warm+period).sumOf { it.toDouble()*it }/period)
             if(normalize) {
+                if(Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("EMBOUCHURE loop no longer wanted")
                 Dsp.levelTo(kept,Dsp.RATE,target=Dsp.MELODIC_LOUDNESS_TARGET)
                 val gain=unit(velocity,1f).pow(.60f)
                 for(i in kept.indices) kept[i]=acousticZero(kept[i]*gain)

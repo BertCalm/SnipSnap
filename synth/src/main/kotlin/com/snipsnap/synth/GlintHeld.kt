@@ -51,7 +51,8 @@ internal object GlintHeld {
     const val BREATHE_SHARE = 0.25f
     const val BRASS_REST = 0.5f
     private const val ATTACK_SECONDS = 0.002f
-    private const val CANCEL_CHECK_SAMPLES = 4096
+    /** How often the oversampled loop asks whether it is still wanted; the passes after it ask once each. */
+    internal const val CANCEL_CHECK_SAMPLES = 4096
 
     data class BreathPlan(val cycles: Int, val loopFrames: Int, val f0: Double)
 
@@ -94,9 +95,7 @@ internal object GlintHeld {
         var rung = -1
         var swing = 0f
         for (i in 0 until total) {
-            if (i % CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
-                throw CancellationException("GLINT held render no longer wanted")
-            }
+            if (i % CANCEL_CHECK_SAMPLES == 0) stopIfUnwanted(cancelled)
             val attack = (i.toFloat() / rate / ATTACK_SECONDS).coerceAtMost(1f)
             val breathing = i >= w0
             if (breathing) {
@@ -141,11 +140,19 @@ internal object GlintHeld {
             }
         }
 
+        stopIfUnwanted(cancelled)
         val down = Dsp.decimate(out, Dsp.RATE)
         val loopStart = (i0 / os).toInt() + plan.loopFrames
         val audio = down.copyOfRange(0, loopStart + plan.loopFrames)
+        stopIfUnwanted(cancelled)
         level(audio, loopStart)
         return Held(audio, loopStart)
+    }
+
+    // Keygroup exports pass a cancel callback and SynthScreen previews run in runInterruptible;
+    // either stops the loop and the passes after it instead of letting them finish unwanted.
+    private fun stopIfUnwanted(cancelled: () -> Boolean) {
+        if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException("GLINT held render no longer wanted")
     }
 
     /**

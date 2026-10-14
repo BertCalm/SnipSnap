@@ -587,15 +587,24 @@ object Revel {
         for (i in a.indices) { val d = a[i] - b[i]; difference += d * d; energy += b[i] * b[i] }
         return difference / max(energy, 1e-24)
     }
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the long loops stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("REVEL render no longer wanted")
+    }
     private fun cyclicDecimate(two: FloatArray): FloatArray {
+        stopIfUnwanted()
         val pad = 128 * Dsp.OVERSAMPLE
         val extended = FloatArray(two.size + 2 * pad) { two[Math.floorMod(it - pad, two.size)] }
         Tide.bandLimit(extended, INTERNAL_RATE)
+        stopIfUnwanted()
         val result = Dsp.decimate(extended, RATE)
         return result.copyOfRange(pad / Dsp.OVERSAMPLE, pad / Dsp.OVERSAMPLE + two.size / Dsp.OVERSAMPLE)
     }
     private fun finish(raw: FloatArray): FloatArray {
+        stopIfUnwanted()
         Tide.bandLimit(raw, INTERNAL_RATE)
+        stopIfUnwanted()
         return Dsp.decimate(raw, RATE)
     }
     private fun perform(voice: RevelVoice, macros: Map<String, Float>, velocity: Float,
@@ -656,6 +665,7 @@ object Revel {
             return out
         }
         for (sample in 0 until n) {
+            if (sample % 8192 == 0) stopIfUnwanted()
             val local = if (p.held) sample % periodN else sample
             val phraseLocal = if (p.held || sample < p.cycles * phraseN) sample % phraseN else -1
             if (phraseLocal == 0) { eventIndex = 0; nextEvent = phraseEvents.firstOrNull()?.let { (it.timeSeconds * INTERNAL_RATE).roundToInt() } ?: Int.MAX_VALUE }
@@ -748,6 +758,7 @@ object Revel {
         val raw: FloatArray
         if (p.held && probe.seconds == null) {
             val two = cyclicDecimate(rawInternal)
+            stopIfUnwanted()
             var difference = 0.0; var signal = 0.0
             for (i in 0 until p.frames) {
                 val d = two[i + p.frames] - two[i].toDouble()
@@ -769,6 +780,7 @@ object Revel {
         val offset = if (p.held && probe.seconds == null) p.frames else 0
         val energy = energyTrace?.copyOfRange(offset, energyTrace.size)
         val floorEnergy = floorTrace?.copyOfRange(offset, floorTrace.size)
+        stopIfUnwanted()
         val out = raw.copyOf()
         if (normalize) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET, .99f)
         val events = ArrayList<Event>()
