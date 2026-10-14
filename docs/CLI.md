@@ -173,8 +173,10 @@ plus the `.xpm` twin). REGISTERS keeps its speaking attack, so it takes
 drone. SIREN and GLINT hold on the phone's MAKE INSTRUMENT; this command
 refuses them. An engine with a roster and no picker entry (BORE, ARCO,
 MERCURY, TREMOR, AEROSTAT) still renders here. VENT, a prototype outside
-both the roster and the picker, renders its three provisional recipes
-(`VentPresets`, one each for ROUND, WIRE and TEAR); see [VENT](VENT.md).
+both the roster and the picker, renders six provisional recipes
+(`VentPresets`, one per voice):
+ROUND, WIRE and TEAR use model 1; the clean PULSE, COIL and PLUME voices use
+model 2. The voice selects its saved model; see [VENT](VENT.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with

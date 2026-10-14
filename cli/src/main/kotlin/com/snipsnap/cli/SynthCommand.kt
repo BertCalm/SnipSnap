@@ -95,7 +95,7 @@ import kotlin.random.Random
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
- * VENT accepts `--seed N` for its initial trajectory. Its three provisional
+ * VENT accepts `--seed N` for its initial trajectory. Its provisional
  * starting recipes are available here while remaining outside the factory roster.
  */
 object SynthCommand {

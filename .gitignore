@@ -230,3 +230,6 @@ testkit/vent-audition/
 
 # Four controlled, uncoloured VENT trajectory studies; generated for listening.
 testkit/vent-isolation-audition/
+
+# Model-2 clean voice audio, ordinary recipes and listening evidence are generated.
+testkit/vent-voice-audition/

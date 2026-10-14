@@ -45,7 +45,7 @@ internal object PatchTypes {
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
      * deliberately kept out of [Presets] until the owner's listening verdict. VENT's
-     * three starting points live in [VentPresets] and render only through the CLI;
+     * six provisional recipes span two models in [VentPresets] and render through the CLI;
      * its factory roster and phone picker stay unchanged while it is a prototype.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.

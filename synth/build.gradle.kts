@@ -37,6 +37,17 @@ tasks.register<JavaExec>("generateVentIsolationAudition") {
     args("${rootDir}/testkit/vent-isolation-audition")
 }
 
+/** Twelve clean model-2 gestures with ordinary replayable PadRecipes. */
+tasks.register<JavaExec>("generateVentVoiceAudition") {
+    group = "distribution"
+    description = "Render the twelve clean VENT voice native/matched PCM24 WAVs, recipes and measurements under testkit/vent-voice-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentVoiceAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/vent-voice-audition")
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"
