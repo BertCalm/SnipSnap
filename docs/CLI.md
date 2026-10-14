@@ -166,8 +166,8 @@ Renders the voice's factory presets to WAV (`Presets.forVoice`). `--all`
 writes every preset; `--preset N` writes one, counting from 1; with
 neither, the first preset. A string-machine preset that lands with
 ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
-`--instrument` and `--drone` are RESIN only: a held nine-zone instrument
-(`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
+`--instrument` supports RESIN and OPENSKY HALO: a held nine-zone instrument
+(`.xty` plus the `.xpm` twin). `--drone` is RESIN only, producing one loop-grid drone. SIREN and GLINT
 hold on the phone's MAKE INSTRUMENT; this command refuses them. An
 engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR,
 AEROSTAT) still renders here. VENT, a prototype outside both the roster
@@ -176,7 +176,8 @@ each for ROUND, WIRE and TEAR); see [VENT](VENT.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
-`--instrument` or `--drone`. The ranges are `SynthCommand`'s note-range
+`--instrument` or `--drone` except OPENSKY HALO instrument roots and authoring
+velocity. The ranges are `SynthCommand`'s note-range
 table; a `--midi` outside the voice's range is refused with the range in
 the message.
 
@@ -199,6 +200,7 @@ the message.
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
 | BELLOWS | 48–72 |
 | MURMUR | 36–96 |
+| OPENSKY | 0–127 finite; HALO instrument root 36–96 |
 | VENT | 36–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
@@ -209,6 +211,19 @@ itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
 repeatable macro variation around the chosen preset). VENT takes
 `--seed N` too, for its starting trajectory, and refuses `--scramble`;
 every other engine refuses both.
+
+OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
+their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and
+`--dry` / `--wet` explicitly select its room path. `--patch recipe.json` loads
+a complete saved OPENSKY recipe for the requested voice, exclusive with
+`--preset` and `--all`. HALO `--instrument [--release S]` packages nine stereo
+attack/sustain zones; release is 0.1–1.5 seconds, applied by the sample player.
+That mode rejects `--gate` and `--attack`; its attack comes from the saved source.
+
+```sh
+snipsnap synth OPENSKY SOAR --preset 2 --midi 60 --velocity 0.7 --gate 0.4 --dry --out lead
+snipsnap synth OPENSKY HALO --preset 2 --instrument --release 1.2 --out keys
+```
 
 LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
 eight-preset audition bank. `--midi` and `--velocity 0..1` override

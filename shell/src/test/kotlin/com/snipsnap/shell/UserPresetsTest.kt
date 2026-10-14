@@ -27,6 +27,7 @@ import com.snipsnap.synth.MurmurPresets
 import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -225,7 +226,12 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is LacquerPatch) {
+            if (preset is OpenSkyPatch) {
+                val promoted = openSkyFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete source, articulation and render-state promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
             } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
@@ -611,6 +617,17 @@ class UserPresetsTest {
         return LacquerPatch.fromJsonText(json)
     }
 
+    private fun openSkyFromRosterLine(line: String): OpenSkyPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("OpenSkyPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return OpenSkyPatch.fromJsonText(recipe)
+    }
+
     @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
@@ -619,7 +636,10 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == StoopPatch.ENGINE) {
+            if (engine == OpenSkyPatch.ENGINE) {
+                val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == StoopPatch.ENGINE) {
                 assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
                     assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")

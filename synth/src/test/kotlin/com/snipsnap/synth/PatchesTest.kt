@@ -53,8 +53,16 @@ class PatchesTest {
         assertEquals(PatchTypes.engines, patches.map { it.engine }.toSet(), "every engine sends one saved sound through the door")
         for (patch in patches) {
             val fields = patch.toJsonValue().entries
-            val absent = Patches.fromJsonValue(JsonValue.Obj(fields - "macros"))
-            assertEquals(emptyMap(), absent.macros, "${patch.engine}: an absent macros field")
+            if (patch is OpenSkyPatch) {
+                // OPENSKY saves a complete model-3 control snapshot rather
+                // than inheriting voice defaults when a field is missing.
+                assertFailsWith<JsonException>("OPENSKY requires its complete saved macro snapshot") {
+                    Patches.fromJsonValue(JsonValue.Obj(fields - "macros"))
+                }
+            } else {
+                val absent = Patches.fromJsonValue(JsonValue.Obj(fields - "macros"))
+                assertEquals(emptyMap(), absent.macros, "${patch.engine}: an absent macros field")
+            }
             val malformed = JsonValue.Obj(fields + ("macros" to JsonValue.Arr(emptyList())))
             val refused = assertFailsWith<JsonException>("${patch.engine}: a macros array must be refused, not read as no macros") {
                 Patches.fromJsonValue(malformed)

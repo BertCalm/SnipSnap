@@ -91,7 +91,9 @@ data class OpenSkyPatch(
         fun fromJsonValue(value: JsonValue): OpenSkyPatch = try {
             val obj = value.obj()
             exactFields(obj, PATCH_FIELDS, "patch")
-            val rawMacros = required(obj, "macros").obj()
+            val rawMacroValue = required(obj, "macros")
+            val rawMacros = (rawMacroValue as? JsonValue.Obj)?.entries
+                ?: throw JsonException("patch macros must be an object, got ${rawMacroValue::class.simpleName}")
             exactFields(rawMacros, MACRO_NAMES, "macros")
             for ((name, raw) in rawMacros) {
                 val value = raw.num()

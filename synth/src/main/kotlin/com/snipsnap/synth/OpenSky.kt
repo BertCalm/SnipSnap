@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.abs
@@ -69,7 +70,7 @@ data class OpenSkyTimbre(
  * manufactures the held region. Native keys additionally retain their actual onset.
  */
 object OpenSky {
-    const val RATE = 44_100
+    const val RATE = WavWriter.MPC_SAMPLE_RATE
     // R3 revises the wet hall. The R2 dry source and all timbre recipes are retained.
     const val MODEL_VERSION = 3
     const val DEFAULT_MIDI = 60
