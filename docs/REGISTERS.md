@@ -13,7 +13,8 @@ approximations, not measured historical instruments or physical free-reed models
 Neither uses external samples or a room effect.
 
 The [published audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site)
-includes Original / More chiff comparisons. The first listening verdict
+opens with Current / With airflow comparisons and retains the earlier
+Original / More chiff comparisons. The first listening verdict
 asked for more PIPE chiff. Renderer model 2 adds a separate short speaking burst
 to finite PIPE notes. A seeded noise source feeds a note-relative presence band
 and broad air band, with a 2 ms rise and smooth ending. EDGE sets its strength;
@@ -57,6 +58,16 @@ including two held notes. The earlier R1/R2 chiff comparison remains available
 with its archived WAVs. All three review histories retain their sound identity;
 new feedback stays in the R3 namespace. The original models replay their earlier
 sounds rather than inheriting the new wind layer.
+
+The R3 pack contains 85 listening positions and 170 WAVs: 56 current cases,
+twelve archived R1 clips and seventeen archived R2 clips. Twelve synthesis tests
+pass, including legacy model hashes, unchanged attack and AIR-zero controls,
+sustained airflow continuity, and mixed-signal and isolated-airflow recurrence.
+Independent PCM readback verifies every WAV and recipe hash, all 24 finite PIPE
+attacks through 80 ms, and the 30 unchanged MUSETTE/reference cases. At the default
+AIR setting, measured added airflow is approximately 27.96 dB below the settled
+body. These checks verify the addition and its boundaries; the listener decides
+whether its level and character suit PIPE.
 
 ## Playing and saving
 
