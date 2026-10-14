@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.DrumClass
+import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -92,6 +93,10 @@ object Registers {
 
     fun isLoop(hold: Float): Boolean = hold.isFinite() && hold >= LOOP_THRESHOLD
 
+    private fun checkCancelled(cancelled: () -> Boolean) {
+        if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException("REGISTERS render cancelled")
+    }
+
     fun drumClassFor(voice: RegistersVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
         if (isLoop(settled(voice, macros).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
 
@@ -177,7 +182,8 @@ object Registers {
     private fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
 
     private fun synthesize(voice: RegistersVoice, m: Map<String, Float>, velocity: Double,
-        bank: Bank, hz: Double, motionHz: Double, frames: Int, loop: LoopPlan?, model: Int, seed: Int): FloatArray {
+        bank: Bank, hz: Double, motionHz: Double, frames: Int, loop: LoopPlan?, model: Int, seed: Int,
+        cancelled: () -> Boolean): FloatArray {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val out = FloatArray(frames * Dsp.OVERSAMPLE)
         if (velocity == 0.0) return out
@@ -229,6 +235,7 @@ object Registers {
         }
 
         for (i in out.indices) {
+            if (i % 4096 == 0) checkCancelled(cancelled)
             if (i % BLOCK == 0) {
                 val t = i.toDouble() / rate
                 val next = (i + BLOCK).toDouble() / rate
@@ -265,7 +272,7 @@ object Registers {
             }
             out[i] = (.58 * velocityGain * (body + wind)).toFloat()
         }
-        if (pipe && loop == null && model >= 2 && edge > 0.0) addSpeakingBurst(out, hz, m, velocity, seed)
+        if (pipe && loop == null && model >= 2 && edge > 0.0) addSpeakingBurst(out, hz, m, velocity, seed, cancelled)
         return out
     }
 
@@ -276,7 +283,8 @@ object Registers {
      * The 2 ms rise, short crest and smooth fall enclose a 55–60 ms speaking puff.
      * This is a musical approximation of chiff, not a historical pipe model.
      */
-    private fun addSpeakingBurst(out: FloatArray, hz: Double, m: Map<String, Float>, velocity: Double, seed: Int) {
+    private fun addSpeakingBurst(out: FloatArray, hz: Double, m: Map<String, Float>, velocity: Double, seed: Int,
+        cancelled: () -> Boolean) {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val edge = m.getValue("EDGE").toDouble()
         val air = m.getValue("AIR").toDouble()
@@ -292,6 +300,7 @@ object Registers {
         val highCut = (hz * 19.0).coerceIn(5_200.0, 12_000.0).toFloat()
         var peak = 0.0
         for (i in projection.indices) {
+            if (i % 4096 == 0) checkCancelled(cancelled)
             val t = i.toDouble() / rate
             val n = noise.next()
             presence.process(n, center, .85f)
@@ -321,13 +330,16 @@ object Registers {
      * settled before the measured/exported cycles, and all pressure modulation is periodic.
      */
     private fun sustainedAirflow(body: FloatArray, hz: Double, motionHz: Double,
-        m: Map<String, Float>, seed: Int, loop: LoopPlan?): FloatArray? {
+        m: Map<String, Float>, seed: Int, loop: LoopPlan?, cancelled: () -> Boolean): FloatArray? {
         val air = m.getValue("AIR").toDouble()
         if (air == 0.0) return null
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val motion = m.getValue("MOTION").toDouble()
         val noise = Dsp.Noise(seed xor 0x41495233)
-        val period = loop?.let { FloatArray(it.frames * Dsp.OVERSAMPLE) { noise.next() } }
+        val period = loop?.let { FloatArray(it.frames * Dsp.OVERSAMPLE) { i ->
+            if (i % 4096 == 0) checkCancelled(cancelled)
+            noise.next()
+        } }
         val warm = Dsp.OnePole(rate)
         val bright = Dsp.OnePole(rate)
         val softness = Dsp.OnePole(rate)
@@ -339,6 +351,7 @@ object Registers {
         val releaseAt = finiteSeconds(m) - releaseSeconds
         val out = FloatArray(body.size)
         for (i in out.indices) {
+            if (i % 4096 == 0) checkCancelled(cancelled)
             val input = period?.get(i % period.size) ?: noise.next()
             val shaded = .65f * warm.lp(input, warmCut) + .35f * bright.lp(input, brightCut)
             // A second gentle low-pass pole keeps upper-register airflow soft instead of
@@ -395,7 +408,9 @@ object Registers {
         midi: Int = midiFor(macros["TUNE"] ?: .5f),
         velocity: Float = 1f,
         model: Int = MODEL_VERSION,
+        cancelled: () -> Boolean = { false },
     ): RegistersProbe {
+        checkCancelled(cancelled)
         require(supportsModel(model)) { "unsupported REGISTERS model $model" }
         require(midi in 24..96) { "REGISTERS audition supports MIDI 24..96, got $midi" }
         val m = settled(voice, macros)
@@ -415,8 +430,9 @@ object Registers {
         // Continuous synthesis provides preroll + measured previous cycle + exported cycle.
         // Postroll keeps resampler edges outside the evidence windows.
         val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds(m) * Dsp.RATE).roundToInt()
-        val raw = synthesize(voice, m, v, b, hz, motion, frames, loop, model, seed)
-        val rawAirflow = if (model >= 3 && voice == RegistersVoice.PIPE) sustainedAirflow(raw, hz, motion, m, seed, loop) else null
+        val raw = synthesize(voice, m, v, b, hz, motion, frames, loop, model, seed, cancelled)
+        val rawAirflow = if (model >= 3 && voice == RegistersVoice.PIPE) sustainedAirflow(raw, hz, motion, m, seed, loop, cancelled) else null
+        checkCancelled(cancelled)
         if (rawAirflow != null) for (i in raw.indices) raw[i] += rawAirflow[i]
         val peak = raw.maxOfOrNull { abs(it.toDouble()) } ?: 0.0
         check(raw.all { it.isFinite() } && peak <= RAW_PEAK_CEILING) { "REGISTERS raw signal exceeded bound: $peak" }
@@ -446,6 +462,7 @@ object Registers {
         val flowRms = airflow?.let { rms(it, rmsFrom, rmsUntil) } ?: 0.0
         val bodySamples = if (airflow == null) samples else FloatArray(samples.size) { samples[it] - airflow[it] }
         val bodyRms = rms(bodySamples, rmsFrom, rmsUntil)
+        checkCancelled(cancelled)
         return RegistersProbe(samples, midi, requestedHz, hz, loop != null, loop?.frames,
             peak, cycleError, seamError, spread, motion, previous, airflow, flowRms, bodyRms,
             rmsFrom.coerceIn(0, samples.size), rmsUntil.coerceIn(0, samples.size),
@@ -459,10 +476,12 @@ object Registers {
         midi: Int = midiFor(macros["TUNE"] ?: .5f),
         velocity: Float = 1f,
         model: Int = MODEL_VERSION,
+        cancelled: () -> Boolean = { false },
     ): Snip {
-        val result = probe(voice, macros, midi, velocity, model)
+        val result = probe(voice, macros, midi, velocity, model, cancelled)
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
         if (v > 0f) Dsp.levelTo(result.samples, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET * v.pow(.65f))
+        checkCancelled(cancelled)
         return Snip(result.samples, channels = 1, sampleRate = Dsp.RATE)
     }
 }
