@@ -116,6 +116,13 @@ this module owns that folder's whole life.
   chain). A synth pad regenerates from scratch; a captured pad re-treats its
   raw audio. Tested promise: a kit folder rebuilds its own WAVs bit-for-bit
   from nothing but the sidecar.
+- **`Project` / `ProjectStore` / `ProjectMigration`** — the unit of work
+  ([`docs/DIRECTION_2026_10.md`](docs/DIRECTION_2026_10.md) §2): a folder
+  under `Projects/` beside the kits that holds kits **by folder name**, one
+  of them active, with its own beat under `beat/` in `groove.json`'s
+  format. Kits stay where they are and are shared by every project; the
+  migration adopts every unheld kit into a project of its own name,
+  idempotently, copying its grooves across.
 - **`KitAssembler`** — arranged snips in, kit folder out: the last step of the
   auto-chop pipeline.
 - **`Preflight`** — the export wizard's checklist as real checks. WARNs export;
@@ -944,8 +951,9 @@ The app's brain: every screen's state machine as tested pure Kotlin, so the
 Android app is Compose bound to proven logic instead of logic written in a
 UI layer. What lives here:
 
-- **`Schemes`/`Type`/`Layout`/`Motion`** — the eight TapeOS scheme token
-  tables as data (verbatim from the design system), pad-label ink tables
+- **`Schemes`/`Type`/`Layout`/`Motion`** — the nine TapeOS scheme token
+  tables as data (verbatim from the design system; VENT, the ninth, from
+  the audition page `docs/DIRECTION_2026_10.md` names), pad-label ink tables
   for dark schemes and CLEAR, and the layout/motion constants from the
   handoff. The two-surface rule — the LCD stays dark in every scheme — is
   a unit test now.

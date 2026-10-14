@@ -1949,6 +1949,44 @@ class CliTest {
     }
 
     @Test
+    fun `project --project exports a stored project with its beat on the active track`() {
+        val wav = writeBreak(File(temp, "proj.wav"))
+        val shelf = File(temp, "proj-shelf")
+        assertEquals(0, cli("chop", wav.path, "--out", shelf.path, "--name", "Proj A", "--groove").first)
+        assertEquals(0, cli("chop", wav.path, "--out", shelf.path, "--name", "Proj B", "--groove").first)
+        val project = com.snipsnap.kit.Project("Late Set", listOf("Proj A", "Proj B"), activeKit = "Proj B", tempoBpm = 111f)
+        com.snipsnap.kit.ProjectStore.save(shelf, project)
+        val projectDir = com.snipsnap.kit.ProjectStore.dir(shelf, "Late Set")
+        com.snipsnap.kit.ProjectStore.saveBeat(
+            projectDir,
+            listOf(com.snipsnap.mpc3.Mpc3Clip("Late Verse", 2, listOf(com.snipsnap.mpc3.Mpc3Note(36, 0, 0.9f, 240)))),
+        )
+
+        val out = File(temp, "proj-out")
+        val (code, stdout, stderr) = cli("project", "--project", projectDir.path, "--out", out.path, "--mixdown")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "project: Late Set")
+        assertContains(stdout, "beat: 1 pattern(s) on Proj B's track")
+        val xpj = File(out, "card/Late Set.xpj")
+        assertTrue(xpj.isFile, "named after the project")
+        val text = Acvs.read(xpj).payloadText
+        assertContains(text, "Late Verse")
+        assertContains(text, "Proj A Groove")
+        assertTrue("Proj B Groove" !in text, "the active kit's own grooves give way to the beat")
+        assertContains(text, "\"masterTempo\": 111")
+        assertTrue(File(out, "card/Late Set.wav").isFile, "the mixdown lands beside it")
+
+        // The other way in is refused alongside, and a missing kit refuses by name.
+        val (mixedCode, _, mixedErr) = cli("project", File(shelf, "Proj A").path, "--project", projectDir.path, "--out", out.path)
+        assertTrue(mixedCode != 0)
+        assertContains(mixedErr, "drop the kit folders")
+        File(shelf, "Proj B").deleteRecursively()
+        val (goneCode, _, goneErr) = cli("project", "--project", projectDir.path, "--out", out.path, "--overwrite")
+        assertTrue(goneCode != 0)
+        assertContains(goneErr, "Proj B")
+    }
+
+    @Test
     fun `project --mixdown renders the session as one WAV beside the xpj`() {
         val wav = writeBreak(File(temp, "mx.wav"))
         val out = File(temp, "mx-out")

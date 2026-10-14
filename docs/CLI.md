@@ -925,6 +925,16 @@ k-th pattern), mixer wired, samples pooled per-kit-prefixed in
 kit playing its groove, summed and peak-limited — as `<Name>.wav`
 beside the `.xpj`: the beat as a file you can send anywhere.
 
+`--project <shelf>/Projects/<name>` takes a stored project instead of
+kit folders ([`DIRECTION_2026_10.md`](DIRECTION_2026_10.md) §2): its
+held kits, in its order, resolved against the shelf two folders up; its
+**beat on the active kit's track** in place of that kit's own grooves
+(the others keep theirs); its tempo on the session; its name, made
+card-safe, as the session's unless `--name` says otherwise. A held kit
+whose folder is gone is refused by name before anything is written.
+`--mixdown` plays the beat's first pattern on the active kit the same
+way. Kit folders and `--project` are two ways in, not one command line.
+
 ### `sidea <kit-dir>... --title NAME` — the beat tape
 
 The output stops being kits and becomes a finished artifact. Each kit

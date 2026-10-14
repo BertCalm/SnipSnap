@@ -92,8 +92,10 @@ Named after tape formulations:
 
 > **Superseded 2026-09-10 — the roster changed, not just the count.** The
 > table below names Chrome, Ferric, Metal, Snack Bar, Oilslick and Clear. The
-> app ships **eight** schemes and only two of those names survived: `SchemeId`
-> is METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR. The current
+> app ships **nine** schemes and only two of those names survived: `SchemeId`
+> is METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR, and since
+> 2026-10-13 VENT, the first scheme of the modern look
+> ([`DIRECTION_2026_10.md`](DIRECTION_2026_10.md) §4). The current
 > roster's source of truth is `design/Schemes.dc.html` (the artboard the token
 > tables were transcribed from, which matches the code exactly) and
 > `shell/src/main/kotlin/com/snipsnap/shell/Schemes.kt` (the tables, with
