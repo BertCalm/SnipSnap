@@ -101,6 +101,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.shell.RegistersPadMaker
 import com.snipsnap.shell.SirenDroneMaker
 import com.snipsnap.shell.SirenPadMaker
 import com.snipsnap.shell.Scheme
@@ -224,6 +225,9 @@ import com.snipsnap.synth.CircuitVoice
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.AlloyVoice
+import com.snipsnap.synth.Registers
+import com.snipsnap.synth.RegistersPatch
+import com.snipsnap.synth.RegistersVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -270,7 +274,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY and MURMUR, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS and MURMUR, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -290,7 +294,7 @@ fun SynthScreen(
     shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
-    // MAKE INSTRUMENT (RESIN, SIREN or GLINT, held) writes beside the kits; App's instrument
+    // MAKE INSTRUMENT (RESIN, SIREN, GLINT or REGISTERS, held) writes beside the kits; App's instrument
     // list is not reactive to that folder, so this tells it to re-read -
     // PadSheetScreen's own parameter of the same name, for the same reason.
     onShelfAssetWritten: () -> Unit,
@@ -332,6 +336,7 @@ fun SynthScreen(
     val macros = macrosByVoice.getValue(engine to voice)
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, EMBOUCHURE and MURMUR carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
+    // REGISTERS retains its synthesis model, saved pitch and velocity.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
@@ -381,7 +386,10 @@ fun SynthScreen(
     }
     fun loadPreset(patch: Patch) {
         touched = true
-        loadedPatchesByVoice[engine to voice] = patch
+        // Audition recipes can save an explicit root beside a different TUNE.
+        // Canonicalize the sliders without changing that sound or its model.
+        val editable = if (patch is RegistersPatch) patch.forEditing() else patch
+        loadedPatchesByVoice[engine to voice] = editable
         // Merged over the engine's own defaults, same as macrosByVoice's own
         // seeding above: a preset only has to name the macros it cares
         // about (PUNCH, added after every existing THUMP preset was
@@ -389,7 +397,7 @@ fun SynthScreen(
         // that "no missing key" invariant - a bare `patch.macros` would
         // otherwise leave PUNCH's slider crashing on getValue the moment
         // someone loaded a pre-PUNCH preset.
-        macrosByVoice[engine to voice] = engine.defaults(voice) + patch.macros
+        macrosByVoice[engine to voice] = engine.defaults(voice) + editable.macros
         currentPresetByVoice[engine to voice] = patch.name
     }
 
@@ -694,7 +702,7 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----
+    // ---- MAKE INSTRUMENT: RESIN, SIREN, GLINT and REGISTERS, held ----
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN),
     // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
     // (SIREN) and docs/superpowers/specs/2026-09-29-glint-paths-design.md §3
@@ -727,16 +735,20 @@ fun SynthScreen(
         }
     }
 
-    // MAKE INSTRUMENT's three engines behind one shape, so the render/export
+    // MAKE INSTRUMENT's engines behind one shape, so the render/export
     // orchestration below (identical for all) is written once: RESIN's
     // spec carries an ATTACK; SIREN's LOOP render has none to carry
     // (Keys.sirenPad's own KDoc) and neither does GLINT's (its onset and
     // breath come from the patch), so [HeldSpec.Siren] and [HeldSpec.Glint]
-    // simply have none.
+    // simply have none. REGISTERS keeps its authored attack in the sample,
+    // followed by the verified periodic sustain, with RELEASE alone to dial.
     fun heldSpec(): HeldSpec? = when (engine) {
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, holdRelease))
+        Engine.REGISTERS -> HeldSpec.Registers(RegistersPadMaker.spec(
+            buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, holdRelease,
+        ))
         else -> null
     }
 
@@ -1176,7 +1188,36 @@ fun SynthScreen(
                     )
                 }
 
+                if (engine == Engine.REGISTERS) {
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        val pipe = voice == RegistersVoice.PIPE
+                        TapeText(
+                            if (pipe) "PIPE SPEECH, CHIFF AND SOFT SUSTAINED AIR."
+                            else "THREE BEATING REEDS, SHAPED BY BELLOWS.",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                        )
+                        TapeText(
+                            if (pipe) "COLOR: BRIGHTNESS · AIR: FLOW · EDGE: CHIFF"
+                            else "COLOR: REED BODY · AIR: BELLOWS · EDGE: BUZZ",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                        )
+                        TapeText(
+                            if (pipe) "SPREAD: ENSEMBLE · MOTION: TREMULANT"
+                            else "SPREAD: BEATING · MOTION: VIBRATO + SWELL",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                        )
+                        TapeText(
+                            if (Registers.isLoop(macros.getValue("HOLD")))
+                                "LOOP STARTS AT THE SETTLED TONE. LOW SPREAD MAY SOUND IN UNISON."
+                            else "HOLD: NOTE LENGTH · TOP STEP: LOOP WITHOUT ATTACK.",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                        )
+                    }
+                }
+
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
+                val registersRoot = if (engine == Engine.REGISTERS)
+                    (buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch).midi else null
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
                         MacroSlider(
@@ -1194,6 +1235,8 @@ fun SynthScreen(
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.ALLOY && spec.name == "HOLD" && Alloy.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.REGISTERS && spec.name == "HOLD" && Registers.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.REGISTERS && spec.name == "TUNE" && registersRoot != null -> Scales.nameOf(registersRoot)
                                 engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1285,13 +1328,13 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
-                // RESIN, SIREN or GLINT, held: the sound as a keys instrument -
-                // the three engines whose held render closes its own loop.
+                // A sound as a keys instrument, using an engine-verified loop.
+                // REGISTERS retains the authored attack before its held region.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
                 // always substitutes the loop-and-release envelope, the
                 // same way it ignores RESIN's one-shot DECAY.
-                if (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT) {
+                if (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
@@ -1402,7 +1445,7 @@ fun SynthScreen(
             BackHandler(onBack = closeBin)
         }
 
-        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT)) {
+        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS)) {
             // Recomputed here rather than cached: cheap (a Spec is a data
             // class, no rendering), and it must reflect whatever the panel
             // holds right now, the same as every value below it.
@@ -1414,6 +1457,7 @@ fun SynthScreen(
                     attack = holdAttack,
                     release = holdRelease,
                     knobLabel = spec.knobLabel,
+                    instrumentNote = spec.instrumentNote,
                     done = holdDone,
                     total = holdTotal,
                     previewing = holdPreviewing,
@@ -1716,21 +1760,23 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----------
+// ---------- MAKE INSTRUMENT: RESIN, SIREN, GLINT and REGISTERS, held ----------
 
 /**
- * MAKE INSTRUMENT's three engines behind one shape, so the render/export
+ * MAKE INSTRUMENT's engines behind one shape, so the render/export
  * orchestration in [SynthScreen] (identical for all — render every zone,
  * show progress, write the package once every zone has landed) is written
  * once. RESIN's spec carries an ATTACK the sheet draws a slider for;
  * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc) and
  * neither does GLINT's (`Keys.glintPad`: the onset and the breath come from
  * the patch), so [Siren.hasAttack] and [Glint.hasAttack] are false and their
- * slider never appears.
+ * slider never appears. REGISTERS likewise has no attack knob: its speaking
+ * onset is already in the instrument sample, before the verified held cycle.
  */
 private sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
+    val instrumentNote: String? get() = null
 
     /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
@@ -1766,10 +1812,21 @@ private sealed interface HeldSpec {
         override fun preview(cancelled: () -> Boolean) = GlintPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<KeyNote>, destRoot: File) = GlintPadMaker.export(name, spec, notes, destRoot)
     }
+
+    class Registers(private val spec: RegistersPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = RegistersPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${RegistersPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "KEEPS THE NOTE'S ATTACK, THEN HOLDS ITS SETTLED TONE. SYNTH'S LOOP AUDITION STARTS AFTER THE ATTACK."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = RegistersPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = RegistersPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = RegistersPadMaker.export(name, spec, notes, destRoot)
+    }
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN or GLINT): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT or REGISTERS): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT); RELEASE always shows,
@@ -1787,6 +1844,7 @@ private fun HeldInstrumentSheet(
     attack: Float,
     release: Float,
     knobLabel: String,
+    instrumentNote: String?,
     done: Int,
     total: Int,
     previewing: Boolean,
@@ -1825,6 +1883,9 @@ private fun HeldInstrumentSheet(
             TapeText(heading, TapeType.pixel, scheme.ink2.tape)
             if (name.isNotEmpty()) {
                 TapeText(Copy.heldInstrumentNote(name), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            }
+            if (instrumentNote != null) {
+                TapeText(instrumentNote, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
             }
             if (making) {
                 HeldProgress(done, total, fillColor, scheme)
@@ -2049,7 +2110,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2062,6 +2123,7 @@ private enum class Engine {
         VOX -> VoxVoice.entries
         PLUCK -> PluckVoice.entries
         TONEWHEEL -> TonewheelVoice.entries
+        REGISTERS -> RegistersVoice.entries
         FATHOM -> FathomVoice.entries
         RESIN -> ResinVoice.entries
         TIDE -> TideVoice.entries
@@ -2101,6 +2163,7 @@ private enum class Engine {
         VOX -> Vox.macrosFor(voice as VoxVoice)
         PLUCK -> Pluck.macrosFor(voice as PluckVoice)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
+        REGISTERS -> Registers.macrosFor(voice as RegistersVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
         RESIN -> Resin.macrosFor(voice as ResinVoice)
         TIDE -> Tide.macrosFor(voice as TideVoice)
@@ -2140,6 +2203,7 @@ private enum class Engine {
         VOX -> Vox.defaults(voice as VoxVoice)
         PLUCK -> Pluck.defaults(voice as PluckVoice)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
+        REGISTERS -> Registers.defaults(voice as RegistersVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
         RESIN -> Resin.defaults(voice as ResinVoice)
         TIDE -> Tide.defaults(voice as TideVoice)
@@ -2179,6 +2243,7 @@ private enum class Engine {
         VOX -> Vox.scramble(voice as VoxVoice, random)
         PLUCK -> Pluck.scramble(voice as PluckVoice, random)
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
+        REGISTERS -> Registers.scramble(voice as RegistersVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
         RESIN -> Resin.scramble(voice as ResinVoice, random)
         TIDE -> Tide.scramble(voice as TideVoice, random)
@@ -2223,6 +2288,7 @@ private enum class Engine {
         VOX -> Vox.render(voice as VoxVoice, macros)
         PLUCK -> Pluck.render(voice as PluckVoice, macros)
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
+        REGISTERS -> Registers.render(voice as RegistersVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
         RESIN -> Resin.render(voice as ResinVoice, macros)
         TIDE -> Tide.render(voice as TideVoice, macros)
@@ -2266,6 +2332,7 @@ private enum class Engine {
         VOX -> Vox.drumClassFor(voice as VoxVoice, macros)
         PLUCK -> (voice as PluckVoice).drumClass
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
+        REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
         FATHOM -> (voice as FathomVoice).drumClass
         RESIN -> (voice as ResinVoice).drumClass
         TIDE -> (voice as TideVoice).drumClass
@@ -2307,6 +2374,7 @@ private enum class Engine {
         VOX -> VoxPatch(name, voice as VoxVoice, macros)
         PLUCK -> PluckPatch(name, voice as PluckVoice, macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
+        REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
         RESIN -> ResinPatch(name, voice as ResinVoice, macros)
         TIDE -> TidePatch(name, voice as TideVoice, macros)
