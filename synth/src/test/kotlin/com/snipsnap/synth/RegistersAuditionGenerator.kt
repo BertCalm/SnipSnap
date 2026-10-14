@@ -497,6 +497,7 @@ object RegistersAuditionGenerator {
             "originalId" to "r2_${case.id}", "revisedId" to case.id,
             "originalLabel" to "Current R2", "revisedLabel" to "With airflow R3",
             "description" to if (unchanged) "AIR 0 control: added sustained airflow is disabled, so both recordings remain identical."
+                else if (revised["loop"] != null) "Same settled note, velocity and controls. R3 adds soft airflow beneath the sustained PIPE body."
                 else "Same accepted attack, note, velocity and controls. R3 adds soft airflow beneath the sustained PIPE body.",
             "expectedUnchanged" to unchanged,
             "first80msRawUnchanged" to if (revised["loop"] == null) true else null,
