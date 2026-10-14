@@ -243,10 +243,22 @@ audition pages as easier is what the type-size row predicts.
    `activated`), `ProjectStore` (`Projects/<name>/project.json`, the beat
    under `beat/`, `kitDirs` and `missingKits` so a project opens with a
    kit gone), and `ProjectMigration.adopt`. Pinned by `ProjectStoreTest`
-   and `ProjectMigrationTest`. **Still to do**: the shelf (`KitShelf`)
-   listing projects above kits and running the migration on open; the
-   exporters taking a project's `kitDirs` and beat instead of one kit's;
-   `tapes/` and `out/`; and the `:app` wiring, which needs an SDK.
+   and `ProjectMigrationTest`. **The exporters take a project** (same
+   day): `SessionBuilder.build(project, shelf, …)` puts the held kits on
+   tracks in the project's order, the beat on the active kit's track in
+   place of that kit's own grooves (the others keep theirs; a project
+   with no beat exports as the kit session did), and the project's tempo
+   on the session; `SessionMixdown.render(project, shelf)` plays the same
+   routing; a held kit whose folder is gone refuses by name
+   (`ProjectKitsMissingException`) before anything is written; the CLI's
+   `project --project <shelf>/Projects/<name>` is the door. Pinned by
+   `ProjectSessionTest` and a `CliTest` journey. The beat rides the
+   *active* track because a pattern does not yet name the kit it plays;
+   a per-pattern kit reference is the next refinement, and the
+   kit-side `groove.json` still backs the per-kit exports. **Still to
+   do**: the shelf (`KitShelf`) listing projects above kits and running
+   the migration on open; the wizard's MPC SESSION format taking the open
+   project; `tapes/` and `out/`; and the `:app` wiring, which needs an SDK.
 3. **The shape** in `:app`, in the OG look: four places, the dock, the
    stages, the pad strip. Checked by the UAT sim's tap counts.
 4. **The `Look` axis** and the modern drawing, with the type floor from §5.

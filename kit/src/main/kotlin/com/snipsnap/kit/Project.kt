@@ -82,6 +82,15 @@ data class Project(
 }
 
 /**
+ * An export refused because the project holds kits that are not on the
+ * shelf any more (deleted, or asleep in the bin). Named rather than
+ * silently dropped: a session missing a track is a different session,
+ * and the person should hear which kit it is before anything is written.
+ */
+class ProjectKitsMissingException(val project: String, val missing: List<String>) :
+    IOException("project '$project' holds kits that are not on the shelf: ${missing.joinToString()}")
+
+/**
  * Reads and writes projects under `<shelf>/Projects/<name>/project.json`,
  * the way [KitStore] reads and writes `kit.json`.
  *
@@ -162,6 +171,18 @@ object ProjectStore {
     /** The held kits whose folder has no `kit.json` any more. */
     fun missingKits(shelfRoot: File, project: Project): List<String> =
         project.kits.filterNot { File(File(shelfRoot, it), KitStore.FILE_NAME).isFile }
+
+    /**
+     * Where the active kit sits in [kitDirs] — the list's own order — or
+     * -1 when the project has no active kit or its folder is gone. The
+     * exporters route the project's beat by this index rather than by
+     * folder, so a caller that stages its kits elsewhere (the CLI's worn
+     * twins) can still say which track is the active one.
+     */
+    fun activeIndex(shelfRoot: File, project: Project): Int {
+        val present = project.kits.filter { File(File(shelfRoot, it), KitStore.FILE_NAME).isFile }
+        return project.activeKit?.let { present.indexOf(it) } ?: -1
+    }
 
     /** The project's patterns, oldest first; empty when it has none. */
     fun beat(projectDir: File): List<Mpc3Clip> = GrooveStore.load(beatDir(projectDir))
