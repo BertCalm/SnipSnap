@@ -135,9 +135,11 @@ class SpoolTest {
             assertTrue(s.isNotEmpty() && s.all { it.isFinite() }, "$label nonfinite output")
             assertTrue(s.size <= Dsp.RATE * 10, "$label exceeded finite host duration")
             // The output passes a tanh saturator whose ceiling is 1/1.12 (.89), so a 4.0 ceiling could never fire.
-            // A runaway would pin the output against that ceiling; these renders peak at .15 to .20, and must stay
-            // in the saturator's near-linear region (under 4% compression), well clear of it.
-            assertTrue(s.maxOf { abs(it) } < .3f && rms(s) > 1e-5, "$label runaway or silent source: peak ${s.maxOf { abs(it) }}")
+            // A runaway would pin the output against that ceiling. With each family's partials phase-aligned and held
+            // to one amplitude budget, these renders peak at .18 (BRASS all-high) to .40 (CHOIR defaults), at most 7%
+            // compression; they must stay under .5 (12% compression), well clear of the ceiling. Doubling the
+            // saturator's input reaches .59 on the first case and .67 on CHOIR.
+            assertTrue(s.maxOf { abs(it) } < .5f && rms(s) > 1e-5, "$label runaway or silent source: peak ${s.maxOf { abs(it) }}")
             assertTrue(abs(s.average()) < .01, "$label DC offset")
             assertTrue(s.takeLast(Dsp.RATE / 100).maxOf { abs(it) } < 1e-3, "$label failed to terminate quietly")
             assertTrue(d.sourcePeak.isFinite() && d.overlayPeak.isFinite() && d.overlayPeak <= 1f, "$label unbounded recording")
@@ -225,7 +227,7 @@ class SpoolTest {
             "RETURN did not reveal the independent backward journey")
         // 1e-4 on an unnormalized stem is about 50 dB under the stem itself, so a backward layer cut by 30 dB still
         // passed. The layer is measured against the forward pickup in the same window instead: docs/SPOOL.md
-        // reports it at no less than 42% of forward RMS across its clean release cases (this case measures 169%),
+        // reports it at no less than 42% of forward RMS across its clean release cases (this case measures 160%),
         // and RETURN must keep raising it (.9 measures 1.57 times .45).
         val backward = rms(requireNotNull(audible.reverseStem), from, until)
         val forward = rms(requireNotNull(audible.forwardStem), from, until)
@@ -270,6 +272,72 @@ class SpoolTest {
                     "$label overlap was as rough as a semitone-detuned layer: $tone / $rough")
                 assertEquals(0f, d.reengageSeconds, "$label restarted an attacked third pass")
             }
+        }
+    }
+
+    @Test
+    fun `clean voices retain distinct harmonic envelopes in both pickups and their audible overlap`() {
+        val voices = listOf(SpoolVoice.STRING, SpoolVoice.CHOIR, SpoolVoice.FLUTE, SpoolVoice.BRASS)
+        for (midi in listOf(48, 60, 72)) {
+            val macros = mapOf("TUNE" to (midi - 48) / 24f, "HEAD" to .2f, "STRAIN" to .1f,
+                "RETURN" to .65f, "IMPRINT" to 0f, "SPLICE" to 0f)
+            val profiles = mutableMapOf<String, MutableMap<SpoolVoice, SpoolTimbreListeningMeasure.Profile>>()
+            for (voice in voices) {
+                val p = Spool.renderProbe(voice, macros, writes = false)
+                for ((stage, audio) in listOf("mixed" to p.samples,
+                    "forward" to requireNotNull(p.forwardStem), "reverse" to requireNotNull(p.reverseStem))) {
+                    // Both actual pickups sound throughout this pre-gate span. Identical settings,
+                    // note and energy normalization prevent macros, gain or timing disguising a
+                    // common source spectrum beneath the four advertised recording families.
+                    profiles.getOrPut(stage) { mutableMapOf() }[voice] =
+                        SpoolTimbreListeningMeasure.profile(audio, Keys.midiHz(midi).toDouble(), .85, 1.25)
+                }
+            }
+            for ((stage, byVoice) in profiles) {
+                for (i in voices.indices) for (j in i + 1 until voices.size) {
+                    val a = voices[i]; val b = voices[j]
+                    val distance = byVoice.getValue(a).distance(byVoice.getValue(b))
+                    assertTrue(distance >= .15,
+                        "MIDI $midi $stage $a/$b collapsed into similar normalized harmonic envelopes: $distance")
+                }
+                if (midi == 60) {
+                    val flute = byVoice.getValue(SpoolVoice.FLUTE)
+                    val string = byVoice.getValue(SpoolVoice.STRING)
+                    val brass = byVoice.getValue(SpoolVoice.BRASS)
+                    val choir = byVoice.getValue(SpoolVoice.CHOIR)
+                    assertTrue(flute.rootShare >= .70,
+                        "$stage FLUTE lost the root-dominant airy recording: $flute")
+                    assertTrue(string.rootShare < .80 && string.oddUpperShare >= .035 && string.evenShare >= .06,
+                        "$stage STRING lost audible bowed odd/even harmonic body: $string")
+                    assertTrue(brass.upperShare >= .10 && brass.centroidHarmonic >= string.centroidHarmonic * 1.12,
+                        "$stage BRASS did not retain a substantially brighter upper-partial body: $brass / $string")
+                    assertTrue(choir.rootShare < .75 && choir.share(500.0, 2200.0) >= .30,
+                        "$stage CHOIR reduced its vowel formants to a faint tint of the root: $choir")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `choir vowels retain absolute frequency formants when the note moves an octave`() {
+        val profiles = mutableMapOf<String, MutableList<SpoolTimbreListeningMeasure.Profile>>()
+        for (midi in listOf(48, 60)) {
+            val macros = mapOf("TUNE" to (midi - 48) / 24f, "HEAD" to .2f, "STRAIN" to .1f,
+                "RETURN" to .65f, "IMPRINT" to 0f, "SPLICE" to 0f)
+            val p = Spool.renderProbe(SpoolVoice.CHOIR, macros, writes = false)
+            for ((stage, audio) in listOf("mixed" to p.samples,
+                "forward" to requireNotNull(p.forwardStem), "reverse" to requireNotNull(p.reverseStem))) {
+                profiles.getOrPut(stage) { mutableListOf() } +=
+                    SpoolTimbreListeningMeasure.profile(audio, Keys.midiHz(midi).toDouble(), .85, 1.25)
+            }
+        }
+        for ((stage, pair) in profiles) for ((low, high) in listOf(500.0 to 1100.0, 1100.0 to 2200.0)) {
+            for (p in pair) assertTrue(p.share(low, high) >= .07,
+                "$stage CHOIR ${p.wantedHz}Hz lost an audible vowel band at $low..$high Hz: $p")
+            val a = pair[0].strongestPartialHz(low, high)
+            val b = pair[1].strongestPartialHz(low, high)
+            assertTrue(maxOf(a, b) / minOf(a, b) <= 1.4,
+                "$stage CHOIR transposed its vowel resonance with the note: $a -> $b Hz")
         }
     }
 
@@ -476,6 +544,59 @@ class SpoolTest {
     }
 
     @Test
+    fun `each positive imprint step changes the inherited reread beyond output gain`() {
+        val voice = SpoolVoice.CHOIR
+        val machine = SpoolMachine.forVoice(voice).let { defaults ->
+            defaults.copy(
+                roster = defaults.roster.mapIndexed { i, strip -> strip.copy(gain = if (i == 0) 1f else 0f) },
+                routes = listOf(SpoolRoute(2, 0, .55f)),
+                reengage = true,
+            )
+        }
+        val macros = mapOf("HEAD" to 0f, "STRAIN" to .1f, "RETURN" to 1f, "SPLICE" to 0f, "HOLD" to 0f)
+        val levels = listOf(0f, .25f, .5f, .75f, 1f)
+        val performances = levels.map { level ->
+            Spool.play(voice, macros + ("IMPRINT" to level), machine, record = true)
+        }
+        val dry = performances.first()
+        val beforeWrite = (dry.diagnostics.gateSeconds * Dsp.RATE * Dsp.OVERSAMPLE).toInt()
+        for ((level, played) in levels.zip(performances)) {
+            val d = played.diagnostics
+            assertEquals(dry.diagnostics.sourceHashes, d.sourceHashes, "IMPRINT $level changed its source recordings")
+            assertContentEquals(dry.raw.copyOf(beforeWrite), played.raw.copyOf(beforeWrite),
+                "IMPRINT $level changed the first encounter before recording began")
+            assertEquals(dry.diagnostics.trace, d.trace, "IMPRINT $level changed the transport")
+            assertEquals(dry.diagnostics.returnEndSeconds, d.returnEndSeconds)
+            assertEquals(dry.diagnostics.reengageSeconds, d.reengageSeconds)
+            assertEquals(dry.raw.size, played.raw.size)
+        }
+        assertTrue(dry.diagnostics.reengageSeconds > .8f, "the finite inherited reread is missing")
+        val from = (dry.diagnostics.returnEndSeconds * Dsp.RATE).toInt()
+        val until = ((dry.diagnostics.returnEndSeconds + dry.diagnostics.reengageSeconds) * Dsp.RATE).toInt()
+        val rereads = performances.map { Spool.finish(it.raw, normalize = false).copyOfRange(from, until) }
+        var previousInheritedRms = 0.0
+        for ((level, read) in levels.drop(1).zip(rereads.drop(1))) {
+            val inherited = FloatArray(read.size) { read[it] - rereads.first()[it] }
+            val inheritedRms = rms(inherited)
+            assertTrue(inheritedRms > previousInheritedRms, "IMPRINT $level failed to strengthen inherited material")
+            previousInheritedRms = inheritedRms
+        }
+        // Testing only silence versus maximum misses a control whose positive values all sound
+        // alike. Remove the best scalar gain before comparing every adjacent positive reread.
+        for (i in 1 until rereads.lastIndex) {
+            val a = rereads[i]
+            val b = rereads[i + 1]
+            val gain = a.indices.sumOf { a[it].toDouble() * b[it] } /
+                a.indices.sumOf { a[it].toDouble() * a[it] }.coerceAtLeast(1e-30)
+            val residual = sqrt(a.indices.sumOf {
+                val difference = b[it] - gain * a[it]
+                difference * difference
+            } / a.size) / rms(b).coerceAtLeast(1e-20)
+            assertTrue(residual >= .07, "IMPRINT ${levels[i]} to ${levels[i + 1]} changed only gain or a masked trace: $residual")
+        }
+    }
+
+    @Test
     fun `every timbral macro changes normal string shape and diagonal heads differ from frozen pickup`() {
         val baseline = mapOf("HEAD" to .25f, "STRAIN" to .2f, "RETURN" to .6f, "IMPRINT" to .4f, "SPLICE" to .2f)
         for (macro in timbral) {
@@ -641,6 +762,61 @@ class SpoolTest {
             assertEquals(DrumClass.TONAL, Spool.drumClassFor(voice, macros))
             assertEquals(DrumClass.LOOP, Spool.drumClassFor(voice, macros + ("HOLD" to 1f)))
         }
+    }
+}
+
+/** Harmonic energy envelopes from pickup audio, independent of phase, gain and recipe coefficients. */
+internal object SpoolTimbreListeningMeasure {
+    private const val RATE = 44100
+
+    data class Profile(val wantedHz: Double, val partialPower: List<Double>) {
+        val rootShare get() = partialPower.first()
+        val centroidHarmonic get() = partialPower.indices.sumOf { (it + 1) * partialPower[it] }
+        val upperShare get() = partialPower.drop(3).sum()
+        val oddUpperShare get() = partialPower.indices.filter { it >= 2 && it % 2 == 0 }.sumOf { partialPower[it] }
+        val evenShare get() = partialPower.indices.filter { it % 2 == 1 }.sumOf { partialPower[it] }
+
+        fun share(lowHz: Double, highHz: Double) = partialPower.indices
+            .filter { (it + 1) * wantedHz in lowHz..highHz }.sumOf { partialPower[it] }
+
+        fun strongestPartialHz(lowHz: Double, highHz: Double): Double {
+            val index = partialPower.indices.filter { (it + 1) * wantedHz in lowHz..highHz }
+                .maxBy { partialPower[it] }
+            return (index + 1) * wantedHz
+        }
+
+        /** Hellinger distance compares amplitude envelopes after normalizing total partial power. */
+        fun distance(other: Profile) = sqrt(partialPower.indices.sumOf {
+            (sqrt(partialPower[it]) - sqrt(other.partialPower[it])).pow(2)
+        } / 2)
+
+        override fun toString() = "root=$rootShare, centroid=$centroidHarmonic, upper=$upperShare, " +
+            "oddUpper=$oddUpperShare, even=$evenShare"
+    }
+
+    fun profile(s: FloatArray, wanted: Double, fromSeconds: Double, untilSeconds: Double): Profile {
+        val first = (fromSeconds * RATE).toInt()
+        val count = ((untilSeconds - fromSeconds) * RATE).toInt().coerceAtMost(s.size - first)
+        require(count > RATE / 5)
+        val n = 65536
+        require(count <= n)
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) re[i] = s[first + i] * (.5 - .5 * cos(2 * PI * i / (count - 1))).toFloat()
+        Fft.forward(re, im)
+        val bin = RATE.toDouble() / n
+        val power = DoubleArray(n / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        val partial = (1..minOf(24, (8000 / wanted).toInt())).map { h ->
+            // Admit tape-motion sidebands without assigning power to neighboring harmonics.
+            val center = h * wanted
+            val width = maxOf(3 / (count.toDouble() / RATE),
+                center * (2.0.pow(20.0 / 1200) - 1)).coerceAtMost(wanted * .25)
+            val lo = ((center - width) / bin).toInt().coerceAtLeast(1)
+            val hi = ((center + width) / bin).toInt().coerceAtMost(power.lastIndex)
+            (lo..hi).sumOf { power[it] }
+        }
+        val total = partial.sum().coerceAtLeast(1e-30)
+        return Profile(wanted, partial.map { it / total })
     }
 }
 

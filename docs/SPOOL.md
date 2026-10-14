@@ -44,6 +44,26 @@ powered cycle. This is a repeating machine schedule; it does not claim live writ
 
 ## Overlapping pickups and clean harmony
 
+The four recorded source families have separate harmonic and articulation designs. STRING uses
+a broad bowed spectrum; CHOIR emphasizes evolving vowel regions around 730, 1260 and 2500 Hz;
+FLUTE combines a nearly pure root with filtered airflow; BRASS has a quick lip-shaped attack and
+bright even harmonics. Their attack, sustain and upper-partial evolution also differ. Clean
+factory machines give the named family 94% of strip weight, with quiet 4%/2% companions.
+PALIMPSEST uses a vocal/bowed/air mixture; CUT rearranges a brass/flute/string mixture.
+
+The generated partials have a reversal-compatible phase relation, compensated for the four
+source low-pass filters. Higher harmonics therefore reinforce coherently during overlapping
+pickup playback. Original recordings still carry real changing articulation and airflow;
+the backward pickup traverses that captured material in reverse. Source bandwidth remains
+3.4 kHz, and every family shares a bounded partial-amplitude budget.
+
+At identical controls and C4, measured fundamental shares of harmonic power are 65.1% STRING,
+16.5% CHOIR, 99.4% FLUTE and 33.5% BRASS. Gain-independent harmonic-envelope distances between
+every clean family exceed .239 at C3/C4/C5 in mixed audio and both isolated pickups. Choir vowel
+peaks stay near 785 and 1308 Hz across C3/C4. These are audio measurements, not synthesis
+coefficient comparisons. The audition's **Voice comparison** bank supplies twelve real clips
+at the same controls, velocity and listening level for this review.
+
 The motor and spring still move three physical strip coordinates. Two independent virtual
 pickup paths now hear the recordings concurrently: the backward preview opens at 45% of the
 scheduled gate, while forward playback continues. It uses only the prefix already traversed.
@@ -76,16 +96,25 @@ mute continuously. IMPRINT writes a delayed, normalized backward pickup at physi
 coordinates, and the continuing forward and backward heads can hear that inherited trace.
 The write matrix never receives an unbounded sum of the two audible layers.
 
+IMPRINT progresses continuously through its positive settings. Write strength follows the macro
+linearly, while a convex recording filter opens from 120 to 2400 Hz. Once a destination has an
+actual delayed write, its original pickup contribution falls by up to 85%, with a 35 ms onset;
+the inherited contribution retains its existing bounded gain. This makes successive settings
+change the depth and detail of the inherited recording instead of adding nearly identical faint
+traces. An unrouted donor stays unchanged. Explicit write-history flags survive into frozen HOLD
+snapshots and never depend on whether the written audio happens to be silent. Original source
+buffers and all pickup/transport timing remain intact.
+
 Separate precolor stems make the overlap measurable and directly auditionable. Twelve checks
 cover the four clean families at C3, C4 and C5, with HEAD=.2, STRAIN=.1, SPLICE=0,
 IMPRINT=.15 and RETURN=.65. The checks require substantial simultaneous audibility across the
 return, average per-stem pitch within 15 cents, agreement within 20 cents and at least 85%
 harmonic-band power. Separate audio-derived meters on a single STRING strip at C3/C4/C5 show
-3.94–4.07 cents RMS of pitch motion, including 2.07–2.24 cents RMS of faster flutter. Mean tuning
-error stays within .044 cents and forward/backward disagreement within 1.01 cents RMS.
-The forward recording decays and darkens; its backward pickup swells by 28–30% and its
-upper-harmonic/root energy ratio grows by 27–28%. Across six clean release cases, the largest
-adjacent 5 ms RMS step is .52 dB and the backward layer remains at least 42% of forward RMS.
+3.94–4.03 cents RMS of pitch motion, including 2.06–2.22 cents RMS of faster flutter. Mean tuning
+error stays within .043 cents and forward/backward disagreement within .86 cents RMS.
+The forward recording decays and darkens; its backward pickup swells by 23–33% and its
+upper-harmonic/root energy ratio grows by about 28%. Across six clean release cases, the largest
+adjacent 5 ms RMS step is 1.12 dB and the backward layer remains at least 18.8% of forward RMS.
 These measurements use 25 ms RMS windows at 5 ms hops and the longest active overlap window
 for pitch/spectral analysis. The mixed overlap is also checked against a deliberately
 semitone-detuned reference as a calibrated roughness counterexample; that reference is never
@@ -116,6 +145,9 @@ local updates preserve a complete generation-map contraction bound of 0.40, incl
 the write head does not visit. IMPRINT=0 bypasses retention and writes exactly. HOLD prepares
 one finite imprint snapshot and then freezes writes, so it does not claim live periodic
 write-process convergence.
+For a fixed write history, the reduced original contribution is identical between two tapes
+and cancels in their difference; the inherited gain stays at most one and the variable recording
+filter remains convex. The complete contraction bound therefore remains unchanged.
 
 The standard patch dispatcher, factory preset lookup, velocity renderer, phone SYNTH picker,
 FRESH TAPE menu and command-line renderer share the same machine. Macro edits retain the saved
@@ -152,6 +184,43 @@ dry/level-matched audio and machine probes for the owner's review. The static si
 the publishable audition; publishing does not change the rendering or imply sonic approval.
 The optional comparison flag adds labelled before/after pairs for each voice's finite note,
 HOLD cycle and three repeated cycles, retaining the earlier pack's source provenance.
+
+**Follow the movement** uses material chosen for each control: a string/choir/flute crossing for
+HEAD, a short brass attack for RETURN, and a longer brass recording with attack-revisiting cuts
+for SPLICE. IMPRINT plays the actual finite second read of a choir recording after a delayed
+flute-donor write. Its manifest records the excerpt's frame window relative to the complete
+serialized performance and its diagnostic traces. Each sweep keeps its voice, machine and
+companion controls fixed; only the named macro varies. STRAIN retains the original string sweep.
+All 25 movement entries include complete serialized recipes. These demonstration machines do
+not replace the factory voice recipes.
+
+When only movement examples change, refresh their 25 clips without replacing unrelated audio:
+
+```sh
+./gradlew :synth:generateSpoolAudition -PspoolMovementOnly
+```
+
+This requires an existing five-position pack and matching hashes for all three DSP/factory
+source files. Changes to the engine or factory geometry require a complete render.
+
+The **Hear it in a phrase** section adds four seven-note melodies, four held C-minor chords
+and a matching IMPRINT 25%/100% arpeggio pair. Each note is rendered by the unchanged Spool
+engine from its complete saved patch, velocity and finite gate. The full forward/return and
+any second read continue beneath later events. Chords use C3–G3–C4–E♭4 with a 2.2-second gate
+and HOLD off. Each note owns an independent machine; these are dry sampler-style sequences,
+without cross-note motor coupling or external effects.
+
+The manifest and sequence downloads record every event's recipe, integer start/release/end
+frames, second-read window, native Float32 sample hash and dry-sum hash. A single attenuation-only
+mix gain preserves note and velocity relationships, followed by the existing matched listening
+level. Refresh only this bank while preserving the current baseline with:
+
+```sh
+./gradlew :synth:generateSpoolAudition -PspoolMusicalOnly
+```
+
+The musical refresh also requires matching DSP/factory source hashes and retains the previous
+174 cases, kit and patch roster unchanged.
 Individual sounds can also be rendered with:
 
 ```sh
@@ -159,10 +228,11 @@ Individual sounds can also be rendered with:
 ./gradlew :cli:run --args="synth SPOOL CHOIR --midi 60 --velocity .35 --out /tmp/spool-soft"
 ```
 
-The final renderer produces 162 listening clips, including twelve separate pickup diagnostics,
-as 324 native and level-matched WAVs, plus the sixteen-pad MPC kit. The assembly adds eighteen
-pairs of the previous coherent overlap and current reverse/flutter revision, for 198 page
-entries and 384 listening WAVs, including both versions' default pickup stems. Its source patch
+The final renderer produces 184 listening clips, including ten musical examples, twelve separate pickup diagnostics
+and twelve equal-control voice comparisons, as 368 native and level-matched WAVs, plus the
+sixteen-pad MPC kit. The assembly adds eighteen pairs of the previous reverse/flutter and
+current voice-character revision, for 220 page entries and 428 listening WAVs, including both
+versions' default pickup stems. Its source patch
 targets the current upstream baseline and records a
 clean source commit. Provenance hashes cover `Spool.kt`, `SpoolPatch.kt` and `SpoolPresets.kt`;
 changes to DSP or recipe defaults require fresh rendering.
@@ -170,14 +240,23 @@ changes to DSP or recipe defaults require fresh rendering.
 Acceptance checks cover independent layer pitch and harmonic agreement, meaningful simultaneous
 audibility before and after release, actual captured support, deterministic source/memory,
 causal inherited traces, complete feedback bounds, serialization, repeated HOLD waveform
-continuity and seam metrics. There are 22 Spool checks, including audio-derived wow/flutter,
-reverse swell/brightness and connected release handoff. Buffer accounting and cloud timings are prototype
+continuity and seam metrics. There are 25 Spool checks, including independent voice spectra,
+fixed-frequency vowel regions, audio-derived wow/flutter, reverse swell/brightness and connected
+release handoff and the gain-independent separation of every adjacent positive IMPRINT step.
+Buffer accounting and cloud timings are prototype
 measurements, not peak JVM memory or phone/MPC performance estimates.
-The final pack's clean default/register cases overlap for at least 1.825 seconds, covering at
-least 88.57% of the physical return. Mean-window pitch error is below .67 cents and harmonic-band
-power remains above 99.30%. Repeated-cycle seam error is zero; maximum boundary difference is
-1.97e-13. The largest counted core buffer allocation is 31.66 MiB. Cloud render time is 1.73 seconds
-at the median and 7.39 seconds at the maximum, measured while validation was also running.
+All 25 Spool checks and the targeted host checks pass. The rendered pack has zero repeated-cycle
+seam error and a maximum boundary difference of 4.74e-13. The largest counted core buffer
+allocation is 31.66 MiB; the last complete single-note pack measured 1.56 seconds at the median
+and 9.27 seconds at the maximum while validation was also running. Musical examples sum multiple
+independently rendered notes, so their complete sequence render times are recorded separately.
+
+The app acceptance pass covers 77 targeted host checks. Its Spool workflow test moves every
+macro on a loaded custom machine, renders the preview, restarts the preset shelf, saves/reopens
+the sixteen-pad starter, replays a saved pad recipe byte exactly, and reads back all PCM24/XPM
+exports. Android `assembleDebug` also passes with the Compose app and four native ABIs. The
+signed debug APK is available for device checking; touch interaction and phone playback have
+not been tested on a connected device.
 
 The required baseline is `./gradlew --no-daemon test`. Acceptance also requires listening to the
 forward identity, backward answers, diagonal encounters, finite inherited traces and repeated
