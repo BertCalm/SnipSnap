@@ -196,14 +196,18 @@ the message.
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
 | MURMUR | 36–96 |
+| OSPREY | 36–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE resets TUNE to
 zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
 itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
-repeatable macro variation around the chosen preset); both are refused on
-any other engine.
+repeatable macro variation around the chosen preset). OSPREY also takes
+`--seed N` (its sea gesture's variation), `--seconds .25..12` (the length
+of its finite render) and `--model 1|2|3` (the saved renderer). `--seed`
+is refused on any engine but those two; `--scramble`, `--seconds` and
+`--model` on any but their own.
 
 LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
 eight-preset audition bank. `--midi` and `--velocity 0..1` override
