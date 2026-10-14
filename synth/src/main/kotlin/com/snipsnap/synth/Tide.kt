@@ -529,15 +529,13 @@ object Tide {
      * fold at C6 (drive 6, index 3), energy between harmonics sat 36.5 dB
      * under them at 4x, 37.1 dB at 8x and 45.3 dB at 4x with this filter:
      * the decimator's leak, not the render rate, set the floor.
+     *
+     * Each stage's cutoff and damping are fixed, so each runs
+     * [Dsp.TptSvf.lowPassInPlace]: the same samples as [Dsp.TptSvf.process]
+     * per sample, without recomputing the coefficients' `tan` every sample.
      */
     internal fun bandLimit(buf: FloatArray, rate: Int) {
-        for (k in BUTTERWORTH_8) {
-            val f = Dsp.TptSvf(rate)
-            for (i in buf.indices) {
-                f.process(buf[i], BAND_LIMIT_HZ, k)
-                buf[i] = f.low
-            }
-        }
+        for (k in BUTTERWORTH_8) Dsp.TptSvf(rate).lowPassInPlace(buf, BAND_LIMIT_HZ, k)
     }
 
     fun render(voice: TideVoice, macros: Map<String, Float> = emptyMap(), take: Int = 0): Snip {

@@ -23,9 +23,33 @@ import kotlin.random.Random
  * the returned buffer still contains the instrument's passive response.
  * Its optional effort curve shapes force at a relative age, leaving passive
  * modal and tract decay intact when the shared gesture settles.
+ * Optional [Buffers] let a caller that plays many gestures lend the same
+ * arrays to every gesture of a kind; the samples are the same either way.
  */
 internal object CircuitInstruments {
     enum class Kind { RATTLE, CLAPPER, CLAY, GRUNT, UH_HUH }
+
+    /**
+     * Arrays one caller lends to its gestures, so a performance allocates each [Kind]'s
+     * result and force buffers once instead of once per gesture. Every buffer is zeroed when
+     * a gesture takes it, so it starts exactly as a fresh array would. The array [gesture]
+     * returns is then the kind's own buffer: read it before the next gesture of that kind.
+     */
+    class Buffers {
+        // Per kind: the result, then up to two force buffers.
+        private val held = arrayOfNulls<FloatArray>(Kind.entries.size * 3)
+
+        internal fun zeroed(kind: Kind, slot: Int, size: Int): FloatArray {
+            val index = kind.ordinal * 3 + slot
+            val buffer = held[index]
+            if (buffer == null || buffer.size != size) return FloatArray(size).also { held[index] = it }
+            buffer.fill(0f)
+            return buffer
+        }
+    }
+
+    private fun scratch(buffers: Buffers?, kind: Kind, slot: Int, size: Int): FloatArray =
+        buffers?.zeroed(kind, slot, size) ?: FloatArray(size)
 
     fun gesture(
         kind: Kind,
@@ -36,6 +60,7 @@ internal object CircuitInstruments {
         breath: Double = .55,
         poweredSeconds: Double? = null,
         excitationAtSeconds: ((Double) -> Double)? = null,
+        buffers: Buffers? = null,
     ): FloatArray {
         require(rate >= 8_000) { "Circuit gesture rate must be at least 8000 Hz" }
         val root = if (rootHz.isFinite()) rootHz.coerceIn(20.0, 5_000.0) else 130.8128
@@ -49,7 +74,7 @@ internal object CircuitInstruments {
             Kind.GRUNT -> .28
             Kind.UH_HUH -> .58
         }
-        val result = FloatArray((seconds * rate).toInt())
+        val result = scratch(buffers, kind, 0, (seconds * rate).toInt())
         // This ends excitation, while existing modal and tract states continue decaying.
         val poweredFrames = when {
             poweredSeconds == null || poweredSeconds == Double.POSITIVE_INFINITY -> result.size
@@ -58,9 +83,9 @@ internal object CircuitInstruments {
         }
         if (strength == 0.0 || poweredFrames == 0) return result
         when (kind) {
-            Kind.RATTLE -> rattle(result, root, rate, random, poweredFrames, excitationAtSeconds)
-            Kind.CLAPPER -> clapper(result, root, rate, random, poweredFrames, excitationAtSeconds)
-            Kind.CLAY -> clay(result, root, rate, random, poweredFrames, excitationAtSeconds)
+            Kind.RATTLE -> rattle(result, root, rate, random, poweredFrames, excitationAtSeconds, buffers)
+            Kind.CLAPPER -> clapper(result, root, rate, random, poweredFrames, excitationAtSeconds, buffers)
+            Kind.CLAY -> clay(result, root, rate, random, poweredFrames, excitationAtSeconds, buffers)
             Kind.GRUNT, Kind.UH_HUH -> vocal(result, root, rate, random, air, kind == Kind.UH_HUH, poweredFrames, excitationAtSeconds)
         }
         finish(result, rate, strength)
@@ -114,8 +139,8 @@ internal object CircuitInstruments {
     }
 
     private fun rattle(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int,
-                       excitationAtSeconds: ((Double) -> Double)?) {
-        val force = FloatArray(output.size)
+                       excitationAtSeconds: ((Double) -> Double)?, buffers: Buffers?) {
+        val force = scratch(buffers, Kind.RATTLE, 1, output.size)
         val collisions = random.nextInt(7, 13)
         // One finite shake: individual collisions accelerate then scatter, all before 100 ms.
         for (i in 0 until collisions) {
@@ -136,9 +161,9 @@ internal object CircuitInstruments {
     }
 
     private fun clapper(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int,
-                        excitationAtSeconds: ((Double) -> Double)?) {
-        val first = FloatArray(output.size)
-        val second = FloatArray(output.size)
+                        excitationAtSeconds: ((Double) -> Double)?, buffers: Buffers?) {
+        val first = scratch(buffers, Kind.CLAPPER, 1, output.size)
+        val second = scratch(buffers, Kind.CLAPPER, 2, output.size)
         // Wider force contacts soften each edge. Their own main arm modes set
         // the upper-register limit, preserving a pitched second knock as well.
         val firstWidth = min(.0032, 1.25 / (2.0 * root))
@@ -160,8 +185,8 @@ internal object CircuitInstruments {
     }
 
     private fun clay(output: FloatArray, root: Double, rate: Int, random: Random, poweredFrames: Int,
-                     excitationAtSeconds: ((Double) -> Double)?) {
-        val force = FloatArray(output.size)
+                     excitationAtSeconds: ((Double) -> Double)?, buffers: Buffers?) {
+        val force = scratch(buffers, Kind.CLAY, 1, output.size)
         // Keep rounded force below the membrane's second contact-spectrum null
         // at upper roots, where a fixed long contact would cancel the pitched mode.
         val contactWidth = min(random.nextDouble(.010, .014), 1.25 / root)

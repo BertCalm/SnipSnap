@@ -2,6 +2,7 @@ package com.snipsnap.kit
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3ProjectTrack
 import com.snipsnap.mpc3.Mpc3ProjectWriter
 import com.snipsnap.xpm.DrumProgram
@@ -22,7 +23,11 @@ import java.io.IOException
  * arrive as four sequences and the hardware's sequence switcher is the
  * pattern flip. (The corpus rule for projects still holds: hoisted
  * tracks carry no embedded clips, the timeline does.) Tempo comes from
- * the first kit that remembers one.
+ * the first kit that remembers one, unless the caller says.
+ *
+ * A [Project] is this builder's input made into the thing the user
+ * opens: the overload that takes one puts the project's beat on its
+ * active kit's track and its tempo on the session.
  */
 object SessionBuilder {
 
@@ -36,6 +41,51 @@ object SessionBuilder {
         val answerTracks: List<String> = emptyList(),
     )
 
+    /**
+     * A [Project] as a session (`docs/DIRECTION_2026_10.md` §2): its held
+     * kits on tracks, in its order, and its **beat on the active kit's
+     * track** in place of that kit's own grooves. The other kits keep
+     * theirs. A project with no beat yet exports exactly as the plain
+     * kit-list session does, which is what a freshly migrated project is.
+     *
+     * The beat rides the active track because a pattern is played on the
+     * grid of the active kit; until a pattern carries the name of the kit
+     * it plays, that is the only track it can honestly land on.
+     *
+     * The project's tempo wins over the kits'. Its name becomes the
+     * session's, sanitized into MPC shape — a project is a folder name,
+     * which allows a few characters a card does not — unless [name] says
+     * otherwise. A held kit whose folder is gone refuses by name
+     * ([ProjectKitsMissingException]) rather than exporting a session
+     * missing a track.
+     *
+     * [kitDirs] defaults to the project's own folders and exists for a
+     * caller that stages them elsewhere (the CLI's worn twins); it must be
+     * those folders, in that order.
+     */
+    fun build(
+        project: Project,
+        shelfRoot: File,
+        destRoot: File,
+        instruments: List<Pair<KeygroupProgram, Map<String, Snip>>> = emptyList(),
+        overwrite: Boolean = false,
+        name: String = Names.sanitizeStem(project.name),
+        kitDirs: List<File> = ProjectStore.kitDirs(shelfRoot, project),
+    ): Result {
+        val missing = ProjectStore.missingKits(shelfRoot, project)
+        if (missing.isNotEmpty()) throw ProjectKitsMissingException(project.name, missing)
+        require(kitDirs.isNotEmpty()) { "project '${project.name}' holds no kits; a session needs at least one" }
+        val expected = ProjectStore.kitDirs(shelfRoot, project).size
+        require(kitDirs.size == expected) { "kitDirs must be the project's ${expected} kit folders, in order; got ${kitDirs.size}" }
+        val beat = ProjectStore.beat(ProjectStore.dir(shelfRoot, project.name))
+        val active = ProjectStore.activeIndex(shelfRoot, project)
+        return build(
+            name, kitDirs, destRoot, instruments, overwrite,
+            tempoBpm = project.tempoBpm,
+            groovesFor = { index, dir -> if (index == active && beat.isNotEmpty()) beat else GrooveStore.load(dir) },
+        )
+    }
+
     fun build(
         name: String,
         kitDirs: List<File>,
@@ -43,6 +93,14 @@ object SessionBuilder {
         /** Instruments as program + its samples (see `OneNote.MultiResult`). */
         instruments: List<Pair<KeygroupProgram, Map<String, Snip>>> = emptyList(),
         overwrite: Boolean = false,
+        /** The call-site tempo wins; the first kit that remembers one backs it up. */
+        tempoBpm: Float? = null,
+        /**
+         * The grooves that become each track's sequences, by track index
+         * and kit folder. The default is the kit's own `groove.json`; a
+         * project puts its beat on the active track through this.
+         */
+        groovesFor: (Int, File) -> List<Mpc3Clip> = { _, dir -> GrooveStore.load(dir) },
     ): Result {
         require(Names.isMpcSafe(name)) { "session name isn't MPC-safe: '$name'" }
         require(kitDirs.isNotEmpty()) { "a session needs at least one kit" }
@@ -56,7 +114,7 @@ object SessionBuilder {
         dataDir.deleteRecursively()
         dataDir.mkdirs()
 
-        var tempo: Float? = null
+        var tempo: Float? = tempoBpm
         val kitTracks = mutableListOf<String>()
         val tracks = mutableListOf<Mpc3ProjectTrack>()
 
@@ -66,7 +124,7 @@ object SessionBuilder {
             if (findings.blocked()) throw ExportBlockedException(findings)
             val prefix = Names.sanitizeStem("K${index + 1}") + "_"
             val (slots, _) = KitExporter.buildSlots(kit, kitDir, dataDir, stemPrefix = prefix)
-            val grooves = GrooveStore.load(kitDir)
+            val grooves = groovesFor(index, kitDir)
             tracks += Mpc3ProjectTrack.Drum(
                 DrumProgram(kit.name, slots),
                 clips = grooves.take(Mpc3ProjectWriter.MAX_SEQUENCES),
