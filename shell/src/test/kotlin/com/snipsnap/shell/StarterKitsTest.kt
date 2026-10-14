@@ -27,6 +27,10 @@ import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.Nimbus
 import com.snipsnap.synth.NimbusPatch
 import com.snipsnap.synth.NimbusVoice
+import com.snipsnap.synth.Osprey
+import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OspreyPresets
+import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -391,6 +395,35 @@ class StarterKitsTest {
                 assertEquals(source.recipe, replayed.pad.recipe, "source definitions and phrase scheduling survive replay")
                 assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved phrase regenerates exactly")
             }
+            if (starter.id == "osprey") {
+                // Not one of oneEngineStarters: every pad sits at C4, so the kit names no key.
+                val model = KitBuilderModel.open(dir)
+                assertNull(model.kit.key, "OSPREY's pads all sit at C4 and name no key")
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = assertNotNull(Breed.recipeOf(pad.recipe), "${pad.displayName}: no recipe")
+                    val patch = assertIs<OspreyPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the sea gesture lands dry")
+                    assertEquals(Osprey.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot, "${pad.displayName}: plays its complete finite gesture")
+                    patch
+                }
+                assertEquals(OspreyVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(OspreyPresets.all(), patches.take(15), "the fifteen shore/sea presets, in roster order")
+                assertTrue(patches.all { it.midi == 60 && it.seed == 731 && it.modelVersion == Osprey.MODEL_VERSION }, "rooted at C4, one seed, the current model")
+                assertEquals(1f, patches.last().macros.getValue("HOLD"), "the sixteenth pad is the coast with extended excitation")
+                // The first pad and the extended last one each regenerate their saved WAV exactly.
+                val first = model.kit.pads.first()
+                val last = model.kit.pads.last()
+                val firstBytes = File(dir, first.sampleFile).readBytes()
+                val lastBytes = File(dir, last.sampleFile).readBytes()
+                val firstAgain = RecipeReplay.apply(model, last.slot, first.recipe!!, last.displayName)
+                assertEquals(first.recipe, firstAgain.pad.recipe, "note, seed, duration and model survive replay")
+                assertTrue(firstBytes.contentEquals(File(dir, firstAgain.pad.sampleFile).readBytes()), "the first sea gesture regenerates exactly")
+                val lastAgain = RecipeReplay.apply(model, first.slot, last.recipe!!, first.displayName)
+                assertEquals(last.recipe, lastAgain.pad.recipe, "the extended coast's recipe survives replay")
+                assertTrue(lastBytes.contentEquals(File(dir, lastAgain.pad.sampleFile).readBytes()), "the extended sea gesture regenerates exactly")
+            }
             assertEquals(starter, StarterKits.byId(starter.id))
         }
         assertEquals(null, StarterKits.byId("nope"))
@@ -451,6 +484,10 @@ class StarterKitsTest {
         assertEquals("MURMUR", murmur.displayName)
         assertFalse(murmur.seeded, "MURMUR is a fixed dry audition kit")
         assertEquals(KeySpec.parse("Cminpent"), murmur.key)
+        val osprey = StarterKits.byId("osprey")!!
+        assertEquals("OSPREY", osprey.displayName)
+        assertFalse(osprey.seeded, "OSPREY is a fixed dry audition kit")
+        assertNull(osprey.key, "OSPREY's sea gestures all sit at C4 and name no key")
         val revel = StarterKits.byId("revel")!!
         assertEquals("REVEL", revel.displayName)
         assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")

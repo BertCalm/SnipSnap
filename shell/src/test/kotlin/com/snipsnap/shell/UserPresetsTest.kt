@@ -26,6 +26,7 @@ import com.snipsnap.synth.MurmurPresets
 import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -182,6 +183,7 @@ class UserPresetsTest {
                 "RELAY" to RelayVoice.entries.map { it.name },
                 "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
                 "MURMUR" to MurmurVoice.entries.map { it.name },
+                "OSPREY" to OspreyVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
