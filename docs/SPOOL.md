@@ -7,9 +7,10 @@ are generated for the requested note, with evolving articulation. They are not i
 
 This dry listening prototype uses overlapping forward and backward pickups with audible reversed
 articulation and gentle shared tape motion.
-Six presets cover the six voices. The planned
-36-preset library remains deferred until the owner approves the dry sonic identity. A published
-audition presents the sounds for that decision; passing numerical checks alone is not sonic approval.
+The owner accepted the dry sonic identity and musical audition on 2026-10-14. The factory library
+now contains 36 presets: eight strings, eight choir, six flute, six brass and eight experimental
+recordings. The six approved starting presets retain their exact recipes and their original order.
+The expanded bank is available for listening; numerical checks alone do not establish its sonic approval.
 
 ## Controls and finite playback
 
@@ -200,8 +201,8 @@ When only movement examples change, refresh their 25 clips without replacing unr
 ./gradlew :synth:generateSpoolAudition -PspoolMovementOnly
 ```
 
-This requires an existing five-position pack and matching hashes for all three DSP/factory
-source files. Changes to the engine or factory geometry require a complete render.
+This requires an existing five-position pack and matching hashes for all five DSP/factory
+source files, including shared filtering. Changes to the engine or factory geometry require a complete render.
 
 The **Hear it in a phrase** section adds four seven-note melodies, four held C-minor chords
 and a matching IMPRINT 25%/100% arpeggio pair. Each note is rendered by the unchanged Spool
@@ -219,8 +220,8 @@ level. Refresh only this bank while preserving the current baseline with:
 ./gradlew :synth:generateSpoolAudition -PspoolMusicalOnly
 ```
 
-The musical refresh also requires matching DSP/factory source hashes and retains the previous
-174 cases, kit and patch roster unchanged.
+The musical refresh also requires matching DSP/factory source hashes and retains all other
+cases, the kit and the patch roster unchanged.
 Individual sounds can also be rendered with:
 
 ```sh
@@ -228,38 +229,59 @@ Individual sounds can also be rendered with:
 ./gradlew :cli:run --args="synth SPOOL CHOIR --midi 60 --velocity .35 --out /tmp/spool-soft"
 ```
 
-The final renderer produces 184 listening clips, including ten musical examples, twelve separate pickup diagnostics
-and twelve equal-control voice comparisons, as 368 native and level-matched WAVs, plus the
+The final renderer produces 220 listening clips, including the complete 36-preset library,
+ten musical examples, twelve separate pickup diagnostics
+and twelve equal-control voice comparisons, as 440 native and level-matched WAVs, plus the
 sixteen-pad MPC kit. The assembly adds eighteen pairs of the previous reverse/flutter and
-current voice-character revision, for 220 page entries and 428 listening WAVs, including both
+current voice-character revision, for 256 page entries and 500 listening WAVs, including both
 versions' default pickup stems. Its source patch
 targets the current upstream baseline and records a
-clean source commit. Provenance hashes cover `Spool.kt`, `SpoolPatch.kt` and `SpoolPresets.kt`;
+clean source commit. Provenance hashes cover `Spool.kt`, `SpoolPatch.kt`, `SpoolPresets.kt`
+and their shared `Dsp.kt`/`Tide.kt` processing;
 changes to DSP or recipe defaults require fresh rendering.
+
+When refreshing a published page, keep its historical before/after entries and references intact:
+
+```sh
+python3 scripts/prepare-spool-audition.py --output /path/to/published-page \
+  --preserve-comparisons /path/to/published-page
+```
+
+The assembler captures their original provenance and refuses to replace a historical asset
+with different bytes. New recordings keep the current render and recipe hashes.
 
 Acceptance checks cover independent layer pitch and harmonic agreement, meaningful simultaneous
 audibility before and after release, actual captured support, deterministic source/memory,
 causal inherited traces, complete feedback bounds, serialization, repeated HOLD waveform
-continuity and seam metrics. There are 25 Spool checks, including independent voice spectra,
+continuity and seam metrics. There are 26 core Spool checks, including independent voice spectra,
 fixed-frequency vowel regions, audio-derived wow/flutter, reverse swell/brightness and connected
 release handoff and the gain-independent separation of every adjacent positive IMPRINT step.
 Buffer accounting and cloud timings are prototype
 measurements, not peak JVM memory or phone/MPC performance estimates.
-All 25 Spool checks and the targeted host checks pass. The rendered pack has zero repeated-cycle
+All 26 core Spool checks pass in the merged engine's [full CI run](https://github.com/BertCalm/SnipSnap/actions/runs/38622647184).
+The earlier rendered pack has zero repeated-cycle
 seam error and a maximum boundary difference of 4.74e-13. The largest counted core buffer
 allocation is 31.66 MiB; the last complete single-note pack measured 1.56 seconds at the median
 and 9.27 seconds at the maximum while validation was also running. Musical examples sum multiple
 independently rendered notes, so their complete sequence render times are recorded separately.
 
-The app acceptance pass covers 77 targeted host checks. Its Spool workflow test moves every
+The earlier app acceptance pass covers 77 targeted host checks. Its Spool workflow test moves every
 macro on a loaded custom machine, renders the preview, restarts the preset shelf, saves/reopens
 the sixteen-pad starter, replays a saved pad recipe byte exactly, and reads back all PCM24/XPM
 exports. Android `assembleDebug` also passes with the Compose app and four native ABIs. The
 signed debug APK is available for device checking; touch interaction and phone playback have
-not been tested on a connected device.
+not been tested on a connected device. Preset-library checks also cover the specified family counts,
+unique names and recipes, unchanged original presets, and all 36 factory recipes through
+dispatch, macro editing and preset-shelf restart. The sixteen-pad starter keeps its original mapping.
+
+Four new presets export a frozen HOLD cycle: FRAME CYCLE, VOWEL WHEEL, CARBON CYCLE and
+SPLICED CIRCLE. CHOIR AFTERIMAGE, BORROWED ATTACK, NEIGHBOR PRINT and FOLDED RECORDING
+instead request a finite second encounter with their inherited recording. Recipe downloads expose
+their actual machine geometry, gates, routing and snapshot mode.
 
 The required baseline is `./gradlew --no-daemon test`. Acceptance also requires listening to the
 forward identity, backward answers, diagonal encounters, finite inherited traces and repeated
-HOLD wraps. Phone/MPC validation, final release naming and the owner's listening verdict remain open.
+HOLD wraps. The owner accepted the original sounds and musical examples; the new preset bank
+is a further listening pass. Phone/MPC validation and final release naming remain open.
 The published audition and generated probe results are the evidence for reviewing this prototype,
 not a claim of hardware reconstruction or acoustic recording realism.
