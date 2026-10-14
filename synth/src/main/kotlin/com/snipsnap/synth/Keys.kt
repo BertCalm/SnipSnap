@@ -382,6 +382,62 @@ object Keys {
         return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
+    /** Nine minor-third zones across REGISTERS' C3–C5 macro register. */
+    fun registersPadMidis(): List<Int> =
+        (0..Registers.TUNE_SEMITONES step 3).map { Registers.ROOT_MIDI + it }
+
+    /**
+     * Keep the saved note's speaking attack, then enter the engine's measured
+     * held region. The first 350 ms are the finite note itself, preserving PIPE
+     * chiff and MUSETTE's bellows onset; a 100 ms overlap joins it to the held
+     * render. The loop marker follows a complete held cycle and the loop runs
+     * to the end, so both MPC formats and the phone share one loop convention.
+     *
+     * [Registers.probe] checks independent preceding and exported cycles before
+     * this wrapper repeats that region. The overlap never repairs the loop.
+     */
+    fun registersPad(
+        patch: RegistersPatch,
+        midi: Int,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        require(midi in registersPadMidis().first()..registersPadMidis().last()) {
+            "REGISTERS pads are MIDI ${Registers.ROOT_MIDI}..${Registers.ROOT_MIDI + Registers.TUNE_SEMITONES}, got $midi"
+        }
+        fun checkCancelled() {
+            if (cancelled() || Thread.currentThread().isInterrupted)
+                throw java.util.concurrent.CancellationException("REGISTERS render cancelled")
+        }
+        checkCancelled()
+        val hold = patch.macros["HOLD"] ?: Registers.defaults(patch.voice).getValue("HOLD")
+        val finiteMacros = if (Registers.isLoop(hold)) patch.macros +
+            ("HOLD" to Registers.defaults(patch.voice).getValue("HOLD")) else patch.macros
+        val head = Registers.render(patch.voice, finiteMacros, midi, patch.velocity, patch.model, cancelled = cancelled).samples
+        checkCancelled()
+        val held = Registers.render(patch.voice, patch.macros + ("HOLD" to 1f), midi, patch.velocity, patch.model,
+            cancelled = cancelled).samples
+        checkCancelled()
+        val join = (.350 * RATE).roundToInt()
+        val overlap = (.100 * RATE).roundToInt()
+        check(head.size >= join + overlap && held.size > overlap + 256)
+        val samples = FloatArray(join + held.size * 2)
+        head.copyInto(samples, endIndex = join)
+        for (i in join until samples.size) {
+            // Both renders share seeded oscillator phases. Advance the held
+            // cycle to the head's time rather than restarting phase zero at
+            // the join, which could cancel the body during the overlap.
+            val phase = i % held.size
+            if (i < join + overlap) {
+                val x = (i - join).toDouble() / (overlap - 1)
+                val weight = (x * x * (3.0 - 2.0 * x)).toFloat()
+                samples[i] = head[i] * (1f - weight) + held[phase] * weight
+            } else samples[i] = held[phase]
+        }
+        val loopStart = join + held.size
+        if (patch.velocity > 0f) requireSeam("REGISTERS ${patch.voice} $midi", samples, loopStart)
+        return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStart.toLong())
+    }
+
     // ---------- CONTOUR, held ----------
 
     /** Seventeen minor-third zones around the voice root, over CONTOUR's four-octave TUNE range. */
