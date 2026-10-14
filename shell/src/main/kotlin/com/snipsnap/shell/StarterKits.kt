@@ -214,6 +214,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.embouchure() },
         Starter(
+            "bellows", "BELLOWS",
+            "Warm reeds, push-pull colors, folk bite and a wheel drone in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.bellows() },
+        Starter(
             "murmur", "MURMUR",
             "Talking FM bass, vowel keys and mouth-shaped plucks in C minor pentatonic.",
             seeded = false,

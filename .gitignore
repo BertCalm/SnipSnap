@@ -216,6 +216,10 @@ testkit/SnipSnap Contour Kit/
 testkit/skitter-audition/
 testkit/SnipSnap Skitter Kit/
 
+# BELLOWS dry listening clips and acceptance-kit audio are regenerated locally.
+testkit/bellows-audition/
+testkit/SnipSnap Bellows Kit/
+
 # VENT's regenerated dry audio, recipes, diagnostics and audition archive.
 testkit/vent-audition/
 

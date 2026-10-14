@@ -47,6 +47,17 @@ tasks.register<JavaExec>("generateMurmurKit") {
     args("${rootDir}/testkit")
 }
 
+/** Original BELLOWS source models, saved gestures and dry listening comparisons. */
+tasks.register<JavaExec>("generateBellowsAudition") {
+    group = "distribution"
+    description = "Render BELLOWS PCM16 raw/matched WAVs, recipes, measurements and first-listen ZIP under testkit/bellows-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BellowsAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/bellows-audition")
+}
+
 repositories {
     mavenCentral()
 }
