@@ -3,7 +3,8 @@
 REGISTERS adapts the organ/reed family idea in the
 [XOctave architecture](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/octave-engine-architecture.md)
 to SnipSnap's deterministic offline renderer. This first pass contains PIPE
-and MUSETTE. The dry sound awaits the owner's listening verdict.
+and MUSETTE. The owner selected model-3 PIPE as the working baseline after
+listening to the stronger chiff and sustained airflow. MUSETTE remains provisional.
 
 PIPE uses twelve harmonic partials with registration-inspired dark/principal
 weighting, staggered speech, a brief chiff and a seeded wind field. MUSETTE
@@ -77,11 +78,32 @@ EDGE shapes pipe speech or reed saturation; SPREAD sets ensemble/reed offsets;
 MOTION supplies tremulant/vibrato. TUNE selects MIDI 48–72 when no explicit
 note is supplied. An explicit MIDI note overrides TUNE.
 
-`RegistersPatch` is a versioned standalone audition recipe. It stores the voice,
-complete macro values, note, velocity and renderer model. It deliberately remains
-outside the app engine registry while the sound is under review. Existing
-TONEWHEEL and PRISM patches are unchanged. The prototype is not yet a phone
-picker entry or an MPC instrument export.
+`RegistersPatch` implements the shared patch contract and also reads the original
+audition recipes. It stores the voice, complete macro values, note, velocity and
+renderer model. REGISTERS appears in the phone's SYNTH source picker with PIPE
+and MUSETTE, six presets, saved patches and the shared SEND TO PAD workflow.
+TUNE edits change the explicit note; other edits preserve its note, velocity and
+model. Imported audition notes align the slider without changing the sound.
+
+MAKE INSTRUMENT uses nine C3–C5 zones spaced by minor thirds and the existing
+phone/MPC keygroup package. Each zone retains the first 350 ms of its finite
+speech, then blends over 100 ms into the independently verified held region.
+The held phase advances on the same time axis as the attack to avoid a carrier
+cancellation at the join. A complete held cycle precedes the nonzero loop marker;
+the remaining cycle repeats while the key is held. RELEASE controls the player’s
+key-up fade. The original onset-free audition WAVs remain unchanged.
+
+The CLI can render saved presets or write the same instrument package:
+
+```text
+./gradlew :cli:run --args="synth REGISTERS PIPE --preset 'Pipe Air' --out /tmp/registers"
+./gradlew :cli:run --args="synth REGISTERS PIPE --preset 'Pipe Air' --instrument --release 0.6 --out /tmp/registers"
+```
+
+The picker and export adapters leave the model-3 synthesis arithmetic unchanged.
+Rendering accepts cancellation during synthesis so leaving a long instrument
+render does not keep the phone busy. Actual phone and MPC listening remain a
+hardware check after the automated render, package and playback checks.
 
 ## Finite notes and held material
 

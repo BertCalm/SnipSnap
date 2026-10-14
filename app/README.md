@@ -72,8 +72,8 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 36 engines: THUMP, SKIN, TINES, VELVET,
-VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
+The SYNTH source picker has 37 engines: THUMP, SKIN, TINES, VELVET,
+VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
 CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
@@ -84,6 +84,11 @@ EMBOUCHURE adds eight dry player gestures, a sixteen-pad starter and native
 velocity response. Saved MIDI base, renderer model and gesture survive edits;
 TUNE stays within the selected voice's supported register. Its identity and
 held-loop sound await the owner's audition.
+REGISTERS adds PIPE and MUSETTE, seven controls, six published presets and
+MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
+remains provisional. Saved audition recipes retain note, velocity and model.
+Instrument samples preserve the finite attack before a verified held loop and
+export through the existing MPC 2/MPC 3 and phone keygroup package.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
 and dry starter also await owner listening review.
 PRISM adds six additive voices, eight review presets and a dry pitched

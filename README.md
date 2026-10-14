@@ -383,6 +383,16 @@ listening matrix, or add `-Pquick` for a first listening set. The
 is the owner's sonic acceptance gate;
 [implementation notes](docs/REVEL.md) describe the model and validation limits.
 
+REGISTERS adds PIPE and MUSETTE to the phone's SYNTH picker. PIPE keeps the
+selected model-3 chiff and soft sustained airflow; MUSETTE has three beating
+reeds and a bellows contour. COLOR, AIR, EDGE, SPREAD and MOTION shape the sound,
+with TUNE and HOLD beside them. Six published settings, saved recipes, native
+velocity and CLI rendering share the same renderer. MAKE INSTRUMENT preserves
+the finite speech before a verified held loop, then writes the existing phone,
+MPC 2 and MPC 3 keygroup package. [The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site)
+retains the original chiff and airflow comparisons; [implementation notes](docs/REGISTERS.md)
+describe compatibility and export behavior. MUSETTE remains provisional.
+
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
 plucks, organs, basses, glass and sustained veils whose harmonics develop at
 different rates. GRAIN, DRIFT, SHAPE, STRIKE and BODY shape the dry note; HOLD
@@ -656,8 +666,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and GRAINS round out the lineup —
-thirty-six engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, REGISTERS and GRAINS round out the lineup —
+thirty-seven engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -838,7 +848,7 @@ Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
+THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
 SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
