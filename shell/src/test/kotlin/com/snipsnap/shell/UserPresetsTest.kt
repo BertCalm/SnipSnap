@@ -12,6 +12,8 @@ import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerRole
@@ -832,5 +834,63 @@ class UserPresetsTest {
         assertEquals("1 KIT LANDED ON THE SHELF.", Copy.landed(1, 0))
         assertEquals("1 KIT LANDED ON THE SHELF. 1 PRESET UNDER YOURS.", Copy.landed(1, 0, 1))
         assertEquals("2 KITS LANDED ON THE SHELF. 3 PRESETS UNDER YOURS. 1 SKIPPED.", Copy.landed(2, 1, 3))
+    }
+
+    /**
+     * FLOTILLA keeps its note and strike velocity outside the macro map, as CISTERN
+     * does, so its promoted line has to carry them. This reads the line back the way
+     * FlotillaPresets.kt would build it ([KotlinLiteral]) and plays it.
+     */
+    @Test
+    fun `a saved flotilla roster line retains its note and strike velocity`() {
+        val root = shelf()
+        try {
+            val source = FlotillaPatch(
+                "LOW WAKE", FlotillaVoice.RIPPLE,
+                linkedMapOf("PULSE" to .2f, "SURFACE" to .4f), midi = 40, velocity = .3f,
+            )
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch, "the shelf retains state outside the macros")
+            val line = UserPresets.rosterLine(saved.patch)
+            assertEquals(
+                "p(FlotillaVoice.RIPPLE, \"LOW WAKE\", \"PULSE\" to 0.2f, \"SURFACE\" to 0.4f).copy(midi = 40, velocity = 0.3f),",
+                line,
+                "UserPresets.rosterLine's FLOTILLA branch: the pasteable line carries the saved note and strike velocity",
+            )
+            assertEquals("FlotillaPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+            val rebuilt = flotillaFromRosterLine(line)
+            assertEquals(source, rebuilt, "the pasteable line rebuilds the saved patch exactly")
+            assertTrue(source.render().samples.contentEquals(rebuilt.render().samples), "and plays the bytes the phone heard")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    /**
+     * [line] as FlotillaPresets.kt builds it: `p(voice, name, macros...)` is
+     * `FlotillaPatch(name, voice, macros.toMap())`, then `.copy(...)`.
+     */
+    private fun flotillaFromRosterLine(line: String): FlotillaPatch {
+        assertTrue(line.endsWith(","), line)
+        val copy = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+        assertEquals("copy", copy.name, "the line carries no .copy for the fields p does not take: $line")
+        val p = copy.receiver as KotlinLiteral.Call
+        assertEquals("p", p.name)
+        assertTrue(p.named.isEmpty(), "the p helper takes positional arguments")
+        val voiceRef = p.positional[0] as KotlinLiteral.Ref
+        assertEquals("FlotillaVoice", voiceRef.owner)
+        val voice = FlotillaVoice.valueOf(voiceRef.name)
+        val name = (p.positional[1] as KotlinLiteral.Str).value
+        val macros = p.positional.drop(2).associate { arg ->
+            val pair = arg as KotlinLiteral.Pair
+            (pair.first as KotlinLiteral.Str).value to float(pair.second)
+        }
+        // FlotillaPatch's init refuses every model but Flotilla.MODEL_VERSION, which is the default p builds.
+        assertEquals(fieldsOf(FlotillaPatch::class.java) - setOf("name", "voice", "macros", "model"), copy.named.keys,
+            "the copy carries every field p does not")
+        assertTrue(copy.positional.isEmpty())
+        return FlotillaPatch(name, voice, macros,
+            midi = int(copy.named.getValue("midi")), velocity = float(copy.named.getValue("velocity")))
     }
 }

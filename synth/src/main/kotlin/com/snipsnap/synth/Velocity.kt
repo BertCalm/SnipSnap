@@ -305,18 +305,23 @@ object Velocity {
      * as strike energy, CIRCUIT as event energy, and TREMOR as the blow. MURK uses
      * it as event energy and response reach, preserving the STRIKE contact
      * character. NIMBUS uses it as flex impulse and transient stack displacement,
-     * preserving EXCITE's contact character. THAW uses it as runner gesture energy while retaining
+     * preserving EXCITE's contact character. COROLLA scales pull and contact energy
+     * while PULL keeps its playing character. THAW uses it as runner gesture energy while retaining
      * the selected contact character. TESSERA scales hammer energy while retaining HAMMER's
      * contact character. UNDERTOW uses it as piston work while
      * preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
+     * REVEL scales each phrase event's energy while keeping its saved [RevelConfig].
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
      * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
      * ALLOY scales generated attack energy and modulation work with its stored material and routing.
      * CONTOUR changes attack energy, filter motion and edge emphasis in the saved table pair.
+     * STOOP scales the gain and brightness of its note and its shadow answers while keeping
+     * source registration, shadow gesture and chord voicing.
      * LACQUER changes source energy, edge strength and filter articulation while keeping its layer recipe.
+     * SPOOL scales its recorded source's attack, upper harmonics and level, and its heads' contact.
      * SKITTER changes excitation, oscillator recovery and filter provocation together.
      * TANGLE changes early energy, filter opening and bounded modulation effort
      * while preserving the oscillator recipe and requested note.

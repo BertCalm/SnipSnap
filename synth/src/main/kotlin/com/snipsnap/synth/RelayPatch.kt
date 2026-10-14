@@ -9,15 +9,24 @@ import com.snipsnap.json.JsonValue
  * with the sound so a later voice-default change cannot silently change a saved phrase.
  * Velocity is excitation energy, separate from the timbral macros. TUNE selects the root
  * within the voice's two-octave range; sequence slots never select another note.
+ *
+ * Not a data class: a data class keeps its constructor arguments as given, and this keeps
+ * a [RelayPhrase.snapshot] of its phrase instead. [RelayPhrase] checks its lists once, when
+ * it is made, so a caller still holding one could otherwise change this patch's saved file
+ * and equality without passing a guard, and its sound with any edit [RelayPhrase] accepts.
+ * [copy], [equals], [hashCode] and [toString] are written out to behave as the data class's did.
  */
-data class RelayPatch(
+class RelayPatch(
     override val name: String,
     val voice: RelayVoice,
     override val macros: Map<String, Float>,
-    val phrase: RelayPhrase = Relay.phraseFor(voice),
+    phrase: RelayPhrase = Relay.phraseFor(voice),
     val velocity: Float = 1f,
     val model: Int = MODEL_VERSION,
 ) : Patch {
+    /** The phrase as it stood when the patch was made. Later edits to the caller's lists do not reach it. */
+    val phrase: RelayPhrase = phrase.snapshot()
+
     init {
         Patches.validateMacros(this, Relay.macrosFor(voice))
         require(velocity.isFinite() && velocity in 0f..1f) { "RELAY velocity out of 0..1: $velocity" }
@@ -28,6 +37,27 @@ data class RelayPatch(
     override val voiceName get() = voice.name
     override fun render() = Relay.render(voice, macros, velocity = velocity, phrase = phrase)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    fun copy(
+        name: String = this.name,
+        voice: RelayVoice = this.voice,
+        macros: Map<String, Float> = this.macros,
+        phrase: RelayPhrase = this.phrase,
+        velocity: Float = this.velocity,
+        model: Int = this.model,
+    ): RelayPatch = RelayPatch(name, voice, macros, phrase, velocity, model)
+
+    // compareTo, not ==: a data class compares a Float property by Float.compare.
+    override fun equals(other: Any?): Boolean =
+        other is RelayPatch && name == other.name && voice == other.voice && macros == other.macros &&
+            phrase == other.phrase && velocity.compareTo(other.velocity) == 0 && model == other.model
+
+    override fun hashCode(): Int =
+        ((((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + phrase.hashCode()) * 31 +
+            velocity.hashCode()) * 31 + model.hashCode()
+
+    override fun toString(): String =
+        "RelayPatch(name=$name, voice=$voice, macros=$macros, phrase=$phrase, velocity=$velocity, model=$model)"
 
     override fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap(Patches.toJsonValue(this).entries)
