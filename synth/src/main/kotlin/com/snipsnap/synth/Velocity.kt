@@ -315,6 +315,7 @@ object Velocity {
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
      * REVEL scales each phrase event's energy while keeping its saved [RevelConfig].
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
+     * BELLOWS scales reed pressure, harmonic response and level while keeping the saved gesture.
      * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
      * ALLOY scales generated attack energy and modulation work with its stored material and routing.

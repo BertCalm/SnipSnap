@@ -348,8 +348,8 @@ object UserPresets {
      * so the promoted preset renders the
      * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE retains its
-     * MIDI base, velocity, model and selected player gesture; REVEL retains its
+     * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
+     * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
