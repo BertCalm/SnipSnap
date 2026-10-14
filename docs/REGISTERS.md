@@ -109,7 +109,7 @@ cross-note pressure interactions are not part of this sample renderer.
 ./gradlew :synth:generateRegistersAudition -PregistersBaseline=/path/to/verified-r1-archive -PregistersR2Baseline=/path/to/verified-r2-archive
 ```
 
-The output is `testkit/registers-audition/`: actual Kotlin-generated mono
+The output is `testkit/registers-audition-r3/`: actual Kotlin-generated mono
 44.1 kHz PCM24 WAVs, raw/matched partners, complete recipes, measured diagnostics,
 source/audio hashes and a standalone listening page. Existing TONEWHEEL and PRISM
 ORGAN references use their supported pitches without clamping or transposition.
