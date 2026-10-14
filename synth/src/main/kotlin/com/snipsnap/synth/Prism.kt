@@ -493,7 +493,8 @@ object Prism {
         return raw
     }
 
-    /** Pre-level evidence: genuine adjacent held cycles, precondition 4× samples, and the actual partial bank. */
+    /** Pre-level evidence: genuine adjacent held cycles, precondition 4× samples, and the actual partial bank.
+     * [raw] is empty when [probe] was asked not to keep it. */
     internal data class Probe(
         val samples: FloatArray,
         val raw: FloatArray,
@@ -514,6 +515,7 @@ object Prism {
         normalize: Boolean = false,
         cancelled: () -> Boolean = { false },
         seconds: Float? = null,
+        keepRaw: Boolean = true,
     ): Probe {
         val m = settled(voice, macros)
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
@@ -527,7 +529,8 @@ object Prism {
         val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds * RATE).roundToInt().coerceAtLeast(64)
         val raw = synthesize(voice, m, template, bank, contours, frames, loop, cancelled)
         stopIfUnwanted(cancelled)
-        val conditioned = raw.copyOf()
+        // Only a test reads the unconditioned 4x sum back; a render conditions it in place.
+        val conditioned = if (keepRaw) raw.copyOf() else raw
         Tide.bandLimit(conditioned, RATE * Dsp.OVERSAMPLE)
         stopIfUnwanted(cancelled)
         val down = Dsp.decimate(conditioned, RATE)
@@ -565,7 +568,7 @@ object Prism {
                 for (i in previous.indices) previous[i] *= gain
             }
         }
-        return Probe(out, raw, bank.hz, bank.weights, bank.groups, loop?.baseHz ?: hz, loop?.frames ?: 0, previous, seam)
+        return Probe(out, if (keepRaw) raw else FloatArray(0), bank.hz, bank.weights, bank.groups, loop?.baseHz ?: hz, loop?.frames ?: 0, previous, seam)
     }
 
     fun render(
@@ -573,7 +576,7 @@ object Prism {
         macros: Map<String, Float> = emptyMap(),
         velocity: Float = 1f,
         template: PrismTemplate = templateFor(voice),
-    ): Snip = Snip(probe(voice, macros, velocity, template, normalize = true).samples, channels = 1, sampleRate = RATE)
+    ): Snip = Snip(probe(voice, macros, velocity, template, normalize = true, keepRaw = false).samples, channels = 1, sampleRate = RATE)
 
     fun renderAtMidi(
         voice: PrismVoice,
@@ -593,5 +596,5 @@ object Prism {
         velocity: Float = 1f,
         template: PrismTemplate = templateFor(voice),
         cancelled: () -> Boolean = { false },
-    ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled).samples
+    ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled, keepRaw = false).samples
 }

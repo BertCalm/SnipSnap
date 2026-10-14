@@ -390,13 +390,13 @@ object ContourEngine {
         if (Thread.currentThread().isInterrupted || cancelled()) throw java.util.concurrent.CancellationException("CONTOUR render no longer wanted")
     }
 
-    /** Band limiting and DC conditioning only; deliberately no limiter or gain. */
+    /** Band limiting and DC conditioning only; deliberately no limiter or gain.
+     * Consumes [raw]: it is band-limited in place, so a caller must not read it afterwards. */
     internal fun finish(raw: FloatArray, normalize: Boolean = false, fade: Boolean = false): FloatArray {
         stopIfUnwanted()
-        val filtered = raw.copyOf()
-        Tide.bandLimit(filtered, INTERNAL_RATE)
+        Tide.bandLimit(raw, INTERNAL_RATE)
         stopIfUnwanted()
-        val out = Dsp.decimate(filtered, RATE)
+        val out = Dsp.decimate(raw, RATE)
         val mean = out.sumOf { it.toDouble() } / out.size.coerceAtLeast(1)
         val hp = Dsp.OnePole(RATE)
         for (i in out.indices) { val x = out[i] - mean.toFloat(); out[i] = x - hp.lp(x, 8f) }

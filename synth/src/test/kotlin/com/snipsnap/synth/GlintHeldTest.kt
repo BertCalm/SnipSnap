@@ -153,8 +153,8 @@ class GlintHeldTest {
         val whole = GlintHeld.render(voice, m) { all++; false }
         val loopFrames = whole.audio.size - whole.loopStart
         val os = Dsp.OVERSAMPLE
-        // The oversampled loop runs the onset to its first frame boundary, then three breaths.
-        val total = (whole.loopStart - loopFrames) * os + 3 * loopFrames * os
+        // The oversampled loop runs the onset to its first frame boundary, two breaths, then the decimator's margin.
+        val total = (whole.loopStart - loopFrames) * os + 2 * loopFrames * os + GlintHeld.TAIL_MARGIN
         val loopAsks = (total + GlintHeld.CANCEL_CHECK_SAMPLES - 1) / GlintHeld.CANCEL_CHECK_SAMPLES
         assertEquals(loopAsks + 2, all, "an uninterrupted render asks $loopAsks times in its loop, then before the decimation and the level")
         var asks = 0
