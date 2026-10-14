@@ -7,6 +7,9 @@ import com.snipsnap.kit.blocked
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.AlloyVoice
+import com.snipsnap.synth.Bellows
+import com.snipsnap.synth.BellowsPatch
+import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.Circuit
 import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
@@ -91,7 +94,7 @@ class StarterKitsTest {
      * The single-engine starters with no block of their own below. Each SynthKits
      * builder lands sixteen pads through `pad(patch, drumClass)` with no chain, so
      * every pad is dry, carries its engine's patch, is filed by that engine's
-     * drumClassFor, and the sixteen reach every voice (measured for all eleven).
+     * drumClassFor, and the sixteen reach every voice (measured for all twelve).
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
         "circuit" to OneEngine(CircuitPatch::class.java, CircuitVoice.entries.map { it.name }.toSet()) {
@@ -123,6 +126,9 @@ class StarterKitsTest {
         },
         "embouchure" to OneEngine(EmbouchurePatch::class.java, EmbouchureVoice.entries.map { it.name }.toSet()) {
             (it as EmbouchurePatch).let { p -> Embouchure.drumClassFor(p.voice, p.macros) }
+        },
+        "bellows" to OneEngine(BellowsPatch::class.java, BellowsVoice.entries.map { it.name }.toSet()) {
+            (it as BellowsPatch).let { p -> Bellows.drumClassFor(p.voice, p.macros) }
         },
         "murmur" to OneEngine(MurmurPatch::class.java, MurmurVoice.entries.map { it.name }.toSet()) {
             (it as MurmurPatch).let { p -> Murmur.drumClassFor(p.voice, p.macros) }
