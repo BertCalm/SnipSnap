@@ -105,9 +105,13 @@ The archive has a single `SnipSnap Osprey R3/` root:
 | `PAD-MAP.txt`, `README.txt` | Pad order and loading instructions. |
 | `manifest.json`, `validation.json` | File hashes, recipe identity and artifact checks. |
 
-For SnipSnap, open the shared `[TrackData]` folder containing `kit.json`. Its
-sample filenames are mapped to the native export filenames; recipes, pad
-settings and all WAV bytes are unchanged.
+The shared `[TrackData]` folder containing `kit.json` is an editable kit for
+`KitStore` and desktop tooling. Its sample filenames are mapped to the native
+export filenames; recipes, pad settings and all WAV bytes are unchanged. On a
+phone build containing these OSPREY changes, choose **NEW KIT ▸ STARTERS →
+OSPREY**, or preview OSPREY in SYNTH and send it to a pad. Android's XPM ZIP
+import loads playable samples but does not load these saved recipes. Phone
+playback and MPC loading remain unverified.
 
 The adjacent `handoff-manifest.json` identifies the complete ZIP by SHA-256 and
 byte count. Checks cover export read-back, recipe regeneration and comparison

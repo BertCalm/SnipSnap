@@ -308,10 +308,13 @@ object OspreyHandoffGenerator {
 
         SNIPSNAP
         The mpc/${KIT_NAME}_[TrackData]/ folder contains kit.json and sixteen
-        WAVs. Keep them together. Open that folder as a kit using the existing
-        SnipSnap kit-folder workflow. Every pad retains its model-3 recipe;
-        only sample filenames in kit.json are mapped to the export filenames.
-        All other starter metadata and every audio byte are preserved.
+        WAVs. Keep them together as an editable kit for KitStore and desktop
+        tooling. Every pad retains its model-3 recipe; only sample filenames
+        in kit.json are mapped to the export filenames. All other starter
+        metadata and every audio byte are preserved.
+        On a phone build containing these OSPREY changes, choose NEW KIT >
+        STARTERS > OSPREY, or preview OSPREY in SYNTH and send it to a pad.
+        Android's XPM ZIP import loads samples without these saved recipes.
         recipes/A01.json through A16.json are separate copies for inspection.
         A binary/phone install is not included or verified by this download.
 
