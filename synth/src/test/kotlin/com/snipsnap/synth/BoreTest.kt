@@ -12,6 +12,8 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -939,6 +941,11 @@ class BoreTest {
         // landing chain never applied, and BorePatch.render() must not know the chain exists.
         val patch = BorePatch("Dry", BoreVoice.FLUTE, Bore.defaults(BoreVoice.FLUTE))
         assertEquals(Bore.render(BoreVoice.FLUTE, patch.macros).samples.toList(), patch.render().samples.toList())
+        // The equality can only catch a patch that applies its own landing if this patch has one and
+        // applying it changes the samples; a LOOP lands dry, and there the equality would hold anyway.
+        val chain = assertNotNull(Bore.landingChain(patch.macros), "the default FLUTE is a LOOP, so this test guards nothing")
+        val dry = Bore.render(BoreVoice.FLUTE, patch.macros)
+        assertFalse(chain.process(dry).samples.contentEquals(dry.samples), "the landing tape leaves the render unchanged")
     }
 
     @Test
@@ -1001,5 +1008,25 @@ class BoreTest {
             val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
             assertTrue(soft < hard, "$voice: soft centroid $soft should be below hard centroid $hard")
         }
+    }
+
+    @Test
+    fun `an interrupted one-shot or LOOP render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // blow, the loop cut and every conditioning pass must stop on that flag instead of finishing.
+        for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+            "BORE one-shot render did not stop on the interrupt at its first look in the blow" to
+                { Bore.render(BoreVoice.FLUTE) },
+            "BORE LOOP render did not stop on the interrupt at its first look in the blow" to
+                { Bore.render(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + ("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(missing) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Bore.render(BoreVoice.FLUTE).samples.any { it != 0f }, "an uninterrupted render still sounds")
     }
 }

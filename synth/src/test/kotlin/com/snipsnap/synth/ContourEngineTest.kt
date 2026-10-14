@@ -126,6 +126,25 @@ class ContourEngineTest {
     }
 
     @Test
+    fun `a held render nobody wants any more stops after its loop too, before the seam and the level`() {
+        // The loop asks every 8192 internal samples over six periods and the conditioning pass never asks;
+        // a cancellation that only becomes true after the loop's last ask must still stop the seam and the level.
+        // After the loop an uninterrupted render asks exactly three more times: before the seam measurement, before
+        // the level and before the final seam check. Removing any one of those changes the count.
+        var all = 0
+        val frames = ContourEngine.renderLoop(ContourVoice.KEY) { all++; false }.size
+        val loopAsks = (frames * Dsp.OVERSAMPLE * 6 + 8191) / 8192
+        assertEquals(loopAsks + 3, all,
+            "an uninterrupted render asks $loopAsks times in its loop, then before the seam measurement, the level and the final seam check")
+        var asks = 0
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "CONTOUR held render did not stop on the cancel callback at its first ask after the loop, before the seam measurement",
+        ) {
+            ContourEngine.renderLoop(ContourVoice.KEY) { asks++ >= loopAsks }
+        }
+    }
+
+    @Test
     fun `body partial weighting preserves root energy and changes only the overtones`() {
         for (voice in listOf(ContourVoice.BASS, ContourVoice.KEY)) {
             val macros = ContourEngine.defaults(voice) + mapOf("MOTION" to 0f, "FILTER" to 1f, "DRIVE" to 0f, "HOLD" to 1f)

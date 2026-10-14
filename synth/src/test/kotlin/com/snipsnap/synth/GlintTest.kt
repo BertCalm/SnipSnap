@@ -1323,4 +1323,19 @@ class GlintTest {
             "BRASS at BLOOM 0.5 moved its centroid $head -> $tail",
         )
     }
+
+    @Test
+    fun `an interrupted render stops instead of finishing beside its replacement`() {
+        // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
+        // frame loop and the passes after it must stop on that flag instead of finishing.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "GLINT render did not stop on the interrupt at its first look in the frame loop",
+            ) { Glint.render(GlintVoice.SWEEP) }
+        } finally {
+            Thread.interrupted()
+        }
+        assertTrue(Glint.render(GlintVoice.SWEEP).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 }

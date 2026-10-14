@@ -417,6 +417,12 @@ object Prism {
 
     internal data class LoopPlan(val frames: Int, val periods: Int, val baseHz: Double)
 
+    // SynthScreen previews run in runInterruptible and keygroup exports pass a cancel
+    // callback; either stops a long render instead of letting it finish unwanted.
+    private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
+        if (Thread.currentThread().isInterrupted || cancelled()) throw CancellationException("PRISM render no longer wanted")
+    }
+
     /** Search whole note periods near the patch duration; fit frames to the pitch with <.1 cent movement. */
     internal fun planLoop(hz: Double, template: PrismTemplate): LoopPlan {
         val step = if (template.spectralId == PrismSpectrum.BELL && template.ratioOverrides.isEmpty()) 4 else 1
@@ -461,7 +467,7 @@ object Prism {
         val increment = DoubleArray(GROUPS)
         for (i in raw.indices) {
             if (i % BLOCK == 0) {
-                if (cancelled()) throw CancellationException("PRISM render cancelled")
+                stopIfUnwanted(cancelled)
                 val t = i.toDouble() / rate
                 for (g in 0 until GROUPS) {
                     current[g] = envelope(t, g, c, m, loop)
@@ -520,8 +526,10 @@ object Prism {
         // A small postroll keeps the decimator's edge outside the exported loop.
         val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds * RATE).roundToInt().coerceAtLeast(64)
         val raw = synthesize(voice, m, template, bank, contours, frames, loop, cancelled)
+        stopIfUnwanted(cancelled)
         val conditioned = raw.copyOf()
         Tide.bandLimit(conditioned, RATE * Dsp.OVERSAMPLE)
+        stopIfUnwanted(cancelled)
         val down = Dsp.decimate(conditioned, RATE)
         val out: FloatArray
         var previous: FloatArray? = null
@@ -549,6 +557,7 @@ object Prism {
             // Match timbres to the shared melodic reference while preserving performance dynamics.
             // Use the same gain on the preceding cycle so the measured seam remains meaningful.
             val unlevel = if (previous != null) out.copyOf() else null
+            stopIfUnwanted(cancelled)
             Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET * v.pow(.65f))
             if (previous != null && unlevel != null) {
                 val reference = unlevel.indices.maxByOrNull { abs(unlevel[it]) } ?: 0
