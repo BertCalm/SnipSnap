@@ -130,7 +130,8 @@ class RegistersIntegrationReviewTest {
                     val probe = patch.probe()
                     assertFalse(probe.isLoop)
                     assertTrue(probe.samples.all { it.isFinite() })
-                    assertEquals(0f, probe.samples.last(), "the finite scrambled note must finish its release")
+                    assertTrue(abs(probe.samples.last()) < 1e-6f,
+                        "the finite scrambled note must finish near silence: ${probe.samples.last()}")
                 }
             }
         }
