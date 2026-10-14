@@ -16,6 +16,10 @@ There is no `app/src/test`. The on-device Compose suites live in
 packaging; THAW's on-device and listening checks still require a phone or
 emulator.
 
+REGISTERS also passes `:app:assembleDebug` in the cloud on 2026-10-14, including
+all four native targets. Its keyboard reference player passes pitch, sustain and
+release checks at 48 kHz; actual phone and MPC listening remain hardware checks.
+
 ## Building (desktop session or any machine with an Android SDK)
 
 1. Point the build at an SDK — any one of:
@@ -72,8 +76,8 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 38 engines: THUMP, SKIN, TINES, VELVET,
-VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
+The SYNTH source picker has 39 engines: THUMP, SKIN, TINES, VELVET,
+VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
 CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OPENSKY.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OPENSKY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
@@ -89,6 +93,12 @@ VELOCITY, GATE and DRY/WET are saved beside RISE, WIDTH, GLOW, AIR and the
 complete source timbre. Its preview preserves stereo; HALO MAKE INSTRUMENT
 renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
+
+REGISTERS adds PIPE and MUSETTE, seven controls, six published presets and
+MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
+remains provisional. Saved audition recipes retain note, velocity and model.
+Instrument samples preserve the finite attack before a verified held loop and
+export through the existing MPC 2/MPC 3 and phone keygroup package.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
 and dry starter also await owner listening review.
 PRISM adds six additive voices, eight review presets and a dry pitched

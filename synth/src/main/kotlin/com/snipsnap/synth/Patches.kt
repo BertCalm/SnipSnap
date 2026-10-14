@@ -91,6 +91,7 @@ object Patches {
             TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
             OpenSkyPatch.ENGINE -> OpenSkyPatch.fromJsonValue(value)
+            RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }

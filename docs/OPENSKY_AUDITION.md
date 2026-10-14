@@ -1,4 +1,4 @@
-# OPENSKY audition spike
+# OPENSKY integration and audition
 
 OPENSKY adapts the [XOpenSky concept brief](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs%2Fconcepts%2Fxopensky_concept_brief.md)
 into SnipSnap's offline sample-authoring model. The accepted Round 3 voices

@@ -159,6 +159,7 @@ threshold by.
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
+snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
 ```
 
@@ -166,13 +167,15 @@ Renders the voice's factory presets to WAV (`Presets.forVoice`). `--all`
 writes every preset; `--preset N` writes one, counting from 1; with
 neither, the first preset. A string-machine preset that lands with
 ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
-`--instrument` supports RESIN and OPENSKY HALO: a held nine-zone instrument
-(`.xty` plus the `.xpm` twin). `--drone` is RESIN only, producing one loop-grid drone. SIREN and GLINT
-hold on the phone's MAKE INSTRUMENT; this command refuses them. An
-engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR,
-AEROSTAT) still renders here. VENT, a prototype outside both the roster
-and the picker, renders its three provisional recipes (`VentPresets`, one
-each for ROUND, WIRE and TEAR); see [VENT](VENT.md).
+`--instrument` supports RESIN, REGISTERS and OPENSKY HALO: a held nine-zone
+instrument (`.xty` plus the `.xpm` twin). REGISTERS and OPENSKY keep their
+speaking attack, so they take `--release` and refuse `--attack`. `--drone`
+is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone’s
+MAKE INSTRUMENT; this command refuses them. An engine with a roster and
+no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
+VENT, a prototype outside both the roster and the picker, renders its three
+provisional recipes (`VentPresets`, one each for ROUND, WIRE and TEAR);
+see [VENT](VENT.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
@@ -190,6 +193,7 @@ the message.
 | PITCHWHEEL | 24–96 |
 | REVEL | 48–72 |
 | PRISM | BASS 24–48; ORGAN 36–60; KEY, PLUCK, VEIL 48–72; GLASS 60–84 |
+| REGISTERS | 24–96 |
 | CONTOUR | BASS 12–60; HOLLOW, SWELL 24–72; KEY, PLUCK, LEAD 36–84 |
 | STOOP | 24–96 |
 | LACQUER | 24–96 |

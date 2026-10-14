@@ -186,6 +186,10 @@ object Presets {
             val v = OpenSkyVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             OpenSkyPresets.forVoice(v)
         }
+        RegistersPatch.ENGINE -> {
+            val v = RegistersVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            RegistersPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -220,5 +224,5 @@ object Presets {
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
             RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() +
             LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() +
-            EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OpenSkyPresets.all()
+            EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + RegistersPresets.all() + OpenSkyPresets.all()
 }
