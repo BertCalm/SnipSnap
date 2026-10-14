@@ -318,6 +318,7 @@ object Registers {
         val period = loop?.let { FloatArray(it.frames * Dsp.OVERSAMPLE) { noise.next() } }
         val warm = Dsp.OnePole(rate)
         val bright = Dsp.OnePole(rate)
+        val softness = Dsp.OnePole(rate)
         val low = Dsp.OnePole(rate)
         val warmCut = (hz * 3.0).coerceIn(450.0, 2_600.0).toFloat()
         val brightCut = (hz * 12.0).coerceIn(2_400.0, 9_000.0).toFloat()
@@ -328,7 +329,10 @@ object Registers {
         for (i in out.indices) {
             val input = period?.get(i % period.size) ?: noise.next()
             val shaded = .65f * warm.lp(input, warmCut) + .35f * bright.lp(input, brightCut)
-            val colored = shaded - low.lp(shaded, lowCut)
+            // A second gentle low-pass pole keeps upper-register airflow soft instead of
+            // exposing the first pole's long bright tail. It belongs only to the R3 layer.
+            val soft = softness.lp(shaded, brightCut)
+            val colored = soft - low.lp(soft, lowCut)
             val t = i.toDouble() / rate
             // A little space after the speaking transient keeps the first 80 ms unchanged,
             // including the decimator's short lookahead. Full airflow arrives by 125 ms.

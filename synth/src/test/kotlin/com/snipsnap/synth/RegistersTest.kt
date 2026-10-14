@@ -328,7 +328,7 @@ class RegistersTest {
         val active = bins.count { powers[it] > total / bins.size * .15 }
         assertTrue(active > 400, "airflow is too spectrally sparse: $active active bins")
         val high = powers.indices.filter { it * binHz > 10_000.0 }.sumOf { powers[it] }
-        assertTrue(high < total * .15, "airflow should remain colored rather than harsh high hiss")
+        assertTrue(high < total * .15, "airflow should remain colored rather than harsh high hiss: ${high / total}")
     }
 
     @Test
