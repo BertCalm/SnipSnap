@@ -76,6 +76,14 @@
     $('#sweep-grid').innerHTML = clips.length ? clips.map((clip) => `<article class="sweep-point" data-card-id="${esc(clip.id)}"><div class="sweep-value">${percent(clip.value)}<span>%</span></div><div class="sweep-meter" aria-hidden="true"><i style="--value:${percent(clip.value)}%"></i></div>${clipButton(clip)}<span class="clip-time">${duration(clip)} · ${esc(clip.voice)}</span></article>`).join('') : empty('This macro sweep is not present in the audition pack.');
     updateButtons();
   }
+  function renderMusical() {
+    const clips = state.clips.filter((clip) => clip.section === 'musical-context');
+    $('#musical').hidden = !clips.length;
+    const row = (clip, caption) => `<div class="musical-row" data-card-id="${esc(clip.id)}"><span class="musical-caption">${esc(caption)} <small>${duration(clip)}</small></span>${clipButton(clip)}</div>`;
+    $('#musical-grid').innerHTML = VOICES.filter((voice) => clips.some((clip) => clip.voice === voice && clip.musicalKind !== 'imprint')).map((voice) => `<article class="loop-card"><div class="loop-card-top"><span>${esc(voice)}</span><span>IN CONTEXT</span></div><h3>${esc(VOICE_NAMES[voice] || voice)}</h3>${clips.filter((clip) => clip.voice === voice && clip.musicalKind !== 'imprint').sort((a, b) => a.musicalKind === b.musicalKind ? 0 : a.musicalKind === 'phrase' ? -1 : 1).map((clip) => row(clip, clip.musicalKind === 'phrase' ? 'Melody' : 'Held chord')).join('')}</article>`).join('');
+    $('#musical-memory-grid').innerHTML = clips.filter((clip) => clip.musicalKind === 'imprint').sort((a, b) => macroValue(a, 'IMPRINT') - macroValue(b, 'IMPRINT')).map((clip) => `<article class="loop-card" data-card-id="${esc(clip.id)}"><div class="loop-card-top"><span>CHOIR / INHERITED FLUTE</span></div><h3>IMPRINT ${percent(macroValue(clip, 'IMPRINT'))}%</h3>${row(clip, 'Same phrase')}</article>`).join('');
+    updateButtons();
+  }
   function renderInteractions() {
     const clips = state.clips.filter((c) => c.section === 'interactions');
     const groups = [...new Set(clips.map((c) => c.groupKey).filter(Boolean))];
@@ -120,17 +128,17 @@
     if (!clip) { $('#metric-grid').innerHTML = empty('Play a recording to see its measurements.'); $('#diagnostic-details').hidden = true; return; }
     const metrics = (state.level === 'raw' ? clip.rawMetrics : clip.matchedMetrics) || {};
     const hasSeam = clip.seamError != null && Number.isFinite(Number(clip.seamError));
-    const rows = [ ['Peak', formatDb(metrics.peak), 'dBFS'], ['RMS', formatDb(metrics.rms), 'dBFS'], ['DC offset', Number.isFinite(Number(metrics.dc)) ? Number(metrics.dc).toExponential(1) : '—', ''], ['Duration', Number(clip.seconds || 0).toFixed(2), 's'], ['Render time', Number(clip.renderMs || 0).toFixed(0), 'ms'], [hasSeam ? 'Loop seam error' : 'Requested root', hasSeam ? Number(clip.seamError).toExponential(1) : noteName(clip.midi), ''] ];
+    const rows = [ ['Peak', formatDb(metrics.peak), 'dBFS'], ['RMS', formatDb(metrics.rms), 'dBFS'], ['DC offset', Number.isFinite(Number(metrics.dc)) ? Number(metrics.dc).toExponential(1) : '—', ''], ['Duration', Number(clip.seconds || 0).toFixed(2), 's'], ['Render time', Number(clip.renderMs || 0).toFixed(0), 'ms'], clip.sequence ? ['Note events', String(clip.sequence.noteCount), ''] : [hasSeam ? 'Loop seam error' : 'Requested root', hasSeam ? Number(clip.seamError).toExponential(1) : noteName(clip.midi), ''] ];
     if (clip.forwardPitch && Number.isFinite(Number(clip.forwardPitch.hz))) rows.push(['Forward pitch', Number(clip.forwardPitch.hz).toFixed(1), 'Hz'], ['Pitch offset', Number(clip.forwardPitch.cents).toFixed(1), 'cents'], ['Root power', (Number(clip.forwardPitch.rootPowerShare) * 100).toFixed(1), '%']);
     if (clip.overlap) rows.push(['Audible overlap', Number(clip.overlap.totalSeconds).toFixed(2), 's'], ['Return with both layers', (Number(clip.overlap.postGateFraction) * 100).toFixed(0), '%']);
-    $('#metric-download-links').innerHTML = [[clip.rawPath, 'Raw WAV'], [clip.matchedPath || clip.file, 'Matched WAV'], [clip.stems?.forward?.rawPath, 'Forward pickup WAV'], [clip.stems?.reverse?.rawPath, 'Backward pickup WAV'], [clip.diagnostics?.tracePath, 'Transport trace'], [clip.diagnostics?.pickupTracePath, 'Pickup trace'], [clip.diagnostics?.eventsPath, 'Imprint events']].filter(([path]) => safeUrl(path)).map(([path, label]) => `<a href="${esc(safeUrl(path))}" download>${label} ↓</a>`).join('');
+    $('#metric-download-links').innerHTML = [[clip.rawPath, 'Raw WAV'], [clip.matchedPath || clip.file, 'Matched WAV'], [clip.stems?.forward?.rawPath, 'Forward pickup WAV'], [clip.stems?.reverse?.rawPath, 'Backward pickup WAV'], [clip.diagnostics?.tracePath, 'Transport trace'], [clip.diagnostics?.pickupTracePath, 'Pickup trace'], [clip.diagnostics?.eventsPath, 'Imprint events'], [clip.diagnostics?.sequencePath, 'Note recipes & timing']].filter(([path]) => safeUrl(path)).map(([path, label]) => `<a href="${esc(safeUrl(path))}" download>${label} ↓</a>`).join('');
     $('#metric-grid').innerHTML = rows.map(([label, value, unit]) => `<div class="metric"><span class="metric-label">${esc(label)}</span><span class="metric-value">${esc(value)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>`).join('');
     $('#measurement-label').textContent = `${clip.label} / ${state.level}`;
     const rawGain = Number(clip.rawExportGain ?? 1);
     $('#measurement-context').textContent = `${clip.description || ''} ${state.level === 'raw' ? `Raw measurements describe native engine output before PCM export${rawGain < 1 ? ` (export gain ${rawGain.toFixed(4)})` : ''}.` : 'Matched files use the common quiet audition level of 0.03 over the loudest 200 ms.'} Listening approval remains a separate step.`;
     $('#measurement-context').classList.add('measurement-context');
     $('#diagnostic-details').hidden = !clip.diagnostics;
-    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, auditionWindow: clip.auditionWindow, recipe: clip.recipe, forwardPitch: clip.forwardPitch, overlap: clip.overlap, stems: clip.stems, provenance: clip.provenance || state.manifest.provenance }, null, 2);
+    $('#diagnostic-json').textContent = JSON.stringify({ ...(clip.diagnostics || {}), macros: clip.macros, midi: clip.midi, velocity: clip.velocity, rawExportGain: clip.rawExportGain, auditionWindow: clip.auditionWindow, recipe: clip.recipe, sequence: clip.sequence, forwardPitch: clip.forwardPitch, overlap: clip.overlap, stems: clip.stems, provenance: clip.provenance || state.manifest.provenance }, null, 2);
   }
   function updateButtons() {
     const playing = !!state.selected && !audio.paused && !audio.ended;
@@ -150,7 +158,8 @@
     $('#player-play').innerHTML = playing ? '<span class="pause-mark" aria-hidden="true">Ⅱ</span>' : playIcon;
     $('#player-repeat').setAttribute('aria-pressed', String(state.repeat));
     $('#player-title').textContent = state.selected?.label || 'Select a recording';
-    $('#player-subtitle').textContent = state.selected ? `${state.level.toUpperCase()} · ${noteName(state.selected.midi)} · ${Number(state.manifest.sampleRate || 44100).toLocaleString()} HZ MONO${state.selected.loop ? ' · HOLD' : ''}` : 'Generated WAV';
+    const musicalLabel = { phrase: 'MELODY', chord: 'HELD CHORD', imprint: 'IMPRINT PHRASE' }[state.selected?.musicalKind];
+    $('#player-subtitle').textContent = state.selected ? `${state.level.toUpperCase()} · ${musicalLabel || noteName(state.selected.midi)} · ${Number(state.manifest.sampleRate || 44100).toLocaleString()} HZ MONO${state.selected.loop ? ' · HOLD' : ''}` : 'Generated WAV';
   }
   function playerError(message) { $('#player-status').textContent = message; $('#player-status').hidden = !message; }
   function setRepeat(repeat) { state.repeat = repeat; audio.loop = repeat; updateButtons(); }
@@ -242,7 +251,7 @@
       state.manifest = manifest;
       state.clips = manifest.clips.filter((clip) => clip.id && (clip.rawPath || clip.matchedPath || clip.file));
       $('#load-status').textContent = '';
-      renderVoices(); renderMacros(); renderInteractions(); renderLoops(); renderExtras(); renderDownloads(); renderMetrics();
+      renderVoices(); renderMusical(); renderMacros(); renderInteractions(); renderLoops(); renderExtras(); renderDownloads(); renderMetrics();
     } catch {
       $('#load-status').textContent = 'The audition pack could not be loaded. Reload the page to try again.';
       $('#voice-grid').innerHTML = empty('Recordings are unavailable. The page does not synthesize replacement audio.');

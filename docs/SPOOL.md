@@ -202,6 +202,25 @@ When only movement examples change, refresh their 25 clips without replacing unr
 
 This requires an existing five-position pack and matching hashes for all three DSP/factory
 source files. Changes to the engine or factory geometry require a complete render.
+
+The **Hear it in a phrase** section adds four seven-note melodies, four held C-minor chords
+and a matching IMPRINT 25%/100% arpeggio pair. Each note is rendered by the unchanged Spool
+engine from its complete saved patch, velocity and finite gate. The full forward/return and
+any second read continue beneath later events. Chords use C3–G3–C4–E♭4 with a 2.2-second gate
+and HOLD off. Each note owns an independent machine; these are dry sampler-style sequences,
+without cross-note motor coupling or external effects.
+
+The manifest and sequence downloads record every event's recipe, integer start/release/end
+frames, second-read window, native Float32 sample hash and dry-sum hash. A single attenuation-only
+mix gain preserves note and velocity relationships, followed by the existing matched listening
+level. Refresh only this bank while preserving the current baseline with:
+
+```sh
+./gradlew :synth:generateSpoolAudition -PspoolMusicalOnly
+```
+
+The musical refresh also requires matching DSP/factory source hashes and retains the previous
+174 cases, kit and patch roster unchanged.
 Individual sounds can also be rendered with:
 
 ```sh
@@ -209,10 +228,10 @@ Individual sounds can also be rendered with:
 ./gradlew :cli:run --args="synth SPOOL CHOIR --midi 60 --velocity .35 --out /tmp/spool-soft"
 ```
 
-The final renderer produces 174 listening clips, including twelve separate pickup diagnostics
-and twelve equal-control voice comparisons, as 348 native and level-matched WAVs, plus the
+The final renderer produces 184 listening clips, including ten musical examples, twelve separate pickup diagnostics
+and twelve equal-control voice comparisons, as 368 native and level-matched WAVs, plus the
 sixteen-pad MPC kit. The assembly adds eighteen pairs of the previous reverse/flutter and
-current voice-character revision, for 210 page entries and 408 listening WAVs, including both
+current voice-character revision, for 220 page entries and 428 listening WAVs, including both
 versions' default pickup stems. Its source patch
 targets the current upstream baseline and records a
 clean source commit. Provenance hashes cover `Spool.kt`, `SpoolPatch.kt` and `SpoolPresets.kt`;
@@ -228,8 +247,16 @@ Buffer accounting and cloud timings are prototype
 measurements, not peak JVM memory or phone/MPC performance estimates.
 All 25 Spool checks and the targeted host checks pass. The rendered pack has zero repeated-cycle
 seam error and a maximum boundary difference of 4.74e-13. The largest counted core buffer
-allocation is 31.66 MiB; cloud render time is 1.56 seconds at the median and 9.27 seconds at the
-maximum, measured while validation was also running.
+allocation is 31.66 MiB; the last complete single-note pack measured 1.56 seconds at the median
+and 9.27 seconds at the maximum while validation was also running. Musical examples sum multiple
+independently rendered notes, so their complete sequence render times are recorded separately.
+
+The app acceptance pass covers 77 targeted host checks. Its Spool workflow test moves every
+macro on a loaded custom machine, renders the preview, restarts the preset shelf, saves/reopens
+the sixteen-pad starter, replays a saved pad recipe byte exactly, and reads back all PCM24/XPM
+exports. Android `assembleDebug` also passes with the Compose app and four native ABIs. The
+signed debug APK is available for device checking; touch interaction and phone playback have
+not been tested on a connected device.
 
 The required baseline is `./gradlew --no-daemon test`. Acceptance also requires listening to the
 forward identity, backward answers, diagonal encounters, finite inherited traces and repeated

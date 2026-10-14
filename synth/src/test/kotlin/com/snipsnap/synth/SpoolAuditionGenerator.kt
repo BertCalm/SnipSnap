@@ -9,6 +9,8 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.KitExporter
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Locale
@@ -16,6 +18,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.ln
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /** Real offline Spool recordings and evidence; the listening site consumes manifest.json. */
@@ -60,14 +63,30 @@ object SpoolAuditionGenerator {
         val excerptReread: Boolean = false,
     )
 
+    /** Offline sampler events: each note owns a fresh finite recording machine. */
+    private data class MusicalNote(val startSeconds: Double, val midi: Int, val velocity: Float, val gate: Float)
+    private data class MusicalCase(
+        val id: String,
+        val voice: SpoolVoice,
+        val label: String,
+        val description: String,
+        val kind: String,
+        val macros: Map<String, Float>,
+        val notes: List<MusicalNote>,
+        val machine: SpoolMachine = SpoolMachine.forVoice(voice),
+        val groupKey: String? = null,
+    )
+
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/spool-audition")
         val quick = "--quick" in args
         val movementOnly = "--movement-only" in args
-        require(!(quick && movementOnly)) { "Movement refresh requires all five sweep positions" }
+        val musicalOnly = "--musical-only" in args
+        require(!(movementOnly && musicalOnly)) { "Choose one refresh section" }
+        require(!(quick && (movementOnly || musicalOnly))) { "Section refreshes require a complete section" }
         require(root.isDirectory || root.mkdirs()) { "Could not create ${root.absolutePath}" }
-        val cases = cases(quick).filter { !movementOnly || it.section == "macros" }
+        val cases = if (musicalOnly) emptyList() else cases(quick).filter { !movementOnly || it.section == "macros" }
         check(cases.map { it.id }.distinct().size == cases.size)
         val source = listOf(File("src/main/kotlin/com/snipsnap/synth/Spool.kt"), File("synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"))
             .first { it.isFile }
@@ -81,21 +100,23 @@ object SpoolAuditionGenerator {
                 "$path changed during rendering; regenerate one consistent pack"
             }
         }
-        val previous = if (movementOnly) {
-            require(File(root, "manifest.json").isFile) { "Movement refresh needs an existing complete pack" }
+        val previous = if (movementOnly || musicalOnly) {
+            require(File(root, "manifest.json").isFile) { "Section refresh needs an existing pack" }
             Json.parse(File(root, "manifest.json").readText()).obj()
         } else null
         if (previous != null) {
             require(previous.getValue("provenance").obj().getValue("sourceFilesSha256") == j(sourceFileHashes)) {
                 "DSP or factory geometry changed; regenerate the complete pack"
             }
-            val oldClips = previous.getValue("clips").arr().map { it.obj() }
-            require(timbral.all { macro -> oldClips.count {
-                it["section"]?.str() == "macros" && it["macro"]?.str() == macro
-            } == 5 }) { "Movement refresh needs an existing complete five-position pack" }
+            if (movementOnly) {
+                val oldClips = previous.getValue("clips").arr().map { it.obj() }
+                require(timbral.all { macro -> oldClips.count {
+                    it["section"]?.str() == "macros" && it["macro"]?.str() == macro
+                } == 5 }) { "Movement refresh needs an existing complete five-position pack" }
+            }
         }
         val entries = previous?.getValue("clips")?.arr()?.filter {
-            it.obj().getValue("section").str() != "macros"
+            it.obj().getValue("section").str() != (if (musicalOnly) "musical-context" else "macros")
         }?.toMutableList() ?: mutableListOf()
         for ((index, case) in cases.withIndex()) {
             verifySources()
@@ -257,11 +278,18 @@ object SpoolAuditionGenerator {
             entries += stemClips
             println("Spool audition ${index + 1}/${cases.size}: ${case.id} (${"%.0f".format(Locale.ROOT, renderMs)} ms)")
         }
+        if (!movementOnly) for ((index, case) in musicalCases().withIndex()) {
+            entries += renderMusicalCase(root, case, ::verifySources)
+            println("Spool musical audition ${index + 1}/10: ${case.id}")
+        }
+        check(entries.map { it.obj().getValue("id").str() }.distinct().size == entries.size) {
+            "Audition clip IDs must be unique"
+        }
         verifySources()
         val kit = previous?.getValue("kit") ?: j(exportKit(root))
         verifySources()
         val patches = SpoolPresets.all().map { it.toJsonValue() }
-        File(root, "patches.json").writeText(Json.write(JsonValue.Arr(patches)) + "\n")
+        if (previous == null) File(root, "patches.json").writeText(Json.write(JsonValue.Arr(patches)) + "\n")
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "SPOOL", "title" to "Spool — a recording that returns", "generatedAt" to Instant.now().toString(),
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 16,
@@ -270,6 +298,7 @@ object SpoolAuditionGenerator {
             "holdDescription" to "HOLD prepares a finite deterministic imprint snapshot, freezes writes, then exports a repeating forward/return cycle. Memory does not continue accumulating during sample playback.",
             "exportDescription" to "The overlapping pickup motion and serialized gate are baked into each sample. Sampler pitch transposition changes gesture timing as well as pitch; playback-time release samples are not provided.",
             "levelDescription" to "Native dry files preserve measured machine level, with any PCM attenuation recorded per clip. Matched dry files share the repository's quiet audition loudness of 0.03 over the loudest 200 ms.",
+            "musicalDescription" to "Musical examples sequence and sum real finite Spool recordings with complete per-note recipes. Each note has an independent machine and motor; recordings overlap as sampler voices. The examples do not introduce a shared cross-note transport or external effects. Longer chords use finite serialized gates with HOLD off.",
             "provenance" to mapOf("sourceSha256" to sourceHash, "sourceFilesSha256" to sourceFileHashes,
                 "renderer" to "com.snipsnap.synth.Spool.renderProbe", "internalRate" to Dsp.RATE * Dsp.OVERSAMPLE),
             "clips" to entries, "kit" to kit,
@@ -278,6 +307,140 @@ object SpoolAuditionGenerator {
         verifySources()
         File(root, "manifest.json").writeText(Json.write(j(manifest)) + "\n")
         println("Spool audition: ${entries.size} clips and a 16-pad MPC kit under ${root.absolutePath}")
+    }
+
+    private fun musicalCases(): List<MusicalCase> = buildList {
+        val controls = mapOf("HEAD" to .22f, "STRAIN" to .18f, "RETURN" to .72f,
+            "IMPRINT" to .28f, "SPLICE" to 0f, "HOLD" to 0f)
+        val melodies = mapOf(
+            SpoolVoice.STRING to listOf(48, 55, 58, 60, 63, 60, 55),
+            SpoolVoice.CHOIR to listOf(60, 63, 67, 70, 67, 63, 60),
+            SpoolVoice.FLUTE to listOf(60, 65, 67, 70, 72, 67, 60),
+            SpoolVoice.BRASS to listOf(48, 55, 60, 58, 55, 51, 48),
+        )
+        val onsets = listOf(0.0, .64, 1.28, 1.92, 2.88, 3.52, 4.48)
+        val velocities = listOf(.90f, .62f, .76f, .95f, .72f, .66f, .84f)
+        val gates = listOf(.56f, .50f, .50f, .82f, .50f, .78f, 1.22f)
+        for ((voice, melody) in melodies) {
+            val id = voice.name.lowercase(Locale.ROOT)
+            add(MusicalCase("music_phrase_$id", voice, "$voice · a returning phrase",
+                "A velocity-shaped C-minor pentatonic phrase. Each finite note's full forward/return recording continues beneath the next note, as independent sampler voices.",
+                "phrase", controls, melody.mapIndexed { i, midi -> MusicalNote(onsets[i], midi, velocities[i], gates[i]) },
+                groupKey = "music_$id"))
+            add(MusicalCase("music_chord_$id", voice, "$voice · held C minor",
+                "C3–G3–C4–E♭4 held for 2.2 seconds, followed by their complete returns. Four independent finite Spool recordings play together; HOLD is off.",
+                "chord", controls, listOf(48, 55, 60, 63).mapIndexed { i, midi ->
+                    MusicalNote(0.0, midi, listOf(.72f, .58f, .66f, .55f)[i], 2.2f)
+                }, groupKey = "music_$id"))
+        }
+        val choir = SpoolMachine.forVoice(SpoolVoice.CHOIR).let { machine ->
+            machine.copy(roster = machine.roster.mapIndexed { i, strip -> strip.copy(gain = if (i == 0) 1f else 0f) },
+                routes = listOf(SpoolRoute(2, 0, .55f)), reengage = true)
+        }
+        val imprintControls = mapOf("HEAD" to 0f, "STRAIN" to .1f, "RETURN" to 1f,
+            "SPLICE" to 0f, "HOLD" to 0f)
+        val memoryPhrase = listOf(MusicalNote(0.0, 60, .84f, 1.25f), MusicalNote(1.6, 63, .68f, 1.25f),
+            MusicalNote(3.2, 67, .90f, 1.25f))
+        for ((name, value) in listOf("low" to .25f, "high" to 1f)) {
+            add(MusicalCase("music_imprint_$name", SpoolVoice.CHOIR, "IMPRINT · ${(value * 100).toInt()}% in a phrase",
+                "The same three-note C-minor arpeggio at both IMPRINT settings. Each note includes its actual second read: listen for the inherited flute detail after the return, especially at the end. Memory belongs to each note's own machine.",
+                "imprint", imprintControls + ("IMPRINT" to value), memoryPhrase, choir, "music_imprint"))
+        }
+    }
+
+    /** Dry sample sequencing only: no envelopes, pitch shifts, crossfades or effects are added here. */
+    private fun renderMusicalCase(root: File, case: MusicalCase, verifySources: () -> Unit): JsonValue {
+        data class NoteRender(val startFrame: Int, val samples: FloatArray, val metadata: Map<String, Any?>)
+        val start = System.nanoTime()
+        require(case.notes.isNotEmpty() && case.notes.all {
+            it.startSeconds.isFinite() && it.startSeconds >= 0 && it.midi in 48..72
+        }) { "Invalid musical events for ${case.id}" }
+        require(case.notes.zipWithNext().all { (a, b) -> a.startSeconds <= b.startSeconds }) {
+            "Musical events must be in summation order"
+        }
+        val notes = case.notes.mapIndexed { index, note ->
+            verifySources()
+            val macros = Spool.defaults(case.voice) + case.macros + ("TUNE" to ((note.midi - 48) / 24f))
+            require(!Spool.isLoop(macros.getValue("HOLD"))) { "Musical examples require finite note recordings" }
+            val machine = case.machine.copy(gateSeconds = note.gate)
+            val patch = SpoolPatch("${case.label} · note ${index + 1}", case.voice, macros, machine, note.velocity)
+            val noteStart = System.nanoTime()
+            val result = Spool.renderProbe(patch.voice, patch.macros, patch.machine, patch.velocity, normalize = false)
+            verifySources()
+            require(result.samples.isNotEmpty() && result.samples.all { it.isFinite() }) { "Invalid musical note ${case.id}/$index" }
+            val startFrame = (note.startSeconds * Dsp.RATE).roundToInt()
+            val d = result.diagnostics
+            val returnEndFrame = startFrame + (d.returnEndSeconds * Dsp.RATE).roundToInt()
+            val metadata = linkedMapOf<String, Any?>(
+                "index" to index, "startFrame" to startFrame, "startSeconds" to startFrame.toDouble() / Dsp.RATE,
+                "midi" to note.midi, "requestedHz" to Keys.midiHz(note.midi), "velocity" to note.velocity,
+                "gateSeconds" to note.gate, "releaseFrame" to startFrame + (note.gate * Dsp.RATE).roundToInt(),
+                "renderedFrames" to result.samples.size, "endFrame" to startFrame + result.samples.size,
+                "returnEndFrame" to returnEndFrame, "reengageSeconds" to d.reengageSeconds,
+                "secondReadStartFrame" to if (d.reengageSeconds > 0f) returnEndFrame else null,
+                "secondReadEndFrame" to if (d.reengageSeconds > 0f)
+                    returnEndFrame + (d.reengageSeconds * Dsp.RATE).roundToInt() else null,
+                "recipe" to patch.toJsonValue(), "sampleFloat32LeSha256" to floatHash(result.samples),
+                "nativePeak" to result.samples.maxOf { abs(it) }, "sourceHashes" to d.sourceHashes,
+                "sourcePeak" to d.sourcePeak, "overlayPeak" to d.overlayPeak,
+                "writeCount" to d.writeCount, "firstWriteSeconds" to d.firstWriteSeconds,
+                "firstOverlayReadSeconds" to d.firstOverlayReadSeconds,
+                "writePassLimit" to d.writePassLimit, "feedbackBound" to d.feedbackBound,
+                "allocatedBytes" to d.allocatedBytes, "pitchMode" to d.pitchMode,
+                "tapeExcursionBoundCents" to Spool.MAX_TAPE_CENTS,
+                "renderMs" to (System.nanoTime() - noteStart) / 1_000_000.0,
+            )
+            NoteRender(startFrame, result.samples, metadata)
+        }
+        val samples = FloatArray(notes.maxOf { it.startFrame + it.samples.size })
+        for (note in notes) for (i in note.samples.indices) samples[note.startFrame + i] += note.samples[i]
+        require(samples.all { it.isFinite() }) { "Invalid musical sum ${case.id}" }
+        val native = Snip(samples, 1, Dsp.RATE)
+        val nativePeak = samples.maxOf { abs(it) }
+        // One attenuation-only gain for the complete dry sum preserves all note/velocity relationships.
+        val mixGain = if (nativePeak > .85f) .85f / nativePeak else 1f
+        require(mixGain in 0f..1f)
+        val exported = if (mixGain == 1f) native else Snip(FloatArray(samples.size) { samples[it] * mixGain }, 1, Dsp.RATE)
+        val matched = AuditionLevel.level(native)
+        val rawPath = "raw/${case.id}.wav"
+        val matchedPath = "matched/${case.id}.wav"
+        WavWriter.write(File(root, rawPath), exported, WavWriter.BitDepth.PCM_16)
+        WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_16)
+        val maxActive = notes.maxOf { at -> notes.count { it.startFrame <= at.startFrame && it.startFrame + it.samples.size > at.startFrame } }
+        val sequence = linkedMapOf<String, Any?>(
+            "sampleRate" to Dsp.RATE, "kind" to case.kind, "noteCount" to notes.size,
+            "notes" to notes.map { it.metadata }, "maxConcurrentVoices" to maxActive,
+            "voiceModel" to "independent fresh finite Spool machine per note; no cross-note motor or memory",
+            "summation" to "Float32 sample addition in event index order at integer startFrame; complete note recordings are retained",
+            "mixGain" to mixGain, "mixPolicy" to "one attenuation-only gain for all notes, maximum native export peak 0.85",
+            "nativeSummedPeak" to nativePeak, "nativeSumFloat32LeSha256" to floatHash(samples),
+            "effects" to "none; all reverse motion, flutter, inherited detail and note envelopes come from Spool.renderProbe",
+        )
+        val sequencePath = "diagnostics/${case.id}_sequence.json"
+        File(root, sequencePath).apply { parentFile.mkdirs(); writeText(Json.write(j(sequence)) + "\n") }
+        val representative = Spool.defaults(case.voice) + case.macros + ("TUNE" to ((case.notes.first().midi - 48) / 24f))
+        return j(linkedMapOf<String, Any?>(
+            "id" to case.id, "section" to "musical-context", "voice" to case.voice.name,
+            "label" to case.label, "description" to case.description, "musicalKind" to case.kind,
+            "macros" to representative, "midi" to case.notes.first().midi,
+            "requestedHz" to Keys.midiHz(case.notes.first().midi), "velocity" to case.notes.first().velocity,
+            "held" to false, "loop" to false, "memoryMode" to case.machine.holdMode.name, "repeatedCopies" to 1,
+            "rawPath" to rawPath, "matchedPath" to matchedPath, "file" to matchedPath,
+            "frames" to samples.size, "seconds" to samples.size.toDouble() / Dsp.RATE,
+            "renderMs" to (System.nanoTime() - start) / 1_000_000.0, "rawExportGain" to mixGain,
+            "rawMetrics" to metrics(native), "matchedMetrics" to metrics(matched),
+            "sequence" to sequence, "groupKey" to case.groupKey,
+            "diagnostics" to mapOf("sequencePath" to sequencePath, "writesEnabled" to true,
+                "signalStage" to "complete independent Spool note recordings summed dry", "maxConcurrentVoices" to maxActive),
+            "seamError" to null, "boundaryError" to null,
+            "recipeStatus" to "Complete per-note recipes and sequencing geometry; owner musical listening review pending",
+        ))
+    }
+
+    private fun floatHash(samples: FloatArray): String {
+        val bytes = ByteBuffer.allocate(samples.size * Float.SIZE_BYTES).order(ByteOrder.LITTLE_ENDIAN)
+        for (sample in samples) bytes.putFloat(sample)
+        return sha256(bytes.array())
     }
 
     private fun cases(quick: Boolean): List<Case> = buildList {

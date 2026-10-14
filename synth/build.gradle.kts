@@ -796,6 +796,7 @@ tasks.register<JavaExec>("generateSpoolAudition") {
     args("${rootDir}/testkit/spool-audition")
     if (project.hasProperty("spoolQuick")) args("--quick")
     if (project.hasProperty("spoolMovementOnly")) args("--movement-only")
+    if (project.hasProperty("spoolMusicalOnly")) args("--musical-only")
 }
 
 /** Render Embouchure's original dry gestures, control matrix and settled held loops. */
