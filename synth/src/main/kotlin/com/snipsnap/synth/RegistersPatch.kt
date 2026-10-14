@@ -78,7 +78,11 @@ data class RegistersPatch(
             val voiceName = field("voice").str()
             val voice = RegistersVoice.entries.firstOrNull { it.name == voiceName }
                 ?: throw JsonException("unknown REGISTERS voice $voiceName")
-            val macros = obj["macros"]?.obj()?.mapValues { it.value.num().toFloat() } ?: emptyMap()
+            val macros = when (val raw = obj["macros"]) {
+                null, JsonValue.Null -> emptyMap()
+                is JsonValue.Obj -> raw.entries.mapValues { it.value.num().toFloat() }
+                else -> throw JsonException("patch macros must be an object, got ${raw::class.simpleName}")
+            }
             val midi = obj["midi"]?.int() ?: Registers.midiFor(macros["TUNE"] ?: .5f)
             val velocity = obj["velocity"]?.num()?.toFloat() ?: 1f
             return RegistersPatch(field("name").str(), voice, macros, midi, velocity, model)

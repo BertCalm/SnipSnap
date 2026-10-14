@@ -109,7 +109,7 @@ Integration verification passes 213 synthesis/preset/patch/velocity tests,
 91 shell tests, three CLI tests and ten package/readback tests. Fixed PCM24
 fixtures preserve the published finite and held sounds. Instrument tests check
 the first 80 ms, overlap energy, actual XPM/XTY/WAV loop markers, phone-side
-pitch and sustain/release at 48 kHz, legacy models, silence and cancellation.
+reference pitch and sustain/release at 48 kHz, legacy models, silence and cancellation.
 The Android debug APK assembles with all four native targets.
 
 ## Finite notes and held material
