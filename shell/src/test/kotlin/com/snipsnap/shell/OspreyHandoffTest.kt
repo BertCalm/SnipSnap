@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 
 class OspreyHandoffTest {
     @Test
-    fun `handoff round trips an editable starter and both programs without a third WAV set`() {
+    fun `handoff round trips an editable starter and both programs with one shared WAV set`() {
         val directory = createTempDirectory("osprey-handoff").toFile()
         try {
             val result = OspreyHandoffGenerator.generate(directory, baseline = null,
@@ -23,7 +23,7 @@ class OspreyHandoffTest {
             val receipt = Json.parse(result.manifest.readText()).obj()
             val archive = receipt.getValue("archive").obj()
             assertEquals(16, receipt.getValue("padCount").int())
-            assertEquals(32, receipt.getValue("waveFileCount").int())
+            assertEquals(16, receipt.getValue("waveFileCount").int())
             assertEquals(result.archive.length(), archive.getValue("bytes").long())
             assertEquals(sha(result.archive.readBytes()), archive.getValue("sha256").str())
             assertFalse(receipt.getValue("validation").obj().getValue("hardwareVerified").bool())
@@ -31,7 +31,7 @@ class OspreyHandoffTest {
             val extracted = File(directory, "extracted")
             ZipFile(result.archive).use { zip ->
                 val entries = zip.entries().asSequence().toList()
-                assertEquals(32, entries.count { it.name.endsWith(".wav") })
+                assertEquals(16, entries.count { it.name.endsWith(".wav") })
                 assertEquals(1, entries.count { it.name.endsWith(".xtd") })
                 assertEquals(1, entries.count { it.name.endsWith(".xpm") })
                 assertTrue(entries.single { it.name.endsWith(".xpm") }.name.contains("_[TrackData]/"))
@@ -43,8 +43,11 @@ class OspreyHandoffTest {
                 }
             }
             val root = File(extracted, OspreyHandoffGenerator.KIT_NAME)
-            val kit = KitStore.load(File(root, "snipsnap"))
+            val kitFile = File(root, receipt.getValue("snipsnapKit").str())
+            val kit = KitStore.load(kitFile.parentFile)
             assertEquals((1..16).toList(), kit.pads.map { it.slot })
+            assertTrue(kit.pads.all { File(kitFile.parentFile, it.sampleFile).isFile })
+            assertFalse(File(root, "snipsnap").exists())
             assertEquals("BETWEEN SHORES", (PadRecipe.fromJsonValue(kit.pads.last().recipe!!).patch as OspreyPatch).name)
             for (row in receipt.getValue("files").arr()) {
                 val file = row.obj()
@@ -52,7 +55,12 @@ class OspreyHandoffTest {
                 assertEquals(file.getValue("bytes").long(), bytes.size.toLong())
                 assertEquals(file.getValue("sha256").str(), sha(bytes))
             }
-            for (name in listOf("preflight", "nativeXtd", "compatibilityXpm")) {
+            val validation = receipt.getValue("validation").obj()
+            assertTrue(validation.getValue("starterKitStoreLoadExact").bool())
+            assertTrue(validation.getValue("sharedKitStoreLoadExact").bool())
+            assertTrue(validation.getValue("sharedKitDiffersOnlyBySampleFilenames").bool())
+            assertEquals(16, validation.getValue("sharedRecipeRegenerationByteExactPads").int())
+            for (name in listOf("preflight", "sharedKitPreflight", "nativeXtd", "compatibilityXpm")) {
                 val checks = receipt.getValue("validation").obj().getValue(name).arr()
                 assertTrue(checks.isNotEmpty())
                 assertTrue(checks.none { it.obj().getValue("severity").str() == "FAIL" })

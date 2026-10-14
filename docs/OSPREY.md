@@ -100,11 +100,14 @@ The archive has a single `SnipSnap Osprey R3/` root:
 
 | Path | Contents |
 | --- | --- |
-| `snipsnap/` | `kit.json` and sixteen raw 24-bit PCM WAVs. |
-| `mpc/` | `SnipSnap Osprey R3.xtd` and its `SnipSnap Osprey R3_[TrackData]/` folder. The compatibility XPM inside that folder shares the native export's sixteen WAVs. |
+| `mpc/` | `SnipSnap Osprey R3.xtd` and its `SnipSnap Osprey R3_[TrackData]/` folder. The compatibility XPM and editable SnipSnap `kit.json` inside that folder share the same sixteen raw PCM24 WAVs. |
 | `recipes/` | `A01.json` through `A16.json`, preserving each complete recipe. |
 | `PAD-MAP.txt`, `README.txt` | Pad order and loading instructions. |
 | `manifest.json`, `validation.json` | File hashes, recipe identity and artifact checks. |
+
+For SnipSnap, open the shared `[TrackData]` folder containing `kit.json`. Its
+sample filenames are mapped to the native export filenames; recipes, pad
+settings and all WAV bytes are unchanged.
 
 The adjacent `handoff-manifest.json` identifies the complete ZIP by SHA-256 and
 byte count. Checks cover export read-back, recipe regeneration and comparison

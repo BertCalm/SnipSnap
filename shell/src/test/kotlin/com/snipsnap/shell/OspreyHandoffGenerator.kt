@@ -34,14 +34,14 @@ import kotlin.math.sqrt
 /**
  * A handoff of the existing OSPREY starter, not a new voicing. The production
  * starter, kit store and export drivers do all rendering/writing. This harness
- * verifies the files they made and packages two WAV sets: SnipSnap's editable
- * folder and the one folder shared by the MPC 3 track and its MPC 2 twin.
+ * verifies the files they made, then places editable kit metadata alongside the
+ * one WAV set shared by SnipSnap, the MPC 3 track and its MPC 2 twin.
  */
 object OspreyHandoffGenerator {
     const val KIT_NAME = "SnipSnap Osprey R3"
     const val ARCHIVE_NAME = "osprey-r3-kit.zip"
     const val MANIFEST_NAME = "handoff-manifest.json"
-    private const val MAX_ARCHIVE_BYTES = 50L * 1024 * 1024
+    private const val MAX_ARCHIVE_BYTES = 25L * 1024 * 1024
     private const val RATE = 44_100
     private const val FRAMES = RATE * 8
     private const val R3_SOURCE = "bad8d8a52277bd92d27407f6aa5370cff11422e2"
@@ -76,7 +76,7 @@ object OspreyHandoffGenerator {
         }
         val result = generate(output, baseline, source)
         println("${result.archive.name}: ${result.archive.length()} bytes, SHA-256 ${sha(result.archive)}")
-        println("16 unchanged model-3 recipes; 32 PCM24 WAVs across two folders; native and compatibility read-back complete.")
+        println("16 unchanged model-3 recipes and 16 shared PCM24 WAVs; native and compatibility read-back complete.")
         println("Hardware loading and phone playback remain unverified. ${result.manifest}")
     }
 
@@ -175,21 +175,49 @@ object OspreyHandoffGenerator {
         for ((pad, row) in loaded.pads.zip(rows)) {
             val copy = File(shared, "${Names.sanitizeStem(pad.sampleStem)}.wav")
             require(copy.readBytes().contentEquals(File(snipsnap, pad.sampleFile).readBytes())) { "MPC export altered ${pad.sampleFile}." }
+            row["starterSampleFile"] = pad.sampleFile
+            row["rawFile"] = relative(bundle, copy)
             row["mpcFile"] = relative(bundle, copy)
             row["mpcSha256"] = sha(copy)
         }
-        require(bundle.walkTopDown().count { it.isFile && it.extension.equals("wav", true) } == 32) {
-            "The bundle must have exactly two copies of sixteen WAVs; the native and compatibility programs share one set."
+        // The exported WAV bytes are already identical. Remap only their bare
+        // filenames in kit.json so SnipSnap can use that same sample folder.
+        val sharedKit = loaded.copy(pads = loaded.pads.map { pad ->
+            pad.copy(sampleFile = "${Names.sanitizeStem(pad.sampleStem)}.wav")
+        })
+        require(sharedKit.copy(pads = sharedKit.pads.zip(loaded.pads).map { (mapped, original) ->
+            mapped.copy(sampleFile = original.sampleFile)
+        }) == loaded) { "Shared-kit remapping changed more than the sample filenames." }
+        val sharedKitFile = KitStore.save(sharedKit, shared)
+        val sharedLoaded = KitStore.load(shared)
+        require(sharedLoaded == sharedKit) { "Shared-folder KitStore load changed metadata or recipes." }
+        val sharedPreflight = Preflight.check(sharedLoaded, shared)
+        require(!sharedPreflight.blocked()) { "Shared-folder kit preflight failed: $sharedPreflight" }
+        for ((pad, row) in sharedLoaded.pads.zip(rows)) {
+            val regenerated = PadRecipe.fromJsonValue(requireNotNull(pad.recipe)).render()
+            val bytes = File(shared, pad.sampleFile).readBytes()
+            require(bytes.contentEquals(encode(regenerated, WavWriter.BitDepth.PCM_24))) {
+                "Shared-folder recipe no longer regenerates ${pad.sampleFile}."
+            }
+            require(sha(bytes) == row.getValue("rawSha256")) { "Shared-folder metadata changed the raw audio." }
+            row["sharedRecipeRegenerationByteExact"] = true
+        }
+        require(snipsnap.deleteRecursively()) { "Could not remove the redundant starter WAV staging folder." }
+        require(bundle.walkTopDown().count { it.isFile && it.extension.equals("wav", true) } == 16) {
+            "The bundle must have one shared set of sixteen WAVs for SnipSnap and both MPC generations."
         }
         val validation = linkedMapOf<String, Any?>(
-            "preflight" to findings(preflight), "nativeXtd" to findings(nativeReport), "compatibilityXpm" to findings(twinReport),
-            "kitStoreLoadExact" to true, "recipeRegenerationByteExactPads" to 16, "exportAudioByteExactPads" to 16,
+            "preflight" to findings(preflight), "sharedKitPreflight" to findings(sharedPreflight),
+            "nativeXtd" to findings(nativeReport), "compatibilityXpm" to findings(twinReport),
+            "starterKitStoreLoadExact" to true, "sharedKitStoreLoadExact" to true,
+            "sharedKitDiffersOnlyBySampleFilenames" to true,
+            "recipeRegenerationByteExactPads" to 16, "sharedRecipeRegenerationByteExactPads" to 16, "exportAudioByteExactPads" to 16,
             "publishedR3RawByteExactPads" to rows.count { (it.getValue("publishedR3RawMatches") as List<*>).isNotEmpty() },
             "hardwareVerified" to false, "phoneVerified" to false,
             "readBackLimit" to "Read-back proves agreement with SnipSnap's reader. It does not establish hardware loading. SKIP rows remain unchecked.",
         )
         writeJson(File(bundle, "validation.json"), validation)
-        File(bundle, "PAD-MAP.txt").writeText(padMap(loaded))
+        File(bundle, "PAD-MAP.txt").writeText(padMap(sharedLoaded))
         File(bundle, "README.txt").writeText(readme())
         require(historicalManifest == null || sha(historicalManifest) == historicalHash) { "The preserved audition manifest changed during generation." }
         val files = bundle.walkTopDown().filter { it.isFile }.sortedBy { relative(bundle, it) }.map {
@@ -199,9 +227,9 @@ object OspreyHandoffGenerator {
             "schemaVersion" to 1, "engine" to "OSPREY", "title" to "Osprey R3 working-baseline kit",
             "starterId" to "osprey", "kitName" to KIT_NAME, "renderModel" to 3,
             "sourceCommit" to source.commit, "workingTreeDirty" to false, "sourceFilesSha256" to source.sources,
-            "audioPolicy" to "Existing starter rendered without changing DSP, presets, order, FX, pitch, gain or normalization. Production PCM24 WAV bytes are preserved.",
-            "sampleRate" to RATE, "channels" to 2, "bitDepth" to 24, "padCount" to 16, "waveFileCount" to 32,
-            "bundleRoot" to KIT_NAME, "snipsnapKit" to "snipsnap/kit.json", "nativeProgram" to relative(bundle, native.primary),
+            "audioPolicy" to "Existing starter rendered without changing DSP, presets, order, FX, pitch, gain or normalization. Production PCM24 WAV bytes are preserved in one shared folder; kit.json sample filenames alone are mapped to the export filenames.",
+            "sampleRate" to RATE, "channels" to 2, "bitDepth" to 24, "padCount" to 16, "waveFileCount" to 16,
+            "bundleRoot" to KIT_NAME, "snipsnapKit" to relative(bundle, sharedKitFile), "nativeProgram" to relative(bundle, native.primary),
             "compatibilityProgram" to relative(bundle, twin), "sharedMpcAudioFolder" to relative(bundle, shared),
             "padMap" to "PAD-MAP.txt", "instructions" to "README.txt", "validationReport" to "validation.json",
             "baseline" to historical?.let { linkedMapOf("sourceCommit" to R3_SOURCE, "manifestSha256" to historicalHash, "audioModified" to false) },
@@ -279,9 +307,11 @@ object OspreyHandoffGenerator {
         retain the production starter's 0.707946 setting. The WAV bytes remain raw.
 
         SNIPSNAP
-        The snipsnap/ folder contains kit.json and its sixteen WAVs. Keep them
-        together. Open the folder as a kit using the existing SnipSnap kit-folder
-        workflow. Every pad retains its model-3 regenerable recipe in kit.json;
+        The mpc/${KIT_NAME}_[TrackData]/ folder contains kit.json and sixteen
+        WAVs. Keep them together. Open that folder as a kit using the existing
+        SnipSnap kit-folder workflow. Every pad retains its model-3 recipe;
+        only sample filenames in kit.json are mapped to the export filenames.
+        All other starter metadata and every audio byte are preserved.
         recipes/A01.json through A16.json are separate copies for inspection.
         A binary/phone install is not included or verified by this download.
 
@@ -292,15 +322,17 @@ object OspreyHandoffGenerator {
 
         MPC 2 COMPATIBILITY
         Browse inside mpc/${KIT_NAME}_[TrackData]/ and load $KIT_NAME.xpm.
-        This compatibility program shares the same WAVs as the native track.
-        Do not move it away from them. No third sample folder is needed.
+        This compatibility program, the native track and SnipSnap kit.json all
+        share one set of WAVs. Do not move these files away from their samples.
 
         CHECKS AND LISTENING
         PAD-MAP.txt names each pad and its trigger note. manifest.json records
         source, recipe and file hashes, PCM bounds and raw R3 audition matches.
         validation.json holds preflight and native/XPM export read-back reports.
-        KitStore reloading, recipe regeneration, export audio and ZIP extraction
-        are checked for byte agreement. The adjacent handoff-manifest.json also
+        Original and shared-folder KitStore reloads, recipe regeneration,
+        export audio and ZIP extraction are checked for exact agreement. The
+        sample-filename metadata remap is checked separately. The adjacent
+        handoff-manifest.json also
         identifies the ZIP by byte count and SHA-256.
         Read-back agrees with SnipSnap's own reader; it is not a hardware pass.
         SKIP findings remain unchecked. Phone playback and MPC loading are still
