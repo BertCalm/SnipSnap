@@ -105,8 +105,8 @@ Rendering accepts cancellation during synthesis so leaving a long instrument
 render does not keep the phone busy. Actual phone and MPC listening remain a
 hardware check after the automated render, package and playback checks.
 
-Integration verification passes 213 synthesis/preset/patch/velocity tests,
-91 shell tests, three CLI tests and ten package/readback tests. Fixed PCM24
+Integration verification covers synthesis, presets, patch loading, velocity,
+keyboard playback, CLI rendering and package readback. Fixed PCM24
 fixtures preserve the published finite and held sounds. Instrument tests check
 the first 80 ms, overlap energy, actual XPM/XTY/WAV loop markers, phone-side
 reference pitch and sustain/release at 48 kHz, legacy models, silence and cancellation.
