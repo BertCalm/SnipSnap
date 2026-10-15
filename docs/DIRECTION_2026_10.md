@@ -260,7 +260,12 @@ audition pages as easier is what the type-size row predicts.
    the migration on open; the wizard's MPC SESSION format taking the open
    project; `tapes/` and `out/`; and the `:app` wiring, which needs an SDK.
 3. **The shape** in `:app`, in the OG look: four places, the dock, the
-   stages, the pad strip. Checked by the UAT sim's tap counts.
+   stages, the pad strip. Checked by the UAT sim's tap counts. **The
+   models landed first, 2026-10-14** (`SCREEN_PLAN_2026_10.md` §6):
+   `Navigation`, `DockModel`, `ShelfModel`, `PadStrip`,
+   `ProjectSessionModel`, `Places` and `Scheme.look`, each tested, and
+   the sim's J11 walking the plan's journeys on `Navigation`. What is
+   left of this step is Compose.
 4. **The `Look` axis** and the modern drawing, with the type floor from §5.
 5. **OPENSKY**, which reopens the light-shell law with VENT already shipped
    as proof the look works.

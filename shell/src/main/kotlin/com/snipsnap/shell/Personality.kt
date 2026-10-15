@@ -93,6 +93,22 @@ object Copy {
      * would have been a third copy of a control already twice on screen.
      */
     const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. FOUR TABS, IN ORDER — OR START FURTHER IN."
+
+    /**
+     * The same sentence for the four-place shape (`docs/SCREEN_PLAN_2026_10.md`
+     * §3.1), written beside [FIRST_RUN_LOOP_NOTE] rather than over it: the
+     * app still draws the twelve tabs, and `ConventionTest`'s loop-names
+     * law reads the old note against them. The SDK session swaps the
+     * shelf to this one and retires the other with the tabs.
+     *
+     * The four verbs are unchanged. What follows them names two places,
+     * not four tabs, because CUT is a stage of TAPE and WRITE is a stage
+     * of PROJECT. [Places] holds the words the rows draw.
+     */
+    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN."
+
+    /** The dock's resting line, with no door beside it. */
+    const val DOCK_READY = "READY WHEN YOU ARE."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct

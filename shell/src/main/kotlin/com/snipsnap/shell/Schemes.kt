@@ -77,6 +77,15 @@ data class Scheme(
     val winFrame: Int = title2,
     /** Centre of the radial glow behind the desk; fades to [desk1]. */
     val deskGlow: Int = desk2,
+    /**
+     * Which drawing these colours are for (`docs/DIRECTION_2026_10.md`
+     * §4): CLASSIC is the bevelled TapeOS surface language in `Bevel.kt`;
+     * MODERN is the audition pages' — flat fills, hairlines, system
+     * faces — which the SDK session draws. Data only until then: the
+     * picker groups by it, and a MODERN scheme under the CLASSIC drawing
+     * still reads (VENT's KDoc says how).
+     */
+    val look: Look = Look.CLASSIC,
 ) {
     /** Rec.601 luma 0..255 — used by the two-surface test and ink fallbacks. */
     companion object {
@@ -121,6 +130,12 @@ data class Scheme(
             return (lighter + 0.05) / (darker + 0.05)
         }
     }
+}
+
+/** The two surface languages a scheme can be drawn in. The second axis beside [SchemeId]. */
+enum class Look(val displayName: String) {
+    CLASSIC("CLASSIC"),
+    MODERN("MODERN"),
 }
 
 enum class SchemeId(val displayName: String) {
@@ -266,10 +281,14 @@ object Schemes {
         // the floor of SchemesTest's "selection is visible" law, and a
         // frame drawn 3dp in the OG look needs the margin.
         raised = 0x232420, win = 0x1D1E1B, winFrame = 0x55564B, deskGlow = 0x2A1E18,
+        look = Look.MODERN,
     )
 
     /** Picker order — the order the design system tells its story in. */
     val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR, VENT)
+
+    /** The picker's groups: each look's schemes, in [ALL]'s order, looks in [Look]'s order. */
+    fun byLook(): Map<Look, List<Scheme>> = Look.entries.associateWith { look -> ALL.filter { it.look == look } }
 
     val DEFAULT: Scheme = OILSLICK
 

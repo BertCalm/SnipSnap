@@ -984,6 +984,19 @@ UI layer. What lives here:
   for dark schemes and CLEAR, and the layout/motion constants from the
   handoff. The two-surface rule — the LCD stays dark in every scheme — is
   a unit test now.
+- **The four-place shape's models**
+  ([`docs/SCREEN_PLAN_2026_10.md`](docs/SCREEN_PLAN_2026_10.md) §6) —
+  `Navigation` (four places, the stage rows, benches, one back stack, and
+  the per-place state a stage switch keeps), `DockModel` (the transport,
+  the capture light, the line and its standing door), `ShelfModel`
+  (projects above kits, the migration on open), `PadStrip` (the tap door
+  under the grid, built on the pad sheet's own closed-box words),
+  `ProjectSessionModel` (OUT's session card over the project exporter),
+  `Places` (the rows' words, the dock's labels, HELP by place) and
+  `Scheme.look` (CLASSIC or MODERN, the second axis beside the scheme).
+  Built ahead of the SDK session that draws them, so that session binds
+  rather than designs; `UatSimTest`'s J11 walks the plan's journeys on
+  `Navigation` and counts them.
 - **`PeaksPyramid`** — min/max waveform mips with *exact* queries at any
   zoom; what makes the tape deck's canvas flat-cost at 60 fps.
 - **`TapeDeckModel`** — the trim screen's transport physics, ported
