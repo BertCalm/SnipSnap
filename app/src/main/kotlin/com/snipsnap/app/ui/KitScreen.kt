@@ -171,8 +171,6 @@ fun KitScreen(
     onBreed: () -> Unit = {},
     /** Whether the shelf holds a second kit BREED could cross this one with. */
     canBreed: Boolean = false,
-    /** SHARE (F6.3): this kit packed as one `.xpn` and handed to the chooser. */
-    onShare: () -> Unit,
     /** SPLIT: a pad taken apart into sines, transient and air, on three faders. */
     onSplit: () -> Unit,
     /** DUST ALL: every pad under the kit's own tape's hiss and room (`docs/DUST.md`), the per-pad chip at one amount. */
@@ -426,7 +424,7 @@ fun KitScreen(
     val showing = bank.coerceAtMost(reachable - 1)
 
     // ⟳ FULL: an in-app Popup + a runtime orientation flip, not a second
-    // Activity. LoopActivity's separate-activity pattern exists because
+    // Activity. the loop's old separate-Activity pattern existed because
     // LOOP owns a wholly disk-backed session and its own audio-thread
     // engine that has no reason to live inside App()'s composition; this
     // screen's whole state - this VoiceAllocator, this PadEngine, every
@@ -662,7 +660,7 @@ fun KitScreen(
             }
         }
 
-        // ---- THIS KIT: the nine actions, one closed group (section 3.3) ----
+        // ---- THIS KIT: the eight actions, one closed group (section 3.3; SHARE went to OUT) ----
         // Closed by default and reading what it holds, the way the pad
         // sheet's boxes do. Nine buttons on six rows was the densest thing
         // on the hub and most of them are weekly, not hourly, actions.
@@ -879,17 +877,8 @@ fun KitScreen(
                     }
                 }
 
-                // SHARE: one file out the share sheet - a messenger, Drive, a
-                // cable - the kit's own .xpn, which the receiving phone's
-                // SnipSnap (or an MPC) reads back. Stays in THIS KIT for now;
-                // section 3.3 moves it to OUT, being an output.
-                ActionButton(
-                    "SHARE ▸ THIS KIT AS ONE FILE",
-                    scheme,
-                    enabled = !busy && kit.pads.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onShare,
-                )
+                // SHARE is OUT's now (plan §3.5): one file out the share sheet
+                // is an output, so it sits with the other outputs.
 
                 if (panelKind == KEY_PANEL) {
                     KeyPanel(
