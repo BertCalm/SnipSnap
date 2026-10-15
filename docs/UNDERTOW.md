@@ -80,6 +80,16 @@ compliant seat reduces the pressure force on a closed flap, allowing elastic
 return to reopen it. The resulting change in demand reaches the other inlets
 through the shared reservoir.
 
+SEAL normalizes seat closure independently of acoustic leakage before applying
+pressure relief. The earlier calculation reused the leaky aperture closure,
+leaving enough inward pressure force for the root flap to remain latched
+above its reopening threshold at normal or strong event energy. Its delayed
+release could then produce an abrupt burst as the piston stopped. A seated
+flap now unloads nearly completely so elastic return can reopen it during
+the powered draw. LEAK still controls the physical aperture, inward flow and
+bypass; it no longer prevents the seat from unloading. This correction
+applies to SEAL's finite draws.
+
 Each chamber has a tuned nonlinear airflow resonator. Flow and aperture
 control its excitation and losses, while flap movement disturbs the same
 resonator. Closing an inlet cuts its powered excitation and leaves passive
@@ -154,6 +164,15 @@ three event energies, five-step timbral sweeps, the five required interaction
 grids, causal diagnostics, passive tails and difficult HOLD cases. The
 manifest records audio levels, render cost and loop evidence. Pressure and
 mechanical traces make shared competition inspectable before leveling.
+
+The focused SEAL review compares before/after finite draws at normal and
+strong event energy. Inspect the root inlet's closing and reopening while
+the piston is active, then compare the release with the body of the draw.
+Regression checks target pressure-driven reopening, bounded release energy,
+finite deterministic output and the requested root across the supported
+registers. Audition both raw and matched material: a level match can conceal
+an excessive late burst. These checks supplement the owner’s judgment of
+whether closure and reopening sound controlled and musical.
 
 The full roster contains 314 renders, 317 listening cases and 634 raw/matched
 WAV files, including quiet event energy .25 with DRAW 0, LEAK 1 and HOLD 1
