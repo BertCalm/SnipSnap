@@ -410,7 +410,8 @@ fun KitsScreen(
                         // September UAT, finding 3: the app never stated its
                         // own loop anywhere. It does now, on the one screen a
                         // new user is guaranteed to meet, in the words of the
-                        // tabs themselves.
+                        // places themselves (plan §3.1): the row above, then
+                        // the four verbs and the two places they start in.
                         //
                         // NOT shown mid-hand-off: a user placing a snip has a
                         // blocker to clear, and the tour of an app they are
@@ -424,13 +425,13 @@ fun KitsScreen(
                         // that cannot be dismissed cannot be lost.
                         if (!assigningSnip) {
                             TapeText(
-                                Copy.FIRST_RUN_LOOP,
+                                Places.PLACES.joinToString(" · "),
                                 TapeType.lcdSmall,
                                 scheme.amber.tape,
                                 maxLines = 1,
                             )
                             TapeText(
-                                Copy.FIRST_RUN_LOOP_NOTE,
+                                Copy.FIRST_RUN_PLACES_NOTE,
                                 TapeType.pixelSmall,
                                 scheme.lcdInk.tape,
                                 maxLines = 2,
