@@ -45,10 +45,10 @@ internal object PatchTypes {
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
      * deliberately kept out of [Presets] until the owner's listening verdict. VENT's
-     * three starting points live in [VentPresets] and render only through the CLI;
+     * starting points and FLOCK's finite recipes have dedicated audition generators and CLI access;
      * its factory roster and phone picker stay unchanged while it is a prototype.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, FlockPatch.ENGINE)
 }

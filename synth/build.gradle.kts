@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** First finite FLOCK experiment: interacting particles, controls and causal comparisons. */
+tasks.register<JavaExec>("generateFlockAudition") {
+    group = "distribution"
+    description = "Render FLOCK raw/matched PCM16 clips, recipes, pitch traces, source provenance and a downloadable ZIP under testkit/flock-audition/."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlockAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockOutput").orNull ?: "${rootDir}/testkit/flock-audition")
+}
+
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
 tasks.register<JavaExec>("generateOspreyAudition") {
     group = "distribution"
