@@ -718,7 +718,7 @@ object SynthKits {
 
     /**
      * Sixteen dry hybrid pads: eight KEY notes in C minor pentatonic, one finite
-     * candidate from each voice, and the two settled held STRING/SOFT candidates.
+     * preset from each voice, and the original settled held STRING/SOFT presets.
      * Every pad saves the generated attack, PM routing, envelopes, root and energy.
      */
     fun alloy(): List<ArrangedPad?> {
@@ -728,7 +728,10 @@ object SynthKits {
             landed(key.copy(name = "Alloy ${i + 1}", midi = Alloy.DEFAULT_MIDI + semitone))
         }
         val finite = AlloyVoice.entries.map { landed(AlloyPresets.forVoice(it).first()) }
-        val held = AlloyPresets.all().filter { Alloy.isLoop(it.macros.getValue("HOLD")) }.map { landed(it) }
+        // Keep the starter's two held pads stable as the factory roster grows.
+        val held = listOf("Held Filament", "Endless Ember").map { name ->
+            landed(AlloyPresets.all().single { it.name == name })
+        }
         return scale + finite + held
 
     }

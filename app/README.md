@@ -102,8 +102,9 @@ its fifteen presets and sixteen-pad starter.
 PRISM adds six additive voices, eight review presets and a dry pitched
 starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
 precedes further preset expansion.
-ALLOY adds six attack-driven PM voices, twelve provisional presets and a dry
-sixteen-pad starter kit; its first listening set also awaits owner approval.
+ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
+sixteen-pad starter kit. The owner heard the initial twelve and authorized six
+presets per voice on the same engine tuning; the additions await listening review.
 CONTOUR adds six wavetable voices with SCAN, OFFSET, MOTION, FILTER,
 DRIVE and HOLD. Loading, editing and saving a preset retains its authored
 table pair, layer relationship and envelopes along with the macros.

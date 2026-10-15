@@ -425,8 +425,10 @@ PM articulation independently. BODY preserves root support and shapes carrier
 balance; LENGTH and HOLD control finite gestures and settled periodic excitation.
 Held exports omit the initial attack and retain MATERIAL/FUSE through the same port.
 
-Six voices and twelve provisional presets form the first listening roster. The
-proposed 36-preset expansion waits for the owner's dry audition decision. Run
+The owner heard the initial twelve-preset audition and authorized expansion on
+the same engine tuning. Thirty-six factory presets now provide six per voice,
+the agreed allocation replacing the specification's uneven split. The original
+twelve retain their settings, and the new presets await listening review. Run
 `./gradlew :synth:generateAlloyAudition` for the reproducible listening pack.
 The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
 includes voice/register/velocity coverage, five-point macro sweeps, interactions,
