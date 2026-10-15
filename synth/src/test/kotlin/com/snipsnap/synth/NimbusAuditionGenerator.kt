@@ -34,6 +34,14 @@ object NimbusAuditionGenerator {
         NimbusVoice.CONTACT to "Close spacing permits motion-dependent rim contact around the pitched metal.",
         NimbusVoice.SUSPEND to "Gentler excitation and firm suspension favor a longer supported metallic texture.",
     )
+    private val holdVoiceCues = mapOf(
+        NimbusVoice.RING to "Listen for rounded Body weight and clear upper metal around C4.",
+        NimbusVoice.SHIMMER to "Listen for fine Paper shimmer and an airy upper wash around C4.",
+        NimbusVoice.GATHER to "Listen for the Flex character: a spreading response that gathers back around C4.",
+        NimbusVoice.THROAT to "Listen for Dark's chamber-colored body; compare its top with the brighter voices.",
+        NimbusVoice.CONTACT to "Listen for Wire's fine metallic edge and close-rim texture around C4.",
+        NimbusVoice.SUSPEND to "Listen for Bell's supported ringing and a broad, unhurried overlap around C4.",
+    )
     private val identityDescriptions = listOf(
         "Rounded gong-like weight with a strong principal mode and restrained upper loss.",
         "Sharp central definition with a clear attack and selected bright modes.",
@@ -538,7 +546,7 @@ object NimbusAuditionGenerator {
             manifest are embedded; all WAVs and mechanical records use local relative paths.
             Audio starts off and only plays after a user request. Stop all or Escape stops playback.
 
-            ${if (compareHold || compareHoldAll) "Begin with HOLD before / revised. Does the ringing feel like gentle overlapping rolls from felted mallets, with ringing decays, steady softness and no hard accents or jarring edge? Compare several repeated cycles at the same playback volume. The previous PCM stays unchanged; both versions use the same note, controls, event velocity and RMS 0.12 listening target. Can you still recognize the requested pitch and several cymbal characters? Listening acceptance remains open." else if (quick) "Begin with RING at C4, then compare the other default C4 voices and their settled powered HOLD clips. This tooling subset checks finite playback and sustain transport; the connected-ensemble front section is included in the ordinary full audition." else "Begin with the Hear the stack section: RING and GATHER at C4 expose the unchanged whole mix, selected connected contribution, selected-muted whole and other five cymbals. Every aligned stem uses one whole-reference gain with common headroom; quiet sources keep their actual balance. The edited build replays short aligned excerpts and adds actual readouts; it is explicitly not the instrument's natural onset. Return to Whole to judge whether multiple cymbal characters are present in the musical response."}
+            ${if (ensembleOnly) "Begin with Hear the stack: compare Whole with the actual connected contributions at their shared gain. This compact package contains no HOLD clips." else if ((compareHold || compareHoldAll) && !holdComparisonOnly) "Begin with Six HOLD voices: compare the current default C4 rolls with each other at a fixed playback volume. Listen for distinct material colors and brightness with a gentle felted touch. Then compare the matched before / revised pairs over several cycles. The previous PCM stays unchanged; both versions use the same note, controls, event velocity and RMS 0.12 listening target. Listening acceptance remains open." else if (compareHold || compareHoldAll) "Begin with HOLD before / revised. Compare brightness and voice character as well as gentle overlapping ringing. The previous PCM stays unchanged; both versions use the same note, controls, event velocity and RMS 0.12 listening target. Listening acceptance remains open." else if (quick) "Begin with the six default C4 HOLD voices, then compare their finite voice cards. This tooling subset checks finite playback and sustain transport; the connected-ensemble section is included in the ordinary full audition." else "Begin with Six HOLD voices to compare current default C4 sustain colors. Hear the stack then exposes finite RING and GATHER at C4: the unchanged whole mix, selected connected contribution, selected-muted whole and other five cymbals. Every aligned stem uses one whole-reference gain with common headroom; quiet sources keep their actual balance. The edited build replays short aligned excerpts and adds actual readouts; it is explicitly not the instrument's natural onset. Return to Whole to judge whether multiple cymbal characters are present in the musical response."}
 
             ${if (holdComparisonOnly) "This focused prototype contains seven settled HOLD before/revised pairs: all six default voices at C4 and the close-rim CONTACT recipe at C3. It omits the finite, ensemble, velocity and control matrices; use the full audition for those. The finite ensemble stems cannot establish contribution balance in these settled sustains." else if (quick) "Use ordinary full generation for the C3–C5 pitch/velocity matrix, factory presets, macro sweeps, interaction grids and mechanical diagnostics." else if (ensembleOnly) "This compact package contains only connected-ensemble evidence; it does not contain the full pitch, velocity, control or HOLD matrix." else "The voice/velocity matrix covers C3, C4 and C5, all five timbral controls have five-step sweeps on every voice, and the five required interactions have 3 × 3 grids. Hear the stack contains finite RING/GATHER connected contributions at one shared gain; those stems do not establish the balance of a settled HOLD cycle. Full-tail voices/presets and powered HOLD remain available below the ensemble section."}
 
@@ -769,27 +777,63 @@ object NimbusAuditionGenerator {
         "diagnostics" to ("Six identities, shared causes and finite extremes" to "First compare independently excited Body, Bell, Paper, Dark, Flex and Wire at C4. Connected source taps and causal switches then expose neighboring transfer, loading, contact and passive decay. The unexcited control is intentionally silent."),
         "hold" to ("Powered ringing and difficult seams" to "HOLD adds explicit bounded modal drive. Listen for gentle overlapping rolls from felted mallets, ringing decays and steady softness without hard accents; these are targets to judge. Repeat uses one audio buffer with no seek gaps. The main Pause and Stop controls fade smoothly; Repeat off previews one cycle. Inspect seam measurements and listen across repeated boundaries."),
     )
+    private data class PageSection(
+        val id: String, val category: String, val label: String, val title: String,
+        val description: String, val members: List<Clip>, val group: String? = null,
+    )
+    private fun pageSections(clips: List<Clip>): List<PageSection> = buildList {
+        // Feature the existing cards once. Their evidence categories, recipes and IDs stay intact.
+        val defaultHolds = NimbusVoice.entries.mapNotNull { voice ->
+            clips.singleOrNull { it.id == "${voice.name.lowercase()}_hold" && it.category == "hold" }
+        }.takeIf { it.size == NimbusVoice.entries.size }.orEmpty()
+        if (defaultHolds.isNotEmpty()) add(PageSection(
+            "hold-voices", "hold", "Six HOLD voices", "Six HOLD voices · one C4",
+            "Compare these current default rolls with each other first. Keep the playback volume fixed and hear several cycles of each: do their material characters and brightness differ while the felted touch stays gentle? " +
+                (if (clips.any { it.category == "hold-comparison" }) "Then use the matched before / revised pairs below to judge the change. " else "") +
+                "The cues describe intended character; your listening decides whether it comes through.",
+            defaultHolds, "C4 · current default voices",
+        ))
+        val featuredIds = defaultHolds.map { it.id }.toSet()
+        for ((category, copy) in categories) {
+            val members = clips.filter { it.category == category && it.id !in featuredIds }
+            if (members.isNotEmpty()) add(PageSection(
+                category, category, sectionLabel(category), copy.first, copy.second, members,
+            ))
+        }
+    }
     private fun writePage(root: File, clips: List<Clip>, manifestText: String) {
         val cacheKey = assetCacheKey(manifestText)
+        val sections = pageSections(clips)
+        val hasHoldVoices = sections.any { it.id == "hold-voices" }
+        val hasHoldComparison = clips.any { it.category == "hold-comparison" }
+        val holdPairLink = if (hasHoldComparison)
+            " Then compare the preserved previous version in the <a href=\"#hold-comparison\">before / revised pairs</a>."
+        else ""
         val template = javaClass.getResourceAsStream("/audition/nimbus-audition.html")
             ?.use { it.readBytes().toString(Charsets.UTF_8) } ?: error("Nimbus listening template is missing")
         require(template.contains("<!-- NIMBUS_CARDS -->") && template.contains("<!-- NIMBUS_MANIFEST -->"))
         File(root, "index.html").writeText(template
-            .replace("<!-- NIMBUS_CARDS -->", sectionsHtml(clips, cacheKey))
+            .replace("<!-- NIMBUS_CARDS -->", sectionsHtml(sections, cacheKey))
             .replace("href=\"manifest.json\"", "href=\"${assetUrl("manifest.json", cacheKey)}\"")
             .replace("href=\"README.md\"", "href=\"${assetUrl("README.md", cacheKey)}\"")
-            .replace("<!-- NIMBUS_HOLD_COMPARISON_NOTE -->", if (clips.none { it.category == "hold-comparison" }) "" else "<p class=\"comparison-note\"><strong>HOLD listening revision.</strong> <a href=\"#hold-comparison\">Begin with HOLD before / revised.</a> Does it ring like gentle overlapping rolls from felted mallets, with ringing decays, steady softness and no hard accents? Same note, controls, event velocity and listening target; the verdict stays open.</p>")
+            .replace("<!-- NIMBUS_HOLD_COMPARISON_NOTE -->", when {
+                hasHoldVoices -> "<p class=\"comparison-note\"><strong>Compare the HOLD characters.</strong> <a href=\"#hold-voices\" data-filter=\"hold\">Begin with the six current voices at C4.</a> Listen for different material colors and an open upper ring, with a gentle felted touch.$holdPairLink Listening acceptance remains open.</p>"
+                hasHoldComparison -> "<p class=\"comparison-note\"><strong>HOLD listening revision.</strong> <a href=\"#hold-comparison\">Begin with HOLD before / revised.</a> Compare brightness and voice character as well as gentle overlapping ringing. Same note, controls, event velocity and listening target; the verdict stays open.</p>"
+                else -> ""
+            })
             .replace("<!-- NIMBUS_ENSEMBLE_NOTE -->", if (clips.none { it.category == "ensemble" }) "" else "<p class=\"comparison-note\"><strong>Hear the six-cymbal stack.</strong> <a href=\"#ensemble\">Start with Whole, then compare the actual connected contributions.</a> Every source uses the same mix gain; the labeled build is an edited demonstration. Judge the natural response on Whole.</p>")
             .replace("<!-- NIMBUS_COMPARISON_NOTE -->", if (clips.none { it.category == "comparison" }) "" else "<p class=\"comparison-note\"><strong>Listening revision.</strong> <a href=\"#comparison\">Start with the previous / revised pairs.</a> Compare the six C4 voices for distinct attacks and tails while the requested note stays recognizable. These clips ask for a listening verdict; they do not claim acceptance.</p>")
             .replace("<!-- NIMBUS_START_GUIDE -->", when {
+                hasHoldVoices -> "Begin with the six current HOLD voices at C4. Judge material character and brightness alongside the gentle felted roll. The finite ensemble stems do not measure the settled sustain's contribution balance."
                 clips.any { it.category == "hold-comparison" } -> "Begin with HOLD before / revised and compare several repeated cycles at the same playback volume. Judge the target of gentle overlapping ringing, like rolls from felted mallets, without hard accents or a jarring edge. The finite ensemble stems do not measure the settled sustain's contribution balance."
                 clips.any { it.category == "ensemble" } -> "Begin with the natural whole instrument at C4. Compare its selected contribution, selected-muted mix and other five cymbals at the same playback level."
                 else -> "Begin with RING at C4, then compare the other default voices and settled HOLD clips at the same playback level."
             })
             .replace("<!-- NIMBUS_SECTION_FILTER_OPTIONS -->", categories.keys.filter { category -> clips.any { it.category == category } }
                 .joinToString("") { category -> "<option value=\"$category\">${h(sectionLabel(category))}</option>" })
-            .replace("<!-- NIMBUS_SECTION_NAV -->", categories.keys.filter { category -> clips.any { it.category == category } }
-                .joinToString("") { category -> "<li><a href=\"#$category\">${h(sectionLabel(category))}</a></li>" })
+            .replace("<!-- NIMBUS_SECTION_NAV -->", sections.joinToString("") { section ->
+                "<li><a href=\"#${section.id}\" data-filter=\"${section.category}\">${h(section.label)}</a></li>"
+            })
             .replace("<!-- NIMBUS_MANIFEST -->", "<script type=\"application/json\" id=\"nimbus-manifest\">${manifestText.replace("<", "\\u003c")}</script>"))
     }
     private fun sectionLabel(category: String) = when (category) {
@@ -805,12 +849,10 @@ object NimbusAuditionGenerator {
         "diagnostics" -> "Diagnostics"
         else -> "HOLD"
     }
-    private fun sectionsHtml(clips: List<Clip>, cacheKey: String): String = buildString {
-        for ((category, copy) in categories) {
-            val members = clips.filter { it.category == category }
-            if (members.isEmpty()) continue
-            append("<section class=\"audition-section\" id=\"$category\" aria-labelledby=\"heading-$category\"><div class=\"section-heading\"><p class=\"eyebrow\">${h(category)}</p><h2 id=\"heading-$category\">${h(copy.first)}</h2><p>${h(copy.second)}</p></div>")
-            for ((group, rows) in members.groupBy { it.group }) {
+    private fun sectionsHtml(sections: List<PageSection>, cacheKey: String): String = buildString {
+        for (section in sections) {
+            append("<section class=\"audition-section\" id=\"${section.id}\" aria-labelledby=\"heading-${section.id}\"><div class=\"section-heading\"><p class=\"eyebrow\">${h(section.category)}</p><h2 id=\"heading-${section.id}\">${h(section.title)}</h2><p>${h(section.description)}</p></div>")
+            for ((group, rows) in section.members.groupBy { section.group ?: it.group }) {
                 append("<div class=\"clip-group\"><h3>${h(group)}</h3><div class=\"clip-grid\">")
                 for (clip in rows) append(clipHtml(clip, cacheKey))
                 append("</div></div>")
@@ -824,6 +866,9 @@ object NimbusAuditionGenerator {
         val voice = e.getValue("voice") as String
         val duration = number((e.getValue("durationSeconds") as Number).toDouble())
         val loop = e.getValue("loop") as Boolean
+        val holdCue = if (clip.id == "${voice.lowercase()}_hold")
+            "<p class=\"listening-cue\"><strong>Compare character.</strong> ${h(holdVoiceCues.getValue(NimbusVoice.valueOf(voice)))}</p>"
+        else ""
         val seam = (e["seamError"] as? Number)?.let {
             "<dt>Loop seam error</dt><dd>${scientific(it.toDouble())}</dd>"
         }.orEmpty()
@@ -855,6 +900,7 @@ object NimbusAuditionGenerator {
               <div class="clip-badges"><span>${h(voice)}</span><span>${h(e.getValue("level").toString())}</span>${if (version == null) "" else "<span>${h(version)}</span>"}${if (loop) "<span>loop</span>" else ""}${if (segments != null) "<span>edited demonstration</span>" else ""}</div>
               <h4 id="title-${clip.id}">${h(title)}</h4>
               <p class="description" id="desc-${clip.id}">${h(e.getValue("description") as String)}</p>
+              $holdCue
               $sequenceCopy
               <p class="macro-line">${h(macros)}</p>
               <p class="clip-meta">$duration s · velocity ${fmt((e.getValue("energy") as Number).toFloat())} · root ${number((e.getValue("rootHz") as Number).toDouble())} Hz · ${(e.getValue("contactEvents") as Number).toInt()} contacts</p>

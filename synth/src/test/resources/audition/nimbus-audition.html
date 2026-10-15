@@ -70,6 +70,7 @@
     .clip-badges span { color:var(--muted); border:1px solid var(--line); border-radius:1rem; padding:.08rem .5rem; font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; }
     .clip h4 { font-size:1.08rem; line-height:1.45; margin:.75rem 0 .5rem; }
     .description { margin:0 0 .8rem; font-size:1rem; }
+    .listening-cue { border-left:2px solid var(--accent); padding-left:.65rem; margin:0 0 .8rem; font-size:.95rem; }
     .sequence-now { border-left:2px solid var(--accent); padding-left:.65rem; color:var(--accent); font-size:.9rem; margin:0 0 .8rem; }
     .sequence-stages { margin:0 0 .9rem; padding-left:1.5rem; font-size:.875rem; }
     .sequence-stages li { margin:.2rem 0; }
@@ -509,7 +510,7 @@
     categoryFilter.addEventListener('change', filter);
     searchFilter.addEventListener('input', filter);
     document.querySelectorAll('.section-nav a, .comparison-note a').forEach(link => link.addEventListener('click', () => {
-      voiceFilter.value = 'all'; categoryFilter.value = link.hash.slice(1); searchFilter.value = ''; filter();
+      voiceFilter.value = 'all'; categoryFilter.value = link.dataset.filter || link.hash.slice(1); searchFilter.value = ''; filter();
     }));
     filter();
   })();

@@ -68,6 +68,21 @@ object Nimbus {
         NimbusVoice.CONTACT -> Shape(.65f, .10f, .50f, .55f, .55f, 5, .65, .17, .90, .80, 1.06, .34, 4)
         NimbusVoice.SUSPEND -> Shape(.30f, .55f, .55f, .65f, .65f, 1, 1.20, .22, -.10, 1.65, .72, 2.60, 2)
     }
+    /** A player's material and felt choices for the powered roll, before any radiation. */
+    private data class RollTouch(
+        val contactMillis: Double, val spatialRatio: Double, val spatialHz: Double,
+        val principal: Double, val materials: DoubleArray, val hardCompression: Double = 0.0,
+    )
+    private fun rollTouch(voice: NimbusVoice) = when (voice) {
+        // Body, Bell, Paper, Dark, Flex, Wire. All six are struck; the preferred
+        // face and its companions change with the instrument's finite identity.
+        NimbusVoice.RING -> RollTouch(1.40, 9.0, 4800.0, .130, doubleArrayOf(1.80, .90, .75, .75, .95, .70))
+        NimbusVoice.SHIMMER -> RollTouch(1.20, 12.0, 6200.0, .095, doubleArrayOf(.75, .75, 1.95, .70, .90, 1.10))
+        NimbusVoice.GATHER -> RollTouch(1.25, 10.0, 5200.0, .115, doubleArrayOf(.85, .75, .90, .75, 2.15, .75))
+        NimbusVoice.THROAT -> RollTouch(1.05, 8.0, 4800.0, .140, doubleArrayOf(1.05, .82, .75, 1.60, .90, .75))
+        NimbusVoice.CONTACT -> RollTouch(1.40, 12.0, 6000.0, .100, doubleArrayOf(.70, .70, .90, .70, .85, 2.20), hardCompression = .45)
+        NimbusVoice.SUSPEND -> RollTouch(1.50, 9.5, 4800.0, .125, doubleArrayOf(.85, 2.10, .75, .75, .90, .70))
+    }
     fun macrosFor(voice: NimbusVoice): List<MacroSpec> {
         val s = shape(voice)
         return listOf(
@@ -331,6 +346,7 @@ object Nimbus {
         private val cycle: Int, private val cancelled: () -> Boolean,
     ) {
         private val shape = shape(voice)
+        private val rollTouch = rollTouch(voice)
         private val excite = m.getValue("EXCITE").toDouble()
         private val spacing = m.getValue("SPACING").toDouble()
         private val height = m.getValue("HEIGHT").toDouble()
@@ -423,20 +439,24 @@ object Nimbus {
             ((s + .5 + .20 * (strokeDraw(s, 0) - .5) + .04 * (strokeDraw(s, 3) - .5)) * rollFrames / strokesPerCycle +
                 (if (strokePlate(s) % 2 == 0) -handTiming else handTiming)).roundToInt()
         }
-        // Above the voice's ordinary touch, felt compresses into a shorter contact.
-        // This opens more native body modes for harder playing while every pulse still
-        // begins/ends smoothly. Ordinary rolls keep exactly their established softness.
-        private val feltCompression = 1 - .45 * max(0.0, excite - shape.excite.toDouble())
+        // Contact follows the native period so higher notes retain their material's
+        // upper body. Only Wire uses a firmer felt that compresses under harder EXCITE;
+        // its fast touch also keeps the close rim's physical response repeatable.
+        private val feltCompression = 1 - rollTouch.hardCompression * max(0.0, excite - shape.excite.toDouble())
         private val strokeWidths = IntArray(strokesPerCycle) { s ->
-            (.0024 * sqrt(261.625565 / root) * feltCompression * (.88 + .24 * strokeDraw(s, 2)) * INTERNAL_RATE).roundToInt().coerceAtLeast(24)
+            (rollTouch.contactMillis * .001 * (261.625565 / root) * feltCompression *
+                (.88 + .24 * strokeDraw(s, 2)) * INTERNAL_RATE).roundToInt().coerceAtLeast(24)
         }
         private val strokePlates = IntArray(strokesPerCycle) { s -> strokePlate(s) }
         private fun strokePlate(s: Int): Int {
             val traversal = intArrayOf(0, 3, 1, 4, 2, 5)
             return (selected + traversal[s % CYMBALS] + s / CYMBALS) % CYMBALS
         }
+        // Normalize touch preferences in impulse energy, not in the listener taps.
+        // A different favored face does not silently give one voice a larger budget.
+        private val rollPreferenceScale = .86 / sqrt(rollTouch.materials.sumOf { it * it } / CYMBALS)
         private val strokeImpulses = DoubleArray(strokesPerCycle) { s ->
-            val preference = .70 + .30 * exp(-abs(strokePlates[s] - selected) * .4)
+            val preference = rollTouch.materials[strokePlates[s]] * rollPreferenceScale
             (.12 + .02 * excite) * (.94 + .12 * strokeDraw(s, 1)) * preference * sqrt(24.0 / strokesPerCycle)
         }
         // Additional strokes reuse and decorrelate the old draws, never advance the RNG.
@@ -451,11 +471,12 @@ object Nimbus {
                 if (j == 0 || !supported[i][j]) 0.0 else {
                     val ratio = RATIOS[i][j]
                     val hz = root * ratio
-                    bodyImpulse[i][j] / sqrt((1 + (ratio / 7.0).pow(4.0)) * (1 + (hz / 3800).pow(4.0)))
+                    bodyImpulse[i][j] / sqrt((1 + (ratio / rollTouch.spatialRatio).pow(4.0)) *
+                        (1 + (hz / rollTouch.spatialHz).pow(4.0)))
                 }
             })
-            for (j in b.indices) b[j] *= sqrt(1 - .11 * .11 - .01 * .01)
-            b[0] = .11
+            for (j in b.indices) b[j] *= sqrt(1 - rollTouch.principal * rollTouch.principal - .01 * .01)
+            b[0] = rollTouch.principal
             b
         }
         private val malletForce = DoubleArray(CYMBALS)

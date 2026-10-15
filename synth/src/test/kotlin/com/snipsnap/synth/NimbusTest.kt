@@ -237,6 +237,46 @@ class NimbusTest {
     }
 
     @Test
+    fun `held voices retain distinct native colors and useful finite body brightness`() {
+        // The common felt roll passed the participation and smoothness guards while
+        // erasing the voices' upper colors. Compare native upper spectra, excluding
+        // their shared principal so different root levels cannot fake an identity.
+        val options = Nimbus.ProbeOptions(recordDiagnostics = false)
+        val held = NimbusVoice.entries.associateWith { voice ->
+            val p = Nimbus.probe(voice, mapOf("HOLD" to 1f), options = options)
+            bands(p.samples, p.rootHz.toDouble(), 0.0, p.samples.size.toDouble() / Dsp.RATE,
+                upperCutoff = 1.35, profileCutoff = 1.35, rectangular = true)
+        }
+        val bodies = NimbusVoice.entries.associateWith { voice ->
+            val p = Nimbus.probe(voice, options = options.copy(durationSeconds = .8f))
+            bands(p.samples, p.rootHz.toDouble(), .18, .65, upperCutoff = 1.35)
+        }
+        val deficient = mutableListOf<String>()
+        for ((index, voice) in NimbusVoice.entries.withIndex()) for (other in NimbusVoice.entries.take(index)) {
+            val contrast = spectralDifference(held.getValue(voice).profile, held.getValue(other).profile)
+            println("NIMBUS $voice/$other held native upper contrast=$contrast")
+            // Reuse the finite voices' existing spectral anti-collapse allowance.
+            if (contrast < .20) deficient += "$voice/$other native upper spectra collapsed: $contrast"
+        }
+        for (voice in NimbusVoice.entries) {
+            fun nativeBrightness(tone: Bands) = tone.highShare / tone.upperShare.coerceAtLeast(1e-30)
+            val finite = nativeBrightness(bodies.getValue(voice))
+            val roll = nativeBrightness(held.getValue(voice))
+            val retained = roll / finite.coerceAtLeast(1e-30)
+            println("NIMBUS $voice held native brightness: roll=$roll finiteBody=$finite retained=$retained")
+            // A soft touch may darken the sharp finite event. Allow a full 10 dB
+            // reduction in its native high-power fraction; every original held voice
+            // clears this allowance. The rejected common roll retained under 0.6%.
+            if (retained < .10) deficient += "$voice lost its native upper color: held/finite brightness=$retained"
+        }
+        val highContrast = held.getValue(NimbusVoice.SHIMMER).highShare /
+            held.getValue(NimbusVoice.THROAT).highShare.coerceAtLeast(1e-30)
+        println("NIMBUS held SHIMMER/THROAT high-band contrast=$highContrast")
+        if (highContrast <= 1.5) deficient += "SHIMMER/THROAT lost the intended bright/dark contrast: $highContrast"
+        assertTrue(deficient.isEmpty(), "Held voice colors regressed: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
     fun `held rolls preserve the native middle body without gaps or hard accents across registers`() {
         // Whole-loop balance alone missed the harsh held texture. Measure short attacks
         // and overlap too. A smooth roll may have nearly constant overall loudness; a
@@ -640,6 +680,10 @@ class NimbusTest {
             val heldMetal = bands(p.samples, p.rootHz.toDouble(), .05, .65)
             assertTrue(heldMetal.upperShare >= .15 && heldMetal.upperOccupied >= 4, "$voice held texture collapsed to a sparse bell: upper=${heldMetal.upperShare}, bands=${heldMetal.upperOccupied}")
             assertTrue(heldMetal.rootShare >= .01, "$voice held requested root became negligible: ${heldMetal.rootShare}")
+            // Harder touch must retain the same held-roll treble ceiling. The old
+            // extra felt compression reopened a sustained >3 kHz layer at C5.
+            val tone = heldTone(p.samples, p.rootHz.toDouble())
+            assertTrue(tone.above3k <= .15, "$voice difficult held treble exceeded the soft-roll balance: >3kHz power=${tone.above3k}")
             if (voice == NimbusVoice.CONTACT) {
                 assertTrue(p.contactEvents > 0, "difficult held case contained no settled rim contacts")
                 assertTrue(p.contact.all { it.isFinite() } && rms(p.contact) > 1e-7, "settled contacts emitted no finite contact sound")
@@ -873,7 +917,10 @@ class NimbusTest {
         return best / scale
     }
 
-    private fun bands(samples: FloatArray, root: Double, start: Double, end: Double, upperCutoff: Double = 1.8): Bands {
+    private fun bands(
+        samples: FloatArray, root: Double, start: Double, end: Double,
+        upperCutoff: Double = 1.8, profileCutoff: Double = 0.0, rectangular: Boolean = false,
+    ): Bands {
         val from = (start * Dsp.RATE).roundToInt()
         val count = minOf(samples.size - from, ((end - start) * Dsp.RATE).roundToInt())
         require(count > 8)
@@ -883,7 +930,9 @@ class NimbusTest {
         val im = FloatArray(n)
         var windowPower = 0.0
         for (i in 0 until count) {
-            val window = .5 - .5 * cos(2 * PI * i / (count - 1))
+            // Complete periodic captures weight the whole roll equally. Padding only
+            // adapts the transform to the repository's radix-2 FFT.
+            val window = if (rectangular) 1.0 else .5 - .5 * cos(2 * PI * i / (count - 1))
             re[i] = (samples[from + i] * window).toFloat()
             windowPower += window * window
         }
@@ -906,7 +955,7 @@ class NimbusTest {
             if (hz >= root * upperCutoff) upper += energy
             if (hz >= root * 4.0) high += energy
             while (band < energyBands.size && hz >= edges[band + 1]) band++
-            if (band < energyBands.size && hz >= edges[band]) energyBands[band] += energy
+            if (band < energyBands.size && hz >= edges[band] && hz >= root * profileCutoff) energyBands[band] += energy
         }
         val denominator = total.coerceAtLeast(1e-30)
         val occupied = energyBands.indices.count { edges[it] >= root * upperCutoff && energyBands[it] >= total * .005 }
