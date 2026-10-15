@@ -2,6 +2,43 @@ plugins {
     kotlin("jvm")
 }
 
+/** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
+tasks.register<JavaExec>("generateOspreyAudition") {
+    group = "distribution"
+    description = "Render OSPREY shore, weather, morph, component and control comparisons under testkit/osprey-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-audition")
+}
+
+/** Compare preserved model 1 with model 2's coast-specific materials and ocean gestures. */
+tasks.register<JavaExec>("generateOspreyRevisionAudition") {
+    group = "distribution"
+    description = "Render OSPREY R1/R2 pairs, shore and weather lineups, and creature-free body diagnostics."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyRevisionAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-revision-audition")
+    project.findProperty("ospreyBaselineDir")?.toString()?.let { args(it) }
+    args("--include-bodies")
+}
+
+/** Compare preserved model 1 with model 3's small modal body-balance refinement. */
+tasks.register<JavaExec>("generateOspreyGentleAudition") {
+    group = "distribution"
+    description = "Render OSPREY R1/R3 pairs, original-gesture lineups and creature-free body diagnostics."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyGentleAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-gentle-audition")
+    project.findProperty("ospreyBaselineDir")?.toString()?.let { args(it) }
+    args("--include-bodies")
+}
+
 /** Dry PIPE/MUSETTE prototypes, exact engine loops and existing organ references. */
 tasks.register<JavaExec>("generateRegistersAudition") {
     group = "distribution"

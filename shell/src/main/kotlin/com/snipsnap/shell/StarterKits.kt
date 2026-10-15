@@ -226,6 +226,11 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.murmur() },
         Starter(
+            "osprey", "OSPREY",
+            "Five coasts at calm, rough and storm energy. Dry finite sea gestures rooted at C4.",
+            seeded = false,
+        ) { SynthKits.osprey() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

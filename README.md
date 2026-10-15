@@ -309,7 +309,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 30 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 31 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -378,6 +378,23 @@ C minor pentatonic FRESH TAPE starter are included. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the renderer, settled HOLD loops and the pending owner listening review.
+
+OSPREY adapts XOsprey into a finite SWELL articulation. The original sound was
+positively received, with a request for slightly more distinct voices. R2 was
+rejected as harsh and for losing that character. Model 3 retains the original
+ocean, calls, envelopes and defaults, with a small coast-specific adjustment to
+the existing modal body balance. SHORE, SEA, MOTION, DEPTH, SPACE and finite HOLD
+shape the gesture. Fifteen dry presets, a sixteen-pad starter, the SYNTH picker
+and CLI share saved note/velocity/seed/duration/model recipes. Models 1 and 2
+remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudition`
+for paired R1/R3 renders and creature-muted body comparisons. The original
+46-clip study remains preserved. After the [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
+the owner said, “We are in a better spot audio wise.” R3 is the working audio
+baseline; final listening and phone/MPC acceptance remain open. Run
+`./gradlew :shell:generateOspreyHandoff` for the existing sixteen-pad starter as
+a SnipSnap working folder, native MPC 3 export and compatibility twin, with raw
+renders, recipes and checks. [Implementation notes](docs/OSPREY.md) describe the
+three models, audition and hardware handoff.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One
@@ -678,8 +695,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS and GRAINS round out the lineup —
-thirty-eight engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY and GRAINS round out the lineup —
+thirty-nine engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -862,10 +879,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
