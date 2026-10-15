@@ -237,14 +237,15 @@ object LacquerPresets {
                     attack = .002f, decay = .18f, sustain = .008f, release = .13f) },
                 trail = { it.voicing(source = ROUNDED, cutoff = 2200f,
                     attack = .016f, decay = .95f, sustain = .10f, release = .44f) })),
-        recipe(LacquerVoice.PLUCK, "Wire Flick", .35f, .89f, .35f, .22f, .17f,
+        recipe(LacquerVoice.PLUCK, "Wire Flick", .35f, .89f, .50f, .22f, .17f,
             profile = model(LacquerVoice.PLUCK,
                 body = { it.voicing(cutoff = 8000f, attack = .0025f,
                     decay = .74f, sustain = .035f, release = .28f) },
                 // A quiet third harmonic, not a separately voiced chord note.
                 edge = { it.voicing(ratio = 3f, gain = .095f, cutoff = 15000f,
                     attack = .0015f, decay = .13f, sustain = .005f, release = .10f, delay = .012f) },
-                trail = { it.voicing(cutoff = 3000f, attack = .011f,
+                // Keep the root strong when the delayed hollow source is out of phase.
+                trail = { it.voicing(gain = .035f, cutoff = 3000f, attack = .011f,
                     decay = .84f, sustain = .07f, release = .37f, delay = .055f) },
                 processing = LacquerProcessing(.9f, .18f, 15500f))),
         recipe(LacquerVoice.PLUCK, "Pearl Tap", .23f, .58f, .61f, .34f, .22f,

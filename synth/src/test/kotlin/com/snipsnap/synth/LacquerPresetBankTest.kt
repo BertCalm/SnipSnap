@@ -49,6 +49,7 @@ class LacquerPresetBankTest {
         var smallestRootShare = 1.0
         var quietest = Float.POSITIVE_INFINITY
         var loudest = 0f
+        val referenceNames = LacquerPresets.references().map { it.name }.toSet()
         for ((patch, probe) in comparisons) {
             assertTrue(probe.samples.all { it.isFinite() } && probe.raw.all { it.isFinite() }, "${patch.name}: nonfinite raw or output audio")
             assertTrue(probe.layerEndSeconds.values.all { it.isFinite() && it <= Lacquer.MAX_FINITE_SECONDS },
@@ -62,7 +63,8 @@ class LacquerPresetBankTest {
             val wanted = Keys.midiHz(48)
             val measured = FineTuning.measuredHz(probe.samples, Dsp.RATE, wanted, .2f, .6f)
             val cents = abs(FineTuning.cents(measured, wanted.toDouble()))
-            val rootShare = harmonicRootShare(probe.samples, wanted.toDouble())
+            val harmonicEnergy = harmonicEnergies(probe.samples, wanted.toDouble())
+            val rootShare = harmonicEnergy[0] / harmonicEnergy.sum()
             worstCents = max(worstCents, cents)
             largestRawPeak = maxOf(largestRawPeak, rawPeak)
             largestDc = max(largestDc, dc)
@@ -73,11 +75,35 @@ class LacquerPresetBankTest {
             assertTrue(peak <= .99001f, "${patch.name}: output peak $peak exceeds export headroom")
             assertTrue(dc < .005, "${patch.name}: output DC $dc")
             assertTrue(cents < 5.0, "${patch.name}: common requested root is $cents cents off")
-            assertTrue(rootShare > .1, "${patch.name}: layered fundamental share $rootShare is too weak")
+            assertTrue(rootShare > .3, "${patch.name}: layered fundamental share $rootShare is too weak")
+            if (patch.name !in referenceNames) {
+                assertTrue(harmonicEnergy[0] >= harmonicEnergy.drop(1).max(),
+                    "${patch.name}: a higher harmonic dominates the requested factory root")
+            }
             assertEquals(Dsp.MELODIC_LOUDNESS_TARGET, loudness, .005f, "${patch.name}: shared melodic level")
         }
         println("LACQUER 36-preset common-performance bounds: raw peak $largestRawPeak; DC $largestDc; root error $worstCents cents; " +
             "minimum fundamental share $smallestRootShare; loudness $quietest..$loudest")
+    }
+
+    @Test
+    fun `wire flick keeps a substantial root across octaves and soft or hard playing`() {
+        val common = comparisons.single { it.patch.name == "Wire Flick" }
+        val patch = common.patch
+        for (midi in listOf(36, 48, 60, 72)) for (velocity in listOf(.35f, 1f)) {
+            val probe = if (midi == 48 && velocity == 1f) common.probe else Lacquer.renderProbe(
+                patch.voice, patch.macros, midi = midi, velocity = velocity, profile = patch.profile,
+                seconds = 1.2f, normalize = true,
+            )
+            val energy = harmonicEnergies(probe.samples, Keys.midiHz(midi).toDouble())
+            val share = energy[0] / energy.sum()
+            val strongest = energy.indices.maxBy { energy[it] } + 1
+            println("LACQUER Wire Flick MIDI$midi velocity$velocity: fundamental share $share; strongest harmonic $strongest")
+            // A narrow tuning estimator can locate a quiet fundamental even when
+            // an octave dominates. This separately catches cancellation between
+            // the body's root and the independently delayed trailing layer.
+            assertTrue(share > .3, "Wire Flick MIDI$midi velocity$velocity: opposing layers leave fundamental share $share")
+        }
     }
 
     @Test
@@ -133,10 +159,10 @@ class LacquerPresetBankTest {
             return sqrt(difference / n)
         }
 
-        fun harmonicRootShare(samples: FloatArray, hz: Double): Double {
+        fun harmonicEnergies(samples: FloatArray, hz: Double): DoubleArray {
             val from = (.2 * Dsp.RATE).toInt()
             val length = (.6 * Dsp.RATE).toInt()
-            val energies = DoubleArray(8) { harmonic ->
+            return DoubleArray(8) { harmonic ->
                 var real = 0.0
                 var imaginary = 0.0
                 val step = 2 * Math.PI * hz * (harmonic + 1) / Dsp.RATE
@@ -147,7 +173,6 @@ class LacquerPresetBankTest {
                 }
                 real * real + imaginary * imaginary
             }
-            return energies[0] / energies.sum().coerceAtLeast(1e-30)
         }
     }
 }
