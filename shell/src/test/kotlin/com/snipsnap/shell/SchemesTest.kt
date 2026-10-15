@@ -156,6 +156,25 @@ class SchemesTest {
         assertTrue(ratio >= 4.5, "VENT ink3 vs gray = %.2f:1, below AA text".format(ratio))
     }
 
+    /**
+     * The second axis (`docs/DIRECTION_2026_10.md` §4): VENT is the first
+     * MODERN scheme and every earlier one is CLASSIC. The picker groups by
+     * look without reordering within a look, so the OG story still reads
+     * METAL first and OILSLICK second.
+     */
+    @Test
+    fun `VENT is the first modern scheme and the picker groups by look`() {
+        assertEquals(Look.MODERN, Schemes.VENT.look)
+        for (scheme in Schemes.ALL.filter { it.id != SchemeId.VENT }) {
+            assertEquals(Look.CLASSIC, scheme.look, "${scheme.id} is an OG scheme")
+        }
+        val groups = Schemes.byLook()
+        assertEquals(listOf(Look.CLASSIC, Look.MODERN), groups.keys.toList())
+        assertEquals(Schemes.ALL.filter { it.look == Look.CLASSIC }, groups.getValue(Look.CLASSIC))
+        assertEquals(listOf(Schemes.VENT), groups.getValue(Look.MODERN))
+        assertEquals(Schemes.ALL.size, groups.values.sumOf { it.size }, "every scheme is in exactly one group")
+    }
+
     @Test
     fun `the three ink tiers never invert in any scheme`() {
         for (scheme in Schemes.ALL) {

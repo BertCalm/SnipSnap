@@ -102,10 +102,84 @@ class UatSimTest {
         j8PowerUserDepth()
         j9TrimDeck()
         j10ChromeAndCopy()
+        j11FourPlaces()
 
         val file = File(System.getProperty("java.io.tmpdir"), "uat-transcript.txt")
         file.writeText(out.toString())
-        println("UAT SIMULATION: ${findings.size} findings across 10 journeys -> ${file.absolutePath}")
+        println("UAT SIMULATION: ${findings.size} findings across 11 journeys -> ${file.absolutePath}")
+    }
+
+    // ================================================================
+    // J11 — the four-place shape, walked on the navigation model
+    // ================================================================
+
+    /**
+     * `docs/SCREEN_PLAN_2026_10.md` §4 counted its journeys by hand off
+     * the structure. This walks the same journeys on [Navigation] and
+     * counts them, so the table there is measured rather than remembered
+     * — and raises a finding if a journey costs more than the plan says.
+     */
+    private fun j11FourPlaces() {
+        say("")
+        say("── J11: THE FOUR PLACES · ${Places.PLACES.joinToString(" · ")} ──")
+        note("stages: TAPE ▸ ${Places.TAPE_STAGES.joinToString(" · ")} · PROJECT ▸ ${Places.PROJECT_STAGES.joinToString(" · ")}")
+        note("the row holds ${Places.PLACES.size} places; the sim that measured the thirteen-tab row (J10) has nothing to measure here")
+
+        note("counted: navigations only — a pad tap, a dock ▶ and a treatment chip move nothing and cost no step here")
+
+        /**
+         * [setup] puts the user where the journey starts and is not
+         * counted; [walk] is the journey. The plan's table counts the
+         * journey, not the way to it.
+         */
+        fun journey(name: String, planned: Int, setup: Navigation.() -> Unit = {}, walk: Navigation.() -> Unit) {
+            val nav = Navigation()
+            nav.setup()
+            val before = nav.taps
+            nav.walk()
+            val taps = nav.taps - before
+            step(taps, "$name — ${nav.location.place}${nav.location.stage?.let { " ▸ $it" } ?: ""}${nav.location.top?.let { " ▸ ${it.label}" } ?: ""}")
+            if (taps > planned) {
+                finding("J11-$name", "the plan counted $planned navigations for '$name'; the model walked $taps")
+            } else {
+                note("$taps navigations, plan allows $planned")
+            }
+        }
+
+        journey("capture, cut, pads, out", planned = 4) {
+            go(Place.TAPE)
+            stage(Stage.CUT) // KEEP moves the stage
+            take(Door(Places.DOOR_PADS, Location(Place.PROJECT, Stage.PADS))) // SEND TO PADS lands
+            take(Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT))) // the dock's standing door
+        }
+        journey("treat a pad while the beat plays", planned = 2, setup = { go(Place.PROJECT); stage(Stage.BEAT) }) {
+            // dock ▶ is the DockModel's transport, not a navigation; the beat keeps playing
+            stage(Stage.PADS)
+            pads.selectedSlot = 2 // tap: selects and plays, no navigation
+            open(Bench.PAD_SHEET) // OPEN ▸ on the strip
+            pads.openBox = PadSheetBoxes.Box.TREATMENT
+        }
+        journey("export the project as a session", planned = 2) {
+            go(Place.PROJECT)
+            stage(Stage.OUT)
+        }
+        // The gear opens a two-row sheet (SETUP ▸, HELP ▸) that is not a
+        // navigation; HELP is. One navigation here is two taps on the phone,
+        // which is what the plan's "2" counts.
+        journey("reach HELP from a pad bench", planned = 1, setup = { go(Place.PROJECT); open(Bench.PAD_SHEET) }) {
+            open(Bench.HELP) // the gear, from anywhere
+        }
+        journey("tune a synth, hear it, tune again", planned = 4, setup = { go(Place.MAKE); open(Bench.SYNTH) }) {
+            make.settings(Bench.SYNTH)["engine"] = "RESIN"
+            go(Place.PROJECT) // hear the pad
+            go(Place.MAKE) // back to the lab, settings kept
+            open(Bench.SYNTH)
+            check(make.settings(Bench.SYNTH)["engine"] == "RESIN")
+        }
+        val dock = DockModel()
+        dock.offer("THE PADS ARE LOADED. TAKE THE KIT OUT.", Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT)))
+        dock.say("DUSTED A02.")
+        note("the dock's door survives a plain line: '${dock.now.text}' still offers ${dock.now.door?.label} — J10's timed offer retires")
     }
 
     // ================================================================
