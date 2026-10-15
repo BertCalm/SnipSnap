@@ -866,6 +866,23 @@ tasks.register<JavaExec>("generateTesseraAudition") {
     else if (project.hasProperty("tesseraQuick")) args("--quick")
 }
 
+/** Compare a committed material proposal with an explicitly supplied published audition. */
+tasks.register<JavaExec>("generateTesseraMaterialComparison") {
+    group = "distribution"
+    description = "Render 12 controlled Tessera before/after pairs; requires -PtesseraComparisonBaseline=/absolute/path/to/published-audition."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TesseraMaterialComparisonGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tessera-material-comparison", "--source-dir=${rootDir}")
+    providers.gradleProperty("tesseraComparisonBaseline").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("tesseraComparisonBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
+    doFirst {
+        require(project.hasProperty("tesseraComparisonBaseline")) {
+            "Set -PtesseraComparisonBaseline=/absolute/path/to/published-audition."
+        }
+    }
+}
+
 /** Render Pitchwheel's provisional dry voices, causal probes and settled held loops. */
 tasks.register<JavaExec>("generatePitchwheelAudition") {
     group = "distribution"
