@@ -5,8 +5,13 @@ object PrismPresets {
     private fun p(voice: PrismVoice, name: String, vararg macros: Pair<String, Float>) =
         PrismPatch(name, voice, Prism.defaults(voice) + macros.toMap())
 
-    private data class Entry(val patch: PrismPatch, val role: String)
-    private fun e(role: String, patch: PrismPatch) = Entry(patch, role)
+    private val roles = linkedMapOf<String, String>()
+
+    /** Returns a plain patch so promoted `p(...)` recipes can also be pasted directly into the table. */
+    private fun e(role: String, patch: PrismPatch): PrismPatch {
+        roles[patch.name] = role
+        return patch
+    }
 
     /** A complete bank is deliberate: unspecified high partials must not return through template defaults. */
     private fun partials(vararg levels: Float): List<Float> =
@@ -108,7 +113,7 @@ object PrismPresets {
         PrismGroupProfile(1.4f, .45f, .03f, 3, .15f),
     )
 
-    private val entries = listOf(
+    private val presets: List<PrismPatch> = listOf(
         // Compatibility: keep these eight recipes and their relative order unchanged.
         e("A rounded, gentle key for soft chords and unhurried melodies.",
             p(PrismVoice.KEY, "Soft Facets", "GRAIN" to .22f, "DRIFT" to .28f, "STRIKE" to .25f, "BODY" to .68f)),
@@ -275,9 +280,7 @@ object PrismPresets {
                     scale = { n -> when (n) { 1 -> 1f; 2 -> .18f; 3 -> .92f; 4 -> .20f; 5 -> .48f; 6 -> .38f; else -> .25f } }))),
     )
 
-    private val presets = entries.map { it.patch }
-
     fun forVoice(voice: PrismVoice): List<PrismPatch> = presets.filter { it.voice == voice }
     fun all(): List<PrismPatch> = presets
-    fun descriptionFor(name: String): String? = entries.firstOrNull { it.patch.name == name }?.role
+    fun descriptionFor(name: String): String? = roles[name]
 }
