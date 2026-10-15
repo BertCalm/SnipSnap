@@ -24,9 +24,11 @@ class SkitterAgitationTest {
             val gaps = events.zipWithNext { a, b -> b.seconds - a.seconds }
             assertTrue(gaps.all { it >= MIN_GAP_SECONDS - TRACE_SECONDS - 1e-6 }, "$voice refractory gaps $gaps")
             assertTrue(gaps.max() - gaps.min() > .020, "$voice still has a regular gesture clock: $gaps")
-            assertTrue(median(gaps) < .200, "$voice departures still move at the old slow cadence: $gaps")
+            // Replies and breaths deliberately skew the median; preserve R2's overall reaction
+            // rate with the same 200ms bar on mean spacing. Phrasing tests check the two scales.
+            assertTrue(gaps.average() < .200, "$voice departures still move at the old slow overall cadence: $gaps")
             assertVariedDepartures(repeated, "$voice finite")
-            println("$voice finite: ${events.size} gestures; gaps ${gaps.min()}..${gaps.max()}, median ${median(gaps)}, strength ratio ${strengthRatio(repeated)}")
+            println("$voice finite: ${events.size} gestures; gaps ${gaps.min()}..${gaps.max()}, mean ${gaps.average()}, median ${median(gaps)}, strength ratio ${strengthRatio(repeated)}")
         }
     }
 
@@ -36,7 +38,7 @@ class SkitterAgitationTest {
             val rendered = Skitter.renderProbe(voice, active(voice, held = true), midi = 57, seed = 917)
             val period = rendered.loopStart.toDouble() / Dsp.RATE
             val events = events(rendered)
-            val schedule = Skitter.heldGestureSchedule(.9f.toDouble(), Dsp.seedFor("SKITTER", voice.name, 57, 917), rendered.loopStart)
+            val schedule = Skitter.heldGestureSchedule(.9f.toDouble(), Dsp.seedFor("SKITTER", voice.name, 57, 917), rendered.loopStart, voice)
             assertEquals(schedule.size, events.size, "$voice held schedule is absent from the rendered offsets")
             assertEquals(schedule.size * 2, rendered.diagnostics.gestureCount, "$voice held diagnostic count")
             for ((planned, observed) in schedule.zip(events)) {
@@ -106,7 +108,7 @@ class SkitterAgitationTest {
         val minimumFrames = ceil(Dsp.RATE * MIN_GAP_SECONDS).toInt()
         val periods = listOf(minimumFrames * 2, minimumFrames * 3, (Dsp.RATE * .85).roundToInt(), Dsp.RATE, (Dsp.RATE * 1.15).roundToInt())
         for (frames in periods) for (amount in listOf(.02, .3, .7, 1.0)) for (seed in listOf(0, 1, 19, 917, Int.MIN_VALUE, Int.MAX_VALUE)) {
-            val schedule = Skitter.heldGestureSchedule(amount, seed, frames)
+            val schedule = Skitter.heldGestureSchedule(amount, seed, frames, SkitterVoice.FLUTTER)
             val label = "$frames frames, SKITTER $amount, seed $seed"
             assertTrue(schedule.size >= 2, "$label lacks a repeating episode")
             assertEquals(0, schedule.first().frame, "$label missing the boundary gesture")
@@ -114,7 +116,7 @@ class SkitterAgitationTest {
             val gaps = schedule.zipWithNext { a, b -> b.frame - a.frame } + (frames - schedule.last().frame)
             assertTrue(gaps.all { it >= minimumFrames }, "$label has a too-short gap, including wrap: $gaps")
         }
-        assertTrue(Skitter.heldGestureSchedule(0.0, 917, Dsp.RATE).isEmpty(), "SKITTER zero schedules departures")
+        assertTrue(Skitter.heldGestureSchedule(0.0, 917, Dsp.RATE, SkitterVoice.FLUTTER).isEmpty(), "SKITTER zero schedules departures")
     }
 
     private data class Event(val seconds: Double, val impulse: Double)

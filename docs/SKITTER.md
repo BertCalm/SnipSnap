@@ -6,6 +6,51 @@ multimode filter. History and flutter are new proposals, not a reconstruction of
 the historical circuit. The [supplied specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
 is retained alongside this implementation.
 
+## Phrase listening revision (R3)
+
+R2 is the accepted baseline for this pass. R3 organizes its gestures into a
+primary response, one or two softer replies, and a brief breathing gap. Pairs
+are gentler in BASS/HOLLOW; the more reactive voices allow stronger replies
+and more groups of three. Reply strength follows its own primary rather than
+an unrelated random hit. Phrase choices have a separate deterministic seed
+stream from oscillator departures and noise.
+
+This redistributes the gesture cadence while keeping R2's quick flutter,
+recovery times, pitch phase budget and source sound. Recent circuit energy and
+agitation can shift a finite phrase's breath, gated by AGITATE. Held phrases
+replay exactly; every gap, including the wrap, reserves the 8 Hz refractory
+interval before the remaining period is allocated to close replies and breaths.
+
+The audition opens with nine matched R2/R3 pairs and retains the earlier nine
+R1/R2 pairs in a second comparison bench. Both benches share the same frozen
+R2 recordings. Every pair keeps its macros, note, velocity, seed and render
+settings; prior revisions are archival snapshots with exact WAV checksums.
+Only R3 source patches are claimed to replay through the current renderer.
+
+All 29 focused engine, patch, agitation and phrasing tests pass. Rendered
+high-SKITTER traces show 125 ms replies and mean breathing gaps of 243–281 ms;
+the slowest overall mean event gap is 174 ms. Held replies produce agitation
+peaks 28–66% of their primary, with a still softer third response. The existing
+cadence check keeps its 200 ms limit on mean spacing; the new tests separately
+require close replies, longer breaths and bounded reply strength.
+
+The 144-case default/moderate pitch study retains all pitch/body limits. Its
+72 moderate cases stay within 1.451 cents, with confidence at least .850,
+pre-release sustain ratio at least .926, onset flatness at most .0852 and body
+flatness at most .0383. These are stability and behavior checks; the matched
+recordings remain the owner's listening gate.
+
+The complete R3 pack contains 319 current variants, 975 current PCM24 WAVs and
+22 frozen comparison WAVs. All 18 held clips converge within three periods;
+maximum state error is `3.66e-10` and maximum exported PCM24 seam error is
+`3.46e-14`. No render hits an emergency bound. On the Linux environment
+described below, finite render time is 255 ms at the 95th percentile and the
+slowest held render is 514 ms. Independent hosted decoding restores all 997
+WAVs byte-for-byte and validates 1,756 references and both provenance chains.
+Chromium plays all 36 comparison sides and eight held-seam demonstrations;
+download hashes, comparison level locks, historical labels and layouts at
+1440, 390 and 320 pixels pass.
+
 ## Agitation listening revision (R2)
 
 The first listening feedback described the motion as a mechanical police-siren
@@ -25,7 +70,7 @@ noise feed intact. FRAY anchors its pitch more tightly so its torn character
 comes primarily from the reactive filter. A small minimum ceiling preserves
 subtle departures in the upper register.
 
-The audition opens with nine R1/R2 comparisons at the same note, velocity, seed
+The original R2 audition supplied nine R1/R2 comparisons at the same note, velocity, seed
 and shared matched-level target. They cover all six defaults, NERVOUS WIRE and
 held FLUTTER/FRAY. The R1 sides are immutable render snapshots with SHA-256
 provenance; their archived patch recipes describe the inputs but the current
@@ -160,10 +205,12 @@ labels alone do not establish sonic acceptance.
 Run `./gradlew --no-daemon test` for the JVM gate and
 `./gradlew :synth:generateSkitterAudition` for the full listening artifact.
 `-Pquick` selects a smaller development pack. Add
-`-PskitterBaseline=/absolute/path/to/skitter-r1-baseline` to include the preserved
-R1/R2 comparisons. The baseline directory contains its manifest, original
-render assets and SHA-256 inventory; the generator verifies it before copying
-the selected matched snapshots, patches and traces. The
+`-PskitterBaseline=/absolute/path/to/skitter-r2-baseline` to include the preserved
+R2/R3 comparisons. Add `-PskitterPrevious=/absolute/path/to/skitter-r1-baseline`
+to retain R1/R2 beside them. Each baseline directory contains its manifest,
+original render assets and SHA-256 inventory; the generator verifies these
+before copying selected matched snapshots, patches and traces. R2 assets are
+copied once and shared by both benches. The
 [published private audition](https://skitter-snipsnap-audition.bertcalm.chatgpt.site)
 contains dry raw/native/matched playback, presets, registers and velocities,
 macro sweeps, interactions, common-gain causal comparisons, repeated exported
