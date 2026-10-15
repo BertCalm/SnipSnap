@@ -79,7 +79,7 @@ private const val EMPTY_ROOMS_BIN_ARM_MS = 3_000L
 /**
  * The SHELF (`docs/SCREEN_PLAN_2026_10.md` §3.1): the library. The
  * projects at the top — one row each, and NEW PROJECT ▸ — then every kit
- * folder on the device, the instruments, the rooms, plus the NEW KIT ▸
+ * folder on the device, the rooms, plus the NEW KIT ▸
  * PICK A STARTER menu (the cold-start answer — the shelf is never
  * uselessly empty when starter kits are one tap away). Projects and kits
  * are two headed lists on one page, not two tabs: a kit is one of a
@@ -96,10 +96,8 @@ fun KitsScreen(
     onOpenProject: (ShelfModel.ProjectRow) -> Unit,
     /** NEW PROJECT ▸: an empty project, opened. */
     onNewProject: () -> Unit,
-    instruments: List<KitShelf.InstrumentEntry>,
     busy: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
-    onOpenInstrument: (KitShelf.InstrumentEntry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
     /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
     onBackup: () -> Unit,
@@ -143,7 +141,7 @@ fun KitsScreen(
      * adds it and returns. `App` owns what adding means.
      */
     addingTo: String? = null,
-    /** ROOMS (YY5): what OUTSIDE measured and kept, beside the instruments; hold one to forget it into the bin. */
+    /** ROOMS (YY5): what OUTSIDE measured and kept, beside the kits; hold one to forget it into the bin. */
     rooms: List<Rooms.Room> = emptyList(),
     onForgetRoom: (Rooms.Room) -> Unit = {},
     /** SHARE on a room row: packed as one `.snip-room` and handed to the chooser. */
@@ -386,7 +384,7 @@ fun KitsScreen(
                 TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             }
 
-            if (kits.isEmpty() && instruments.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
+            if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -513,15 +511,8 @@ fun KitsScreen(
                     item(key = "kits-note") {
                         TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
                     }
-                    // INSTRUMENTS: what MAKE INSTRUMENT and MAKE PAD left beside the kits, playable on KEYS.
-                    if (instruments.isNotEmpty()) {
-                        item(key = "instruments-header") {
-                            TapeText("INSTRUMENTS · PLAY THEM ON KEYS", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
-                        }
-                        items(instruments, key = { "instrument:" + it.sidecar.name }) { entry ->
-                            InstrumentRow(entry, onOpenInstrument)
-                        }
-                    }
+                    // INSTRUMENTS left for MAKE ▸ INSTRUMENTS (plan §3.6): they are
+                    // what MAKE made, and the list is where you find them.
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
@@ -724,27 +715,6 @@ private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (Shelf
             TapeText(facts, TapeType.pixelSmall, scheme.ink2.tape)
         }
         TapeText("OPEN ▸", TapeType.pixelSmall, scheme.ink2.tape)
-    }
-}
-
-@Composable
-private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.InstrumentEntry) -> Unit) {
-    val scheme = LocalScheme.current
-    val i = entry.instrument
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .raisedBevel(scheme)
-            .tapeClick(label = "OPEN ${i.name.uppercase()}") { onOpen(entry) }
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            TapeText(i.name, TapeType.markerBig, scheme.ink.tape)
-            val looped = if (i.zones.any { it.loopStartFrame > 0 }) "  ·  HOLDS" else ""
-            TapeText("${i.zones.size} ${if (i.zones.size == 1) "ZONE" else "ZONES"}  ·  ROOT ${com.snipsnap.shell.KeysLayout.label(i.rootNote)}$looped", TapeType.pixelSmall, scheme.ink2.tape)
-        }
-        TapeText("KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
 

@@ -85,6 +85,25 @@ import kotlinx.coroutines.withContext
  */
 private enum class Panel { VOICE, SHAPE, MOD }
 
+// The keys SURFACE writes into its MAKE bag (`SurfaceScreen`'s `settings`
+// parameter, §3.6): the player's unkeyed work, so leaving to hear a pad
+// and coming back finds the lab where it was left. Values are names and
+// small ints as text; the voice, corners, grain, swarm, KEY, ECHO and MOD
+// assignments are not here because they already live in the kit's
+// surface.json and come back with the kit.
+private const val KEY_MODE = "mode"
+private const val KEY_PANEL = "panel"
+private const val KEY_PRINT_TO_PAD = "printToPad"
+private const val KEY_BARS = "bars"
+private const val KEY_GRAIN_KNOB = "grainKnob"
+private const val KEY_SWARM_KNOB = "swarmKnob"
+private const val KEY_MOD_SLOT = "modSlot"
+private const val KEY_MOD_FIELD = "modField"
+
+/** The bag's int at [key], or [fallback] when it is absent, unparseable or outside [0, [size]) - a stale bag never throws or indexes out of range. */
+private fun MutableMap<String, String>.indexAt(key: String, size: Int, fallback: Int): Int =
+    this[key]?.toIntOrNull()?.takeIf { it in 0 until size } ?: fallback
+
 /** GRAIN's three knobs, in the order its row's own button cycles them - each an index into `SurfaceStore.Grain`'s fields below. */
 private val GRAIN_KNOBS = listOf("SIZE", "DENSITY", "SPRAY")
 
@@ -254,6 +273,21 @@ fun SurfaceScreen(
     onPrinted: () -> Unit,
     /** The print landed on a pad: the kit changed on disk, the shelf should know. */
     onKitUpdated: (Kit) -> Unit,
+    /**
+     * This lab's bag in the navigation model's MAKE state
+     * (`MakeState.settings(Bench.SURFACE)`, §3.6): it outlives this
+     * composable, so what the player chose here survives a trip to hear a
+     * pad. Not Compose state - the vars below stay the live state, seeded
+     * from it when the screen composes and written back to it when they
+     * change. Keys, all text: `mode` (a [Mode] name, default XY), `panel`
+     * (VOICE / SHAPE / MOD, default VOICE), `printToPad` ("true" for → PAD,
+     * default → TAPE), `bars` (the BARS index into [PrintLength.BARS],
+     * default 0 = FREE), and the row picks `grainKnob`, `swarmKnob`,
+     * `modSlot`, `modField` (indices, default 0). The kit's own sound is
+     * not in it: that is `surface.json`. Anything absent or unreadable
+     * falls back to the default.
+     */
+    settings: MutableMap<String, String> = mutableMapOf(),
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -261,7 +295,8 @@ fun SurfaceScreen(
 
     val engine = remember { SurfaceEngine(deviceSampleRate(context)) }
     val tilt = remember { TiltSource(context) }
-    var mode by remember { mutableStateOf(Mode.XY) }
+    var mode by remember { mutableStateOf(Mode.entries.firstOrNull { it.name == settings[KEY_MODE] } ?: Mode.XY) }
+    LaunchedEffect(mode) { settings[KEY_MODE] = mode.name }
     var target by remember { mutableStateOf(Reading.REST) }
     var painted by remember { mutableStateOf(Reading.REST) }
     // `tilt.tilt` is a plain `@Volatile var` on `TiltSource`, not Compose
@@ -303,7 +338,7 @@ fun SurfaceScreen(
     var pad2Generation by remember { mutableStateOf(0) }
     var pad3Generation by remember { mutableStateOf(0) }
     var pad4Generation by remember { mutableStateOf(0) }
-    var settings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
+    var kitSettings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
     // Which corner PRESET ◄ ► targets - armed by its own ARM A..D row, a
     // separate gesture from SET A..D (which always captures the live
     // touch): arming only picks a target, it never itself changes a
@@ -317,12 +352,12 @@ fun SurfaceScreen(
     var presetIndexB by remember { mutableStateOf<Int?>(null) }
     var presetIndexC by remember { mutableStateOf<Int?>(null) }
     var presetIndexD by remember { mutableStateOf<Int?>(null) }
-    // The kit `settings` (and so its `corners`) actually belong to - null
+    // The kit `kitSettings` (and so its `corners`) actually belong to - null
     // while LaunchedEffect(entry) below is still loading a kit's
     // surface.json. setCorner/stepPreset both refuse to persist while this
     // disagrees with the current entry, so a fast SET/PRESET press landing
     // in that window can't write the outgoing kit's other corners into the
-    // incoming kit's surface.json (Copilot review, PR #195) - `settings`
+    // incoming kit's surface.json (Copilot review, PR #195) - `kitSettings`
     // itself, not just armedCorner/presetIndex*, is stale until this is set.
     var settingsLoadedFor by remember { mutableStateOf<File?>(null) }
     // The frame loop's arithmetic lives in `SurfaceLoop` (`:shell`, tested):
@@ -332,16 +367,21 @@ fun SurfaceScreen(
     // it hands back what to play and what happened.
     val loop = remember { SurfaceLoop() }
     var printing by remember { mutableStateOf(false) }
-    var printToPad by remember { mutableStateOf(false) }
+    var printToPad by remember { mutableStateOf(settings[KEY_PRINT_TO_PAD] == "true") }
+    LaunchedEffect(printToPad) { settings[KEY_PRINT_TO_PAD] = printToPad.toString() }
     var latched by remember { mutableStateOf(false) }
     /** Index into PrintLength.BARS; 0 = FREE. */
-    var barsIndex by remember { mutableStateOf(0) }
-    /** Which [Panel] of controls is showing above the pad; a pick, not a sound, so not persisted - same as armedCorner. */
-    var panel by remember { mutableStateOf(Panel.VOICE) }
-    /** Which of [GRAIN_KNOBS] the GRAIN row's ◄ ► currently step; a pick, not a sound, so not persisted - same as armedCorner. */
-    var grainKnob by remember { mutableStateOf(0) }
+    var barsIndex by remember { mutableStateOf(settings.indexAt(KEY_BARS, PrintLength.BARS.size, 0)) }
+    LaunchedEffect(barsIndex) { settings[KEY_BARS] = barsIndex.toString() }
+    /** Which [Panel] of controls is showing above the pad; a pick, not a sound, so not in surface.json (armedCorner is not kept at all) - but held in the MAKE bag (§3.6), so the lab comes back on the same panel. */
+    var panel by remember { mutableStateOf(Panel.entries.firstOrNull { it.name == settings[KEY_PANEL] } ?: Panel.VOICE) }
+    LaunchedEffect(panel) { settings[KEY_PANEL] = panel.name }
+    /** Which of [GRAIN_KNOBS] the GRAIN row's ◄ ► currently step; a pick, not a sound, so not in surface.json - held in the MAKE bag (§3.6) like panel. */
+    var grainKnob by remember { mutableStateOf(settings.indexAt(KEY_GRAIN_KNOB, GRAIN_KNOBS.size, 0)) }
+    LaunchedEffect(grainKnob) { settings[KEY_GRAIN_KNOB] = grainKnob.toString() }
     /** Which of [SWARM_KNOBS] the SWARM row's ◄ ► step; a pick, like grainKnob. */
-    var swarmKnob by remember { mutableStateOf(0) }
+    var swarmKnob by remember { mutableStateOf(settings.indexAt(KEY_SWARM_KNOB, SWARM_KNOBS.size, 0)) }
+    LaunchedEffect(swarmKnob) { settings[KEY_SWARM_KNOB] = swarmKnob.toString() }
     // GESTURE's recording: REC arms, the next touch-down starts a recording
     // of gestureLength bars (BARS' own length when armed; FREE is one) in
     // the loop, which feeds it every frame and hands the gesture back when
@@ -351,9 +391,11 @@ fun SurfaceScreen(
     var gestureLength by remember { mutableStateOf(1) }
     var recording by remember { mutableStateOf(false) }
     var recordingBars by remember { mutableStateOf(0f) }
-    /** Which modulator (0 = MOD A) and which of its [MOD_FIELDS] the MOD row's ◄ ► step; picks, not sounds, so not persisted either. */
-    var modSlot by remember { mutableStateOf(0) }
-    var modField by remember { mutableStateOf(0) }
+    /** Which modulator (0 = MOD A) and which of its [MOD_FIELDS] the MOD row's ◄ ► step; picks, not sounds, so not in surface.json - held in the MAKE bag (§3.6) like panel. */
+    var modSlot by remember { mutableStateOf(settings.indexAt(KEY_MOD_SLOT, Modulator.SLOTS, 0)) }
+    LaunchedEffect(modSlot) { settings[KEY_MOD_SLOT] = modSlot.toString() }
+    var modField by remember { mutableStateOf(settings.indexAt(KEY_MOD_FIELD, MOD_FIELDS.size, 0)) }
+    LaunchedEffect(modField) { settings[KEY_MOD_FIELD] = modField.toString() }
     /** A finished print waiting for a pad to be chosen; the chooser shows while it is set. */
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
@@ -567,21 +609,21 @@ fun SurfaceScreen(
     }
 
     fun persist(dir: File, next: SurfaceStore.Settings) {
-        settings = next
+        kitSettings = next
         scope.launch {
-            // Write `settings` fresh here, not the `next` this call
+            // Write `kitSettings` fresh here, not the `next` this call
             // captured: two persist() calls close together (a fast PAD3
             // double-tap, say) each launch their own IO write, and those
             // can finish in either order - a write of its own captured
             // value could let an older call's write land on disk after a
             // newer one's and leave a stale choice there. By the time any
             // of these coroutines actually runs, every synchronous
-            // `settings = next` above it has already happened, so reading
-            // `settings` here means every one of them writes the same,
+            // `kitSettings = next` above it has already happened, so reading
+            // `kitSettings` here means every one of them writes the same,
             // latest content - the write order stops mattering.
-            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, settings) } }
+            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, kitSettings) } }
                 .onFailure {
-                    Log.e("SurfaceScreen", "persist: settings not saved", it)
+                    Log.e("SurfaceScreen", "persist: kitSettings not saved", it)
                     onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
                 }
         }
@@ -589,7 +631,7 @@ fun SurfaceScreen(
 
     LaunchedEffect(entry) {
         // Synchronous, before any suspension below: the moment `entry`
-        // changes, `settings` (and so armedCorner's targets) are for a kit
+        // changes, `kitSettings` (and so armedCorner's targets) are for a kit
         // that is no longer showing, so nothing may act on them until this
         // effect says otherwise. Resetting armedCorner/presetIndex* here
         // rather than only after the load below closes most of the window
@@ -634,18 +676,18 @@ fun SurfaceScreen(
         // The kit's surface settings first (a torn file is the defaults,
         // said aloud), then the pad they name, or the kit's lowest.
         val loaded = withContext(Dispatchers.IO) { runCatching { SurfaceStore.load(entry.dir) } }
-        settings = loaded.getOrElse {
+        kitSettings = loaded.getOrElse {
             onToast(Copy.SURFACE_SETTINGS_UNREADABLE)
             SurfaceStore.Settings.DEFAULT
         }
-        pushCorners(settings.corners)
-        engine.setGrain(settings.grain)
-        engine.setKeySnap(settings.keySnap)
-        engine.setSwarm(settings.swarm)
-        engine.setEchoTime(EchoTime.seconds(settings.echoTime, entry.kit.tempoBpm))
+        pushCorners(kitSettings.corners)
+        engine.setGrain(kitSettings.grain)
+        engine.setKeySnap(kitSettings.keySnap)
+        engine.setSwarm(kitSettings.swarm)
+        engine.setEchoTime(EchoTime.seconds(kitSettings.echoTime, entry.kit.tempoBpm))
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
-        val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
+        val pad = pads.firstOrNull { it.slot == kitSettings.padSlot } ?: pads.firstOrNull()
         if (pad == null) {
             padName = null
             padSlot = null
@@ -662,7 +704,7 @@ fun SurfaceScreen(
         // The second and third slots are optional - null unless a kit was
         // saved with one chosen, and never fall back to the kit's lowest
         // the way the first slot does.
-        val pad2 = pads.firstOrNull { it.slot == settings.secondPadSlot }
+        val pad2 = pads.firstOrNull { it.slot == kitSettings.secondPadSlot }
         if (pad2 == null) {
             padName2 = null
             padSlot2 = null
@@ -676,7 +718,7 @@ fun SurfaceScreen(
         } else {
             loadPad2(entry.dir, pad2, ++pad2Generation)
         }
-        val pad3 = pads.firstOrNull { it.slot == settings.thirdPadSlot }
+        val pad3 = pads.firstOrNull { it.slot == kitSettings.thirdPadSlot }
         if (pad3 == null) {
             padName3 = null
             padSlot3 = null
@@ -686,7 +728,7 @@ fun SurfaceScreen(
         } else {
             loadPad3(entry.dir, pad3, ++pad3Generation)
         }
-        val pad4 = pads.firstOrNull { it.slot == settings.fourthPadSlot }
+        val pad4 = pads.firstOrNull { it.slot == kitSettings.fourthPadSlot }
         if (pad4 == null) {
             padName4 = null
             padSlot4 = null
@@ -699,22 +741,22 @@ fun SurfaceScreen(
     }
 
     // PAD ◄ ►: the next pad by slot, wrapping; remembered in surface.json.
-    // The position steps from the *chosen* slot (settings, updated the
+    // The position steps from the *chosen* slot (kitSettings, updated the
     // moment a tap lands), not the loaded one (padSlot, updated when the
     // WAV has been read), so a run of quick taps advances once per tap.
     fun stepPad(delta: Int) {
         val dir = entry?.dir ?: return
-        // Refused while `settings` is still the outgoing kit's, like every
+        // Refused while `kitSettings` is still the outgoing kit's, like every
         // other press that persists (see settingsLoadedFor): a tap in the
         // reload window would write the chosen pad to disk and then be
         // reverted in memory by the load landing after it.
         if (settingsLoadedFor != dir) return
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
-        val chosen = settings.padSlot ?: padSlot
+        val chosen = kitSettings.padSlot ?: padSlot
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
-        persist(dir, settings.copy(padSlot = pad.slot))
+        persist(dir, kitSettings.copy(padSlot = pad.slot))
         // Choosing a pad ends EVERY BAR: the next bar would only take the
         // voice straight back.
         ringOnBar = false
@@ -726,12 +768,12 @@ fun SurfaceScreen(
     // button has picked, a twentieth at a time. Remembered in surface.json
     // like the pad and the corners, and shaping the very next grain - the
     // engine reads its knobs at trigger time, so there is nothing to wait
-    // for. Refused while `settings` is still the outgoing kit's, for the
+    // for. Refused while `kitSettings` is still the outgoing kit's, for the
     // same reason SET and PRESET are (see settingsLoadedFor).
     fun stepGrain(delta: Int) {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        val g = settings.grain
+        val g = kitSettings.grain
         fun nudged(v: Float) = (v + delta * GRAIN_STEP).coerceIn(0f, 1f)
         val next = when (grainKnob) {
             0 -> g.copy(size = nudged(g.size))
@@ -739,7 +781,7 @@ fun SurfaceScreen(
             else -> g.copy(spray = nudged(g.spray))
         }
         engine.setGrain(next)
-        persist(dir, settings.copy(grain = next))
+        persist(dir, kitSettings.copy(grain = next))
     }
 
     // SWARM ◄ ►: VOICES by one, DETUNE by a twentieth - GRAIN's row's own
@@ -749,68 +791,68 @@ fun SurfaceScreen(
     fun stepSwarm(delta: Int) {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        val w = settings.swarm
+        val w = kitSettings.swarm
         val next = when (swarmKnob) {
             0 -> w.copy(voices = (w.voices + delta).coerceIn(1, SurfaceStore.Swarm.MAX_VOICES))
             else -> w.copy(detune = (w.detune + delta * SWARM_DETUNE_STEP).coerceIn(0f, 1f))
         }
         engine.setSwarm(next)
-        persist(dir, settings.copy(swarm = next))
+        persist(dir, kitSettings.copy(swarm = next))
     }
 
     // KEY: the loop's pitch snapped to the kit's key, the way GRAIN's
     // always is - the same snap, in the engine, so a note the loop lands
     // on is a note the cloud would. Remembered in surface.json. Refused
-    // while `settings` is still the outgoing kit's, like SET and PRESET.
+    // while `kitSettings` is still the outgoing kit's, like SET and PRESET.
     fun toggleKeySnap() {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        val next = !settings.keySnap
+        val next = !kitSettings.keySnap
         engine.setKeySnap(next)
-        persist(dir, settings.copy(keySnap = next))
+        persist(dir, kitSettings.copy(keySnap = next))
     }
 
     // ECHO: the echo's time stepped round EchoTime's divisions - FREE,
     // then the note values - at the kit's tempo (no tempo runs at the
     // stand-in the modulators use). Remembered in surface.json, heard
     // within a control interval as a crossfade between the two times.
-    // Refused while `settings` is still the outgoing kit's, like KEY.
+    // Refused while `kitSettings` is still the outgoing kit's, like KEY.
     fun stepEchoTime() {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        val next = EchoTime.next(settings.echoTime)
+        val next = EchoTime.next(kitSettings.echoTime)
         engine.setEchoTime(EchoTime.seconds(next, entry?.kit?.tempoBpm))
-        persist(dir, settings.copy(echoTime = next))
+        persist(dir, kitSettings.copy(echoTime = next))
     }
 
     // MOD ◄ ►: steps the picked field of the picked modulator - TARGET
     // and SHAPE cycle their lists, RATE walks Modulator.RATES and stops
     // at the ends, DEPTH moves a twentieth. Nothing is sent to the engine
-    // here: the frame loop reads `settings.mods` every frame and sends the
+    // here: the frame loop reads `kitSettings.mods` every frame and sends the
     // offsets it works out, so a change is heard on the next frame.
     fun stepMod(delta: Int) {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        val slot = settings.mods[modSlot]
+        val slot = kitSettings.mods[modSlot]
         val next = when (modField) {
             0 -> slot.copy(target = Modulator.Target.entries[(slot.target.ordinal + delta).mod(Modulator.Target.entries.size)])
             1 -> slot.copy(shape = Modulator.Shape.entries[(slot.shape.ordinal + delta).mod(Modulator.Shape.entries.size)])
             2 -> slot.copy(rateIndex = (slot.rateIndex + delta).coerceIn(Modulator.RATES.indices))
             else -> slot.copy(depth = (slot.depth + delta * MOD_DEPTH_STEP).coerceIn(0f, 1f))
         }
-        val mods = settings.mods.toMutableList().also { it[modSlot] = next }
-        persist(dir, settings.copy(mods = mods))
+        val mods = kitSettings.mods.toMutableList().also { it[modSlot] = next }
+        persist(dir, kitSettings.copy(mods = mods))
         // Stepping onto a shape that listens, with nothing to listen to:
         // the shape is kept and the route is said, RING's own discipline.
         if (next.shape.followsRoom && !slot.shape.followsRoom && !MicSessionService.armed.value) onToast(Copy.FOLLOW_NOT_LISTENING)
         // Same discipline for a shape that plays a gesture the kit has not got.
-        if (next.shape.playsGesture && !slot.shape.playsGesture && settings.gesture == null) onToast(Copy.GESTURE_NONE)
+        if (next.shape.playsGesture && !slot.shape.playsGesture && kitSettings.gesture == null) onToast(Copy.GESTURE_NONE)
     }
 
     // REC on the GESTURE row: arm (or disarm) a recording of BARS' own
     // length - FREE is one bar - that the next touch-down starts; the
     // frame loop feeds it and keeps it. A recording in flight runs its
-    // length; REC does nothing to it. Refused while `settings` is still
+    // length; REC does nothing to it. Refused while `kitSettings` is still
     // the outgoing kit's, like SET and PRESET.
     fun armGesture() {
         val dir = entry?.dir ?: return
@@ -828,7 +870,7 @@ fun SurfaceScreen(
     fun clearGesture() {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        persist(dir, settings.copy(gesture = null))
+        persist(dir, kitSettings.copy(gesture = null))
         onToast(Copy.GESTURE_CLEARED)
     }
 
@@ -838,7 +880,7 @@ fun SurfaceScreen(
     fun keepGesture(gesture: Gesture) {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        persist(dir, settings.copy(gesture = gesture))
+        persist(dir, kitSettings.copy(gesture = gesture))
         onToast(Copy.gestureKept(gesture.bars))
     }
 
@@ -848,10 +890,10 @@ fun SurfaceScreen(
         if (settingsLoadedFor != dir) return  // the outgoing kit's settings - see stepPad
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
-        val chosen = settings.secondPadSlot ?: padSlot2
+        val chosen = kitSettings.secondPadSlot ?: padSlot2
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
-        persist(dir, settings.copy(secondPadSlot = pad.slot))
+        persist(dir, kitSettings.copy(secondPadSlot = pad.slot))
         val generation = ++pad2Generation
         scope.launch { loadPad2(dir, pad, generation) }
     }
@@ -862,10 +904,10 @@ fun SurfaceScreen(
         if (settingsLoadedFor != dir) return  // the outgoing kit's settings - see stepPad
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
-        val chosen = settings.thirdPadSlot ?: padSlot3
+        val chosen = kitSettings.thirdPadSlot ?: padSlot3
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
-        persist(dir, settings.copy(thirdPadSlot = pad.slot))
+        persist(dir, kitSettings.copy(thirdPadSlot = pad.slot))
         val generation = ++pad3Generation
         scope.launch { loadPad3(dir, pad, generation) }
     }
@@ -876,10 +918,10 @@ fun SurfaceScreen(
         if (settingsLoadedFor != dir) return  // the outgoing kit's settings - see stepPad
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
-        val chosen = settings.fourthPadSlot ?: padSlot4
+        val chosen = kitSettings.fourthPadSlot ?: padSlot4
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
-        persist(dir, settings.copy(fourthPadSlot = pad.slot))
+        persist(dir, kitSettings.copy(fourthPadSlot = pad.slot))
         val generation = ++pad4Generation
         scope.launch { loadPad4(dir, pad, generation) }
     }
@@ -903,15 +945,15 @@ fun SurfaceScreen(
     // SET A..D: the sound under the last touch becomes a morph corner.
     fun setCorner(index: Int) {
         val dir = entry?.dir ?: return
-        if (settingsLoadedFor != dir) return  // settings.corners is still the outgoing kit's - see settingsLoadedFor
+        if (settingsLoadedFor != dir) return  // kitSettings.corners is still the outgoing kit's - see settingsLoadedFor
         val held = loop.held ?: run {
             onToast(Copy.SURFACE_SET_NEEDS_TOUCH)
             return
         }
-        val corner = SurfaceStore.Corner.from(mode, held, tilt.tilt, settings.corners)
-        val corners = settings.corners.toMutableList().also { it[index] = corner }
+        val corner = SurfaceStore.Corner.from(mode, held, tilt.tilt, kitSettings.corners)
+        val corners = kitSettings.corners.toMutableList().also { it[index] = corner }
         pushCorners(corners)
-        persist(dir, settings.copy(corners = corners))
+        persist(dir, kitSettings.copy(corners = corners))
         // A captured corner is no longer whatever preset it may have been
         // stepped to before - clearing this corner's tracked position stops
         // the PRESET readout from going on claiming a name that no longer
@@ -926,7 +968,7 @@ fun SurfaceScreen(
     fun stepPreset(delta: Int) {
         val corner = armedCorner ?: return
         val dir = entry?.dir ?: return
-        if (settingsLoadedFor != dir) return  // settings.corners is still the outgoing kit's - see settingsLoadedFor
+        if (settingsLoadedFor != dir) return  // kitSettings.corners is still the outgoing kit's - see settingsLoadedFor
         val library = SurfaceStore.Corner.LIBRARY
         val at = presetIndexFor(corner)
         // A corner with no tracked position yet starts the stepper at
@@ -940,9 +982,9 @@ fun SurfaceScreen(
             ((at + delta) % library.size + library.size) % library.size
         }
         setPresetIndexFor(corner, next)
-        val corners = settings.corners.toMutableList().also { it[corner] = library[next].corner }
+        val corners = kitSettings.corners.toMutableList().also { it[corner] = library[next].corner }
         pushCorners(corners)
-        persist(dir, settings.copy(corners = corners))
+        persist(dir, kitSettings.copy(corners = corners))
     }
 
     // The print's landing, once: `finishing` guards the frame loop from
@@ -1074,8 +1116,8 @@ fun SurfaceScreen(
                     mode = mode,
                     target = target,
                     latched = latched,
-                    mods = settings.mods,
-                    gesture = settings.gesture,
+                    mods = kitSettings.mods,
+                    gesture = kitSettings.gesture,
                     bpm = kitBpm,
                     room = MicSessionService.level.value,
                     ringOnBar = ringOnBar,
@@ -1193,8 +1235,9 @@ fun SurfaceScreen(
             // triangle's other three); SHAPE is what the finger does to it
             // (the mode's knobs, the corners with what they are held to,
             // the presets); MOD is what moves on its own (the modulators,
-            // the gesture). A pick, not a sound, so not persisted - like
-            // grainKnob - and a mutually-exclusive row for TalkBack, like
+            // the gesture). A pick, not a sound, so not in surface.json -
+            // it rides the MAKE bag instead (§3.6) - and a
+            // mutually-exclusive row for TalkBack, like
             // the mode row above.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 for (p in Panel.entries) {
@@ -1330,7 +1373,7 @@ fun SurfaceScreen(
                             modifier = Modifier.weight(1.1f),
                         ) { grainKnob = (grainKnob + 1) % GRAIN_KNOBS.size }
                         ActionButton("◄", scheme, enabled = padName != null) { stepGrain(-1) }
-                        val g = settings.grain
+                        val g = kitSettings.grain
                         TapeText(
                             "SIZE ${pct(g.size)}  DENS ${pct(g.density)}  SPRAY ${pct(g.spray)}",
                             TapeType.pixel,
@@ -1357,7 +1400,7 @@ fun SurfaceScreen(
                             modifier = Modifier.weight(1.1f),
                         ) { swarmKnob = (swarmKnob + 1) % SWARM_KNOBS.size }
                         ActionButton("◄", scheme, enabled = padName != null) { stepSwarm(-1) }
-                        val w = settings.swarm
+                        val w = kitSettings.swarm
                         TapeText(
                             "SWARM ${w.voices} ${if (w.voices == 1) "VOICE" else "VOICES"}  DETUNE ${pct(w.detune)}",
                             TapeType.pixel,
@@ -1387,15 +1430,15 @@ fun SurfaceScreen(
                         "KEY",
                         scheme,
                         enabled = padName != null,
-                        dimmed = !settings.keySnap,
-                        modifier = Modifier.weight(1f).semantics { selected = settings.keySnap },
+                        dimmed = !kitSettings.keySnap,
+                        modifier = Modifier.weight(1f).semantics { selected = kitSettings.keySnap },
                     ) { toggleKeySnap() }
                     // ECHO, on the same row for the same reason: the echo's
                     // time held to the kit's bar (see stepEchoTime), lit and
                     // naming the note value while it is, dimmed while free.
-                    val echoSynced = settings.echoTime != EchoTime.FREE_INDEX
+                    val echoSynced = kitSettings.echoTime != EchoTime.FREE_INDEX
                     ActionButton(
-                        "ECHO ${EchoTime.label(settings.echoTime)}",
+                        "ECHO ${EchoTime.label(kitSettings.echoTime)}",
                         scheme,
                         enabled = padName != null,
                         dimmed = !echoSynced,
@@ -1450,7 +1493,7 @@ fun SurfaceScreen(
                 // stepped is never a guess. A slot at 0% is listed, not hidden:
                 // the row is how you find out it is there to turn up.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val slot = settings.mods[modSlot]
+                    val slot = kitSettings.mods[modSlot]
                     ActionButton(
                         "MOD ${'A' + modSlot}",
                         scheme,
@@ -1468,7 +1511,7 @@ fun SurfaceScreen(
                         "${slot.target} ${slot.shape} ${
                             when {
                                 slot.shape.followsRoom -> "ROOM"
-                                slot.shape.playsGesture -> settings.gesture?.let { PrintLength.label(it.bars) } ?: "NONE"
+                                slot.shape.playsGesture -> kitSettings.gesture?.let { PrintLength.label(it.bars) } ?: "NONE"
                                 else -> Modulator.rateLabel(slot.rateIndex)
                             }
                         } ${pct(slot.depth)}",
@@ -1482,7 +1525,7 @@ fun SurfaceScreen(
                 // GESTURE's row, while a slot is on the shape, REC is armed or a
                 // recording runs (the ring row's pattern): REC, what the kit has
                 // or what is happening, CLEAR.
-                if (recording || gestureArmed || settings.mods.any { it.shape.playsGesture }) {
+                if (recording || gestureArmed || kitSettings.mods.any { it.shape.playsGesture }) {
                     Spacer(Modifier.height(6.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1493,7 +1536,7 @@ fun SurfaceScreen(
                             dimmed = !(gestureArmed || recording),
                             modifier = Modifier.weight(1f).semantics { selected = gestureArmed || recording },
                         ) { armGesture() }
-                        val kept = settings.gesture
+                        val kept = kitSettings.gesture
                         TapeText(
                             when {
                                 recording -> "RECORDING %.1f OF %d BARS".format(java.util.Locale.ROOT, recordingBars.coerceIn(0f, gestureLength.toFloat()), gestureLength)
@@ -1505,7 +1548,7 @@ fun SurfaceScreen(
                             scheme.ink.tape,
                             Modifier.weight(2.2f).padding(horizontal = 4.dp),
                         )
-                        ActionButton("CLEAR", scheme, enabled = settings.gesture != null && !recording, modifier = Modifier.weight(1f)) { clearGesture() }
+                        ActionButton("CLEAR", scheme, enabled = kitSettings.gesture != null && !recording, modifier = Modifier.weight(1f)) { clearGesture() }
                     }
                 }
             }
@@ -1666,7 +1709,7 @@ fun SurfaceScreen(
                 // note actually landed on is the engine's to know
                 // (Grain.h); this line names the rule, not a second copy
                 // of its answer.
-                if (mode == Mode.GRAIN || settings.keySnap) append("  KEY ").append(entry?.kit?.key?.label?.uppercase() ?: "NONE")
+                if (mode == Mode.GRAIN || kitSettings.keySnap) append("  KEY ").append(entry?.kit?.key?.label?.uppercase() ?: "NONE")
                 // `tiltReading`, not `tilt.tilt` directly - see its own
                 // declaration for why (Copilot review): this line is only
                 // ever redrawn when something the enclosing recomposition
