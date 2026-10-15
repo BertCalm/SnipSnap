@@ -4,6 +4,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
@@ -79,7 +80,7 @@ data class SkitterRender(
  * double precision, with positive damping and a delayed, dissipative nonlinear feedback
  * branch. No completed signal is clipped to make the model stable.
  *
- * HOLD's approximation is explicit: gestures replay a periodic, alternating schedule,
+ * HOLD's approximation is explicit: gestures replay a seeded, irregular periodic schedule,
  * stochastic forcing is reduced to 70%, and noise repeats a smoothly interpolated seeded
  * sequence. Both oscillators' frequency integrals fit whole cycles, preserving the requested
  * root within a fraction of a cent. Every remaining recursive state must converge under
@@ -108,15 +109,17 @@ object Skitter {
         val cutoffRatio: Double, val damping: Double, val flutterHz: Double,
         val recoveryA: Double, val recoveryB: Double,
         val historyRelease: Double, val support: Double, val interval: Double = 1.0,
+        val phaseTravel: Double = 1.0,
     )
 
     private fun shape(v: SkitterVoice): Shape = when (v) {
-        SkitterVoice.BASS -> Shape(floatArrayOf(.40f,.20f,.30f,.10f,.05f), 1.30,.45,.012, 5.5,.95,7.0,.035,.19,.14,.065)
-        SkitterVoice.LEAD -> Shape(floatArrayOf(.70f,.45f,.45f,.25f,.10f), 1.85,.48,.009, 9.0,.80,13.0,.028,.16,.18,.085)
-        SkitterVoice.HOLLOW -> Shape(floatArrayOf(.35f,.30f,.25f,.50f,.10f), 2.0,.62,.018, 3.2,.70,6.5,.055,.24,.22,.09,2.0)
-        SkitterVoice.FLUTTER -> Shape(floatArrayOf(.55f,.55f,.70f,.40f,.20f), 2.05,.68,.013, 6.4,.74,17.0,.025,.19,.24,.09)
-        SkitterVoice.CHIRP -> Shape(floatArrayOf(.50f,.25f,.65f,.65f,.35f), 1.45,.56,.012, 3.6,.62,22.0,.038,.21,.16,.11)
-        SkitterVoice.FRAY -> Shape(floatArrayOf(.85f,.65f,.85f,.45f,.60f), 2.10,.70,.016, 7.4,.72,26.0,.024,.14,.30,.10)
+        SkitterVoice.BASS -> Shape(floatArrayOf(.40f,.20f,.30f,.10f,.05f), 1.30,.45,.012, 5.5,.95,9.0,.028,.13,.14,.065)
+        SkitterVoice.LEAD -> Shape(floatArrayOf(.70f,.45f,.45f,.25f,.10f), 1.85,.48,.009, 9.0,.80,17.0,.022,.11,.18,.085)
+        SkitterVoice.HOLLOW -> Shape(floatArrayOf(.35f,.30f,.25f,.50f,.10f), 2.0,.62,.018, 3.2,.70,9.0,.044,.16,.22,.09,2.0)
+        SkitterVoice.FLUTTER -> Shape(floatArrayOf(.55f,.55f,.70f,.40f,.20f), 2.05,.68,.013, 6.4,.74,22.0,.020,.13,.24,.09)
+        SkitterVoice.CHIRP -> Shape(floatArrayOf(.50f,.25f,.65f,.65f,.35f), 1.45,.56,.012, 3.6,.62,28.0,.030,.14,.16,.11)
+        // Dense edges already provoke FRAY strongly; keep its irregular pitch gestures compact.
+        SkitterVoice.FRAY -> Shape(floatArrayOf(.85f,.65f,.85f,.45f,.60f), 2.10,.70,.016, 7.4,.72,33.0,.019,.10,.30,.10,phaseTravel=.25)
     }
 
     fun macrosFor(voice: SkitterVoice): List<MacroSpec> {
@@ -304,21 +307,101 @@ object Skitter {
     private data class Forcing(val a: FloatArray, val b: FloatArray, val gesture: FloatArray,
                                val noise: FloatArray, val correctionA: Double, val correctionB: Double, val events: Int)
 
-    /** Exact periodic recovery state from the last repeated, alternating impulses. */
+    /** Pitch impulses are relative to the bounded excursion, and [kick] drives the filter's recovery. */
+    internal data class GestureEvent(val frame: Int, val a: Double, val b: Double, val kick: Double)
+
+    private data class GestureShape(val a: Double, val b: Double, val kick: Double, val spacing: Double)
+
+    /**
+     * Four unequal departures balance over an episode, without a compulsory up/down pair.
+     * This structural variation uses its own seed stream; STATIC still owns noise excitation.
+     */
+    private class GestureSequence(seed: Int) {
+        private val random=Random(Dsp.seedFor("SKITTER-GESTURES",seed))
+        private var episode=DoubleArray(0)
+        private var index=0
+
+        fun next(): GestureShape {
+            if(index==episode.size) {
+                val signs=mutableListOf(1.0,1.0,-1.0,-1.0)
+                signs.shuffle(random)
+                if((1 until signs.size).all { signs[it]!=signs[it-1] }) {
+                    val swap=signs[0]; signs[0]=signs[1]; signs[1]=swap
+                }
+                episode=DoubleArray(4) { signs[it]*(.55+.40*random.nextDouble()) }
+                val mean=episode.sum()/episode.size
+                for(i in episode.indices) episode[i]-=mean
+                val scale=.90/episode.maxOf { abs(it) }
+                for(i in episode.indices) episode[i]*=scale
+                index=0
+            }
+            val a=episode[index++]
+            val b=-a*(.48+.22*random.nextDouble())
+            val kick=(.70+.30*random.nextDouble())*(if(random.nextBoolean()) 1.0 else -.55)
+            return GestureShape(a,b,kick,.76+.48*random.nextDouble())
+        }
+    }
+
+    /** The wrap gap is reserved before jitter is distributed, so it also respects the 8 Hz cap. */
+    internal fun heldGestureSchedule(skitter: Double, seed: Int, periodFrames: Int): List<GestureEvent> {
+        require(skitter.isFinite() && skitter in 0.0..1.0)
+        require(periodFrames>0)
+        if(skitter==0.0) return emptyList()
+        val minimumGap=ceil(RATE/MAX_GESTURE_RATE_HZ).toInt()
+        val maximumEvents=periodFrames/minimumGap
+        require(maximumEvents>=2) { "SKITTER held period is too short for two bounded gestures" }
+        val periodSeconds=periodFrames.toDouble()/RATE
+        val count=(periodSeconds/(.36-.20*skitter)).roundToInt().coerceIn(2,maximumEvents)
+        val sequence=GestureSequence(seed)
+        val shapes=List(count) { sequence.next() }
+        val slack=periodFrames-count*minimumGap
+        val weight=shapes.sumOf { it.spacing }
+        val gaps=IntArray(count) { minimumGap+(slack*shapes[it].spacing/weight).toInt() }
+        var remainder=periodFrames-gaps.sum()
+        var gap=0
+        while(remainder-->0) { gaps[gap%count]++; gap++ }
+        var frame=0
+        return shapes.mapIndexed { i,s ->
+            GestureEvent(frame,s.a,s.b,s.kick).also { frame+=gaps[i] }
+        }
+    }
+
+    private const val GESTURE_ATTACK_SECONDS=.007
+    private const val GESTURE_RECOVERY_SECONDS=.025
+    // Equal area: an energy impulse tears quickly, then recovers with a weaker opposite pull.
+    private const val GESTURE_RECOVERY_WEIGHT=GESTURE_ATTACK_SECONDS/GESTURE_RECOVERY_SECONDS
+
+    /**
+     * A cent departure moves farther through oscillator phase in a high register or during a
+     * slow recovery. Budget that relative travel, so irregular episodes remain quick tears
+     * instead of walking the pair into broad scoops and sustained cancellation. The budget
+     * grows with SKITTER; smooth saturation keeps every part of the control responsive.
+     * Velocity scales the bounded departure afterward, retaining its excitation contrast.
+     */
+    private fun excursionFor(skitter: Double, velocity: Double, hz: Double, s: Shape): Double {
+        val cents=9.0*skitter+170.0*skitter*skitter
+        val phaseBudget=(.055+.28*skitter*skitter)*s.phaseTravel
+        val relativeRecovery=s.recoveryA+.70*s.interval*s.recoveryB
+        // Keep a small perceptible departure even at the top of the supported register.
+        val ceiling=max(4.0,phaseBudget*1200.0/(ln(2.0)*hz*relativeRecovery))
+        return cents/sqrt(1.0+(cents/ceiling).pow(2.0))*(.55+.45*velocity)
+    }
+
+    /** Exact periodic recovery state from the complete seeded episode, including its previous periods. */
     private fun heldForcing(s: Shape, m: Map<String,Float>, velocity: Double, seed: Int, plan: LoopPlan,
                             oversample: Int, probe: SkitterProbe): Forcing {
         val frames=plan.frames*oversample; val rate=RATE*oversample
         val skitter=m.getValue("SKITTER").toDouble()
-        val events=if(skitter==0.0) 0 else if(skitter<.35) 2 else 2+2*(skitter*2.0).toInt()
-        val excursion=(9.0*skitter+170.0*skitter*skitter)*(.55+.45*velocity)
-        val times=IntArray(events) { it*frames/events }
+        val schedule=heldGestureSchedule(skitter,seed,plan.frames)
+        val excursion=excursionFor(skitter,velocity,plan.rootHz,s)
         val ra=s.recoveryA; val rb=if(probe.equalRecovery) ra else s.recoveryB
+        val periodSeconds=frames/rate.toDouble()
+        fun recovered(age: Double, tau: Double)=exp(-age/tau)/(1.0-exp(-periodSeconds/tau))
         fun offset(i: Int, tau: Double, second: Boolean): Double {
             var total=0.0
-            for(j in times.indices) {
-                val age=(i-times[j]+frames)%frames/rate.toDouble()
-                val sign=if(j%2==0) 1.0 else -1.0
-                total+=sign*excursion*(if(second) -.72 else 1.0)*exp(-age/tau)/(1.0-exp(-frames/rate.toDouble()/tau))
+            for(event in schedule) {
+                val age=(i-event.frame*oversample+frames)%frames/rate.toDouble()
+                total+=excursion*(if(second) event.b else event.a)*recovered(age,tau)
             }
             return total
         }
@@ -329,11 +412,15 @@ object Skitter {
             a[i]=offset(i,ra,false).toFloat(); b[i]=offset(i,rb,true).toFloat()
             sumA+=2.0.pow(a[i]/1200.0); sumB+=2.0.pow(b[i]/1200.0)
             var kick=0.0
-            for(t in times) { val age=(i-t+frames)%frames/rate.toDouble(); kick+=skitter*exp(-age/.019) }
+            for(event in schedule) {
+                val age=(i-event.frame*oversample+frames)%frames/rate.toDouble()
+                kick+=skitter*event.kick*(recovered(age,GESTURE_ATTACK_SECONDS)-
+                    GESTURE_RECOVERY_WEIGHT*recovered(age,GESTURE_RECOVERY_SECONDS))
+            }
             gesture[i]=kick.toFloat()
         }
         return Forcing(a,b,gesture,noise(plan.frames,Dsp.seedFor("SKITTER-NOISE",seed)),
-            frames/sumA,frames/sumB,events)
+            frames/sumA,frames/sumB,schedule.size)
     }
 
     // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
@@ -453,24 +540,36 @@ object Skitter {
             rawInternal=FloatArray(frames*oversample)
             val nse=noise(frames+2,Dsp.seedFor("SKITTER-NOISE",contextSeed))
             val ra=exp(-1.0/(rate*s.recoveryA)); val rb=exp(-1.0/(rate*(if(probe.equalRecovery) s.recoveryA else s.recoveryB)))
-            val gestureDecay=exp(-1.0/(rate*.019))
-            val excursion=(9.0*skitter+170.0*skitter*skitter)*(.55+.45*vel)
-            a=excursion; b=-.72*excursion; gesture=skitter; stats.gestures=if(skitter>0.0) 1 else 0
-            var nextGesture=.48-.29*skitter; var event=1; var armed=true
+            val gestureAttackDecay=exp(-1.0/(rate*GESTURE_ATTACK_SECONDS))
+            val gestureRecoveryDecay=exp(-1.0/(rate*GESTURE_RECOVERY_SECONDS))
+            val excursion=excursionFor(skitter,vel,hz,s)
+            a=excursion; b=-.65*excursion; stats.gestures=if(skitter>0.0) 1 else 0
+            var gestureAttack=skitter; var gestureRecovery=skitter
+            val sequence=GestureSequence(contextSeed)
+            var upcoming=sequence.next()
+            var nextGesture=max(1.0/MAX_GESTURE_RATE_HZ,(.34-.18*skitter)*upcoming.spacing)
+            var armed=true
             for(i in rawInternal.indices) {
                 if(i%8192==0) stopIfUnwanted()
                 val t=i.toDouble()/rate
                 if(skitter>.28 && t<gate-.12 && t>=nextGesture && armed) {
-                    val sign=if(event%2==0) 1.0 else -1.0
-                    a=(a+sign*excursion*.78).coerceIn(-PITCH_OFFSET_LIMIT_CENTS,PITCH_OFFSET_LIMIT_CENTS)
-                    b=(b-sign*excursion*.56).coerceIn(-PITCH_OFFSET_LIMIT_CENTS,PITCH_OFFSET_LIMIT_CENTS)
-                    gesture+=skitter*.75; stats.gestures++; event++; armed=false
+                    // Recent energy and agitation alter a bounded episode, rather than run a final LFO.
+                    val response=.85+.25*circuit.agitate*tanh(2.0*circuit.history+.5*abs(circuit.position))
+                    a+=upcoming.a*excursion
+                    b+=upcoming.b*excursion
+                    val kick=skitter*upcoming.kick*response
+                    gestureAttack+=kick; gestureRecovery+=kick
+                    stats.gestures++; armed=false
+                    upcoming=sequence.next()
                     nextGesture=t+max(1.0/MAX_GESTURE_RATE_HZ,
-                        (.48-.30*skitter)*(1.0-.16*abs(circuit.position)).coerceAtLeast(.75))
+                        (.36-.20*skitter)*upcoming.spacing*
+                            (1.0-circuit.agitate*(.10*tanh(2.0*circuit.position)+.08*tanh(3.0*circuit.history))))
                 }
                 // Explicit refractory/hysteresis guard; no agitation-driven event chatter.
-                if(!armed && gesture<.08 && t<nextGesture-.04) armed=true
-                a*=ra; b*=rb; gesture*=gestureDecay
+                if(!armed && max(abs(gestureAttack),abs(gestureRecovery))<.08 && t<nextGesture-.04) armed=true
+                a*=ra; b*=rb
+                gestureAttack*=gestureAttackDecay; gestureRecovery*=gestureRecoveryDecay
+                gesture=gestureAttack-GESTURE_RECOVERY_WEIGHT*gestureRecovery
                 val attack=1.0-exp(-t/s.attack)
                 val release=if(t<=gate) 1.0 else exp(-6.907755*(t-gate)/s.release)
                 // A little extra early energy provokes the circuit, then the powered source settles.

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#111511">
 <meta name="description" content="Audition Skitter in SnipSnap: six coupled circuit voices, 36 patches, macro probes and measured held loops. Real dry Kotlin renders.">
-<title>SKITTER — SnipSnap listening laboratory</title>
+<title>SKITTER R2 — SnipSnap listening laboratory</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 :root{color-scheme:dark;--bg:#111511;--surface:#191e18;--raised:#20261e;--line:#384133;--muted:#aeb7a5;--text:#f0f2e9;--acid:#d5f75a;--coral:#ff8f76;--mono:'DM Mono',monospace;--sans:'Space Grotesk',system-ui,sans-serif}
@@ -14,13 +14,15 @@
 @media(max-width:1050px){.wrap{padding:0 28px}.hero{gap:25px;min-height:340px}.specs{gap:20px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.player-inner{padding:14px 28px;gap:18px;grid-template-columns:minmax(170px,1fr) minmax(220px,1.3fr)}.player-options{grid-column:1/-1;justify-content:flex-end;margin-top:-6px}.footer{padding-bottom:166px}.topright{gap:15px}}
 @media(max-width:680px){.wrap{padding:0 19px}.top{height:71px}.topright .status{display:none}.hero{grid-template-columns:1fr;gap:29px;padding:37px 0 28px}.hero h2{font-size:20px}.hero p{font-size:14px}h1{font-size:clamp(72px,22vw,92px)}.wordmark .eyebrow{display:none}.circuit{aspect-ratio:2.1}.notice{padding:14px;gap:10px;display:block;font-size:12px}.notice .pill{display:inline-block;margin:0 0 7px}.notice{margin-bottom:20px}.tabs button{padding:13px 14px}.bench{padding-top:22px}.bench-top{align-items:flex-start;gap:12px}.bench-top h2{font-size:23px}.counter{font-size:9px;margin-top:8px}.filters .hint{display:none}.search{max-width:none;flex-basis:100%}.filters select{flex:1}.cards{grid-template-columns:1fr}.card p{min-height:0}.underbench{grid-template-columns:1fr;gap:24px}.footer{font-size:9px;flex-direction:column;gap:8px;padding-bottom:199px}.player-inner{padding:12px 19px;grid-template-columns:1fr;gap:10px}.now-meta{display:none}.player-options{grid-column:1;justify-content:space-between;margin:0}.player audio{height:34px}.player-options select{width:126px}.player .now-title{font-size:12px}.now-label{font-size:8px;display:inline;margin-right:8px}.now-title{display:inline}.group-heading{font-size:10px}.stop{font-size:10px}.wordmark{font-size:16px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+.revisiontag{font:9px var(--mono);letter-spacing:.05em;padding:3px 7px;border:1px solid;border-radius:3px;white-space:nowrap}.revisiontag.before{color:var(--coral);border-color:#ff8f7650}.revisiontag.after{color:var(--acid);border-color:#d5f75a50}.card .snapshot-note{min-height:0;font:10px/1.6 var(--mono);margin:9px 0 13px;color:var(--muted)}.comparison-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.comparison-provenance{font:11px var(--mono);color:var(--muted);margin:0}.comparison-cards .card p{min-height:0}@media(max-width:680px){.comparison-cards{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <a class="skip" href="#bench">Skip to listening bench</a>
 <div class="wrap">
 <header class="top"><a class="wordmark" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>SnipSnap <span class="eyebrow">/ sound laboratory</span></a><div class="topright"><span class="status">LISTENING VERDICT PENDING</span><button class="stop" id="stop" type="button"><i aria-hidden="true"></i>Stop all</button></div></header>
-<section class="hero" aria-labelledby="hero-title"><div><div class="edition"><span class="line" aria-hidden="true"></span><span class="eyebrow">Engine 28 · audition 01</span></div><h1 id="hero-title">SKITTER</h1><h2>A circuit with a memory.</h2><p>Sharp edges. Unequal returns. A filter that reacts to what came before. Explore six pitched voices from a quiet recovering bass to a frayed, restless sustain.</p><div class="specs"><div><b>06</b><span>VOICES</span></div><div><b>36</b><span>FACTORY PATCHES</span></div><div><b>4×</b><span>OVERSAMPLED</span></div></div></div>
+<section class="hero" aria-labelledby="hero-title"><div><div class="edition"><span class="line" aria-hidden="true"></span><span class="eyebrow">Engine 28 · audition 02</span></div><h1 id="hero-title">SKITTER</h1><h2>A circuit with a memory.</h2><p>Sharp edges. Unequal returns. A filter that reacts to what came before. Explore six pitched voices from a quiet recovering bass to a frayed, restless sustain.</p><div class="specs"><div><b>06</b><span>VOICES</span></div><div><b>36</b><span>FACTORY PATCHES</span></div><div><b>4×</b><span>OVERSAMPLED</span></div></div></div>
 <div class="circuit" role="img" aria-label="Diagram of oscillator edges and unequal pitch recovery feeding a filter with history and agitation feedback"><div class="circuit-head"><span>COUPLED CIRCUIT / DRY SIGNAL</span><span style="color:var(--coral)">● REACTIVE</span></div><svg viewBox="0 0 500 220" aria-hidden="true"><path class="wire" d="M30 75H160V110H320M30 155H160V110M320 110H460M345 130V185H210V130M210 185H95V165"/><path class="wave" d="M30 75l8-1 5-15 6 37 5-40 7 39 5-35 7 22 6-5h70"/><path class="wave warm" d="M30 155l8-1 6-13 7 26 6-20 7 12 9-4h76"/><rect x="179" y="85" width="72" height="49" rx="5" class="node"/><rect x="306" y="75" width="78" height="69" rx="5" class="node"/><path class="wave" d="M315 110c7-28 14 27 20 0s14 27 20 0 13 26 20-1M398 110l6-8 7 18 7-25 7 29 6-19 7 6h22"/><circle cx="210" cy="185" r="4" class="node warm"/><circle cx="160" cy="110" r="4" class="node"/><text x="33" y="45">EXCITATION A</text><text x="33" y="185">UNEQUAL RETURN B</text><text x="191" y="106">HISTORY</text><text x="193" y="119">+ DRIVE</text><text x="320" y="161">FILTER</text><text x="230" y="206">AGITATION FEEDBACK</text><text x="405" y="87">VENT</text></svg><div class="circuit-foot"><span>EDGES → HISTORY → REACTION</span><span>NO RACK FX</span></div></div></section>
 <aside class="notice"><span class="pill">PROVISIONAL</span><p>These are real, dry renders from the Kotlin engine. Measurements support the audition; the owner's listening verdict is still required. HOLD uses periodic gestures and noise with measured state convergence. <a href="#listening-notes">Read listening notes</a>.</p></aside>
 <nav class="tabs" role="tablist" aria-label="Audition sections" id="tabs"></nav>
@@ -44,6 +46,7 @@ const views = [
  {id:'hold',label:'07 HOLD',title:'Repeated seams',prefix:'HOLD'},
  {id:'limits',label:'08 Limits + reference',title:'Extremes and higher-rate reference',prefix:['EXTREMES','REFERENCE']}
 ];
+if(manifest?.comparisons?.length)views.unshift({id:'comparison',label:'R1 → R2',title:'Faster, less predictable agitation',prefix:null});
 const $ = id => document.getElementById(id);
 const audio = $('audio');
 let activeView = 'voices', selected = null, isSeam = false, playbackSerial = 0, activeAssetUrl = null, disposed = false;
@@ -52,6 +55,12 @@ const MAX_DECODED_ASSETS = 8, MAX_DECODED_BYTES = 48 * 1024 * 1024;
 const clips = new Map();
 const allClips = manifest ? manifest.sections.flatMap(s=>s.groups.flatMap(g=>g.clips.map(c=>({ ...c, key:s.id+'/'+c.id })))) : [];
 allClips.forEach(c=>clips.set(c.key,c));
+const comparisonPairs=(manifest?.comparisons||[]).map(pair=>({
+ ...pair,
+ before:{...pair.before,key:'COMPARISON/'+pair.id+'/before'},
+ after:{...pair.after,key:'COMPARISON/'+pair.id+'/after'}
+}));
+comparisonPairs.forEach(pair=>{clips.set(pair.before.key,pair.before);clips.set(pair.after.key,pair.after);});
 const escape = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number = (value, places=3) => value == null || !Number.isFinite(value) ? '—' : value.toFixed(places);
 const scientific = value => value == null || !Number.isFinite(value) ? '—' : value.toExponential(2);
@@ -137,18 +146,20 @@ function releaseAudioAssets(){
  downloadUrls.forEach(url=>URL.revokeObjectURL(url));downloadUrls.clear();
 }
 function card(c){
+ const revision=c.revision, snapshot=c.snapshot===true;
  const m=c.metrics, d=m.mechanism, playing=selected?.key===c.key&&!audio.paused&&!isSeam;
  const values=[['Playback match',m.matchTreatment],['Raw peak',number(m.raw.peak)],['Raw RMS',number(m.raw.rms)],['Raw DC',scientific(m.raw.dc)],['Centroid',number(m.centroidHz,0)+' Hz'],['Pitch error',number(m.pitchCents,1)+' ¢'],['Pitch confidence',number(m.pitchConfidence,2)],['Classifier / cropped heuristic',m.classification+' / '+m.bodyClassification],['Render cost',number(d.renderMillis,0)+' ms'],['History peak',number(d.historyPeak)],['Agitation peak',number(d.agitationPeak)],['Filter state peak',number(d.filterStatePeak)],['Recovery gestures',d.gestureCount]];
  if(c.held)values.push(['PCM seam',scientific(m.pcm24LoopSeam)],['Preroll / convergence',d.loopPrerollPeriods+' / '+(d.loopConverged?'yes':'no')]);
  if(m.macroDistanceRms!=null)values.push(['Matched waveform distance',number(m.macroDistanceRms,5)]);
- return `<article class="card ${selected?.key===c.key?'active':''}" data-card="${escape(c.key)}"><div class="card-top"><span class="voicetag">${escape(c.voice)}</span>${c.held?'<span class="heldtag">HELD CIRCUIT</span>':'<span class="eyebrow" style="font-size:9px">DRY / '+c.oversample+'×</span>'}</div><h3>${escape(c.name)}</h3><p>${escape(c.description)}</p><div class="meta"><span>${escape(c.note)} / MIDI ${c.midi}</span><span>VEL ${number(c.velocity,2)}</span><span>${number(m.durationSeconds,2)} s</span></div>${!m.pitchedClassifier?`<p style="color:var(--coral);min-height:0;font:10px var(--mono)">Full-sample classifier: ${escape(m.classification)}</p>`:m.bodyPercussionDiagnostic?`<p style="color:var(--muted);min-height:0;font:10px var(--mono)">Cropped heuristic: ${escape(m.bodyClassification)}</p>`:""}<div class="macroline">${macroNames.map(name=>`<div class="macrocell">${name}<b>${number(c.macros[name],2)}</b><i><span style="width:${Math.max(0,Math.min(100,c.macros[name]*100))}%"></span></i></div>`).join('')}</div><div class="card-actions"><button class="play ${playing?'playing':''}" type="button" data-play="${escape(c.key)}" aria-label="${playing?'Pause':'Play'} ${escape(c.name)}">${playing?'Pause':'Play'}</button>${c.held?`<button class="seam" type="button" data-seam="${escape(c.key)}" aria-label="Play repeated seams for ${escape(c.name)}">Seams ↻</button>`:''}<a class="download" href="${href(c.patch)}" download>Source patch ↓</a></div><details><summary>Measurements + downloads</summary><div class="metricgrid">${values.map(([label,value])=>`<div>${escape(label)}<b>${escape(value)}</b></div>`).join('')}</div><div class="filelinks">${wavLink(c.matched,'Matched WAV ↓')}${wavLink(c.native,'Native WAV ↓')}${wavLink(c.raw,'Raw WAV ↓')}${c.repeat?wavLink(c.repeat,'Seams WAV ↓'):''}<a href="${href(c.diagnostics)}" download>Trace JSON ↓</a></div></details></article>`;
+ return `<article class="card ${selected?.key===c.key?'active':''}" data-card="${escape(c.key)}"><div class="card-top"><span class="voicetag">${escape(c.voice)}</span>${revision?'<span class="revisiontag '+(snapshot?'before':'after')+'">'+revision+' · '+(snapshot?'BEFORE':'AFTER')+'</span>':c.held?'<span class="heldtag">HELD CIRCUIT</span>':'<span class="eyebrow" style="font-size:9px">DRY / '+c.oversample+'×</span>'}</div><h3>${escape(c.name)}</h3>${revision?`<p class="snapshot-note">${snapshot?'Original R1 recording · commit '+escape(c.sourceCommit.slice(0,7))+'. Render snapshot; the current engine cannot replay it.':'R2 recording · current engine, with the same source patch and shared matched-level target.'}</p>`:''}<p>${escape(c.description)}</p><div class="meta"><span>${escape(c.note)} / MIDI ${c.midi}</span><span>VEL ${number(c.velocity,2)}</span><span>${number(m.durationSeconds,2)} s</span></div>${!m.pitchedClassifier?`<p style="color:var(--coral);min-height:0;font:10px var(--mono)">Full-sample classifier: ${escape(m.classification)}</p>`:m.bodyPercussionDiagnostic?`<p style="color:var(--muted);min-height:0;font:10px var(--mono)">Cropped heuristic: ${escape(m.bodyClassification)}</p>`:""}<div class="macroline">${macroNames.map(name=>`<div class="macrocell">${name}<b>${number(c.macros[name],2)}</b><i><span style="width:${Math.max(0,Math.min(100,c.macros[name]*100))}%"></span></i></div>`).join('')}</div><div class="card-actions"><button class="play ${playing?'playing':''}" type="button" data-play="${escape(c.key)}" aria-label="${playing?'Pause':'Play'} ${escape((revision?revision+' ':'')+c.name)}">${playing?'Pause':'Play'}</button>${c.held?`<button class="seam" type="button" data-seam="${escape(c.key)}" aria-label="Play repeated seams for ${escape((revision?revision+' ':'')+c.name)}">Seams ↻</button>`:''}<a class="download" href="${href(c.patch)}" download>${snapshot?'R1 patch record ↓':revision?'R2 source patch ↓':'Source patch ↓'}</a></div><details><summary>Measurements + downloads</summary><div class="metricgrid">${values.map(([label,value])=>`<div>${escape(label)}<b>${escape(value)}</b></div>`).join('')}</div><div class="filelinks">${wavLink(c.matched,'Matched WAV ↓')}${!c.comparisonOnly&&c.native?wavLink(c.native,'Native WAV ↓'):''}${!c.comparisonOnly&&c.raw?wavLink(c.raw,'Raw WAV ↓'):''}${c.repeat?wavLink(c.repeat,'Seams WAV ↓'):''}<a href="${href(c.diagnostics)}" download>${revision?revision+' trace':'Trace'} JSON ↓</a></div></details></article>`;
 }
 function render(){
  const view=views.find(v=>v.id===activeView), voice=$('voice').value, held=$('held').value, search=$('search').value.trim().toLowerCase();
  $('tabs').querySelectorAll('button').forEach(b=>{b.setAttribute('aria-selected',String(b.dataset.view===activeView));b.tabIndex=b.dataset.view===activeView?0:-1;});
- const sections=manifest.sections.filter(s=>Array.isArray(view.prefix)?view.prefix.includes(s.id):s.id.startsWith(view.prefix));
+ const sections=activeView==='comparison'?[]:manifest.sections.filter(s=>Array.isArray(view.prefix)?view.prefix.includes(s.id):s.id.startsWith(view.prefix));
  $('groups').setAttribute('aria-labelledby','tab-'+activeView);
  $('bench-title').textContent=view.title;
+ if(activeView==='comparison'){renderComparisons(voice,held,search);return;}
  $('bench-description').textContent=sections.map(s=>s.description).filter((s,i,a)=>a.indexOf(s)===i).join(' ');
  let visible=0, total=0;
  const output=sections.flatMap(section=>section.groups.map(group=>{
@@ -162,6 +173,13 @@ function render(){
  $('groups').innerHTML=output||'<div class="empty">No clips match these filters. Try another voice or clear the search.</div>';
  $('counter').textContent=visible+' / '+total+' CLIPS';
 }
+function renderComparisons(voice,held,search){
+ $('bench-description').textContent='Nine same-patch comparisons at one shared quiet loudness target. R1 is the original published recording; R2 uses the revised engine. Listen for faster reactions and less regular wee-ahh motion. Playback and downloads here stay matched. The R1 patch records document the old sound; the current engine cannot replay those recordings.';
+ const visible=comparisonPairs.filter(pair=>{const c=pair.after;return (voice==='ALL'||c.voice===voice)&&(held==='ALL'||c.held===(held==='held'))&&(!search||[pair.label,c.voice,c.name,c.description,c.note].join(' ').toLowerCase().includes(search));});
+ $('groups').innerHTML=visible.map(pair=>`<section aria-label="${escape(pair.label)}"><h3 class="group-heading">${escape(pair.label)} · ${escape(pair.after.note)} / VEL ${number(pair.after.velocity,2)}</h3><div class="cards comparison-cards">${card(pair.before)}${card(pair.after)}</div></section>`).join('')||'<div class="empty">No comparison pairs match these filters. Try another voice or clear the search.</div>';
+ if(visible.length&&manifest.baseline?.provenance)$('groups').insertAdjacentHTML('beforeend',`<p class="comparison-provenance"><a href="${href(manifest.baseline.provenance)}" download>R1 source commit + original WAV checksums ↓</a></p>`);
+ $('counter').textContent=visible.length+' / '+comparisonPairs.length+' PAIRS';
+}
 function selectView(id){activeView=id;$('search').value='';$('voice').value=id==='macros'?'LEAD':'ALL';$('held').value='ALL';render();history.replaceState(null,'','#'+id);}
 function updateButtons(){
  $('groups').querySelectorAll('[data-card]').forEach(element=>{
@@ -169,15 +187,17 @@ function updateButtons(){
    element.classList.toggle('active',selectedCard);
    const button=element.querySelector('[data-play]');
    button.classList.toggle('playing',playing);button.textContent=playing?'Pause':'Play';
-   const clip=clips.get(element.dataset.card);button.setAttribute('aria-label',(playing?'Pause ':'Play ')+clip.name);
+   const clip=clips.get(element.dataset.card);button.setAttribute('aria-label',(playing?'Pause ':'Play ')+(clip.revision?clip.revision+' ':'')+clip.name);
  });
 }
 async function setSource(){
  if(!selected)return null;
- const serial=++playbackSerial, clip=selected, seam=isSeam, mode=$('mode').value;
+ const serial=++playbackSerial, clip=selected, seam=isSeam;
+ if(clip.comparisonOnly)$('mode').value='matched';
+ const mode=$('mode').value;
  audio.pause();audio.removeAttribute('src');audio.load();activeAssetUrl=null;
- $('mode').disabled=seam;
- $('now-title').textContent=clip.name+(seam?' · repeated seams':'');
+ $('mode').disabled=seam||Boolean(clip.comparisonOnly);
+ $('now-title').textContent=(clip.revision?clip.revision+' · ':'')+clip.name+(seam?' · repeated seams':'');
  $('now-meta').textContent='Preparing WAV…';$('announcement').textContent='Loading '+clip.name;
  $('error').textContent='';updateButtons();
  try{
@@ -196,7 +216,7 @@ async function play(key,seam=false){
  const clip=clips.get(key);if(!clip)return;
  if(selected?.key===key&&isSeam===seam&&!audio.paused){playbackSerial++;audio.pause();return;}
  selected=clip;isSeam=seam;const serial=await setSource();if(serial==null)return;
- try{await audio.play();if(serial!==playbackSerial)return;$('announcement').textContent='Playing '+clip.name+(seam?' repeated seams':'');}
+ try{await audio.play();if(serial!==playbackSerial)return;$('announcement').textContent='Playing '+(clip.revision?clip.revision+' ':'')+clip.name+(seam?' repeated seams':'');}
  catch(error){if(serial!==playbackSerial||error.name==='AbortError')return;$('error').textContent='Playback could not start. Use the player controls or download this WAV.';}
  updateButtons();
 }
@@ -212,8 +232,8 @@ if(manifest){
  ['play','pause','ended'].forEach(event=>audio.addEventListener(event,updateButtons));
  audio.addEventListener('error',()=>{$('error').textContent='This audio file could not be loaded. The WAV download is available in the clip measurements.';});
  window.addEventListener('pagehide',releaseAudioAssets);window.addEventListener('pageshow',()=>{disposed=false;});
- const initial=location.hash.slice(1);selectView(views.some(v=>v.id===initial)?initial:'voices');
- $('pack-footer').textContent=manifest.variants+' VARIANTS / '+manifest.wavFiles+' WAVs · '+(manifest.quick?'DEVELOPMENT SMOKE PACK':'FULL LISTENING MATRIX');
+ const initial=location.hash.slice(1);selectView(views.some(v=>v.id===initial)?initial:comparisonPairs.length?'comparison':'voices');
+ $('pack-footer').textContent=manifest.variants+(comparisonPairs.length?' CURRENT VARIANTS / ':' VARIANTS / ')+manifest.wavFiles+' WAVs'+(comparisonPairs.length?' + '+comparisonPairs.length+' R1/R2 PAIRS / '+manifest.comparisonWavFiles+' R1 WAVs':'')+' · '+(manifest.quick?'DEVELOPMENT SMOKE PACK':'FULL LISTENING MATRIX');
  if(manifest.quick){document.querySelector('.notice p').insertAdjacentText('afterbegin','This is the smaller development pack. ');}
 }else{$('error').textContent='The generated clip manifest is missing. Regenerate the audition page with the Kotlin generator.';}
 </script>

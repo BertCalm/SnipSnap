@@ -6,6 +6,41 @@ multimode filter. History and flutter are new proposals, not a reconstruction of
 the historical circuit. The [supplied specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
 is retained alongside this implementation.
 
+## Agitation listening revision (R2)
+
+The first listening feedback described the motion as a mechanical police-siren
+"wee-ahh" and asked for quicker, more human phrasing. R2 keeps the same six
+controls and saved recipes, but raises the flutter response by about 30%,
+shortens oscillator recovery, and replaces compulsory alternating departures
+with seeded episodes of unequal gestures. Event gaps and strengths vary; finite
+notes also respond modestly to preceding circuit energy and agitation. A quick
+filter provocation now has a weaker opposite recovery instead of an identical
+positive swell each time. The actual event gaps, including the held wrap, retain
+the 8 Hz ceiling.
+
+Pitch departures have a smooth budget for relative oscillator phase travel,
+accounting for register and recovery time. This reduces broad scoops and
+sustained cancellation while leaving the fast filter gestures, waveform and
+noise feed intact. FRAY anchors its pitch more tightly so its torn character
+comes primarily from the reactive filter. A small minimum ceiling preserves
+subtle departures in the upper register.
+
+The audition opens with nine R1/R2 comparisons at the same note, velocity, seed
+and shared matched-level target. They cover all six defaults, NERVOUS WIRE and
+held FLUTTER/FRAY. The R1 sides are immutable render snapshots with SHA-256
+provenance; their archived patch recipes describe the inputs but the current
+renderer does not reproduce the old sound. R2 renders existing recipes with the
+revised circuit. This is a listening revision, not a change to the patch format.
+
+R2 passes 25 focused engine, patch and agitation tests, including the existing
+216-case finite stability matrix, held export/seam checks, cancellation checks
+and new rendered-trace tests for irregular timing and quick rebound. A separate
+144-case default/moderate pitch study covers MIDI 36–72 at three velocities.
+Its 72 moderate cases stayed within 1.451 cents with confidence at least .848,
+body flatness at most .0682 and pre-release sustain ratio at least .942.
+These checks establish stability and pitched behavior; the matched comparisons
+are still the owner's listening gate.
+
 ## Rendering and saving
 
 `Skitter.render(voice, macros, midi, velocity, seed)` exports 44.1 kHz mono audio
@@ -43,8 +78,8 @@ BUZZ morphs a four-partial rounded triangle, PolyBLEP saw and PolyBLEP pulse.
 Their fundamental polarities agree, avoiding cancellation during the morph;
 pulse width stays between .16 and .50. A quiet direct fundamental supports the
 filtered signal. Unequal exponential recovery follows bounded departures in
-cents; deterministic repeated gestures use hysteresis and an explicit 8 Hz
-event ceiling. SKITTER zero removes the departures.
+cents; seeded episodes vary direction, strength and timing, with hysteresis and
+an explicit 8 Hz event ceiling. SKITTER zero removes the departures.
 
 The double-precision trapezoidal state-variable filter has coherent low-, band-
 and high-pass outputs. Nonlinear excitation, small signed bias and delayed
@@ -74,7 +109,7 @@ HOLD at or above .999 returns two independently evolved settled periods;
 lower values extend finite excitation. A near-one-second period is selected
 from whole cycles of the requested root, with finely fitted output frame count.
 Oscillator frequency integrals are corrected to whole cycles, while recovery
-departures remain audible. Gestures replay an alternating periodic schedule;
+departures remain audible. Gestures replay a seeded, irregular periodic schedule;
 seeded noise wraps through interpolation and recursive noise filters.
 Stochastic forcing is reduced to 70%, rather than removing STATIC or AGITATE.
 
@@ -87,7 +122,11 @@ trajectory loops. No wrap crossfade was needed in the measured cases.
 `loopStart` identifies the second period; sampler WAV metadata and exported
 PCM are checked with the binding `Keys.seamError < 1e-3` requirement.
 
-## Evidence and listening
+## Initial port evidence (R1)
+
+The measurements below describe the original published R1. R2 has a separate
+listening comparison and is checked against the existing pitch, state, macro,
+release and exported-loop assertions; R1 measurements are not R2 results.
 
 Round 3 probes covered 216 finite register/velocity/default/all-high cases,
 36 held cases, 144 default/moderate pitch cases, every macro quarter step and
@@ -120,7 +159,11 @@ labels alone do not establish sonic acceptance.
 
 Run `./gradlew --no-daemon test` for the JVM gate and
 `./gradlew :synth:generateSkitterAudition` for the full listening artifact.
-`-Pquick` selects a smaller development pack. The
+`-Pquick` selects a smaller development pack. Add
+`-PskitterBaseline=/absolute/path/to/skitter-r1-baseline` to include the preserved
+R1/R2 comparisons. The baseline directory contains its manifest, original
+render assets and SHA-256 inventory; the generator verifies it before copying
+the selected matched snapshots, patches and traces. The
 [published private audition](https://skitter-snipsnap-audition.bertcalm.chatgpt.site)
 contains dry raw/native/matched playback, presets, registers and velocities,
 macro sweeps, interactions, common-gain causal comparisons, repeated exported
