@@ -734,18 +734,19 @@ object SynthKits {
     }
 
     /**
-     * A dry groove kit: bass in the bottom row, tines above it, then clipped keys,
-     * organ, lead and explicit root/fifth/octave chords. The final two pads hold.
+     * A dry groove kit: anchored bass and tine rows, then a muted/bright clav pair,
+     * hollow organ, whistle, bright fifth chord and octave bell answer. The final two pads hold.
      * Exact note, source registration, answer and chord voicing stay in every recipe.
      */
     fun stoop(): List<ArrangedPad?> {
-        fun sound(voice: StoopVoice, name: String, midi: Int, held: Boolean = false, shadow: Float? = null): ArrangedPad {
-            val preset = StoopPresets.forVoice(voice).first()
+        fun sound(voice: StoopVoice, name: String, midi: Int, held: Boolean = false, shadow: Float? = null, presetName: String? = null): ArrangedPad {
+            val presets = StoopPresets.forVoice(voice)
+            val preset = if (presetName == null) presets.first() else presets.single { it.name == presetName }
             val macros = preset.macros + ("HOLD" to if (held) 1f else 0f) +
                 (shadow?.let { mapOf("SHADOW" to it) } ?: emptyMap())
             val patch = preset.copy(name = name, macros = macros, midi = midi,
                 chordIntervals = if (voice == StoopVoice.CHORD) listOf(0, 7, 12) else preset.chordIntervals)
-            val tags = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi)) +
+            val tags = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi), "factoryPreset" to preset.name) +
                 if (voice == StoopVoice.CHORD) mapOf("chordIntervals" to patch.chordIntervals.joinToString(",")) else emptyMap()
             return pad(patch, Stoop.drumClassFor(voice, macros)).copy(displayName = name, source = tags)
         }
@@ -754,9 +755,11 @@ object SynthKits {
             sound(StoopVoice.BASS, "Bass F2", 41), sound(StoopVoice.BASS, "Bass G2", 43),
             sound(StoopVoice.TINE, "Tine C4", 60), sound(StoopVoice.TINE, "Tine Eb4", 63),
             sound(StoopVoice.TINE, "Tine F4", 65), sound(StoopVoice.TINE, "Tine G4", 67),
-            sound(StoopVoice.CLAV, "Clav C3", 48), sound(StoopVoice.CLAV, "Clav G3", 55),
-            sound(StoopVoice.ORGAN, "Organ C3", 48), sound(StoopVoice.LEAD, "Lead C5", 72),
-            sound(StoopVoice.CHORD, "Fifth Chord C3", 48), sound(StoopVoice.TINE, "Answering Tine", 60, shadow = .6f),
+            sound(StoopVoice.CLAV, "Clav C3", 48), sound(StoopVoice.CLAV, "Wire Clav G3", 55, presetName = "Short Wire"),
+            sound(StoopVoice.ORGAN, "Hollow Organ C3", 48, presetName = "Small Pipes"),
+            sound(StoopVoice.LEAD, "Whistle C5", 72, presetName = "Pocket Whistle"),
+            sound(StoopVoice.CHORD, "Bright Fifth C3", 48, presetName = "Small Cinema"),
+            sound(StoopVoice.TINE, "Bell Answer C4", 60, shadow = .6f, presetName = "After Key"),
             sound(StoopVoice.ORGAN, "Held Organ C3", 48, held = true),
             sound(StoopVoice.CHORD, "Held Fifth C3", 48, held = true),
         )
