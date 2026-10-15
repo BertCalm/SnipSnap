@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171e1c">
+  <meta name="description" content="A first listening prototype for OVERLAP in SnipSnap: six connected resonators, breathing motion, and harmonic glow. Compare the rendered sounds and keep your listening notes.">
+  <title>OVERLAP — SnipSnap first listen</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listening">Skip to the listening bench</a>
+  <header class="masthead wrap">
+    <a class="brand" href="#top" aria-label="SnipSnap, back to top">
+      <svg aria-hidden="true" viewBox="0 0 36 26"><rect x="1" y="1" width="34" height="24" rx="3"/><path d="M7 5h22v11H7zM11 21l2-5h10l2 5"/><circle cx="12" cy="10.5" r="3"/><circle cx="24" cy="10.5" r="3"/><path d="M15 10.5h6"/></svg>
+      <span>SnipSnap<span class="brand-sub">SOUND EXPERIMENTS</span></span>
+    </a>
+    <span class="edition"><span class="status-light"></span> FIRST LISTEN <span class="edition-number">/ 001</span></span>
+    <a class="header-link" href="#notes">Listening notes <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow">OVERLAP × SNIPSNAP <span>/ PROOF OF CONCEPT</span></p>
+        <h1 id="page-title">Strike a knot.<br>Hear it <em>breathe.</em></h1>
+        <p class="hero-lede">One small strike. Six connected resonators. A new body for a sound to travel through.</p>
+        <p class="hero-detail">An audition of the OVERLAP idea, adapted for SnipSnap. Listen to the routing first, then add movement and glow.</p>
+        <a class="primary-link" href="#listening">Open the listening bench <span aria-hidden="true">↓</span></a>
+      </div>
+      <div class="machine" aria-label="OVERLAP six-resonator concept diagram">
+        <div class="machine-top"><span>OVERLAP</span><span>6-LINE RESONATOR</span></div>
+        <div class="lcd">
+          <div class="lcd-top"><span><span class="lcd-dot"></span> <span id="deck-state">STANDBY</span></span><span id="deck-mode">MATCHED</span></div>
+          <svg class="network" viewBox="0 0 420 220" role="img" aria-labelledby="network-title network-desc">
+            <title id="network-title">Six resonators connected in a circuit</title>
+            <desc id="network-desc">A strike enters a network of six resonators. Routing, breathing and glow shape the result.</desc>
+            <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="currentColor" stroke-width=".5" opacity=".11"/></pattern></defs>
+            <rect x="0" y="0" width="420" height="220" fill="url(#grid)"/>
+            <g class="network-wires"><path d="M130 45 290 45 340 110 290 175 130 175 80 110Z"/><path d="M130 45 290 175M290 45 130 175M80 110H340"/></g>
+            <path class="network-input" d="M12 110H61m-9-7 9 7-9 7"/>
+            <g class="network-node" transform="translate(130 45)"><circle r="17"/><text y="4">01</text></g>
+            <g class="network-node" transform="translate(290 45)"><circle r="17"/><text y="4">02</text></g>
+            <g class="network-node" transform="translate(340 110)"><circle r="17"/><text y="4">03</text></g>
+            <g class="network-node" transform="translate(290 175)"><circle r="17"/><text y="4">04</text></g>
+            <g class="network-node" transform="translate(130 175)"><circle r="17"/><text y="4">05</text></g>
+            <g class="network-node" transform="translate(80 110)"><circle r="17"/><text y="4">06</text></g>
+          </svg>
+          <div class="lcd-track"><span id="deck-title">READY WHEN YOU ARE</span><span id="deck-time">00:00</span></div>
+        </div>
+        <div class="machine-bottom"><div class="reel" aria-hidden="true"><i></i><i></i><i></i></div><span>EXCITE → CONNECT → DECAY</span><div class="reel" aria-hidden="true"><i></i><i></i><i></i></div></div>
+        <div class="machine-foot"><span>OFFLINE RENDERS</span><span>NO AUTOPLAY</span><span>EST. 2026</span></div>
+      </div>
+    </section>
+
+    <section class="listen-guide wrap" aria-label="How to listen">
+      <div class="guide-heading"><span class="section-number">A SIDE</span><h2>Follow the sound.</h2></div>
+      <div class="guide-step"><span>01</span><p><strong>Start with the routing.</strong> Same strike, different connections. Hear what the network contributes.</p></div>
+      <div class="guide-step"><span>02</span><p><strong>Compare at a steady level.</strong> MATCHED is the default. RAW lets you hear the original output level.</p></div>
+      <div class="guide-step"><span>03</span><p><strong>Trust your ears.</strong> Keep a sound, ask for a revision, or pass. Your notes stay in this browser.</p></div>
+    </section>
+
+    <section class="bench wrap" id="listening" aria-labelledby="bench-title">
+      <div class="bench-heading">
+        <div><p class="eyebrow">THE LISTENING BENCH</p><h2 id="bench-title">One change at a time.</h2></div>
+        <div class="mode-panel"><span id="mode-label">PLAYBACK LEVEL</span><div class="segmented" role="group" aria-labelledby="mode-label"><button type="button" data-mode="matched" aria-pressed="true">MATCHED</button><button type="button" data-mode="raw" aria-pressed="false">RAW</button></div></div>
+      </div>
+      <p class="mode-explanation" id="mode-explanation">Matched files help compare timbre at a similar listening level. Raw files keep a common engine gain; matched files use the same loudest-200-ms target.</p>
+      <nav class="section-nav" aria-label="Audition sections">
+        <a href="#group-routing">01 Routing</a><a href="#group-depth">02 Knot depth</a><a href="#group-breathing">03 Breathing</a><a href="#group-glow">04 Glow</a><a href="#group-musical">05 In context</a>
+      </nav>
+      <div id="loading" class="loading" role="status"><span class="status-light"></span> Loading the session…</div>
+      <div id="clips"></div>
+      <noscript><p class="notice">JavaScript is needed to load the listening bench. <a href="assets/manifest.json">Download the audio manifest</a> to find the WAV files.</p></noscript>
+    </section>
+
+    <section class="notes-section wrap" id="notes" aria-labelledby="notes-title">
+      <div><p class="eyebrow">B SIDE / YOUR CALL</p><h2 id="notes-title">What should we keep?</h2><p>Use the notes under each sound to mark what works and what needs another pass. Nothing is sent to a server. Export your notes to share them.</p></div>
+      <div class="notes-export"><span class="notes-count" id="notes-count">No listening notes yet.</span><button class="export-button" id="export-notes" type="button">Export notes <span aria-hidden="true">↓</span></button><span class="fine-print">JSON file · saved on this device</span></div>
+    </section>
+
+    <section class="about-section wrap" aria-label="About this prototype">
+      <div><span class="section-number">THE IDEA</span><h3>A struck, breathing resonator.</h3><p>A brief excitation enters six delay lines. The routing changes how energy moves through them. Slow oscillators add breathing motion; a separate glow layer adds harmonics.</p></div>
+      <div><span class="section-number">THE LIMIT</span><h3>An audition, not a finished engine.</h3><p>These are rendered audio examples of a proof of concept. HOLD is finite excitation followed by decay; it is not an endless, seamless loop. Saved synthesis recipes are supported; phone-picker integration and final controls still need design.</p></div>
+      <div><span class="section-number">THE FILES</span><h3>Keep listening elsewhere.</h3><p>Every sound is available as a WAV. Each clip includes the rendering recipe and measured output, so a listening impression can lead to a specific revision.</p><div class="file-links"><a href="assets/manifest.json" download>Audio manifest ↗</a><a id="bundle-link" href="assets/overlap-first-listen.zip" download>All audio + recipes ↗</a></div></div>
+    </section>
+  </main>
+
+  <footer class="footer wrap"><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true">↗</span></a><span>OVERLAP / FIRST LISTEN</span><a href="https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/overlap_synthesis_guide.md" target="_blank" rel="noopener noreferrer">The original concept <span aria-hidden="true">↗</span></a></footer>
+
+  <div class="transport" aria-label="Playback status and controls">
+    <div class="transport-inner wrap"><span class="transport-indicator" aria-hidden="true"></span><div class="transport-track"><span class="transport-eyebrow" id="transport-state">LISTENING BENCH</span><span id="transport-title">Choose a sound to begin</span></div><span class="transport-mode" id="transport-mode">MATCHED</span><button type="button" id="stop-all" class="stop-button" aria-label="Stop all audio and return to the beginning"><span class="stop-square" aria-hidden="true"></span> Stop <kbd>ESC</kbd></button></div>
+  </div>
+  <p class="sr-only" id="announcement" role="status" aria-live="polite" aria-atomic="true"></p>
+</body>
+</html>

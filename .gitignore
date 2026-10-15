@@ -1,4 +1,5 @@
 build/
+testkit/overlap-audition/
 testkit/osprey-audition/
 testkit/osprey-revision-audition/
 testkit/osprey-gentle-audition/
