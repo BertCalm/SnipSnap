@@ -351,19 +351,21 @@ class ConventionTest {
             file = "App.kt",
             args = normalizeSpan(
                 """
-                enabled = !anyOverlayOpen && screenHistory.isNotEmpty() &&
-                    screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
+                enabled = !anyOverlayOpen && nav.canGoBack &&
+                    location.top != Bench.KEYS &&
                     note == null && !captureBlocked && !micPermissionDenied,
                 """,
             ),
             justification = "the app-level ROOT handler, not a busy-guard: its entire job is to defer. " +
-                "anyOverlayOpen, SPLIT, and KEYS each already have their own unconditional handler or their own " +
-                "back door (the KDoc directly above this call enumerates them); the remaining case is an EMPTY " +
-                "screenHistory, which is the true root of the session - falling through to Activity.finish() " +
-                "there is the correct, intended Android behavior, not an accident. This used to read " +
-                "`screen != AppScreen.KITS` and said the same thing a weaker way (J11): with a back stack, being " +
-                "the root is a property of having nowhere to go back to, not of being one particular tab, and a " +
-                "non-empty history always has somewhere to pop to. This is the one site that is SUPPOSED to read " +
+                "anyOverlayOpen and KEYS each already have their own unconditional handler or their own " +
+                "back door (the KDoc directly above this call enumerates them); the remaining case is a " +
+                "Navigation with nothing to pop (`nav.canGoBack` false), which is the true root of the session - " +
+                "falling through to Activity.finish() there is the correct, intended Android behavior, not an " +
+                "accident. This used to read `screen != AppScreen.KITS` and said the same thing a weaker way " +
+                "(J11): with a back stack, being the root is a property of having nowhere to go back to, not of " +
+                "being one particular tab, and a non-empty history always has somewhere to pop to. SPLIT left " +
+                "the exclusions with the four-place shape: as a bench it pops like any other, where before Back " +
+                "on it fell through to finishing the Activity. This is the one site that is SUPPOSED to read " +
                 "as a fallback, never as a mid-operation guard.",
         ),
         BackHandlerAllow(
@@ -1333,39 +1335,46 @@ class ConventionTest {
         }
     }
 
-    // ==================== Law: a toast's door belongs to that toast ====================
+    // ==================== Law: the line and its door are one value, the dock's ====================
 
     /**
-     * An offer is a toast with a door (J10). The first cut of it held the
+     * An offer is a line with a door (J10). The first cut of it held the
      * message in `toast` and the door in `toastDoor` and wrote them
      * independently, so a plain `onToast` landing afterwards — TAPE's KEEP
      * fired one on the very next line — swapped the sentence and left the
      * door under someone else's words, on the offer's longer dwell. The
      * comment beside the two vars claimed a door "can never outlive its
-     * message"; nothing made that true.
+     * message"; nothing made that true. A second cut derived the door from
+     * the sentence and held that by law.
      *
-     * It is true now because `toastDoor` is derived: `offered` carries the
-     * sentence it was made with, and the door shows only while the toast on
-     * screen is that sentence. This law keeps it derived — the moment
-     * anything assigns `toastDoor` again, the two can disagree again.
+     * The four-place shape (`docs/SCREEN_PLAN_2026_10.md` §1) moves both
+     * into the dock: `DockModel.Now` is the text and the door as one value,
+     * `DockModelTest` pins that a `say` keeps the door and an `offer`
+     * replaces it, and nothing is timed. So the law here is now about
+     * routing, not derivation: `App.kt` keeps no line of its own — no toast
+     * var to drift from the dock's, no `ToastOverlay` to draw it twice —
+     * and every offer goes through the one `offer(...)` helper that calls
+     * `dock.offer`.
      */
     @Test
-    fun `the toast door is derived from the toast, never assigned beside it`() {
+    fun `the dock holds the line and its door, and App keeps no toast of its own`() {
         val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
         assertTrue(app.isFile, "expected to find ${app.absolutePath}")
         val src = codeOnly(app.readText(Charsets.UTF_8))
-        assertTrue(
-            "val toastDoor" in src,
-            "App.kt no longer declares `val toastDoor`. The door has to be computed from the toast on " +
-                "screen, not stored beside it — see J10/J44.",
+        assertFalse(
+            Regex("""\bvar\s+toast\b""").containsMatchIn(src),
+            "App.kt declares a `toast` var again. The line lives in the dock (`dock.say`); a second copy " +
+                "here is the two-vars bug J10/J44 found, waiting to recur.",
         )
-        val assigned = Regex("""\btoastDoor\s*=(?!=)""").findAll(src).count()
-        assertEquals(
-            0,
-            assigned,
-            "App.kt assigns `toastDoor` $assigned time(s). A door held in its own var can outlive the " +
-                "sentence it was offered with: any plain `toast = ...` replaces the words and leaves the " +
-                "button. Set `offered` instead and let `toastDoor` be derived from it.",
+        assertFalse(
+            "ToastOverlay(" in src,
+            "App.kt draws a ToastOverlay. The dock's Now region is where the line lands; a toast beside it " +
+                "is the same sentence in two places.",
+        )
+        assertTrue(
+            Regex("""fun offer\([^)]*\)\s*\{[^}]*dock\.offer\(""").containsMatchIn(src),
+            "App.kt's `offer(...)` no longer calls `dock.offer`. The door has to stand in the dock until " +
+                "taken — see `DockModel.offer`.",
         )
     }
 
@@ -2732,16 +2741,18 @@ class ConventionTest {
      * 4 of the loop the app advertises: the app automated the one join in
      * the middle (CHOP → KIT) and left the two at the ends to the user.
      *
-     * Counts both forms, because the screen is reached both ways: a direct
-     * `screen = AppScreen.X` and the `goToScreen(AppScreen.X)` helper. A
-     * law that knew only the form the review happened to grep for would go
-     * green on a navigation that does not exist, or red on one that does.
+     * Counts every form, because the screen is reached more than one way:
+     * a landing (`landOn(AppScreen.X)`, what a bare `screen = AppScreen.X`
+     * used to be), the `goToScreen(AppScreen.X)` departure, and a dock door
+     * offered onto it (`offer(..., AppScreen.X)`). A law that knew only the
+     * form the review happened to grep for would go green on a navigation
+     * that does not exist, or red on one that does.
      */
     @Test
     fun `law - every step of the advertised loop can be reached from the one before it`() {
         val src = appKt.readText(Charsets.UTF_8)
         fun navigationsTo(screen: String): Int =
-            Regex("""(screen\s*=\s*AppScreen\.$screen\b|goToScreen\(AppScreen\.$screen\))""")
+            Regex("""((landOn|goToScreen)\(AppScreen\.$screen\)|offer\([^)]*,\s*AppScreen\.$screen\))""")
                 .findAll(src).count()
 
         for (step in listOf("CHOP", "EXPORT")) {
@@ -2756,11 +2767,12 @@ class ConventionTest {
 
         // The offers are offers. A door the player can ignore, not a screen
         // that moves under them — being moved without asking is the same
-        // complaint as a control that changes its own target.
+        // complaint as a control that changes its own target. The door is
+        // the dock's and names its target by screen; it stands until taken.
         assertTrue(
-            Regex("""offer\(Copy\.CAPTURE_OFFER,\s*Copy\.CAPTURE_OFFER_DOOR\)""").containsMatchIn(src) &&
-                Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR\)""").containsMatchIn(src),
-            "both handoffs should go through `offer(...)`, which puts a door on a toast and leaves the screen " +
+            Regex("""offer\(Copy\.CAPTURE_OFFER,\s*Copy\.CAPTURE_OFFER_DOOR,\s*AppScreen\.CHOP\)""").containsMatchIn(src) &&
+                Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR,\s*AppScreen\.EXPORT\)""").containsMatchIn(src),
+            "both handoffs should go through `offer(...)`, which puts a door in the dock and leaves the screen " +
                 "where it is. Navigating outright would be a stronger handoff and the wrong one.",
         )
         // The guard has to be ON the offer, not merely somewhere in the

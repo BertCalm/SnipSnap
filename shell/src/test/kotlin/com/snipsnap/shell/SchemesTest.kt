@@ -246,15 +246,28 @@ class SchemesTest {
     /**
      * The other half of finding 9, stated where it can be read: the strip
      * grows into the body, so the body has to be the thing that gives.
-     * Nothing here can assert `MenuRow`'s Compose tree - this is the
+     * Nothing here can assert the frame's Compose tree - this is the
      * arithmetic that says the frame has the room.
+     *
+     * The frame is the four-place shape's now (`docs/SCREEN_PLAN_2026_10.md`
+     * §1): title bar, place row, stage row (on TAPE and PROJECT, the deepest
+     * case) and the dock at the foot. The stage row is a segment row, which
+     * is a hit target tall like the place row.
      */
     @Test
     fun `the chrome still leaves the body most of the frame`() {
-        val chrome = Layout.TITLEBAR_H + Layout.MENU_ROW_H + Layout.STATUS_BAR_H
+        val chrome = Layout.TITLEBAR_H + Layout.MENU_ROW_H + Layout.MIN_HIT_TARGET + Layout.DOCK_H
         assertTrue(
             chrome < Layout.FRAME_H / 4,
-            "titlebar + menu + status = ${chrome}dp of a ${Layout.FRAME_H}dp frame",
+            "titlebar + place row + stage row + dock = ${chrome}dp of a ${Layout.FRAME_H}dp frame",
+        )
+    }
+
+    @Test
+    fun `the dock is at least a hit target tall`() {
+        assertTrue(
+            Layout.DOCK_H >= Layout.MIN_HIT_TARGET,
+            "the dock holds the SNIP and door chips: DOCK_H=${Layout.DOCK_H} against MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}",
         )
     }
 
