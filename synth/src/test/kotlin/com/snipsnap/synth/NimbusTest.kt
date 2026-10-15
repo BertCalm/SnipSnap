@@ -594,6 +594,37 @@ class NimbusTest {
     }
 
     @Test
+    fun `close rim rolls at zero field repeat the actual preceding cycle in both registers`() {
+        // The full audition found a C5 corner that the default/C3 cases missed. A longer
+        // render on the old global control clock still drifted between mallet cycles.
+        val cases = listOf(1f to 0f, 0f to 0f, 0f to .6f)
+        val deficient = mutableListOf<String>()
+        for ((tune, field) in cases) try {
+            val label = "CONTACT TUNE $tune FIELD $field"
+            val macros = mapOf("TUNE" to tune, "EXCITE" to 1f, "SPACING" to 0f,
+                "HEIGHT" to .5f, "FIELD" to field, "FUNNEL" to (if (field == 0f) 1f else Nimbus.defaults(NimbusVoice.CONTACT).getValue("FUNNEL")), "HOLD" to 1f)
+            val p = Nimbus.probe(NimbusVoice.CONTACT, macros, options = Nimbus.ProbeOptions(snapshotStride = 4096))
+            assertEquals(p.samples.size, p.previousCycle.size, "$label supplied no actual preceding cycle")
+            val seam = Keys.seamError(p.previousCycle + p.samples, p.previousCycle.size)
+            val mismatch = normalizedDifference(p.previousCycle, p.samples)
+            val from = p.samples.size / 5
+            val to = p.samples.size * 4 / 5
+            val interior = normalizedDifference(p.previousCycle.copyOfRange(from, to), p.samples.copyOfRange(from, to))
+            println("NIMBUS $label close roll: seam=$seam fullCycleMismatch=$mismatch interiorMismatch=$interior contacts=${p.contactEvents} penetration=${p.peakContactPenetration}")
+            assertTrue(seam < Keys.MAX_SEAM_ERROR, "$label genuine held seam $seam")
+            assertTrue(interior < .03, "$label preceding cycle remained unsettled: $interior")
+            assertTrue(p.samples.all { it.isFinite() } && p.rawPeak < 1f)
+            assertTrue(p.poweredDriveWork > 0.0 && p.malletStrokes.map { it.cymbal }.toSet().size == 6)
+            assertTrue(p.contactEvents > 0 && rms(p.contact) > 1e-7, "$label contains no actual audible rim contacts")
+            assertTrue(p.peakContactPenetration.isFinite() && p.peakContactPenetration in 0f.. .003f)
+            assertTrue(p.snapshots.all { it.geometryValid && it.passiveEnergy.isFinite() })
+        } catch (failure: AssertionError) {
+            deficient += "CONTACT TUNE $tune FIELD $field: ${failure.message}"
+        }
+        assertTrue(deficient.isEmpty(), "Close rim roll convergence regressed: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
     fun `powered metal and difficult contact holds converge across a genuine preceding cycle`() {
         val cases = listOf(
             NimbusVoice.SUSPEND to mapOf("TUNE" to 0f, "HOLD" to 1f),

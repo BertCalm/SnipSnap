@@ -44,6 +44,7 @@ object Nimbus {
     private const val DEFAULT_CONTROL_STRIDE = 128
     private const val SNAPSHOT_STRIDE = 4096
     private const val HOLD_PREROLL_CYCLES = 6
+    private const val CONTACT_HOLD_PREROLL_CYCLES = 18
     private const val OUTPUT_TRIM = .34
     private const val MASS = .08
     private const val RIM_SCALE = 6.0
@@ -216,9 +217,14 @@ object Nimbus {
         val cycleFrames = ((hz * 1.35).roundToInt() * RATE / hz).roundToInt().coerceAtLeast(1024)
         val root = if (held) (hz * 1.35).roundToInt() * RATE.toDouble() / cycleFrames else hz
         val cycle = if (held) cycleFrames * Dsp.OVERSAMPLE else 0
+        // Repeated compliant rim impacts settle more slowly than the freely ringing
+        // stack. Let that complete physical state converge before capturing two real
+        // adjacent cycles; silent/drive-disabled diagnostics retain their original span.
+        val prerollCycles = if (held && options.poweredDriveEnabled && options.contactsEnabled &&
+            m.getValue("SPACING") <= .28f) CONTACT_HOLD_PREROLL_CYCLES else HOLD_PREROLL_CYCLES
         val padding = if (held) 256 * Dsp.OVERSAMPLE else 0
-        val start = if (held) HOLD_PREROLL_CYCLES * cycle - padding else 0
-        val frames = if (held) (HOLD_PREROLL_CYCLES + 2) * cycle + padding else
+        val start = if (held) prerollCycles * cycle - padding else 0
+        val frames = if (held) (prerollCycles + 2) * cycle + padding else
             (((options.durationSeconds?.takeIf { it.isFinite() } ?: (5.0f + 1.4f * m.getValue("FIELD") + .5f * m.getValue("FUNNEL") + 1.7f * m.getValue("HOLD"))).coerceIn(.10f, MAX_SECONDS)) * INTERNAL_RATE).roundToInt()
         val seed = Dsp.seedFor("NIMBUS", voice, frequencyFor(voice, m.getValue("TUNE")), velocity, options.seedContext)
         stopIfUnwanted(cancelled)
@@ -243,7 +249,7 @@ object Nimbus {
         stopIfUnwanted(cancelled)
         val seam = if (held && previous.any { it != 0f }) Keys.seamError(previous + audio, previous.size) else 0.0
         fun tap(i: Int): FloatArray = if (taps[i].isEmpty()) taps[i] else if (held) taps[i].copyOfRange(pad + cycleFrames, pad + 2 * cycleFrames) else taps[i]
-        val offset = if (held) (HOLD_PREROLL_CYCLES + 1) * cycle.toFloat() / INTERNAL_RATE else 0f
+        val offset = if (held) (prerollCycles + 1) * cycle.toFloat() / INTERNAL_RATE else 0f
         val snapshots = if (held) result.snapshots.filter { it.timeSeconds >= offset && it.timeSeconds < offset + cycle.toFloat() / INTERNAL_RATE }
             .map { it.copy(timeSeconds = it.timeSeconds - offset) } else result.snapshots
         return Probe(audio, Array(CYMBALS) { tap(it + 1) }, tap(7), tap(8), tap(9), snapshots,
@@ -626,8 +632,8 @@ object Nimbus {
             for (plate in plates) taken += plate.deplete(amount * plate.energy() / total)
             return taken
         }
-        private fun control() {
-            val dt = controlStride.toDouble() / INTERNAL_RATE
+        private fun control(frames: Int = controlStride) {
+            val dt = frames.toDouble() / INTERNAL_RATE
             val envelope = exp(-dt / .037)
             for (i in 0 until CYMBALS) {
                 smoothedEnergy[i] = envelope * smoothedEnergy[i] + (1 - envelope) * plates[i].energy()
@@ -795,7 +801,13 @@ object Nimbus {
             for (frame in 0 until frames) {
                 if (frame % 8192 == 0) stopIfUnwanted(cancelled)
                 if (bodyWindow && frame >= BODY_ONSET_SECONDS * INTERNAL_RATE) { bodyWindow = false; load() }
-                if (frame % controlStride == 0) control()
+                if (cycle > 0 && options.poweredDriveEnabled) {
+                    // The physical force pattern repeats at the loop period. Sample its
+                    // slow response on that same grid, including the final short block;
+                    // a global control clock otherwise drifts between adjacent cycles.
+                    val within = frame % cycle
+                    if (within % controlStride == 0) control(minOf(controlStride, cycle - within))
+                } else if (frame % controlStride == 0) control()
                 for (plate in plates) plate.step()
                 chamber.step()
                 if (options.primaryStrikeEnabled && frame < eventFrames && eventVelocity > 0) {

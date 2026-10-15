@@ -238,10 +238,18 @@ to the powered source ledger, distinct from passive field stabilization.
 The finite onset-transfer path still drains before the settled HOLD region.
 HOLD at zero retains the accepted finite event and its original random
 sequence. The roll schedule repeats over the existing loop interval without
-resetting the physical state. Bounded preroll settles the complete acoustic
-and mechanical state, and the probe retains an independently rendered
+resetting the physical state. Powered HOLD samples its slow controls on that
+same loop grid and integrates the actual duration of the final shorter block.
+Bounded preroll settles the complete acoustic and mechanical state: powered
+HOLD with contacts enabled and SPACING at or below .28 uses eighteen cycles;
+other held renders use six. This follows the existing contact-capable spacing
+range and gives weak-field repeated contacts time to settle, at the cost of
+longer precomputation for close rims. The probe retains an independently rendered
 preceding cycle for `Keys.seamError`; a copied boundary cannot serve as
-continuity evidence. Modal frequencies retain the requested note within
+continuity evidence. Weak-field rim contacts can retain small nonlinear
+variation between cycles. Contact repeat checks use the existing boundary
+limit and 3% RMS-normalized difference over the central 60% of each cycle;
+they do not require identical physical states. Modal frequencies retain the requested note within
 sample-period quantization. Listening must establish whether the result
 feels like soft overlapping rings rather than hard accents or a drone.
 
