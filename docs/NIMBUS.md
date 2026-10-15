@@ -29,9 +29,10 @@ full-stack source taps, coupling/funnel/
 contact switches, geometry corners, finite decay and difficult held loops.
 Generated files are ignored by Git; source, tests and templates are tracked.
 
-When HOLD before/revised is present, start there. Compare the sustained
-low drone, piercing upper tones and gentle motion at the same listening
-target, then replay several cycles to check continuity.
+When HOLD before/revised is present, start there. Listen for soft overlapping
+rings like a cymbal rolled with felted mallets, with natural decays and no
+hard accents. Compare at the same listening target and replay several cycles
+to judge softness, continuity and recognizable pitch.
 
 Use the ensemble demonstration at C4 next. For both RING and GATHER,
 the whole event, selected connected component, selected-muted event,
@@ -103,7 +104,7 @@ clean source revision:
 ```sh
 ./gradlew --no-daemon :synth:generateNimbusAudition \
   -PnimbusBaselineDir=/absolute/path/to/preserved-nimbus-audition \
-  -PnimbusBaselineRevision=98a02845627c735f9257d8ea7bbf807c343b461f \
+  -PnimbusBaselineRevision=dda08e4b305b5dcbc9ebdb58199a2984e907ab26 \
   -PnimbusCompareHoldAll=true
 ```
 
@@ -219,25 +220,30 @@ Early path lengths are fixed per render to avoid delay-motion energy and
 unwanted Doppler; movement changes loading rather than moving delay taps.
 This is a deliberate simplification of the design specification.
 
-Intermediate HOLD adds a smooth finite drive that releases before the tail;
-HOLD at .99 and above returns a settled repeating region. Both use weak
-modal forcing, distinct from stabilization. Voice and selected-material
-weights also shape the sustained upper modes. The settled drive retains
-multiple material contributions after the finite onset-transfer path drains. The
-continuous force uses a separately normalized native-body vector with a
-smooth ratio and frequency taper, so high strike partials receive less
-permanent excitation. A smaller principal target and alternating drive
-phases reduce the coherent common-note bed while retaining relative rim
-motion. Each plate's supplied force breathes at a staggered phase over one
-exact loop period; the work ledger accounts for every velocity increment.
-These changes affect powered sustain, while HOLD at zero retains the
-accepted finite event and its original random sequence. The
-seamless region follows bounded preroll of the complete acoustic and
-mechanical state. The probe retains an independently rendered preceding
-cycle for the current `Keys.seamError` metric; a copied boundary cannot serve
-as the continuity evidence. Upper drive frequencies align to the repeat
-period for a stable loop, while its principal remains at the requested note
-within sample-period quantization.
+Intermediate HOLD adds a finite soft roll that releases before the tail;
+HOLD at .99 and above returns a settled repeating region. The powered source
+supplies short, smooth contact pulses distributed across all six plates,
+with small deterministic variations in timing, strength and width. This is
+an invented felted-mallet-like excitation of the existing cymbals. Each
+stroke uses a native contact vector, with a small principal projection and
+restrained upper participation. Above the voice's default EXCITE, a firmer
+stroke compresses the felt contact and exposes more upper modes. Between
+pulses the source supplies no force;
+the plates ring and decay at their existing modal loss rates. No resonant
+carrier or inverse-loss compensation maintains their partials.
+
+The staggered strokes overlap in the acoustic response rather than imposing
+a common slow volume cycle. Supplied acoustic and suspension work belongs
+to the powered source ledger, distinct from passive field stabilization.
+The finite onset-transfer path still drains before the settled HOLD region.
+HOLD at zero retains the accepted finite event and its original random
+sequence. The roll schedule repeats over the existing loop interval without
+resetting the physical state. Bounded preroll settles the complete acoustic
+and mechanical state, and the probe retains an independently rendered
+preceding cycle for `Keys.seamError`; a copied boundary cannot serve as
+continuity evidence. Modal frequencies retain the requested note within
+sample-period quantization. Listening must establish whether the result
+feels like soft overlapping rings rather than hard accents or a drone.
 
 ## Checks and acceptance
 
@@ -255,6 +261,12 @@ Raw probes expose six cymbal taps, chamber/contact/return taps, acoustic and
 mechanical energy, per-cymbal modal energy, transfer reservoirs and release
 events, heights, resting positions, velocity, controller work,
 penetration, contact count, powered work and the genuine preceding cycle.
+Powered HOLD also records finite mallet contacts, force samples, and positive
+and returned source work. Loop contact events cover the returned interval;
+the aggregate work totals include settling and preroll. An isolated-contact
+check verifies that supplied force ends while the native cymbal continues
+ringing and decaying. Steady roll pitch is measured over a complete period
+so nearby beating lines are not confused with a retuned principal.
 Tests check deterministic variation, silence at rest, isolated and full-root
 calibration, isolated spectral identity, audible-band upper energy through
 attack and body, contrasting voice spectra and temporal profiles, causal
