@@ -270,16 +270,17 @@ and GLUE, plus host TUNE and HOLD. RELIEF changes actual layer onsets and
 envelope development. Held loops use periodic layer contours with separated
 phases, because initial arrivals cannot remain audible in loop-only material.
 
-Eight provisional recipes cover the six voices. Saved patches retain the layer
+Thirty-six recipes provide six per voice, preserving the original eight reference
+recipes and the sixteen-pad starter. Saved patches retain the layer
 model, timing, envelopes, processing and loop profile. The dry kit, recipes,
 velocity renderer, CLI and synth picker follow existing host paths. Finite notes
 route as TONAL; HOLD's top step routes as LOOP. The audition generator writes
 real Kotlin-rendered native/matched audio, solos, five-point sweeps, interaction
 grids and held comparisons to `testkit/lacquer-audition/`.
-[LACQUER](LACQUER.md) documents reproduction and acceptance. Owner dry sonic
-approval precedes the wider 36-preset bank; numerical checks do not establish
-that listening verdict. Android device, MPC hardware and naming checks remain
-separate acceptance work.
+[LACQUER](LACQUER.md) documents reproduction and acceptance. The expanded bank
+is available for owner listening review, with three twelve-preset MPC programs
+and the original starter. Numerical checks do not establish a listening verdict;
+Android device, MPC hardware and naming checks remain separate acceptance work.
 
 ### TANGLE — oscillators that catch and release
 

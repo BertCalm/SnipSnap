@@ -945,7 +945,7 @@ tasks.register<JavaExec>("generateContourAudition") {
     }
 }
 
-/** Render Lacquer's provisional bank, layer solos, macro grids and held loops. */
+/** Render Lacquer's complete bank, layer solos, macro grids and held loops. */
 tasks.register<JavaExec>("generateLacquerAudition") {
     group = "distribution"
     description = "Render LACQUER dry audition WAVs, measured evidence and a listening page under testkit/lacquer-audition/."
@@ -959,7 +959,7 @@ tasks.register<JavaExec>("generateLacquerAudition") {
 
 tasks.register<JavaExec>("generateLacquerKit") {
     group = "distribution"
-    description = "Export the sixteen dry LACQUER starter pads as MPC 3 with an MPC 2 program twin."
+    description = "Export the sixteen-pad LACQUER starter and complete thirty-six-preset bank as three twelve-pad MPC 3/MPC 2 programs."
     maxHeapSize = "512m"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.LacquerKitGenerator")

@@ -765,7 +765,7 @@ object SynthKits {
 
     /**
      * A dry layered-tone audition kit. Eight KEY notes climb C minor pentatonic;
-     * the upper half contains the eight provisional recipes, including held SILK.
+     * the upper half keeps the original eight reference recipes, including held SILK.
      * Each pad keeps its root, velocity and complete layer profile for regeneration.
      */
     fun lacquer(): List<ArrangedPad?> {
@@ -774,7 +774,7 @@ object SynthKits {
             midi = Lacquer.DEFAULT_MIDI + semitone,
         ).let { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
-            LacquerPresets.all().map { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
+            LacquerPresets.references().map { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
     }
 
     /**
