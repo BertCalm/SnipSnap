@@ -87,23 +87,31 @@ class LacquerPresetBankTest {
     }
 
     @Test
-    fun `wire flick keeps a substantial root across octaves and soft or hard playing`() {
-        val common = comparisons.single { it.patch.name == "Wire Flick" }
-        val patch = common.patch
-        for (midi in listOf(36, 48, 60, 72)) for (velocity in listOf(.35f, 1f)) {
-            val probe = if (midi == 48 && velocity == 1f) common.probe else Lacquer.renderProbe(
-                patch.voice, patch.macros, midi = midi, velocity = velocity, profile = patch.profile,
-                seconds = 1.2f, normalize = true,
-            )
-            val energy = harmonicEnergies(probe.samples, Keys.midiHz(midi).toDouble())
-            val share = energy[0] / energy.sum()
-            val strongest = energy.indices.maxBy { energy[it] } + 1
-            println("LACQUER Wire Flick MIDI$midi velocity$velocity: fundamental share $share; strongest harmonic $strongest")
-            // A narrow tuning estimator can locate a quiet fundamental even when
-            // an octave dominates. This separately catches cancellation between
-            // the body's root and the independently delayed trailing layer.
-            assertTrue(share > .3, "Wire Flick MIDI$midi velocity$velocity: opposing layers leave fundamental share $share")
+    fun `delayed factory recipes keep substantial roots across octaves and playing strengths`() {
+        val weakRoots = mutableListOf<String>()
+        for (name in listOf("Wire Flick", "Bright Lip", "Split Plectrum")) {
+            val common = comparisons.single { it.patch.name == name }
+            val patch = common.patch
+            var smallestShare = 1.0
+            for (midi in listOf(36, 48, 60, 72)) for (velocity in listOf(.35f, 1f)) {
+                val probe = if (midi == 48 && velocity == 1f) common.probe else Lacquer.renderProbe(
+                    patch.voice, patch.macros, midi = midi, velocity = velocity, profile = patch.profile,
+                    seconds = 1.2f, normalize = true,
+                )
+                val energy = harmonicEnergies(probe.samples, Keys.midiHz(midi).toDouble())
+                val share = energy[0] / energy.sum()
+                val strongest = energy.indices.maxBy { energy[it] } + 1
+                smallestShare = minOf(smallestShare, share)
+                println("LACQUER ${patch.name} MIDI$midi velocity$velocity: fundamental share $share; strongest harmonic $strongest")
+                // A narrow tuning estimate can find a quiet fundamental despite
+                // cancellation between independently articulated root layers.
+                // Require substantial root energy here; a bright upper harmonic
+                // may legitimately be louder at some notes and velocities.
+                if (share <= .3 || !share.isFinite()) weakRoots += "${patch.name} MIDI$midi velocity$velocity: $share"
+            }
+            println("LACQUER ${patch.name} register and velocity guard: minimum fundamental share $smallestShare")
         }
+        assertTrue(weakRoots.isEmpty(), "delayed recipes have insufficient requested-root energy: ${weakRoots.joinToString()}")
     }
 
     @Test

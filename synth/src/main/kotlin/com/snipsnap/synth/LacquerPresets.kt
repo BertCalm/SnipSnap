@@ -165,7 +165,8 @@ object LacquerPresets {
                     attack = .010f, decay = .95f, sustain = .38f, release = .50f) },
                 edge = { it.voicing(ratio = 2f, gain = .12f, cutoff = 11000f,
                     attack = .0025f, decay = .20f, sustain = .015f, release = .15f, delay = .012f) },
-                trail = { it.voicing(cutoff = 2900f, attack = .029f,
+                // Preserve the bright body when the delayed support opposes its root.
+                trail = { it.voicing(gain = .06f, cutoff = 2900f, attack = .029f,
                     decay = 1.12f, sustain = .30f, release = .55f, delay = .055f) })),
         recipe(LacquerVoice.BRASS, "Mellow Column", .42f, .30f, .84f, .66f, .44f,
             profile = model(LacquerVoice.BRASS,
@@ -262,7 +263,8 @@ object LacquerPresets {
                     decay = .80f, sustain = .07f, release = .38f) },
                 edge = { it.voicing(source = PLUCK, gain = .14f, cutoff = 9000f,
                     attack = .002f, decay = .21f, sustain = .01f, release = .15f, delay = .040f) },
-                trail = { it.voicing(source = SILK, gain = .14f, cutoff = 2600f,
+                // Limit root cancellation while retaining the later silk arrival.
+                trail = { it.voicing(source = SILK, gain = .11f, cutoff = 2600f,
                     attack = .023f, decay = 1.0f, sustain = .10f, release = .45f, delay = .105f) })),
 
         // SILK: held projection profiles and finite blooms share a clear root anchor.
