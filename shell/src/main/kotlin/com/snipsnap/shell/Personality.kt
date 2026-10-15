@@ -471,17 +471,20 @@ object Copy {
     }
 
     /**
-     * What CHOP is about to slice, when it is not what you just taped (J30).
+     * What CUT is about to slice (J30, then `docs/SCREEN_PLAN_2026_10.md`
+     * §3.2).
      *
-     * CHOP's load is a silent three-tier fallback: the last TAPE commit,
-     * else **the open kit's longest sample**, else nothing. So a player
-     * who opens CHOP without taping first is about to cut up whichever pad
-     * happens to be longest, and nothing on the screen said so - the
-     * filename was read, used to derive a kit name, and never shown.
+     * CUT's load is a three-tier fallback: the last TAPE commit, else
+     * **the open kit's longest sample**, else nothing. So a player who
+     * opens CUT without taping first is about to cut up whichever pad
+     * happens to be longest, and nothing on the screen used to say so -
+     * the filename was read, used to derive a kit name, and never shown.
      *
-     * Said only on the fallback, deliberately. Arriving from a COMMIT, you
-     * just chose the thing on the previous screen and being told again is
-     * noise; arriving on the fallback, the app picked for you.
+     * Said on every load now. J30 said it only on the fallback, because
+     * arriving from a COMMIT you had just chosen the thing on the previous
+     * screen. CUT is a stage of TAPE since the four-place shape, one
+     * row-tap away at any time, so the thing on the table may be a tape
+     * kept an hour ago; the header names it every time.
      */
     fun chopFromKit(name: String): String = "FROM $name"
 

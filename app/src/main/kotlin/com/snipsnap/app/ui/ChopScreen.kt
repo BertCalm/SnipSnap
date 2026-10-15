@@ -205,10 +205,6 @@ fun ChopScreen(
         entry = entry,
         shelf = shelf,
         sourceFile = file,
-        // J30: whether the app picked this source rather than the player.
-        // Computed here because this is where both halves are in scope;
-        // it is the same test the RE-TRIM reference makes above.
-        sourceFromKit = lastCommit?.sourceFile != file,
         initialModel = loadedModel,
         teachEnabled = teachEnabled,
         workshopOpen = workshopOpen,
@@ -362,8 +358,6 @@ private fun ChopContent(
     entry: KitShelf.Entry?,
     shelf: KitShelf,
     sourceFile: File,
-    /** J30: true when the source is the open kit's longest sample rather than a TAPE commit. */
-    sourceFromKit: Boolean,
     initialModel: ChopReviewModel,
     teachEnabled: Boolean,
     workshopOpen: Boolean,
@@ -806,22 +800,19 @@ private fun ChopContent(
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
                 )
-                // J30: name the source when the app picked it rather than
-                // the player. The load falls back to the open kit's
-                // LONGEST SAMPLE when there is no commit, so someone who
-                // opened CHOP without taping is about to slice a pad they
-                // never chose, untold - the filename was read, used to
-                // derive a kit name, and never shown. Only on the
-                // fallback: arriving from a COMMIT you chose the thing on
-                // the previous screen, and being told again is noise.
-                if (sourceFromKit) {
-                    TapeText(
-                        Copy.chopFromKit(sourceFile.nameWithoutExtension.uppercase(java.util.Locale.ROOT)),
-                        TapeType.lcdSmall,
-                        scheme.ink.tape,
-                        maxLines = 1,
-                    )
-                }
+                // The source, always (plan §3.2). J30 first named it only on
+                // the fallback — the open kit's LONGEST SAMPLE when there is
+                // no commit — because arriving from a COMMIT you had just
+                // chosen the thing on the previous screen. CUT is a stage of
+                // TAPE now, one row-tap from DECK at any time, so the thing
+                // on the table may be a tape kept an hour ago or a pad the
+                // app picked; the header says which, every time.
+                TapeText(
+                    Copy.chopFromKit(sourceFile.nameWithoutExtension.uppercase(java.util.Locale.ROOT)),
+                    TapeType.lcdSmall,
+                    scheme.ink.tape,
+                    maxLines = 1,
+                )
             }
         }
 
