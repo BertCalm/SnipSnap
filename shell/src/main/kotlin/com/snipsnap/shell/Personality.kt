@@ -109,6 +109,13 @@ object Copy {
 
     /** The dock's resting line, with no door beside it. */
     const val DOCK_READY = "READY WHEN YOU ARE."
+
+    /**
+     * Opening or starting a project failed on disk: its `project.json`
+     * would not read or write. Law 3's shape, like [KIT_DELETE_FAILED] —
+     * what happened, in the user's words, with the thing it happened to.
+     */
+    const val PROJECT_OPEN_FAILED = "COULDN'T OPEN THAT PROJECT."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct

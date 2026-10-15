@@ -51,7 +51,8 @@ import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.ChopScreen
-import com.snipsnap.app.ui.DeletedKitsScreen
+import com.snipsnap.app.ui.BinScreen
+import com.snipsnap.app.ui.CaptureSheet
 import com.snipsnap.app.ui.DoublesScreen
 import com.snipsnap.app.ui.EmptyStatePanel
 import com.snipsnap.app.ui.EmptyStateRoute
@@ -107,6 +108,7 @@ import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Project
 import com.snipsnap.loop.Arp
 import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Orbit
@@ -448,34 +450,49 @@ fun App(shelf: KitShelf) {
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
     var binnedRooms by remember { mutableStateOf<List<Rooms.Binned>>(emptyList()) }
     var roomsRevision by remember { mutableStateOf(0) }
-    // DELETED KITS (Task 2 of the bin-restore plan): the shelf's own gate
-    // for the `DELETED KITS ▸` row — how many kits `KitShelf.binnedKits()`
-    // holds right now. `deletedKitsOpen` is in this effect's key list, not
-    // just `kits`/`screen`/`roomsRevision`: EMPTY THE BIN NOW changes
-    // nothing else this effect already watches, so without that key,
-    // emptying the bin and returning to the shelf would leave a stale count
-    // (and the row itself) showing after the door behind it is empty.
-    var binnedKitsCount by remember { mutableStateOf(0) }
-    var deletedKitsOpen by remember { mutableStateOf(false) }
+    // BIN (the plan's §3.1, over the bin-restore plan's DELETED KITS): the
+    // shelf's own gate for the `BIN ▸` row — how many kits and snips the two
+    // bins hold right now. `binOpen` is in this effect's key list, not just
+    // `kits`/`onShelf`/`roomsRevision`: EMPTY THE BIN NOW changes nothing
+    // else this effect already watches, so without that key, emptying a bin
+    // and returning to the shelf would leave a stale count (and the row
+    // itself) showing after the door behind it is empty.
+    var binnedCount by remember { mutableStateOf(0) }
+    var binOpen by remember { mutableStateOf(false) }
+    // The projects on the shelf (`docs/DIRECTION_2026_10.md` §2): the
+    // library's project list, read with the rest of the shelf, and the one
+    // that is open. `ShelfModel` is the project half of the shelf beside
+    // `KitShelf`; both are over the same root.
+    val shelfModel = remember { ShelfModel(shelf.root) }
+    var projects by remember { mutableStateOf<List<ShelfModel.ProjectRow>>(emptyList()) }
+    var project by remember { mutableStateOf<Project?>(null) }
     // Keyed on the place, not the whole location: a bench opening over the
     // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf.
     val onShelf = location.place == Place.SHELF
-    LaunchedEffect(kits, onShelf, roomsRevision, deletedKitsOpen) {
+    LaunchedEffect(kits, onShelf, roomsRevision, binOpen) {
         if (onShelf) {
             // Opening the shelf adopts every unheld kit into a project of
             // its own name (`ProjectMigration.adopt`, idempotent) — the one
             // rule of `docs/DIRECTION_2026_10.md` §2. Keyed on `kits` so a
             // kit that lands while the shelf is open is adopted on the same
-            // visit. Logged, not toasted: a migration is nothing the user
-            // asked for, so a failure is nothing they can act on here.
-            withContext(Dispatchers.IO) {
-                runCatching { ShelfModel(shelf.root).open() }
+            // visit, and the projects list is read after it so the list
+            // shows what the migration just made. Logged, not toasted: a
+            // migration is nothing the user asked for, so a failure is
+            // nothing they can act on here.
+            projects = withContext(Dispatchers.IO) {
+                runCatching { shelfModel.open() }
                     .onFailure { Log.e(TAG, "shelf open: project migration failed", it) }
+                runCatching { shelfModel.projects() }
+                    .onFailure { Log.e(TAG, "shelf open: projects unreadable", it) }
+                    .getOrDefault(emptyList())
             }
             instruments = withContext(Dispatchers.IO) { shelf.instruments() }
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
             binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
-            binnedKitsCount = withContext(Dispatchers.IO) { runCatching { shelf.binnedKits() }.getOrDefault(emptyList()) }.size
+            binnedCount = withContext(Dispatchers.IO) {
+                runCatching { shelf.binnedKits().size }.getOrDefault(0) +
+                    runCatching { SnipStore.binned(context.filesDir).size }.getOrDefault(0)
+            }
         }
     }
     // Pad Sheet v2: the open workshop box, remembered per kit so the next
@@ -624,11 +641,11 @@ fun App(shelf: KitShelf) {
     // KitsScreen's own DOUBLES ▸ row, a bare boolean since the screen
     // measures the shelf itself on mount.
     var doublesOpen by remember { mutableStateOf(false) }
-    // DELETED KITS (Task 2 of the bin-restore plan): same shape as
+    // BIN (plan §3.1, over Task 2 of the bin-restore plan): same shape as
     // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
-    // from `KitsScreen`'s own `DELETED KITS ▸` row at `AppScreen.KITS`.
-    // `deletedKitsOpen` itself is declared earlier in this function (with
-    // `binnedKitsCount`, above) since the shelf's refresh effect needs it as
+    // from `KitsScreen`'s own `BIN ▸` row and from SNIPS' own door.
+    // `binOpen` itself is declared earlier in this function (with
+    // `binnedCount`, above) since the shelf's refresh effect needs it as
     // a key; this comment marks where `snipsOpen`'s own sibling lives.
     // SNIPS → PAD's kit-gate fix: the file a SNIPS row's → PAD asked to
     // place on a pad, stashed here while the user picks a kit. SNIPS is only
@@ -2692,7 +2709,7 @@ fun App(shelf: KitShelf) {
         // as SNIPS above: a tab switch away from KITS must
         // not leave this overlay armed to reopen on top of
         // whatever tab comes back into view later.
-        deletedKitsOpen = false
+        binOpen = false
         // X-RAY is shelf-level too, same reasoning again.
         xray = null
         // DOUBLES likewise.
@@ -2724,10 +2741,65 @@ fun App(shelf: KitShelf) {
         clearTransientState()
     }
 
+    /**
+     * Opening a project (`docs/SCREEN_PLAN_2026_10.md` §3.1): it becomes
+     * the open project, its active kit becomes the open kit, and PROJECT
+     * opens on PADS. A project whose active kit is gone from the shelf
+     * opens with no kit, which PADS already says.
+     */
+    fun openProject(p: Project) {
+        project = p
+        open = kits.firstOrNull { it.dir.name == p.activeKit }
+        goToScreen(AppScreen.KIT)
+    }
+
+    /**
+     * Opening a kit row: the first project that holds it, else a new
+     * project named after it — the migration's own rule, for a kit that
+     * arrived since the shelf was opened (`ShelfModel.projectForKit`).
+     * The kit itself is the one tapped, whatever the project's active kit
+     * says: the row the user chose is the kit they want on the grid.
+     */
+    fun openKit(entry: KitShelf.Entry) {
+        scope.launch {
+            val p = try {
+                withContext(Dispatchers.IO) { shelfModel.projectForKit(entry.dir.name).activated(entry.dir.name) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "openKit: no project for ${entry.dir.name}", e)
+                dock.say(Copy.PROJECT_OPEN_FAILED)
+                return@launch
+            }
+            // Re-read after the await: the shelf may have moved under us.
+            project = p
+            open = kits.firstOrNull { it.dir == entry.dir } ?: entry
+            goToScreen(AppScreen.KIT)
+        }
+    }
+
+    /** NEW PROJECT ▸: an empty project, opened on PADS with no kit, where the switcher offers the shelf. */
+    fun newProject() {
+        scope.launch {
+            val p = try {
+                withContext(Dispatchers.IO) { shelfModel.newProject() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "newProject: failed", e)
+                dock.say(Copy.PROJECT_OPEN_FAILED)
+                return@launch
+            }
+            openProject(p)
+        }
+    }
+
     // The gear's two-row sheet. Open/closed state, not a navigation: the
     // sim counts HELP as one step from anywhere and this is the half of
     // that step that moves nothing.
     var gearOpen by remember { mutableStateOf(false) }
+    // The dock's capture choice (mic, or another app), the same shape.
+    var captureSheetOpen by remember { mutableStateOf(false) }
 
     // System Back, root policy: with no KIT-scoped or shelf-level overlay
     // drawn (every such overlay owns its own BackHandler, mounted only while
@@ -2748,10 +2820,10 @@ fun App(shelf: KitShelf) {
         Stage.PADS -> padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
             padCaptureSlot != null || playOpen
         Stage.BEAT -> arrangeOpen
-        null -> location.place == Place.SHELF && (snipsOpen || deletedKitsOpen || doublesOpen || xray != null)
+        null -> location.place == Place.SHELF && (snipsOpen || binOpen || doublesOpen || xray != null)
         else -> false
     }
-    val anyOverlayOpen = overlayDrawn || benchNote != null || gearOpen
+    val anyOverlayOpen = overlayDrawn || benchNote != null || gearOpen || captureSheetOpen
     //
     // KITS is no longer among the exclusions (J11): with a real stack
     // there is nothing special about the shelf except that it is usually
@@ -2801,7 +2873,7 @@ fun App(shelf: KitShelf) {
                 // The NOTE chip only while the WORKSHOP is open; a phone
                 // that never knocked draws the bar exactly as before. The
                 // gear is always there: SETUP and HELP, one tap from anywhere.
-                TitleBar(onNote = if (workshopOpen) ::openBenchNote else null, onGear = { gearOpen = true })
+                TitleBar(projectName = project?.name, onNote = if (workshopOpen) ::openBenchNote else null, onGear = { gearOpen = true })
                 // The frame (`docs/SCREEN_PLAN_2026_10.md` §1): the four
                 // places, then the stage row where the place has stages.
                 PlaceRow(current = location.place, onSelect = ::goToPlace)
@@ -2845,6 +2917,7 @@ fun App(shelf: KitShelf) {
                                 shelf = shelf,
                                 snipsRoot = context.filesDir,
                                 onBack = { snipsOpen = false },
+                                onBin = { snipsOpen = false; binOpen = true },
                                 onToast = { dock.say(it) },
                                 onOpenInTape = { file ->
                                     snipsOpen = false
@@ -2867,24 +2940,28 @@ fun App(shelf: KitShelf) {
                                 onSendToLoop = ::sendSnipToLoop,
                                 onShare = ::shareSnip,
                             )
-                        } else if (deletedKitsOpen) {
-                            DeletedKitsScreen(
+                        } else if (binOpen) {
+                            BinScreen(
                                 shelf = shelf,
-                                onBack = { deletedKitsOpen = false },
+                                snipsRoot = context.filesDir,
+                                onBack = { binOpen = false },
                                 onToast = { dock.say(it) },
-                                onRestored = {
-                                    // The screen already owns its own toast
+                                onKitRestored = {
+                                    // The section already owns its own toast
                                     // and its own list refresh — this only
                                     // needs to catch the shelf back up, the
                                     // same reload `deleteKit`/`renameKit`
                                     // already do after their own move. The
-                                    // `binnedKitsCount` effect above is keyed
+                                    // `binnedCount` effect above is keyed
                                     // on `kits`, so this refresh alone is
                                     // also what re-reads the bin count.
                                     scope.launch {
                                         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                     }
                                 },
+                                // A snip back on its list changes nothing the
+                                // shelf shows; the count re-reads when BIN closes.
+                                onSnipRestored = {},
                             )
                         } else if (doublesOpen) {
                             DoublesScreen(
@@ -2907,9 +2984,11 @@ fun App(shelf: KitShelf) {
                         } else {
                             KitsScreen(
                                 kits = kits,
+                                projects = projects,
+                                onOpenProject = { openProject(it.project) },
+                                onNewProject = ::newProject,
                                 instruments = instruments,
                                 busy = busy != null,
-                                armed = armed,
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
                                     if (breedSource != null) {
@@ -2931,8 +3010,10 @@ fun App(shelf: KitShelf) {
                                             finishBreed(breedSource, entry)
                                         }
                                     } else {
-                                        open = entry
-                                        landOn(AppScreen.KIT)
+                                        // Through the project that holds it (plan
+                                        // §3.1): the kit lands on PADS as the open
+                                        // project's active kit.
+                                        openKit(entry)
                                         // A kit opened while a SNIPS → PAD pick is
                                         // still pending: tell the user what the
                                         // next empty-pad long-press will do, since
@@ -2979,17 +3060,6 @@ fun App(shelf: KitShelf) {
                                 },
                                 onOpenInstrument = { openInstrument = it; landOn(AppScreen.KEYS) },
                                 onFresh = ::fresh,
-                                onArm = ::requestArm,
-                                onArmInside = ::requestArmInside,
-                                onSnip = {
-                                    MicSessionService.snip(context)
-                                    // Optimistic — the real commit hasn't started yet,
-                                    // let alone resolved. Immediate feedback is good UX,
-                                    // but it's a promise: the `lastSnipError` collector
-                                    // above corrects this toast if that commit fails.
-                                    dock.say(Copy.SNIPPED)
-                                },
-                                onEject = { MicSessionService.eject(context) },
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
@@ -3007,8 +3077,8 @@ fun App(shelf: KitShelf) {
                                 onEmptyRoomsBin = ::emptyRoomsBin,
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
-                                binnedKitsCount = binnedKitsCount,
-                                onDeletedKits = { deletedKitsOpen = true },
+                                binnedCount = binnedCount,
+                                onBin = { binOpen = true },
                                 shelfSort = shelfSort,
                                 onToggleSort = { setShelfSort(if (shelfSort == KitShelf.ShelfSort.RECENT) KitShelf.ShelfSort.ALPHA else KitShelf.ShelfSort.RECENT) },
                             )
@@ -3637,6 +3707,7 @@ fun App(shelf: KitShelf) {
                 Dock(
                     dock = dock,
                     busy = busy,
+                    onArm = { captureSheetOpen = true },
                     onSnip = {
                         MicSessionService.snip(context)
                         // Optimistic — the real commit hasn't started yet, let
@@ -3644,7 +3715,15 @@ fun App(shelf: KitShelf) {
                         // corrects this line if that commit fails.
                         dock.say(Copy.SNIPPED)
                     },
+                    onEject = { MicSessionService.eject(context) },
                     onTakeDoor = ::takeDockDoor,
+                )
+            }
+            if (captureSheetOpen) {
+                CaptureSheet(
+                    onMic = { captureSheetOpen = false; requestArm() },
+                    onInside = { captureSheetOpen = false; requestArmInside() },
+                    onDismiss = { captureSheetOpen = false },
                 )
             }
             if (gearOpen) {
