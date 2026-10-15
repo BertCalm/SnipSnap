@@ -103,3 +103,8 @@ routing and difficult held loops. The audition adds five-point sweeps and the
 required GRAIN × SHAPE, DRIFT × STRIKE, BODY × GRAIN and DRIFT × SHAPE grids.
 These checks support listening; they do not establish sonic approval. Phone
 and MPC playback still require device validation.
+
+An opt-in [finite spectral-motion audition](PRISM_MOTION.md) adds saved A/B
+amplitude travel and a synthesized-donor colour experiment. Its 31 dry cases
+are generated with `:synth:generatePrismMotionAudition`; existing patches keep
+the original renderer and motion patches do not support HOLD loops.
