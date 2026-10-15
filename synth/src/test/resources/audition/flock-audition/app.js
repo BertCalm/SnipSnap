@@ -311,7 +311,7 @@
     ['FLOCK','FIXED','INDEPENDENT'].forEach((mode,index)=>{
       const clip=comparisons.find(c=>c.mode===mode)||(mode==='FLOCK'?defaultClip('RIBBON'):null);if(!clip)return;
       const button=document.createElement('button');button.type='button';button.className='comparison-option';button.dataset.clipId=clip.id;button.setAttribute('aria-pressed','false');
-      const label=textEl('span','compare-label',`${'ABC'[index]} / ${mode==='INDEPENDENT'?'WANDER':mode}`);label.append(textEl('span','','↗'));
+      const label=textEl('span','compare-label',`${'ABC'[index]} / ${mode==='INDEPENDENT'?'WANDER':mode}`);label.append(textEl('span','','→'));
       button.append(label,textEl('strong','',descriptions[mode][0]),textEl('small','',descriptions[mode][1]));button.addEventListener('click',()=>select(clip,true));nodes['comparison-options'].append(button);
     });
   }

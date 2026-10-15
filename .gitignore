@@ -235,3 +235,6 @@ testkit/vent-audition/
 
 # Four controlled, uncoloured VENT trajectory studies; generated for listening.
 testkit/vent-isolation-audition/
+
+# FLOCK's generated finite listening pack, source snapshots, and diagnostic traces.
+testkit/flock-audition/
