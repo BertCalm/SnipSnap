@@ -10,12 +10,14 @@ data class OverlapPatch(
     override val macros: Map<String, Float>,
     val midi: Int = Overlap.rootMidi(topology),
     val velocity: Float = 1f,
+    val model: Int = Overlap.MODEL_VERSION,
 ) : Patch {
     /** Shared engine introspection calls topology selection a voice. */
     val voice: OverlapTopology get() = topology
 
     init {
         Patches.validateMacros(this, Overlap.macrosFor(topology))
+        require(model in 1..Overlap.MODEL_VERSION) { "unsupported OVERLAP model $model" }
         require(midi in Overlap.MIN_MIDI..Overlap.MAX_MIDI) {
             "OVERLAP midi out of ${Overlap.MIN_MIDI}..${Overlap.MAX_MIDI}: $midi"
         }
@@ -24,13 +26,14 @@ data class OverlapPatch(
 
     override val engine get() = ENGINE
     override val voiceName get() = topology.name
-    override fun render() = Overlap.render(topology, macros, midi, velocity)
+    override fun render() = Overlap.render(topology, macros, midi, velocity, model = model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap(Patches.toJsonValue(this).entries)
         obj["midi"] = JsonValue.Num(midi.toDouble())
         obj["velocity"] = JsonValue.Num(velocity.toDouble())
+        obj["model"] = JsonValue.Num(model.toDouble())
         return JsonValue.Obj(obj)
     }
 
@@ -41,7 +44,8 @@ data class OverlapPatch(
             return Patches.decode(value, ENGINE, { n -> OverlapTopology.entries.firstOrNull { it.name == n } }) { name, topology, macros ->
                 val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Overlap.rootMidi(topology)
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
-                OverlapPatch(name, topology, macros, midi, velocity)
+                val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: 1
+                OverlapPatch(name, topology, macros, midi, velocity, model)
             }
         }
         fun fromJsonText(text: String): OverlapPatch = fromJsonValue(Json.parse(text)) as OverlapPatch

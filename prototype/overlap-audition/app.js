@@ -1,11 +1,11 @@
 (() => {
   'use strict';
 
-  const storageKey = 'snipsnap-overlap-audition-v1';
+  const storageKey = 'snipsnap-overlap-audition-v2';
   const groupInfo = {
-    routing: { number: '01', title: 'Change the connections.', description: 'The same excitation through four routing patterns. Start here: what character comes from the network itself?' },
-    depth: { number: '02', title: 'Turn the knot.', description: 'Move from independent resonators toward the selected routing. Listen for the point where the network becomes an instrument.' },
-    breathing: { number: '03', title: 'Let it breathe.', description: 'Slow movement changes the ringing. Compare independent motion with breathing that gradually moves together.' },
+    routing: { number: '01', title: 'Change the connections.', description: 'The same excitation through four revised routing patterns. Listen for contrasting bodies, colours and decays; compare with the first audition if useful.' },
+    depth: { number: '02', title: 'Turn the knot.', description: 'Compare zero and half depth with full-depth TREFOIL above. Listen for a half-depth tail that keeps ringing. Tuning across the full morph remains under evaluation.' },
+    breathing: { number: '03', title: 'Let it breathe.', description: 'Compare free, independent breaths with a shared pulse. Listen for a stronger common cadence when LOCK brings the motion together.' },
     glow: { number: '04', title: 'Bring up the glow.', description: 'A harmonic layer follows the resonating sound. Compare the clean network with its illuminated counterpart.' },
     musical: { number: '05', title: 'Try the instrument.', description: 'Step back from the comparison. A short pluck and an evolving tail suggest where this could live in SnipSnap.' }
   };
@@ -291,7 +291,8 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape') stopAll(); });
   document.getElementById('export-notes').addEventListener('click', () => {
     const feedback = {
-      audition: 'OVERLAP / SnipSnap first listen',
+      audition: 'OVERLAP / SnipSnap second listen',
+      auditionRevision: 2,
       exportedAt: new Date().toISOString(),
       playbackMode: mode,
       renderVersion: manifest && (manifest.modelVersion || manifest.version) || null,
@@ -300,7 +301,7 @@
       notes: audioEntries.filter(({ clip }) => notes[clip.id] && (notes[clip.id].rating || (notes[clip.id].text && notes[clip.id].text.trim()))).map(({ clip }) => ({ id: clip.id, title: clip.title, group: clip.group, ...notes[clip.id] }))
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(feedback, null, 2) + '\n'], { type: 'application/json' }));
-    const link = document.createElement('a'); link.href = url; link.download = 'snipsnap-overlap-listening-notes.json';
+    const link = document.createElement('a'); link.href = url; link.download = 'snipsnap-overlap-second-listen-notes.json';
     document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     announce('Listening notes exported. Nothing was sent to a server.');
   });

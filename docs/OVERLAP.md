@@ -1,95 +1,110 @@
-# OVERLAP — first listening prototype
+# OVERLAP — second listening prototype
 
-OVERLAP adapts the [XOmnibus synthesis guide](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/overlap_synthesis_guide.md)
-as a deterministic, finite, six-delay resonator in `:synth`. A colored noise strike
-excites the network; routing changes its resonant structure, six slow phases
-control breathing, and the output can generate its own upper harmonics. The
-[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site) is the
-first listening gate. Numerical checks do not establish musical acceptance.
+OVERLAP adapts the [XOmnibus guide](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/overlap_synthesis_guide.md)
+as a deterministic finite six-delay resonator in `:synth`. The
+[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site) presents
+revision 2, with the [original audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/r1/index.html)
+retained for comparison. Musical acceptance remains with the owner.
 
-This is an audition prototype with saved `Patch`/`PadRecipe` support. It is not yet
-registered in the phone engine picker or factory preset/kit roster. Six provisional
-starting points live in `OverlapPresets` for the audition. Captured-snip
-excitation and sustained-loop export are later work. All first-listen clips are
-real JVM-engine renders; the browser only plays the resulting WAVs.
+## Listening verdict and revision
 
-## Signal path
+The first listening verdict found the four routing identities too similar,
+KNOT halfway a short pluck, and the breathing pair indistinguishable. Three
+mechanisms explained the failures:
 
-A seeded colored-noise hammer feeds six unequal delay lines with asymmetric
-injection and pickup weights. Reads pass through a two-tap damping filter,
-then `M = (1 - KNOT) I + KNOT P`, then per-line feedback. Every feedback stage
-is contractive or non-expansive in the infinity norm; feedback remains below
-one. No limiter, normalization or nonlinear feedback is needed for stability.
+- Every full-depth circuit had been tuned to the same root-period comb, so the
+  routing mostly changed how that same harmonic structure was excited and read.
+- `(1-d)I + dP` discarded differential energy. Its squared-energy loss is
+  `d(1-d) ||x-Px||²`, greatest around the middle of the control.
+- Shallow output-only modulation averaged six phases together, while a shared
+  initiating hammer and a short rubbing passage dominated the comparison.
 
-The permutations are explicit:
+Revision 2 changes the model. It remains a listening candidate; passing numerical
+checks does not establish that the new identities or cadence work musically.
 
-- SELF: six self loops.
-- TREFOIL: two independent three-line cycles, 0 → 1 → 2 → 0 and 3 → 4 → 5 → 3.
-- MIRROR: pairs 0 ↔ 5, 1 ↔ 4, 2 ↔ 3.
-- TORUS: one six-line cycle. The name is a creative routing metaphor; no
-  mathematical-knot invariant or automatic p:q harmonic lock is claimed.
+## Routing and depth
 
-Slow Kuramoto phase oscillators modulate pickup amplitude outside the feedback
-path. LOCK changes their synchronization, never delay length or audio pitch.
-PULSE zero disables audible modulation. GLOW follows the actual resonator output,
-derives bounded even/odd harmonics and removes their DC; it is also outside the
-feedback path. Synthesis and nonlinear processing run at 4× and use the shared
-antialias decimator. The output is mono 44.1 kHz.
+The same six segment proportions `[1.2, 1.6, 2.0, 3.0, 2.4, 1.8]` belong to every
+routing. One overall geometry scale tunes the longest effective circuit to the
+reference note; shorter circuits keep their own families.
 
-## Pitch and controls
-
-MIDI 24–84 and velocity 0–1 are saved beside six macros. The excitation seed is
-independent of topology and macros, allowing isolated comparisons. Zero velocity
-is digital silence. The regular renderer uses house melodic leveling and retains
-velocity dynamics; the raw audition path precedes that leveling.
-
-| Control | First-prototype mapping |
+| Routing | Full-depth structure |
 | --- | --- |
-| KNOT | Identity → selected permutation, with delay geometry moving between calibrated endpoints |
-| PULSE | Zero is off; otherwise slow-to-faster pickup breathing |
-| LOCK | Independent slow phases → stronger Kuramoto synchronization |
-| GLOW | Dry network → output-derived upper harmonics |
-| RING | Nominal low-frequency T60 of `.32 × 22^RING` seconds |
-| HOLD | Finite excitation duration `.008 + 2.8 × HOLD²` seconds |
+| SELF | Six separate lengths, with different upper intervals above the reference root |
+| TREFOIL | Two positive three-line cycles, giving root and fifth families |
+| MIRROR | Three reflected pairs, giving three odd-harmonic families |
+| TORUS | One reflected six-line circuit, giving one odd-harmonic family |
 
-At KNOT zero, all topology selections produce identical self-resonance, with
-lines tuned to the root and integer harmonics. At full depth, each complete
-permutation cycle has one root-period phase transit, including fractional-delay
-and damping phase. This avoids accidentally tuning a six-line cycle to root/6.
-Unequal phase shares preserve different transit structures within a cycle.
+KNOT uses proper rotations: Rodrigues rotations on the two triples, quarter-turn
+pair rotations for MIRROR, and composed adjacent rotations for TORUS. Scattering
+preserves its input's squared norm at every depth. MIRROR includes one polarity
+inversion per pair; TORUS includes one inverted reflection. An unsigned three-pair
+or six-cycle permutation has determinant -1 and cannot connect continuously to
+identity inside six-dimensional orthogonal matrices. These reflections are an
+explicit part of the new instrument, rather than a hidden gain correction.
 
-Intermediate depths combine paths with different lengths. They can shift the
-strongest pitch as well as color. This prototype does not promise pitch-invariant
-morphing, a concert-tuned full MIDI range, or equal decay for every partial.
-The tests measure endpoint tuning at C3 and C4; further registers need listening
-and measurement before product integration. The nominal RING T60 also excludes
-extra high-frequency loss from interpolation and damping.
+Fractional-delay interpolation and two-tap damping are passive. Explicit per-line
+feedback remains below one. Together with orthogonal scattering, this supplies
+an L2 small-gain stability argument before normalization. The tests check the
+matrix on every input direction and exercise actual unlevelled impulse responses.
 
-HOLD always returns finite audio, including at one. It adds gated rubbing
-excitation and a bounded tail; it does not export a sustained or seamless loop.
+At KNOT zero, every topology selection yields the identical SELF network. Overall
+geometry moves toward the selected full-depth size as KNOT rises. Intermediate
+pitch remains exploratory. Full-depth families retain the reference root, but a
+multi-family sound's strongest perceived pitch or autocorrelation estimate can
+follow another family. No independent root oscillator hides that behavior.
 
-## Regeneration and first listen
+## Breathing and glow
+
+Six slow Kuramoto phases gate their own noise excitation and complementary
+absorption. Independent phases give staggered entrances; strong LOCK gathers
+those energy processes into shared surges. Pickup weights remain fixed. There
+is no separate master volume oscillator. PULSE zero bypasses both gates and
+breath absorption. The breathing pair uses PULSE .65 (about 1.4 Hz), HOLD one,
+and only changes LOCK. Its opening ramps in, without a common hammer masking
+the ongoing gesture. Listen beyond the opening second.
+
+GLOW derives bounded even/odd harmonics from the actual output, outside feedback.
+It adds harmonic character; it does not promise that every spectrum becomes
+brighter. The six deterministic excitation streams are shared between routing
+and control comparisons. Synthesis and nonlinearity run at 4× and use the shared
+antialias decimator. Output is mono 44.1 kHz.
+
+| Control | Revision 2 behavior |
+| --- | --- |
+| KNOT | Identity → selected passive scattering, with overall geometry changing |
+| PULSE | Zero is off; otherwise sets the six slow phase rates |
+| LOCK | Stronger synchronization of actual excitation and absorption |
+| GLOW | More output-derived harmonics |
+| RING | Nominal low-frequency T60 `.55 × 24^RING` seconds, before additional spectral losses |
+| HOLD | Finite excitation duration `.040 + 5.96 × HOLD²` seconds; at one, six seconds plus decay |
+
+All outputs remain finite, capped at eight seconds. HOLD does not export a
+seamless or indefinite loop. Phone-picker registration, captured-snip input and
+factory kit integration remain outside this audition prototype.
+
+## Recipes and regeneration
+
+`OverlapPatch` stores an explicit model, MIDI 24–84, velocity and the six macros.
+New patches use model 2. An old recipe with no model reads as model 1. The original
+renderer is preserved in `OverlapV1`; a golden WAV hash checks that its published
+sound remains byte-identical. Edits and velocity variants retain the saved model.
+Six provisional starting points live in `OverlapPresets`, outside the factory
+preset roster.
 
 ```text
 ./gradlew :synth:test --tests com.snipsnap.synth.OverlapTest
 ./gradlew :synth:generateOverlapAudition
 ```
 
-The task writes `testkit/overlap-audition/`, which is generated and ignored by Git.
-The page source lives in `prototype/overlap-audition/`. Twelve clips cover four
-topologies, two intermediate depth conditions, independent/locked breathing,
-glow off/on, and two musical candidates. Every clip has raw and matched PCM24
-WAVs plus a complete replayable recipe. A manifest records hashes, root estimates,
-raw levels, loop gain, internal peak and phase synchronization; diagnostics retain
-the phase-order history and calibrated delay lengths.
+The task writes the generated, ignored `testkit/overlap-audition/`. Page source is
+`prototype/overlap-audition/`. Twelve clips compare routing, depth, breathing, glow
+and two musical candidates. Revision-prefixed WAV and recipe paths avoid serving
+stale first-listen audio. The manifest records hashes, reference/pitch observations,
+phase order and audio envelope measurements. Raw listening files retain one fixed
+engine gain and the regular end fade; matched files use `AuditionLevel`'s loudest
+200 ms target `.03`. Raw internal diagnostics precede the fade and leveling.
 
-Raw files retain one common fixed engine gain. Matched files use the existing
-`AuditionLevel` loudest-200-ms target `.03`, with a `.99` peak guard. No rack
-effects or independently synthesized root anchor mask the resonator. Listen to
-the raw comparisons as well when judging gain or decay. Source recipes regenerate
-the regular engine output; the generator reproduces the raw/matched audition
-variants from those same saved parameters.
-
-The listening page starts silent, plays one clip at a time, and supports Escape
-to stop. Keep/revise/pass decisions and notes stay in that browser's local
-storage and can be downloaded as JSON; they are not submitted to a server.
+The page starts silent and plays one clip at a time. Keep/revise/pass decisions
+and notes stay in browser storage and export as JSON. Revision 2 uses a separate
+note key; first-listen notes remain accessible on the retained original page.

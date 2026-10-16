@@ -355,11 +355,13 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-OVERLAP is a first-listen six-delay resonator prototype: a finite strike rings
-through selectable self, three-cycle, mirrored-pair or six-cycle routing.
+OVERLAP is a second-listen six-delay resonator prototype: a finite strike rings
+through selectable self, three-cycle, reflected-pair or six-cycle routing.
 KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response; saved recipes
 retain MIDI root and velocity. Run `./gradlew :synth:generateOverlapAudition`
-for twelve dry raw/matched comparisons and their replayable recipes. The
+for twelve dry raw/matched comparisons and their replayable recipes. Revision 2
+uses different cycle families, passive depth scattering and phase-gated excitation
+after the first listening verdict found the identities and breathing too similar. The
 [private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site)
 awaits listening; [implementation notes](docs/OVERLAP.md) describe tuning limits
 and the prototype's scope before phone-picker or sustained-loop integration.
