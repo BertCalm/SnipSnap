@@ -86,6 +86,24 @@ data class Scheme(
      * still reads (VENT's KDoc says how).
      */
     val look: Look = Look.CLASSIC,
+    /**
+     * Destructive-action text — STOP, DELETE, EMPTY THE BIN, FORGET → BIN
+     * — which must read as red in every scheme (`docs/MODERN_LOOK.md` §4).
+     * [Schemes.BIN_RED_GLOW] by default, the one value tuned for dark
+     * chrome; a paper scheme gives its own, because a glow tuned to read on
+     * dark reads at 2.5 : 1 on paper. `ContrastTest` holds every scheme's
+     * to AA on its chrome and its LCD.
+     */
+    val bin: Int = Schemes.BIN_RED_GLOW,
+    /**
+     * The same word on the LCD — the dock's STOP. One red cannot clear AA
+     * on both a paper chrome and a dark LCD (the luminance a paper needs
+     * is below what a dark surface needs), so a paper scheme gives the
+     * dock its own: the page's active player light, which is what its
+     * dock turns the word. [bin] by default, which reads on both where the
+     * chrome is dark.
+     */
+    val binLcd: Int = bin,
 ) {
     /** Rec.601 luma 0..255 — used by the two-surface test and ink fallbacks. */
     companion object {
@@ -148,6 +166,8 @@ enum class SchemeId(val displayName: String) {
     ICE("ICE"),
     VAPOR("VAPOR"),
     VENT("VENT"),
+    /** Paper, ink and a deep orange — the first light modern scheme, from the OPENSKY audition page (`docs/MODERN_LOOK.md` §2). */
+    OPENSKY("OPENSKY"),
 }
 
 object Schemes {
@@ -284,8 +304,36 @@ object Schemes {
         look = Look.MODERN,
     )
 
+    /**
+     * OPENSKY: the first paper scheme, every value from the audition page's
+     * `:root` mapped onto the slot that does the same job
+     * (`docs/MODERN_LOOK.md` §2). The August cut of light shells
+     * (`DESIGN_GAP.md` §2f) is reopened for it on purpose, by the decision
+     * of 2026-10-15: this is not CLEAR coming back — a pale bevelled shell
+     * — but a printed page that happens to be light, drawn by the modern
+     * look's flat forms. The two-surface rule holds: the LCD is the page's
+     * dark dock, one step darker so it sits inside the dark-surface law
+     * with margin, and `amber` reads there (6.9 : 1), never on paper
+     * (2.1 : 1) — on chrome the modern look reaches for `accent`.
+     *
+     * `bin` is the page's own error colour, not the dark-chrome glow:
+     * `BIN_RED_GLOW` is 2.5 : 1 on paper.
+     */
+    val OPENSKY = Scheme(
+        SchemeId.OPENSKY, "t-opensky",
+        gray = 0xF8F3E9, grayHi = 0xFFFFFF, grayEdge = 0xDBD5C7, grayMid = 0xEEE6D8, grayDark = 0xB4AD9E,
+        ink = 0x292820, ink2 = 0x69675A,
+        title1 = 0xF8F3E9, title2 = 0xF8F3E9, titleInk = 0x292820,
+        desk1 = 0xEFE8DA, desk2 = 0xF3EDDF,
+        lcd = 0x22211A, lcdInk = 0xF8F3E9, amber = 0xFF8C00, field = 0xFFFAF1,
+        warn = 0xFF8C00, ink3 = 0x817A6B, accent = 0xA74C00,
+        raised = 0xFFFAF1, win = 0xF8F3E9, winFrame = 0xB4AD9E, deskGlow = 0xFFD350,
+        look = Look.MODERN,
+        bin = 0x813600, binLcd = 0xFF8C00,
+    )
+
     /** Picker order — the order the design system tells its story in. */
-    val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR, VENT)
+    val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR, VENT, OPENSKY)
 
     /** The picker's groups: each look's schemes, in [ALL]'s order, looks in [Look]'s order. */
     fun byLook(): Map<Look, List<Scheme>> = Look.entries.associateWith { look -> ALL.filter { it.look == look } }

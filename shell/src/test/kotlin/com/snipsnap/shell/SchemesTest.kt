@@ -9,24 +9,37 @@ import kotlin.test.assertTrue
 class SchemesTest {
 
     @Test
-    fun `nine dark schemes in picker order, OILSLICK by default`() {
+    fun `ten schemes in picker order, OILSLICK by default`() {
         assertEquals(
             listOf(
                 SchemeId.METAL, SchemeId.OILSLICK, SchemeId.PETROL, SchemeId.INFRARED,
-                SchemeId.ACID, SchemeId.SODIUM, SchemeId.ICE, SchemeId.VAPOR, SchemeId.VENT,
+                SchemeId.ACID, SchemeId.SODIUM, SchemeId.ICE, SchemeId.VAPOR, SchemeId.VENT, SchemeId.OPENSKY,
             ),
             Schemes.ALL.map { it.id },
         )
         assertEquals(SchemeId.OILSLICK, Schemes.DEFAULT.id)
     }
 
+    /**
+     * The August cut (`DESIGN_GAP.md` §2f, 2026-08-28: "CLEAR is cut. Every
+     * light shell goes with it") held every scheme's chrome dark. It holds
+     * for the classic drawing still — a pale bevelled shell is what was
+     * cut, and the bevels are what made it pale. The decision of 2026-10-15
+     * reopened it for the modern look only: a paper scheme is a printed
+     * page that happens to be light, drawn flat, and it is light all the
+     * way — chrome at paper luma, not a grey that is neither. What every
+     * scheme still owes, light or dark, is the two-surface rule (the LCD
+     * stays dark, the next law) and chrome text that reads on its chrome.
+     */
     @Test
-    fun `every scheme is dark now - the light shells are gone`() {
+    fun `classic chrome is dark, and a modern scheme is dark or paper, never between`() {
         for (scheme in Schemes.ALL) {
-            assertTrue(
-                Scheme.luma(scheme.gray) < 90,
-                "${scheme.id}: chrome ${"%06x".format(scheme.gray)} is a light shell, and those were cut",
-            )
+            val luma = Scheme.luma(scheme.gray)
+            if (scheme.look == Look.CLASSIC) {
+                assertTrue(luma < 90, "${scheme.id}: chrome ${"%06x".format(scheme.gray)} is a light shell under the classic drawing, and those were cut")
+            } else {
+                assertTrue(luma < 90 || luma > 200, "${scheme.id}: chrome ${"%06x".format(scheme.gray)} is neither dark nor paper (luma $luma)")
+            }
         }
     }
 
@@ -163,15 +176,16 @@ class SchemesTest {
      * METAL first and OILSLICK second.
      */
     @Test
-    fun `VENT is the first modern scheme and the picker groups by look`() {
+    fun `VENT and OPENSKY are the modern schemes and the picker groups by look`() {
         assertEquals(Look.MODERN, Schemes.VENT.look)
-        for (scheme in Schemes.ALL.filter { it.id != SchemeId.VENT }) {
+        assertEquals(Look.MODERN, Schemes.OPENSKY.look)
+        for (scheme in Schemes.ALL.filter { it.id != SchemeId.VENT && it.id != SchemeId.OPENSKY }) {
             assertEquals(Look.CLASSIC, scheme.look, "${scheme.id} is an OG scheme")
         }
         val groups = Schemes.byLook()
         assertEquals(listOf(Look.CLASSIC, Look.MODERN), groups.keys.toList())
         assertEquals(Schemes.ALL.filter { it.look == Look.CLASSIC }, groups.getValue(Look.CLASSIC))
-        assertEquals(listOf(Schemes.VENT), groups.getValue(Look.MODERN))
+        assertEquals(listOf(Schemes.VENT, Schemes.OPENSKY), groups.getValue(Look.MODERN))
         assertEquals(Schemes.ALL.size, groups.values.sumOf { it.size }, "every scheme is in exactly one group")
     }
 

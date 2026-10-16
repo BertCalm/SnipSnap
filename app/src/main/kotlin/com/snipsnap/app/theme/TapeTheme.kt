@@ -27,14 +27,30 @@ import com.snipsnap.shell.Schemes
 val Int.tape: Color get() = Color((0xFF shl 24) or this)
 
 /**
- * Destructive-action text, bound from `:shell`'s [Schemes.BIN_RED_GLOW] —
- * the single source of the value (tuned to clear WCAG AA against every
- * scheme's chrome gray; see that constant's KDoc and `ContrastTest`). Was
- * duplicated as a private `Color(0xFFC86050)` literal in six screen files;
- * every one of them now binds this token instead, so the colour — and any
- * future retune — lives in exactly one place.
+ * Destructive-action text on chrome, bound from the scheme's own `bin` —
+ * [Schemes.BIN_RED_GLOW] for every dark scheme (tuned to clear WCAG AA
+ * against every dark chrome gray; see that constant's KDoc and
+ * `ContrastTest`), the page's own error red for a paper one, where the
+ * glow is 2.5 : 1. Was duplicated as a private `Color(0xFFC86050)` literal
+ * in six screen files; every one of them binds this instead, so the
+ * colour — and any retune — lives in exactly one place. A composable read
+ * because the scheme is the composition's.
  */
-val BinRedGlow: Color get() = Schemes.BIN_RED_GLOW.tape
+val BinRedGlow: Color @Composable get() = LocalScheme.current.bin.tape
+
+/** The same word on the LCD — the dock's STOP — from the scheme's `binLcd`. */
+val BinRedOnLcd: Color @Composable get() = LocalScheme.current.binLcd.tape
+
+/**
+ * `amber` where it is drawn on chrome rather than on the LCD. The modern
+ * look's rule (`docs/MODERN_LOOK.md` §4): amber is the LCD's colour and
+ * never sits on chrome — on paper it is 2.1 : 1 — so a chrome site reads
+ * `accent` under the modern look and `amber` under the classic one, where
+ * the two are the same warm orange on dark. The frame's chips use this;
+ * the screens' own amber-on-chrome sites are an audit the grep cannot do,
+ * since it cannot tell a surface from a colour.
+ */
+val Scheme.amberOnChrome: Color @Composable get() = (if (look == Look.MODERN) accent else amber).tape
 
 val LocalScheme = staticCompositionLocalOf { Schemes.DEFAULT }
 
