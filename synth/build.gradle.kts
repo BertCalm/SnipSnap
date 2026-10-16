@@ -991,3 +991,15 @@ tasks.register<JavaExec>("generateRelayAudition") {
     if (project.hasProperty("relayQuick")) args("--quick")
     if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }
+
+/** CREASE's reproducible dry prototype matrix and standalone audition assets. */
+tasks.register<JavaExec>("generateCreaseAudition") {
+    group = "distribution"
+    description = "Render CREASE matched/raw PCM16 WAVs, replay recipes, control traces and measurements under testkit/crease-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CreaseAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("creaseOutput")?.toString() ?: "${rootDir}/testkit/crease-audition")
+    project.findProperty("creaseRecipe")?.toString()?.let { args("--recipe=$it") }
+}

@@ -48,6 +48,22 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
+### CREASE — pressure memory in a phase map (first listening prototype)
+
+ROUND, PINCH and RUBBER share two smooth, monotonic phase-distortion layers.
+FOLD sets their geometry; PRESSURE drives bounded deformation; DRAG delays it;
+SPLIT separates the shapes and response times; RELAX unfolds them. HOLD extends
+finite notes and reserves its top step for a recurring, converged pressure loop.
+The MIDI root stays outside the six controls. Shape-sensitive reciprocal load,
+history/instantaneous and coupled/independent probes, higher-rate references and
+raw diagnostics make the mechanism reviewable before factory voicing.
+
+`./gradlew :synth:generateCreaseAudition` generates the dry listening matrix and
+standalone audition recipes in `testkit/crease-audition/`. This milestone awaits
+the owner's listening verdict; the remaining three voices, 36 factory presets
+and production patch/phone/kit registration follow that gate. [CREASE](CREASE.md)
+records the prototype scope and reproduction commands.
+
 ### THUMP — analog-style drum voices (the drum synth engine)
 
 One engine, per-class voice models, each a small parameter set with big
