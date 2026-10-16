@@ -372,7 +372,9 @@
         button.dataset.clipId = clip.id;
         button.setAttribute('aria-pressed', 'false');
         button.setAttribute('aria-label', `Play ${label.toLowerCase()} FLOW ${Number(pair.value).toFixed(2)}${key === 'after' ? `, ${rateLabel(pair.rate)} motion speed` : ''}`);
-        button.append(textEl('span', '', '▶'));
+        const icon = textEl('span', '', '');
+        icon.setAttribute('aria-hidden', 'true');
+        button.append(icon);
         button.addEventListener('click', () => select(clip, true));
         controls.append(button);
       });
