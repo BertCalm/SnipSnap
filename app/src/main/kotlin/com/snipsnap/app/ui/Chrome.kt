@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -23,7 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -36,6 +42,7 @@ import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Look
 import com.snipsnap.shell.Places
 import com.snipsnap.shell.SchemeId
 
@@ -200,8 +207,12 @@ fun TitleBar(
     onGear: () -> Unit,
 ) {
     val scheme = LocalScheme.current
+    val modern = scheme.look == Look.MODERN
     val brush =
-        if (scheme.id == SchemeId.OILSLICK) {
+        if (modern) {
+            // `.masthead`: a flat bar, a hairline under it, no gradient.
+            SolidColor(scheme.title1.tape)
+        } else if (scheme.id == SchemeId.OILSLICK) {
             oilslickSweep()
         } else {
             Brush.horizontalGradient(listOf(scheme.title1.tape, scheme.title2.tape))
@@ -210,7 +221,8 @@ fun TitleBar(
         modifier = modifier
             .fillMaxWidth()
             .height(Layout.TITLEBAR_H.dp)
-            .background(brush, RoundedCornerShape(4.dp))
+            .background(brush, RoundedCornerShape(if (modern) 2.dp else 4.dp))
+            .let { if (modern) it.drawBehind { drawRect(scheme.grayEdge.tape, topLeft = Offset(0f, size.height - 1.dp.toPx()), size = Size(size.width, 1.dp.toPx())) } else it }
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -220,7 +232,13 @@ fun TitleBar(
         // skeleton it made a finished app look like an abandoned prototype.
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
-        TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (modern) {
+                // `.wordmark-square`: the page's tilted square before the name.
+                Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
+            }
+            TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (projectName != null) {
                 TapeText(projectName.uppercase(), TapeType.pixel, scheme.titleInk.tape, Modifier.widthIn(max = 140.dp))
