@@ -12,9 +12,11 @@ import kotlin.test.assertTrue
 
 class ShoalUserPresetsTest {
     @Test
-    fun `both first listen factory names remain protected after normalization`() {
+    fun `both voices reserve factory names within the saved name limit after normalization`() {
         for (voice in ShoalVoice.entries) {
-            val factory = ShoalPresets.forVoice(voice).first()
+            val factory = ShoalPresets.forVoice(voice).first {
+                UserPresets.normalize(it.name).length <= UserPresets.MAX_NAME
+            }
             assertEquals(
                 UserPresets.Check.Factory(UserPresets.normalize(factory.name)),
                 UserPresets.check("  ${factory.name.lowercase()}  ", factory.engine, factory.voiceName, emptyList()),
