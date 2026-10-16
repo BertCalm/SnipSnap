@@ -818,6 +818,22 @@ object SynthKits {
     }
 
     /**
+     * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
+     * Eight PLUCK roots walk C minor pentatonic; the remaining eight pads
+     * compare every provisional recipe, including two settled held buffers.
+     * Every pad retains its note, velocity and controls in its recipe.
+     */
+    fun wick(): List<ArrangedPad?> {
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            WickPatch(
+                "Wick ${index + 1}", WickVoice.PLUCK, Wick.defaults(WickVoice.PLUCK),
+                midi = 48 + semitone,
+            ).let { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+        }
+        return notes + WickPresets.all().map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

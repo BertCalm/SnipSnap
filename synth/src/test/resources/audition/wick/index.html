@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eeeadf">
+  <meta name="description" content="Listen to Wick, an experimental dry synthesis engine for SnipSnap. A shared source, three low-pass gates, and a chain reaction.">
+  <title>Wick — a SnipSnap listening lab</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listening-room">Skip to the listening room</a>
+  <header class="masthead wrap">
+    <a class="brand" href="./" aria-label="Wick listening lab home"><span class="brand-symbol" aria-hidden="true">s/s</span><span>SnipSnap <span class="brand-divider">/</span> WICK</span></a>
+    <span class="edition"><span class="status-dot" aria-hidden="true"></span> Listening prototype <span class="edition-number">01</span></span>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">The Wick experiment</p>
+        <h1 id="hero-title">A spark.<br>Three gates.<br><em>Listen to what follows.</em></h1>
+        <p class="hero-intro">One pitched source. Three low-pass gates that wake one another as they close. An experiment in articulation, recovery, and little chain reactions.</p>
+        <button id="first-play" class="primary-button" type="button" disabled><span class="play-icon" aria-hidden="true"></span><span>Play the first spark</span><span class="button-arrow" aria-hidden="true">→</span></button>
+        <p class="hero-note">PLUCK & BUBBLE · Dry renders · Headphones welcome</p>
+      </div>
+      <div class="instrument" aria-label="Wick's three-gate concept">
+        <div class="instrument-topline"><span>WICK / 001</span><span>CAUSAL GATE NETWORK</span></div>
+        <div class="gate-art" aria-hidden="true">
+          <div class="source-art"><span class="source-ring"></span><span class="art-label">one source</span></div>
+          <div class="gate-unit gate-one"><div class="gate-body"><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div></div><span class="gate-number">01</span></div>
+          <div class="gate-unit gate-two"><div class="gate-body"><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div></div><span class="gate-number">02</span></div>
+          <div class="gate-unit gate-three"><div class="gate-body"><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div><div class="gate-slit"></div></div><span class="gate-number">03</span></div>
+          <div class="spark-path"><span>release</span><i>→</i><span>excite</span><i>→</i><span>release</span></div>
+        </div>
+        <div class="instrument-caption"><span class="caption-rule"></span><p>The sound paths run in parallel.<br>The releases start the chain.</p><span class="dry-stamp">100%<br><b>DRY</b></span></div>
+      </div>
+    </section>
+
+    <section id="listening-room" class="listening-room wrap" aria-labelledby="room-title">
+      <div class="room-heading"><div><p class="eyebrow">A small listening study</p><h2 id="room-title">Follow your ears.</h2></div><div class="level-setting"><span id="level-label">Playback level</span><div class="segmented" role="group" aria-labelledby="level-label"><button type="button" data-level="matched" aria-pressed="true">Matched</button><button type="button" data-level="native" aria-pressed="false">Native</button></div><p id="level-note">Matched files make differences easier to hear.</p></div></div>
+      <div class="section-tabs" role="tablist" aria-label="Listening sections">
+        <button type="button" role="tab" id="tab-start" aria-controls="panel-start" aria-selected="true" tabindex="0" data-tab="start"><span>01</span> Start here</button>
+        <button type="button" role="tab" id="tab-mechanism" aria-controls="panel-mechanism" aria-selected="false" tabindex="-1" data-tab="mechanism"><span>02</span> Mechanism</button>
+        <button type="button" role="tab" id="tab-controls" aria-controls="panel-controls" aria-selected="false" tabindex="-1" data-tab="controls"><span>03</span> Controls</button>
+        <button type="button" role="tab" id="tab-held" aria-controls="panel-held" aria-selected="false" tabindex="-1" data-tab="held"><span>04</span> Held loops</button>
+        <button type="button" role="tab" id="tab-range" aria-controls="panel-range" aria-selected="false" tabindex="-1" data-tab="range"><span>05</span> Range & recipes</button>
+      </div>
+      <div id="load-state" class="load-state" role="status">Preparing the listening room…</div>
+      <div id="panel-start" role="tabpanel" aria-labelledby="tab-start" data-panel="start" class="tab-panel">
+        <div class="panel-intro"><h3>Two ways to strike a match.</h3><p>Start with the reference sounds. Listen for the first opening, the smaller answers, and the space between them.</p></div>
+        <div class="group-host" data-host="start"></div>
+      </div>
+      <div id="panel-mechanism" role="tabpanel" aria-labelledby="tab-mechanism" data-panel="mechanism" class="tab-panel" hidden>
+        <div class="panel-intro"><h3>What makes the chain audible?</h3><p>Compare each complete render with a version that changes one part of the mechanism. The patch settings stay the same within each comparison.</p></div>
+        <div class="group-host" data-host="mechanism"></div>
+      </div>
+      <div id="panel-controls" role="tabpanel" aria-labelledby="tab-controls" data-panel="controls" class="tab-panel" hidden>
+        <div class="panel-intro"><h3>A little movement goes a long way.</h3><p>These are rendered sweeps: one control changes while the other settings stay fixed. Play a row in sequence to hear the movement.</p></div>
+        <div class="filter-row"><label for="voice-filter">Voice</label><select id="voice-filter"><option value="all">Both voices</option><option value="PLUCK">PLUCK</option><option value="BUBBLE">BUBBLE</option></select><label for="macro-filter">Control</label><select id="macro-filter"><option value="all">All controls</option></select></div>
+        <div class="group-host" data-host="controls"></div>
+      </div>
+      <div id="panel-held" role="tabpanel" aria-labelledby="tab-held" data-panel="held" class="tab-panel" hidden>
+        <div class="panel-intro"><h3>Let it keep talking.</h3><p>Held renders are prepared as repeatable buffers. Turn repeat on to hear successive cycles. A normal SnipSnap pad plays the buffer once; sustained instrument playback is a separate integration step.</p></div>
+        <div class="repeat-setting"><label class="toggle-label"><input id="repeat-held" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>Repeat held clips</span></label><span>Applies only to clips marked HOLD.</span></div>
+        <div class="group-host" data-host="held"></div>
+      </div>
+      <div id="panel-range" role="tabpanel" aria-labelledby="tab-range" data-panel="range" class="tab-panel" hidden>
+        <div class="panel-intro"><h3>Find its useful corners.</h3><p>Try the provisional recipes, register and velocity changes, and paired control settings. Each clip includes its exact patch or diagnostic recipe.</p></div>
+        <div class="group-host" data-host="range"></div>
+      </div>
+      <section class="feedback" aria-labelledby="feedback-title" hidden>
+        <div><p class="eyebrow">Your listening notes</p><h3 id="feedback-title">What did you hear?</h3><p>Notes stay in this browser. Export them when you're ready to share.</p></div>
+        <div class="feedback-form"><label for="feedback-verdict">For this section</label><select id="feedback-verdict"><option value="">Choose a response…</option><option value="convincing">Convincing — the behavior is audible</option><option value="subtle">Subtle — needs closer listening</option><option value="unclear">Unclear — I can't hear the intended behavior</option><option value="issue">Issue — something sounds wrong</option></select><label class="sr-only" for="feedback-text">Listening notes</label><textarea id="feedback-text" rows="3" placeholder="A sound you liked, a comparison that surprised you, or something to fix…"></textarea><div class="feedback-bottom"><span id="save-note" role="status">Saved locally as you type</span><button id="export-feedback" type="button" class="text-button">Export notes <span aria-hidden="true">↓</span></button></div></div>
+      </section>
+    </section>
+
+    <section class="about wrap" aria-labelledby="about-title">
+      <div><p class="eyebrow">Work in progress</p><h2 id="about-title">An engine worth<br>listening into.</h2></div>
+      <div class="about-copy"><p>Wick is a provisional engine study for <a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true">↗</span></a>. This audition focuses on PLUCK and BUBBLE, their interacting gates, and held-loop behavior. Every sound is dry, with an empty effects chain.</p><p>This is a listening prototype, not a completed six-voice release. The downloads preserve the exact recipes and render evidence so the sounds can be reviewed and reproduced.</p><details class="build-details"><summary>Build & validation notes <span aria-hidden="true">+</span></summary><div id="build-info"><p>Loading build information…</p></div></details><div class="download-links"><a href="manifest.json" download>Audio manifest <span aria-hidden="true">↓</span></a><a href="downloads/SnipSnap-Wick-Prototype-Kit.zip" download>SnipSnap kit ZIP <span aria-hidden="true">↓</span></a><a href="downloads/wick-source.zip" download>Prototype source ZIP <span aria-hidden="true">↓</span></a></div></div>
+    </section>
+  </main>
+  <footer class="footer wrap"><span>SnipSnap / Wick</span><span>A spark is only the beginning.</span><a href="#hero-title">Back to the top ↑</a></footer>
+
+  <div class="transport" id="transport" hidden aria-label="Audio player">
+    <div class="transport-inner wrap"><button id="transport-toggle" class="transport-play" type="button" aria-label="Pause audio"><span aria-hidden="true">Ⅱ</span></button><div class="transport-identity"><span id="transport-voice">WICK</span><strong id="transport-title">Ready to listen</strong></div><label class="sr-only" for="playhead">Playback position</label><input type="range" id="playhead" min="0" max="1000" value="0"><span class="transport-time"><span id="elapsed">0:00</span><span class="time-divider"> / </span><span id="duration">0:00</span></span><button id="transport-stop" class="transport-stop" type="button" aria-label="Stop and close player">×</button></div><p id="audio-status" class="sr-only" aria-live="polite"></p>
+  </div>
+  <div id="notice" class="notice" role="status" hidden></div>
+</body>
+</html>

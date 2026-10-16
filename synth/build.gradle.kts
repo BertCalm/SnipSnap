@@ -2,6 +2,28 @@ plugins {
     kotlin("jvm")
 }
 
+/** Two-voice WICK milestone: dry audio, causal comparisons and real held-loop evidence. */
+tasks.register<JavaExec>("generateWickAudition") {
+    group = "distribution"
+    description = "Render WICK native/raw/matched WAVs, exact recipes, causal traces and the prototype audition page under testkit/wick-audition/."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("wickOutput").orNull ?: "${rootDir}/testkit/wick-audition")
+    if (providers.gradleProperty("wickQuick").orNull == "true") args("--quick")
+}
+
+tasks.register<JavaExec>("generateWickKit") {
+    group = "distribution"
+    description = "Export the dry provisional WICK MPC 3 kit, MPC 2 program twin and regenerable recipes."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
 tasks.register<JavaExec>("generateOspreyAudition") {
     group = "distribution"

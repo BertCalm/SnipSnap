@@ -281,6 +281,26 @@ approval precedes the wider 36-preset bank; numerical checks do not establish
 that listening verdict. Android device, MPC hardware and naming checks remain
 separate acceptance work.
 
+### WICK — ignite, cascade, recover
+
+The [supplied specification](WICK_SPEC.md) is being tested as a two-voice
+PLUCK/BUBBLE listening prototype. One pitched complex source feeds three
+parallel low-pass gates. Each has bounded charge and recoverable availability;
+real releases schedule later pulses into the next gate. SPARK, FEED, CASCADE,
+TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
+and velocity. The oscillator/filter techniques draw on TIDE; the gate network
+and release scheduler are new.
+
+Eight provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+kit support the first audition. WICK stays outside the factory preset roster,
+phone picker and starter menu pending listening. Run
+`./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point
+controls, register/velocity probes, mechanism ablations and held examples.
+The [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
+and [implementation notes](WICK.md) retain the scope and current limits.
+WOOD, BREATH, FLICKER, RATTLE and the proposed 36-preset library follow the
+owner's verdict on the finite chain and repeating BUBBLE proof.
+
 ### TANGLE — oscillators that catch and release
 
 The supplied [Tangle engineering specification](superpowers/specs/2026-10-11-tangle-engine-engineering-spec.md)

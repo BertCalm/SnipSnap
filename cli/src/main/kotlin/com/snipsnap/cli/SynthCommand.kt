@@ -64,6 +64,10 @@ import com.snipsnap.synth.Vent
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.VentPresets
 import com.snipsnap.synth.VentVoice
+import com.snipsnap.synth.Wick
+import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.WickPresets
+import com.snipsnap.synth.WickVoice
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
@@ -92,7 +96,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT prototype) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -100,6 +104,7 @@ import kotlin.random.Random
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * VENT accepts `--seed N` for its initial trajectory. Its three provisional
  * starting recipes are available here while remaining outside the factory roster.
+ * WICK likewise offers its eight provisional PLUCK/BUBBLE recipes without adding a phone engine.
  */
 object SynthCommand {
 
@@ -115,9 +120,11 @@ object SynthCommand {
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
 
-        val presets = if (engine == VentPatch.ENGINE) {
-            VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
-        } else Presets.forVoice(engine, voice)
+        val presets = when (engine) {
+            VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
+            WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
+            else -> Presets.forVoice(engine, voice)
+        }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
 
         val instrument = opts.has("--instrument")
@@ -144,6 +151,7 @@ object SynthCommand {
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
                 SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
                 VentPatch.ENGINE -> Vent.MIDI_MIN..Vent.MIDI_MAX
+                WickPatch.ENGINE -> Wick.MIN_MIDI..Wick.MAX_MIDI
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
                     val root = Prism.rootMidi(prismVoice)
@@ -152,7 +160,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and VENT, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, VENT and WICK, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -227,6 +235,7 @@ object SynthCommand {
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is TanglePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is WickPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Relay.rootMidi(patch.voice)) / Relay.TUNE_SEMITONES.toFloat()),

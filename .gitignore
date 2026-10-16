@@ -235,3 +235,8 @@ testkit/vent-audition/
 
 # Four controlled, uncoloured VENT trajectory studies; generated for listening.
 testkit/vent-isolation-audition/
+# WICK's listening audio, diagnostic evidence and MPC/source kit are regenerated.
+testkit/wick-audition/
+testkit/.wick-work/
+testkit/SnipSnap Wick Prototype Kit/
+testkit/SnipSnap-Wick-Prototype-Kit.zip
