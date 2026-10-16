@@ -208,6 +208,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.relay() },
         Starter(
+            "shoal", "SHOAL",
+            "Glass and ripples gather into moving harmonic groups in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.shoal() },
+        Starter(
             "embouchure", "EMBOUCHURE",
             "Dry expressive reeds, muted brass, breathy bass and bowed notes in C minor pentatonic.",
             seeded = false,

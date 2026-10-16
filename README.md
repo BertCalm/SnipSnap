@@ -430,6 +430,16 @@ interaction grids, velocity and loop probes. The
 awaits the owner's dry listening verdict before expanding the preset roster.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 
+SHOAL's first prototype offers GLASS and RIPPLE: harmonic energy gathers,
+migrates between partials and briefly strays before returning. DENSITY, CURRENT,
+COHESION, STRAY and GLOW shape the population; HOLD supplies a moving loop.
+ROOT and VELOCITY remain independent controls. Eight provisional dry recipes,
+saved patches, a sixteen-pad starter kit, CLI rendering and the phone picker
+support the first listen. Run `./gradlew :synth:generateShoalAudition` for the
+audition. The remaining four proposed voices and 36-preset expansion await
+later work; the owner's listening verdict is pending.
+[Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
+
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
 modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
@@ -695,8 +705,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY and GRAINS round out the lineup —
-thirty-nine engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY and GRAINS round out the lineup —
+forty engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -879,10 +889,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).

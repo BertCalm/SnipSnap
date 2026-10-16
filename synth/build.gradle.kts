@@ -991,3 +991,15 @@ tasks.register<JavaExec>("generateRelayAudition") {
     if (project.hasProperty("relayQuick")) args("--quick")
     if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }
+
+/** Render Shoal's first two voices with causal comparisons and moving held loops. */
+tasks.register<JavaExec>("generateShoalAudition") {
+    group = "distribution"
+    description = "Render SHOAL dry raw/matched24-bit WAVs, recipes, state traces, measurements and a listening page under testkit/shoal-audition/."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ShoalAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("shoalOutput").orNull ?: "${rootDir}/testkit/shoal-audition")
+    if (project.hasProperty("shoalRefreshPage")) args("--refresh-page")
+}

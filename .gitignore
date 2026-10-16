@@ -235,3 +235,5 @@ testkit/vent-audition/
 
 # Four controlled, uncoloured VENT trajectory studies; generated for listening.
 testkit/vent-isolation-audition/
+# Generated Shoal listening assets; recipes and player sources live under synth/.
+testkit/shoal-audition/

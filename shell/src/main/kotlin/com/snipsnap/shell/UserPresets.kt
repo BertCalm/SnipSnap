@@ -23,6 +23,7 @@ import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
@@ -407,6 +408,7 @@ object UserPresets {
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is ShoalPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")

@@ -64,6 +64,7 @@ class PadRecipeTest {
         StoopPatch("Groove Test", StoopVoice.TINE, mapOf("TOUCH" to 0.6f), midi = 55, velocity = 0.6f, shadowInterval = 12),
         TanglePatch("Knot Test", TangleVoice.BASS, mapOf("TANGLE" to 0.6f), midi = 36, velocity = 0.6f),
         MurmurPatch("Mouth Test", MurmurVoice.KEY, mapOf("MOUTH" to 0.7f), midi = 55, velocity = 0.6f),
+        ShoalPatch("Population Test", ShoalVoice.RIPPLE, mapOf("COHESION" to .8f, "STRAY" to .3f), midi = 43, velocity = .6f),
         // VENT is a prototype held outside Presets (PatchTypes.PROTOTYPES), so no factory
         // preset covers it; this one also carries a saved note, velocity and seed.
         VentPatch("Orbit Test", VentVoice.WIRE, mapOf("CHAOS" to 0.6f, "LENGTH" to 0.1f), midi = 48, velocity = 0.6f, seed = 7),
@@ -110,6 +111,17 @@ class PadRecipeTest {
         val restored = PadRecipe.fromJsonText(recipe.toJsonText())
         assertEquals(recipe, restored, "recipe dispatch retains state outside the macro map")
         assertNull(restored.fx)
+    }
+
+    @Test
+    fun `editing a shoal recipe retains its root velocity and synthesis model`() {
+        val source = ShoalPatch("Low population", ShoalVoice.RIPPLE, mapOf("DENSITY" to .7f),
+            midi = 36, velocity = .3f, model = Shoal.MODEL_VERSION)
+        val macros = source.macros + ("CURRENT" to .8f)
+        val edited = Patches.edited(source, "Rising population", macros)
+        assertEquals(source.copy(name = "Rising population", macros = macros), edited)
+        val recipe = PadRecipe(edited)
+        assertEquals(recipe, PadRecipe.fromJsonText(recipe.toJsonText()))
     }
 
     @Test
