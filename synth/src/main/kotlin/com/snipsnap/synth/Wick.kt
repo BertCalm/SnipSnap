@@ -286,7 +286,12 @@ object Wick {
             // Quiet gates accept the pulse. An already-open root is allowed to finish rather
             // than being held forever above its closing threshold by a fast feed clock.
             if (gates[0].opening > CLOSE_THRESHOLD) return
-            val strength = (.40 + .48 * spark) * (.42 + .58 * feed) * velocity
+            // HOLD declares a .54 recurrent supply floor: at FEED 0 the default SPARK must
+            // still open far enough to arm a real release and its answering cascade. Finite
+            // notes keep the initial-only FEED 0 gesture; FEED still changes held pulse count
+            // and supply strongly. Velocity zero never reaches this point.
+            val supply = if (held) .54 + .46 * feed else .42 + .58 * feed
+            val strength = (.40 + .48 * spark) * supply * velocity
             admit(Pending(sample, 0, strength, -1, -1, -1, "FEED"))
         }
         private fun initial() {
