@@ -24,6 +24,7 @@
         <p class="tagline">A little disorder.<br> A shared direction.</p>
         <p class="hero-description">Strike a note. Twenty-four voices scatter, respond to their neighbors, and find their way back together.</p>
         <div class="hero-actions"><button class="primary-button" id="first-listen" type="button" disabled><span class="play-triangle" aria-hidden="true"></span> Hear it gather <span class="button-time" id="first-duration"></span></button><a class="quiet-link" href="#comparison">Then, hear the difference <span aria-hidden="true">→</span></a></div>
+        <a class="flow-notice" id="flow-notice" href="#flow-revision" hidden><span>FLOW revised</span> Hear slow to fast <span aria-hidden="true">→</span></a>
       </div>
       <figure class="flock-window">
         <div class="window-heading"><span><span class="signal-dot" aria-hidden="true"></span> A movement in twenty-four parts</span><span>01—24</span></div>
@@ -35,6 +36,12 @@
 
     <div class="load-message wrap" id="library-status" role="status">Opening the audition library…</div>
     <div class="load-error wrap" id="library-error" hidden role="alert"><strong>The sounds could not be loaded.</strong><p id="library-error-message">Check your connection and try again.</p><button class="text-button" id="retry-load" type="button">Try again ↻</button></div>
+
+    <section class="flow-revision wrap" id="flow-revision" aria-labelledby="flow-title" hidden>
+      <div class="flow-heading"><div><p class="eyebrow section-number">FLOW / Revised for review</p><h2 id="flow-title">Give FLOW another listen.</h2></div><p id="flow-description">FLOW now changes the speed of the collective motion. Compare the revised mapping with the previous version at each setting.</p></div>
+      <div class="flow-steps" id="flow-steps" role="group" aria-label="Compare previous and revised FLOW at five settings"></div>
+      <p class="flow-footnote" id="flow-footnote">The other sounds remain from the original audition.</p>
+    </section>
 
     <section class="gesture-section wrap" id="gestures" aria-labelledby="gestures-title">
       <div class="section-top"><div><p class="eyebrow section-number">01 / Meet the gestures</p><h2 id="gestures-title">Same flock. Three ways to move.</h2></div><p class="section-aside">Each sound is a complete, finite render.<br>Choose a gesture and follow its change.</p></div>

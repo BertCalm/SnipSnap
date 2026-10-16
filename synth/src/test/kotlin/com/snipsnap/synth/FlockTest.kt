@@ -17,7 +17,8 @@ class FlockTest {
         macros: Map<String, Float> = Flock.defaults(voice) + ("HOLD" to 0f),
         midi: Int = 60, velocity: Float = 1f, seed: Long = 42001,
         mode: FlockMode = FlockMode.FLOCK, perturb: Boolean = false,
-    ) = Flock.renderDetailed(voice, macros, midi, velocity, seed, mode, perturb, oversample = 1)
+        model: Int = Flock.MODEL_VERSION,
+    ) = Flock.renderDetailed(voice, macros, midi, velocity, seed, mode, perturb, oversample = 1, model = model)
 
     private fun distance(a: FloatArray, b: FloatArray): Double {
         val n = minOf(a.size, b.size)
@@ -158,6 +159,81 @@ class FlockTest {
         var checks = 0
         assertFailsWith<CancellationException> {
             Flock.renderDetailed(FlockVoice.GATHER, macros, cancelled = { ++checks > 3 })
+        }
+    }
+
+    @Test
+    fun `FLOW clock is monotonic and exactly preserves each accepted voice default`() {
+        for (voice in FlockVoice.entries) {
+            val base = Flock.defaults(voice) + ("HOLD" to 0f)
+            val defaultFlow = base.getValue("FLOW")
+            assertEquals(.12, Flock.motionRate(voice, 0f))
+            assertEquals(1.0, Flock.motionRate(voice, defaultFlow))
+            assertEquals(4.0, Flock.motionRate(voice, 1f))
+            val rates = (0..100).map { Flock.motionRate(voice, it / 100f) }
+            assertTrue(rates.zipWithNext().all { (a, b) -> b > a }, "$voice rate is not monotonic")
+            assertTrue((0..100).all { Flock.motionRate(voice, it / 100f, model = 1) == 1.0 })
+            val original = quick(voice, base, seed = Long.MAX_VALUE, model = 1)
+            val current = quick(voice, base, seed = Long.MAX_VALUE, model = 2)
+            assertContentEquals(original.rawSamples, current.rawSamples, "$voice default raw sound changed")
+            assertContentEquals(original.samples, current.samples, "$voice default leveled sound changed")
+            assertEquals(original.trace, current.trace, "$voice default group behavior changed")
+            assertEquals(original.diagnostics, current.diagnostics)
+        }
+        assertFailsWith<IllegalArgumentException> { Flock.motionRate(FlockVoice.RIBBON, .5f, model = 3) }
+        assertFailsWith<IllegalArgumentException> { quick(model = 0) }
+    }
+
+    @Test
+    fun `FLOW changes sustained group rate as well as attack timing`() {
+        val companion = mapOf("SPREAD" to .55f, "PULL" to .55f, "FLOW" to .65f,
+            "SCATTER" to .55f, "EDGE" to .4f, "HOLD" to 1f)
+        data class Motion(val speed: Double, val depth: Double, val characteristicHz: Double)
+        fun motion(probe: Flock.Probe): Motion {
+            val frames = probe.trace.filter { it.seconds in 2.5..5.5 }
+            val centers = (0 until Flock.PARTICLES).map { i -> frames.map { it.pitchSemitones[i] }.average() }
+            val depth = sqrt(frames.sumOf { f -> centers.indices.sumOf { i ->
+                val d = f.pitchSemitones[i] - centers[i]; d * d
+            } } / (frames.size * Flock.PARTICLES))
+            var speedSquaredTime = 0.0
+            var duration = 0.0
+            for ((a, b) in frames.zipWithNext()) {
+                val dt = b.seconds - a.seconds
+                speedSquaredTime += centers.indices.sumOf { i ->
+                    val v = (b.pitchSemitones[i] - a.pitchSemitones[i]) / dt; v * v
+                } * dt
+                duration += dt
+            }
+            val speed = sqrt(speedSquaredTime / (duration * Flock.PARTICLES))
+            return Motion(speed, depth, speed / depth / (2.0 * kotlin.math.PI))
+        }
+        val measured = listOf(0f, .25f, .5f, .75f, 1f).map { flow ->
+            motion(quick(macros = companion + ("FLOW" to flow), seed = Flock.DEFAULT_SEED))
+        }
+        assertTrue(measured.all { it.depth > .003 && it.speed.isFinite() && it.characteristicHz.isFinite() }, "$measured")
+        assertTrue(measured.last().characteristicHz > 2.0 * measured.first().characteristicHz,
+            "FLOW did not increase sustained motion rate: $measured")
+        assertTrue(measured.last().characteristicHz > 1.4 * measured[2].characteristicHz,
+            "FLOW upper half has little sustained rate authority: $measured")
+
+        fun halfway(probe: Flock.Probe, voice: FlockVoice): Double {
+            fun excursion(f: Flock.TraceFrame): Double = sqrt(f.pitchSemitones.indices.sumOf { i ->
+                val anchor = if (voice != FlockVoice.SPLIT) 0.0 else when (i / 8) { 1 -> 7.01955; 2 -> 12.0; else -> 0.0 }
+                val d = f.pitchSemitones[i] - anchor; d * d
+            } / Flock.PARTICLES)
+            val half = excursion(probe.trace.first()) * .5
+            return probe.trace.firstOrNull { excursion(it) <= half }?.seconds ?: probe.diagnostics.durationSeconds
+        }
+        for (voice in FlockVoice.entries) {
+            val macros = Flock.defaults(voice) + ("HOLD" to 1f)
+            val slow = quick(voice, macros + ("FLOW" to 0f), seed = Flock.DEFAULT_SEED)
+            val fast = quick(voice, macros + ("FLOW" to 1f), seed = Flock.DEFAULT_SEED)
+            val slowHalf = halfway(slow, voice)
+            val fastHalf = halfway(fast, voice)
+            assertTrue(fastHalf < 1.0 && slowHalf > fastHalf * 4.0,
+                "$voice FLOW did not change gathering time: slow=$slowHalf fast=$fastHalf")
+            assertEquals(slow.samples.size, fast.samples.size, "$voice FLOW changed wall-clock duration")
+            assertEquals(slow.trace.first(), fast.trace.first(), "$voice FLOW changed seeded scatter")
         }
     }
 }

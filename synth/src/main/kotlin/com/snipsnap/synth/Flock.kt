@@ -26,10 +26,11 @@ enum class FlockMode { FLOCK, FIXED, INDEPENDENT }
  * reads one complete previous snapshot. Audio interpolates the resulting coordinates;
  * neither the neighbor graph nor the group motion is simulated by the stereo field.
  *
- * Model 1 deliberately has no sustain loop. HOLD selects a 2–6 second performance.
+ * HOLD selects a finite 2–6 second performance. Model 2 gives FLOW a simulation
+ * clock as well as its original neighbor response, anchored to the model-1 defaults.
  */
 object Flock {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val PARTICLES = 24
     const val CONTROL_RATE = 420
     const val MIN_MIDI = 36
@@ -53,11 +54,13 @@ object Flock {
         val outputPeak: Double,
         val minFrequencyHz: Double,
         val maxFrequencyHz: Double,
+        /** Maximum pitch speed in semitones per wall-clock second. */
         val maxSpeed: Double,
         val neighborMean: Double,
         val perturbationSeconds: Double?,
         val directNeighborsAtImpulse: List<Int>,
         val perturbationNeighbors: List<NeighborFrame>,
+        val motionRate: Double = 1.0,
     )
 
     data class Probe(
@@ -86,6 +89,23 @@ object Flock {
 
     fun defaults(voice: FlockVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
+    fun supportsModel(model: Int): Boolean = model in 1..MODEL_VERSION
+
+    /**
+     * FLOW slows or accelerates the existing group equations, rather than adding a
+     * modulation source. Each original voice default is an exact 1x anchor, so its
+     * accepted sound is unchanged. Saved model-1 performances always retain 1x time.
+     */
+    fun motionRate(voice: FlockVoice, flow: Float, model: Int = MODEL_VERSION): Double {
+        require(supportsModel(model)) { "unsupported flock model $model" }
+        require(flow.isFinite() && flow in 0f..1f) { "FLOCK FLOW must be 0..1" }
+        if (model == 1) return 1.0
+        val anchor = defaults(voice).getValue("FLOW")
+        if (flow == anchor) return 1.0
+        return if (flow < anchor) .12.pow(1.0 - flow.toDouble() / anchor.toDouble())
+        else 4.0.pow((flow.toDouble() - anchor.toDouble()) / (1.0 - anchor.toDouble()))
+    }
+
     internal fun settled(macros: Map<String, Float>, voice: FlockVoice): Map<String, Float> {
         val m = defaults(voice).toMutableMap()
         for ((key, value) in macros) {
@@ -111,7 +131,7 @@ object Flock {
 
     private class Cloud(
         val voice: FlockVoice, val m: Map<String, Float>, velocity: Float, seed: Long,
-        val mode: FlockMode, val perturb: Boolean,
+        val mode: FlockMode, val perturb: Boolean, val motionRate: Double,
     ) {
         val spread = m.getValue("SPREAD").toDouble()
         val pull = m.getValue("PULL").toDouble()
@@ -158,8 +178,9 @@ object Flock {
                 pitch.copyInto(nextPitch); energy.copyInto(nextEnergy)
                 return
             }
-            val dt = 1.0 / CONTROL_RATE
+            val dt = (1.0 / CONTROL_RATE) * motionRate
             val time = tick * dt
+            val wallTime = tick * (1.0 / CONTROL_RATE)
             val radius = 1.15 + 1.8 * flow + 1.1 * spread
             val radius2 = radius * radius
             val damping = if (voice == FlockVoice.RIBBON) .65 + 1.7 * pull else .95 + 2.1 * pull
@@ -239,10 +260,10 @@ object Flock {
                 nextPitchSpeed[i] = vx; nextEnergySpeed[i] = vy
                 nextPitch[i] = (pitch[i] + vx * dt).coerceIn(anchor[i] - 7.0, anchor[i] + 7.0)
                 nextEnergy[i] = (energy[i] + vy * dt).coerceIn(-1.0, 1.0)
-                maxSpeed = max(maxSpeed, abs(vx))
+                maxSpeed = max(maxSpeed, abs(vx) * motionRate)
             }
             if (zeroReceivers != null) {
-                perturbationNeighbors += NeighborFrame(time, zeroReceivers.toList())
+                perturbationNeighbors += NeighborFrame(wallTime, zeroReceivers.toList())
                 if (tick == CONTROL_RATE) directNeighborsAtImpulse = zeroReceivers.toList()
             }
         }
@@ -273,7 +294,9 @@ object Flock {
         perturb: Boolean = false,
         cancelled: () -> Boolean = { false },
         oversample: Int = 4,
+        model: Int = MODEL_VERSION,
     ): Probe {
+        require(supportsModel(model)) { "unsupported flock model $model" }
         require(midi in MIN_MIDI..MAX_MIDI) { "FLOCK midi must be $MIN_MIDI..$MAX_MIDI" }
         require(velocity.isFinite() && velocity in 0f..1f) { "FLOCK velocity must be 0..1" }
         require(oversample == 1 || oversample == 4) { "FLOCK oversample must be 1 or 4" }
@@ -285,7 +308,8 @@ object Flock {
         check(block * CONTROL_RATE == rate)
         val frames = (seconds * rate).roundToInt()
         val raw = FloatArray(frames)
-        val cloud = Cloud(voice, m, velocity, seed, mode, perturb)
+        val motionRate = motionRate(voice, m.getValue("FLOW"), model)
+        val cloud = Cloud(voice, m, velocity, seed, mode, perturb, motionRate)
         val trace = mutableListOf(cloud.trace(0))
         val hz = Keys.midiHz(midi).toDouble()
         val edge = m.getValue("EDGE").toDouble()
@@ -354,7 +378,7 @@ object Flock {
                 minHz, maxHz, cloud.maxSpeed,
                 if (cloud.neighborObservations == 0) 0.0 else cloud.totalNeighbors / cloud.neighborObservations,
                 if (perturb && mode != FlockMode.FIXED) PERTURBATION_SECONDS else null,
-                cloud.directNeighborsAtImpulse, cloud.perturbationNeighbors.toList()))
+                cloud.directNeighborsAtImpulse, cloud.perturbationNeighbors.toList(), motionRate))
     }
 
     fun render(
@@ -366,5 +390,6 @@ object Flock {
         mode: FlockMode = FlockMode.FLOCK,
         perturb: Boolean = false,
         cancelled: () -> Boolean = { false },
-    ): Snip = renderDetailed(voice, macros, midi, velocity, seed, mode, perturb, cancelled).snip
+        model: Int = MODEL_VERSION,
+    ): Snip = renderDetailed(voice, macros, midi, velocity, seed, mode, perturb, cancelled, model = model).snip
 }

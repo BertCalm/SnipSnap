@@ -73,6 +73,7 @@ object FlockAuditionGenerator {
                 voice = spec.voice, macros = spec.macros, midi = spec.midi,
                 velocity = spec.velocity, seed = spec.seed, mode = spec.mode,
                 perturb = spec.perturb, oversample = OVERSAMPLE,
+                model = 1,
             )
             renderNanos += System.nanoTime() - began
             val raw = Snip(probe.rawSamples, channels = probe.snip.channels, sampleRate = probe.snip.sampleRate)
@@ -115,7 +116,7 @@ object FlockAuditionGenerator {
                 "matchGroup" to matchGroup,
                 "matchingPolicy" to if (sharedGain == null) "per-clip fixed gain" else "shared causal-pair fixed gain",
             )
-            val patch = FlockPatch(spec.label, spec.voice, spec.macros, spec.midi, spec.velocity, spec.seed)
+            val patch = FlockPatch(spec.label, spec.voice, spec.macros, spec.midi, spec.velocity, spec.seed, model = 1)
             writeJson(File(root, recipePath), linkedMapOf(
                 "schemaVersion" to 1,
                 "patch" to patch.toJsonValue(),

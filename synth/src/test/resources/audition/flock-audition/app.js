@@ -24,6 +24,8 @@
   };
   const defaultClip = gesture => sectionClips('gestures').find(c => c.gesture === gesture) || manifest.clips.find(c => c.gesture === gesture && c.mode === 'FLOCK' && !c.perturb);
   const currentTime = () => playing && audioContext ? Math.min(audioBuffer?.duration || selected?.duration || 0, offset + audioContext.currentTime - startedAt) : offset;
+  const flowPairForClip = clip => manifest?.flowRevision?.pairs?.find(pair => pair.before === clip.id || pair.after === clip.id);
+  const rateLabel = rate => `${Number(rate).toFixed(Number(rate) < 1 ? 3 : 2).replace(/0+$/, '').replace(/\.$/, '')}×`;
 
   async function readJson(path) {
     const response = await fetch(path);
@@ -150,7 +152,8 @@
     audioBuffer = null;
     selected = clip;
     setError('');
-    nodes['player-title'].textContent = clip.label || gestureNames[clip.gesture] || clip.id;
+    const flowPair = flowPairForClip(clip);
+    nodes['player-title'].textContent = flowPair ? `FLOW ${Number(flowPair.value).toFixed(2)} · ${flowPair.after === clip.id ? 'revised' : 'previous'}` : clip.label || gestureNames[clip.gesture] || clip.id;
     nodes['player-kicker'].textContent = `${modeNames[clip.mode] || clip.mode} / ${level === 'raw' ? 'RAW' : 'MATCHED'}`;
     nodes['player-detail'].textContent = `${clip.noteLabel || `MIDI ${clip.note}`} · velocity ${Number(clip.velocity).toFixed(2)} · finite render`;
     nodes['clip-download'].href = clipPath(clip);
@@ -349,12 +352,43 @@
     });
   }
 
+  function renderFlowRevision() {
+    const revision = manifest.flowRevision;
+    const pairs = revision?.pairs?.filter(pair => byId.has(pair.before) && byId.has(pair.after)) || [];
+    $('flow-revision').hidden = !pairs.length;
+    $('flow-notice').hidden = !pairs.length;
+    $('flow-steps').replaceChildren();
+    if (!pairs.length) return;
+    const paces = ['Slowest', 'Slow', 'Medium', 'Near original', 'Fastest'];
+    $('flow-description').textContent = 'FLOW now changes the speed of the collective motion. Compare the revised mapping with the previous version at the same setting.';
+    pairs.forEach((pair, index) => {
+      const card = textEl('div', 'flow-step', '');
+      card.append(textEl('span', 'flow-value', `FLOW ${Number(pair.value).toFixed(2)}`), textEl('h3', '', pair.pace || revision.labels?.[index] || paces[index] || 'Motion speed'), textEl('span', 'flow-rate', `${rateLabel(pair.rate)} motion`));
+      const controls = textEl('div', 'flow-pair-buttons', '');
+      [['after', 'Revised'], ['before', 'Previous']].forEach(([key, label]) => {
+        const clip = byId.get(pair[key]);
+        const button = textEl('button', `flow-pair-button flow-${key}`, label);
+        button.type = 'button';
+        button.dataset.clipId = clip.id;
+        button.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-label', `Play ${label.toLowerCase()} FLOW ${Number(pair.value).toFixed(2)}${key === 'after' ? `, ${rateLabel(pair.rate)} motion speed` : ''}`);
+        button.append(textEl('span', '', '▶'));
+        button.addEventListener('click', () => select(clip, true));
+        controls.append(button);
+      });
+      card.append(controls);
+      $('flow-steps').append(card);
+    });
+    const anchor = Number(revision.anchorFlow);
+    $('flow-footnote').textContent = `${Number.isFinite(anchor) ? `The original Ribbon speed is anchored at FLOW ${anchor.toFixed(2)} (1×). ` : ''}The other sounds remain from the original audition. Rates describe motion speed, not note pitch.`;
+  }
+
   async function loadManifest() {
     nodes['library-status'].hidden=false;nodes['library-error'].hidden=true;
     try {
       const data=await readJson('manifest.json');if(!Array.isArray(data.clips)||!data.clips.length)throw new Error('The audition manifest contains no clips.');
       manifest=data;byId.clear();data.clips.forEach(clip=>byId.set(clip.id,clip));
-      renderComparisons();renderCausal();renderStudies();
+      renderComparisons();renderCausal();renderStudies();renderFlowRevision();
       document.querySelectorAll('[data-play-gesture]').forEach(button=>{const clip=defaultClip(button.dataset.playGesture);button.disabled=!clip;button.onclick=()=>select(clip,true);});
       document.querySelectorAll('[data-duration]').forEach(node=>{const clip=defaultClip(node.dataset.duration);node.textContent=clip?`${Number(clip.duration).toFixed(1)} sec`:'Unavailable';});
       const first=defaultClip('GATHER')||data.clips[0];nodes['first-listen'].disabled=false;nodes['first-duration'].textContent=`${Number(first.duration).toFixed(1)}s`;
@@ -363,7 +397,9 @@
       if(data.download?.rawPath)$('raw-pack-link').href=data.download.rawPath;else $('raw-pack-link').hidden=true;
       const audio=data.audio||{},sourceInfo=data.source||{};
       $('render-notes').textContent=`${audio.channels===1?'Mono':'PCM'} ${Number(audio.sampleRate||44100).toLocaleString()} Hz WAV renders from the SnipSnap Kotlin engine. ${audio.normalization||'Matched playback uses fixed gain per clip.'} Causal pairs share one gain so the impulse remains a fair comparison. No effects are added by this page. Gesture drawings are illustrative; the large trajectory view and response plot use recorded data.`;
-      $('source-notes').textContent=`Seeded recipes reproduce the same finite performance. ${sourceInfo.revision?`Source revision: ${sourceInfo.revision.slice(0,12)}${sourceInfo.dirty?' (working tree changes included in the recorded source hashes)':''}. `:''}The listening packs include recipes and traces. This is an audition of the concept; presets await listening review.`;
+      $('source-notes').textContent=data.flowRevision
+        ? `This pack contains two model versions: the original audition uses model ${data.flowRevision.baselineModel || 1}; only the five revised FLOW renders use model ${data.flowRevision.model || 2}. The five previous FLOW renders are retained for comparison. Each clip and recipe records its source. ${data.flowRevision.baselineSource?.revision ? `Original source: ${data.flowRevision.baselineSource.revision.slice(0,12)}. ` : ''}${sourceInfo.revision ? `Revised FLOW source: ${sourceInfo.revision.slice(0,12)}. ` : ''}The listening packs include recipes and traces. The revised mapping awaits listening review.`
+        : `Seeded recipes reproduce the same finite performance. ${sourceInfo.revision?`Source revision: ${sourceInfo.revision.slice(0,12)}${sourceInfo.dirty?' (working tree changes included in the recorded source hashes)':''}. `:''}The listening packs include recipes and traces. This is an audition of the concept; presets await listening review.`;
       nodes['level-explanation'].textContent=`Matched playback compares ${audio.matchedMetric||'short-window RMS'} with a peak ceiling. Each render gets one fixed gain; causal pairs share a gain. Raw preserves the engine's output level.`;
       nodes['library-status'].hidden=true;select(first,false);
     } catch(error) {

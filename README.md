@@ -365,6 +365,9 @@ Run `./gradlew :synth:generateFlockAudition` for real raw/matched WAVs,
 fixed/independent comparisons and one-particle disturbance measurements.
 The [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](docs/FLOCK.md) describe the proof and its limits.
+After the first listen, model 2 gives FLOW a slow-to-fast clock for the flock;
+original model-1 recipes and each voice's default sound remain exact. The
+audition includes five Previous/Revised FLOW pairs, with its other clips retained.
 
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,

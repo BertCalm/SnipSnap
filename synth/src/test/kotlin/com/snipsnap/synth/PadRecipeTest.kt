@@ -67,6 +67,8 @@ class PadRecipeTest {
         // VENT is a prototype held outside Presets (PatchTypes.PROTOTYPES), so no factory
         // preset covers it; this one also carries a saved note, velocity and seed.
         VentPatch("Orbit Test", VentVoice.WIRE, mapOf("CHAOS" to 0.6f, "LENGTH" to 0.1f), midi = 48, velocity = 0.6f, seed = 7),
+        // FLOCK also keeps its provisional recipes outside the factory preset roster.
+        FlockPatch("Flock Test", FlockVoice.RIBBON, mapOf("FLOW" to 0.65f, "HOLD" to 0f), midi = 55, velocity = 0.6f, seed = 7),
     )
 
     @Test

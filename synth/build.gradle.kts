@@ -13,6 +13,18 @@ tasks.register<JavaExec>("generateFlockAudition") {
     args(providers.gradleProperty("flockOutput").orNull ?: "${rootDir}/testkit/flock-audition")
 }
 
+/** Revise FLOW's five recordings while preserving the complete accepted first-flight baseline. */
+tasks.register<JavaExec>("generateFlockFlowAudition") {
+    group = "distribution"
+    description = "Render five model-2 FLOCK FLOW rates, preserve the original 51-clip baseline and export a 56-clip comparison audition."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlockFlowAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockFlowOutput").orNull ?: "${rootDir}/testkit/flock-flow-audition")
+    args(providers.gradleProperty("flockBaseline").orNull ?: "${rootDir}/testkit/flock-audition")
+}
+
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
 tasks.register<JavaExec>("generateOspreyAudition") {
     group = "distribution"

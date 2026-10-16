@@ -30,16 +30,38 @@ the factory roster and phone picker pending a listening verdict.
 | --- | --- |
 | SPREAD | Initial pitch range and bounded particle separation |
 | PULL | Restoration toward the requested note or harmonic center |
-| FLOW | Neighbor velocity alignment and response |
+| FLOW | Pace of the group's motion and neighbor velocity alignment |
 | SCATTER | Initial disturbance, scaled by playing velocity |
 | EDGE | Second- and third-harmonic carrier content |
 | HOLD | Finite duration from two to six seconds; **never a sustain loop in model 1** |
 
-`FlockPatch` stores MIDI 36–84, velocity 0–1, model 1 and an exact signed 64-bit
+`FlockPatch` stores MIDI 36–84, velocity 0–1, its rendering model and an exact signed 64-bit
 seed alongside the six normalized macros. The seed is a canonical decimal JSON
 string because the shared numeric JSON representation uses `Double`. Identical
 recipes reproduce identical samples. A new seed produces another performance;
 ordinary playback repeats the rendered performance.
+
+### FLOW revision after the first listen
+
+The original FLOW mapping mainly damped differences between particle velocities.
+Its published sweep had nearly identical gathering times, and little change in
+the upper half of the control. Model 2 gives FLOW a clock for the existing flock
+equations: 0.12 times normal speed at zero, rising to four times at one. Each
+voice's original default FLOW is an exact normal-speed anchor, preserving that
+default sound sample-for-sample. The neighbor forces and their existing FLOW
+weights retain their original formulas. Pitch, carriers and the audio envelope
+are not resampled; HOLD duration and the one-second diagnostic impulse stay on
+the ordinary playback clock.
+
+Saved model-1 patches still render with the original equations and normal-speed
+clock. Tests reproduce the originally published FLOW and default WAV hashes.
+New patches select model 2. The original audition generator explicitly renders
+model 1 so it remains a reproducible record of the first listening round.
+
+The updated audition preserves the other 46 listening clips unchanged and puts
+the five revised FLOW settings beside their original versions. Its mixed-model
+manifest identifies each source. This revision is ready to listen to; measured
+motion differences do not establish perceptual acceptance.
 
 Patches participate in `Patches`, `PadRecipe` and physical velocity rendering.
 The CLI exposes the provisional recipes without adding them to `Presets.all()`:
@@ -47,12 +69,18 @@ The CLI exposes the provisional recipes without adding them to `Presets.all()`:
 ```sh
 ./gradlew :cli:run --args='synth FLOCK GATHER --all --midi 60 --velocity .7 --seed 41001 --out /tmp/flock'
 ./gradlew :synth:generateFlockAudition
+./gradlew :synth:generateFlockFlowAudition -PflockBaseline=/absolute/path/to/flock-audition
 ```
 
 The audition writes to `testkit/flock-audition/`, including raw and matched
 mono PCM16 WAVs, recipes, trajectories, source snapshots and hashes, a manifest,
 and separate listening archives. Its frontend source lives under
 `synth/src/test/resources/audition/flock-audition/`.
+
+The focused FLOW task reads a preserved first-flight pack and writes
+`testkit/flock-flow-audition/`, retaining its original audio, recipes and source
+snapshots alongside the revised FLOW files. Preserve the baseline directory
+before regenerating or replacing it.
 
 ## What the comparison removes
 

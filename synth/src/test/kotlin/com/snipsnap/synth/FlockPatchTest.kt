@@ -47,13 +47,29 @@ class FlockPatchTest {
             FlockPatch.fromJsonValue(changed("seed", JsonValue.Str(bad)))
         }
         assertFails { FlockPatch.fromJsonValue(changed("seed", JsonValue.Num(1.0))) }
-        assertFails { FlockPatch.fromJsonValue(changed("model", JsonValue.Num(2.0))) }
+        for (model in listOf(0.0, 1.5, 3.0)) assertFails {
+            FlockPatch.fromJsonValue(changed("model", JsonValue.Num(model)))
+        }
         for (bad in listOf(-.000000001, 1.000000001, Double.NaN)) assertFails {
             FlockPatch.fromJsonValue(changed("macros", JsonValue.Obj(mapOf("FLOW" to JsonValue.Num(bad)))))
         }
         assertFailsWith<IllegalArgumentException> { p.copy(macros = mapOf("NOISE" to .5f)) }
         assertFailsWith<IllegalArgumentException> { p.copy(macros = mapOf("FLOW" to Float.NaN)) }
         assertFailsWith<IllegalArgumentException> { p.copy(name = " ") }
+    }
+
+    @Test
+    fun `stored model one and two remain distinct through rendering serialization and editing`() {
+        assertEquals(2, patch().model)
+        for (model in listOf(1, 2)) {
+            val p = patch(Long.MAX_VALUE).copy(model = model, macros = patch().macros + ("FLOW" to 0f))
+            assertEquals(p, FlockPatch.fromJsonText(p.toJsonText()))
+            val edited = p.withMacros(p.macros + ("EDGE" to .8f))
+            assertEquals(model, edited.model)
+            assertEquals(p.seed, edited.seed)
+            assertContentEquals(Flock.render(p.voice, p.macros, p.midi, p.velocity, p.seed, model = model).samples,
+                p.render().samples, "patch discarded stored model $model")
+        }
     }
 
     @Test

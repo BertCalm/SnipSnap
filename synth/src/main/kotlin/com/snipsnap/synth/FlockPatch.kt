@@ -18,12 +18,12 @@ data class FlockPatch(
         Patches.validateMacros(this, Flock.macrosFor(voice))
         require(midi in Flock.MIN_MIDI..Flock.MAX_MIDI) { "FLOCK midi must be ${Flock.MIN_MIDI}..${Flock.MAX_MIDI}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "FLOCK velocity must be 0..1" }
-        require(model == Flock.MODEL_VERSION) { "unsupported flock model $model" }
+        require(Flock.supportsModel(model)) { "unsupported flock model $model" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Flock.render(voice, macros, midi, velocity, seed)
+    override fun render() = Flock.render(voice, macros, midi, velocity, seed, model = model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -45,7 +45,7 @@ data class FlockPatch(
             fun required(key: String): JsonValue = obj[key]?.takeUnless { it is JsonValue.Null }
                 ?: throw JsonException("FLOCK patch has no $key")
             val model = required("model").int()
-            if (model != Flock.MODEL_VERSION) throw JsonException("unsupported flock model $model")
+            if (!Flock.supportsModel(model)) throw JsonException("unsupported flock model $model")
             val midi = required("midi").int()
             val velocityDouble = required("velocity").num()
             if (!velocityDouble.isFinite() || velocityDouble !in 0.0..1.0) throw JsonException("FLOCK velocity must be 0..1")
