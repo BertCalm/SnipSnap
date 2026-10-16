@@ -189,6 +189,29 @@ class SchemesTest {
         assertEquals(Schemes.ALL.size, groups.values.sumOf { it.size }, "every scheme is in exactly one group")
     }
 
+    /**
+     * The modern look's light pad keeps the pad's name in its class colour,
+     * darkened until it reads: the eight class colours were tuned for dark
+     * pads (lime on paper is 1.6 : 1), and a paper scheme's pad is the card.
+     * Every class, on every paper scheme's card, clears AA; on a dark
+     * scheme the function is never called, and the handoff's 55 %-to-white
+     * tint stands.
+     */
+    @Test
+    fun `every class colour reads on a paper scheme's pad once darkened`() {
+        for (scheme in Schemes.ALL.filter { Scheme.luma(it.gray) >= 90 }) {
+            for (dc in DrumClass.entries) {
+                val cls = Schemes.classColor(dc)
+                val ink = Schemes.classInkOn(cls, scheme.raised)
+                val ratio = Scheme.contrastRatio(ink, scheme.raised)
+                assertTrue(ratio >= 4.5, "${scheme.id}/$dc: name ink ${"%06x".format(ink)} is %.2f:1 on the card".format(ratio))
+            }
+        }
+        // And a colour that already reads is left alone: the function is a
+        // floor, not a filter.
+        assertEquals(0x292820, Schemes.classInkOn(0x292820, Schemes.OPENSKY.raised))
+    }
+
     @Test
     fun `the three ink tiers never invert in any scheme`() {
         for (scheme in Schemes.ALL) {

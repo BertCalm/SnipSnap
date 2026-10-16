@@ -386,6 +386,26 @@ object Schemes {
         return DARK_PAD_INK[c] ?: darken(c, 0.75f)
     }
 
+    /**
+     * Ink for a pad's name on a light pad (`docs/MODERN_LOOK.md` §4's
+     * "ink3 is 3.9 : 1 on paper", met for the class colours): the class
+     * colour itself, darkened in 5 % steps just until it clears AA text
+     * contrast against [surface], so lime stays lime and cyan stays cyan
+     * while reading. On a dark surface the app tints the other way (55 %
+     * to white, the handoff's rule) and never reaches for this. A colour
+     * that cannot get there by 90 % darkening (none of the eight can;
+     * `SchemesTest` says so) comes back as dark as it got.
+     */
+    fun classInkOn(classColor: Int, surface: Int): Int {
+        var amount = 0f
+        var ink = classColor
+        while (Scheme.contrastRatio(ink, surface) < 4.5 && amount < 0.9f) {
+            amount += 0.05f
+            ink = darken(classColor, amount)
+        }
+        return ink
+    }
+
     private val DARK_PAD_INK: Map<Int, Int> = mapOf(
         0xE8542E to 0x3A1005, // kick
         0xFFC41F to 0x3A2C02, // snare

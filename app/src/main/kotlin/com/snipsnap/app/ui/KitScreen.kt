@@ -88,6 +88,7 @@ import com.snipsnap.shell.PadStrip
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Places
 import com.snipsnap.shell.Provenance
+import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.TextureKits
@@ -1448,18 +1449,25 @@ private fun PadCell(
         // data-dependent (whatever the waveform happens to render at this
         // corner) and can still fall to ~2.4:1 for a bright class colour
         // like HAT_OPEN even with ink2 fixed — see ContrastTest.
+        // On paper the chip is the card itself (ink2 clears AA on it —
+        // ContrastTest's backdrop law reads `raised` under the modern
+        // look); darkening paper gives a grey block nothing needs.
+        val paper = Scheme.luma(scheme.gray) >= 90
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .background(Schemes.darken(scheme.gray, 0.30f).tape, RoundedCornerShape(3.dp))
+                .background((if (paper) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape, RoundedCornerShape(3.dp))
                 .padding(horizontal = 3.dp, vertical = 1.dp),
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
+        // The name: tinted toward white on a dark pad (the handoff's rule),
+        // darkened just until it reads on a paper one, so lime stays lime
+        // either way (`Schemes.classInkOn`).
         TapeText(
             pad.displayName,
             TapeType.marker,
-            classTint(cls),
+            if (paper) Schemes.classInkOn(cls, scheme.raised).tape else classTint(cls),
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )
