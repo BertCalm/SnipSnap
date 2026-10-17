@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f2e9">
+  <meta name="description" content="Choose the source palette for SnipSnap PRISM. Compare eight original synthesized sounds with their static spectral imprints and moving versions.">
+  <title>PRISM / Source palette · SnipSnap</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listen">Skip to the listening desk</a>
+  <div class="page">
+    <header class="masthead">
+      <a class="wordmark" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap source on GitHub">SNIP<span>/</span>SNAP</a>
+      <span class="masthead-study">PRISM <span>/</span> SOURCE PALETTE</span>
+      <button class="text-button" id="export-notes" type="button">Export notes <span aria-hidden="true">↗</span></button>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> ROUND 02 / CHOOSE THE MATERIAL</p>
+          <h1 id="page-title">Find the sound worth moving.</h1>
+          <p id="study-description">Choose a source you like. Then hear what PRISM keeps, before deciding whether the movement helps.</p>
+        </div>
+        <div class="proof-stamp"><span id="study-size">8 SOURCES / 4 DIRECTIONS</span><strong>Original → imprint → motion</strong><span>Real Kotlin renders · finite notes</span></div>
+      </section>
+      <div id="load-status" class="load-status" role="status">Loading the source palette…</div>
+      <section id="load-error" class="load-error" hidden aria-labelledby="load-error-title">
+        <h2 id="load-error-title">The renders could not load.</h2>
+        <p id="load-error-detail">The listening manifest is unavailable.</p>
+        <button class="button" id="retry" type="button">Try again</button>
+        <a href="./manifest.json">Open render manifest ↗</a>
+      </section>
+      <div id="study" hidden>
+        <nav id="category-tabs" class="category-tabs" aria-label="Source directions"></nav>
+        <section class="listening-desk" id="listen" aria-labelledby="desk-title">
+          <div class="comparison">
+            <div class="section-label"><span id="category-label">01 / CHOOSE A SOURCE</span><span id="family-count"></span></div>
+            <div class="family-heading">
+              <div class="family-picker"><label for="family-select" class="sr-only">Choose an original source preset</label><select id="family-select"></select></div>
+              <span class="source-engine" id="source-engine"></span>
+            </div>
+            <h2 id="desk-title" class="sr-only">Original source, static imprint and moving PRISM</h2>
+            <p class="what-to-hear"><strong>Start with the original</strong><span id="family-guide">Do you like the source on its own? Then compare its PRISM imprint and moving version.</span></p>
+            <div class="compare-cards" id="compare-cards" role="group" aria-label="Play original source, static PRISM imprint or moving PRISM"></div>
+            <ol class="stage-guide" aria-label="Three listening questions">
+              <li><span>01</span><p><strong>Like the source?</strong>Judge the original engine sound first.</p></li>
+              <li><span>02</span><p><strong>Does its character survive?</strong>The imprint borrows spectral colour; PRISM supplies its own attack and carriers.</p></li>
+              <li><span>03</span><p><strong>Does movement help?</strong>One 0.8-second transition into that colour.</p></li>
+            </ol>
+          </div>
+          <aside class="review" aria-labelledby="review-title">
+            <div class="section-label"><span>YOUR LISTENING NOTES</span><span id="review-count">0 reviewed</span></div>
+            <h2 id="review-title">Do you like this source?</h2>
+            <p class="review-clip" id="review-clip">Select a render.</p>
+            <div class="verdicts" role="group" aria-label="Verdict for this selected stage">
+              <button type="button" data-verdict="keep" aria-pressed="false">Keep</button>
+              <button type="button" data-verdict="revise" aria-pressed="false">Revise</button>
+              <button type="button" data-verdict="pass" aria-pressed="false">Pass</button>
+            </div>
+            <label for="note" id="note-prompt">What would you keep or change?</label>
+            <textarea id="note" rows="4" placeholder="Warmth, weight, texture, attack… What appeals to you?"></textarea>
+            <p class="save-status" id="save-status" role="status">Notes stay in this browser. Export a copy to keep them.</p>
+            <details class="render-details"><summary>Selected render details</summary><dl id="render-details"></dl></details>
+          </aside>
+        </section>
+        <section class="library" aria-labelledby="library-title">
+          <div class="library-heading"><div><p class="eyebrow">ALL SOURCES / ALL THREE STAGES</p><h2 id="library-title">The listening shelf.</h2></div><span id="clip-count"></span></div>
+          <div class="filters">
+            <label class="search-label"><span class="sr-only">Search sounds or source engines</span><input id="search" type="search" placeholder="Search a sound or source engine…" autocomplete="off"></label>
+            <label><span class="sr-only">Filter by direction</span><select id="library-category"><option value="">All directions</option></select></label>
+            <label><span class="sr-only">Filter by stage</span><select id="library-variant"><option value="">All stages</option></select></label>
+            <button class="text-button" id="reset-filters" type="button">Reset</button>
+          </div>
+          <div id="clip-list"></div>
+          <p id="empty-state" class="empty-state" hidden>No renders match. Reset the filters to see the whole palette.</p>
+        </section>
+        <section class="study-notes" aria-label="About this palette">
+          <div><span class="eyebrow">CHOOSE A PALETTE FIRST</span><p>Listen to the originals before judging the transfers. A source can be a keeper even when its imprint needs work. Notes belong to the selected stage, so those two verdicts stay separate.</p></div>
+          <div><span class="eyebrow">WHAT THESE FILES CONTAIN</span><p>Every original is synthesized by an existing SnipSnap engine. These are finite dry renders with no added FX; drive that belongs to the source engine remains part of its sound. No real-world recordings are used.</p><p>The static imprint carries a smoothed, time-averaged spectral colour into PRISM’s 32 sine partials. It does not copy the original attack, noise or performance. Motion moves into that same colour.</p></div>
+        </section>
+      </div>
+    </main>
+    <footer><span>SnipSnap <span class="coral">/</span> PRISM source palette</span><div><a href="./round-1/">Earlier motion study ↗</a><a href="./manifest.json">Render manifest ↗</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source ↗</a></div></footer>
+  </div>
+  <section class="player-dock" id="player-dock" aria-label="Shared audio player" hidden>
+    <div class="player-inner">
+      <button class="play-toggle" id="play" type="button" aria-label="Play selected render" aria-pressed="false"><span id="play-icon" aria-hidden="true">▶︎</span></button>
+      <button class="stop-button" id="stop" type="button" aria-label="Stop and return to the beginning">■</button>
+      <div class="now-playing"><span class="eyebrow" id="player-family">CHOOSE A SOURCE</span><strong id="player-title">Ready to listen</strong><span id="audio-status" role="status" aria-live="polite"></span></div>
+      <div class="timeline"><label for="seek" class="sr-only">Playback position in seconds</label><input id="seek" type="range" min="0" max="1" step="0.01" value="0"><div><span id="current-time">0:00</span><span id="duration">0:00</span></div></div>
+      <div class="player-options"><div class="level-switch" role="group" aria-label="Listening level"><button type="button" id="level-matched" aria-pressed="true">Matched</button><button type="button" id="level-raw" aria-pressed="false">Native</button></div><div class="downloads"><a id="download-wav" download>WAV ↓</a><a id="download-recipe" download>Recipe ↓</a></div></div>
+    </div>
+    <details class="browser-player"><summary>Browser player</summary><audio id="audio" controls preload="metadata">Your browser does not support WAV audio. Use the download link.</audio></details>
+  </section>
+  <div id="notification" class="notification" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">Enable JavaScript to compare sources and keep notes. The <a href="./manifest.json">render manifest</a> lists the audio files.</p></noscript>
+</body>
+</html>

@@ -239,6 +239,7 @@ object Velocity {
         is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
         is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
+        is OspreyPatch -> Osprey.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
         is AlloyPatch -> Alloy.macrosFor(patch.voice)
         is ContourPatch -> ContourEngine.macrosFor(patch.voice)
@@ -246,6 +247,7 @@ object Velocity {
         is LacquerPatch -> Lacquer.macrosFor(patch.voice)
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
+        is OverlapPatch -> Overlap.macrosFor(patch.topology)
         is RelayPatch -> Relay.macrosFor(patch.voice)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
@@ -338,7 +340,7 @@ object Velocity {
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is RegistersPatch || patch is VentPatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is OverlapPatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is OspreyPatch || patch is RegistersPatch || patch is VentPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -377,6 +379,7 @@ object Velocity {
                 is EmbouchurePatch -> patch.copy(velocity = v).render()
                 is BellowsPatch -> patch.copy(velocity = v).render()
                 is MurmurPatch -> patch.copy(velocity = v).render()
+                is OspreyPatch -> patch.copy(velocity = v).render()
                 is PrismPatch -> patch.copy(velocity = v).render()
                 is AlloyPatch -> patch.copy(velocity = v).render()
                 is ContourPatch -> patch.copy(velocity = v).render()
@@ -385,6 +388,7 @@ object Velocity {
                 is LacquerPatch -> patch.copy(velocity = v).render()
                 is SkitterPatch -> patch.copy(velocity = v).render()
                 is TanglePatch -> patch.copy(velocity = v).render()
+                is OverlapPatch -> patch.copy(velocity = v).render()
                 is RelayPatch -> patch.copy(velocity = v).render()
                 is RegistersPatch -> patch.copy(velocity = v).render()
                 is VentPatch -> patch.copy(velocity = v).render()

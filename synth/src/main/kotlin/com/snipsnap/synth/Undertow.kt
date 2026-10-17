@@ -66,7 +66,7 @@ object Undertow {
             turbulence = 6.0, mounting = 3.0, flex = 1.0, radiation = .90)
         UndertowVoice.SEAL -> Shape(floatArrayOf(.65f, .55f, .60f, .60f, .20f), 1.40, .90, .80, .85, 4.3, .90,
             rimDrive = .14, partials = doubleArrayOf(1.0, .08, .50, .22), mounting = 5.0,
-            radiation = .85, relief = .92, sealLag = .065)
+            radiation = .85, relief = .95, sealLag = .065)
         UndertowVoice.HOLLOW -> Shape(floatArrayOf(.50f, .45f, .65f, .85f, .35f), .75, .70, .55, .40, .20, 1.40,
             rimDrive = .12, rimLoss = 12.0, reedLoss = 13.0,
             partials = doubleArrayOf(1.0, .25, .06, .03), mounting = 30.0, shellLoss = .8,
@@ -266,9 +266,12 @@ object Undertow {
                     (6500 * penetration + 20 * max(0.0, v[j])) * contactWindow else 0.0
                 // The distant compliant travel stop keeps seal-seat motion bounded.
                 val collision = 9000 * max(0.0, x[j] - (1.04 - .03 * j)) + 65 * max(0.0, v[j]) * smooth(((x[j] - .95) / .08).coerceIn(0.0, 1.0))
-                // A sealed cavity equalizes across SEAL's compliant seat. Reducing the
-                // flap's pressure load lets its spring reopen it and redirects shared flow.
-                val pressureLoad = local[j] * (1 - (if (held) 0.0 else sh.relief) * sealMix[j])
+                // The seated flap nearly equalizes its pressure load even though a rim
+                // leak still admits air. Normalize seat travel independently of that
+                // acoustic leak, so stronger draws cannot hold it shut until release.
+                val seated = if (!held && sh.relief > 0.0)
+                    (sealMix[j] / (.95 - .16 * leak)).coerceIn(0.0, 1.0) else 0.0
+                val pressureLoad = local[j] * (1 - sh.relief * seated)
                 val force = 1450 * pressureLoad - k * x[j] - rimReaction - collision
                 val trial = v[j] + dt * force / mass
                 // Implicit loss avoids explicit cubic-damping instability at high speed.

@@ -65,7 +65,12 @@ object ProjectMigration {
         return Result(created, alreadyHeld)
     }
 
-    /** [base], or `<base> 2`, `<base> 3`… — the first name not in [taken]. */
+    /**
+     * [base], or `<base> 2`, `<base> 3`… — the first name not in [taken].
+     * [ProjectStore.freshName] is the same rule over the shelf; this one
+     * takes the set because one run creates several projects before any
+     * of them is listed.
+     */
     private fun freshName(base: String, taken: Set<String>): String {
         if (base !in taken) return base
         var n = 2

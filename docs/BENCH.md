@@ -359,6 +359,29 @@ which would load the program and prove nothing.
 Note it either way. If the MPC ignores the sheet, the sheet still costs
 nothing — it is a few dozen bytes and every other sampler reads it.
 
+### B8 · Osprey R3 handoff
+
+Added 2026-10-14. The owner said, “We are in a better spot audio wise.”
+R3 is the working audio baseline; final listening and this phone/MPC pass
+remain open. This adds a queued check and does not lift the bench pause.
+
+Build `./gradlew :shell:generateOspreyHandoff`; unpack the sixteen-pad
+`testkit/osprey-handoff/osprey-r3-kit.zip` bundle. The first fifteen pads
+cover five coasts × three sea states; the last is **BETWEEN SHORES**. They are raw, dry C4,
+seed-731, eight-second one-shots, not the audition's level-matched files.
+
+- On the phone: SYNTH → OSPREY preview → pad. Save/reopen the kit, reload
+  that pad's recipe and render again. Are the model, macros, note,
+  velocity, seed and duration retained, with the same water and call timing?
+- Export, then load the native MPC 3 `.xtd` and compatibility `.xpm` with
+  their sample folders on the Live III. Do all sixteen pads land in order,
+  keep stereo and pitch, and play the complete water/call gesture once?
+- At the highest comfortable volume, listen to single hits and overlaps:
+  warmth retained, voices distinct enough, no harshness, clicks or cut tails?
+  HOLD still ends; there is no repeating-loop claim.
+
+→ phone/build, MPC firmware, format, pad and exact error if any:
+
 ---
 
 ## C · The one save no corpus can supply [W3.4, Y6.3, HH1.4]

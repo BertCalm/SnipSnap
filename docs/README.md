@@ -32,3 +32,7 @@ engine, six controls, patch and kit contracts, and held-loop limits. The
 awaits the owner's listening verdict. The supplied
 [`engineering specification`](superpowers/specs/2026-10-11-tangle-engine-engineering-spec.md)
 is preserved unchanged as the proposal rather than an acceptance record.
+
+**Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
+recipe and audition contracts. HOLD extends the finite gesture; repeating
+sea cycles and the owner's sonic acceptance remain open.

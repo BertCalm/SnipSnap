@@ -69,21 +69,22 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (30 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (31 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 38 engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has 39 engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR.
-CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS and MURMUR also provide
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY.
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
-six original recorded-material voices, a dry 16-pad starter and CLI note/velocity
-auditions; its presets also remain provisional pending listening review.
+six original recorded-material voices with 36 presets, a dry 16-pad starter and CLI note/velocity
+auditions. Its original six sounds and musical examples have owner approval;
+the expanded preset bank is available for a further listening pass.
 EMBOUCHURE adds eight dry player gestures, a sixteen-pad starter and native
 velocity response. Saved MIDI base, renderer model and gesture survive edits;
 TUNE stays within the selected voice's supported register. Its identity and
@@ -95,11 +96,16 @@ Instrument samples preserve the finite attack before a verified held loop and
 export through the existing MPC 2/MPC 3 and phone keygroup package.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
 and dry starter also await owner listening review.
-PRISM adds six additive voices, eight review presets and a dry pitched
+OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
+each recipe's seed and render model. R3 is the working audio baseline after the
+owner's positive feedback; final listening and phone/MPC handoff remain open for
+its fifteen presets and sixteen-pad starter.
+PRISM adds six additive voices, thirty-six factory presets and a dry pitched
 starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-precedes further preset expansion.
-ALLOY adds six attack-driven PM voices, twelve provisional presets and a dry
-sixteen-pad starter kit; its first listening set also awaits owner approval.
+includes the full bank and the original/revised GLASS comparisons.
+ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
+sixteen-pad starter kit. The owner heard the initial twelve and authorized six
+presets per voice on the same engine tuning; the additions await listening review.
 CONTOUR adds six wavetable voices with SCAN, OFFSET, MOTION, FILTER,
 DRIVE and HOLD. Loading, editing and saving a preset retains its authored
 table pair, layer relationship and envelopes along with the macros.

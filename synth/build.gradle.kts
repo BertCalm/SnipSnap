@@ -2,6 +2,54 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite OVERLAP proof: twelve real Kotlin renders, replayable recipes and the listening bench. */
+tasks.register<JavaExec>("generateOverlapAudition") {
+    group = "distribution"
+    description = "Render OVERLAP raw/matched WAVs, diagnostic comparisons and the first-listen page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/overlap-audition")
+}
+
+/** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
+tasks.register<JavaExec>("generateOspreyAudition") {
+    group = "distribution"
+    description = "Render OSPREY shore, weather, morph, component and control comparisons under testkit/osprey-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-audition")
+}
+
+/** Compare preserved model 1 with model 2's coast-specific materials and ocean gestures. */
+tasks.register<JavaExec>("generateOspreyRevisionAudition") {
+    group = "distribution"
+    description = "Render OSPREY R1/R2 pairs, shore and weather lineups, and creature-free body diagnostics."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyRevisionAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-revision-audition")
+    project.findProperty("ospreyBaselineDir")?.toString()?.let { args(it) }
+    args("--include-bodies")
+}
+
+/** Compare preserved model 1 with model 3's small modal body-balance refinement. */
+tasks.register<JavaExec>("generateOspreyGentleAudition") {
+    group = "distribution"
+    description = "Render OSPREY R1/R3 pairs, original-gesture lineups and creature-free body diagnostics."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OspreyGentleAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-gentle-audition")
+    project.findProperty("ospreyBaselineDir")?.toString()?.let { args(it) }
+    args("--include-bodies")
+}
+
 /** Dry PIPE/MUSETTE prototypes, exact engine loops and existing organ references. */
 tasks.register<JavaExec>("generateRegistersAudition") {
     group = "distribution"
@@ -120,7 +168,7 @@ tasks.test {
     }
 }
 
-/** Stoop's reproducible dry listening pack; -Pquick selects the smoke pack. */
+/** Stoop's dry pack; -PstoopQuick selects smoke, -PstoopBaselineDir adds original factory references. */
 tasks.register<JavaExec>("generateStoopAudition") {
     group = "distribution"
     description = "Render STOOP presets, phrases, macro comparisons and held loops under testkit/stoop-audition/."
@@ -128,6 +176,9 @@ tasks.register<JavaExec>("generateStoopAudition") {
     mainClass.set("com.snipsnap.synth.StoopAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/stoop-audition")
+    providers.gradleProperty("stoopBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+    if (project.hasProperty("stoopQuick")) args("--quick")
+    if (project.hasProperty("stoopRefreshPage")) args("--refresh-page")
 }
 
 /** Actual TANGLE renders, listening assets and a reproducible probe report. */
@@ -840,6 +891,23 @@ tasks.register<JavaExec>("generateTesseraAudition") {
     else if (project.hasProperty("tesseraQuick")) args("--quick")
 }
 
+/** Compare a committed material proposal with an explicitly supplied published audition. */
+tasks.register<JavaExec>("generateTesseraMaterialComparison") {
+    group = "distribution"
+    description = "Render 12 controlled Tessera before/after pairs; requires -PtesseraComparisonBaseline=/absolute/path/to/published-audition."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TesseraMaterialComparisonGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tessera-material-comparison", "--source-dir=${rootDir}")
+    providers.gradleProperty("tesseraComparisonBaseline").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("tesseraComparisonBaselineRevision").orNull?.let { args("--baseline-revision=$it") }
+    doFirst {
+        require(project.hasProperty("tesseraComparisonBaseline")) {
+            "Set -PtesseraComparisonBaseline=/absolute/path/to/published-audition."
+        }
+    }
+}
+
 /** Render Pitchwheel's provisional dry voices, causal probes and settled held loops. */
 tasks.register<JavaExec>("generatePitchwheelAudition") {
     group = "distribution"
@@ -852,10 +920,10 @@ tasks.register<JavaExec>("generatePitchwheelAudition") {
     if (project.hasProperty("pitchwheelFull")) args("--full")
 }
 
-/** Render Spool's original recordings, causal transport evidence, sweeps, loops and 16-pad MPC kit. */
+/** Render Spool's factory library, original recordings, causal evidence, sweeps, loops and MPC kit. */
 tasks.register<JavaExec>("generateSpoolAudition") {
     group = "distribution"
-    description = "Render SPOOL dry native/matched WAVs, mechanical traces, manifest and 16-pad MPC kit under testkit/spool-audition/. -PspoolQuick selects a smaller development pack; -PspoolMovementOnly refreshes sweeps in an unchanged-engine full pack."
+    description = "Render SPOOL's 36-preset library, dry native/matched WAVs, traces, musical examples and 16-pad MPC kit under testkit/spool-audition/. -PspoolQuick selects a smaller development pack; -PspoolMovementOnly or -PspoolMusicalOnly refreshes one section in an unchanged-source full pack."
     maxHeapSize = "512m"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.SpoolAuditionGenerator")
@@ -890,6 +958,28 @@ tasks.register<JavaExec>("generatePrismAudition") {
     args("${rootDir}/testkit/prism-audition")
 }
 
+/** Compare original PRISM spectra with saved finite additive motion, without effects. */
+tasks.register<JavaExec>("generatePrismMotionAudition") {
+    group = "distribution"
+    description = "Render PRISM motion dry PCM16 raw/matched WAVs, complete recipes and manifest under testkit/prism-motion-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismMotionAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-motion-audition")
+}
+
+/** Compare eight original source candidates with their dry PRISM imprint and motion. */
+tasks.register<JavaExec>("generatePrismPaletteAudition") {
+    group = "distribution"
+    description = "Render eight source candidates, static PRISM imprints and moving PRISM PCM16 comparisons under testkit/prism-palette-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismPaletteAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-palette-audition")
+}
+
 /** Render Alloy's provisional dry hybrid patches, causal FUSE comparisons and held-loop listening pack. */
 tasks.register<JavaExec>("generateAlloyAudition") {
     group = "distribution"
@@ -919,7 +1009,7 @@ tasks.register<JavaExec>("generateContourAudition") {
     }
 }
 
-/** Render Lacquer's provisional bank, layer solos, macro grids and held loops. */
+/** Render Lacquer's complete bank, layer solos, macro grids and held loops. */
 tasks.register<JavaExec>("generateLacquerAudition") {
     group = "distribution"
     description = "Render LACQUER dry audition WAVs, measured evidence and a listening page under testkit/lacquer-audition/."
@@ -933,7 +1023,7 @@ tasks.register<JavaExec>("generateLacquerAudition") {
 
 tasks.register<JavaExec>("generateLacquerKit") {
     group = "distribution"
-    description = "Export the sixteen dry LACQUER starter pads as MPC 3 with an MPC 2 program twin."
+    description = "Export the sixteen-pad LACQUER starter and complete thirty-six-preset bank as three twelve-pad MPC 3/MPC 2 programs."
     maxHeapSize = "512m"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.LacquerKitGenerator")
@@ -944,13 +1034,15 @@ tasks.register<JavaExec>("generateLacquerKit") {
 /** Full dry SKITTER listening matrix, with a smaller optional development pack. */
 tasks.register<JavaExec>("generateSkitterAudition") {
     group = "distribution"
-    description = "Render SKITTER native/raw/matched WAVs, patch JSON, traces and listening page under testkit/skitter-audition/. -Pquick selects the smoke pack."
+    description = "Render SKITTER WAVs, patches, traces and listening page. -Pquick selects the smoke pack; -PskitterBaseline=<frozen R2 directory> adds R2/R3 comparisons; -PskitterPrevious=<frozen R1 directory> retains R1/R2."
     maxHeapSize = "1g"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.SkitterAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/skitter-audition")
     if (project.hasProperty("quick")) args("--quick")
+    if (project.hasProperty("skitterBaseline")) args("--baseline=${project.property("skitterBaseline")}")
+    if (project.hasProperty("skitterPrevious")) args("--previous=${project.property("skitterPrevious")}")
 }
 
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */

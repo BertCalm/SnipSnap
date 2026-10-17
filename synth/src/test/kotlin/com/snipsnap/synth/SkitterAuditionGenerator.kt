@@ -11,6 +11,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import java.io.File
+import java.security.MessageDigest
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ln
@@ -26,12 +27,32 @@ object SkitterAuditionGenerator {
         "VENT" to .25f, "STATIC" to .15f, "HOLD" to 0f)
     private val percussion = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
         DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
+    private val comparisonKeys = SkitterVoice.entries.map { "DEFAULTS/${it.name.lowercase(Locale.ROOT)}" } +
+        listOf("PRESETS/nervous_wire", "HOLD/flutter_default", "HOLD/fray_default")
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.all { !it.startsWith("--") || it == "--quick" }) { "only --quick is supported" }
+        require(args.count { !it.startsWith("--") } <= 1 && args.count { it.startsWith("--baseline=") } <= 1 &&
+            args.count { it.startsWith("--previous=") } <= 1 &&
+            args.all { !it.startsWith("--") || it == "--quick" || it.startsWith("--baseline=") || it.startsWith("--previous=") }) {
+            "supply one output directory, optional --quick, --baseline=<frozen R2 directory> and --previous=<frozen R1 directory>"
+        }
         val quick = "--quick" in args
+        val baselinePath = args.firstOrNull { it.startsWith("--baseline=") }?.substringAfter('=')
+        val previousPath = args.firstOrNull { it.startsWith("--previous=") }?.substringAfter('=')
+        require(previousPath == null || baselinePath != null) { "--previous needs --baseline so the historical after remains the frozen R2 recording" }
+        require(!quick || baselinePath == null) { "the nine revision comparisons need the full pack; omit --quick" }
+        val baseline = baselinePath?.let {
+            require(it.isNotBlank()) { "--baseline needs a frozen R2 directory" }
+            loadBaseline(File(it), "R2")
+        }
+        val previous = previousPath?.let {
+            require(it.isNotBlank()) { "--previous needs a frozen R1 directory" }
+            loadBaseline(File(it), "R1")
+        }
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/skitter-audition").also { it.mkdirs() }
+        for (snapshot in listOfNotNull(baseline, previous)) require(!root.canonicalFile.toPath().startsWith(snapshot.root.toPath()) &&
+            !snapshot.root.toPath().startsWith(root.canonicalFile.toPath())) { "output and frozen baselines must be separate directories" }
         val sections = mutableListOf<JsonValue>()
         val measurements = mutableListOf<JsonValue>()
         var count = 0
@@ -221,9 +242,27 @@ object SkitterAuditionGenerator {
                     neutral + timbral.associateWith { 1f }, 84, oversample = rate, baseline = reference, capture = { if (rate == 4) reference = it })
             })))
 
-        val manifest = Json.write(obj("engine" to str("SKITTER"), "formatVersion" to num(1), "quick" to bool(quick),
-            "variants" to num(count), "wavFiles" to num(wavCount), "presetCount" to num(presets.size),
-            "acceptance" to str("Provisional: owner listening verdict pending"), "sections" to arr(sections)))
+        val frozenBaseline = baseline?.let { copySnapshot(root, it) }
+        val frozenPrevious = previous?.let { copySnapshot(root, it) }
+        val comparison = frozenBaseline?.let { comparisons(it.clips, revisionClips(indexedClips(sections), "R3")) }
+        val previousComparison = frozenPrevious?.let { comparisons(it.clips, requireNotNull(frozenBaseline).clips) }
+        val manifestFields = linkedMapOf("engine" to str("SKITTER"), "formatVersion" to num(1), "quick" to bool(quick),
+            "revision" to str("R3"), "variants" to num(count), "wavFiles" to num(wavCount), "presetCount" to num(presets.size),
+            "acceptance" to str("R3 candidate: owner listening verdict pending; R2 is the accepted baseline"), "sections" to arr(sections))
+        if (comparison != null) {
+            manifestFields["comparisons"] = arr(comparison)
+            manifestFields["comparisonCount"] = num(comparison.size)
+            manifestFields["comparisonWavFiles"] = num(requireNotNull(frozenBaseline).wavFiles)
+            manifestFields["baseline"] = frozenBaseline.provenance
+            manifestFields["snapshotWavFiles"] = num(frozenBaseline.wavFiles + (frozenPrevious?.wavFiles ?: 0))
+        }
+        if (previousComparison != null) {
+            manifestFields["previousComparisons"] = arr(previousComparison)
+            manifestFields["previousComparisonCount"] = num(previousComparison.size)
+            manifestFields["previousComparisonWavFiles"] = num(requireNotNull(frozenPrevious).wavFiles)
+            manifestFields["previousBaseline"] = frozenPrevious.provenance
+        }
+        val manifest = Json.write(JsonValue.Obj(manifestFields))
         File(root, "manifest.json").writeText(manifest + "\n")
         File(root, "measurements.json").writeText(Json.write(obj("engine" to str("SKITTER"), "quick" to bool(quick),
             "complete" to bool(true), "variants" to num(count), "wavFiles" to num(wavCount),
@@ -236,8 +275,126 @@ object SkitterAuditionGenerator {
         require(marker in template) { "missing page manifest marker" }
         File(root, "index.html").writeText(template.replace(marker, manifest.replace("<", "\\u003c")))
         println("wrote $count variants, $wavCount WAVs, patch JSON, mechanism traces, manifest, measurements and listening page under ${root.absolutePath}")
+        if (comparison != null) println("added ${comparison.size} R2/R3 pairs with ${frozenBaseline?.wavFiles} frozen R2 WAVs; current render counts stay separate")
+        if (previousComparison != null) println("retained ${previousComparison.size} historical R1/R2 pairs with ${frozenPrevious?.wavFiles} frozen R1 WAVs, reusing the same R2 snapshots")
         if (quick) println("quick development pack; run without --quick for the full acceptance matrix")
     }
+
+    private data class Baseline(val root: File, val manifest: Map<String, JsonValue>,
+                                val clips: Map<String, JsonValue.Obj>, val hashes: Map<String, String>)
+    private data class FrozenSnapshot(val clips: Map<String, JsonValue.Obj>, val wavFiles: Int, val provenance: JsonValue)
+
+    /** A frozen recording is provenance, never a recipe that the current engine claims to replay. */
+    private fun loadBaseline(directory: File, revision: String): Baseline {
+        val root = directory.canonicalFile
+        require(root.isDirectory) { "frozen $revision directory is missing: $root" }
+        val manifest = Json.parse(File(root, "manifest.json").readText()).obj()
+        require(manifest.getValue("engine").str() == "SKITTER" && manifest.getValue("revision").str() == revision) {
+            "baseline must be a frozen SKITTER $revision snapshot"
+        }
+        val commit = manifest.getValue("sourceCommit").str()
+        require(Regex("[0-9a-f]{40}").matches(commit)) { "baseline source commit must be a full Git SHA" }
+        val checksums = Json.parse(File(root, "sha256.json").readText()).obj()
+        require(checksums.getValue("algorithm").str() == "SHA-256" && checksums.getValue("sourceCommit").str() == commit)
+        val hashes = checksums.getValue("files").obj().mapValues { (_, value) -> value.obj().getValue("sha256").str() }
+        for ((relative, expected) in hashes) {
+            val file = snapshotFile(root, relative)
+            require(sha256(file) == expected) { "frozen $revision asset changed: $relative" }
+        }
+        require(hashes["manifest.json"] == sha256(File(root, "manifest.json"))) { "baseline manifest lacks its checksum" }
+        require(hashes["source-manifest.json"] == manifest.getValue("sourceManifestSha256").str()) { "baseline source manifest checksum differs" }
+        val clips = manifest.getValue("clips").arr().associate { value ->
+            val item = value.obj()
+            item.getValue("sourceKey").str() to (item.getValue("clip") as JsonValue.Obj)
+        }
+        require(clips.keys == comparisonKeys.toSet()) { "baseline needs all six defaults, Nervous Wire and the FLUTTER/FRAY held defaults" }
+        val originals = indexedClips(Json.parse(File(root, "source-manifest.json").readText()).obj().getValue("sections").arr())
+        for ((key, clip) in clips) require(originals[key] == clip) { "snapshot metadata differs from the original $revision manifest: $key" }
+        return Baseline(root, manifest, clips, hashes)
+    }
+
+    private fun indexedClips(sections: List<JsonValue>): Map<String, JsonValue.Obj> = buildMap {
+        for (section in sections) {
+            val data = section.obj()
+            for (group in data.getValue("groups").arr()) for (clip in group.obj().getValue("clips").arr()) {
+                val item = clip as JsonValue.Obj
+                put(data.getValue("id").str() + "/" + item.entries.getValue("id").str(), item)
+            }
+        }
+    }
+
+    private fun copySnapshot(root: File, baseline: Baseline): FrozenSnapshot {
+        val copied = linkedMapOf<String, JsonValue>()
+        val clips = linkedMapOf<String, JsonValue.Obj>()
+        var wavFiles = 0
+        val revision = baseline.manifest.getValue("revision").str()
+        val commit = baseline.manifest.getValue("sourceCommit")
+        for (key in comparisonKeys) {
+            val clip = LinkedHashMap(baseline.clips.getValue(key).entries)
+            // Publish only matched snapshots, repeated seams, archival patches and original traces.
+            clip.remove("raw")
+            clip.remove("native")
+            for (field in listOf("matched", "repeat", "patch", "diagnostics")) {
+                val value = clip[field]
+                if (value == null || value == JsonValue.Null) continue
+                val relative = value.str()
+                val source = snapshotFile(baseline.root, relative)
+                val expected = baseline.hashes[relative] ?: error("$revision asset has no recorded checksum: $relative")
+                require(sha256(source) == expected) { "$revision source changed during rendering: $relative" }
+                val path = "${revision}_BASELINE/$relative"
+                val target = File(root, path).also { it.parentFile.mkdirs() }
+                if (target.exists()) require(target.delete()) { "cannot replace prior snapshot: $path" }
+                source.copyTo(target)
+                require(sha256(target) == expected) { "$revision copy differs: $path" }
+                clip[field] = str(path)
+                copied[path] = obj("sha256" to str(expected), "bytes" to num(target.length()))
+                if (relative.endsWith(".wav")) wavFiles++
+            }
+            clip["revision"] = str(revision)
+            clip["sourceCommit"] = commit
+            clip["snapshot"] = bool(true)
+            clip["comparisonOnly"] = bool(true)
+            clips[key] = JsonValue.Obj(clip)
+        }
+        val provenancePath = "${revision}_BASELINE/provenance.json"
+        val provenanceFields = linkedMapOf("revision" to str(revision), "sourceCommit" to commit,
+            "capturedAt" to baseline.manifest.getValue("capturedAt"),
+            "sourceManifestSha256" to baseline.manifest.getValue("sourceManifestSha256"),
+            "note" to str("Frozen $revision render snapshots. Patch JSON is archival provenance; the current engine is not claimed to reproduce these recordings. WAV checksums refer to the decoded original bytes."),
+            "assets" to JsonValue.Obj(copied))
+        for (field in listOf("apiSourceCommit", "sourceTree", "acceptance")) baseline.manifest[field]?.let { provenanceFields[field] = it }
+        File(root, provenancePath).writeText(Json.write(JsonValue.Obj(provenanceFields)) + "\n")
+        return FrozenSnapshot(clips, wavFiles, obj("revision" to str(revision), "sourceCommit" to commit,
+            "sourceManifestSha256" to baseline.manifest.getValue("sourceManifestSha256"), "provenance" to str(provenancePath)))
+    }
+
+    private fun revisionClips(current: Map<String, JsonValue.Obj>, revision: String): Map<String, JsonValue.Obj> =
+        current.mapValues { (_, value) -> JsonValue.Obj(LinkedHashMap(value.entries).apply {
+            put("revision", str(revision)); put("snapshot", bool(false)); put("comparisonOnly", bool(true))
+        }) }
+
+    private fun comparisons(beforeClips: Map<String, JsonValue.Obj>, afterClips: Map<String, JsonValue.Obj>): List<JsonValue> =
+        comparisonKeys.map { key ->
+            val before = beforeClips.getValue(key)
+            val after = afterClips.getValue(key)
+            for (field in listOf("voice", "macros", "midi", "velocity", "seed", "oversample", "held", "renderSettings")) {
+                require(before.entries[field] == after.entries[field]) { "$key: revision $field differs; comparisons require the exact same patch and render settings" }
+            }
+            val source = before.entries.getValue("name").str()
+            obj("id" to str(key.lowercase(Locale.ROOT).replace('/', '_')), "sourceKey" to str(key),
+                "label" to str(if (key.startsWith("DEFAULTS/")) "$source · voice defaults" else source),
+                "before" to before, "after" to after)
+        }
+
+    private fun snapshotFile(root: File, relative: String): File {
+        require(relative.isNotBlank() && !File(relative).isAbsolute) { "unsafe snapshot asset path" }
+        val file = File(root, relative).canonicalFile
+        require(file.toPath().startsWith(root.toPath()) && file.isFile) { "missing or escaping snapshot asset: $relative" }
+        return file
+    }
+
+    private fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+        .joinToString("") { "%02x".format(it.toInt() and 255) }
 
     private data class Stats(val peak: Double, val rms: Double, val dc: Double) {
         fun json() = obj("peak" to num(peak), "rms" to num(rms), "dc" to num(dc))
