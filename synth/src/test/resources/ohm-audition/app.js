@@ -327,6 +327,9 @@
         `Model version ${manifest.modelVersion ?? 1}${manifest.renderedAt ? ` · rendered ${manifest.renderedAt}` : ""}`,
         ...(Array.isArray(manifest.notes) ? manifest.notes.filter((entry) => typeof entry === "string") : [])
       ];
+      for (const clip of state.clips.filter((entry) => Number.isFinite(entry.metrics?.pitchCents) && Math.abs(entry.metrics.pitchCents) > 100)) {
+        technicalNotes.push(`${clip.title}: the full-mix pitch probe follows an upper companion (${Math.round(clip.metrics.pitchCents)} cents above the requested root). Listen for whether the foreground keeps its identity; this estimate does not establish perceived pitch.`);
+      }
       $("technical-notes").replaceChildren(...technicalNotes.map((text) => node("li", "", text)));
       $("library-status").hidden = true;
       $("audition-content").hidden = false;

@@ -90,3 +90,8 @@ is the listening test: does Communion sound like one transformed instrument?
 Automated reproducibility, causal coupling, pitch, headroom, finite-tail
 and recipe checks support that test; they do not establish sonic approval.
 Phone and MPC acceptance remain device checks.
+
+In the first fixed-seed pack, the shortest LENGTH comparison's full-mix
+pitch probe follows the octave companion. This is a listening point for
+foreground identity, rather than a measurement of the foreground string
+alone; it remains alongside the longer notes for comparison.
