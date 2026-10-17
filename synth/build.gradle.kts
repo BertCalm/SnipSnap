@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite OVERLAP proof: twelve real Kotlin renders, replayable recipes and the listening bench. */
+tasks.register<JavaExec>("generateOverlapAudition") {
+    group = "distribution"
+    description = "Render OVERLAP raw/matched WAVs, diagnostic comparisons and the first-listen page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/overlap-audition")
+}
+
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
 tasks.register<JavaExec>("generateOspreyAudition") {
     group = "distribution"
