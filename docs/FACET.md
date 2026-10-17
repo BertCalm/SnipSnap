@@ -166,11 +166,20 @@ The light study has its own task, `./gradlew :synth:generateFacetLightStudy`,
 with `-PfacetLightOutput=/path/to/output` to choose a destination instead of
 `testkit/facet-audition`. The task writes twelve focused comparisons rendered
 by `FacetLightStudy` and the preserved R2 reference renderer, adding them
-to the front of the page while retaining the previous R2 assets, reports
-and archives. `light-study.zip` contains matched audio and full replay
+to the front of the page while retaining the previous R2 audio, settings,
+reports and source packages. `light-study.zip` contains matched audio and full replay
 settings; raw and native files are individually downloadable. Study
 settings identify `FacetLightStudy`, its study version, direction and render
 arguments, rather than masquerading as saved `FacetPatch` recipes.
+
+After generation, run
+`python scripts/compact_facet_light_study.py /path/to/output` before source
+packaging and publication. The compact hosting distribution removes eight
+duplicate R2 section ZIPs to fit the bundle limit. All 171 earlier and 36
+new WAVs stay byte-identical, with earlier settings, reports, source packages,
+the first-listen ZIP and R1 originals retained. The original R2 manifest is
+saved as `archive/r2/published-manifest.json`; the served `r2-manifest.json`
+filters the removed download links and records these distribution changes.
 
 The preserved R2 page can be generated separately with
 `./gradlew :synth:generateFacetAudition` to write its listening page,
