@@ -723,6 +723,47 @@ fun App(shelf: KitShelf) {
     var exportSession by remember { mutableStateOf<ExportSession?>(null) }
     val scope = rememberCoroutineScope()
 
+    /**
+     * A kit landing on the grid from somewhere else — INSTANT KIT, SEND TO
+     * PADS, a starter, a photo kit, a BREED child, a shared file, DOUBLES'
+     * GO ▸ — lands as the open project's active kit (plan §3.2): the grid
+     * shows it at once, and the project is brought up to date behind it,
+     * holding it if it did not and activating it. With no project open,
+     * the kit's own project opens (`ShelfModel.projectForKit`, the
+     * migration's rule for a kit that has none). The bookkeeping is on IO
+     * after the landing rather than before it, because the kit is already
+     * made and the grid is the point; a failed `project.json` write says so
+     * and leaves the grid where it is.
+     */
+    fun landKit(entry: KitShelf.Entry) {
+        open = entry
+        landOn(AppScreen.KIT)
+        val p = project
+        scope.launch {
+            val updated = try {
+                withContext(Dispatchers.IO) {
+                    val folder = entry.dir.name
+                    val holder = if (p != null) {
+                        if (!p.holds(folder)) shelfModel.addKit(p.name, folder)
+                        p
+                    } else {
+                        shelfModel.projectForKit(folder)
+                    }
+                    shelfModel.activate(holder.name, folder)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "landKit: project bookkeeping failed for ${entry.dir.name}", e)
+                dock.say(Copy.PROJECT_OPEN_FAILED)
+                return@launch
+            }
+            // Re-read after the await: only adopt the update if the user
+            // has not opened another project meanwhile.
+            if (project?.name == updated.name || project == null) project = updated
+        }
+    }
+
     // The armed mic session (retroactive-snip Task 4): `armed` is the
     // service companion's own StateFlow, so this reflects the live session
     // regardless of which screen changed it (the ARM/EJECT buttons here,
@@ -1113,11 +1154,10 @@ fun App(shelf: KitShelf) {
                     val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets)
                     if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets))
                     entries.firstOrNull()?.let { first ->
-                        open = first
                         padSheetSlot = null
                         takesBinOpen = false
                         arrangeOpen = false
-                        landOn(AppScreen.KIT)
+                        landKit(first)
                     }
                     // Clearing a key of this effect cancels it on the next
                     // recomposition. Finish the shelf and navigation first.
@@ -1192,8 +1232,7 @@ fun App(shelf: KitShelf) {
             // copy points at, while every other way into a kit with a snip
             // armed says what to do next (September UAT, finding 12).
             dock.say(if (pendingSnipAssign != null) Copy.snipLanding(hasLandingPad(entry.kit)) else Copy.FRESH_TAPE)
-            open = entry
-            landOn(AppScreen.KIT)
+            landKit(entry)
         }
     }
 
@@ -1218,8 +1257,7 @@ fun App(shelf: KitShelf) {
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
             dock.say(Copy.photoKitMade(entry.kit.name))
-            open = entry
-            landOn(AppScreen.KIT)
+            landKit(entry)
         }
     }
 
@@ -1585,8 +1623,7 @@ fun App(shelf: KitShelf) {
             // The freshly bred kit is the whole point of the tap that
             // landed here — open it, the same instant-gratification
             // landing EVIL TWINS gets by staying on the kit it just changed.
-            open = entry
-            landOn(AppScreen.KIT)
+            landKit(entry)
         }
     }
 
@@ -2174,8 +2211,7 @@ fun App(shelf: KitShelf) {
                 }
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                 dock.say(Copy.instantKit(result.sliceCount, result.chokeSet, wholeTape = !hadSelection))
-                open = entry
-                landOn(AppScreen.KIT)
+                landKit(entry)
             } catch (e: CancellationException) {
                 // Leaving the screen is not a failure; let the scope have it.
                 throw e
@@ -3026,8 +3062,7 @@ fun App(shelf: KitShelf) {
                                     // land on that kit with its PAD SHEET
                                     // already up on the double in question.
                                     doublesOpen = false
-                                    open = entry
-                                    landOn(AppScreen.KIT)
+                                    landKit(entry)
                                     // Through openPadSheet (J16): DOUBLES' GO was
                                     // the second of the three doors that opened
                                     // the sheet without retiring its hint.
@@ -3431,10 +3466,13 @@ fun App(shelf: KitShelf) {
                             // a snip. Synchronous now — no IO re-read needed.
                             onCommit = { file, range ->
                                 lastCommit = TapeCommit(file, range)
-                                // Step 1 → step 2 (J10). CHOP reads
-                                // `lastCommit`, which is what was just set,
-                                // so the door always has something to open.
-                                offer(Copy.CAPTURE_OFFER, Copy.CAPTURE_OFFER_DOOR, AppScreen.CHOP)
+                                // KEEP moves the stage (plan §3.2): CUT is the
+                                // tape's own second stage, so a kept tape is
+                                // simply shown cut, with no offer to take
+                                // first. CUT reads `lastCommit`, which is what
+                                // was just set, so it always has its source.
+                                // DECK is one stage-row tap back.
+                                landOn(AppScreen.CHOP)
                                 // A real COMMIT is genuine, fresher intent than
                                 // whatever SNIPS → TAPE request (if any) is
                                 // still sitting in `tapeOpenOverride` — clearing
@@ -3512,8 +3550,7 @@ fun App(shelf: KitShelf) {
                             workshopOpen = workshopOpen,
                             onToast = { dock.say(it) },
                             onSentToGrid = { newEntry ->
-                                open = newEntry
-                                landOn(AppScreen.KIT)
+                                landKit(newEntry)
                                 // Step 3 → step 4 (J10), and only when the
                                 // kit has pads: a door onto an empty EXPORT
                                 // is a worse answer than no door.
@@ -3525,9 +3562,8 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                             onLandedOnto = { updated, bank ->
-                                open = updated
+                                landKit(updated)
                                 kitBankRequest = bank
-                                landOn(AppScreen.KIT)
                                 if (updated.kit.pads.isNotEmpty()) {
                                     offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR, AppScreen.EXPORT)
                                 }

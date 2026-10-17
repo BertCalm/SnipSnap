@@ -2759,21 +2759,30 @@ class ConventionTest {
             assertTrue(
                 navigationsTo(step) > 0,
                 "$step is step ${if (step == "CHOP") 2 else 4} of the loop the app advertises and nothing in " +
-                    "App.kt ever navigates to it. Finishing a capture has to offer CHOP; finishing a kit has " +
-                    "to offer EXPORT. Without it the app automates the one join in the middle and leaves both " +
+                    "App.kt ever navigates to it. Finishing a capture has to show CUT; finishing a kit has " +
+                    "to offer OUT. Without it the app automates the one join in the middle and leaves both " +
                     "ends to a user who has to already know the loop exists.",
             )
         }
 
-        // The offers are offers. A door the player can ignore, not a screen
-        // that moves under them — being moved without asking is the same
-        // complaint as a control that changes its own target. The door is
-        // the dock's and names its target by screen; it stands until taken.
+        // The two ends are two different kinds of step, by the shape's own
+        // rule (`docs/SCREEN_PLAN_2026_10.md` §3.2). KEEP → CUT is a stage
+        // switch inside TAPE: CUT is the tape's own second stage, so a kept
+        // tape is shown cut and DECK is one row-tap back — no offer, since
+        // nothing moves the user out of the place they are in. CUT → OUT
+        // crosses into PROJECT, so that one stays an offer: a door the
+        // player can ignore, not a screen that moves under them — being
+        // moved without asking is the same complaint as a control that
+        // changes its own target. The door is the dock's and names its
+        // target by screen; it stands until taken.
         assertTrue(
-            Regex("""offer\(Copy\.CAPTURE_OFFER,\s*Copy\.CAPTURE_OFFER_DOOR,\s*AppScreen\.CHOP\)""").containsMatchIn(src) &&
-                Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR,\s*AppScreen\.EXPORT\)""").containsMatchIn(src),
-            "both handoffs should go through `offer(...)`, which puts a door in the dock and leaves the screen " +
-                "where it is. Navigating outright would be a stronger handoff and the wrong one.",
+            Regex("""landOn\(AppScreen\.CHOP\)""").containsMatchIn(src),
+            "KEEP should land on CUT with `landOn(AppScreen.CHOP)` — the stage switch the plan describes.",
+        )
+        assertTrue(
+            Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR,\s*AppScreen\.EXPORT\)""").containsMatchIn(src),
+            "the kit → OUT handoff should go through `offer(...)`, which puts a door in the dock and leaves " +
+                "the screen where it is. Navigating outright would be a stronger handoff and the wrong one.",
         )
         // The guard has to be ON the offer, not merely somewhere in the
         // file. `containsMatchIn` passed with the guard deleted, because
