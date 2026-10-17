@@ -10,6 +10,8 @@ package com.snipsnap.synth
  * An unregistered engine name (or a future one with no roster yet)
  * returns an empty list rather than throwing, so the UI can ask before
  * checking what exists.
+ * Provisional VENT and WICK recipes stay in their own tables and are
+ * auditioned through the CLI before joining this factory roster.
  */
 object Presets {
 

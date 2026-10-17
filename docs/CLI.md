@@ -158,6 +158,7 @@ threshold by.
 ```
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
+snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
 snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
@@ -177,6 +178,8 @@ both the roster and the picker, renders six provisional recipes
 (`VentPresets`, one per voice):
 ROUND, WIRE and TEAR use model 1; the clean PULSE, COIL and PLUME voices use
 model 2. The voice selects its saved model; see [VENT](VENT.md).
+WICK follows the same provisional path with four PLUCK and four BUBBLE recipes,
+including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
@@ -206,6 +209,7 @@ the message.
 | MURMUR | 36–96 |
 | OSPREY | 36–84 |
 | VENT | 36–84 |
+| WICK | 24–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE and BELLOWS

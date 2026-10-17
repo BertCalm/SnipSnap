@@ -347,6 +347,17 @@ is private to the owner's account and includes three twelve-preset MPC bank
 programs plus the original dry sixteen-pad starter. The expanded recipes are
 available for listening review; physical device validation remains a bench step.
 
+WICK is a first listening prototype: one pitched complex source feeds three
+recovering low-pass gates, and actual releases ignite later articulations.
+PLUCK and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Nine provisional recipes stay outside
+the phone picker and factory roster pending listening. Run
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, BUBBLE
+tone comparisons, mechanism comparisons, control sweeps, held loops and causal traces. The
+[private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
+[implementation notes](docs/WICK.md) describe this first round; the remaining
+four proposed voices and full preset library follow the listening verdict.
+
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
 TANGLE, CHASE, CATCH, BITE, WEIGHT and HOLD, with explicit MIDI 24–84 roots

@@ -25,6 +25,7 @@ import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.TanglePatch
+import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
@@ -349,7 +350,7 @@ object UserPresets {
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
+     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE and WICK also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
      * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
@@ -414,6 +415,7 @@ object UserPresets {
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")

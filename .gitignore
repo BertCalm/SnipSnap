@@ -251,3 +251,9 @@ testkit/vent-voice-audition/
 # FLOCK's generated finite listening pack, source snapshots, and diagnostic traces.
 testkit/flock-audition/
 testkit/flock-flow-audition/
+
+# WICK's listening audio, diagnostic evidence and MPC/source kit are regenerated.
+testkit/wick-audition/
+testkit/.wick-work/
+testkit/SnipSnap Wick Prototype Kit/
+testkit/SnipSnap-Wick-Prototype-Kit.zip
