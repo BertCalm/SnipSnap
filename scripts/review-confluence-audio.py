@@ -197,6 +197,62 @@ def review_fixture_boundaries(root):
             'passed': all(c['passed'] for c in checks.values())}
 
 
+def review_shared_role_levels(root, clips, issues):
+    """Isolation must preserve the balance and timeline of the complete gathering."""
+    members = {id: c for id, c in clips.items()
+               if c.get('matchingPolicy') == 'shared-gathering-gain'}
+    if not members:
+        return {}
+    reference_ids = {c['matchedReferenceId'] for c in members.values()}
+    checks = {}
+    for reference_id in reference_ids:
+        family = {id: c for id, c in members.items()
+                  if c['matchedReferenceId'] == reference_id}
+        reference = clips[reference_id]
+        reference_recipe = json.loads((root/reference['recipePath']).read_text())
+        reference_engine = json.loads((root/reference['diagnosticsPath']).read_text())['engine']
+        failures = []
+        for id, clip in family.items():
+            if (clip['frames'], clip['sampleRate']) != (reference['frames'], reference['sampleRate']):
+                failures.append(f'{id}: different timeline')
+            for key in ('matchedGain', 'rawExportGain'):
+                if abs(clip[key] - reference[key]) > 1e-7:
+                    failures.append(f'{id}: independently changed {key}')
+            recipe = json.loads((root/clip['recipePath']).read_text())
+            engine = json.loads((root/clip['diagnosticsPath']).read_text())['engine']
+            if recipe['assembly'] != reference_recipe['assembly']:
+                failures.append(f'{id}: different arrangement recipe')
+            if any(engine[key] != reference_engine[key] for key in ('performers', 'events', 'roles')):
+                failures.append(f'{id}: isolation changed full schedule or identities')
+        single_roles = {c['roleIds'][0]: id for id, c in family.items()
+                        if len(c['roleIds']) == 1}
+        if set(single_roles) != set(reference['roleIds']):
+            failures.append('missing isolated role')
+        reconstruction = {}
+        for id, clip in family.items():
+            if not all(role in single_roles for role in clip['roleIds']):
+                continue
+            for field in ('rawPath', 'matchedPath'):
+                _, target = read(root / clip[field])
+                parts = [read(root / family[single_roles[role]][field])[1]
+                         for role in clip['roleIds']]
+                if any(len(p) != len(target) for p in parts):
+                    continue
+                error = float(np.max(np.abs(target - np.sum(parts, axis=0))))
+                reconstruction[f'{id}:{field}'] = error
+                # PCM24 independently rounds each stem; permit one LSB per part.
+                if error > (len(parts) + 1) / 8388608:
+                    failures.append(f'{id}: {field} isolated roles do not sum to mix')
+        checks[reference_id] = {'members': sorted(family),
+                                'sharedMatchedGain': reference['matchedGain'],
+                                'sharedRawExportGain': reference['rawExportGain'],
+                                'maximumPcmReconstructionErrors': reconstruction,
+                                'failures': failures}
+        if failures:
+            issues.append({'case': reference_id, 'issue': 'Role balance or sum failure', 'details': failures})
+    return checks
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--audition', type=Path, default=DEFAULT_AUDITION,
@@ -225,6 +281,10 @@ def main():
         issues.append({'issue': 'Fixture source boundary regression', 'details': boundaries})
     diagnostics_by_id = {}
     for id, clip in clips.items():
+        for path_key, hash_key in [('rawPath', 'rawSha256'), ('matchedPath', 'matchedSha256'),
+                                   ('recipePath', 'recipeSha256'), ('diagnosticsPath', 'diagnosticsSha256')]:
+            if hashlib.sha256((root/clip[path_key]).read_bytes()).hexdigest() != clip[hash_key]:
+                issues.append({'case': id, 'issue': f'{hash_key} does not match exported file'})
         raw = metrics(root/clip['rawPath'])
         matched = metrics(root/clip['matchedPath'])
         diagnostic = json.loads((root/clip['diagnosticsPath']).read_text())
@@ -232,13 +292,15 @@ def main():
         check = {'raw':raw, 'matched':matched}
         if any(m['channels']!=1 or m['sampleRate']!=44100 or not m['finite'] or m['peak']>1 for m in [raw,matched]):
             issues.append({'case':id,'issue':'Audio format, finiteness, or peak failure'})
-        if abs(matched['loudestFiltered200msRms']-.03) > 2e-6:
+        if (clip.get('matchingPolicy') != 'shared-gathering-gain' or clip.get('matchedReferenceId') == id) and abs(matched['loudestFiltered200msRms']-.03) > 2e-6:
             issues.append({'case':id,'issue':'Matched level differs from documented0.03 target','value':matched['loudestFiltered200msRms']})
         engine=diagnostic['engine']
         if 'events' in engine:
             recipe=json.loads((root/clip['recipePath']).read_text())
-            r=recipe['recipe']
-            regions={q['assetHash']:q for q in r['regions']}
+            assembly = recipe.get('assembly')
+            r=assembly or recipe['recipe']
+            regions={q['assetHash']:q for q in r.get('regions', [])}
+            role_specs={s['role']:s for s in r.get('roles', [])}
             grouped={}
             for e in engine['events']:
                 if not(0<=e['startFrame']<=e['endFrame']<=clip['frames']):
@@ -251,8 +313,18 @@ def main():
                 if set(states)!=set(['ENTER','SING','RELEASE']):
                     failures.append({'event':key,'reason':'missing state'});continue
                 enter,sing,release=[states[k] for k in ['ENTER','SING','RELEASE']]
-                region=regions[enter['sourceHash']]
-                n=(region['sustainEndFrame']-region['sustainStartFrame']) if r['profile']=='DRONE' else region['endFrame']-region['startFrame']
+                region=role_specs[enter['role']]['region'] if assembly else regions[enter['sourceHash']]
+                sustain = enter.get('role') == 'FOUNDATION' if assembly else r['profile']=='DRONE'
+                source_start = region['sustainStartFrame'] if sustain else region['startFrame']
+                source_end = region['sustainEndFrame'] if sustain else region['endFrame']
+                n=source_end-source_start
+                if assembly:
+                    spec=role_specs[enter['role']]
+                    if (enter['sourceHash'] != region['assetHash'] or enter['sourceStartFrame'] != source_start or
+                            enter['sourceEndFrame'] != source_end or enter['performerId'] not in spec['performerIds']):
+                        failures.append({'event': key, 'reason': 'role source or performer assignment changed'})
+                    if abs(enter['gain'] - engine['masterGain']*spec['gain']) > 1e-7:
+                        failures.append({'event': key, 'reason': 'role event does not retain fixed master gain'})
                 expected=int(np.floor(n*enter['durationRatio']+.5))
                 if enter['endFrame']!=sing['startFrame'] or sing['endFrame']!=release['startFrame'] or abs(release['endFrame']-enter['startFrame']-expected)>1:
                     failures.append({'event':key,'reason':'state continuity or whole-region duration','expectedDuration':expected,'actualDuration':release['endFrame']-enter['startFrame']})
@@ -261,6 +333,10 @@ def main():
                 own=sorted((x[1],x[2]) for x in intervals if x[0]==performer)
                 if any(own[i][1]>own[i+1][0] for i in range(len(own)-1)):
                     failures.append({'performer':performer,'reason':'same performer overlaps own phrases'})
+                if assembly:
+                    states=sorted((e['startFrame'], e['endFrame']) for e in engine['events'] if e['performerId']==performer)
+                    if states[0][0] != 0 or states[-1][1] != clip['frames'] or any(a[1] != b[0] for a,b in zip(states,states[1:])):
+                        failures.append({'performer':performer,'reason':'states do not exclusively cover full timeline'})
             points=sorted([(a,+1) for _,a,b in intervals]+[(b,-1) for _,a,b in intervals],key=lambda p:(p[0],p[1]))
             count=maximum=0
             for _,delta in points:
@@ -268,6 +344,32 @@ def main():
             check['trace']={'rosterCount':len(engine['performers']),'distinctSingingPerformerIds':sorted(set(x[0] for x in intervals)),
                             'completeRegionEvents':len(intervals),'maximumSimultaneousFromExactEvents':maximum,
                             'declaredMaximumSimultaneous':engine['maximumSimultaneousPerformers'],'chronologyFailures':failures}
+            if assembly:
+                enters=[e for e in engine['events'] if e['state']=='ENTER']
+                rounds={e['eventIndex'] for e in enters if e['role']=='AIRY'}
+                answer_rounds={e['eventIndex'] for e in enters if e['role']=='ANSWER'}
+                exchanges=[]
+                if rounds != answer_rounds:
+                    failures.append({'reason':'finite render contains an incomplete exchange'})
+                previous_answer_end=None
+                for round in sorted(rounds & answer_rounds):
+                    def points(role,state,field):
+                        return [e[field] for e in engine['events'] if e['role']==role and e['state']==state and e['eventIndex']==round]
+                    call_start=min(points('AIRY','ENTER','startFrame'))
+                    call_end=max(points('AIRY','RELEASE','endFrame'))
+                    answer_start=min(points('ANSWER','ENTER','startFrame'))
+                    answer_end=max(points('ANSWER','RELEASE','endFrame'))
+                    gap=answer_start-call_end
+                    if gap < int(r['answerDelaySeconds']*clip['sampleRate'])-1:
+                        failures.append({'round':round,'reason':'answer precedes complete upper release and configured gap'})
+                    if previous_answer_end is not None and call_start-previous_answer_end < int(r['exchangeRestSeconds']*clip['sampleRate'])-1:
+                        failures.append({'round':round,'reason':'next call precedes complete prior answer and rest'})
+                    exchanges.append({'round':round,'callStartFrame':call_start,'callEndFrame':call_end,
+                                      'answerStartFrame':answer_start,'answerEndFrame':answer_end,'answerGapFrames':gap})
+                    previous_answer_end=answer_end
+                if maximum != engine['maximumSimultaneousPerformers'] or maximum > 8:
+                    failures.append({'reason':'assembly simultaneous performer count mismatch or over budget'})
+                check['trace']['exchanges']=exchanges
             if failures:issues.append({'case':id,'issue':'Event chronology failure','details':failures})
             if id in ['crowd_1','identity_solo_0','phrase_solo']:
                 check['sourcePitchComparison']=pitch_compare(root,clip,diagnostic,recipe)
@@ -288,9 +390,11 @@ def main():
         space={'caseIds':space_ids,'eventsSampleIdentical':ae['events']==be['events'],'performersIdentical':ae['performers']==be['performers']}
         if not space['eventsSampleIdentical'] or not space['performersIdentical']:issues.append({'issue':'SPACE comparison changes source schedule or identities'})
     engine_cases={k:v for k,v in assessments.items() if 'trace' in v}
+    role_levels = review_shared_role_levels(root, clips, issues)
     review={'status':'numerical review; perceptual listening verdict remains open','scope':'Exported24bit WAV metrics, recorded event boundaries and independent source/solo pitch observations; cannot verify word intelligibility from event traces.',
             'reviewedUtc':datetime.now(timezone.utc).isoformat(),'auditionManifestSha256':hashlib.sha256((root/'manifest.json').read_bytes()).hexdigest(),
             'clipPairs':len(clips),'issues':issues,'crowdParticipation':roster,'spaceComparison':space,
+            'roleBalanceComparison': role_levels,
             'matchedLevelRange':[min(c['matched']['loudestFiltered200msRms'] for c in assessments.values()),max(c['matched']['loudestFiltered200msRms'] for c in assessments.values())],
             'maximumAbsoluteRawDc':max(abs(c['raw']['dc']) for c in assessments.values()),'maximumExportedRawPeak':max(c['raw']['peak'] for c in assessments.values()),
             'maximumAbsoluteEngineRawDc':max(abs(c['raw']['dc']) for c in engine_cases.values()),

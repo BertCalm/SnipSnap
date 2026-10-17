@@ -1,9 +1,11 @@
-# Confluence — first recorded-source audition
+# Confluence — recorded-source and three-role audition
 
 Confluence turns supplied vocal regions into a small, independently scheduled
-ensemble and renders ordinary mono samples for SnipSnap's kit workflow. This
-first proof asks whether increasing the number of persistent performers sounds
-like people joining. The owner's listening verdict remains open.
+ensemble and renders ordinary mono samples for SnipSnap's kit workflow. The
+original proof asks whether increasing the number of persistent performers sounds
+like people joining. The next arrangement gives that gathering three explicit
+roles: a low foundation, a real breathy upper group and a clear answering phrase.
+The owner's listening verdict remains open.
 
 The supplied [engineering specification](CONFLUENCE_SPEC.md) is retained unchanged
 as the long-term proposal. This document describes the smaller implemented stage.
@@ -28,6 +30,11 @@ as the long-term proposal. This document describes the smaller implemented stage
   preserves the source contour; TEXTURE makes no melodic-tuning promise.
 - Source hashes, region and sustain markers, versions, seed and macros in JSON;
   source PCM and derived analysis outside the recipe.
+- A separate `ConfluenceAssemblyRecipe` assigns FOUNDATION, AIRY and ANSWER to
+  explicit source regions and fixed performer slots. `ConfluenceAssembly.render`
+  produces the complete finite gathering and role stems from one schedule.
+  This adds no profile to the original recipe and changes none of its saved
+  source assignments or rendering behavior.
 
 No normal `Patch` registration, Android editor, playable factory presets,
 keyboard multisample instrument or HOLD is included in this stage. The existing
@@ -66,7 +73,23 @@ Git; the renderer, generator, page source and vocal fixtures are retained.
 
 ## What to listen for
 
-Begin with the source and the dry, matched 1/2/4/8 comparison. Compare the existing
+Start with the three-role study: low foundation, airy upper group, clear answer,
+foundation plus airy voices, then the complete gathering. These 24-second clips
+share one arrangement: three low voices, three upper variants and two responders.
+The airy gestures finish before the answering phrase begins; foundation voices
+take individual breath rests underneath. Every source retains its native pitch
+range, with only the existing small identity deviations.
+
+The role clips use **one playback gain derived from the complete gathering**.
+The same gain also applies to the isolated parts and the cumulative pair, so
+isolated parts intentionally sound quieter. Leave the volume unchanged to judge
+their balance. Their event traces retain the full schedule and explicitly name
+which roles are audible. The raw role stems reconstruct the full raw gathering;
+the generator records the maximum reconstruction error and verifies a moved-source
+assembly rerender.
+
+The original study remains available. Begin with the source and the dry, matched
+1/2/4/8 comparison. Compare the existing
 six-player SECTION effect, independent Confluence scheduling, and the two-singer
 version. Judge the vowel and articulated phrase separately. More performers
 should change participation, articulation and density rather than just loudness.
@@ -78,9 +101,10 @@ there is no continuously negotiated pitch model. Room clips are secondary to the
 dry evidence. Notes and Keep/Revise/Pass verdicts stay in the browser and can be
 exported as JSON.
 
-Matched playback uses the project's loudest-window loudness measurement, not an
-integrated-song loudness target. Raw PCM, export gain and matched measurements
-remain available. Numerical validation does not establish natural vocal identity,
+The earlier proof clips each use the project's loudest-window loudness measurement,
+not an integrated-song loudness target. The three-role family applies that measure
+once to its full mix and preserves the relative stem gains. Raw PCM, export gain
+and matched measurements remain available. Numerical validation does not establish natural vocal identity,
 intelligibility or a convincing crowd; those are listening judgments.
 
 ## Sources and boundaries
@@ -98,6 +122,16 @@ follow waveform/pitch continuity and pauses; no automatic linguistic transcripti
 or tradition-specific performance claim is made. Vocal transformation does not
 create additional recorded singers: single-source clips are transformed variants
 of one recording; the two-singer comparisons use separately supplied singers.
+
+The three-role study uses VocalSet male singer 3's low sustained `/a/`, female
+singer 1's actual **breathy** `/a/` gesture and male singer 1's articulated phrase.
+The upper recording is the final native C4 vowel from a breathy arpeggio. Its
+1.20-second canonical excerpt has an explicitly recorded 80 ms entrance fade at
+the crop; its natural quiet release is retained. Breathiness comes from the
+recorded performance, without adding synthesized breath or treating ordinary
+EQ as a different singing technique. `source_airy` exposes that source before
+ensemble processing. The source and rendered downloads retain the attribution,
+CC BY 4.0 link and modification notice, including the entrance fade.
 
 The source bundle has the canonical sources and recipes required to rerender
 without relying on local paths or caches. The generator checks a moved-directory

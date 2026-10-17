@@ -178,7 +178,7 @@
       const selected = node.dataset.clipId === state.selected?.id;
       node.classList.toggle('is-selected', selected);
       node.classList.toggle('is-playing', selected && playing);
-      if (node.classList.contains('featured-clip')) {
+      if (node.classList.contains('featured-clip') || node.classList.contains('role-clip')) {
         node.setAttribute('aria-pressed', String(selected));
         node.setAttribute('aria-label', `${selected && playing ? 'Pause' : 'Play'} ${node.dataset.clipTitle}`);
         node.querySelector('.featured-action').replaceChildren(icon(selected && playing), document.createTextNode(selected && playing ? 'Playing' : 'Listen'));
@@ -249,10 +249,46 @@
     state.level = level;
     try { localStorage.setItem(LEVEL_KEY, level); } catch (_) { /* Notes still work without persistent preferences. */ }
     $('level-explanation').textContent = level === 'matched'
-      ? 'Matched levels use the loudest listening window so louder crowds do not win by volume alone.'
-      : 'Raw files keep the mix before loudness leveling; any export peak protection is recorded in diagnostics. More performers can increase the level.';
+      ? 'Role clips share the complete gathering’s matched gain; the isolated parts stay quieter. Earlier crowd comparisons match each clip separately.'
+      : 'Raw files keep the rendered mix before loudness leveling, with any export peak protection recorded in diagnostics. Role clips share the gathering’s master gain.';
     $('player-mode').textContent = level === 'matched' ? 'MATCHED LEVEL' : 'RAW RENDER';
     if (state.selected) loadAudio(state.selected, !audio.paused, audio.currentTime);
+  }
+
+  function renderRoles() {
+    const roles = [
+      { id: 'low_foundation', label: 'Low foundation.', tag: 'ISOLATED ROLE / LOW', description: 'Hear the sustained lower role on its own.', color: 'low' },
+      { id: 'airy_upper', label: 'Airy upper group.', tag: 'ISOLATED ROLE / UPPER', description: 'Hear the recorded breathy upper voices, with the other roles silent.', color: 'airy' },
+      { id: 'clear_answer', label: 'Clear answering phrase.', tag: 'ISOLATED ROLE / ANSWER', description: 'A clear phrase answers the upper group. Its opening rest is part of the arrangement.', color: 'answer' },
+      { id: 'role_gathering', label: 'The complete gathering.', tag: 'ALL THREE ROLES', description: 'The low foundation, airy upper group and clear answer, together.', color: 'gathering' }
+    ];
+    const fragment = document.createDocumentFragment();
+    for (const [index, role] of roles.entries()) {
+      const clip = state.clips.find((item) => item.id === role.id && item.group === 'roles');
+      if (!clip) continue;
+      const button = el('button', `role-clip role-${role.color}`);
+      button.type = 'button';
+      button.dataset.clipId = clip.id;
+      button.dataset.clipTitle = clip.title;
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-label', `Play ${clip.title}`);
+      const top = el('span', 'role-top');
+      top.append(el('span', 'role-index', String(index + 1).padStart(2, '0')), el('span', 'role-tag', role.tag));
+      const copy = el('span', 'role-copy');
+      const description = el('span', 'role-description', role.description);
+      description.id = `role-description-${role.id}`;
+      button.setAttribute('aria-describedby', description.id);
+      copy.append(el('span', 'role-title', role.label), description);
+      const transport = el('span', 'role-transport');
+      const action = el('span', 'featured-action');
+      action.append(icon(), document.createTextNode('Listen'));
+      transport.append(action, el('span', 'role-time', time(clip.seconds)));
+      button.append(top, copy, transport);
+      button.addEventListener('click', () => selectClip(clip));
+      fragment.append(button);
+    }
+    $('role-clips').replaceChildren(fragment);
+    $('roles-unavailable').hidden = $('role-clips').childElementCount > 0;
   }
 
   function renderFeatured() {
@@ -289,7 +325,8 @@
   }
 
   function renderGroups() {
-    const groups = [{ id: 'all', title: 'All recordings' }, ...(Array.isArray(state.manifest.groups) ? state.manifest.groups : [])];
+    const manifestGroups = Array.isArray(state.manifest.groups) ? state.manifest.groups : [];
+    const groups = [{ id: 'all', title: 'All recordings' }, ...manifestGroups.filter((group) => group.id === 'roles'), ...manifestGroups.filter((group) => group.id !== 'roles')];
     const fragment = document.createDocumentFragment();
     const seen = new Set();
     for (const group of groups) {
@@ -405,6 +442,7 @@
         return true;
       }).map((clip) => ({ ...clip, title: typeof clip.title === 'string' ? clip.title : clip.id }));
       if (!state.clips.length) throw new Error('No playable recording paths were found.');
+      renderRoles();
       renderFeatured();
       renderGroups();
       renderLibrary();

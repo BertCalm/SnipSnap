@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -28,7 +29,7 @@ import kotlin.math.sqrt
  * matched WAVs, exact recipes and event traces travel together; this generator never writes HTML.
  */
 object ConfluenceAuditionGenerator {
-    private const val GENERATOR_VERSION = 1
+    private const val GENERATOR_VERSION = 2
     private const val SEED = 20261017
     private const val MATCHED_LOUDEST_WINDOW_RMS = .03f
 
@@ -48,7 +49,14 @@ object ConfluenceAuditionGenerator {
         val isolatedPerformer: Int? = null,
     )
 
+    private data class SharedGains(val raw: Float, val matched: Float, val referenceId: String)
+
+    private data class RoleCase(
+        val id: String, val title: String, val description: String, val roles: Set<ConfluenceRole>,
+    )
+
     private val groups = listOf(
+        group("roles", "A gathering with three roles", "Hear the low foundation, the actual breathy upper source and the clear answering phrase separately, then together. Every part keeps the complete gathering's schedule and the same playback gain; leave the volume unchanged to hear their balance."),
         group("source", "Original recordings and existing SECTION", "Hear the actual human recordings first. The existing six-player SECTION comparison uses the same untransformed vowel timeline at WIDTH 0. Every file is mono."),
         group("crowd", "One voice becomes a gathering", "One, two, four and eight persistent transformed variants of the same singer. Matched playback uses the same loudest-window RMS; raw playback retains the engine's crowd gain."),
         group("behavior", "Complete phrases and individual breaths", "UNISON and RESPONSE schedule complete marked source phrases; DRONE uses the marked sustained vowel. These are deterministic finite renders, without HOLD."),
@@ -73,6 +81,9 @@ object ConfluenceAuditionGenerator {
         val primaryPhrase = fixtures.firstOrNull { it.id == "phrase-male" }
             ?: fixtures.first { it.metadata["kind"]?.str() == "phrase" }
         val secondVowel = fixtures.firstOrNull { it.id != primaryVowel.id && it.metadata["kind"]?.str() == "vowel" }
+        val airy = fixtures.firstOrNull { it.id == "airy-female" }
+            ?: error("the three-role audition needs the real airy-female fixture and its provenance")
+        require(airy.metadata["kind"]?.str() == "airy") { "the airy group requires an explicitly identified airy source" }
         root.mkdirs()
         val sourceRecords = copySources(root, fixtures, fixtureManifest)
         val implementationSources = copyImplementation(root, fixtureRoot)
@@ -85,13 +96,17 @@ object ConfluenceAuditionGenerator {
             id: String, group: String, title: String, description: String,
             audio: Snip, recipe: JsonValue.Obj, diagnostics: JsonValue.Obj,
             renderMs: Double, extra: Map<String, Any?> = emptyMap(),
+            sharedGains: SharedGains? = null,
         ) {
             require(audio.channels == 1 && audio.sampleRate == 44_100)
             require(audio.frameCount > 0 && audio.samples.all { it.isFinite() }) { "nonfinite or empty audition $id" }
             val rawMetrics = metrics(audio)
-            val rawGain = minOf(1f, .99f / audio.peak().coerceAtLeast(1e-9f))
+            val rawGain = sharedGains?.raw ?: minOf(1f, .99f / audio.peak().coerceAtLeast(1e-9f))
             val rawExport = gain(audio, rawGain)
-            val matched = AuditionLevel.level(audio)
+            val matched = sharedGains?.let { gain(audio, it.matched) } ?: AuditionLevel.level(audio)
+            require(rawExport.peak() <= .990001f && matched.peak() <= .990001f) { "shared gain exceeds PCM headroom: $id" }
+            val matchingPolicy = if (sharedGains == null) "individual-loudness-match" else "shared-gathering-gain"
+            val matchedGain = sharedGains?.matched ?: (matched.peak() / audio.peak().coerceAtLeast(1e-9f))
             val rawPath = "raw/$id.wav"
             val matchedPath = "matched/$id.wav"
             val recipePath = "recipes/$id.json"
@@ -104,6 +119,8 @@ object ConfluenceAuditionGenerator {
                 writeText(Json.write(json(linkedMapOf(
                     "id" to id, "rawMetrics" to rawMetrics, "rawExportMetrics" to metrics(rawExport),
                     "matchedMetrics" to metrics(matched), "rawExportGain" to rawGain,
+                    "matchedGain" to matchedGain, "matchingPolicy" to matchingPolicy,
+                    "matchedReferenceId" to sharedGains?.referenceId,
                     "renderMilliseconds" to renderMs, "engine" to diagnostics,
                 ))) + "\n")
             }
@@ -118,7 +135,8 @@ object ConfluenceAuditionGenerator {
                 "rawPeak" to rawMetrics.getValue("peak"), "rawRms" to rawMetrics.getValue("rms"),
                 "rawDc" to rawMetrics.getValue("dc"), "loudestWindowRms" to rawMetrics.getValue("loudestWindowRms"),
                 "matchedLoudestWindowRms" to Loudness.of(matched), "rawExportGain" to rawGain,
-                "matchedGain" to (matched.peak() / audio.peak().coerceAtLeast(1e-9f)),
+                "matchedGain" to matchedGain, "matchingPolicy" to matchingPolicy,
+                "matchedReferenceId" to sharedGains?.referenceId,
                 "renderMilliseconds" to renderMs, "finite" to true,
             ) + extra
             renderedById[id] = matched
@@ -129,6 +147,7 @@ object ConfluenceAuditionGenerator {
         for ((fixture, id, title, seconds) in listOf(
             Quad(primaryVowel, "source_vowel", "Original human vowel, with rests", 9f),
             Quad(primaryPhrase, "source_phrase", "Original human phrase", maxOf(9f, regionSeconds(primaryPhrase) + .5f)),
+            Quad(airy, "source_airy", "Original breathy upper gesture", 9f),
         )) {
             val audio = referenceTimeline(fixture, seconds)
             record(id, "source", title,
@@ -185,16 +204,75 @@ object ConfluenceAuditionGenerator {
             if (case.id == "crowd_4") portableCheck = verifyMovedRecipe(root, recipe, options, report.snip)
         }
 
+        val roleSources = linkedMapOf(
+            ConfluenceRole.FOUNDATION to primaryVowel,
+            ConfluenceRole.AIRY to airy,
+            ConfluenceRole.ANSWER to primaryPhrase,
+        )
+        val assemblyRecipe = ConfluenceAssemblyRecipe(
+            name = "Low foundation, breathy upper voices and a clear answer",
+            roles = listOf(
+                ConfluenceRoleSpec(ConfluenceRole.FOUNDATION, primaryVowel.region, listOf(0, 1, 2), .52f),
+                ConfluenceRoleSpec(ConfluenceRole.AIRY, airy.region, listOf(3, 4, 5), .32f),
+                ConfluenceRoleSpec(ConfluenceRole.ANSWER, primaryPhrase.region, listOf(6, 7), 1f),
+            ),
+            seed = SEED, seconds = 24f, space = .20f, divergence = .25f,
+        )
+        val assemblyStarted = System.nanoTime()
+        val assembly = ConfluenceAssembly.render(assemblyRecipe, resolved, normalize = false)
+        val assemblyMs = elapsed(assemblyStarted)
+        val roleSum = sum(ConfluenceRole.entries.map { assembly.rawStems.getValue(it) })
+        val stemSumError = roleSum.samples.indices.maxOf { abs(roleSum.samples[it] - assembly.raw[it]) }
+        check(stemSumError <= 2e-6f) { "role stems do not reconstruct the full raw gathering: $stemSumError" }
+        val fullMatched = AuditionLevel.level(assembly.mix)
+        val familyGains = SharedGains(
+            minOf(1f, .99f / assembly.mix.peak().coerceAtLeast(1e-9f)),
+            fullMatched.peak() / assembly.mix.peak().coerceAtLeast(1e-9f), "role_gathering",
+        )
+        val roleCases = listOf(
+            RoleCase("low_foundation", "Low foundation", "Three persistent low voices use the actual low source's marked sustain, with individual breath rests. This is the foundation stem from the full gathering, at its original mix level.", setOf(ConfluenceRole.FOUNDATION)),
+            RoleCase("airy_upper", "Real airy upper group", "Three upper voices reuse the supplied breathy female vowel gesture. The airy quality is in the recording; this part keeps its full-gathering schedule and mix level.", setOf(ConfluenceRole.AIRY)),
+            RoleCase("clear_answer", "Clear answering phrase", "Two responders carry the complete marked sung phrase after the upper group's gesture. The full schedule remains in the trace while only this part is heard.", setOf(ConfluenceRole.ANSWER)),
+            RoleCase("foundation_airy", "Foundation and airy upper group", "The same low bed and breathy upper group together, before the answering phrase is added. Their gain and entrances are unchanged.", setOf(ConfluenceRole.FOUNDATION, ConfluenceRole.AIRY)),
+            RoleCase("role_gathering", "The complete gathering", "The three roles together: three low foundation voices, three actual breathy upper variants and two clear phrase responders. Compare with the isolated parts without changing volume.", ConfluenceRole.entries.toSet()),
+        )
+        for (case in roleCases) {
+            val audio = if (case.roles.size == ConfluenceRole.entries.size) assembly.mix
+                else sum(case.roles.map { assembly.rawStems.getValue(it) })
+            val selectedSources = case.roles.map { roleSources.getValue(it) }
+            val recipeJson = json(linkedMapOf(
+                "format" to "snipsnap-confluence-assembly-audition", "version" to GENERATOR_VERSION,
+                "assembly" to Json.parse(assemblyRecipe.toJsonText()),
+                "selectedRoles" to case.roles.map { it.name }, "normalize" to false,
+                "sourceIds" to roleSources.values.map { it.id }, "sourcePaths" to roleSources.values.map { "sources/${it.id}.wav" },
+                "sourcePcmHashes" to roleSources.values.map { it.source.hash },
+                "playbackGains" to mapOf("raw" to familyGains.raw, "matched" to familyGains.matched, "referenceId" to familyGains.referenceId),
+            )) as JsonValue.Obj
+            val diagnostics = JsonValue.Obj(LinkedHashMap(assembly.diagnosticsJson().entries).apply {
+                put("selectedRoles", json(case.roles.map { it.name }))
+                put("allRolesScheduled", JsonValue.Bool(true))
+                put("stemSumRawMaximumAbsoluteError", json(stemSumError))
+            })
+            record(case.id, "roles", case.title, case.description, audio, recipeJson, diagnostics, assemblyMs,
+                linkedMapOf(
+                    "profile" to "ASSEMBLY", "performerCount" to assemblyRecipe.roles.filter { it.role in case.roles }.sumOf { it.performerIds.size },
+                    "rosterCount" to 8, "roleIds" to case.roles.map { it.name },
+                    "sourceIds" to selectedSources.map { it.id }, "assemblySourceIds" to roleSources.values.map { it.id },
+                    "evidence" to mapOf("sharedSchedule" to true, "sharedMasterGain" to true, "hold" to false,
+                        "fullGatheringReferenceId" to "role_gathering", "stemSumRawMaximumAbsoluteError" to stemSumError),
+                ), familyGains)
+        }
+        val assemblyPortableCheck = verifyMovedAssembly(root, assemblyRecipe, assembly.mix)
         val kit = writeRenderedKit(root, clips, renderedById)
         val manifest = linkedMapOf<String, Any?>(
-            "schemaVersion" to GENERATOR_VERSION, "title" to "Confluence · first human-source proof",
+            "schemaVersion" to GENERATOR_VERSION, "title" to "Confluence · a gathering in three roles",
             "engineVersion" to Confluence.MODEL, "analysisVersion" to Confluence.ANALYSIS_VERSION, "generatorVersion" to GENERATOR_VERSION,
             "implementationSources" to implementationSources,
             "runtime" to runtime(),
             "sourceRevision" to git("rev-parse", "HEAD"), "workingTreeChanges" to git("status", "--short"),
             "sampleRate" to 44_100, "channels" to 1, "bitDepth" to 24, "seed" to SEED,
             "matchedLoudestWindowRmsTarget" to MATCHED_LOUDEST_WINDOW_RMS,
-            "levelPolicy" to "Matched: repository AuditionLevel, loudest 200 ms filtered RMS .03 with .99 peak guard. Raw: prelevel renderer output; rawExportGain records any PCM peak protection. Silence and rests are not removed.",
+            "levelPolicy" to "Existing proof clips: repository AuditionLevel, loudest 200 ms filtered RMS .03 with .99 peak guard. Three-role family: one matched gain derived from the full gathering, also applied to every stem and pair; isolated parts intentionally remain quieter. Raw: prelevel renderer output, with the same full-derived peak guard across the role family. Silence and rests are not removed.",
             "status" to "feasibility-prototype-awaiting-owner-listening",
             "scope" to "Actual licensed human vocal sources; conservative offline transformed variants, persistent seeded roster, complete phrase schedules and a shared mono room. No 48-voice or seamless HOLD claim; no native patch/kit editing integration.",
             "limitations" to listOf("A transformed copy is not a new human singer.", "Pitch/formant quality and phrase-boundary integrity still need listening.",
@@ -205,14 +283,20 @@ object ConfluenceAuditionGenerator {
             "sourceProvenance" to fixtureJson.filterKeys { it != "sources" }.mapValues { native(it.value) },
             "groups" to groups, "clips" to clips,
             "portableSourceCheck" to portableCheck, "renderedKit" to kit,
+            "assemblyPortableSourceCheck" to assemblyPortableCheck,
+            "assembly" to mapOf("referenceId" to "role_gathering", "roleIds" to ConfluenceRole.entries.map { it.name },
+                "performersPerRole" to assemblyRecipe.roles.associate { it.role.name to it.performerIds.size },
+                "seconds" to assemblyRecipe.seconds, "matchingPolicy" to "shared-gathering-gain",
+                "matchedGain" to familyGains.matched, "rawExportGain" to familyGains.raw,
+                "stemSumRawMaximumAbsoluteError" to stemSumError),
             "sourceBundlePath" to "confluence-source-bundle.zip",
             "generationMilliseconds" to elapsed(generationStarted),
         )
         File(root, "manifest.json").writeText(Json.write(json(manifest)) + "\n")
         File(root, "SOURCE-BUNDLE.txt").writeText(
-            "Confluence first source proof.\n\nRecipes and canonical human-source WAVs are bundled with their content hashes and license attribution. " +
-                "This is a prototype replay archive, not a native SnipSnap project. Use the matching repository revision and Confluence.render with the recipe's options. " +
-                "The generator verifies one recipe after moving its inputs to a new temporary directory. See manifest.json and sources/fixture-manifest.json.\n"
+            "Confluence recorded-source and three-role audition.\n\nRecipes and canonical human-source WAVs are bundled with their content hashes and license attribution. " +
+                "This is a prototype replay archive, not a native SnipSnap project. Use the matching repository revision and Confluence.render or ConfluenceAssembly.render with the recipe's options. " +
+                "The assembly's isolated roles use the full gathering's schedule and common playback gains. The generator verifies both recipe types after moving their inputs to a new temporary directory. See manifest.json and sources/fixture-manifest.json.\n"
         )
         writeZip(root, File(root, "confluence-source-bundle.zip"), listOf("manifest.json", "SOURCE-BUNDLE.txt", "sources", "recipes", "diagnostics", "implementation"))
         println("Wrote ${clips.size} raw/matched pairs, exact recipes, traces, source bundle and rendered kit under $root")
@@ -308,6 +392,7 @@ object ConfluenceAuditionGenerator {
         val paths = listOf("synth/src/main/kotlin/com/snipsnap/synth/Confluence.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceRecipe.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceVoice.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceAssembly.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/ConfluenceAuditionGenerator.kt")
         return paths.map { path ->
             val source = File(repo, path)
@@ -355,12 +440,28 @@ object ConfluenceAuditionGenerator {
         } finally { moved.deleteRecursively() }
     }
 
+    private fun verifyMovedAssembly(root: File, recipe: ConfluenceAssemblyRecipe, expected: Snip): Map<String, Any?> {
+        val moved = Files.createTempDirectory("confluence-assembly-portable-check-").toFile()
+        return try {
+            File(root, "sources").copyRecursively(File(moved, "sources"), overwrite = true)
+            File(moved, "assembly.json").writeText(recipe.toJsonText())
+            val loaded = ConfluenceAssemblyRecipe.fromJsonText(File(moved, "assembly.json").readText())
+            val sources = File(moved, "sources").listFiles().orEmpty().filter { it.extension == "wav" }
+                .map { ConfluenceSource.fromSnip(WavReader.read(it)) }.associateBy { it.hash }
+            val actual = ConfluenceAssembly.render(loaded, sources, normalize = false).mix
+            check(expected.samples.contentEquals(actual.samples)) { "moved assembly source recipe changed its rendered samples" }
+            mapOf("caseId" to "role_gathering", "passed" to true, "sampleIdentical" to true,
+                "absolutePathsUsed" to false, "sourceCacheUsed" to false,
+                "method" to "Copied all three assigned canonical sources and the serialized assembly recipe to a new directory, rebuilt source objects, rerendered and compared every float.")
+        } finally { moved.deleteRecursively() }
+    }
+
     private fun writeRenderedKit(root: File, clips: List<Map<String, Any?>>, audio: Map<String, Snip>): Map<String, Any?> {
         val provenance = Json.parse(File(root, "sources/fixture-manifest.json").readText()).obj()
         val originalCredit = provenance.getValue("sources").arr().first().obj().getValue("attribution").str()
         val credit = "$originalCredit Source: ${provenance.getValue("sourceUrl").str()}. License: ${provenance.getValue("licenseUrl").str()}. " +
-            "Modified by cropping, constant gain, source-based pitch/formant/timing processing, ensemble scheduling and optional room rendering."
-        val ids = listOf("crowd_1", "crowd_2", "crowd_4", "crowd_8", "phrase_solo", "phrase_unison", "phrase_response", "drone_4", "drone_8", "two_source_gathering")
+            "Modified by cropping, constant gain, source-based pitch/formant/timing processing, ensemble scheduling and optional room rendering. The cropped breathy vowel has an explicit 80 ms entrance fade; its breathiness comes from the original recording."
+        val ids = listOf("crowd_1", "crowd_2", "crowd_4", "crowd_8", "phrase_solo", "phrase_unison", "phrase_response", "drone_4", "drone_8", "two_source_gathering", "role_gathering")
             .filter { it in audio }
         val dir = File(root, "rendered-kit/Confluence First Proof").apply { mkdirs() }
         val pads = ids.mapIndexed { i, id ->
@@ -380,12 +481,21 @@ object ConfluenceAuditionGenerator {
         check(findings.none { it.severity == Severity.FAIL })
         Mpc3Exporter.exportTrack(kit, dir, File(root, "rendered-kit/mpc"), overwrite = true, mpc2Twin = true)
         XpnPackager.write(kit, dir, File(root, "confluence-rendered-kit.xpn"),
-            ExpansionMeta("Confluence First Proof", identifier = "app.snipsnap.confluence.prototype", version = "0.1.0",
+            ExpansionMeta("Confluence First Proof", identifier = "app.snipsnap.confluence.prototype", version = "0.2.0",
                 description = "Human-source vocal ensemble feasibility renders. $credit Prototype sources and recipes are supplied separately."), overwrite = true)
-        writeZip(root, File(root, "confluence-rendered-kit.zip"), listOf("rendered-kit"))
+        val zip = File(root, "confluence-rendered-kit.zip")
+        var zipContents = listOf("rendered-kit")
+        writeZip(root, zip, zipContents)
+        if (zip.length() > 25L * 1024 * 1024) {
+            // Keep one copy of the WAVs when the full native+MPC package exceeds hosting's file limit.
+            zipContents = listOf("rendered-kit/mpc", "rendered-kit/SOURCE-ATTRIBUTION.txt", "rendered-kit/LICENSE-CC-BY-4.0.txt")
+            writeZip(root, zip, zipContents)
+        }
+        check(zip.length() <= 25L * 1024 * 1024) { "rendered kit ZIP exceeds the hosting asset limit" }
         return mapOf("xpnPath" to "confluence-rendered-kit.xpn", "zipPath" to "confluence-rendered-kit.zip",
             "nativeKitPath" to "rendered-kit/Confluence First Proof/kit.json", "pads" to ids.size,
             "caseIds" to ids, "preflight" to findings.map { mapOf("severity" to it.severity.name, "message" to it.message) },
+            "zipContents" to zipContents,
             "editableEngine" to false, "levelPolicy" to "The same matched 24-bit audio heard on the audition page; ordinary unpitched pads, no implicit auto-retune.")
     }
 
@@ -411,6 +521,10 @@ object ConfluenceAuditionGenerator {
     private data class Quad(val fixture: Fixture, val id: String, val title: String, val seconds: Float)
     private fun regionSeconds(fixture: Fixture) = (fixture.region.endFrame - fixture.region.startFrame) / 44_100f
     private fun gain(snip: Snip, amount: Float) = Snip(FloatArray(snip.samples.size) { snip.samples[it] * amount }, snip.channels, snip.sampleRate)
+    private fun sum(parts: List<Snip>): Snip {
+        require(parts.isNotEmpty() && parts.all { it.channels == 1 && it.sampleRate == 44_100 && it.frameCount == parts.first().frameCount })
+        return Snip(FloatArray(parts.first().frameCount) { i -> parts.sumOf { it.samples[i].toDouble() }.toFloat() }, 1, 44_100)
+    }
     private fun elapsed(started: Long) = (System.nanoTime() - started) / 1e6
     private fun group(id: String, title: String, description: String) = mapOf("id" to id, "title" to title, "description" to description)
     private fun tag(v: Float) = (v * 100).toInt().toString().padStart(3, '0')

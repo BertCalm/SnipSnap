@@ -181,9 +181,69 @@
       },
       "originalRegionPeak": 0.094512939453125,
       "originalRegionRms": 0.017074286753451944
+    },
+    {
+      "id": "airy-female",
+      "path": "airy-female.wav",
+      "title": "Female singer 1 — recorded breathy final C4 vowel",
+      "kind": "airy",
+      "sourceTechnique": "breathy",
+      "roleEligibility": [
+        "AIRY_UPPER"
+      ],
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 52920,
+      "seconds": 1.2,
+      "sha256": "6630c11b3ad6e5f008674b75562aae01251efba2afd1eeda58140f02a1f9cc75",
+      "phraseStartFrame": 0,
+      "phraseEndFrame": 52920,
+      "sustainStartFrame": 6615,
+      "sustainEndFrame": 30870,
+      "referenceMidi": 60,
+      "referenceHz": 261.89813144502506,
+      "referencePolicy": "Manual C4 note label supported by stable-region autocorrelation; native final note retained. Actual breathiness comes from the recorded technique, not filtering or generated noise.",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://zenodo.org/records/1193957",
+      "doi": "10.5281/zenodo.1193957",
+      "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+      "originalPath": "originals/f1_arpeggios_breathy_a.wav",
+      "originalArchiveMember": "FULL/female1/arpeggios/breathy/f1_arpeggios_breathy_a.wav",
+      "originalSha256": "18306bdc3d68f0fbd55828ed6d0ec225b9df84fbbacd6d15a4d551e27f4ef7f7",
+      "originalCropStartFrame": 262395,
+      "originalCropEndFrame": 315315,
+      "entranceFadeFrames": 3528,
+      "entranceFadeCurve": "half-cosine",
+      "gainDb": 34.539213560101615,
+      "modificationOrder": [
+        "crop",
+        "80 ms half-cosine entrance fade",
+        "constant gain to -3 dBFS sample peak",
+        "PCM16 quantization"
+      ],
+      "modifications": "Selected the final nonlinguistic /a/ note from a real recorded breathy arpeggio after its preceding pitch transition. An explicit 80 ms half-cosine entrance fade smooths the mid-vowel crop, followed by constant gain to -3 dBFS sample peak. The natural vocal release and quiet ending remain intact; no exit fade, EQ, noise generation, denoising, pitch shift, or time stretch. Complete original WAV retained.",
+      "selectionBasis": "Original5.95–7.15s: preceding E4 transition resolves to C4 by5.95s; stable native C4 body around6.10–6.65s; natural recorded release around6.85–7.00s and quiet margin through7.15s. Full selected tail and sustain pitch trajectory inspected. Dataset technique is explicitly breathy; no perceptual owner acceptance claimed.",
+      "pitchObservation": {
+        "medianHz": 261.89813144502506,
+        "medianAutocorrelation": 0.9455008149422977,
+        "windows": 19
+      },
+      "originalRegionPeak": 0.0164794921875,
+      "originalRegionRms": 0.004445107689028983,
+      "boundaryGuard": {
+        "policy": "Fixture-specific held-vowel regression guard; not a rule for arbitrary imported voices.",
+        "tailWindowFrames": 2205,
+        "maxTailToSustainRmsRatio": 0.05,
+        "maxTailRms": 0.012,
+        "tailPitchScanFrames": 22050,
+        "pitchEnergyFractionOfSustain": 0.15,
+        "maxHighEnergyTailPitchExcursionCents": 300,
+        "maxSustainPitchExcursionCents": 150
+      }
     }
   ],
-  "fixtureVersion": 2,
+  "fixtureVersion": 3,
   "retiredVowelMale": {
     "reason": "The original0.15–3.65s male1 crop included the start of the next register gesture around3.5–3.6s and ended while hot; canonical last50msRMS.15147 and~246Hz instead of~128Hz. Original preserved for provenance and regression comparison.",
     "previousSource": {
@@ -224,5 +284,6 @@
       "originalRegionPeak": 0.018310546875,
       "originalRegionRms": 0.00435607053018591
     }
-  }
+  },
+  "primaryAiryId": "airy-female"
 }

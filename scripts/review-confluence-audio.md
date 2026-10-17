@@ -25,6 +25,13 @@ An independent autocorrelation tracker compares source and isolated performer
 pitch contours using each event's duration ratio. A nonzero exit code indicates
 a recorded signal or trace check failure.
 
+The three-role study uses one gain derived from the complete gathering for all
+isolations. Its isolated roles deliberately retain their balance within the
+mix, so they do not each reach the ordinary `.03` matched target. The reviewer
+checks the common gains and reconstructs both the full mix and the cumulative
+pair from the exported isolated roles, allowing only floating-point and PCM24
+rounding error. It also checks each file against its declared SHA-256 hash.
+
 These checks cannot establish word intelligibility, plausible human identity,
 or whether the result sounds like performers joining. Those remain listening
 judgments. Rerun this script after regenerating the audition so the report

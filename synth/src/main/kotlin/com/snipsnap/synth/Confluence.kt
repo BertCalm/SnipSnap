@@ -299,7 +299,7 @@ object Confluence {
     private data class Planned(val performerId: Int, val eventIndex: Int, val sourceIndex: Int, val startFrame: Int,
         val identity: ConfluencePerformer, val variation: Float, val pull: Float)
 
-    private fun identity(seed: Int, id: Int, register: Float, divergence: Float): ConfluencePerformer {
+    internal fun identity(seed: Int, id: Int, register: Float, divergence: Float): ConfluencePerformer {
         val r = Random(stream(seed, id, 0))
         fun bipolar() = 2 * r.nextFloat() - 1
         val registerSlots = floatArrayOf(.35f, -.85f, .9f, -.4f, .45f, -1f, 1f, .2f)
@@ -325,7 +325,7 @@ object Confluence {
     }
 
     /** One shared bounded mono room. Direct performers remain the dominant cue at small SPACE. */
-    private fun room(dry: FloatArray, space: Float): FloatArray {
+    internal fun room(dry: FloatArray, space: Float): FloatArray {
         val out = FloatArray(dry.size)
         val lengths = intArrayOf((RATE * (.031 + .012 * space)).roundToInt(),
             (RATE * (.047 + .017 * space)).roundToInt(), (RATE * (.073 + .021 * space)).roundToInt())
@@ -347,7 +347,7 @@ object Confluence {
         return out
     }
 
-    private fun removeDc(samples: FloatArray) {
+    internal fun removeDc(samples: FloatArray) {
         var previous = 0f; var state = 0f
         for (i in samples.indices) { val x = samples[i]; state = x - previous + .9985f * state; previous = x; samples[i] = state }
         // Finite export only: a 4 ms edge after the last allowed release and room tail.

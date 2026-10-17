@@ -18,9 +18,10 @@ dataset authors or singers endorse SnipSnap.
 ## Files and marked regions
 
 All canonical files are mono, 44.1 kHz, PCM16 WAV. The canonical versions are
-cropped and given constant gain to a -3 dBFS sample peak. No denoising, tuning,
-stretching, fades, synthetic replacement, or generative processing was applied.
-The five complete original recordings remain in `originals/`, including the
+cropped and given constant gain to a -3 dBFS sample peak. The airy vowel has the
+explicit entrance fade described below; the other four files have no fades.
+No denoising, EQ, tuning, stretching, synthetic replacement, or generative
+processing was applied. Six complete original recordings remain in `originals/`, including the
 retired male1 vowel recording retained for the boundary regression history.
 
 | Canonical file | Duration | Reference note / observed frequency | Marked sustain, frames |
@@ -29,6 +30,7 @@ retired male1 vowel recording retained for the boundary regression history.
 | `vowel-female.wav` | 2.95 s | C4 / 261.065 Hz | 30870–94815 |
 | `phrase-male.wav` | 7.25 s | Initial C3 / 129.217 Hz | 22050–37485 |
 | `phrase-female.wav` | 6.55 s | Initial C4 / 263.697 Hz | 26460–39690 |
+| `airy-female.wav` | 1.20 s | C4 / 261.898 Hz | 6615–30870 |
 
 Frame intervals are half-open: start inclusive, end exclusive. Each complete
 canonical file is also its selected phrase. `manifest.json` is authoritative
@@ -42,6 +44,21 @@ and the next register gesture begins around 4.3 seconds. No curated fade was
 needed. Its normalized final 50 ms RMS is about 0.00217, under one percent of
 the marked sustain RMS. The female vowel retains its quiet natural release;
 a small pitch scoop while it dies away is part of the recording.
+
+The airy source is the final native C4 `/a/` note in female1's **recorded
+breathy-technique arpeggio**. Original 5.95–7.15 seconds starts after the previous
+E4-to-C4 transition; the selected stable body is original 6.10–6.65 seconds.
+Voicing releases naturally around 6.85–7.00 seconds, followed by a quiet margin.
+An explicit **80 ms half-cosine entrance fade** smooths the cropped mid-vowel
+entrance before peak normalization. There is no exit fade. The full 7.44-second
+original arpeggio remains in `originals/f1_arpeggios_breathy_a.wav`.
+
+The breathy label comes from VocalSet's source-technique metadata, not from EQ,
+added hiss, or a synthesis technique claim. Final 50 ms RMS is about 0.00688,
+2.44% of its marked body RMS; the high-energy tail remains within 40 cents of
+its median pitch. The source is tagged `AIRY_UPPER` for the mixed-role audition.
+Whether it sounds sufficiently airy in the gathering remains a listening
+judgment.
 
 The phrase files retain the first
 source section of the dataset's `row_straight` excerpt through its substantial
@@ -61,7 +78,7 @@ not flatten all notes to the reference.
 ## Reproduction
 
 Run `python reference/fixtures/confluence/acquire.py` from the repository root.
-The script reads only the five retained ZIP members using HTTP ranges, verifies
+The script reads only the six retained ZIP members using HTTP ranges, verifies
 their CRCs and pinned SHA-256 hashes, and recreates the canonical files from
 the committed manifest. It does not download the complete 2 GB archive.
 
@@ -74,10 +91,10 @@ of the main 128 Hz and its RMS was still 0.151. This was a bad source boundary,
 not an acceptable natural release. The original and retired source metadata
 remain in `originals/` and `manifest.json`; the playable vowel now uses male3.
 
-Both current vowel entries include fixture-specific `boundaryGuard` settings.
+The two straight vowel entries and the airy vowel include fixture-specific `boundaryGuard` settings.
 The numerical audition reviewer checks the full source tail's amplitude and
 high-energy pitch trajectory, plus the marked sustain pitch range. These are
-regression checks for these two held-vowel fixtures, not eligibility thresholds
+regression checks for these selected held-vowel fixtures, not eligibility thresholds
 for arbitrary user voices. They do not establish perceptual acceptance.
 
 The original recordings' ZIP member names are also retained in

@@ -102,9 +102,16 @@ def main():
             pcm = array.array("h", recording.readframes(source["originalCropEndFrame"] - source["originalCropStartFrame"]))
         if sys.byteorder != "little":
             pcm.byteswap()
-        maximum = max(abs(x) for x in pcm)
-        gain = 10 ** (-3 / 20) / (maximum / 32768)
-        output = array.array("h", (max(-32768, min(32767, round((x / 32768) * gain * 32767))) for x in pcm))
+        samples = [x / 32768 for x in pcm]
+        fade_frames = source.get("entranceFadeFrames", 0)
+        if fade_frames:
+            if source.get("entranceFadeCurve") != "half-cosine" or not 0 < fade_frames <= len(samples):
+                raise RuntimeError("Unsupported or invalid source entrance fade")
+            for i in range(fade_frames):
+                samples[i] *= .5 - .5 * math.cos(math.pi * (i + 1) / fade_frames)
+        maximum = max(abs(x) for x in samples)
+        gain = 10 ** (-3 / 20) / maximum
+        output = array.array("h", (max(-32768, min(32767, round(x * gain * 32767))) for x in samples))
         if sys.byteorder != "little":
             output.byteswap()
         path = ROOT / source["path"]

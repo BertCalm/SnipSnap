@@ -248,4 +248,173 @@ class ConfluenceTest {
         assertTrue(failure.message.orEmpty().contains("phrase ends while hot"),
             "the regression must fail for its audible hot boundary, not malformed markers: ${failure.message}")
     }
+
+    private fun assemblyFixture(space: Float = .4f): Pair<ConfluenceAssemblyRecipe, Map<String, ConfluenceSource>> {
+        fun source(seconds: Float, midi: Int): ConfluenceSource {
+            val hz = 440.0 * 2.0.pow((midi - 69) / 12.0)
+            val samples = FloatArray((seconds * Confluence.RATE).toInt()) { i ->
+                val phase = 2 * PI * hz * i / Confluence.RATE
+                (.19 * sin(phase) + .065 * sin(3 * phase) + .025 * sin(5 * phase)).toFloat()
+            }
+            return ConfluenceSource.fromSnip(Snip(samples, 1, Confluence.RATE))
+        }
+        val low = source(1.1f, 43)
+        val upper = source(.55f, 55)
+        val answer = source(.75f, 50)
+        val roles = listOf(
+            ConfluenceRoleSpec(ConfluenceRole.FOUNDATION,
+                ConfluenceRegion(low.hash, 0, low.frameCount, referenceMidi = 43f,
+                    sustainStartFrame = Confluence.RATE / 10, sustainEndFrame = Confluence.RATE * 9 / 10),
+                listOf(0, 1, 2), gain = .7f),
+            ConfluenceRoleSpec(ConfluenceRole.AIRY,
+                ConfluenceRegion(upper.hash, 0, upper.frameCount, referenceMidi = 55f),
+                listOf(3, 4, 5), gain = .4f),
+            ConfluenceRoleSpec(ConfluenceRole.ANSWER,
+                ConfluenceRegion(answer.hash, 0, answer.frameCount, referenceMidi = 50f),
+                listOf(6, 7), gain = .9f),
+        )
+        return ConfluenceAssemblyRecipe("Three native registers", roles, seed = 17, seconds = 9f,
+            space = space, divergence = .25f) to listOf(low, upper, answer).associateBy { it.hash }
+    }
+
+    @Test
+    fun `mixed roles reproduce their native source assignments and whole selected regions`() {
+        val (recipe, sources) = assemblyFixture()
+        val restored = ConfluenceAssemblyRecipe.fromJsonText(recipe.toJsonText())
+        val a = ConfluenceAssembly.render(recipe, sources, normalize = false)
+        val b = ConfluenceAssembly.render(restored, sources, normalize = false)
+        assertEquals(recipe, restored)
+        assertContentEquals(a.raw, b.raw)
+        assertEquals(a.events, b.events)
+        assertEquals(a.performers, b.performers)
+        assertEquals((0 until Confluence.MAX_PERFORMERS).toSet(), a.performers.map { it.id }.toSet())
+
+        for (role in recipe.roles) {
+            val region = role.region
+            val expectedStart = if (role.role == ConfluenceRole.FOUNDATION) region.sustainStartFrame!! else region.startFrame
+            val expectedEnd = if (role.role == ConfluenceRole.FOUNDATION) region.sustainEndFrame!! else region.endFrame
+            val entrances = a.events.filter { it.role == role.role && it.state == "ENTER" }
+            assertEquals(role.performerIds.toSet(), entrances.map { it.performerId }.toSet())
+            assertTrue(entrances.isNotEmpty())
+            for (event in entrances) {
+                assertEquals(region.assetHash, event.sourceHash)
+                assertEquals(expectedStart, event.sourceStartFrame)
+                assertEquals(expectedEnd, event.sourceEndFrame)
+                assertTrue(abs(event.pitchSemitones) < .5f,
+                    "a native role should retain its supplied register, not gain an octave mapping")
+                val release = a.events.single { it.role == event.role && it.performerId == event.performerId &&
+                    it.eventIndex == event.eventIndex && it.state == "RELEASE" }
+                val expectedFrames = ((expectedEnd - expectedStart) * event.durationRatio).toInt()
+                assertTrue(abs(release.endFrame - event.startFrame - expectedFrames) <= 1,
+                    "the complete selected source must survive each role event")
+            }
+        }
+    }
+
+    @Test
+    fun `role isolates retain one mix schedule and one gain through the shared room`() {
+        val (recipe, sources) = assemblyFixture()
+        val raw = ConfluenceAssembly.render(recipe, sources, normalize = false)
+        val matched = ConfluenceAssembly.render(recipe, sources, normalize = true)
+        assertEquals(raw.events, matched.events)
+        assertEquals(raw.performers, matched.performers)
+        assertContentEquals(raw.raw, matched.raw)
+        assertEquals(ConfluenceRole.entries.toSet(), matched.stems.keys)
+        assertEquals(matched.stems.keys, matched.rawStems.keys)
+        assertEquals(matched.stems.keys, matched.dryStems.keys)
+        assertTrue(matched.normalizationGain.isFinite() && matched.normalizationGain > 0f)
+        for (role in ConfluenceRole.entries) {
+            assertEquals(raw.raw.size, matched.stems.getValue(role).samples.size)
+            assertEquals(raw.raw.size, matched.rawStems.getValue(role).samples.size)
+            assertEquals(raw.raw.size, matched.dryStems.getValue(role).samples.size)
+        }
+
+        var rawError = 0f
+        var matchedError = 0f
+        var dryError = 0f
+        for (i in raw.raw.indices) {
+            var rawSum = 0f; var matchedSum = 0f; var drySum = 0f
+            for (role in ConfluenceRole.entries) {
+                val stem = matched.stems.getValue(role)
+                val rawStem = matched.rawStems.getValue(role).samples
+                val dryStem = matched.dryStems.getValue(role)
+                rawSum += rawStem[i]
+                matchedSum += stem.samples[i]
+                drySum += dryStem.samples[i]
+                assertTrue(abs(stem.samples[i] - rawStem[i] * matched.normalizationGain) < 2e-6f,
+                    "a quiet role must not be independently boosted when isolated")
+            }
+            rawError = maxOf(rawError, abs(rawSum - raw.raw[i]))
+            matchedError = maxOf(matchedError, abs(matchedSum - matched.mix.samples[i]))
+            dryError = maxOf(dryError, abs(drySum - matched.dry.samples[i]))
+        }
+        assertTrue(rawError < 2e-6f, "raw role sum changed the full mix: $rawError")
+        assertTrue(matchedError < 2e-6f, "matched role sum changed the full mix: $matchedError")
+        assertTrue(dryError < 2e-6f, "dry role sum changed the full mix: $dryError")
+        assertTrue(matched.mix.samples.all { it.isFinite() })
+        assertTrue(matched.mix.peak() <= .991f)
+    }
+
+    @Test
+    fun `mixed exchanges answer completed calls and all performer states remain exclusive`() {
+        val (recipe, sources) = assemblyFixture(space = 0f)
+        val report = ConfluenceAssembly.render(recipe, sources, normalize = false)
+        val enters = report.events.filter { it.state == "ENTER" }
+        val callRounds = enters.filter { it.role == ConfluenceRole.AIRY }.map { it.eventIndex }.toSet()
+        val answerRounds = enters.filter { it.role == ConfluenceRole.ANSWER }.map { it.eventIndex }.toSet()
+        assertTrue(callRounds.size >= 2, "the fixture must exercise an answer followed by another call")
+        assertEquals(callRounds, answerRounds, "a finite render must admit complete call and answer exchanges")
+        var previousAnswerEnd = -1
+        for (round in callRounds.sorted()) {
+            fun states(role: ConfluenceRole, state: String) = report.events.filter {
+                it.role == role && it.eventIndex == round && it.state == state
+            }
+            val callStart = states(ConfluenceRole.AIRY, "ENTER").minOf { it.startFrame }
+            val callEnd = states(ConfluenceRole.AIRY, "RELEASE").maxOf { it.endFrame }
+            val answerStart = states(ConfluenceRole.ANSWER, "ENTER").minOf { it.startFrame }
+            val answerEnd = states(ConfluenceRole.ANSWER, "RELEASE").maxOf { it.endFrame }
+            assertTrue(callStart > previousAnswerEnd, "a fresh call must wait for the preceding complete answer")
+            assertTrue(answerStart >= callEnd + (recipe.answerDelaySeconds * Confluence.RATE).toInt() - 1,
+                "a clear answer must wait for the final caller and the explicit response gap")
+            previousAnswerEnd = answerEnd
+        }
+        val totalFrames = report.mix.frameCount
+        for (performer in report.performers) {
+            val states = report.events.filter { it.performerId == performer.id }.sortedBy { it.startFrame }
+            assertTrue(states.all { it.startFrame >= 0 && it.endFrame <= totalFrames && it.endFrame >= it.startFrame })
+            for ((before, after) in states.zipWithNext()) {
+                assertTrue(before.endFrame <= after.startFrame,
+                    "performer ${performer.id}: ${before.state} overlaps ${after.state}")
+            }
+        }
+        assertTrue(report.events.filter { it.state == "RELEASE" }.maxOf { it.endFrame } < totalFrames,
+            "whole releases must leave room for the finite export ending")
+        val foundationEnters = enters.filter { it.role == ConfluenceRole.FOUNDATION }
+        assertTrue(foundationEnters.groupBy { it.performerId }.values.all { it.size >= 2 },
+            "the foundation must exercise independent rests and reentries")
+    }
+
+    @Test
+    fun `mixed role assignments reject missing duplicate excessive and changed inputs`() {
+        val (recipe, sources) = assemblyFixture()
+        assertFailsWith<IllegalArgumentException> { recipe.copy(roles = recipe.roles.dropLast(1)) }
+        assertFailsWith<IllegalArgumentException> { recipe.copy(roles = recipe.roles + recipe.roles.first()) }
+        assertFailsWith<IllegalArgumentException> { recipe.copy(roles = recipe.roles.map {
+            if (it.role == ConfluenceRole.ANSWER) it.copy(performerIds = listOf(0, 7)) else it
+        }) }
+        assertFailsWith<IllegalArgumentException> { recipe.copy(roles = recipe.roles.map {
+            if (it.role == ConfluenceRole.ANSWER) it.copy(performerIds = listOf(6, 7, 8)) else it
+        }) }
+        val foundation = recipe.roles.first { it.role == ConfluenceRole.FOUNDATION }
+        assertFailsWith<IllegalArgumentException> { recipe.copy(roles = recipe.roles.map {
+            if (it == foundation) it.copy(region = it.region.copy(sustainStartFrame = null, sustainEndFrame = null)) else it
+        }) }
+        assertFailsWith<IllegalArgumentException> { recipe.copy(roles = recipe.roles.map {
+            if (it.role == ConfluenceRole.AIRY) it.copy(region = it.region.copy(mode = ConfluenceSourceMode.TEXTURE)) else it
+        }) }
+        assertFailsWith<IllegalArgumentException> { ConfluenceAssembly.render(recipe, sources - foundation.region.assetHash) }
+        val wrongSource = sources.getValue(recipe.roles.last().region.assetHash)
+        assertFailsWith<IllegalArgumentException> { ConfluenceAssembly.render(recipe,
+            sources + (foundation.region.assetHash to wrongSource)) }
+    }
 }
