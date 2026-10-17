@@ -195,6 +195,7 @@ class ExportScreenTest : ComposeScreenTest() {
                 onToast = { toasts += it },
                 onNote = {},
                 onNavigateKits = {},
+                onAddFromShelf = {},
             )
         }
         // The session loads off disk in a LaunchedEffect (KitStore.load +

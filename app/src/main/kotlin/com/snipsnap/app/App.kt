@@ -56,8 +56,7 @@ import com.snipsnap.app.ui.CaptureSheet
 import com.snipsnap.app.ui.ChoiceSheet
 import com.snipsnap.app.ui.SheetRow
 import com.snipsnap.app.ui.DoublesScreen
-import com.snipsnap.app.ui.EmptyStatePanel
-import com.snipsnap.app.ui.EmptyStateRoute
+import com.snipsnap.app.ui.NoKitPanel
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
@@ -2802,6 +2801,18 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * `+ FROM SHELF`: the shelf in pick mode, returning here with the kit
+     * tapped added to the open project. With no project open there is
+     * nothing to add to, and the pages that offer this door only offer it
+     * when one is open.
+     */
+    fun addFromShelf() {
+        val p = project ?: return
+        goToScreen(AppScreen.KITS)
+        pendingAddTo = p
+    }
+
+    /**
      * The kit switcher (plan §3.3): [kitFolder] becomes the open project's
      * active kit, saved through `ShelfModel.activate`, and the grid shows
      * it. A failure says so and leaves the grid where it was.
@@ -2819,7 +2830,12 @@ fun App(shelf: KitShelf) {
                 return@launch
             }
             project = updated
-            open = kits.firstOrNull { it.dir.name == kitFolder }
+            val activated = kits.firstOrNull { it.dir.name == kitFolder }
+            open = activated
+            // The grid changes under the user's finger: say which kit it is
+            // now (F4). A switch that said nothing left the header as the
+            // only evidence.
+            if (activated != null) dock.say(Copy.onTheGrid(activated.kit.name))
         }
     }
 
@@ -3394,13 +3410,7 @@ fun App(shelf: KitShelf) {
                                     // its kit list, and the shelf in pick mode.
                                     switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
                                     onSwitchKit = { kitSheetOpen = true },
-                                    onAddFromShelf = {
-                                        val p = project
-                                        if (p != null) {
-                                            goToScreen(AppScreen.KITS)
-                                            pendingAddTo = p
-                                        }
-                                    },
+                                    onAddFromShelf = ::addFromShelf,
                                     // The grid's state, held by the navigation model.
                                     bank = nav.padsBank,
                                     onBankChange = { nav.padsBank = it },
@@ -3448,6 +3458,8 @@ fun App(shelf: KitShelf) {
                                         dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
                                     },
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                    hasProject = project != null,
+                                    onNavigateTape = { goToScreen(AppScreen.TAPE) },
                                 )
                             }
                         }
@@ -3504,7 +3516,8 @@ fun App(shelf: KitShelf) {
                             onCaptureLanded = { retrim = null },
                             onCatch = ::catchOnto,
                             onCatchDone = ::catchDone,
-                            onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            // The empty deck's door: SNIPS, a bench, like PADS' FROM SNIPS.
+                            onNavigateSnips = { nav.open(Bench.SNIPS) },
                             onCatchInFlight = { catchInFlight = it },
                         )
                         top == Bench.SETUP -> PropertiesScreen(
@@ -3567,6 +3580,12 @@ fun App(shelf: KitShelf) {
                             onToast = { dock.say(it) },
                             onSentToGrid = { newEntry ->
                                 landKit(newEntry)
+                                // The new kit is the grid's now (F4). The offer
+                                // just below replaces the whole line whenever
+                                // the kit has pads, so this shows only for an
+                                // empty one until the dock's lines are scoped
+                                // (the UX review's S1) and can carry both.
+                                dock.say(Copy.onTheGrid(newEntry.kit.name))
                                 // Step 3 → step 4 (J10), and only when the
                                 // kit has pads: a door onto an empty EXPORT
                                 // is a worse answer than no door.
@@ -3606,6 +3625,7 @@ fun App(shelf: KitShelf) {
                             appScope = scope,
                             onToast = { dock.say(it) },
                             onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            onAddFromShelf = ::addFromShelf,
                             // OUT's second card (plan §3.5): the whole project
                             // as one session, over the open project.
                             project = project,
@@ -3738,6 +3758,9 @@ fun App(shelf: KitShelf) {
                                     onTransport = { dock.transport = it },
                                     onBeatWritten = ::mirrorBeat,
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                    hasProject = project != null,
+                                    onAddFromShelf = ::addFromShelf,
+                                    onNavigatePads = { goToStage(Stage.PADS) },
                                     feel = grooveFeel,
                                     onFeelChange = { grooveFeel = it },
                                     swingPercent = grooveSwingPercent,
@@ -3781,7 +3804,12 @@ fun App(shelf: KitShelf) {
                             // GROOVE's ORBIT ▸ (plan §3.4). It needs only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
-                                EmptyStatePanel(Copy.NO_KIT_FOR_ORBIT, listOf(EmptyStateRoute("SHELF ▸", { goToScreen(AppScreen.KITS) })))
+                                NoKitPanel(
+                                    Copy.NO_KIT_FOR_ORBIT,
+                                    hasProject = project != null,
+                                    onAddFromShelf = ::addFromShelf,
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                )
                             } else {
                                 OrbitScreen(
                                     entry = orbitEntry,
@@ -3830,7 +3858,7 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) })
+                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) }, hasKit = open != null)
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
                             onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
@@ -3857,7 +3885,22 @@ fun App(shelf: KitShelf) {
                     // The transport is a button only while BEAT is the stage:
                     // the clock is GrooveScreen's, so off BEAT there is nothing
                     // to flip and the region is a readout (Frame.kt's Dock KDoc).
-                    onPlayToggle = if (location.stage == Stage.BEAT && location.top == null) ({ beatPlayRequest++ }) else null,
+                    onPlayToggle = if (location.stage == Stage.BEAT && location.top == null) {
+                        ({
+                            // GrooveScreen answers an empty beat itself, but it
+                            // returns early on no kit and on a kit with no pads,
+                            // before its play request is read: those two are
+                            // answered here, so the chip is never silent.
+                            val playable = open
+                            when {
+                                playable == null -> dock.say(Copy.ADD_KIT_FIRST)
+                                playable.kit.pads.isEmpty() -> dock.say(Copy.BEAT_NEEDS_PADS)
+                                else -> beatPlayRequest++
+                            }
+                        })
+                    } else {
+                        null
+                    },
                     onSnip = {
                         MicSessionService.snip(context)
                         // Optimistic — the real commit hasn't started yet, let

@@ -121,8 +121,9 @@ fun KitScreen(
     /**
      * The kit switcher's line, built by App through `Places.switcher`
      * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). Drawn above
-     * the LCD header even when [entry] is null, so an empty project still
-     * offers + FROM SHELF (docs/SCREEN_PLAN_2026_10.md section 3.3).
+     * the LCD header when there is a kit; with [entry] null the whole page
+     * is one empty panel and the switcher is not drawn
+     * (docs/SCREEN_PLAN_2026_10.md section 3.3).
      */
     switcherLine: String,
     /** The switcher chip: lists the project's kits. */
@@ -180,17 +181,28 @@ fun KitScreen(
     onDustAll: () -> Unit = {},
     onEmptyLongPress: (Int) -> Unit = {},
     onEmptyTapHint: (Int) -> Unit = {},
-    /** NO_TAPE_IN_DECK's own route: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    /** NO_PROJECT_OPEN's own route: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
+    /** Whether a project is open: the cold page says one of two things, and this picks which. */
+    hasProject: Boolean,
+    /** PROJECT_HAS_NO_KIT's second route: TAPE, where a kit's first sound is recorded. */
+    onNavigateTape: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        // The switcher is drawn here too: an empty project is exactly where
-        // + FROM SHELF is the first thing a user needs.
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            KitSwitcherRow(switcherLine, onSwitchKit, onAddFromShelf)
-            EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)), Modifier.weight(1f))
+        // One panel, one story, and no switcher: with no kit there is
+        // nothing to switch between, and the switcher's own NO KITS YET
+        // would be a second empty saying the same thing. A project with no
+        // kit gets + FROM SHELF (the same pick mode the switcher's chip
+        // opens) and TAPE; no project at all gets the shelf.
+        if (hasProject) {
+            EmptyStatePanel(
+                Copy.PROJECT_HAS_NO_KIT,
+                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("TAPE ▸", onNavigateTape)),
+            )
+        } else {
+            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
         }
         return
     }

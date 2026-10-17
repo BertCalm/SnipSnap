@@ -510,6 +510,15 @@ private fun ChopContent(
         }
     }
 
+    /**
+     * GRID: as many parts as hits the ear heard — on GHOSTS that is the hits
+     * underneath, not the spaces (a gated break has hits and no ghosts). The
+     * segment's tap and the empty page's TRY GRID ▸ are the same move.
+     */
+    fun toGrid() {
+        if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
+    }
+
     /** HITS ◀ ▶: one fewer or one more than the chop has now, so the step is always visible when the tape allows it. */
     fun stepHits(delta: Int) {
         val hits = ChopReviewModel.hitsOf(model.mode) ?: return
@@ -834,11 +843,7 @@ private fun ChopContent(
                     rechopTo(ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
                 }
             },
-            onGrid = {
-                // As many parts as hits the ear heard — on GHOSTS that is the
-                // hits underneath, not the spaces (a gated break has hits and no ghosts).
-                if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
-            },
+            onGrid = ::toGrid,
             onGhosts = {
                 // GHOST CHOP (docs/CHOP_CONTROLS.md §9): the spaces between
                 // the hits this chop makes (or would make, from a grid).
@@ -1041,17 +1046,38 @@ private fun ChopContent(
             }
         }
 
-        GridPreview(placed, scheme)
+        // Nothing to place: sixteen empty slabs and an AUTO-PLACE line for a
+        // chop that has no slices would be furniture describing nothing. One
+        // line says so and routes to GRID, the way out that always finds
+        // slices. (A ghost chop of a gated break has hits and no ghosts, so
+        // it keeps its own honest strip line instead — GRID is not its fix.)
+        val noHitsFound = model.sliceCount == 0 && !model.ghosts
+        if (noHitsFound) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Layout.LCD_HEADER_MAX_H.dp)
+                    .lcdPanel(scheme)
+                    .padding(horizontal = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TapeText(Copy.CHOP_NO_HITS_FOUND, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 2)
+                ActionButton("TRY GRID ▸", scheme, enabled = !rechopBusy && !sendBusy && !humming, onClick = ::toGrid)
+            }
+        } else {
+            GridPreview(placed, scheme)
 
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(Layout.LCD_HEADER_MAX_H.dp)
-                .lcdPanel(scheme)
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            TapeText(stripText, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(Layout.LCD_HEADER_MAX_H.dp)
+                    .lcdPanel(scheme)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                TapeText(stripText, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
+            }
         }
 
         // J31: what SEND TO PADS will call the kit, worked out before the
@@ -1119,7 +1145,9 @@ private fun ChopContent(
             Box(Modifier.weight(2f)) {
                 PrimaryAction(
                     label = if (sendBusy) "…" else "SEND TO PADS",
-                    enabled = !sendBusy && !rechopBusy && !humming,
+                    // A chop with no slices has nothing to send: dimmed (with
+                    // its name kept) rather than the dark primary it was.
+                    enabled = !sendBusy && !rechopBusy && !humming && model.sliceCount > 0,
                 ) {
                     if (sendBusy || rechopBusy || humming) return@PrimaryAction
                     sendBusy = true
@@ -1199,12 +1227,15 @@ private fun ChopContent(
         // carry its own destination because it is a full-width secondary
         // in smaller type - which is the whole reason this one needed a
         // line instead of the same treatment.
-        TapeText(
-            "LANDS AS $plannedName",
-            TapeType.pixelSmall,
-            scheme.ink2.tape,
-            maxLines = 1,
-        )
+        // Not at zero slices: it would name a kit the dimmed button cannot make.
+        if (model.sliceCount > 0) {
+            TapeText(
+                "LANDS AS $plannedName",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+        }
 
         // ONTO <kit> · BANK X (bank B round 2): the same arrangement, landed
         // on the open kit's first empty bank instead of into a new kit —
@@ -1218,7 +1249,7 @@ private fun ChopContent(
             SecondaryButton(
                 if (sendBusy) "…" else "ONTO ${entry.kit.name} · BANK ${PadBanks.letter(landBank)}",
                 modifier = Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
-                enabled = !sendBusy && !rechopBusy && !humming,
+                enabled = !sendBusy && !rechopBusy && !humming && model.sliceCount > 0,
             ) {
                 if (sendBusy || rechopBusy || humming) return@SecondaryButton
                 sendBusy = true
