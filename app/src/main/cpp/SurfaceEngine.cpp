@@ -796,6 +796,13 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
             springApWrite_[a] = (idx + 1) % springApBuf_[a].size();
         }
 
+        // No clamp here, unlike PadEngine's bus: a hot source with the echo
+        // and spring both up can pass full scale. The float stream hands
+        // those overs to the platform, which clips them on the way to the
+        // speaker, while the print tap keeps them as they are (WavWriter
+        // clamps whatever is still over when the print is saved). Clamping
+        // or softening here would change the sound, so it is the owner's
+        // call, not a fix.
         out[i] = (gated + wet * echo + springWet * spring) * 0.8f;
     }
 }
