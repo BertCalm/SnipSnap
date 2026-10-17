@@ -74,7 +74,6 @@ enum class AppScreen(val label: String) {
     KIT("KIT"),
     TAPE("TAPE"),
     CHOP("CHOP"),
-    PLAY("PLAY"),
     GROOVE("GROOVE"),
     /** The circular sequencer: the kit on rings of different lengths. Its own menu entry, since a sequencer is a peer of GROOVE, not a corner of it. */
     ORBIT("ORBIT"),
@@ -326,7 +325,6 @@ val MENU_GROUPS = listOf(
     ),
     // Ways to play what the loop made.
     listOf(
-        MenuItem("PLAY", AppScreen.PLAY),
         MenuItem("GROOVE", AppScreen.GROOVE),
         MenuItem("ORBIT", AppScreen.ORBIT),
         MenuItem("SYNTH", AppScreen.SYNTH),

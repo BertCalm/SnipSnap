@@ -3128,26 +3128,27 @@ class ConventionTest {
     }
 
 
-    // ==================== Law: every pad sheet door retires its own hint ====================
+    // ==================== Law: every pad sheet door is the one door ====================
 
     /**
-     * PAD SHEET has three doors — KIT's long press, DOUBLES' `GO`, and the
+     * PAD SHEET had three doors — KIT's long press, DOUBLES' `GO`, and the
      * RE-TRIM return — and its discovery hint was retired inside exactly
      * one of them (J16). A user who found the sheet either of the other
      * two ways was told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit
-     * open, forever.
-     *
-     * `Copy.PAD_SHEET_HINT`'s own KDoc says opening the sheet is "the only
-     * event that proves they found it". That was true of the intent and
-     * false of the code, which is the shape this wave keeps finding: a
+     * open, forever. `Copy.PAD_SHEET_HINT`'s own KDoc said opening the sheet
+     * is "the only event that proves they found it" — true of the intent
+     * and false of the code, which is the shape this wave keeps finding: a
      * comment asserting a behaviour the code does not have.
      *
-     * `openPadSheet` is the one door now. Opening is assigning a slot;
-     * closing is assigning null, and closing has nothing to retire — so
-     * this refuses a non-null assignment made anywhere else.
+     * The hint retired with the pad strip (`docs/SCREEN_PLAN_2026_10.md`
+     * §3.3): a permanent OPEN ▸ under the grid is a fourth door and needs
+     * no nudge toward the hold. What stays is the discipline the hint
+     * taught: `openPadSheet` is the one door, so whatever a door has to do
+     * next is done once. Opening is assigning a slot; closing is assigning
+     * null — so this refuses a non-null assignment made anywhere else.
      */
     @Test
-    fun `every pad sheet door retires its own hint`() {
+    fun `every pad sheet door is the one door`() {
         val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
         assertTrue(app.isFile, "expected to find ${app.absolutePath}")
         val src = codeOnly(app.readText(Charsets.UTF_8))
@@ -3155,14 +3156,9 @@ class ConventionTest {
         assertTrue(
             "fun openPadSheet(" in src,
             "App.kt no longer declares `openPadSheet`. Every door onto PAD SHEET has to go through one " +
-                "function, or the hint gets retired by some of them and not others — see J16.",
+                "function, or what a door does on the way in is done by some of them and not others — see J16.",
         )
         val opener = src.substringAfter("fun openPadSheet(")
-        assertTrue(
-            "PAD_SHEET_FOUND" in opener.take(400),
-            "`openPadSheet` no longer retires the hint (PAD_SHEET_FOUND). It is the one place that does; " +
-                "without it every door nags forever.",
-        )
 
         // Assigning a slot is opening. Assigning null is closing, and a
         // close has no hint to retire.
@@ -3189,8 +3185,8 @@ class ConventionTest {
             emptyList(),
             bad,
             "App.kt opens PAD SHEET by assigning `padSheetSlot` directly, outside `openPadSheet`: $bad. " +
-                "That is how J16 happened — the hint is retired in one place and the other doors walk " +
-                "past it. Call openPadSheet(slot) instead.",
+                "That is how J16 happened — one door did the work and the other doors walked past it. " +
+                "Call openPadSheet(slot) instead.",
         )
     }
 

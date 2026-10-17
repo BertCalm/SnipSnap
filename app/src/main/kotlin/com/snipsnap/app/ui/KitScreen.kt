@@ -1,6 +1,11 @@
 package com.snipsnap.app.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -29,6 +34,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -41,14 +47,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.MidiInput
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
@@ -58,6 +68,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
@@ -65,14 +76,18 @@ import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadPeaks
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadStrip
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.Places
 import com.snipsnap.shell.Provenance
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.TextureKits
 import com.snipsnap.shell.VoiceAllocator
 import kotlin.random.Random
@@ -100,6 +115,35 @@ private fun gridRows(bank: Int): List<IntRange> = windowRows(bank)
 @Composable
 fun KitScreen(
     entry: KitShelf.Entry?,
+    /**
+     * The kit switcher's line, built by App through `Places.switcher`
+     * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). Drawn above
+     * the LCD header even when [entry] is null, so an empty project still
+     * offers + FROM SHELF (docs/SCREEN_PLAN_2026_10.md section 3.3).
+     */
+    switcherLine: String,
+    /** The switcher chip: lists the project's kits. */
+    onSwitchKit: () -> Unit,
+    /** + FROM SHELF: SHELF in pick mode, returning here. */
+    onAddFromShelf: () -> Unit,
+    /**
+     * The bank the grid draws, 0-based, hoisted so the navigation model
+     * holds it across a bench and back (section 3.3's last checklist line)
+     * instead of `remember(entry.dir)` losing it with the composition.
+     */
+    bank: Int,
+    onBankChange: (Int) -> Unit,
+    /** The pad the strip reads, or null before any is tapped. Tapping selects; the strip names it. */
+    selectedSlot: Int?,
+    onSelectSlot: (Int) -> Unit,
+    /** The strip's OPEN ▸: the tap door into PAD SHEET for this slot. */
+    onOpenPad: (Int) -> Unit,
+    /** The strip's CAPTURE ▸ on an empty pad: PAD CAPTURE aimed at this slot. */
+    onCaptureInto: (Int) -> Unit,
+    /** The strip's FROM SNIPS ▸ on an empty pad: SNIPS in pick mode aimed at this slot. */
+    onFromSnips: (Int) -> Unit,
+    /** How many versions the kit holds, for THIS KIT's closed line. */
+    versions: Int,
     busy: Boolean,
     onLongPress: (Int) -> Unit,
     onTakesBin: () -> Unit,
@@ -141,7 +185,12 @@ fun KitScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+        // The switcher is drawn here too: an empty project is exactly where
+        // + FROM SHELF is the first thing a user needs.
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            KitSwitcherRow(switcherLine, onSwitchKit, onAddFromShelf)
+            EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)), Modifier.weight(1f))
+        }
         return
     }
 
@@ -167,15 +216,36 @@ fun KitScreen(
     // from the dir-scoped effect above so this also covers the very first
     // composition, without a redundant load from that one.
     LaunchedEffect(entry.kit) { withContext(Dispatchers.IO) { player.load(entry) } }
+    // Built at the engine's own polyphony so the status line and the
+    // engine cannot drift: at the cap the engine steals exactly the voice
+    // the allocator said it would.
     val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
-    // The endings ring, drained at screen rate — same idiom as PLAY's own
-    // frame loop, so the allocator's bookkeeping (who's oldest, who's
-    // still sounding) never drifts from what the engine actually did.
+    // Only the fullscreen grid's status line reads these two (inside its
+    // Popup, so this body never recomposes on a voice coming or going):
+    // what the allocator counts, and what the device says a round trip
+    // costs. The latency is polled about once a second - it reads a
+    // timestamp, so it is cheap but not free, and it does not move fast
+    // enough to want a frame.
+    var voiceCount by remember(entry.dir) { mutableIntStateOf(0) }
+    var latency by remember(entry.dir) { mutableStateOf(StreamFacts.latency(null)) }
+    // The endings ring, drained at screen rate - the allocator's
+    // bookkeeping (who's oldest, who's still sounding) never drifts from
+    // what the engine actually did, and a route change reopens the stream
+    // from here too.
     LaunchedEffect(player) {
+        var lastLatencyAt = 0L
         while (true) {
-            withFrameNanos { }
-            for (id in player.drainEnded()) allocator.voiceEnded(id)
+            val now = withFrameNanos { it }
+            val ended = player.drainEnded()
+            if (ended.isNotEmpty()) {
+                for (id in ended) allocator.voiceEnded(id)
+                voiceCount = allocator.activeCount
+            }
             if (player.needsRestart()) engineUp = player.start()
+            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
+                lastLatencyAt = now
+                latency = StreamFacts.latency(player.latencyMillis(), player.isShared())
+            }
         }
     }
     // W12: every pad's mini-waveform, read off the main thread once per
@@ -191,6 +261,26 @@ fun KitScreen(
 
     val kit = entry.kit
 
+    // The glow the pad cells cannot draw for themselves: a hit that did not
+    // arrive as a finger on a cell (a MIDI note, the fullscreen grid) has no
+    // cell gesture to light it. The cells light from their own touch; this
+    // map is the echo for everything else, and FullscreenPlayGrid's glow.
+    val glow = remember(kit) { kit.pads.associate { it.slot to Animatable(0f) } }
+    val scope = rememberCoroutineScope()
+
+    fun flash(slot: Int) {
+        val anim = glow[slot] ?: return
+        scope.launch {
+            anim.snapTo(1f)
+            anim.animateTo(0f, tween(Motion.PAD_GLOW_MS))
+        }
+    }
+
+    fun extinguish(slot: Int) {
+        val anim = glow[slot] ?: return
+        scope.launch { anim.snapTo(0f) }
+    }
+
     fun hit(slot: Int, velocity: Float = 1f) {
         val pad = kit.pad(slot) ?: return
         if (!engineUp || !player.isUp()) return
@@ -205,29 +295,109 @@ fun KitScreen(
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
         if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+        voiceCount = allocator.activeCount
+    }
+
+    // The two paths below are PLAY's, folded in (section 5, decision 4): a
+    // MIDI key and the fullscreen grid both HAVE a release, so a gate pad
+    // honours its own metadata here - noteOn reads `pad.oneShot` and
+    // `release` calls noteOff - where the window's tap cannot.
+    fun playHeld(slot: Int, velocity: Float) {
+        val pad = kit.pad(slot) ?: return
+        // No stream, no voice: with no callback running nothing would ever
+        // report an ending, and the voice count would climb and stick.
+        // `isUp` reads the native dead-stream flag, so the window between
+        // a route change and the frame loop's restart is covered too.
+        if (!engineUp || !player.isUp()) return
+        val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, pad.oneShot)
+        for (voice in allocation.choked + allocation.stolen) {
+            player.stop(voice.id)
+            // A pad in its own mute group re-triggering itself shows up
+            // here with padSlot == slot - `flash` below already restarts
+            // that same Animatable at 1f, so extinguishing it first would
+            // just be two competing mutations on one Animatable racing to
+            // decide the pad's opening glow value.
+            if (voice.padSlot != slot) extinguish(voice.padSlot)
+        }
+        if (!player.hit(pad, velocity, allocation.started.id)) {
+            // Nothing loaded for this pad (or nothing yet): the allocator
+            // must not count a voice that never sounded.
+            allocator.voiceEnded(allocation.started.id)
+        }
+        voiceCount = allocator.activeCount
+        flash(slot)
+    }
+
+    fun release(slot: Int) {
+        val stopped = allocator.noteOff(slot)
+        if (stopped.isEmpty()) return
+        for (voice in stopped) player.stop(voice.id)
+        voiceCount = allocator.activeCount
+        extinguish(slot)
     }
 
     fun panic() {
         allocator.allOff()
         player.allOff()
+        voiceCount = allocator.activeCount
+        for (slot in glow.keys) extinguish(slot)
     }
+    // Read through rememberUpdatedState wherever something outlives one
+    // composition (the focus callback, the lifecycle observer, the cable
+    // pull): `glow` is keyed on the kit, so a `panic` captured once would
+    // keep extinguishing a previous kit's animatables.
+    val onPanic by rememberUpdatedState<() -> Unit>(::panic)
+
+    // A MIDI keyboard on the pads: `:shell`'s MidiPads picks the slot
+    // (under the map the chip in the footer sets) and the note goes through
+    // this screen's own `playHeld` and `release`, so a keyboard note
+    // chokes, steals and glows exactly as a finger does. A kit can change
+    // under an open screen (a re-read sidecar), so the handler is read
+    // through rememberUpdatedState rather than captured once by the
+    // listener. The keyboard itself is opened and closed with the
+    // lifecycle, below, so no note can reach `playHeld` after ON_STOP's
+    // panic.
+    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+    var midiDevices by remember(entry.dir) { mutableStateOf<List<String>>(emptyList()) }
+    val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
+        MidiPads.handle(event, midiMap, onHit = ::playHeld, onRelease = ::release, onPanic = ::panic)
+    })
+    val midi = remember(entry.dir) { MidiInput(engineContext) }
+    val midiListener = remember(entry.dir) {
+        object : MidiInput.Listener {
+            override fun onEvent(event: MidiWire.Event) = onMidi(event)
+            override fun onDevicesChanged(names: List<String>) { midiDevices = names }
+            // The cable is out: a gated pad it held would ring until PANIC.
+            override fun onDeviceRemoved() = onPanic()
+        }
+    }
+
     // Lessons from PLAY: ON_STOP means allOff() - a backgrounded phone
     // should not keep a choke group ringing, or leave the allocator
     // thinking voices are still active while the frame loop isn't ticking
     // to drain their endings. A focus loss asks for the same silence, so
-    // KIT's shared AudioFocus registration rides this same effect - see
-    // PlayScreen's own copy of this pattern for the full reasoning.
+    // KIT's shared AudioFocus registration rides this same effect: acquired
+    // the moment the grid can make sound, released the moment it stops
+    // being able to - leaving the screen, or the phone itself taking the
+    // interruption. The MIDI keyboard rides the same events as KEYS' does:
+    // open while the screen can make sound (addObserver replays ON_START),
+    // closed the moment it must not, the readout cleared on the way down.
     val lifecycleOwner = LocalLifecycleOwner.current
-    val audioVoice = remember(entry.dir) { object : AudioVoice { override fun silence() = panic() } }
+    val audioVoice = remember(entry.dir) { object : AudioVoice { override fun silence() = onPanic() } }
     DisposableEffect(lifecycleOwner, entry.dir) {
         AudioFocus.acquire(audioVoice)
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
-                    panic()
+                    onPanic()
                     AudioFocus.release(audioVoice)
+                    midi.close()
+                    midiDevices = emptyList()
                 }
-                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                Lifecycle.Event.ON_START -> {
+                    AudioFocus.acquire(audioVoice)
+                    midi.open(midiListener)
+                }
                 else -> {}
             }
         }
@@ -235,11 +405,10 @@ fun KitScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
+            midi.close()
         }
     }
 
-    /** Which bank the grid is drawing, 0-based. Bank A until asked otherwise. */
-    var bank by remember(entry.dir) { mutableIntStateOf(0) }
     val bankCount = PadBanks.banksUsed(kit.pads.map { it.slot })
     // Two banks are always reachable, filled or not: an empty B is a page
     // the user fills the same three ways A is filled (hold a pad to
@@ -247,16 +416,57 @@ fun KitScreen(
     // that loses a bank above B (an UNDO past a third bank) falls back.
     val reachable = maxOf(bankCount, 2)
     LaunchedEffect(reachable) {
-        if (bank >= reachable) bank = 0
+        if (bank >= reachable) onBankChange(0)
     }
     LaunchedEffect(bankRequest) {
         val asked = bankRequest ?: return@LaunchedEffect
-        bank = asked.coerceIn(0, reachable - 1)
+        onBankChange(asked.coerceIn(0, reachable - 1))
         onBankRequestConsumed()
     }
     val showing = bank.coerceAtMost(reachable - 1)
 
+    // ⟳ FULL: an in-app Popup + a runtime orientation flip, not a second
+    // Activity. LoopActivity's separate-activity pattern exists because
+    // LOOP owns a wholly disk-backed session and its own audio-thread
+    // engine that has no reason to live inside App()'s composition; this
+    // screen's whole state - this VoiceAllocator, this PadEngine, every
+    // in-flight choke - already lives in App()'s composition, and
+    // "playback/state shared across the rotation" is the brief's explicit
+    // requirement. A second Activity would mean either a process-wide
+    // singleton to smuggle that live state across an Activity boundary, or
+    // rebuilding it (a fresh engine losing every loaded sample, a fresh
+    // allocator losing every active choke) - both worse than staying in
+    // one composition. MainActivity already declares
+    // `configChanges="orientation|screenSize|keyboardHidden"` in the
+    // manifest, so flipping `requestedOrientation` at runtime reflows the
+    // window instead of recreating the Activity.
+    var fullscreen by remember { mutableStateOf(false) }
+    val exitFullscreen = { fullscreen = false }
+    val activity = remember(engineContext) { engineContext.findActivity() }
+    // Fix round 1 (F1, CRITICAL, from PLAY): the restore must not read
+    // `fullscreen` live inside onDispose - that effect runs precisely
+    // because `fullscreen` just flipped, so a live read saw false and the
+    // restore never fired, sticking the app landscape until process death.
+    // This effect is keyed on the value itself, so the lambda below holds
+    // the value it was started with: onDispose restores portrait on the
+    // flip back AND on leaving the screen while still fullscreen. Keyed
+    // this way it also writes nothing on a plain entry, so opening PADS
+    // never fights the orientation another screen set.
+    DisposableEffect(fullscreen, activity) {
+        // A plain val, not the state delegate: onDispose must see the value
+        // this effect started with, not whatever `fullscreen` has become.
+        val wentFullscreen = fullscreen
+        if (wentFullscreen) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        onDispose {
+            if (wentFullscreen) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // The kit switcher (section 3.3): one line above the LCD, so the
+        // kit is chosen before it is read.
+        KitSwitcherRow(switcherLine, onSwitchKit, onAddFromShelf)
+
         Row(
             Modifier
                 .fillMaxWidth()
@@ -267,10 +477,25 @@ fun KitScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
-            val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
-            val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-            val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
-            TapeText("$keyed$tempo$banks${Copy.countOf(kit.pads.size, "PAD", "PADS")}", TapeType.lcdSmall, scheme.amber.tape)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
+                val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
+                val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
+                TapeText("$keyed$tempo$banks${Copy.countOf(kit.pads.size, "PAD", "PADS")}", TapeType.lcdSmall, scheme.amber.tape)
+                // PLAY's ⟳ FULL, moved to the header's right end (section
+                // 3.3): the fullscreen grid is the part of PLAY that was
+                // different from KIT, and this is its door.
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .tapeClick(label = "FULLSCREEN") { fullscreen = true }
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("⟳ FULL", TapeType.pixel, scheme.ink2.tape)
+                }
+            }
         }
 
         if (kit.pads.isEmpty()) {
@@ -312,7 +537,7 @@ fun KitScreen(
                         // Same text the TapeText below shows — it already
                         // reads as a state ("BANK B · EMPTY"/"BANK A · 12").
                         .tapeClick(label = "BANK ${PadBanks.letter(b)} · ${if (empty) "EMPTY" else filled.toString()}", onClick = {
-                            bank = b
+                            onBankChange(b)
                             if (empty && !here) onBankEmpty(b)
                         }),
                     contentAlignment = Alignment.Center,
@@ -345,10 +570,18 @@ fun KitScreen(
                             slot = slot,
                             pad = kit.pad(slot),
                             peaks = padPeaks[slot],
-                            onTap = ::hit,
+                            selected = slot == selectedSlot,
+                            echo = glow[slot],
+                            // A tap on a filled pad plays it AND selects it,
+                            // so the strip below names what was just heard.
+                            onTap = { s, v -> hit(s, v); onSelectSlot(s) },
                             onLongPress = onLongPress,
                             onEmptyLongPress = onEmptyLongPress,
-                            onEmptyTapHint = onEmptyTapHint,
+                            // An empty pad is selectable too: its strip is
+                            // where CAPTURE and FROM SNIPS live. The hint
+                            // toast still fires - it is the same early
+                            // release - so the old discovery is kept.
+                            onEmptyTapHint = { s -> onEmptyTapHint(s); onSelectSlot(s) },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -356,21 +589,24 @@ fun KitScreen(
             }
         }
 
-        // PAD SHEET's visible door (September UAT, findings 4 and 5). Twenty
-        // treatments plus shape, tune, mutate, layers, takes and GRAIN FIELD
-        // sat behind one 480 ms hold with nothing on screen naming it, taught
-        // only by a toast that stopped after three showings — so a user who
-        // dismissed it three times lost that half of the app for good.
-        //
-        // The same move ROOMS already makes under its own list: one line,
-        // always there. A legend cannot be dismissed, so the gesture cannot
-        // be forgotten. The hold stays exactly as it was — this explains it,
-        // it does not replace it.
-        TapeText(Copy.PAD_SHEET_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
-        // The second gesture with nothing to see (J37). Same reasoning as
-        // the line above it: a pad that answers to where it is tapped is
-        // not discoverable by looking, and a hint that can be dismissed is
-        // a feature that can be lost.
+        // The pad strip (section 3.3): one line for the selected pad, and
+        // the tap door into PAD SHEET that the September UAT's findings 4
+        // and 5 asked for. It replaces the first of the two legend lines
+        // that used to sit here ("HOLD A PAD ..."): the hold stays exactly
+        // as it was, but a permanent OPEN ▸ door now says what a hold does,
+        // so the sentence is no longer the only teacher. Before any pad is
+        // tapped the strip rests on STRIP_RESTING_LINE.
+        PadStripLine(
+            slot = selectedSlot,
+            pad = selectedSlot?.let { kit.pad(it) },
+            onOpen = onOpenPad,
+            onCapture = onCaptureInto,
+            onFromSnips = onFromSnips,
+        )
+        // The second gesture with nothing to see (J37). A pad that answers
+        // to where it is tapped is not discoverable by looking, and a hint
+        // that can be dismissed is a feature that can be lost. The one
+        // legend left: the strip carries the other.
         TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
         // Where the kit came from (persona review, P4.4). The same move as
         // the two lines above: always there, cannot be dismissed. The
@@ -385,6 +621,53 @@ fun KitScreen(
         if (cameFrom != null) {
             TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
         }
+
+        // PLAY's footer, folded in (section 3.3): PANIC always, and the MIDI
+        // line only while a keyboard is plugged in - there is no idle
+        // "NO MIDI KEYBOARD" line any more, since the strip and the legend
+        // above already fill the space a hint used to. MPC NOTES is the
+        // hardware's own map (36 is A02, the kick); A01 = C1 walks the
+        // slots, for a kit that is a scale. The flip silences first, as
+        // KEYS' OCT and LAYOUT do: a key held across it would let go on a
+        // different slot and leave a gate ringing.
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(
+                Modifier
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .raisedBevel(scheme)
+                    .tapeClick(label = "PANIC", onClick = ::panic)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("PANIC", TapeType.pixel, scheme.ink2.tape)
+            }
+            if (midiDevices.isEmpty()) {
+                Box(Modifier.weight(1f))
+            } else {
+                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .tapeClick(label = "MIDI MAP ${midiMap.label}") { panic(); midiMap = midiMap.next() }
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(midiMap.label, TapeType.pixel, scheme.ink2.tape)
+                }
+            }
+        }
+
+        // ---- THIS KIT: the nine actions, one closed group (section 3.3) ----
+        // Closed by default and reading what it holds, the way the pad
+        // sheet's boxes do. Nine buttons on six rows was the densest thing
+        // on the hub and most of them are weekly, not hourly, actions.
+        var thisKitOpen by remember { mutableStateOf(false) }
+        val bankBEmpty = kit.pads.none { it.slot in PadBanks.slots(1) }
 
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
         // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
@@ -432,204 +715,329 @@ fun KitScreen(
 
         // X2.3 KIT action rows: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
         // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
-        // TAKES + BIN, and both are real now. Two rows so every word fits:
-        // TAKES + BIN · EVIL TWINS · KEY, then the two texture doors; the
-        // panel below them scrolls, so a short screen never pushes the grid.
+        // TAKES + BIN, and both are real now. Folded into THIS KIT (section
+        // 3.3) with the rows the screen had before the box: the rows keep the
+        // shelf's proven widths, because ActionButton is single-line and
+        // SPLIT / DUST ALL run to 31 and 39 characters - a plan-literal
+        // two-column grid truncated them, and a truncated visible label is
+        // worse than a longer column. VERSIONS + BIN · REMIX BANK B · KEY
+        // share one row (3:2:1), SPLIT, DUST ALL and BREED each take a full
+        // row, then the two texture doors; the panel below them scrolls, so
+        // a short screen never pushes the grid.
         Column(
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
-                // followups) — matches TakesBinScreen.kt's own renamed
-                // header; the destination screen and its Kotlin symbol are
-                // unchanged, only this entry-point label.
-                //
-                // Weighted 3:2:1 against REMIX BANK B and KEY ▸ below
-                // (name-and-find followups, truncation pass): three equal
-                // weights on labels of 37/21/5 characters rendered as
-                // "VERSIONS + BIN …" on a device — the worst truncation in
-                // the app. "ROLL BACK OR RESTORE" also dropped to
-                // "RESTORE": RESTORE alone says the same thing the longer
-                // phrase did, and no truncation-proof width exists for 37
-                // characters in a one-third share of any phone this wide.
-                ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
-                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a
-                // second press rerolls. REROLL means twins are there — not
-                // merely something on B, which since bank B round 2 can be
-                // the user's own pads (and then the press is refused).
-                //
-                // No ▸: `onTwins` (`App.kt`'s `evilTwins`) fills bank B and
-                // toasts from right here — it never navigates and never
-                // opens a panel, so the "opens something" glyph doesn't
-                // apply (▸ rule, truncation pass). "·" replaces it as the
-                // same plain separator "KEY · <label>" already uses below.
-                val twinned = kit.pads.any { KitBuilderModel.isTwin(kit, it) }
-                ActionButton(
-                    if (twinned) "REMIX BANK B · REROLL" else "REMIX BANK B",
-                    scheme,
-                    enabled = !busy && kit.pads.any { it.slot in 1..16 },
-                    modifier = Modifier.weight(2f),
-                    onClick = onTwins,
-                )
-                // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
-                val keyOpen = panelKind == KEY_PANEL
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        // Always clickable, `!busy` forwarded rather than
-                        // dropped: a screen reader is told this control is
-                        // temporarily unavailable instead of it silently
-                        // vanishing from the tree (accessibility audit
-                        // finding 12 — see ActionButton in PadSheetScreen.kt).
-                        .tapeClick(label = if (keyOpen) "CLOSE KEY" else "OPEN KEY", enabled = !busy) { panelKind = if (keyOpen) null else KEY_PANEL }
-                        .padding(horizontal = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText("KEY ▸", TapeType.pixel, if (busy) scheme.ink3.tape else if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // SPLIT is a screen rather than a panel: three faders, three
-                // REVERSE buttons and a print want more room than a drawer
-                // under the grid, and the loop wants to keep playing while
-                // you work it.
-                ActionButton(
-                    "SPLIT ▸ SINES · TRANSIENT · AIR",
-                    scheme,
-                    enabled = !busy && kit.pads.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onSplit,
-                )
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // DUST ALL: the per-pad DUST chip on every pad at one amount,
-                // from the tape each pad came off (else the kit's), so the
-                // kit shares one room and one floor (docs/DUST.md). Only
-                // offered when the kit came off a tape at all.
-                ActionButton(
-                    "DUST ALL · THE TAPE'S OWN HISS AND ROOM",
-                    scheme,
-                    enabled = !busy && DustPrints.kitTape(kit) != null,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onDustAll,
-                )
-            }
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                // BREED: this kit's own recipes crossed with a second kit's
-                // into a new child, kept beside this one — the shelf-level
-                // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
-                // next, the same shape SNIPS → PAD already uses to pick a
-                // kit for a snip. The button always opens that picker, so
-                // its label is constant; the line under it counts the pads
-                // with a recipe to cross (`Breed.recipePads`), so "0 PADS
-                // CROSSED" is never the first word of the explanation.
-                // Still enabled at zero: the other kit's racks can cross
-                // over this one's audio.
-                ActionButton(
-                    Copy.BREED_BUTTON,
-                    scheme,
-                    enabled = !busy && kit.pads.isNotEmpty() && canBreed,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onBreed,
-                )
-                TapeText(
-                    Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
-                    TapeType.pixelSmall,
-                    scheme.ink3.tape,
-                    Modifier.fillMaxWidth(),
-                    maxLines = 1,
-                )
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (kind in TextureKits.KINDS) {
-                    val open = panelKind == kind
-                    val doorEnabled = !busy && kit.pads.isNotEmpty()
+            GroupBox(
+                legend = "THIS KIT",
+                summary = Places.thisKit(kit.key?.let { KeyPicker.label(it) }, bankBEmpty, versions),
+                open = thisKitOpen,
+                onToggle = { thisKitOpen = !thisKitOpen },
+                scheme = scheme,
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // "VERSIONS + BIN", not "TAKES + BIN" (name-and-find
+                    // followups) - matches TakesBinScreen.kt's own renamed
+                    // header; the destination screen and its Kotlin symbol are
+                    // unchanged, only this entry-point label.
+                    // Weighted 3:2:1 against REMIX BANK B and KEY ▸ below
+                    // (name-and-find followups, truncation pass): three equal
+                    // weights on labels of 37/21/5 characters rendered as
+                    // "VERSIONS + BIN …" on a device - the worst truncation in
+                    // the app. "ROLL BACK OR RESTORE" also dropped to
+                    // "RESTORE": RESTORE alone says the same thing the longer
+                    // phrase did.
+                    ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
+                    // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a
+                    // second press rerolls. REROLL means twins are there — not
+                    // merely something on B, which since bank B round 2 can be
+                    // the user's own pads (and then the press is refused).
+                    //
+                    // No ▸: `onTwins` (`App.kt`'s `evilTwins`) fills bank B and
+                    // toasts from right here — it never navigates and never
+                    // opens a panel, so the "opens something" glyph doesn't
+                    // apply (▸ rule, truncation pass). "·" replaces it as the
+                    // same plain separator "KEY · <label>" already uses below.
+                    val twinned = kit.pads.any { KitBuilderModel.isTwin(kit, it) }
+                    ActionButton(
+                        if (twinned) "REMIX BANK B · REROLL" else "REMIX BANK B",
+                        scheme,
+                        enabled = !busy && kit.pads.any { it.slot in 1..16 },
+                        modifier = Modifier.weight(2f),
+                        onClick = onTwins,
+                    )
+                    // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
+                    // Still the fourth door's shape - a bevel that lights amber
+                    // while its panel is open - not an ActionButton.
+                    val keyOpen = panelKind == KEY_PANEL
                     Box(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (open) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                            // Always clickable, `doorEnabled` forwarded
-                            // rather than dropped: a screen reader is told
-                            // this door is temporarily unavailable instead
-                            // of it silently vanishing from the tree
-                            // (accessibility audit finding 12).
-                            .tapeClick(label = if (open) "CLOSE $kind" else "OPEN $kind", enabled = doorEnabled) { panelKind = if (open) null else kind }
+                            .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                            // Always clickable, `!busy` forwarded rather than
+                            // dropped: a screen reader is told this control is
+                            // temporarily unavailable instead of it silently
+                            // vanishing from the tree (accessibility audit
+                            // finding 12 — see ActionButton in PadSheetScreen.kt).
+                            .tapeClick(label = if (keyOpen) "CLOSE KEY" else "OPEN KEY", enabled = !busy) { panelKind = if (keyOpen) null else KEY_PANEL }
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        // TEXTURES dropped from SCULPT's own subtitle
-                        // (truncation pass): equal 26/23-character weights
-                        // on this even split were marginal at 411dp and
-                        // truncated at 360dp, and "TEXTURES" was the padded
-                        // half — GRANULAR already names the technique.
-                        // STRETCH's two words are untouched: SLOW and
-                        // FREEZE are its own two modes (`modesFor`), not
-                        // padding.
-                        val doorSubtitle = when (kind) {
-                            "SCULPT" -> "GRANULAR"
-                            "STRETCH" -> "SLOW & FREEZE"
-                            else -> ""
-                        }
-                        TapeText(
-                            "$kind ▸ $doorSubtitle",
-                            TapeType.pixel,
-                            if (!doorEnabled) scheme.ink3.tape else if (open) scheme.titleInk.tape else scheme.ink2.tape,
-                        )
+                        TapeText("KEY ▸", TapeType.pixel, if (busy) scheme.ink3.tape else if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
-            }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // SPLIT is a screen rather than a panel: three faders, three
+                    // REVERSE buttons and a print want more room than a drawer
+                    // under the grid, and the loop wants to keep playing while
+                    // you work it.
+                    ActionButton(
+                        "SPLIT ▸ SINES · TRANSIENT · AIR",
+                        scheme,
+                        enabled = !busy && kit.pads.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onSplit,
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // DUST ALL: the per-pad DUST chip on every pad at one amount,
+                    // from the tape each pad came off (else the kit's), so the
+                    // kit shares one room and one floor (docs/DUST.md). Only
+                    // offered when the kit came off a tape at all.
+                    ActionButton(
+                        "DUST ALL · THE TAPE'S OWN HISS AND ROOM",
+                        scheme,
+                        enabled = !busy && DustPrints.kitTape(kit) != null,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onDustAll,
+                    )
+                }
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // BREED: this kit's own recipes crossed with a second kit's
+                    // into a new child, kept beside this one — the shelf-level
+                    // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
+                    // next, the same shape SNIPS → PAD already uses to pick a
+                    // kit for a snip. The button always opens that picker, so
+                    // its label is constant; the line under it counts the pads
+                    // with a recipe to cross (`Breed.recipePads`), so "0 PADS
+                    // CROSSED" is never the first word of the explanation.
+                    // Still enabled at zero: the other kit's racks can cross
+                    // over this one's audio.
+                    ActionButton(
+                        Copy.BREED_BUTTON,
+                        scheme,
+                        enabled = !busy && kit.pads.isNotEmpty() && canBreed,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onBreed,
+                    )
+                    TapeText(
+                        Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 1,
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (kind in TextureKits.KINDS) {
+                        val open = panelKind == kind
+                        val doorEnabled = !busy && kit.pads.isNotEmpty()
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                .raisedBevel(scheme, fill = if (open) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                                // Always clickable, `doorEnabled` forwarded
+                                // rather than dropped: a screen reader is told
+                                // this door is temporarily unavailable instead
+                                // of it silently vanishing from the tree
+                                // (accessibility audit finding 12).
+                                .tapeClick(label = if (open) "CLOSE $kind" else "OPEN $kind", enabled = doorEnabled) { panelKind = if (open) null else kind }
+                                .padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // TEXTURES dropped from SCULPT's own subtitle
+                            // (truncation pass): equal 26/23-character weights
+                            // on this even split were marginal at 411dp and
+                            // truncated at 360dp, and "TEXTURES" was the padded
+                            // half — GRANULAR already names the technique.
+                            // STRETCH's two words are untouched: SLOW and
+                            // FREEZE are its own two modes (`modesFor`), not
+                            // padding.
+                            val doorSubtitle = when (kind) {
+                                "SCULPT" -> "GRANULAR"
+                                "STRETCH" -> "SLOW & FREEZE"
+                                else -> ""
+                            }
+                            TapeText(
+                                "$kind ▸ $doorSubtitle",
+                                TapeType.pixel,
+                                if (!doorEnabled) scheme.ink3.tape else if (open) scheme.titleInk.tape else scheme.ink2.tape,
+                            )
+                        }
+                    }
+                }
 
-            // SHARE: one file out the share sheet - a messenger, Drive, a
-            // cable - the kit's own .xpn, which the receiving phone's
-            // SnipSnap (or an MPC) reads back.
-            ActionButton(
-                "SHARE ▸ THIS KIT AS ONE FILE",
-                scheme,
-                enabled = !busy && kit.pads.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onShare,
-            )
-
-            if (panelKind == KEY_PANEL) {
-                KeyPanel(
-                    key = kit.key,
-                    readouts = KeyPicker.readouts(kit),
-                    busy = busy,
-                    onSetKey = onSetKey,
-                    onInKey = onInKey,
+                // SHARE: one file out the share sheet - a messenger, Drive, a
+                // cable - the kit's own .xpn, which the receiving phone's
+                // SnipSnap (or an MPC) reads back. Stays in THIS KIT for now;
+                // section 3.3 moves it to OUT, being an output.
+                ActionButton(
+                    "SHARE ▸ THIS KIT AS ONE FILE",
+                    scheme,
+                    enabled = !busy && kit.pads.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onShare,
                 )
-            }
 
-            val kind = panelKind
-            val src = sourceSlot
-            if (kind != null && knob != null && src != null) {
-                TexturePanel(
-                    kind = kind,
-                    modes = TextureKits.modesFor(kind),
-                    mode = mode,
-                    onMode = { picked -> textureModes[kind] = picked },
-                    sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
-                    onSourceStep = { step ->
-                        val i = sources.indexOf(src)
-                        if (i >= 0 && sources.size > 1) pickedSource = sources[(i + step).mod(sources.size)]
-                    },
-                    knobLabel = knob.label,
-                    knobFraction = fraction,
-                    knobText = TextureKits.knobLabel(knob, knob.value(fraction)),
-                    onKnob = { f -> textureKnobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
-                    busy = busy,
-                    onGo = {
-                        val seed = Random.nextLong(0L, 1_000_000L)
-                        onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
-                    },
-                )
+                if (panelKind == KEY_PANEL) {
+                    KeyPanel(
+                        key = kit.key,
+                        readouts = KeyPicker.readouts(kit),
+                        busy = busy,
+                        onSetKey = onSetKey,
+                        onInKey = onInKey,
+                    )
+                }
+
+                val kind = panelKind
+                val src = sourceSlot
+                if (kind != null && knob != null && src != null) {
+                    TexturePanel(
+                        kind = kind,
+                        modes = TextureKits.modesFor(kind),
+                        mode = mode,
+                        onMode = { picked -> textureModes[kind] = picked },
+                        sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
+                        onSourceStep = { step ->
+                            val i = sources.indexOf(src)
+                            if (i >= 0 && sources.size > 1) pickedSource = sources[(i + step).mod(sources.size)]
+                        },
+                        knobLabel = knob.label,
+                        knobFraction = fraction,
+                        knobText = TextureKits.knobLabel(knob, knob.value(fraction)),
+                        onKnob = { f -> textureKnobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
+                        busy = busy,
+                        onGo = {
+                            val seed = Random.nextLong(0L, 1_000_000L)
+                            onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
+                        },
+                    )
+                }
             }
         }
     }
+
+    // The fullscreen grid, drawn from this screen's own engine, allocator
+    // and glow (see the orientation note above). It plays through
+    // `playHeld`/`release`, not the window's one-shot-forced `hit`: the
+    // fullscreen pads have a release, so a gate pad holds while a finger
+    // does. The status line is read here, inside the Popup, so only the
+    // Popup recomposes as voices come and go.
+    if (fullscreen) {
+        Popup(
+            onDismissRequest = exitFullscreen,
+            properties = PopupProperties(focusable = true),
+        ) {
+            FullscreenPlayGrid(
+                kit = kit,
+                glow = glow,
+                status = StreamFacts.playStatus(engineUp, voiceCount, PadEngine.MAX_VOICES, latency),
+                onHit = { s, v, _ -> playHeld(s, v) },
+                onRelease = { s, _ -> release(s) },
+                onExit = exitFullscreen,
+            )
+        }
+    }
+}
+
+
+/**
+ * The kit switcher (docs/SCREEN_PLAN_2026_10.md section 3.3): one line above
+ * the LCD header. The line App built through `Places.switcher` is itself the
+ * chip that lists the project's kits; `+ FROM SHELF` beside it is a door onto
+ * SHELF in pick mode. Pixel type, both a full hit target tall.
+ */
+@Composable
+private fun KitSwitcherRow(switcherLine: String, onSwitchKit: () -> Unit, onAddFromShelf: () -> Unit) {
+    val scheme = LocalScheme.current
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            Modifier
+                .weight(1f)
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = "SWITCH KIT", onClick = onSwitchKit)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            TapeText(switcherLine, TapeType.pixel, scheme.ink.tape, maxLines = 1)
+        }
+        DoorChip(Places.ADD_FROM_SHELF, onAddFromShelf)
+    }
+}
+
+/**
+ * The strip's resting line: what it reads before any pad has been tapped.
+ * It replaces the HOLD-A-PAD legend this slot used to carry (section 3.3,
+ * "the two legend lines become one") - the strip says what a hold does by
+ * offering OPEN ▸, so the resting line only has to say that tapping is how
+ * the strip gets its pad.
+ */
+private const val STRIP_RESTING_LINE = "TAP A PAD · IT PLAYS, AND THIS LINE READS IT"
+
+/**
+ * The pad strip: one line for the selected pad from [PadStrip.line], then
+ * one door chip per entry in its doors - OPEN ▸ for a filled pad, CAPTURE ▸
+ * and FROM SNIPS ▸ for an empty one. Dispatches on the door's own label,
+ * the same strings `PadStrip` hands out. A row at least a hit target tall
+ * in both states, so selecting a pad never moves the page under the thumb.
+ */
+@Composable
+private fun PadStripLine(
+    slot: Int?,
+    pad: KitPad?,
+    onOpen: (Int) -> Unit,
+    onCapture: (Int) -> Unit,
+    onFromSnips: (Int) -> Unit,
+) {
+    val scheme = LocalScheme.current
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (slot == null) {
+            TapeText(STRIP_RESTING_LINE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            return@Row
+        }
+        val strip = PadStrip.line(pad, slot)
+        TapeText(PadStrip.oneLine(strip), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+        for (door in strip.doors) {
+            DoorChip(door, onClick = {
+                when (door) {
+                    PadStrip.DOOR_OPEN -> onOpen(slot)
+                    PadStrip.DOOR_CAPTURE -> onCapture(slot)
+                    PadStrip.DOOR_FROM_SNIPS -> onFromSnips(slot)
+                }
+            })
+        }
+    }
+}
+
+/** The Activity under a Compose context, for the fullscreen grid's orientation flip. */
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 /** The action row's fourth door, beside the texture kinds. */
@@ -817,6 +1225,10 @@ private fun PadCell(
     slot: Int,
     pad: KitPad?,
     peaks: List<PeaksPyramid.Column>?,
+    /** The strip is reading this pad: a 1dp amber ring, and the semantics say so (never colour alone). */
+    selected: Boolean,
+    /** The glow of a hit that did not arrive as this cell's own touch - a MIDI note, say. Null for an empty slot. */
+    echo: Animatable<Float, AnimationVector1D>?,
     /** The pad, and how hard: [PadHit.velocityAt] over where in the cell the finger landed. */
     onTap: (Int, Float) -> Unit,
     onLongPress: (Int) -> Unit,
@@ -837,6 +1249,7 @@ private fun PadCell(
             modifier
                 .height(Layout.PAD_H.dp)
                 .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                .then(if (selected) Modifier.border(1.dp, scheme.amber.tape, shape) else Modifier)
                 // The raw pointerInput below fires onTap on release
                 // (a hint, not an action) and starts a hand-rolled
                 // long-press timer on down — neither registers a
@@ -854,6 +1267,7 @@ private fun PadCell(
                 // would land on this cell twice.
                 .semantics(mergeDescendants = true) {
                     contentDescription = "PAD $tag: EMPTY"
+                    this.selected = selected
                     onClick(label = "HINT") { onEmptyTapHint(slot); true }
                     onLongClick(label = "CAPTURE A SAMPLE") { onEmptyLongPress(slot); true }
                 }
@@ -920,13 +1334,17 @@ private fun PadCell(
     // The hit's own flash still decays; the held floor is what stays.
     // maxOf, not a sum: a tap on an already-held pad must not stack into
     // a brighter fill than a fresh hit produces.
-    val lit = maxOf(0.35f * glow.value, if (held) PAD_HELD_ALPHA else 0f)
+    val lit = maxOf(0.35f * glow.value, 0.35f * (echo?.value ?: 0f), if (held) PAD_HELD_ALPHA else 0f)
 
     Box(
         modifier
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .border(if (held) 3.dp else 2.dp, cls.tape, shape)
+            // The selection ring, over the outer pixel of the class rim:
+            // the rim's width is the held state and its hue the drum class,
+            // so the ring takes the one thing neither already says.
+            .then(if (selected) Modifier.border(1.dp, scheme.amber.tape, shape) else Modifier)
             .background(cls.tape.copy(alpha = lit), shape)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
@@ -948,6 +1366,7 @@ private fun PadCell(
                 // below is not available to them at all.
                 contentDescription = "PAD $tag: ${pad.displayName}" +
                     if (touchedBenches.isEmpty()) "" else ", ${Copy.padTreated(touchedBenches)}"
+                this.selected = selected
                 // The centre, deliberately: a synthesized click has no
                 // position to read, so it gets what a tap at the pad's
                 // vertical middle would have produced — the same answer

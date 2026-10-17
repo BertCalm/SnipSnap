@@ -55,6 +55,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Location
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Navigation
+import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.Place
 import com.snipsnap.shell.Places
 import com.snipsnap.shell.Stage
@@ -80,8 +81,45 @@ class NavState(private val model: Navigation = Navigation()) {
     var location: Location by mutableStateOf(model.location)
         private set
 
-    /** The per-place state records, straight through: the screens read and write them. */
-    val pads get() = model.pads
+    /**
+     * PADS' state (`Navigation.pads`), observed the same way: bank,
+     * selected pad, open box. Written through here so the model and the
+     * composition move together, and reset together when the kit changes
+     * ([resetPads]) — a bank or a selection is per kit, and a stage switch
+     * is not a kit change (plan §3.3, the J20–J26 class).
+     */
+    private val padsBankState = mutableStateOf(model.pads.bank)
+    var padsBank: Int
+        get() = padsBankState.value
+        set(value) {
+            model.pads.bank = value
+            padsBankState.value = value
+        }
+
+    private val padsSelectedState = mutableStateOf(model.pads.selectedSlot)
+    var padsSelectedSlot: Int?
+        get() = padsSelectedState.value
+        set(value) {
+            model.pads.selectedSlot = value
+            padsSelectedState.value = value
+        }
+
+    private val padsOpenBoxState = mutableStateOf(model.pads.openBox)
+    var padsOpenBox: PadSheetBoxes.Box?
+        get() = padsOpenBoxState.value
+        set(value) {
+            model.pads.openBox = value
+            padsOpenBoxState.value = value
+        }
+
+    /** A different kit on the grid: bank A, nothing selected, every box closed. */
+    fun resetPads() {
+        padsBank = 0
+        padsSelectedSlot = null
+        padsOpenBox = null
+    }
+
+    /** The other per-place records, straight through, until their steps of the plan observe them. */
     val beat get() = model.beat
     val tape get() = model.tape
     val make get() = model.make

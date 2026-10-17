@@ -57,6 +57,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.ShelfFilter
 import com.snipsnap.shell.ShelfModel
+import com.snipsnap.shell.Places
 import com.snipsnap.shell.StarterKits
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -134,6 +135,14 @@ fun KitsScreen(
      * whether opening a kit means navigating in or crossing it with this one.
      */
     breedingFrom: KitShelf.Entry? = null,
+    /**
+     * `+ FROM SHELF` (plan §3.3): the project a kit is being picked for, by
+     * name, or null. The third pick mode beside [assigningSnip] and
+     * [breedingFrom]: the header names the project, the projects list hides
+     * (a project is not an answer to "which kit"), and tapping a kit row
+     * adds it and returns. `App` owns what adding means.
+     */
+    addingTo: String? = null,
     /** ROOMS (YY5): what OUTSIDE measured and kept, beside the instruments; hold one to forget it into the bin. */
     rooms: List<Rooms.Room> = emptyList(),
     onForgetRoom: (Rooms.Room) -> Unit = {},
@@ -227,7 +236,7 @@ fun KitsScreen(
     // moment after the screen does, and a kit without one is claimed by no
     // filter.
     val filterOffered =
-        !assigningSnip && breedingFrom == null && kits.size > 1 && dubStatuses.isNotEmpty()
+        !assigningSnip && breedingFrom == null && addingTo == null && kits.size > 1 && dubStatuses.isNotEmpty()
     val shownKits =
         ShelfFilter.apply(kits, ShelfFilter.effective(shelfFilter, filterOffered)) {
             dubStatuses[it.dir.path]
@@ -291,6 +300,7 @@ fun KitsScreen(
                     when {
                         assigningSnip -> "PICK A KIT FOR THIS SNIP"
                         breedingFrom != null -> Copy.breedPickHeader(breedingFrom.kit.name)
+                        addingTo != null -> Places.addPickHeader(addingTo)
                         else -> "SHELF"
                     },
                     TapeType.lcdHeader,
@@ -306,7 +316,7 @@ fun KitsScreen(
                 // pick mode (the header's line is a hint there, not "SHELF")
                 // and with fewer than two kits, where neither an
                 // order nor a filter has anything to say.
-                if (!assigningSnip && breedingFrom == null && kits.size > 1) {
+                if (!assigningSnip && breedingFrom == null && addingTo == null && kits.size > 1) {
                     Row(
                         Modifier.align(Alignment.CenterEnd),
                         verticalAlignment = Alignment.CenterVertically,
@@ -445,7 +455,7 @@ fun KitsScreen(
                     // would be a second kind of answer on the same list.
                     // Never empty when the kit list is not: the migration
                     // made one per kit before this screen read them.
-                    if (!assigningSnip && breedingFrom == null) {
+                    if (!assigningSnip && breedingFrom == null && addingTo == null) {
                         item(key = "projects-header") {
                             TapeText("PROJECTS · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
                         }
@@ -487,7 +497,7 @@ fun KitsScreen(
                             onArm = { armedKitDirs = armedKitDirs + entry.dir.path },
                             onDisarm = { armedKitDirs = armedKitDirs - entry.dir.path },
                             busy = busy,
-                            pickModeActive = assigningSnip || breedingFrom != null,
+                            pickModeActive = assigningSnip || breedingFrom != null || addingTo != null,
                             onOpen = onOpen,
                             onRequestDelete = { confirmDeleteKit = it },
                             onRequestRename = { renameTarget = it },

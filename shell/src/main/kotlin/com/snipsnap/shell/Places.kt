@@ -71,6 +71,9 @@ object Places {
     const val NO_KITS = "NO KITS YET"
     const val ADD_FROM_SHELF = "+ FROM SHELF"
 
+    /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
+    fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
+
     /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
         val parts = mutableListOf<String>()
