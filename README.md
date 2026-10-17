@@ -406,16 +406,17 @@ audition includes five Previous/Revised FLOW pairs, with its other clips retaine
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
 with relative TUNE, native velocity, saved playing gestures and settled HOLD
-loops. Eight dry starting presets and a sixteen-pad C minor pentatonic kit
-are available in SYNTH, FRESH TAPE and the CLI. Run
+loops. Thirty-six dry factory presets are available in SYNTH and the CLI;
+FRESH TAPE keeps the original sixteen-pad C minor pentatonic starter. Run
 `./gradlew :synth:generateEmbouchureAudition` for the complete listening page,
-control matrix and MPC 2/3 kit under `testkit/embouchure-audition/`.
+control matrix and four MPC 2/3 kits under `testkit/embouchure-audition/`.
 The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
 contains the revised control matrix, original/revised comparisons and the
-downloadable kit. Model 2 strengthens the controls while preserving all six
-default voices; saved model 1 recipes retain their original render.
-The revised controls await owner listening approval before preset expansion;
-[implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
+downloadable starter and three factory banks covering all 36 presets. Model 2
+strengthens the controls while preserving all six default voices; saved model 1
+recipes retain their original render. The owner accepted the voices and revised
+controls; the expanded presets now have their own listening review.
+[Implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
 
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,

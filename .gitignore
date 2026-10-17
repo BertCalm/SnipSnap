@@ -210,6 +210,7 @@ testkit/SnipSnap Relay Kit/
 # Embouchure dry clips, probes, loops and exports are reproduced by its audition task.
 testkit/embouchure-audition/
 testkit/embouchure-audition-model2/
+testkit/embouchure-preset-audition/
 testkit/SnipSnap Embouchure Kit/
 # MURMUR's generated listening matrix and export evidence.
 testkit/murmur-audition/
