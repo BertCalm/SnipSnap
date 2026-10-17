@@ -436,6 +436,25 @@ interaction corners and HOLD extremes. Run
 36-preset expansion waits for the owner's dry sonic approval. Device playback
 and release naming remain outstanding.
 
+### SHOAL — a moving population of harmonics
+
+The first Shoal audition implements GLASS and RIPPLE from the supplied
+engineering concept. DENSITY, CURRENT, COHESION, STRAY and GLOW shape an additive
+population with a protected root, conservative neighbor transport, attraction
+to occupied neighborhoods and bounded pitch departures. Root MIDI 24–84 and
+native excitation velocity are separate from the six controls, including HOLD.
+
+Eight provisional dry recipes, a sixteen-pad C minor pentatonic kit, patch
+serialization, CLI note/velocity overrides and the phone picker form the first
+integration. HOLD returns moving repeating material without the initiating
+attack; its captured periodic trajectory is an approximation to the free-running
+transport model. `./gradlew :synth:generateShoalAudition` builds the listening
+matrix. The owner's first listen found GLASS and RIPPLE too similar. Model 2
+revises their contrast while preserving saved model-1 recipes; its listening
+verdict remains pending. ORGAN, WHISTLE,
+DRIFT, SWARM and the proposed 36-preset roster are later work.
+[SHOAL](SHOAL.md) records the as-built contracts and retained proposal.
+
 ### ALLOY — generated attack entering a four-operator tonal body
 
 The [supplied engineering specification](ALLOY_ENGINE_SPEC.md) is ported to the

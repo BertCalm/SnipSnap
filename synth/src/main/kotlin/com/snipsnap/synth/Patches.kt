@@ -92,6 +92,7 @@ object Patches {
             TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
             OverlapPatch.ENGINE -> OverlapPatch.fromJsonValue(value)
             FlockPatch.ENGINE -> FlockPatch.fromJsonValue(value)
+            ShoalPatch.ENGINE -> ShoalPatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
