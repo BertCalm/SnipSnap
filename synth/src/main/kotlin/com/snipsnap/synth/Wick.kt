@@ -68,6 +68,8 @@ object Wick {
         val constantAvailability: Boolean = false,
         val gainOnly: Boolean = false,
         val oversample: Int = Dsp.OVERSAMPLE,
+        /** Diagnostic reference: reproduce BUBBLE's original compact envelope and stage mix. */
+        val legacyBubbleEnvelope: Boolean = false,
     )
     data class Event(
         val timeSeconds: Double,
@@ -194,6 +196,7 @@ object Wick {
         val timbre = m.getValue("TIMBRE").toDouble()
         val recovery = m.getValue("RECOVERY").toDouble()
         val held = plan != null
+        val roundedBubble = voice == WickVoice.BUBBLE && !options.legacyBubbleEnvelope
         val gates = Array(STAGES) { Gate(rate) }
         val queue = ArrayList<Pending>()
         val events = ArrayList<Event>()
@@ -201,30 +204,36 @@ object Wick {
         val feedRate = .5 + 7.5 * feed.pow(1.45)
         val feedCount = if (held) max(1, (plan!!.seconds * (.65 + 7.35 * feed.pow(1.45))).roundToInt()) else 0
         // A 200 ms sub-bass envelope is heard/classified as a kick even when its oscillator is
-        // perfectly pitched. The bass gates really ring longer: three times the root charge
-        // lifetime through C3, smoothly returning to the compact articulation at C4. Later
-        // stages stretch less, so a bass note still completes an answering chain in a few seconds.
+        // perfectly pitched. The original bass gates stretch the root lifetime three times
+        // through C3, returning to their compact C4 articulation. Rounded BUBBLE instead starts
+        // with a longer primary ring and applies only 1..1.4x primary tracking, retaining a
+        // pitched midrange tail without making the bass chain outlast its excitation window.
         val registerRelease = run {
             val x = ((midi - 48) / 12.0).coerceIn(0.0, 1.0)
             1.0 + 2.0 * (1.0 - x * x * (3.0 - 2.0 * x))
         }
         val bassTime = .40 * (registerRelease - 1.0)
-        val finiteSeconds = (if (voice == WickVoice.PLUCK) 2.1 + 1.1 * recovery + .5 * feed
+        val legacyFiniteSeconds = (if (voice == WickVoice.PLUCK) 2.1 + 1.1 * recovery + .5 * feed
             else 3.0 + 1.3 * recovery + .8 * feed) + bassTime
+        val finiteSeconds = if (roundedBubble) legacyFiniteSeconds + .4 else legacyFiniteSeconds
         val finiteSamples = (finiteSeconds * rate).roundToInt()
         // Stop all *admission*, including late cascade events, before an actual decaying tail.
-        val admissionEnd = ((finiteSeconds - (1.0 + .7 * recovery)) * rate).roundToInt().toLong()
+        // The added BUBBLE tail lets its actual gates ring; it admits no extra feed or cascades.
+        val admissionEnd = ((legacyFiniteSeconds - (1.0 + .7 * recovery)) * rate).roundToInt().toLong()
         val chargeDecay = DoubleArray(STAGES) { j ->
             val base = if (voice == WickVoice.PLUCK) doubleArrayOf(.19, .14, .115)[j]
+                else if (roundedBubble && j == 0) .24
                 else doubleArrayOf(.092, .075, .11)[j]
-            val stretch = 1.0 + (registerRelease - 1.0) / (1.0 + 2.0 * j)
+            val stretch = if (roundedBubble && j == 0) 1.0 + .2 * (registerRelease - 1.0)
+                else 1.0 + (registerRelease - 1.0) / (1.0 + 2.0 * j)
             exp(-1.0 / (rate * base * (.62 + 1.05 * recovery) * stretch))
         }
         val recoveryPole = DoubleArray(STAGES) { j ->
             val tau = (.055 * (32.0.pow(recovery))) * (1.0 + .18 * j)
             exp(-1.0 / (rate * tau))
         }
-        val attack = 1.0 - exp(-1.0 / (rate * (.017 - .014 * spark)))
+        val attackSeconds = if (roundedBubble) .034 - .022 * spark else .017 - .014 * spark
+        val attack = 1.0 - exp(-1.0 / (rate * attackSeconds))
         val closing = 1.0 - exp(-1.0 / (rate * .007))
         val ratio = if (voice == WickVoice.PLUCK) 2.0 else 3.0
         val reach: Double = run {
@@ -369,7 +378,8 @@ object Wick {
                     maxFilter = max(maxFilter, max(abs(gate.filter.first), abs(gate.filter.second)))
                     val vca = gate.opening.pow(1.22)
                     val weight = if (j == 0) 1.0 else (.60 + .42 * cascade) / (1.0 + .15 * j)
-                    mixed += (if (options.gainOnly) sourceMix else filtered) * vca * weight
+                    val voicedWeight = if (roundedBubble && j > 0) weight * (if (j == 1) .55 else .42) else weight
+                    mixed += (if (options.gainOnly) sourceMix else filtered) * vca * voicedWeight
                     if (gate.opening >= OPEN_THRESHOLD) {
                         gate.armed = true
                         gate.peak = max(gate.peak, gate.opening)

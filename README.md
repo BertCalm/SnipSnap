@@ -349,8 +349,8 @@ recovering low-pass gates, and actual releases ignite later articulations.
 PLUCK and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
 saved MIDI 24–84 roots and velocity. Nine provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, mechanism
-comparisons, control sweeps, held loops and causal traces. The
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, BUBBLE
+tone comparisons, mechanism comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/WICK.md) describe this first round; the remaining
 four proposed voices and full preset library follow the listening verdict.

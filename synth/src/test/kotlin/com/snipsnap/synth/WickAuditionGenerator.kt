@@ -11,7 +11,10 @@ import com.snipsnap.json.JsonValue
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -24,6 +27,7 @@ object WickAuditionGenerator {
     private const val RAW_EXPORT_GAIN = .5f
     private const val MAX_EXPORTED_SEAM = 1e-3
     private const val MAX_WRAP_STEP_RATIO = 8.0
+    private const val BUBBLE_REFERENCE_REVISION = "140d951a72aaca5f3a42af6b33c484bf4b645d16"
     private val timbral = listOf("SPARK", "FEED", "CASCADE", "TIMBRE", "RECOVERY")
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
 
@@ -44,6 +48,7 @@ object WickAuditionGenerator {
         val comparison: String? = null,
         val variant: String? = null,
         val preset: WickPatch? = null,
+        val referenceRevision: String? = null,
     )
 
     @JvmStatic
@@ -85,6 +90,10 @@ object WickAuditionGenerator {
                 metrics["matchedPeak"] = matched.peak()
                 metrics["rawExportGain"] = RAW_EXPORT_GAIN
                 metrics["eventCount"] = probe.diagnostics.events.size
+                if (case.groupId == "bubble-tone") {
+                    metrics["toneWindows"] = toneWindows(probe.raw, matched.samples, case.midi)
+                    metrics["toneWindowMeasurement"] = "Fixed post-onset time windows: raw RMS, matched RMS, and coherent power at the requested root. The coherent share is a sinusoidal projection of the raw samples, with no pitch search; short-window energy and root share support comparison but do not establish pitch audibility."
+                }
                 val localFailures = mutableListOf<String>()
                 val held = Wick.isLoop(case.macros.getValue("HOLD"))
                 val loop = probe.diagnostics.loop
@@ -185,14 +194,14 @@ object WickAuditionGenerator {
                 }
 
                 val patch = case.preset ?: WickPatch(case.title.take(14), case.voice, case.macros, case.midi, case.velocity)
-                val isAblation = case.options.disableCascade || case.options.constantAvailability || case.options.gainOnly
-                val patchFile = if (isAblation) null else "patches/${case.id}.json"
-                val recipeFile = if (isAblation) "recipes/${case.id}.json" else null
+                val isDiagnostic = case.options.disableCascade || case.options.constantAvailability || case.options.gainOnly || case.options.legacyBubbleEnvelope
+                val patchFile = if (isDiagnostic) null else "patches/${case.id}.json"
+                val recipeFile = if (isDiagnostic) "recipes/${case.id}.json" else null
                 patchFile?.let { File(root, it).also { file -> file.parentFile.mkdirs() }.writeText(patch.toJsonText()) }
                 recipeFile?.let {
                     writeJson(File(root, it), linkedMapOf(
                         "format" to "wick-diagnostic-recipe-v1", "description" to "Call Wick.inspect with this patch and these diagnostic options. This is not a standard patch.",
-                        "patch" to patch.toJsonValue(), "options" to options(case.options),
+                        "patch" to patch.toJsonValue(), "options" to options(case.options), "referenceRevision" to case.referenceRevision,
                     ))
                 }
                 val file = "wav/${case.id}.wav"
@@ -206,12 +215,13 @@ object WickAuditionGenerator {
                 writeJson(File(root, diagnosticsFile), linkedMapOf(
                     "id" to case.id, "voice" to case.voice.name, "midi" to case.midi, "velocity" to case.velocity,
                     "macros" to case.macros, "options" to options(case.options), "metrics" to metrics,
+                    "referenceRevision" to case.referenceRevision,
                     "diagnostics" to diagnostics, "seamContextFile" to seamContextFile,
                     "status" to if (localFailures.isEmpty()) "ready" else "failed", "failures" to localFailures,
                 ))
                 entries += metadata(case) + linkedMapOf(
                     "file" to file, "nativeFile" to nativeFile, "rawFile" to rawFile,
-                    "patchFile" to patchFile, "recipeFile" to recipeFile, "patch" to if (isAblation) null else patch.toJsonValue(),
+                    "patchFile" to patchFile, "recipeFile" to recipeFile, "patch" to if (isDiagnostic) null else patch.toJsonValue(),
                     "diagnosticsFile" to diagnosticsFile, "seamContextFile" to seamContextFile,
                     "metrics" to metrics, "diagnostics" to (diagnostics - "events" - "replaySourceEvents"),
                     "status" to if (localFailures.isEmpty()) "ready" else "failed", "failures" to localFailures,
@@ -263,6 +273,7 @@ object WickAuditionGenerator {
             "scope" to "Two-voice listening prototype. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
             "classifierNote" to "metrics.classifier and classifierConfidence describe the whole file; the house classifier labels files longer than 1.5 seconds LOOP before judging percussion. The separate onsetClassifier and onsetClassifierConfidence analyze only the first 1.2 seconds, exposing onset/percussion decisions independently of file duration. Neither classifier is a substitute for the requested-root pitch measurements or listening.",
             "listeningQuestions" to listOf(
+                "Does the revised BUBBLE response make the underlying note clearer than the earlier pops at the same controls?",
                 "Does one spark audibly start a chain of gate openings?", "Does disconnecting the cascade remove later articulations?",
                 "Does rapid feeding reveal depletion and recovery memory?", "Does gain-only gating lose the changing brightness of the low-pass gates?",
                 "Do both voices remain useful pitched samples?", "Do held patterns repeat without audible clicks or stutters?",
@@ -334,18 +345,30 @@ object WickAuditionGenerator {
         "midi" to case.midi, "velocity" to case.velocity, "macros" to case.macros, "options" to options(case.options),
         "loop" to Wick.isLoop(case.macros.getValue("HOLD")), "macro" to case.macro, "value" to case.value,
         "comparison" to case.comparison, "variant" to case.variant,
+        "referenceRevision" to case.referenceRevision,
     )
 
     private fun cases(quick: Boolean): List<Case> = buildList {
         for (voice in WickVoice.entries) add(Case(
             "default_${voice.name.lowercase()}", "${voice.name} · first spark", "Dry voice default at MIDI ${Wick.rootMidi(voice)}, velocity 1. " +
-                (if (voice == WickVoice.BUBBLE) "Calmer FEED 25% baseline; the original FEED 65% sound is preserved as Busy Bubbles under Range & recipes. " else "") +
+                (if (voice == WickVoice.BUBBLE) "FEED 25% baseline with the revised gate response. Compare Earlier pops and Longer pitched tone at the same controls below. " else "") +
                 "The same initial excitation and release network used by every normal patch.",
             "defaults", voice, "defaults", "Start here · two dry voices",
         ))
+        val toneControls = linkedMapOf("SPARK" to .40f, "FEED" to .25f, "CASCADE" to .70f, "TIMBRE" to .45f, "RECOVERY" to .50f, "HOLD" to 0f)
+        for (midi in listOf(48, 60, 72)) for (reference in listOf(true, false)) add(Case(
+            "bubble_tone_${midi}_${if (reference) "reference" else "candidate"}",
+            "${note(midi)} · ${if (reference) "Earlier pops" else "Longer pitched tone"}",
+            "BUBBLE at MIDI $midi, velocity 1: SPARK 40%, FEED 25%, CASCADE 70%, TIMBRE 45%, RECOVERY 50%, HOLD off. " +
+                (if (reference) "Earlier response from revision 140d951, reproduced by the explicit legacy-envelope diagnostic option."
+                else "Revised gate-response candidate. Listen for the underlying note and the spacing of articulations; musical acceptance is pending."),
+            "comparison", WickVoice.BUBBLE, "bubble-tone", "BUBBLE · earlier pops and longer pitched tone", toneControls, midi,
+            options = Wick.Options(legacyBubbleEnvelope = reference), comparison = "bubble-tone-$midi",
+            variant = if (reference) "reference" else "candidate", referenceRevision = if (reference) BUBBLE_REFERENCE_REVISION else null,
+        ))
         for (preset in WickPresets.all().filter { it.name !in setOf("Small Spark", "Bubble Chain") }) add(Case(
             "preset_${slug(preset.name)}", preset.name,
-            if (preset.name == "Busy Bubbles") "Original BUBBLE default, preserved at FEED 65%. Compare with the calmer FEED 25% first spark; all other controls, pitch and velocity match."
+            if (preset.name == "Busy Bubbles") "Busy BUBBLE recipe at FEED 65%, now using the revised gate response. The earlier-response A/B comparison uses FEED 25% with all other controls unchanged."
             else "Provisional ${preset.voice.name.lowercase()} recipe. Dry engine output, with no rack effects.",
             "preset", preset.voice, "presets", "Seven provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
         ))
@@ -404,9 +427,11 @@ object WickAuditionGenerator {
         ))
     }
 
-    private fun groupDescription(case: Case): String = when (case.kind) {
+    private fun groupDescription(case: Case): String = if (case.groupId == "bubble-tone") {
+        "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier pops uses revision 140d951's envelope through an explicit diagnostic option; Longer pitched tone is the provisional revised response. Compare the underlying note and the articulation. Short-window measurements support listening without establishing audibility."
+    } else when (case.kind) {
         "defaults" -> "Listen first to the two dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
-        "preset" -> "Seven provisional recipes, including the original Busy Bubbles reference, Held Glow and Held Bubbles. The two starting voices include the calmer BUBBLE default. Every clip uses its saved pitch, velocity and six controls."
+        "preset" -> "Seven provisional recipes, including Busy Bubbles at FEED 65%, Held Glow and Held Bubbles. BUBBLE recipes use the revised gate response. Every clip uses its saved pitch, velocity and six controls."
         "comparison" -> case.description
         "sweep" -> "Five settings: 0, 25, 50, 75 and 100%. Companion controls stay at this voice's defaults."
         "held-sweep" -> "Five settings in a sustained periodic pattern. Each clip supplies cycle-state and exported PCM seam evidence."
@@ -418,7 +443,35 @@ object WickAuditionGenerator {
     private fun options(options: Wick.Options): Map<String, Any?> = linkedMapOf(
         "disableCascade" to options.disableCascade, "constantAvailability" to options.constantAvailability,
         "gainOnly" to options.gainOnly, "oversample" to options.oversample,
+        "legacyBubbleEnvelope" to options.legacyBubbleEnvelope,
     )
+
+    private fun toneWindows(raw: FloatArray, matched: FloatArray, midi: Int): List<Map<String, Any?>> {
+        val hz = Keys.midiHz(midi).toDouble()
+        return listOf(.05 to .15, .20 to .35, .50 to .65, .90 to 1.05).map { (fromSeconds, toSeconds) ->
+            val from = minOf((fromSeconds * Dsp.RATE).toInt(), raw.size, matched.size)
+            val to = minOf((toSeconds * Dsp.RATE).toInt(), raw.size, matched.size)
+            var real = 0.0
+            var imaginary = 0.0
+            var rawEnergy = 0.0
+            var matchedEnergy = 0.0
+            for (frame in from until to) {
+                val value = raw[frame].toDouble()
+                val phase = 2.0 * PI * hz * frame / Dsp.RATE
+                real += value * cos(phase)
+                imaginary += value * sin(phase)
+                rawEnergy += value * value
+                matchedEnergy += matched[frame].toDouble() * matched[frame]
+            }
+            val count = (to - from).coerceAtLeast(1)
+            linkedMapOf(
+                "fromSeconds" to fromSeconds, "toSeconds" to toSeconds, "sampleCount" to to - from,
+                "rawRms" to sqrt(rawEnergy / count), "matchedRms" to sqrt(matchedEnergy / count),
+                "requestedRootHz" to hz,
+                "requestedRootCoherentShare" to (2.0 * (real * real + imaginary * imaginary) / (count * rawEnergy).coerceAtLeast(1e-30)).coerceIn(0.0, 1.0),
+            )
+        }
+    }
 
     private fun diagnostics(d: Wick.Diagnostics): Map<String, Any?> = linkedMapOf(
         "rawPeak" to d.rawPeak, "rawRms" to d.rawRms, "rawDc" to d.rawDc,

@@ -6,7 +6,10 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import java.io.ByteArrayOutputStream
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -134,6 +137,53 @@ class WickTest {
             println("WICK BUBBLE HOLD$hold $macro endpoint shape distance $distance")
             assertTrue(distance > .01, "HOLD$hold $macro only changes gain or the discarded preroll: $distance")
         }
+    }
+
+    @Test
+    fun `an isolated bubble retains a pitched body after the initial pop`() {
+        val controls = Wick.defaults(WickVoice.BUBBLE) + mapOf("FEED" to 0f, "CASCADE" to 0f)
+        fun window(samples: FloatArray, from: Double, to: Double) =
+            samples.copyOfRange((from * Dsp.RATE).toInt(), (to * Dsp.RATE).toInt())
+        fun bodyRatio(samples: FloatArray): Double =
+            TangleMeasure.rms(window(samples, .30, .50)) / TangleMeasure.rms(window(samples, .06, .16)).coerceAtLeast(1e-12)
+        for (midi in listOf(48, 60, 72)) {
+            val candidate = Wick.inspect(WickVoice.BUBBLE, controls, midi)
+            val reference = Wick.inspect(WickVoice.BUBBLE, controls, midi,
+                options = Wick.Options(legacyBubbleEnvelope = true))
+            assertTrue(candidate.raw.all { it.isFinite() } && candidate.samples.all { it.isFinite() }, "MIDI$midi non-finite BUBBLE")
+            val retained = bodyRatio(candidate.raw)
+            val previous = bodyRatio(reference.raw)
+            // These within-render ratios remove output gain as an explanation. C3 already had
+            // a bass tail; C4/C5 must gain a body rather than merely another louder onset.
+            assertTrue(retained > .10, "MIDI$midi late pitched body is too weak relative to its onset: $retained")
+            assertTrue(retained >= previous * if (midi == 48) .9 else 2.0,
+                "MIDI$midi late/early energy did not improve: $previous -> $retained")
+            val late = window(candidate.raw, .30, .50)
+            val wanted = Keys.midiHz(midi)
+            val measured = FineTuning.measuredHz(Snip(late, 1, Dsp.RATE), wanted, 0f, .2f)
+            val cents = FineTuning.cents(measured, wanted.toDouble())
+            assertTrue(abs(cents) < 25.0, "MIDI$midi late body lost the requested root: $cents cents")
+            var real = 0.0
+            var imaginary = 0.0
+            var energy = 0.0
+            for (i in late.indices) {
+                val sample = late[i].toDouble()
+                val phase = 2 * PI * wanted * i / Dsp.RATE
+                real += sample * cos(phase)
+                imaginary += sample * sin(phase)
+                energy += sample * sample
+            }
+            val rootShare = 2 * (real * real + imaginary * imaginary) / (late.size * energy).coerceAtLeast(1e-30)
+            assertTrue(rootShare > .10, "MIDI$midi late root is only a small spectral trace: $rootShare")
+            println("WICK BUBBLE MIDI$midi isolated late/early RMS $previous -> $retained; late root $cents cents, share $rootShare")
+        }
+    }
+
+    @Test
+    fun `the bubble envelope comparison leaves the pluck raw render unchanged`() {
+        val normal = Wick.inspect(WickVoice.PLUCK, midi = 60)
+        val comparison = Wick.inspect(WickVoice.PLUCK, midi = 60, options = Wick.Options(legacyBubbleEnvelope = true))
+        assertContentEquals(normal.raw, comparison.raw, "BUBBLE-only envelope changes reached PLUCK")
     }
 
     @Test

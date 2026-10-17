@@ -118,6 +118,7 @@
   function sectionFor(group, clips) {
     const id = String(group.id || '').toLowerCase();
     const text = `${id} ${group.title || ''}`.toLowerCase();
+    if (id === 'bubble-tone') return 'start';
     if (id === 'defaults' || /^(default|start|reference)/.test(id)) return 'start';
     if (/mechanism|comparison|ablation|cascade.disabled|depletion.disabled/.test(text) || clips.some(c => c.kind === 'comparison')) return 'mechanism';
     if (/held|hold/.test(id) || clips.every(c => c.kind === 'hold' || c.kind === 'held-sweep')) return 'held';
@@ -173,7 +174,7 @@
     state.current = clip;
     $('#transport').hidden = false;
     document.body.classList.add('has-player');
-    $('#transport-title').textContent = clip.title || clip.id;
+    $('#transport-title').textContent = clipAccessibleTitle(clip);
     $('#transport-voice').textContent = `${clip.voice || 'WICK'}${clip.loop ? ' / HOLD' : ''} / ${state.level === 'matched' ? 'MATCHED' : clip.nativeFile ? 'NATIVE' : 'RAW (−6 dB)'}`;
     audio.loop = Boolean(state.repeat && clip.loop && !state.sequence.length);
     updateCards();
@@ -206,7 +207,7 @@
         startHeldSource(position);
         state.loadingToken = 0;
         updateProgress();
-        $('#audio-status').textContent = `Playing ${clip.title || clip.id}.`;
+        $('#audio-status').textContent = `Playing ${clipAccessibleTitle(clip)}.`;
         return;
       } catch (_) {
         if (token !== loadToken) return;
@@ -224,7 +225,7 @@
       await audio.play();
       if (token !== loadToken) return;
       state.loadingToken = 0;
-      $('#audio-status').textContent = `Playing ${clip.title || clip.id}.`;
+      $('#audio-status').textContent = `Playing ${clipAccessibleTitle(clip)}.`;
       updateCards();
     } catch (error) {
       if (token !== loadToken || error.name === 'AbortError') return;
@@ -252,7 +253,7 @@
       card.classList.toggle('is-playing', Boolean(current && playing));
       const button = $('.clip-play', card);
       const clip = state.clips.get(card.dataset.clip);
-      button.setAttribute('aria-label', `${current && playing ? 'Pause' : 'Play'} ${clip?.title || card.dataset.clip}`);
+      button.setAttribute('aria-label', `${current && playing ? 'Pause' : 'Play'} ${clip ? clipAccessibleTitle(clip) : card.dataset.clip}`);
       button.replaceChildren(el('span', current && playing ? 'pause-icon' : 'play-icon'));
       button.firstChild.setAttribute('aria-hidden', 'true');
       button.setAttribute('aria-pressed', String(Boolean(current && playing)));
@@ -344,6 +345,20 @@
     if (state.repeat && state.sequence.length) tell('Repeat is enabled for individual held clips. Sequences play each clip once.');
   });
 
+  function isBubbleTone(clip) {
+    return clip?.groupId === 'bubble-tone' || /^bubble_tone_\d+_(reference|candidate)$/.test(String(clip?.id || ''));
+  }
+  function clipTitle(clip) {
+    if (isBubbleTone(clip)) {
+      if (/_reference$/.test(clip.id)) return 'Earlier pops';
+      if (/_candidate$/.test(clip.id)) return 'Longer pitched tone';
+    }
+    return clip?.title || clip?.id || 'Wick clip';
+  }
+  function clipAccessibleTitle(clip) {
+    return `${clipTitle(clip)}${isBubbleTone(clip) && finite(clip.midi) ? ` at MIDI ${clip.midi}` : ''}`;
+  }
+
   function createCard(clip) {
     const unique = `clip-detail-${++cardCounter}`;
     const card = el('article', `clip-card${clip.status === 'failed' ? ' failed' : ''}`);
@@ -355,14 +370,14 @@
     const main = el('div', 'clip-main');
     const play = el('button', 'clip-play');
     play.type = 'button';
-    play.setAttribute('aria-label', `Play ${clip.title || clip.id}`);
+    play.setAttribute('aria-label', `Play ${clipAccessibleTitle(clip)}`);
     play.setAttribute('aria-pressed', 'false');
     const icon = el('span', 'play-icon');
     icon.setAttribute('aria-hidden', 'true');
     play.append(icon);
     play.disabled = clip.status === 'failed' || !clip.file;
     play.addEventListener('click', () => toggleClip(clip));
-    main.append(play, el('h5', 'clip-name', clip.title || clip.id));
+    main.append(play, el('h5', 'clip-name', clipTitle(clip)));
     const description = el('p', 'clip-description', clip.description || `${clip.voice || 'Wick'} · ${clip.kind || 'render'}`);
     const meta = el('div', 'clip-meta');
     const note = noteName(clip.midi);
@@ -398,6 +413,8 @@
     return card;
   }
   function createGroup(group) {
+    const bubbleTone = group.id === 'bubble-tone';
+    const clips = bubbleTone ? group.clips.slice().sort((a, b) => (a.midi - b.midi) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : group.clips;
     const sweep = group.clips.some(clip => clip.kind === 'sweep' || clip.kind === 'held-sweep');
     const section = el('section', `clip-group${sweep ? ' sweep-group' : ''}`);
     section.dataset.group = String(group.id);
@@ -406,13 +423,14 @@
     const header = el('div', 'group-header');
     const heading = el('div', 'group-heading');
     const headingId = `group-${String(group.id).replace(/[^\w-]/g, '-')}`;
-    const title = el('h4', '', group.title || group.id);
+    const title = el('h4', '', bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
     title.id = headingId;
     section.setAttribute('aria-labelledby', headingId);
     heading.append(title);
-    if (group.description) heading.append(el('p', '', group.description));
+    if (bubbleTone) heading.append(el('p', '', 'Can you hear the note ring through the smaller pops? Compare each pair at MIDI 48, 60, and 72. Pitch, velocity, and all controls match within each pair; FEED stays at 25%.'));
+    else if (group.description) heading.append(el('p', '', group.description));
     header.append(heading);
-    const playable = group.clips.filter(clip => clip.status !== 'failed' && clip.file);
+    const playable = clips.filter(clip => clip.status !== 'failed' && clip.file);
     if (playable.length > 1) {
       const sequence = el('button', 'sequence-button');
       sequence.type = 'button';
@@ -438,7 +456,7 @@
       header.append(sequence);
     }
     const grid = el('div', 'clip-grid');
-    group.clips.forEach(clip => grid.append(createCard(clip)));
+    clips.forEach(clip => grid.append(createCard(clip)));
     section.append(header, grid);
     return section;
   }
@@ -619,6 +637,7 @@
       for (const name of sections) {
         const host = $(`[data-host="${name}"]`);
         const groups = state.groups.filter(group => group.section === name);
+        if (name === 'start') groups.sort((a, b) => Number(b.id === 'bubble-tone') - Number(a.id === 'bubble-tone'));
         groups.forEach(group => host.append(createGroup(group)));
         if (!groups.length) host.append(el('p', 'empty-state', 'No renders in this section are included in this build.'));
       }

@@ -28,10 +28,25 @@ velocity is silence, including held operation.
 BUBBLE's listening-driven default now uses FEED **.25**, giving the answering
 gates more space after feedback that the original sounded chaotic. Its other
 controls remain SPARK .40, CASCADE .70, TIMBRE .45, RECOVERY .50 and HOLD 0.
-The provisional **Busy Bubbles** recipe preserves the original FEED .65 setting
-for comparison. **Spent Bubbles** and **Held Bubbles** also retain their explicit,
-denser settings. Saved patches keep their recorded controls; the supplied
-engineering specification remains the original proposal.
+The provisional **Busy Bubbles** recipe retains FEED .65. **Spent Bubbles** and
+**Held Bubbles** also retain their explicit, denser settings. These recipes use
+the current gate response. Saved patches keep their recorded controls; the
+supplied engineering specification remains the original proposal.
+
+After feedback that the note was masked by rapid pops, BUBBLE's primary gate
+now rings longer, its attacks round off more slowly, and the answering stages
+sit below the primary tone. Primary pitch tracking keeps the longer midrange
+ring bounded in the bass. Its finite render has another .4 seconds of decay;
+excitation admission still ends at the previous time. PLUCK keeps its response.
+
+The opening audition section compares **Earlier pops** and **Longer pitched
+tone** at MIDI 48, 60 and 72, with the same pitch, velocity and all six controls.
+Diagnostic `legacyBubbleEnvelope=true` reproduces the response from source
+revision `140d951a72aaca5f3a42af6b33c484bf4b645d16` for those references. Its
+reference recipes save that option explicitly; the candidate uses a normal
+Wick patch. Short-window energy and requested-root measurements help compare
+the note's body after the attack. The listener still decides whether the tone
+comes through clearly.
 
 `WickPresets` is deliberately outside the shared factory roster, Android picker
 and starter menu pending listening. The CLI, patch/recipe decoder and native
