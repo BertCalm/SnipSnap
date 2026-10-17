@@ -13,6 +13,9 @@ import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.FacetBeam
+import com.snipsnap.synth.FacetPatch
+import com.snipsnap.synth.FacetVoice
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Lacquer
@@ -397,6 +400,27 @@ class UserPresetsTest {
                 line,
             )
             assertEquals("SkitterPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `saved Facet prototype promotion retains alignment beam overrides and playing state`() {
+        val root = shelf()
+        try {
+            val source = FacetPatch("LIGHT \"A\" \$X", FacetVoice.BLOOM,
+                linkedMapOf("REVOLVE" to 0f, "CHROMA" to .3f), midi = 55, velocity = .4f,
+                seed = -937, initialAlignment = .375f, beamMode = "OVERRIDE",
+                beams = listOf(FacetBeam(5, intensity = .2f, elevation = .8f, color = .7f, width = .4f)))
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            assertTrue(line.startsWith("FacetPatch.fromJsonText(\"") && line.endsWith("\"),"), line)
+            val literal = line.removePrefix("FacetPatch.fromJsonText(").removeSuffix("),")
+            val json = Json.parse(literal.replace("\\\$", "\$")).str()
+            assertEquals(source, FacetPatch.fromJsonText(json), "promoted JSON preserves every saved field")
         } finally {
             root.deleteRecursively()
         }

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17131b">
+  <meta name="description" content="Listen to FACET, an experimental SnipSnap instrument that turns a rotating mirrorball into blooming, shifting sound.">
+  <title>FACET — First Light</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='24' fill='%2317131b'/%3E%3Cpath d='M24 5 39 13 43 30 32 43 15 41 5 27 10 12Z' fill='%23c5bad8'/%3E%3Cpath d='M10 12 32 43M39 13 15 41M5 27 43 30M24 5 24 43' stroke='%235b4d68' fill='none'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listening-room">Skip to the listening room</a>
+  <header class="masthead shell">
+    <a class="wordmark" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap on GitHub">Snip<span>Snap</span><span class="wordmark-dot" aria-hidden="true"></span></a>
+    <span class="masthead-note">Instrument studies <span class="slash">/</span> No. 01</span>
+    <a class="small-link" href="#about">About this study <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M5 19h14V5"/></svg></a>
+  </header>
+
+  <main>
+    <section class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="status-light" aria-hidden="true"></span> An experimental SnipSnap voice</div>
+        <h1 id="hero-title">FACET<span class="title-period">.</span></h1>
+        <p class="hero-tagline">A mirrorball<br>you can hear.</p>
+        <p class="hero-description">Twelve beams. One note. A shifting constellation of reflections, from a slow, luminous bloom to a fine glass shimmer.</p>
+        <a class="hero-cta" href="#listening-room">Enter the listening room <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></a>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-annotation annotation-top"><span>12 BEAMS</span><span>ONE SHARED PITCH</span></div>
+        <svg class="mirrorball" viewBox="0 0 640 660" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="ball-fill" cx=".28" cy=".2" r=".85"><stop stop-color="#dedee5"/><stop offset=".32" stop-color="#90899b"/><stop offset=".73" stop-color="#4e425b"/><stop offset="1" stop-color="#251e2c"/></radialGradient>
+            <radialGradient id="ball-glow"><stop stop-color="#af91c5" stop-opacity=".13"/><stop offset="1" stop-color="#af91c5" stop-opacity="0"/></radialGradient>
+            <linearGradient id="floor-light"><stop stop-color="#e9dafa" stop-opacity="0"/><stop offset=".5" stop-color="#e9dafa" stop-opacity=".18"/><stop offset="1" stop-color="#e9dafa" stop-opacity="0"/></linearGradient>
+            <clipPath id="ball-clip"><circle cx="330" cy="300" r="171"/></clipPath>
+          </defs>
+          <ellipse cx="330" cy="342" rx="290" ry="280" fill="url(#ball-glow)"/>
+          <g stroke="#b5a8c5" opacity=".12">
+            <path d="M223 230 7 115M195 280 0 255M207 353 8 441M277 432 202 650M400 423 513 658M453 339 640 414M449 235 640 122"/>
+            <path d="M295 152 240 0M372 143 424 0"/>
+          </g>
+          <path d="M330 0V128" stroke="#bcb3c7" stroke-opacity=".35"/>
+          <rect x="320" y="122" width="20" height="12" rx="3" fill="#847b90"/>
+          <circle cx="330" cy="300" r="171" fill="url(#ball-fill)"/>
+          <g clip-path="url(#ball-clip)">
+            <g stroke="#241b2c" stroke-width="2" opacity=".75">
+              <path d="M159 300H501M163 268Q330 251 497 268M173 237Q330 210 487 237M190 204Q330 172 470 204M216 174Q330 145 444 174M259 145Q330 132 401 145M163 333Q330 349 497 333M173 367Q330 393 487 367M191 401Q330 430 469 401M218 431Q330 456 442 431M259 456Q330 468 401 456"/>
+              <path d="M330 129V471M294 132Q235 300 294 468M365 132Q425 300 365 468M260 143Q155 300 260 456M400 143Q505 300 400 456M227 163Q111 300 227 437M433 163Q549 300 433 437M199 189Q122 300 199 411M461 189Q538 300 461 411M177 225Q140 300 177 375M483 225Q520 300 483 375"/>
+            </g>
+            <g fill="#f1edf7">
+              <path d="M274 183 292 179 283 212 259 216Z" opacity=".72"/>
+              <path d="M296 143 329 140 329 169 286 172Z" opacity=".68"/>
+              <path d="M239 223 257 219 250 252 226 255Z" opacity=".8"/>
+              <path d="M286 216 328 213 328 251 279 253Z" opacity=".33"/>
+              <path d="M367 177 392 182 407 214 376 210Z" opacity=".56"/>
+              <path d="M164 272 181 271 180 298 161 298Z" opacity=".6"/>
+              <path d="M224 272 248 270 247 298 219 298Z" opacity=".31"/>
+              <path d="M281 305 328 305 328 344 284 342Z" opacity=".26"/>
+              <path d="M380 307 417 306 415 339 378 342Z" opacity=".55"/>
+              <path d="M448 273 473 275 476 298 450 298Z" opacity=".21"/>
+              <path d="M430 344 456 341 451 369 426 374Z" opacity=".32"/>
+              <path d="M288 389 327 394 327 425 300 422Z" opacity=".2"/>
+              <path d="M230 402 253 408 266 433 251 428Z" opacity=".33"/>
+              <path d="M364 430 392 427 384 450 356 457Z" opacity=".27"/>
+            </g>
+            <g fill="#352a42" opacity=".75">
+              <path d="M333 215 373 218 379 253 333 251Z"/>
+              <path d="M183 303 216 303 219 336 189 334Z"/>
+              <path d="M252 346 279 348 287 385 259 382Z"/>
+              <path d="M334 350 374 347 365 386 334 390Z"/>
+              <path d="M422 255 449 259 450 298 426 298Z"/>
+            </g>
+          </g>
+          <circle cx="330" cy="300" r="171" stroke="#ded7e9" stroke-opacity=".24"/>
+          <path d="M262 187V218M247 202H278" stroke="#fff6ff" stroke-width="1.5"/>
+          <path d="M456 357V376M447 366H465" stroke="#dfd9f1" stroke-opacity=".75"/>
+          <ellipse cx="330" cy="575" rx="218" ry="23" fill="url(#floor-light)"/>
+          <g fill="#c3b5d7" opacity=".48">
+            <path d="m126 518 17-5 10 5-18 5Z"/><path d="m466 553 13-3 15 4-14 3Z"/>
+            <path d="m213 586 15-3 12 5-15 4Z"/><path d="m392 604 20-4 13 4-20 4Z"/>
+          </g>
+        </svg>
+        <div class="art-annotation annotation-bottom"><span>REFLECTION → RESONANCE</span><span class="annotation-coordinate">θ 0.000 — 1.000</span></div>
+      </div>
+    </section>
+
+    <div class="concept-strip">
+      <div class="shell concept-inner"><span class="strip-label">The listening question</span><p>Can a broad bloom become a fine shimmer<br class="desktop-break"> while the note stays whole?</p><span class="strip-symbol" aria-hidden="true">✧</span></div>
+    </div>
+
+    <section id="listening-room" class="listening-room shell" aria-labelledby="room-title">
+      <div class="room-heading">
+        <div><div class="eyebrow section-kicker">The listening room</div><h2 id="room-title">Follow the reflections.</h2></div>
+        <p>Start with the two voices. Then listen for what changes as the ball turns, the facets get finer, and the resonances fall away.</p>
+      </div>
+
+      <div class="listening-toolbar">
+        <div class="quality-control"><span id="quality-label" class="control-label">Playback level</span><div class="segmented" role="group" aria-labelledby="quality-label"><button type="button" data-quality="matched" aria-pressed="true">Level matched</button><button type="button" data-quality="native" aria-pressed="false">Native</button><button type="button" data-quality="raw" aria-pressed="false">Raw</button></div></div>
+        <p id="quality-description">Level-matched files make differences in tone easier to compare.</p>
+      </div>
+      <nav class="section-nav" aria-label="Listening comparisons" id="section-nav" hidden></nav>
+      <div id="load-status" class="load-status" role="status"><span class="loading-mark" aria-hidden="true">✧</span><p>Preparing the listening room…</p></div>
+      <div id="sections"></div>
+      <div class="listening-footer" id="listening-footer" hidden><span class="footer-mark" aria-hidden="true">✧</span><p>Take your time. The smallest changes often live in the tail.</p><a class="small-link" href="#listening-room">Back to the first reflection <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4M6 10l6-6 6 6"/></svg></a></div>
+      <noscript><div class="no-script">Enable JavaScript to load the audio comparisons. The complete audition manifest is available as <a href="manifest.json">manifest.json</a>.</div></noscript>
+    </section>
+
+    <section class="about-section shell" id="about" aria-labelledby="about-title">
+      <div class="about-intro"><div class="eyebrow section-kicker">Inside the instrument</div><h2 id="about-title">One note.<br>Many ways to catch it.</h2></div>
+      <div class="about-copy"><p>FACET imagines twelve beams striking a rotating mirrorball. Each beam carries a different shade of the same note. As reflections pass, the harmonic balance shifts and a small bank of resonances rings in response.</p><p>Coarse facets make room for broad, overlapping blooms. Finer facets break the motion into a more delicate shimmer. Stop the rotation and the sound holds its particular angle.</p><p class="prototype-note"><span class="status-light" aria-hidden="true"></span> A listening prototype for SnipSnap. These are finite BLOOM and SHIMMER renders; sustained HOLD playback and the expanded editor are future work. Listening acceptance is still pending.</p></div>
+    </section>
+
+    <section class="methodology shell" aria-labelledby="methodology-title">
+      <details><summary id="methodology-title">Render notes &amp; downloads <span aria-hidden="true">+</span></summary><div class="methodology-content"><div><p>Every player uses a rendered audio file from the same deterministic engine. Compare the same note and phrase across each group. Level matching helps keep loudness from dominating the comparison; choose Native or Raw to inspect the available render variants.</p><p>Only one clip plays at a time. Switching the playback level preserves your position when the alternate file is available. No sound starts automatically.</p><p id="render-summary" class="render-summary"></p><p id="render-revision" class="render-revision"></p></div><div class="downloads" id="downloads"><a class="download-link" href="manifest.json" download>Audition manifest <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 14l6 6 6-6"/></svg></a><a class="download-link" href="https://github.com/BertCalm/SnipSnap">SnipSnap on GitHub <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></a></div></div></details>
+    </section>
+  </main>
+
+  <footer class="site-footer shell"><a class="wordmark" href="https://github.com/BertCalm/SnipSnap">Snip<span>Snap</span><span class="wordmark-dot" aria-hidden="true"></span></a><p>FACET <span class="slash">/</span> An instrument in reflection.</p><span class="footer-index">Study 001</span></footer>
+</body>
+</html>

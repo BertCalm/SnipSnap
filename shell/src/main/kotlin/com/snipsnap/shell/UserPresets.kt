@@ -9,6 +9,7 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.FacetPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
@@ -364,10 +365,11 @@ object UserPresets {
      * operator/formant/envelope definition. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
-        if (patch is LacquerPatch) {
+        if (patch is LacquerPatch || patch is FacetPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+            val type = if (patch is FacetPatch) "FacetPatch" else "LacquerPatch"
+            return "$type.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         if (patch is StoopPatch) {

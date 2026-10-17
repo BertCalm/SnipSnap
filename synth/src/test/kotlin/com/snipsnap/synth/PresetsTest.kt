@@ -95,11 +95,14 @@ class PresetsTest {
             assertTrue(runCatching { Class.forName(roster) }.isFailure, "$engine is listed as rosterless but $roster exists")
         }
         // A prototype is held out of Presets on purpose, not for want of recipes: it keeps
-        // its own provisional roster, and nothing of it is served through the factory one.
+        // a provisional roster or an explicitly recorded audition source, and nothing of
+        // it is served through the factory one.
         assertTrue(PatchTypes.PROTOTYPES.intersect(PatchTypes.ROSTERLESS).isEmpty(), "an engine is either rosterless or a prototype")
+        assertTrue(PatchTypes.PROTOTYPES.containsAll(PatchTypes.PROTOTYPE_RECIPE_SOURCES.keys),
+            "a provisional recipe source must belong to a recorded prototype")
         for (engine in PatchTypes.PROTOTYPES) {
-            val roster = rosterClass(engine)
-            assertTrue(runCatching { Class.forName(roster) }.isSuccess, "$engine is listed as a prototype but has no $roster to audition")
+            val source = PatchTypes.PROTOTYPE_RECIPE_SOURCES[engine] ?: rosterClass(engine)
+            assertTrue(runCatching { Class.forName(source) }.isSuccess, "$engine is listed as a prototype but has no $source to audition")
         }
     }
 

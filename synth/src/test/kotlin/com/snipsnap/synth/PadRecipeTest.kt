@@ -67,6 +67,10 @@ class PadRecipeTest {
         // VENT is a prototype held outside Presets (PatchTypes.PROTOTYPES), so no factory
         // preset covers it; this one also carries a saved note, velocity and seed.
         VentPatch("Orbit Test", VentVoice.WIRE, mapOf("CHAOS" to 0.6f, "LENGTH" to 0.1f), midi = 48, velocity = 0.6f, seed = 7),
+        // FACET stays outside the factory roster until its first dry listen.
+        FacetPatch("Frozen Light Test", FacetVoice.BLOOM, mapOf("REVOLVE" to 0f, "HOLD" to 0f),
+            midi = 55, velocity = .6f, seed = 7, initialAlignment = .25f,
+            beamMode = "OVERRIDE", beams = listOf(FacetBeam(3, intensity = .3f, color = .8f))),
     )
 
     @Test

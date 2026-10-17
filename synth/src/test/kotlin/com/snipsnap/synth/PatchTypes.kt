@@ -47,8 +47,14 @@ internal object PatchTypes {
      * deliberately kept out of [Presets] until the owner's listening verdict. VENT's
      * three starting points live in [VentPresets] and render only through the CLI;
      * its factory roster and phone picker stay unchanged while it is a prototype.
+     * FACET's two finite starting points live in its standalone audition generator.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, FacetPatch.ENGINE)
+
+    /** The explicit provisional recipe source for a prototype without an XPresets roster. */
+    val PROTOTYPE_RECIPE_SOURCES: Map<String, String> = mapOf(
+        FacetPatch.ENGINE to "com.snipsnap.synth.FacetAuditionGenerator",
+    )
 }

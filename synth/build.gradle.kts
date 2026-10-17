@@ -2,6 +2,18 @@ plugins {
     kotlin("jvm")
 }
 
+/** FACET's finite dry prototype, saved diagnostic A/Bs and real-engine listening pack. */
+tasks.register<JavaExec>("generateFacetAudition") {
+    group = "distribution"
+    description = "Render FACET raw/native/matched PCM24 WAVs, replayable patches, diagnostics and the audition pack."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FacetAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("facetOutput").orNull ?: "${rootDir}/testkit/facet-audition")
+    if (project.hasProperty("facetQuick")) args("--quick")
+}
+
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
 tasks.register<JavaExec>("generateOspreyAudition") {
     group = "distribution"

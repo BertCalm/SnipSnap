@@ -48,6 +48,20 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
+### FACET — mirrorball-driven spectral pads
+
+**Finite prototype in development; listening acceptance pending.** BLOOM and
+SHIMMER explore twelve generated harmonic beams, a deterministic nested facet
+layout, moving spectral routes and shared resonance. ILLUMINATE, ELEVATION,
+CHROMA, REVOLVE, FACETS and HOLD remain separate controls; MIDI root and
+excitation velocity live in the recipe. Initial alignment, seed and sparse
+stable-ID beam overrides survive JSON and macro edits. REVOLVE zero is exactly
+stopped. HOLD below .99 sets finite duration; the loop setting is explicitly
+rejected until phase and resonator closure are implemented. The other four
+voices, Android picker, expanded beam editor, presets and factory kit wait for
+the initial dry listening proof. See [FACET.md](FACET.md) for scope, override
+precedence and the distinction between finite kit pads and held keygroups.
+
 ### THUMP — analog-style drum voices (the drum synth engine)
 
 One engine, per-class voice models, each a small parameter set with big
