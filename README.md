@@ -434,12 +434,13 @@ awaits the owner's dry listening verdict before expanding the preset roster.
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
 modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
-EDGE, BODY, LENGTH, TUNE and HOLD. Twelve provisional presets, saved operator and
+EDGE, BODY, LENGTH, TUNE and HOLD. Thirty-six factory presets, saved operator and
 material recipes, native velocity and a dry sixteen-pad kit use the same renderer.
 Run `./gradlew :synth:generateAlloyAudition` for voice/register/velocity coverage,
 five-point sweeps, interactions, FUSE ablation and settled loop listening. The
-[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) awaits
-the owner's sonic verdict before expansion to the proposed 36 presets.
+[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) includes
+six presets per voice. The owner heard the initial twelve and authorized this
+expansion on the same engine tuning; the new presets await listening review.
 [Implementation notes](docs/ALLOY.md) describe the render and export contracts.
 
 CONTOUR is an original wavetable instrument: a stable body carries the note while
