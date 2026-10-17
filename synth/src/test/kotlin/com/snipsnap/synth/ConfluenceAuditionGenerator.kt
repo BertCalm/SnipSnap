@@ -290,7 +290,9 @@ object ConfluenceAuditionGenerator {
         val phrase = source.copyOfRange(r.startFrame, r.endFrame)
         val out = FloatArray((seconds * 44_100).toInt())
         var cursor = (.15f * 44_100).toInt()
-        while (cursor + phrase.size <= out.size) {
+        // Match the renderer's terminal phrase-admission reserve without transforming the source.
+        val admissionEnd = out.size - (1.25f * 44_100).toInt()
+        while (cursor + phrase.size <= admissionEnd) {
             phrase.copyInto(out, cursor)
             cursor += phrase.size + (.65f * 44_100).toInt()
         }
@@ -333,6 +335,7 @@ object ConfluenceAuditionGenerator {
         "sourceId" to fixture.id, "sourcePath" to "sources/${fixture.id}.wav", "sourcePcmHash" to fixture.source.hash,
         "startFrame" to fixture.region.startFrame, "endFrame" to fixture.region.endFrame,
         "seconds" to seconds, "initialSilenceSeconds" to .15, "restSeconds" to .65,
+        "terminalAdmissionReserveSeconds" to 1.25,
         "ensemble" to if (operation == "ensemble-section") mapOf("SECTION" to 1f, "WIDTH" to 0f, "DEPTH" to .5f, "RATE" to .5f) else null,
     )) as JsonValue.Obj
 
