@@ -90,16 +90,16 @@
   <div class="transport">
     <div class="shell">
       <div class="transport-main">
-        <label class="enable"><input id="audio-enabled" type="checkbox"> Enable audio playback</label>
+        <label class="enable"><input id="audio-enabled" type="checkbox"> Audio enabled</label>
         <button id="stop-all" type="button">Stop all <span aria-hidden="true">· Esc</span></button>
         <div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="100" value="85"><output id="volume-value" for="volume">85%</output></div>
       </div>
-      <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Audio off. Read the comparison, then enable playback.</p>
+      <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Audio off. Choose Play to enable audio and listen.</p>
     </div>
   </div>
   <main class="shell">
-    <p class="reading-order">The material endpoints and paired-string midpoint come first. Compare Before and After within each pair; the remaining registers and isolated sources provide supporting detail. Nothing plays automatically.</p>
-    <noscript><p>Use each clip's native audio controls to listen without JavaScript. Play one clip at a time. Global volume, comparison buttons and Stop all require JavaScript.</p></noscript>
+    <p class="reading-order">The material endpoints and paired-string midpoint come first. Compare Before and After within each pair; the remaining registers and isolated sources provide supporting detail. Choose Play to enable audio and listen. Nothing plays automatically.</p>
+    <noscript><p>Open Native audio controls under a clip to listen without JavaScript. Play one clip at a time. Global volume, comparison buttons and Stop all require JavaScript.</p></noscript>
     <!-- TESSERA_MATERIAL_CARDS -->
   </main>
   <footer class="shell">
@@ -114,142 +114,222 @@
     const volume = document.getElementById('volume');
     const volumeValue = document.getElementById('volume-value');
     const status = document.getElementById('playback-status');
+    const page = new URL(location.href);
+    if (/^https?:$/.test(page.protocol) && !page.pathname.endsWith('/')
+        && !page.pathname.split('/').pop().includes('.')) page.pathname += '/';
+    const assetBase = new URL('.', page);
+    // Directory routes remain correct even when the host removes their trailing slash.
+    document.querySelectorAll('audio[src], a[href]').forEach(element => {
+      const attribute = element.tagName === 'AUDIO' ? 'src' : 'href';
+      const relative = element.getAttribute(attribute);
+      if (relative && !relative.startsWith('#')) element.setAttribute(attribute, new URL(relative, assetBase).href);
+    });
     const clips = Array.from(document.querySelectorAll('.clip')).map(card => ({
-      card,
-      audio: card.querySelector('audio'),
-      button: card.querySelector('.play'),
-      progress: card.querySelector('progress'),
-      hint: card.querySelector('.native-hint'),
-      title: [card.closest('.pair').querySelector('h3').textContent, card.querySelector('h4').textContent].join(' · '),
+      card, audio:card.querySelector('audio'), button:card.querySelector('.play'),
+      progress:card.querySelector('progress'), hint:card.querySelector('.native-hint'),
+      title:[card.closest('.pair').querySelector('h3').textContent, card.querySelector('h4').textContent].join(' · '),
+      offset:0, buffer:null, source:null, gain:null, startedAt:0, nativeOnly:false, pendingNative:null,
     }));
-    let active = null;
-    let action = 0;
+    const buffers = new Map();
+    let context = null, master = null, active = null, epoch = 0;
     const announce = message => { status.textContent = message; };
+    const current = (clip, ticket) => enabled.checked && active?.clip === clip && active.ticket === ticket;
+    const phase = clip => clip.source
+      ? Math.min(clip.buffer.duration, clip.offset + Math.max(0, context.currentTime - clip.startedAt)) : clip.offset;
     enabled.checked = false;
     volume.value = '85';
     volumeValue.value = '85%';
 
     function update(clip) {
-      const playing = !clip.audio.paused && !clip.audio.ended;
-      const paused = clip.audio.currentTime > 0 && !clip.audio.ended;
-      const verb = playing ? 'Pause' : paused ? 'Resume' : 'Play';
+      const loading = active?.clip === clip && active.backend === 'loading';
+      const playing = !!clip.source || (!clip.audio.paused && !clip.audio.ended);
+      const paused = clip.offset > 0 || (clip.audio.currentTime > 0 && !clip.audio.ended);
+      const verb = loading ? 'Loading…' : playing ? 'Pause' : paused ? 'Resume' : 'Play';
       clip.button.textContent = verb;
-      clip.button.setAttribute('aria-label', `${verb} ${clip.title}`);
+      clip.button.setAttribute('aria-label', `${loading ? 'Cancel loading' : verb} ${clip.title}`);
       clip.button.setAttribute('aria-pressed', String(playing));
       clip.card.classList.toggle('playing', playing);
-      if (Number.isFinite(clip.audio.duration) && clip.audio.duration > 0) {
-        clip.progress.max = clip.audio.duration;
-      }
-      clip.progress.value = Math.min(clip.progress.max, clip.audio.currentTime || 0);
+      clip.progress.value = clip.source ? phase(clip) : clip.offset || clip.audio.currentTime || 0;
     }
-
-    function pauseOthers(current) {
-      active = current;
-      for (const clip of clips) {
-        if (clip !== current) {
-          clip.audio.pause();
-          update(clip);
-        }
-      }
+    function audioContext() {
+      if (context && context.state !== 'closed') return context;
+      const Constructor = window.AudioContext || window.webkitAudioContext;
+      if (!Constructor) throw new Error('Audio buffers unavailable');
+      context = new Constructor();
+      master = context.createGain();
+      master.gain.value = Number(volume.value) / 100;
+      master.connect(context.destination);
+      return context;
     }
-
-    function stopAll(message = 'All clips stopped.') {
-      action++;
-      active = null;
-      for (const clip of clips) {
+    function stop(clip, reset = true, keepNative = false) {
+      if (clip.pendingNative && !keepNative) clip.pendingNative.cancelled = true;
+      if (clip.source) {
+        clip.offset = reset ? 0 : phase(clip);
+        const source = clip.source, gain = clip.gain;
+        clip.source = null; clip.gain = null;
+        source.onended = null;
+        try { source.stop(); } catch (_) { /* Already ended. */ }
+        source.disconnect(); gain.disconnect();
+      } else if (reset) clip.offset = 0;
+      if (!keepNative) {
         clip.audio.pause();
-        try { clip.audio.currentTime = 0; } catch (_) { /* Metadata may not be loaded yet. */ }
-        update(clip);
-      }
-      announce(message);
-    }
-
-    function syncEnabled() {
-      if (!enabled.checked) stopAll('Audio off. Enable playback when ready.');
-      for (const clip of clips) {
-        clip.button.disabled = !enabled.checked;
-        clip.audio.controls = enabled.checked;
-        clip.audio.hidden = !enabled.checked;
-        if (clip.hint) {
-          clip.hint.textContent = 'Enable audio playback above to show native controls.';
-          clip.hint.hidden = enabled.checked;
-        }
-      }
-      if (enabled.checked) announce('Audio enabled. Choose Before or After to listen.');
-    }
-
-    for (const clip of clips) {
-      clip.audio.autoplay = false;
-      clip.audio.volume = .85;
-      clip.button.addEventListener('click', async () => {
-        if (!enabled.checked) return;
-        if (!clip.audio.paused && !clip.audio.ended) {
-          action++;
-          clip.audio.pause();
-          update(clip);
-          return;
-        }
-        const ticket = ++action;
-        pauseOthers(clip);
-        if (clip.audio.ended) clip.audio.currentTime = 0;
-        announce(`Loading ${clip.title}…`);
-        try {
-          await clip.audio.play();
-        } catch (_) {
-          if (ticket === action && enabled.checked && active === clip) {
-            active = null;
-            announce(`Could not play ${clip.title}. Try its native controls or download the WAV.`);
-          }
-          update(clip);
-        }
-      });
-      clip.audio.addEventListener('play', () => {
-        // A queued event may belong to playback already stopped or superseded.
-        if (clip.audio.paused || clip.audio.ended) {
-          update(clip);
-          return;
-        }
-        if (!enabled.checked) {
-          clip.audio.pause();
-          return;
-        }
-        pauseOthers(clip);
-        announce(`Playing ${clip.title}.`);
-        update(clip);
-      });
-      clip.audio.addEventListener('pause', () => {
-        update(clip);
-        if (enabled.checked && active === clip && !clip.audio.ended) announce(`Paused ${clip.title}.`);
-      });
-      clip.audio.addEventListener('ended', () => {
-        update(clip);
-        if (active === clip) {
-          active = null;
-          announce(`Finished ${clip.title}.`);
-        }
-      });
-      clip.audio.addEventListener('error', () => {
-        update(clip);
-        if (enabled.checked && active === clip) {
-          active = null;
-          announce(`Could not load ${clip.title}. Download the WAV to listen.`);
-        }
-      });
-      for (const event of ['timeupdate', 'loadedmetadata', 'durationchange', 'seeked']) {
-        clip.audio.addEventListener(event, () => update(clip));
+        if (reset) try { clip.audio.currentTime = 0; } catch (_) { /* No metadata yet. */ }
       }
       update(clip);
     }
-    enabled.addEventListener('change', syncEnabled);
+    function stopOthers(clip) { clips.forEach(other => { if (other !== clip) stop(other); }); }
+    function stopAll(message = 'All clips stopped.') {
+      ++epoch; active = null;
+      clips.forEach(clip => stop(clip));
+      announce(message);
+    }
+    function syncEnabled() {
+      clips.forEach(clip => {
+        // Explicit Play is itself permission to enable playback.
+        clip.button.disabled = false;
+        clip.audio.controls = enabled.checked;
+        clip.audio.hidden = !enabled.checked;
+        if (clip.hint) {
+          clip.hint.textContent = 'Choose Play above, or enable audio to use native controls.';
+          clip.hint.hidden = enabled.checked;
+        }
+      });
+    }
+    function loadBuffer(clip, ctx) {
+      const path = clip.audio.src;
+      if (!buffers.has(path)) {
+        const loading = fetch(path, {credentials:'same-origin'}).then(response => {
+          if (!response.ok) throw new Error('Audio unavailable');
+          return response.arrayBuffer();
+        }).then(bytes => new Promise((resolve, reject) => ctx.decodeAudioData(bytes, resolve, reject)));
+        buffers.set(path, loading);
+        loading.catch(() => { if (buffers.get(path) === loading) buffers.delete(path); });
+      }
+      return buffers.get(path);
+    }
+    async function nativePlay(clip, ticket) {
+      if (!current(clip, ticket)) return;
+      clip.nativeOnly = true;
+      if (clip.offset > 0) try { clip.audio.currentTime = clip.offset; } catch (_) { /* Native seek after metadata. */ }
+      clip.offset = 0;
+      if (clip.audio.ended) clip.audio.currentTime = 0;
+      active = {clip, ticket, backend:'native'};
+      clip.card.dataset.playback = 'native';
+      const pending = {ticket, cancelled:false};
+      clip.pendingNative = pending;
+      try {
+        await clip.audio.play();
+        if ((pending.cancelled || !current(clip, ticket)) && clip.pendingNative === pending) clip.audio.pause();
+      }
+      catch (_) {
+        if (current(clip, ticket)) {
+          active = null;
+          clip.card.querySelector('.native').open = true;
+          announce(`Use the native Play control for ${clip.title}, or download its WAV.`);
+        }
+      }
+      if (clip.pendingNative === pending) clip.pendingNative = null;
+      update(clip);
+    }
+    async function start(clip) {
+      const ticket = ++epoch;
+      enabled.checked = true; syncEnabled();
+      // Resume in the click's synchronous call stack, before fetching or decoding.
+      let ctx = null, resumed = null;
+      if (/^https?:$/.test(location.protocol) && !clip.nativeOnly && typeof fetch === 'function') {
+        try { ctx = audioContext(); resumed = ctx.resume(); } catch (_) { ctx = null; }
+      }
+      stopOthers(clip);
+      active = {clip, ticket, backend:'loading'};
+      update(clip); announce(`Loading ${clip.title}…`);
+      if (!ctx) { await nativePlay(clip, ticket); return; }
+      try {
+        await resumed;
+        const buffer = await loadBuffer(clip, ctx);
+        if (!current(clip, ticket)) return;
+        clip.buffer = buffer;
+        if (clip.offset >= buffer.duration) clip.offset = 0;
+        const source = ctx.createBufferSource(), gain = ctx.createGain();
+        source.buffer = buffer;
+        source.connect(gain).connect(master);
+        clip.source = source; clip.gain = gain;
+        clip.startedAt = ctx.currentTime + .005;
+        gain.gain.setValueAtTime(0, clip.startedAt);
+        gain.gain.linearRampToValueAtTime(1, clip.startedAt + .01);
+        source.onended = () => {
+          source.disconnect(); gain.disconnect();
+          if (clip.source !== source) return;
+          clip.source = null; clip.gain = null; clip.offset = 0;
+          if (current(clip, ticket)) { active = null; announce(`Finished ${clip.title}.`); }
+          update(clip); clip.progress.value = buffer.duration;
+        };
+        active = {clip, ticket, backend:'buffer'};
+        clip.card.dataset.playback = 'buffer';
+        clip.progress.max = buffer.duration;
+        source.start(clip.startedAt, clip.offset);
+        update(clip); announce(`Playing ${clip.title}.`);
+      } catch (_) {
+        if (!current(clip, ticket)) return;
+        if (clip.source) stop(clip, false);
+        await nativePlay(clip, ticket);
+      }
+    }
+    clips.forEach(clip => {
+      clip.audio.autoplay = false; clip.audio.volume = .85;
+      clip.button.addEventListener('click', () => {
+        if (active?.clip === clip && active.backend === 'loading') {
+          ++epoch; active = null; stop(clip); announce('Playback cancelled.');
+        } else if (clip.source || (!clip.audio.paused && !clip.audio.ended)) {
+          ++epoch; active = null; stop(clip, false); announce(`Paused ${clip.title}.`);
+        } else start(clip);
+      });
+      clip.audio.addEventListener('play', () => {
+        if (clip.audio.paused || clip.audio.ended) return;
+        const pending = clip.pendingNative;
+        if (!enabled.checked || (pending && (pending.cancelled || !current(clip, pending.ticket)))) { clip.audio.pause(); return; }
+        if (active?.clip !== clip || active.backend !== 'native') {
+          const ticket = ++epoch;
+          stopOthers(clip); stop(clip, true, true);
+          active = {clip, ticket, backend:'native'};
+          clip.nativeOnly = true; clip.card.dataset.playback = 'native';
+        }
+        update(clip); announce(`Playing ${clip.title}.`);
+      });
+      clip.audio.addEventListener('pause', () => {
+        update(clip);
+        if (active?.clip === clip && active.backend === 'native' && !clip.audio.ended) announce(`Paused ${clip.title}.`);
+      });
+      clip.audio.addEventListener('ended', () => {
+        if (active?.clip === clip && active.backend === 'native') { active = null; announce(`Finished ${clip.title}.`); }
+        update(clip);
+      });
+      clip.audio.addEventListener('error', () => {
+        if (active?.clip === clip && active.backend === 'native') {
+          active = null; announce(`Use the WAV download for ${clip.title}.`);
+        }
+        update(clip);
+      });
+      ['timeupdate','loadedmetadata','seeked'].forEach(event => clip.audio.addEventListener(event, () => update(clip)));
+      update(clip);
+    });
+    function progress() {
+      if (active?.backend === 'buffer') active.clip.progress.value = phase(active.clip);
+      requestAnimationFrame(progress);
+    }
+    requestAnimationFrame(progress);
+    enabled.addEventListener('change', () => {
+      if (!enabled.checked) stopAll('Audio off. Choose Play when ready.');
+      else announce('Audio enabled. Choose Before or After to listen.');
+      syncEnabled();
+    });
     volume.addEventListener('input', () => {
-      const value = Number(volume.value);
-      volumeValue.value = `${value}%`;
-      for (const clip of clips) clip.audio.volume = value / 100;
+      const value = Number(volume.value) / 100;
+      volumeValue.value = `${volume.value}%`;
+      clips.forEach(clip => { clip.audio.volume = value; });
+      if (master) master.gain.setTargetAtTime(value, context.currentTime, .01);
     });
     document.getElementById('stop-all').addEventListener('click', () => stopAll());
-    document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') stopAll();
-    });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') stopAll(); });
     syncEnabled();
   })();
   </script>
