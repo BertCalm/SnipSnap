@@ -6,6 +6,16 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
+**Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
+renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry
+audition generator test the gesture of more performers joining. UNISON,
+RESPONSE and marked-vowel DRONE use stable identities and complete source
+regions. This stage is a standalone rendering API; phone source preparation,
+normal patch registration, factory presets, 48 voices and HOLD remain later
+work. See [CONFLUENCE.md](CONFLUENCE.md) for reproduction, source attribution,
+portable audition recipes and listening limits. The owner's listening verdict
+is pending.
+
 ## Why this is cheaper than it sounds
 
 Pads are one-shots. That means **synthesis here is offline rendering** — a

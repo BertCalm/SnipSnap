@@ -58,6 +58,17 @@ tasks.register<JavaExec>("generateWickKit") {
     args("${rootDir}/testkit")
 }
 
+/** First recorded-voice Confluence proof; no synthetic vocal placeholders. */
+tasks.register<JavaExec>("generateConfluenceAudition") {
+    group = "distribution"
+    description = "Render Confluence recorded-source, crowd, phrase and identity comparisons with reproducible recipes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ConfluenceAuditionGenerator")
+    workingDir = rootDir
+    args("${rootDir}/testkit/confluence-audition")
+}
+
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
 tasks.register<JavaExec>("generateOspreyAudition") {
     group = "distribution"

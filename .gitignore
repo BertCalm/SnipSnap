@@ -1,6 +1,8 @@
 build/
 testkit/overlap-audition/
 testkit/overlap-audition-r1/
+testkit/confluence-audition/
+testkit/confluence-audition-site/
 testkit/osprey-audition/
 testkit/osprey-revision-audition/
 testkit/osprey-gentle-audition/
@@ -34,6 +36,7 @@ app/.cxx/
 # beside them ARE the design; the seeded page is rebuilt from those and
 # lives on the artifact, so it is never committed.
 design/*/*.html
+!design/confluence-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
