@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Four less-noisy airy candidates with eight immutable published references. */
+tasks.register<JavaExec>("generateFacetAirRevision") {
+    group = "distribution"
+    description = "Render the reduced-veil AIRY study; verify and preserve published Glass/Airy references."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FacetAirRevisionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("facetAirOutput").orNull ?: "${rootDir}/testkit/facet-audition")
+}
+
 /** Twelve bounded directional light studies, alongside the unchanged published R2 reference. */
 tasks.register<JavaExec>("generateFacetLightStudy") {
     group = "distribution"

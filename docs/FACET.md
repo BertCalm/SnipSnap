@@ -11,7 +11,39 @@ sample-free, deterministic offline mono renderer at 44.1 kHz, with 4× internal
 oversampling. It is a finite listening prototype, not the complete six-voice
 engine in the supplied engineering specification.
 
-## Light study after R2
+## Airy refinement
+
+The owner found the light study “way better,” but heard too much white noise
+in Airy wash. `AIRY_RESONANCE` adds a comparison with only the broad veil
+coefficient reduced from .070 to .016 (about 13 dB). Its modal excitation,
+decays, pitch anchor, geometry, timing and fixed noise sequence are identical
+to `AIRY_WASH`. Glass glints and the original Airy wash remain reproducible;
+the study version and random namespace stay at 1.
+
+`generateFacetAirRevision` presents Glass glints, original Airy wash and the
+less-noise Airy comparison at C3/C4 in both voices. Eight published clips are
+reused and checked against their original PCM hashes; four new clips are
+rendered. Original reports, settings, source packages and individual WAVs
+remain available. The current first-listen ZIP replaces the duplicate prior
+study ZIP to stay within the hosting budget. The R2 archive remains directly
+accessible. This is a listening refinement, without a factory default change.
+
+To update an existing compact light-study distribution, run
+`./gradlew :synth:generateFacetAirRevision -PfacetAirOutput=/path/to/output`.
+For a fresh distribution, first generate R2, generate the initial light study,
+and run the compact hosting packager as described below. The Airy revision
+then writes `air-revision/`, `air-revision.zip` and the current page manifest.
+The original light-study manifest is retained at
+`light-study/published-manifest.json`; its retired ZIP link is historical.
+
+All **33 focused checks passed** without failures or skips: the existing
+31 checks plus published-audio goldens and a reduced-noise spectral check.
+The latter verifies unchanged geometry and timing, lower off-mode energy
+and spectral flatness, and retained modal body in both voices. Existing
+light-study bounds and 4×/8× convergence checks include the new direction.
+The full repository gate has not been rerun for this refinement.
+
+## Initial light study after R2
 
 The owner heard R2 as an Operation buzzer rather than light shimmer. Its
 richer harmonic spectrum did not establish the intended identity. The next

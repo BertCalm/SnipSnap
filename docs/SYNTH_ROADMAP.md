@@ -50,7 +50,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ### FACET — mirrorball-driven spectral pads
 
-**Light study implemented after R2 feedback; listening acceptance pending.** The
+**Light study received positive feedback; Airy refinement in audition.** The
 owner heard R1 as lo-fi and dead while confirming its macro controls worked,
 then heard R2 as an Operation buzzer rather than light shimmer. R1's
 full repository gate passed 4,944 tests in approximately 86 minutes. R2 passed
@@ -65,7 +65,11 @@ versions, at velocity .8 and seed 17. The combined focused gate passed
 31 checks with no failures or skips, including five new study tests; the
 full repository gate has not been rerun. Listening acceptance remains pending.
 It is not model 3, a patch-registry entry or a new default. The prior R2
-study remains available in collapsed listening-page sections.
+study remains available in collapsed listening-page sections. The owner found
+the light study “way better,” but Airy wash too noise-heavy. A new
+`AIRY_RESONANCE` comparison lowers only its broad veil from .070 to .016,
+retaining the original resonances, movement and random source. Glass and the
+original Airy stay exact; no factory default changes.
 BLOOM and
 SHIMMER explore twelve generated harmonic beams, a deterministic nested facet
 layout, moving spectral routes and shared resonance. ILLUMINATE, ELEVATION,

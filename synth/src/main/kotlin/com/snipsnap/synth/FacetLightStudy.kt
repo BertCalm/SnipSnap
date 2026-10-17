@@ -15,7 +15,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class FacetLightDirection { GLASS_GLINTS, AIRY_WASH }
+enum class FacetLightDirection { GLASS_GLINTS, AIRY_WASH, AIRY_RESONANCE }
 
 /** A finite listening study, separate from the saved FACET source models. */
 object FacetLightStudy {
@@ -66,7 +66,14 @@ object FacetLightStudy {
         val rate = Dsp.RATE * options.oversample
         val frames = (seconds * Dsp.RATE).toInt()
         val frequency = 440.0 * 2.0.pow((midi - 69) / 12.0)
-        val airy = direction == FacetLightDirection.AIRY_WASH
+        val airy = direction != FacetLightDirection.GLASS_GLINTS
+        // Keep the published studies exact; the new direction changes only
+        // the broad veil level beneath the same noise-excited resonances.
+        val veilGain = when (direction) {
+            FacetLightDirection.GLASS_GLINTS -> .012
+            FacetLightDirection.AIRY_WASH -> .070
+            FacetLightDirection.AIRY_RESONANCE -> .016
+        }
         val ratios = if (airy) airRatios else glassRatios
         val poleReal = DoubleArray(MODES)
         val poleImag = DoubleArray(MODES)
@@ -157,7 +164,7 @@ object FacetLightStudy {
             }
             val routedIllumination = route.sum().toDouble().coerceAtLeast(0.0)
             val filteredAir = veilFilter.process(airFilter.process(noiseValues[MODES].toFloat())).toDouble()
-            val veil = filteredAir * (if (airy) .070 else .012) * sqrt(routedIllumination) * envelope
+            val veil = filteredAir * veilGain * sqrt(routedIllumination) * envelope
             val root = sin(2.0 * PI * frequency * t + .4) * .004 * (.25 + .75 * illumination) * envelope
             // A gentle cap belongs to the finite study envelope, not a signal limiter.
             val cap = 1.0 - smooth(((t - (seconds - min(.32, tail * .6))) / min(.32, tail * .6)).coerceIn(0.0, 1.0))

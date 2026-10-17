@@ -34,8 +34,8 @@ object FacetLightStudyGenerator {
         val variant get() = direction?.name?.lowercase() ?: "r2"
         val group get() = "light_${voice.name.lowercase()}_$midi"
         val id get() = "${group}_$variant"
-        val order get() = when (direction) { null -> 0; FacetLightDirection.GLASS_GLINTS -> 1; FacetLightDirection.AIRY_WASH -> 2 }
-        val label get() = when (direction) { null -> "R2 reference"; FacetLightDirection.GLASS_GLINTS -> "Glass glints"; FacetLightDirection.AIRY_WASH -> "Airy wash" }
+        val order get() = when (direction) { null -> 0; FacetLightDirection.GLASS_GLINTS -> 1; FacetLightDirection.AIRY_WASH -> 2; FacetLightDirection.AIRY_RESONANCE -> error("Use FacetAirRevisionGenerator") }
+        val label get() = when (direction) { null -> "R2 reference"; FacetLightDirection.GLASS_GLINTS -> "Glass glints"; FacetLightDirection.AIRY_WASH -> "Airy wash"; FacetLightDirection.AIRY_RESONANCE -> error("Use FacetAirRevisionGenerator") }
         val sourceClass get() = if (direction == null) Facet::class.java.name else FacetLightStudy::class.java.name
     }
 
@@ -189,6 +189,7 @@ object FacetLightStudyGenerator {
         null -> "The published R2 source, rendered unchanged and checked against its original PCM24 hashes."
         FacetLightDirection.GLASS_GLINTS -> "A directional study of brief glass-like reflections and lingering resonances. Compare the texture and the space between glints."
         FacetLightDirection.AIRY_WASH -> "A directional study of diffuse, overlapping reflections. Compare the airy texture and continuity against the reference."
+        FacetLightDirection.AIRY_RESONANCE -> error("Use FacetAirRevisionGenerator")
     }
 
     private fun preservePrevious(root: File): Previous {
