@@ -21,6 +21,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -40,6 +41,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +60,7 @@ import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.etchedBox
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -68,6 +71,8 @@ import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Names
+import com.snipsnap.kit.Project
+import com.snipsnap.kit.SessionBuilder
 import com.snipsnap.kit.Severity
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
@@ -77,6 +82,7 @@ import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.ExportWizardModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.ProjectSessionModel
 import com.snipsnap.shell.Scheme
 import java.io.File
 import java.io.IOException
@@ -227,6 +233,19 @@ fun ExportScreen(
     onNote: (LandingNote.Note) -> Unit,
     /** NO_KIT_FOR_EXPORT's own route. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
+    /**
+     * The open project, for OUT's second card (`docs/SCREEN_PLAN_2026_10.md`
+     * §3.5). The card is drawn only when both this and [shelfRoot] are
+     * given, so a caller that has no project (the device test, an old
+     * route) gets card one and the ALSO list exactly as before.
+     */
+    project: Project? = null,
+    /** The shelf the [project]'s kits live under. */
+    shelfRoot: File? = null,
+    /** ALSO ▸ SHARE KIT: this kit packed as one file and handed to the chooser (KitScreen's old SHARE). Enabled when the open kit has pads. */
+    onShareKit: () -> Unit = {},
+    /** ALSO ▸ BEAT WRITERS: the door to BEAT, where bounce, MIDI and chart are written from. */
+    onBeatWriters: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -305,7 +324,7 @@ fun ExportScreen(
         return
     }
 
-    ExportContent(activeSession, context, appScope, scheme, onToast, onNote)
+    ExportContent(activeSession, context, appScope, scheme, onToast, onNote, project, shelfRoot, onShareKit, onBeatWriters)
 }
 
 @Composable
@@ -317,6 +336,10 @@ private fun ExportContent(
     onToast: (String) -> Unit,
     /** See [ExportScreen]'s own `onNote`: the `Blocked` branch below is what needs it. */
     onNote: (LandingNote.Note) -> Unit,
+    project: Project?,
+    shelfRoot: File?,
+    onShareKit: () -> Unit,
+    onBeatWriters: () -> Unit,
 ) {
     val model = session.model
     val kit = session.kit
@@ -578,20 +601,7 @@ private fun ExportContent(
                     // the composable body.
                     val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
-                    // A self-nesting format (see ExportFormat.selfNesting's
-                    // KDoc) already nests the kit's own name inside
-                    // `destRoot` itself; handing it our own kit-name
-                    // subfolder on top would double- or triple-nest it.
-                    val destRoot = if (model.format.selfNesting) {
-                        root
-                    } else {
-                        // Sanitized, not the raw kit name — GrooveScreen's
-                        // own MIDI export dir already does this (a kit name
-                        // free-typed by a user can carry a path separator or
-                        // other filesystem-hostile character); this and
-                        // that one agree now.
-                        File(root, Names.sanitizeStem(kit.name))
-                    }
+                    val destRoot = dubDestRoot(root, kit.name, model.format.selfNesting)
                     // overwrite only on the second tap, and only when the
                     // armed path is the one this write is actually about
                     // (finding 18). A stale arm - format changed, kit
@@ -708,130 +718,356 @@ private fun ExportContent(
         else -> 0
     }
 
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
-                .lcdPanel(scheme)
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
-                TapeText(Copy.countOf(model.fileCount, "FILE", "FILES"), TapeType.lcdSmall, scheme.lcdInk.tape)
+    // One scroll for the whole page: card one (the wizard, its button now
+    // the last thing in its card rather than pinned under the page), card
+    // two, and the ALSO list.
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        OutCard("THIS KIT", scheme) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(Layout.LCD_HEADER_H.dp)
+                    .lcdPanel(scheme)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
+                    TapeText(Copy.countOf(model.fileCount, "FILE", "FILES"), TapeType.lcdSmall, scheme.lcdInk.tape)
+                }
+            }
+
+            if (model.stage == ExportWizardModel.Stage.COMPLETE) {
+                val outcome = session.lastOutcome
+                DoneContent(
+                    destinationPath = outcome?.primary?.absolutePath ?: "",
+                    readBack = outcome?.readBack.orEmpty(),
+                    scheme = scheme,
+                )
+                // Only when the write landed one self-contained file (XPN,
+                // MIDI — see exportShareMime's KDoc): a folder (PROGRAM_FOLDER,
+                // EXPANSION) or a file with a companion (MPC3/SFZ/DecentSampler)
+                // can't travel as a single content URI, so there's nothing here
+                // for SHARE to offer rather than a disabled button that lies
+                // about what a tap would do.
+                if (outcome != null && exportShareMime(outcome.format) != null &&
+                    outcome.companion == null && outcome.primary.isFile
+                ) {
+                    ActionButton(
+                        Copy.EXPORT_SHARE_LABEL,
+                        scheme,
+                        // Always enabled, unlike its two COMPLETE-stage siblings
+                        // below (`!session.busy`): `shareExport()` only reads
+                        // the already-settled `session.lastOutcome` and calls
+                        // synchronous `ShareOut.send` — it never touches
+                        // `session.busy`/`cardPending`, so there is nothing for
+                        // a busy card copy to race here. Gating this on `busy`
+                        // would cost the user a tap with no safety benefit.
+                        enabled = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = ::shareExport,
+                    )
+                }
+                // The card leg this dub held back (persona review P2.3). It
+                // sits here rather than in the toast that announced it for the
+                // reason `replaceWhat` exists on the phone side: a toast is
+                // gone in seconds and the decision is not. Absent entirely
+                // when nothing is waiting — the dub that found the card clear
+                // has already put it there, and a button offering to do it
+                // again would be a second way to lose the same files.
+                session.cardPending?.let { pending ->
+                    ActionButton(
+                        Copy.putOnCardOver(pending.what),
+                        scheme,
+                        enabled = !session.busy,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = ::putOnCard,
+                    )
+                }
+                // `!session.busy`, not the `true` this was: until the card
+                // offer existed nothing ran asynchronously from this stage, so
+                // the reset was always safe to tap. A card copy in flight
+                // makes it unsafe — `eject` clears the pending offer and
+                // resets the wizard, and doing that underneath a running copy
+                // would leave the stamp and the toast landing on a wizard that
+                // had already moved on.
+                PrimaryAction(label = model.writeLabel, enabled = !session.busy, onClick = ::eject)
+            } else {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    FindingsCard(model.preflight, scheme)
+                    CardRow(
+                        tree = cardTree,
+                        enabled = !session.busy,
+                        scheme = scheme,
+                        onPick = { cardPicker.launch(null) },
+                        onForget = {
+                            forgetCard()
+                            onToast(Copy.CARD_FORGOTTEN)
+                        },
+                    )
+                    FormatPickerRow(
+                        current = model.format,
+                        open = formatPickerOpen,
+                        // `session.busy` (Compose-tracked) rather than
+                        // `model.stage` directly — `stage` flips to WRITING on
+                        // the IO thread inside `write()`, so it can lag a tick
+                        // behind `busy` going true; `setFormat()` no-ops off
+                        // READY either way, but this keeps the row's own
+                        // enabled state from racing the plain var.
+                        enabled = !session.busy,
+                        scheme = scheme,
+                        onToggle = { formatPickerOpen = !formatPickerOpen },
+                        onPick = { picked ->
+                            model.setFormat(picked)
+                            // A different format writes to a different place, so
+                            // a confirmation taken against the old destination is
+                            // not consent for this one (finding 18).
+                            session.overwriting = null
+                            // Remembered for next time: finding 7's other half.
+                            // Written on the pick rather than on the dub, so a
+                            // change of mind is kept even if nothing is written.
+                            prefs.edit().putString(PREF_EXPORT_FORMAT, picked.id).apply()
+                            formatPickerOpen = false
+                            revision++
+                        },
+                    )
+                    DubProgressCard(model, filesShown, session.busy, scheme)
+                }
+                PrimaryAction(
+                    // Armed, the button names what it would destroy. Unarmed it
+                    // reads exactly as before. Until this, the two were the same
+                    // words and the only warning was a toast already gone.
+                    label = session.overwriting?.let { Copy.replaceWhat(it.name) } ?: model.writeLabel,
+                    enabled = !session.busy && !model.blocked && model.stage == ExportWizardModel.Stage.READY,
+                    onClick = ::startWrite,
+                )
             }
         }
 
-        if (model.stage == ExportWizardModel.Stage.COMPLETE) {
-            val outcome = session.lastOutcome
+        if (project != null && shelfRoot != null) {
+            ProjectCard(project, shelfRoot, context, appScope, scheme, onToast, onNote)
+        }
+
+        AlsoList(
+            scheme = scheme,
+            canShare = kit.pads.isNotEmpty(),
+            onShareKit = onShareKit,
+            onBeatWriters = onBeatWriters,
+        )
+    }
+}
+
+// ---------- the cards ----------
+
+/**
+ * Where a dub lands under the app's exports folder [root]: [root] itself for
+ * a self-nesting format (see [ExportFormat.selfNesting]'s KDoc — it already
+ * nests the name inside `destRoot`, and a subfolder on top would double- or
+ * triple-nest it), otherwise a folder named for [name].
+ *
+ * Sanitized, not the raw name — GrooveScreen's own MIDI export dir already
+ * does this (a name free-typed by a user can carry a path separator or other
+ * filesystem-hostile character), and this and that one agree. Both cards
+ * resolve their destination here: the kit wizard with the kit's name, THE
+ * PROJECT with the project's.
+ */
+private fun dubDestRoot(root: File, name: String, selfNesting: Boolean): File =
+    if (selfNesting) root else File(root, Names.sanitizeStem(name))
+
+/** One OUT card: an etched box under a pixelSmall ink3 heading line, as the shelf's section headers are drawn. */
+@Composable
+private fun OutCard(heading: String, scheme: Scheme, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().etchedBox(scheme).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        TapeText(heading, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        content()
+    }
+}
+
+/** What the project card has read off disk: held in state so the button re-renders when it changes. */
+private class ProjectRead(
+    val subtitle: String,
+    val preflight: List<Pair<String, List<Finding>>>,
+    val missing: List<String>,
+    val blocked: Boolean,
+)
+
+/**
+ * THE PROJECT (plan section 3.5, card two): every held kit on a track, the
+ * beat on the active one, the project's tempo — one WRITE SESSION over
+ * [ProjectSessionModel], with card one's preflight presentation above it
+ * (one block per kit) and card one's completion leg below it.
+ *
+ * The write runs on [appScope] like card one's, so it survives a tab
+ * switch. The model and its state are `remember`ed per project, not hoisted
+ * into `App` the way [ExportSession] is: a tab switch mid-write remounts a
+ * fresh READY card over a write that is still landing.
+ */
+@Composable
+private fun ProjectCard(
+    project: Project,
+    shelfRoot: File,
+    context: Context,
+    appScope: CoroutineScope,
+    scheme: Scheme,
+    onToast: (String) -> Unit,
+    onNote: (LandingNote.Note) -> Unit,
+) {
+    val model = remember(project, shelfRoot) { ProjectSessionModel(project, shelfRoot) }
+    val scope = rememberCoroutineScope()
+    // The model is a plain mutable class; what the card draws from it is
+    // copied into Compose state at each event so the button re-renders.
+    var stage by remember(model) { mutableStateOf(model.stage) }
+    var read by remember(model) { mutableStateOf<ProjectRead?>(null) }
+    var busy by remember(model) { mutableStateOf(false) }
+    var landed by remember(model) { mutableStateOf<SessionBuilder.Result?>(null) }
+    // What a first WRITE SESSION found already at the destination; the next
+    // tap replaces it. Card one's arm, with card one's timer.
+    var overwriting by remember(model) { mutableStateOf<File?>(null) }
+
+    LaunchedEffect(overwriting) {
+        if (overwriting == null) return@LaunchedEffect
+        delay(EXPORT_ARM_MS)
+        overwriting = null
+    }
+
+    // PREFLIGHT reads every kit's pad WAV headers, and the subtitle, the
+    // missing-kit list and `blocked` all touch the disk: one IO block under
+    // the same KitWrites lock card one's snapshot read takes, with
+    // `withLock` outside `runCatching` so a cancellation is not swallowed.
+    suspend fun refresh() {
+        val fresh = withContext(Dispatchers.IO) {
+            KitWrites.mutex.withLock {
+                runCatching {
+                    val pf = model.runPreflight()
+                    ProjectRead(model.subtitle, pf, model.missingKits, model.blocked)
+                }.getOrNull()
+            }
+        }
+        if (fresh == null) onToast(Copy.KIT_WONT_OPEN) else read = fresh
+    }
+    LaunchedEffect(model) { refresh() }
+
+    fun writeSession() {
+        val now = read
+        if (busy || stage != ProjectSessionModel.Stage.READY || now == null || now.blocked) return
+        busy = true
+        val replace = overwriting != null
+        appScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    val root = Exports.dir(context) ?: throw IOException("external storage unavailable")
+                    val destRoot = dubDestRoot(root, project.name, ExportFormat.MPC3_PROJECT.selfNesting)
+                    // overwrite only on the second tap, as card one's: the
+                    // model's own default is true, which would never ask.
+                    model.write(destRoot, overwrite = replace, withMixdown = false)
+                }
+                when (result) {
+                    is ProjectSessionModel.WriteResult.WouldOverwrite -> {
+                        overwriting = result.path
+                        onToast(Copy.dubWouldOverwrite(result.path.name))
+                    }
+                    is ProjectSessionModel.WriteResult.Done -> {
+                        overwriting = null
+                        landed = result.result
+                        onToast(Copy.DUB_DONE)
+                    }
+                    is ProjectSessionModel.WriteResult.Blocked -> {
+                        overwriting = null
+                        // Nothing was written; the card re-reads so the
+                        // missing-kit line and the checklist say why.
+                        refresh()
+                        val boxed = LandingNote.exportBlocked(
+                            result.findings.flatMap { (kitName, findings) ->
+                                findings.map { it.copy(message = "$kitName: ${it.message}") }
+                            },
+                        )
+                        if (boxed != null) onNote(boxed) else onToast(Copy.EXPORT_BLOCKED)
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "writeSession: session write failed", e)
+                onToast(Copy.DUB_FAILED)
+            } finally {
+                busy = false
+                stage = model.stage
+            }
+        }
+    }
+
+    fun writeAnother() {
+        if (busy || stage != ProjectSessionModel.Stage.COMPLETE) return
+        model.eject()
+        stage = model.stage
+        landed = null
+        onToast(Copy.CARD_EJECTED)
+        scope.launch { refresh() }
+    }
+
+    OutCard("THE PROJECT", scheme) {
+        if (stage == ProjectSessionModel.Stage.COMPLETE) {
             DoneContent(
-                destinationPath = outcome?.primary?.absolutePath ?: "",
-                readBack = outcome?.readBack.orEmpty(),
+                destinationPath = landed?.xpj?.absolutePath ?: "",
+                // The session has no read-back: X-Ray reads a kit's files,
+                // not a project's .xpj, so there is nothing to diff.
+                readBack = emptyList(),
                 scheme = scheme,
-                modifier = Modifier.weight(1f),
             )
-            // Only when the write landed one self-contained file (XPN,
-            // MIDI — see exportShareMime's KDoc): a folder (PROGRAM_FOLDER,
-            // EXPANSION) or a file with a companion (MPC3/SFZ/DecentSampler)
-            // can't travel as a single content URI, so there's nothing here
-            // for SHARE to offer rather than a disabled button that lies
-            // about what a tap would do.
-            if (outcome != null && exportShareMime(outcome.format) != null &&
-                outcome.companion == null && outcome.primary.isFile
-            ) {
-                ActionButton(
-                    Copy.EXPORT_SHARE_LABEL,
-                    scheme,
-                    // Always enabled, unlike its two COMPLETE-stage siblings
-                    // below (`!session.busy`): `shareExport()` only reads
-                    // the already-settled `session.lastOutcome` and calls
-                    // synchronous `ShareOut.send` — it never touches
-                    // `session.busy`/`cardPending`, so there is nothing for
-                    // a busy card copy to race here. Gating this on `busy`
-                    // would cost the user a tap with no safety benefit.
-                    enabled = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = ::shareExport,
-                )
-            }
-            // The card leg this dub held back (persona review P2.3). It
-            // sits here rather than in the toast that announced it for the
-            // reason `replaceWhat` exists on the phone side: a toast is
-            // gone in seconds and the decision is not. Absent entirely
-            // when nothing is waiting — the dub that found the card clear
-            // has already put it there, and a button offering to do it
-            // again would be a second way to lose the same files.
-            session.cardPending?.let { pending ->
-                ActionButton(
-                    Copy.putOnCardOver(pending.what),
-                    scheme,
-                    enabled = !session.busy,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = ::putOnCard,
-                )
-            }
-            // `!session.busy`, not the `true` this was: until the card
-            // offer existed nothing ran asynchronously from this stage, so
-            // the reset was always safe to tap. A card copy in flight
-            // makes it unsafe — `eject` clears the pending offer and
-            // resets the wizard, and doing that underneath a running copy
-            // would leave the stamp and the toast landing on a wizard that
-            // had already moved on.
-            PrimaryAction(label = model.writeLabel, enabled = !session.busy, onClick = ::eject)
+            PrimaryAction(label = "WRITE ANOTHER ✓", enabled = !busy, onClick = ::writeAnother)
         } else {
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                FindingsCard(model.preflight, scheme)
-                CardRow(
-                    tree = cardTree,
-                    enabled = !session.busy,
-                    scheme = scheme,
-                    onPick = { cardPicker.launch(null) },
-                    onForget = {
-                        forgetCard()
-                        onToast(Copy.CARD_FORGOTTEN)
-                    },
-                )
-                FormatPickerRow(
-                    current = model.format,
-                    open = formatPickerOpen,
-                    // `session.busy` (Compose-tracked) rather than
-                    // `model.stage` directly — `stage` flips to WRITING on
-                    // the IO thread inside `write()`, so it can lag a tick
-                    // behind `busy` going true; `setFormat()` no-ops off
-                    // READY either way, but this keeps the row's own
-                    // enabled state from racing the plain var.
-                    enabled = !session.busy,
-                    scheme = scheme,
-                    onToggle = { formatPickerOpen = !formatPickerOpen },
-                    onPick = { picked ->
-                        model.setFormat(picked)
-                        // A different format writes to a different place, so
-                        // a confirmation taken against the old destination is
-                        // not consent for this one (finding 18).
-                        session.overwriting = null
-                        // Remembered for next time: finding 7's other half.
-                        // Written on the pick rather than on the dub, so a
-                        // change of mind is kept even if nothing is written.
-                        prefs.edit().putString(PREF_EXPORT_FORMAT, picked.id).apply()
-                        formatPickerOpen = false
-                        revision++
-                    },
-                )
-                DubProgressCard(model, filesShown, session.busy, scheme)
+            val shown = read
+            TapeText(shown?.subtitle ?: project.name, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
+            if (shown != null) {
+                for ((kitName, findings) in shown.preflight) {
+                    FindingsCard(findings, scheme, title = kitName)
+                }
+                if (shown.missing.isNotEmpty()) {
+                    TapeText(
+                        "MISSING FROM THE SHELF: ${shown.missing.joinToString(", ")}",
+                        TapeType.pixelSmall,
+                        BinRedGlow,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                    )
+                }
             }
             PrimaryAction(
-                // Armed, the button names what it would destroy. Unarmed it
-                // reads exactly as before. Until this, the two were the same
-                // words and the only warning was a toast already gone.
-                label = session.overwriting?.let { Copy.replaceWhat(it.name) } ?: model.writeLabel,
-                enabled = !session.busy && !model.blocked && model.stage == ExportWizardModel.Stage.READY,
-                onClick = ::startWrite,
+                label = if (busy) "WRITING — DO NOT EJECT" else overwriting?.let { Copy.replaceWhat(it.name) } ?: "WRITE SESSION",
+                enabled = !busy && shown != null && !shown.blocked,
+                onClick = ::writeSession,
             )
         }
+    }
+}
+
+/** ALSO: the outputs that are not a card — one kit as one file, and the door to BEAT's writers. */
+@Composable
+private fun AlsoList(scheme: Scheme, canShare: Boolean, onShareKit: () -> Unit, onBeatWriters: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        TapeText("ALSO", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        ActionButton(
+            "SHARE KIT ▸ THIS KIT AS ONE FILE",
+            scheme,
+            enabled = canShare,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onShareKit,
+        )
+        ActionButton(
+            "BEAT WRITERS ▸ BOUNCE · MIDI · CHART",
+            scheme,
+            enabled = true,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onBeatWriters,
+        )
     }
 }
 
@@ -846,7 +1082,7 @@ private fun DoneContent(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier.fillMaxWidth().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

@@ -1,4 +1,6 @@
 build/
+testkit/overlap-audition/
+testkit/overlap-audition-r1/
 testkit/osprey-audition/
 testkit/osprey-revision-audition/
 testkit/osprey-gentle-audition/
@@ -177,6 +179,7 @@ testkit/suture-first-listen/
 
 # Tessera's generated listening matrix, diagnostic traces and kit audio.
 testkit/tessera-audition/
+testkit/tessera-material-comparison/
 testkit/SnipSnap Tessera Kit/
 
 # Pitchwheel dry listening clips and mechanical/loop evidence, generated locally.
@@ -193,6 +196,8 @@ testkit/SnipSnap Stoop Kit/
 testkit/lacquer-audition/
 testkit/SnipSnap Lacquer Kit/
 testkit/SnipSnap-Lacquer-Kit.zip
+testkit/SnipSnap Lacquer Bank/
+testkit/SnipSnap-Lacquer-Bank.zip
 # Tangle's regenerated audition WAVs, diagnostic manifest, page and kit audio.
 testkit/tangle-audition/
 testkit/SnipSnap Tangle Kit/
@@ -235,6 +240,13 @@ testkit/vent-audition/
 
 # Four controlled, uncoloured VENT trajectory studies; generated for listening.
 testkit/vent-isolation-audition/
+
+# Regenerable PRISM spectral-motion listening assets
+/testkit/prism-motion-audition/
+/testkit/prism-palette-audition/
+
+# Model-2 clean voice audio, ordinary recipes and listening evidence are generated.
+testkit/vent-voice-audition/
 
 # FLOCK's generated finite listening pack, source snapshots, and diagnostic traces.
 testkit/flock-audition/

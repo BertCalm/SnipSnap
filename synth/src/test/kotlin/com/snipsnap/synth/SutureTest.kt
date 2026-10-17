@@ -157,6 +157,30 @@ class SutureTest {
         return Spectrum(root / total.coerceAtLeast(1e-30), upper / total.coerceAtLeast(1e-30))
     }
 
+    private data class WindowSpectrum(val power: DoubleArray, val binHz: Double) {
+        fun energy(from: Double, to: Double): Double =
+            power.indices.filter { it * binHz in from..to }.sumOf { power[it] }
+
+        fun peakHz(from: Double, to: Double): Double =
+            power.indices.filter { it * binHz in from..to }.maxBy { power[it] } * binHz
+    }
+
+    /** A fixed observation window measures material independently of final gain. */
+    private fun windowSpectrum(samples: FloatArray, from: Float, to: Float): WindowSpectrum {
+        val n = 65536
+        val first = (from * Dsp.RATE).toInt()
+        val count = minOf((to * Dsp.RATE).toInt(), samples.size) - first
+        assertTrue(count in 1001..n, "missing STRAIN spectral guard window")
+        val mean = (first until first + count).sumOf { samples[it].toDouble() } / count
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until count) re[i] = ((samples[first + i] - mean) *
+            (.5 - .5 * cos(2 * PI * i / (count - 1)))).toFloat()
+        Fft.forward(re, im)
+        return WindowSpectrum(DoubleArray(n / 2 + 1) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] },
+            Dsp.RATE.toDouble() / n)
+    }
+
     @Test
     fun `all voices expose the pitched controls with valid defaults`() {
         for (voice in SutureVoice.entries) {
@@ -198,7 +222,7 @@ class SutureTest {
     }
 
     @Test
-    fun `ordinary voices retain the requested root and pitched routing at three registers`() {
+    fun `ordinary voices retain the requested root and public routing at three registers`() {
         var worstCents = 0.0
         var leastRoot = 1.0
         val failures = mutableListOf<String>()
@@ -213,10 +237,21 @@ class SutureTest {
             leastRoot = minOf(leastRoot, material.rootShare)
             if (abs(cents) > 10.0) failures += "$voice TUNE $tune: $cents cents from $wanted Hz"
             if (material.rootShare < .08) failures += "$voice TUNE $tune: root has only ${material.rootShare} of spectral energy"
-            // Full exports exceed the classifier's duration-only LOOP rule. This shorter
-            // dry observation also exercises its pitched-versus-drum spectral guards.
-            val shortClass = Classifier.classify(Snip(dry, channels = 1, sampleRate = Dsp.RATE))
-            if (shortClass.drumClass in drums) failures += "$voice TUNE $tune short dry material classified as ${shortClass.drumClass}"
+            // Full exports exceed the classifier's duration-only LOOP rule. The selected
+            // cleaner STRAIN C3 transient now falls below its 500 ms bass-decay boundary:
+            // a short crop reads TOM, while its audible root and public routing remain.
+            val shortSnip = Snip(dry, channels = 1, sampleRate = Dsp.RATE)
+            val shortClass = Classifier.classify(shortSnip)
+            if (voice == SutureVoice.STRAIN && tune == 0f) {
+                assertEquals(DrumClass.TOM, shortClass.drumClass, "selected STRAIN C3 short-capture classification")
+                val shortPitch = requireNotNull(Pitch.detect(shortSnip)) { "STRAIN C3 short crop lost its pitch" }
+                assertTrue(abs(FineTuning.cents(shortPitch.hz.toDouble(), wanted.toDouble())) < 50.0,
+                    "STRAIN C3 short crop lost the requested root: ${shortPitch.hz} for $wanted")
+                assertTrue(shortPitch.confidence >= .8f, "STRAIN C3 short pitch confidence ${shortPitch.confidence}")
+                assertTrue(material.rootShare >= .45, "STRAIN C3 short root share ${material.rootShare}")
+            } else if (shortClass.drumClass in drums) {
+                failures += "$voice TUNE $tune short dry material classified as ${shortClass.drumClass}"
+            }
             val snip = Suture.render(voice, macros)
             assertEquals(Suture.renderFrames(voice, macros), snip.samples.size, "$voice TUNE $tune duration contract")
             val heard = Classifier.classify(snip)
@@ -359,6 +394,36 @@ class SutureTest {
                 "$a and $b lost their voice distinction: $spectral dB bands, $temporal energy redistribution"
         }
         assertTrue(failures.isEmpty(), failures.joinToString("\n"))
+    }
+
+    @Test
+    fun `strain surface grain remains subordinate to the requested root`() {
+        val wanted = Suture.frequencyFor(SutureVoice.STRAIN, .5f).toDouble()
+        val played = Suture.play(SutureVoice.STRAIN, emptyMap(), Suture.Probe(durationSeconds = 1.3f))
+        val material = windowSpectrum(Suture.finish(played.raw, normalize = false), 0f, 1.2f)
+        val root = material.energy(.96 * wanted, 1.04 * wanted)
+        assertTrue(root.isFinite() && root > 0.0, "STRAIN surface grain guard lost the requested root")
+        // The closing gesture previously produced a strong nonharmonic band below C4.
+        val grainToRoot = material.energy(180.0, 240.0) / root
+        println("SUTURE STRAIN surface grain guard: $grainToRoot low-band/root energy")
+        assertTrue(grainToRoot <= .06,
+            "STRAIN surface grain guard: low-band/root energy is $grainToRoot, above .06")
+    }
+
+    @Test
+    fun `strain upper modes retain a bounded spectral bend`() {
+        val wanted = Suture.frequencyFor(SutureVoice.STRAIN, .5f).toDouble()
+        val played = Suture.play(SutureVoice.STRAIN, emptyMap(), Suture.Probe(durationSeconds = 1.3f))
+        val material = windowSpectrum(Suture.finish(played.raw, normalize = false), .4f, .75f)
+        val upper = material.energy(1.88 * wanted, 2.25 * wanted) / material.energy(40.0, 15000.0)
+        assertTrue(upper >= .05, "STRAIN upper movement guard lost upper-band energy: $upper")
+        val peak = material.peakHz(1.88 * wanted, 2.25 * wanted)
+        val bend = FineTuning.cents(peak, 2 * wanted)
+        println("SUTURE STRAIN upper movement guard: $bend cents, $upper upper-band energy")
+        // Measure the sounding upper mode: neither excessive stretch nor a fixed
+        // harmonic reference can satisfy the retained, limited elastic movement.
+        assertTrue(bend in 20.0..50.0,
+            "STRAIN upper movement guard: spectral bend is $bend cents, outside 20..50")
     }
 
     @Test

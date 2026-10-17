@@ -102,7 +102,7 @@ import kotlin.random.Random
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
- * VENT accepts `--seed N` for its initial trajectory. Its three provisional
+ * VENT accepts `--seed N` for its initial trajectory. Its provisional
  * starting recipes are available here while remaining outside the factory roster.
  * FLOCK GATHER/RIBBON/SPLIT also keep provisional recipes outside that roster;
  * `--seed N` accepts the full signed 64-bit range for their finite performances.

@@ -39,6 +39,19 @@ object Places {
     const val SNIPPED = "SNIPPED"
     const val STOPPED = "■"
 
+    /** The dock's SNIP, shown while armed. No arrow: it takes the last 60 s, it opens nothing. */
+    const val SNIP = "SNIP"
+
+    /** The dock's STOP, beside SNIP while armed: the session ends. The shelf's ArmControl said the same word in bin red. */
+    const val STOP = "STOP"
+
+    /** The transport chip's accessible names while BEAT is the stage — GROOVE's own PLAY / STOP, read by what they do to the beat. */
+    const val PLAY_BEAT = "PLAY THE BEAT"
+    const val STOP_BEAT = "STOP THE BEAT"
+
+    /** The second row of the dock's capture choice: another app's audio, with the projection consent. The arrow: it opens that consent. */
+    const val ARM_INSIDE = "APP AUDIO ▸ RECORD AN APP"
+
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {
         val s = secondsOnTape.coerceAtLeast(0)
@@ -61,6 +74,9 @@ object Places {
 
     const val NO_KITS = "NO KITS YET"
     const val ADD_FROM_SHELF = "+ FROM SHELF"
+
+    /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
+    fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
 
     /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
