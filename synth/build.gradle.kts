@@ -970,13 +970,15 @@ tasks.register<JavaExec>("generateLacquerKit") {
 /** Full dry SKITTER listening matrix, with a smaller optional development pack. */
 tasks.register<JavaExec>("generateSkitterAudition") {
     group = "distribution"
-    description = "Render SKITTER native/raw/matched WAVs, patch JSON, traces and listening page under testkit/skitter-audition/. -Pquick selects the smoke pack."
+    description = "Render SKITTER WAVs, patches, traces and listening page. -Pquick selects the smoke pack; -PskitterBaseline=<frozen R2 directory> adds R2/R3 comparisons; -PskitterPrevious=<frozen R1 directory> retains R1/R2."
     maxHeapSize = "1g"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.SkitterAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/skitter-audition")
     if (project.hasProperty("quick")) args("--quick")
+    if (project.hasProperty("skitterBaseline")) args("--baseline=${project.property("skitterBaseline")}")
+    if (project.hasProperty("skitterPrevious")) args("--previous=${project.property("skitterPrevious")}")
 }
 
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
