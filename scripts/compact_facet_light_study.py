@@ -80,6 +80,13 @@ manifest["distribution"] = distribution
 manifest["summary"] = summary
 manifest["previousStudy"]["manifestSha256"] = sha(prior_path)
 manifest["previousStudy"]["originalManifest"] = distribution["originalManifest"]
+old_note = "Prior R2 audio, metadata and downloads remain unchanged."
+new_note = "Prior R2 clip audio remains unchanged; distribution metadata lists retained downloads."
+for document in (report, manifest):
+    if "metricNotes" in document:
+        document["metricNotes"] = document["metricNotes"].replace(old_note, new_note)
+readme_path = root / "light-study/README.txt"
+readme_path.write_text(readme_path.read_text().replace(old_note, new_note))
 write_json(report_path, report)
 write_json(manifest_path, manifest)
 
@@ -88,7 +95,12 @@ archive = root / "light-study.zip"
 temporary = archive.with_suffix(".zip.tmp")
 with zipfile.ZipFile(archive) as source, zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as output:
     for item in source.infolist():
-        data = report_path.read_bytes() if item.filename == "light-study/report.json" else source.read(item)
+        if item.filename == "light-study/report.json":
+            data = report_path.read_bytes()
+        elif item.filename == "light-study/README.txt":
+            data = readme_path.read_bytes()
+        else:
+            data = source.read(item)
         item.compress_type = zipfile.ZIP_DEFLATED
         output.writestr(item, data)
 temporary.replace(archive)
