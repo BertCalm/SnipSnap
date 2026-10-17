@@ -25,6 +25,14 @@ The six controls are normalized 0–1. Requested MIDI root (24–84) and velocit
 states and event queues are rebuilt deterministically, not serialized. Zero
 velocity is silence, including held operation.
 
+BUBBLE's listening-driven default now uses FEED **.25**, giving the answering
+gates more space after feedback that the original sounded chaotic. Its other
+controls remain SPARK .40, CASCADE .70, TIMBRE .45, RECOVERY .50 and HOLD 0.
+The provisional **Busy Bubbles** recipe preserves the original FEED .65 setting
+for comparison. **Spent Bubbles** and **Held Bubbles** also retain their explicit,
+denser settings. Saved patches keep their recorded controls; the supplied
+engineering specification remains the original proposal.
+
 `WickPresets` is deliberately outside the shared factory roster, Android picker
 and starter menu pending listening. The CLI, patch/recipe decoder and native
 velocity renderer support the prototype. `SynthKits.wick()` supplies sixteen

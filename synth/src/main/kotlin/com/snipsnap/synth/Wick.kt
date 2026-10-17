@@ -38,7 +38,8 @@ object Wick {
     fun rootMidi(voice: WickVoice): Int = if (voice == WickVoice.PLUCK) 48 else 60
     fun macrosFor(voice: WickVoice): List<MacroSpec> {
         val d = if (voice == WickVoice.PLUCK) floatArrayOf(.45f, .05f, .20f, .25f, .30f, 0f)
-        else floatArrayOf(.40f, .65f, .70f, .45f, .50f, 0f)
+        // Listening revision: separate the bubbles; Busy Bubbles retains the original feed.
+        else floatArrayOf(.40f, .25f, .70f, .45f, .50f, 0f)
         return names.mapIndexed { i, name ->
             // Clearing supply, transmission and source complexity has a real no-effect value.
             // SPARK and RECOVERY use the voice's useful articulation as their central baseline.

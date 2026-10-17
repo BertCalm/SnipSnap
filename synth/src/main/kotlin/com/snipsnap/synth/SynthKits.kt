@@ -830,7 +830,11 @@ object SynthKits {
                 midi = 48 + semitone,
             ).let { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
         }
-        return notes + WickPresets.all().map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+        // The first scale pad already contains PLUCK's Small Spark default. Use its former
+        // upper-bank duplicate for the calmer BUBBLE default and retain the busy reference.
+        val bubble = WickPatch("Calm Bubbles", WickVoice.BUBBLE, Wick.defaults(WickVoice.BUBBLE))
+        val recipes = listOf(bubble) + WickPresets.all().filter { it.name != "Small Spark" }
+        return notes + recipes.map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
     }
 
     /**

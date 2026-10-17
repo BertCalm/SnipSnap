@@ -338,12 +338,16 @@ object WickAuditionGenerator {
 
     private fun cases(quick: Boolean): List<Case> = buildList {
         for (voice in WickVoice.entries) add(Case(
-            "default_${voice.name.lowercase()}", "${voice.name} · first spark", "Dry voice default at MIDI ${Wick.rootMidi(voice)}, velocity 1. The same initial excitation and release network used by every normal patch.",
+            "default_${voice.name.lowercase()}", "${voice.name} · first spark", "Dry voice default at MIDI ${Wick.rootMidi(voice)}, velocity 1. " +
+                (if (voice == WickVoice.BUBBLE) "Calmer FEED 25% baseline; the original FEED 65% sound is preserved as Busy Bubbles under Range & recipes. " else "") +
+                "The same initial excitation and release network used by every normal patch.",
             "defaults", voice, "defaults", "Start here · two dry voices",
         ))
-        for (preset in WickPresets.all().filter { it.name in setOf("Soft Wick", "Dry Chain", "Held Glow", "Slow Feed", "Spent Bubbles", "Held Bubbles") }) add(Case(
-            "preset_${slug(preset.name)}", preset.name, "Provisional ${preset.voice.name.lowercase()} recipe. Dry engine output, with no rack effects.",
-            "preset", preset.voice, "presets", "Six provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
+        for (preset in WickPresets.all().filter { it.name != "Small Spark" }) add(Case(
+            "preset_${slug(preset.name)}", preset.name,
+            if (preset.name == "Busy Bubbles") "Original BUBBLE default, preserved at FEED 65%. Compare with the calmer FEED 25% first spark; all other controls, pitch and velocity match."
+            else "Provisional ${preset.voice.name.lowercase()} recipe. Dry engine output, with no rack effects.",
+            "preset", preset.voice, "presets", "Seven provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
         ))
         val base = Wick.defaults(WickVoice.BUBBLE) + mapOf("SPARK" to .65f, "FEED" to .85f, "CASCADE" to .90f, "RECOVERY" to .90f)
         val comparisons = listOf(
@@ -402,7 +406,7 @@ object WickAuditionGenerator {
 
     private fun groupDescription(case: Case): String = when (case.kind) {
         "defaults" -> "Listen first to the two dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
-        "preset" -> "Six provisional factory recipes, including Held Glow and Held Bubbles, rendered with their saved pitch, velocity and six controls. The two voice defaults complete the eight-recipe provisional bank."
+        "preset" -> "Seven provisional recipes, including the original Busy Bubbles reference, Held Glow and Held Bubbles. The two starting voices include the calmer BUBBLE default. Every clip uses its saved pitch, velocity and six controls."
         "comparison" -> case.description
         "sweep" -> "Five settings: 0, 25, 50, 75 and 100%. Companion controls stay at this voice's defaults."
         "held-sweep" -> "Five settings in a sustained periodic pattern. Each clip supplies cycle-state and exported PCM seam evidence."
