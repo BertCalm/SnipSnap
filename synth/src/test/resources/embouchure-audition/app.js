@@ -122,9 +122,10 @@
 
   function renderDownloads() {
     const bundles = Array.isArray(state.manifest.bundles) ? state.manifest.bundles.filter((bundle) => bundle.path) : state.manifest.bundlePath ? [{ path: state.manifest.bundlePath, title: 'Download curated pack', description: state.manifest.bundleDescription }] : [];
+    const nativeKitsOnly = state.manifest.hosting?.packaging === 'deduplicated-audio-native-kits';
     const kits = Array.isArray(state.manifest.kits) ? state.manifest.kits : state.manifest.kit ? [state.manifest.kit] : [];
     const target = $('kit-downloads'); target.replaceChildren();
-    if (kits.length) target.append(element('p', 'kit-download-note', 'Complete packs include the programs, sample folders and recipes. Keep each program with its matching sample folders; an MPC program file alone does not contain the audio.'));
+    if (kits.length) target.append(element('p', 'kit-download-note', `${nativeKitsOnly ? 'Complete MPC kits' : 'Complete packs'} include the programs, sample folders and recipes. Keep each program with its matching sample folders; an MPC program file alone does not contain the audio.`));
     kits.forEach((kit) => {
       const paths = [['mpc3Path', 'MPC 3 program'], ['mpc2Path', 'MPC 2 program'], ['recipePath', 'Kit recipes']].filter(([key]) => kit[key]);
       if (!paths.length) return;
@@ -133,7 +134,8 @@
       if (kit.description) row.append(element('p', 'kit-download-description', kit.description));
       const links = element('div', 'kit-download-links');
       const bundlePath = kit.bundlePath || bundles.find((bundle) => bundle.kitIds?.includes(kit.id))?.path || (kits.length === 1 && bundles.length === 1 ? bundles[0].path : null);
-      if (bundlePath) { const complete = element('a', 'kit-bundle-link', 'Complete pack ZIP ↓'); complete.href = bundlePath; complete.download = ''; row.append(complete); }
+      const nativeBundle = nativeKitsOnly || bundles.some((bundle) => bundle.path === bundlePath && bundle.kind === 'mpc-kit');
+      if (bundlePath) { const complete = element('a', 'kit-bundle-link', nativeBundle ? 'Complete MPC kit ZIP ↓' : 'Complete pack ZIP ↓'); complete.href = bundlePath; complete.download = ''; row.append(complete); }
       paths.forEach(([key, title]) => { const link = element('a', '', `${title} ↓`); link.href = kit[key]; link.download = ''; links.append(link); });
       row.append(links); target.append(row);
     });
@@ -231,7 +233,7 @@
     $('clip-subtitle').textContent = [noteName(clip), clip.velocity !== undefined ? `velocity ${velocityLabel(clip.velocity)}` : '', clip.loop ? 'HOLD render' : 'finite gesture', state.mode === 'production' ? 'host normalized' : state.mode === 'raw' ? rawModeLabel(clip, true) : 'equal audition loudness'].filter(Boolean).join(' · ');
     const path = pathFor(clip);
     $('download-wav').href = path;
-    $('download-wav').download = path.split('/').pop();
+    $('download-wav').download = `${clip.id}${state.mode === 'production' ? '' : `-${state.mode}`}.wav`;
     $('download-wav').setAttribute('aria-disabled', 'false');
     $('play-button').disabled = false; $('seek').disabled = false; $('download-recipe').disabled = false;
     $('duration').textContent = time(duration(clip)); $('current-time').textContent = '0:00'; $('seek').value = '0';
@@ -457,7 +459,7 @@
       const rawGain = state.clips.find((clip) => clip.rawExportGain !== undefined)?.rawExportGain;
       if (rawGain > 0 && rawGain !== 1) details.append(element('p', '', `Every raw diagnostic WAV uses the same fixed ${(20 * Math.log10(rawGain)).toFixed(2)} dB export gain (${rawGain}), preserving relative source amplitudes. Recipe downloads include this gain, untouched source metrics, and exported raw metrics. The gain is identical for every clip.`));
       bundles.forEach((bundle) => { if (bundle.description) details.append(element('p', '', `${bundle.title || 'Curated pack'}: ${bundle.description}`)); });
-      if (bundles.length) details.append(element('p', '', 'Curated packs include selected listening renders and the listed kit files. Each download has its own manifest and offline listening page. The full probe and sweep matrix stays on this page.'));
+      if (bundles.length) details.append(element('p', '', state.manifest.hosting?.packaging === 'deduplicated-audio-native-kits' || bundles.every((bundle) => bundle.kind === 'mpc-kit') ? 'The complete MPC kit downloads contain programs, matching sample folders and recipes. The full listening collection and control matrix are available on this page.' : 'Curated packs include selected listening renders and the listed kit files. Each download has its own manifest and offline listening page. The full probe and sweep matrix stays on this page.'));
       details.append(element('p', '', 'Production audio is host normalized with expressive velocity gain. Raw and equal-audition-loudness modes appear only where diagnostic companion renders exist. Waveforms show actual rendered audio, scaled visually to the clip peak. HOLD looping repeats the supplied loop file; the page adds no synthesis, effects, or crossfade.'));
       initializePresetFilters(); renderVoiceFilters(); renderLibrary();
       const requested = new URLSearchParams(location.search).get('clip');

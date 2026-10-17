@@ -23,6 +23,23 @@ control and historical comparison matrix remains in the generated folder and
 published page. Every bundle stays below 25 MiB for static hosting. Generated
 audio is excluded from Git.
 
+The hosted page retains the complete listening matrix. Its kit ZIPs contain
+the complete native MPC programs, samples, recipes and README; the larger local
+bundles also include offline listening pages. The hosting copy shares exact
+WAV bytes between identical takes and loads one manifest instead of embedding
+another copy in the HTML. This keeps the expanded Site archive below 256 MiB
+while preserving exact audio bytes. Logical clip IDs, recipes, all loudness
+modes and historical hashes are preserved. Prepare that hosting copy after
+generating the full local pack:
+
+```sh
+python3 scripts/package_embouchure_audition.py testkit/embouchure-audition testkit/embouchure-hosted-audition
+```
+
+The packager verifies every logical WAV hash, native program/sample reference
+and complete kit ZIP before exposing the output. It enforces a 250 MiB expanded
+budget, leaving margin below the publisher's 256 MiB limit.
+
 The starter `kit/` folder contains a native MPC 3 `.xtd` track and an MPC 2 `.xpm` twin
 inside its shared sample folder. A01–A08 are independent C minor pentatonic reed
 notes; A09–A16 contain the eight dry starting presets. The MPC 3 track includes a

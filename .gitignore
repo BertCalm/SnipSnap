@@ -211,6 +211,7 @@ testkit/SnipSnap Relay Kit/
 testkit/embouchure-audition/
 testkit/embouchure-audition-model2/
 testkit/embouchure-preset-audition/
+testkit/embouchure-hosted-audition/
 testkit/SnipSnap Embouchure Kit/
 # MURMUR's generated listening matrix and export evidence.
 testkit/murmur-audition/
