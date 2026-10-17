@@ -936,6 +936,28 @@ tasks.register<JavaExec>("generatePrismAudition") {
     args("${rootDir}/testkit/prism-audition")
 }
 
+/** Compare original PRISM spectra with saved finite additive motion, without effects. */
+tasks.register<JavaExec>("generatePrismMotionAudition") {
+    group = "distribution"
+    description = "Render PRISM motion dry PCM16 raw/matched WAVs, complete recipes and manifest under testkit/prism-motion-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismMotionAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-motion-audition")
+}
+
+/** Compare eight original source candidates with their dry PRISM imprint and motion. */
+tasks.register<JavaExec>("generatePrismPaletteAudition") {
+    group = "distribution"
+    description = "Render eight source candidates, static PRISM imprints and moving PRISM PCM16 comparisons under testkit/prism-palette-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismPaletteAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-palette-audition")
+}
+
 /** Render Alloy's provisional dry hybrid patches, causal FUSE comparisons and held-loop listening pack. */
 tasks.register<JavaExec>("generateAlloyAudition") {
     group = "distribution"
