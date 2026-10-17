@@ -39,6 +39,9 @@ object Places {
     const val SNIPPED = "SNIPPED"
     const val STOPPED = "■"
 
+    /** The dock's SNIP, shown while armed. No arrow: it takes the last 60 s, it opens nothing. */
+    const val SNIP = "SNIP"
+
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {
         val s = secondsOnTape.coerceAtLeast(0)

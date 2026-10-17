@@ -451,6 +451,16 @@ object Layout {
      */
     const val MENU_GROOVE_W = 2
 
+    /**
+     * The dock at the foot of every screen (`docs/SCREEN_PLAN_2026_10.md`
+     * §1): one LCD row holding the beat's transport, the capture light and
+     * the standing line with its door. Taller than [MIN_HIT_TARGET] so a
+     * two-line sentence fits beside a door chip without either shrinking.
+     * It replaces the status bar at the frame's foot, whose three cells it
+     * absorbs; [STATUS_BAR_H] stays for the one row still cut to it, the
+     * fullscreen grid's own header.
+     */
+    const val DOCK_H = 56
     const val STATUS_BAR_H = 26
     const val LCD_HEADER_H = 40
     const val PAD_GAP = 8
@@ -509,25 +519,15 @@ object Layout {
 object Motion {
     /** Reel rotation period while playing, ms per revolution. */
     const val REEL_SPIN_MS = 1200
-    /** Toast rise+fade, ms, ease-out. */
-    const val TOAST_IN_MS = 250
-    /** Toast dwell before dismissing itself, ms. */
-    const val TOAST_DWELL_MS = 2600
-
     /**
-     * How long a toast that carries a door stays up (J10).
-     *
-     * [TOAST_DWELL_MS] is right for a line you only have to read. It is
-     * wrong for one you have to *reach*: an offer that vanishes at 2.6
-     * seconds is a target that sometimes catches the thumb and sometimes
-     * does not, which is worse than no offer at all — a control that works
-     * intermittently teaches nobody where the door is.
-     *
-     * Still a dwell rather than a box that waits: the offer comes after
-     * every capture and every kit, so one that had to be dismissed would
-     * be a toll on the loop it is trying to help.
+     * The dock line's fade-in when its words change, ms, ease-out. The
+     * toast used to rise and fade over this and then dwell — 2.6 s for a
+     * line you only read, 7 s for one carrying a door you had to reach.
+     * Both dwells are gone with the toast: the line stays until the next
+     * one replaces it and the door stays until it is taken, so nothing in
+     * the dock is timed (J10's standing next step).
      */
-    const val TOAST_OFFER_DWELL_MS = 7000
+    const val TOAST_IN_MS = 250
     /** Pad hit glow decay, ms. */
     const val PAD_GLOW_MS = 180
     /** Export dub progress, ms per file. */

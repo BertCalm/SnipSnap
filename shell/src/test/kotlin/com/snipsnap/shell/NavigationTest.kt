@@ -108,6 +108,19 @@ class NavigationTest {
     }
 
     @Test
+    fun `a landing goes straight where it says, benches included, and is a normal step back`() {
+        val nav = Navigation()
+        assertFalse(nav.canGoBack, "a fresh session has nowhere to go back to")
+        nav.goTo(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.ORBIT)))
+        assertEquals(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.ORBIT)), nav.location)
+        assertTrue(nav.canGoBack)
+        assertTrue(nav.back())
+        assertEquals(Location(Place.SHELF), nav.location)
+        assertFalse(nav.canGoBack)
+        assertFalse(nav.back(), "nothing left to pop: the app's cue to leave")
+    }
+
+    @Test
     fun `per-place state survives a stage switch and a trip to another place`() {
         val nav = Navigation()
         nav.go(Place.PROJECT)
