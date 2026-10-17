@@ -2037,9 +2037,14 @@ object Copy {
     const val DUB_DONE_CARD = "DUB DONE. IT'S ON THE CARD."
     /** The card picker came back with a folder the system would not grant lasting access to. */
     const val CARD_REFUSED = "THAT FOLDER WON'T HOLD STILL. PICK ANOTHER."
-    /** The CARD row's label when no card is picked — the dub goes to the phone. */
-    const val CARD_NONE = "CARD ▸ NONE — SAVING TO THIS PHONE"
-    /** The CARD row when one is picked; the destination's own name follows. */
+    /**
+     * The caption under the CARD row when no card is picked — the dub goes
+     * to the phone. A fact in the caption's weight, not a warning: no card
+     * is how most dubs go. A sentence now (the row above it is the door,
+     * [CARD_PICKED]), so it keeps its full stop.
+     */
+    const val CARD_NONE = "SAVES TO THIS PHONE. NO CARD."
+    /** The CARD row: the door to the card picker. The picked card's own name follows it, when there is one. */
     const val CARD_PICKED = "CARD ▸"
     /** Long-press the CARD row to go back to the phone. */
     const val CARD_FORGOTTEN = "CARD FORGOTTEN. DUBS GO TO THE PHONE."

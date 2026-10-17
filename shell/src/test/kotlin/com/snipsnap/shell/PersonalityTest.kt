@@ -574,7 +574,7 @@ class PersonalityTest {
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
-        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
+        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
         // BREED's button label (glyph sweep): now a constant destination
         // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
@@ -638,7 +638,7 @@ class PersonalityTest {
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
         // The status bar's third cell resting label with no kit open - a
-        // standing chip value like CARD_NONE above, not a toast said once.
+        // standing chip value like CARD_PICKED above, not a toast said once.
         "NO_KIT_STATUS",
     )
 
