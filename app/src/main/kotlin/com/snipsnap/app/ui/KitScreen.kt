@@ -601,64 +601,6 @@ fun KitScreen(
             onCapture = onCaptureInto,
             onFromSnips = onFromSnips,
         )
-        // The second gesture with nothing to see (J37). A pad that answers
-        // to where it is tapped is not discoverable by looking, and a hint
-        // that can be dismissed is a feature that can be lost. The one
-        // legend left: the strip carries the other.
-        TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
-        // Where the kit came from (persona review, P4.4). The same move as
-        // the two lines above: always there, cannot be dismissed. The
-        // finding was that provenance is good and reachable only by
-        // holding a pad — this says the kit's half of it without a
-        // gesture, and `Provenance.ofKit` is the same reader the liner
-        // notes on the card use, so the screen and the paper agree.
-        //
-        // Absent, not blank, for a kit built by hand: there is no honest
-        // line for "nowhere".
-        val cameFrom = Provenance.ofKit(kit.pads)
-        if (cameFrom != null) {
-            TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
-        }
-
-        // PLAY's footer, folded in (section 3.3): PANIC always, and the MIDI
-        // line only while a keyboard is plugged in - there is no idle
-        // "NO MIDI KEYBOARD" line any more, since the strip and the legend
-        // above already fill the space a hint used to. MPC NOTES is the
-        // hardware's own map (36 is A02, the kick); A01 = C1 walks the
-        // slots, for a kit that is a scale. The flip silences first, as
-        // KEYS' OCT and LAYOUT do: a key held across it would let go on a
-        // different slot and leave a gate ringing.
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Box(
-                Modifier
-                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .raisedBevel(scheme)
-                    .tapeClick(label = "PANIC", onClick = ::panic)
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText("PANIC", TapeType.pixel, scheme.ink2.tape)
-            }
-            if (midiDevices.isEmpty()) {
-                Box(Modifier.weight(1f))
-            } else {
-                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme)
-                        .tapeClick(label = "MIDI MAP ${midiMap.label}") { panic(); midiMap = midiMap.next() }
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(midiMap.label, TapeType.pixel, scheme.ink2.tape)
-                }
-            }
-        }
 
         // ---- THIS KIT: the eight actions, one closed group (section 3.3; SHARE went to OUT) ----
         // Closed by default and reading what it holds, the way the pad
@@ -913,6 +855,69 @@ fun KitScreen(
                             onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
                         },
                     )
+                }
+            }
+            // Under the box, in the same scroll: the legend, the provenance line
+            // and PLAY's footer. They sat between the strip and the box as fixed
+            // rows until a phone showed the box had no room left at all — the
+            // grid and the strip take the height a 4×4 needs, and whatever is
+            // fixed below them is taken from the one region that scrolls.
+            // The second gesture with nothing to see (J37). A pad that answers
+            // to where it is tapped is not discoverable by looking, and a hint
+            // that can be dismissed is a feature that can be lost. The one
+            // legend left: the strip carries the other.
+            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            // Where the kit came from (persona review, P4.4). The same move as
+            // the two lines above: always there, cannot be dismissed. The
+            // finding was that provenance is good and reachable only by
+            // holding a pad — this says the kit's half of it without a
+            // gesture, and `Provenance.ofKit` is the same reader the liner
+            // notes on the card use, so the screen and the paper agree.
+            //
+            // Absent, not blank, for a kit built by hand: there is no honest
+            // line for "nowhere".
+            val cameFrom = Provenance.ofKit(kit.pads)
+            if (cameFrom != null) {
+                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            }
+    
+            // PLAY's footer, folded in (section 3.3): PANIC always, and the MIDI
+            // line only while a keyboard is plugged in - there is no idle
+            // "NO MIDI KEYBOARD" line any more, since the strip and the legend
+            // above already fill the space a hint used to. MPC NOTES is the
+            // hardware's own map (36 is A02, the kick); A01 = C1 walks the
+            // slots, for a kit that is a scale. The flip silences first, as
+            // KEYS' OCT and LAYOUT do: a key held across it would let go on a
+            // different slot and leave a gate ringing.
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .tapeClick(label = "PANIC", onClick = ::panic)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("PANIC", TapeType.pixel, scheme.ink2.tape)
+                }
+                if (midiDevices.isEmpty()) {
+                    Box(Modifier.weight(1f))
+                } else {
+                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+                    Box(
+                        Modifier
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme)
+                            .tapeClick(label = "MIDI MAP ${midiMap.label}") { panic(); midiMap = midiMap.next() }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(midiMap.label, TapeType.pixel, scheme.ink2.tape)
+                    }
                 }
             }
         }

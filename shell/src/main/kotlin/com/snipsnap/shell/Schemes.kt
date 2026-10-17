@@ -408,48 +408,13 @@ object Layout {
      * measured off this constant, so the strip grows and the screen under
      * it shrinks by the same amount.
      *
-     * A taller strip is only half of it: `MenuRow` has to make each tab
+     * A taller strip is only half of it: the row has to make each place
      * *fill* that height too. A 48dp strip around a text-sized tap area
-     * is a taller strip with the same finding still in it.
+     * is a taller strip with the same finding still in it. The place row
+     * (`Frame.kt`, four chips, no scroll) is cut to this; the old menu
+     * row's edge gutters and group seams went with its thirteen tabs.
      */
     const val MENU_ROW_H = 48
-
-    /**
-     * The width kept clear at each end of the menu row for its overflow
-     * cue — the arrow that says there are more tabs that way (September
-     * UAT, finding 10).
-     *
-     * Narrow on purpose. The twelve tabs already run past the usable width
-     * at the design frame, so every dp spent here hides a little more of
-     * what it is pointing at.
-     *
-     * It lives here rather than in `MenuRow` because it is not only that
-     * composable's business: the UAT sim measures what fits in the row,
-     * and a gutter width with two homes is a gutter width that drifts.
-     */
-    const val MENU_EDGE_W = 12
-
-    /**
-     * The vertical rule between two groups of menu tabs (J12): the shelf,
-     * the four flow tabs, the five instruments, the two utilities.
-     *
-     * Two dp, because that is what a Win9x toolbar separator is - a shadow
-     * line and a highlight line, one dp each - and because the row cannot
-     * afford more. The tabs do not fit at the design frame and the order
-     * above `MENU_GROUPS` was chosen so EXPORT, step four of the app's own
-     * stated loop, lands inside the run that shows without a drag. Running
-     * the UAT sim's own arithmetic over the three boundaries: at 2 the
-     * visible run is unchanged, at 4 it loses its last tab. So this is not
-     * a taste number with room to grow - it is the width at which the
-     * separators cost nothing. `UatSimTest` walks the row twice, with the
-     * rules and without, and raises a J12 finding if raising this ever
-     * costs a tab, so the claim is recomputed rather than remembered.
-     *
-     * It lives here for the same reason [MENU_EDGE_W] does: `MenuRow`
-     * draws it and `UatSimTest` measures around it, and a width with two
-     * homes is a width that drifts.
-     */
-    const val MENU_GROOVE_W = 2
 
     /**
      * The dock at the foot of every screen (`docs/SCREEN_PLAN_2026_10.md`

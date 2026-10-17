@@ -1234,65 +1234,52 @@ class ConventionTest {
             .replace(Regex("""//[^\n]*"""), " ")
             .replace(Regex(""""(?:[^"\\\n]|\\.)*""""), "\"\"")
 
-    // ---- Law: the app's one explanation of itself names real screens ----
+    // ---- Law: the app's one explanation of itself names real places ----
 
     /**
-     * September UAT, finding 3. The empty shelf states the product loop as
-     * the four tabs it runs through, which is the whole reason the line
-     * works: learn it and you have learned the navigation.
+     * September UAT, finding 3. The empty shelf states the product loop
+     * under the row of places it runs through, which is the whole reason
+     * the line works: learn it and you have learned the navigation.
      *
-     * That only holds while the words ARE the tabs. Rename a tab and the
-     * app's single explanation of itself would point at a screen that no
-     * longer exists — and nothing else in the build would notice, because
-     * `Copy` and `MenuRow` live in different modules and neither reads the
-     * other.
+     * That only holds while the words ARE the places. This law used to read
+     * the thirteen tab labels out of `Chrome.kt` by source and hold the
+     * note's four stage names to them; the four-place shape
+     * (`docs/SCREEN_PLAN_2026_10.md` §1) puts the row's words in `:shell`
+     * — `Place.entries` draws it, `Places.PLACES` is its words — so the law
+     * reads the model, not a file. Two things hold:
      *
-     * So this reads the tab labels out of `Chrome.kt` by source, the same
-     * way the roster law above reads prose, and holds every stage to it.
-     * It matches `MenuItem("...")` rather than any one declaration, which
-     * is why J12 could regroup the row into `MENU_GROUPS` underneath it
-     * without this law noticing or needing to be told.
+     * 1. The words `Places` lists are the places `Navigation` has. The row
+     *    and the model are one roster; a place renamed in one and not the
+     *    other is the defect shape this repo keeps finding.
+     * 2. Every place the first-run note names is a real one, and it names
+     *    the two the plan says it does (TAPE, then PROJECT). A note that
+     *    said "THEN KIT" would be J13 again: a word that reads as a place
+     *    and lands nowhere.
      */
     @Test
-    fun `the first-run loop names real menu tabs`() {
-        val chrome = File("../app/src/main/kotlin/com/snipsnap/app/ui/Chrome.kt")
-        assertTrue(chrome.isFile, "expected to find ${chrome.absolutePath} to read the menu tabs from")
-        val labels = Regex("""MenuItem\("([^"]+)"""")
-            .findAll(chrome.readText(Charsets.UTF_8))
-            .map { it.groupValues[1] }
-            .toSet()
-        assertTrue(
-            labels.size >= 5,
-            "only found $labels in Chrome.kt — the MenuItem pattern this law reads must have changed, " +
-                "which would make it pass by checking nothing. Fix the pattern, do not lower this bound.",
-        )
-        for (stage in Copy.FIRST_RUN_LOOP_STAGES) {
+    fun `the first-run note names real places`() {
+        assertEquals(Place.entries.map { it.label }, Places.PLACES, "the place row's words and the navigation model's places disagree")
+        val places = Places.PLACES.toSet()
+        assertTrue(places.size >= 4, "only $places places — the shape has four, and a shorter roster makes this law pass by checking nothing")
+
+        val words = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value }.toList()
+        for (expected in listOf("TAPE", "PROJECT")) {
             assertTrue(
-                stage in labels,
-                "Copy.FIRST_RUN_LOOP_STAGES names '$stage', which is not a menu tab. The empty shelf is " +
-                    "the app's only statement of its own loop and it works by naming the tabs — a stage " +
-                    "that is not one sends a new user looking for a screen that does not exist. " +
-                    "Tabs are: ${labels.sorted()}",
+                expected in words,
+                "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") no longer names $expected. The note's job is " +
+                    "to say where the loop starts and where it lands; the plan's §3.1 names those two places.",
             )
         }
-
-        // ...and the sentence under those four words is held to the same
-        // rule, which is where J13 got in: the law above passed while
-        // FIRST_RUN_LOOP_NOTE glossed step three, KIT, as "PLAY IT" — and
-        // PLAY is a real tab six places along the same menu row. A tab name
-        // in the note is a promise about where to tap, so the only tab
-        // names allowed in it are the four stages it is explaining.
-        val strays = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_LOOP_NOTE)
-            .map { it.value }
-            .filter { it in labels && it !in Copy.FIRST_RUN_LOOP_STAGES }
-            .toSet()
+        // The old tab names that are no longer anywhere on the row. A note
+        // that still said one of them would point a new user at a screen
+        // that does not exist as a destination any more.
+        val retiredTabs = setOf("CHOP", "EXPORT", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP", "SETUP", "HELP", "PLAY")
+        val strays = words.filter { it in retiredTabs }
         assertTrue(
             strays.isEmpty(),
-            "Copy.FIRST_RUN_LOOP_NOTE (\"${Copy.FIRST_RUN_LOOP_NOTE}\") names ${strays.sorted()}, " +
-                "which ${if (strays.size == 1) "is a menu tab" else "are menu tabs"} but not one of the four " +
-                "stages it explains (${Copy.FIRST_RUN_LOOP_STAGES}). The note sits directly under the stage " +
-                "row and reads as a gloss of it, so a tab name in it points a new user at a screen that is " +
-                "not the step being described. Use a verb that is not a tab, or the stage's own name.",
+            "Copy.FIRST_RUN_PLACES_NOTE names ${strays.sorted()}, which were tabs and are not places. The note sits " +
+                "under the place row and reads as a gloss of it; a tab name in it points a new user at a screen " +
+                "that is not a place. Use a verb that is not a tab, or the place's own name.",
         )
     }
 

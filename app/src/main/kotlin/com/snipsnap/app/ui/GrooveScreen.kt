@@ -164,9 +164,10 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  * `MenuRow` (Chrome.kt, September UAT finding 10) already establishes the
  * house rule for this class of problem — "it scrolled with no arrow, fade
  * or cue of any kind" was itself the bug — but it solves it with a
- * reserved gutter and a directional glyph, because a tab strip has no
- * content living at the edge to protect: the row is padded in from
- * [Layout.MENU_EDGE_W] on both sides, so the cue never overlaps a tab.
+ * reserved gutter and a directional glyph, because a tab strip had no
+ * content living at the edge to protect: the row was padded in from
+ * a gutter on both sides, so the cue never overlapped a tab (that row is
+ * the four-place row now, which does not scroll).
  * This screen's scroll region has no such margin — TRANSPORT / SHAPE THE
  * GROOVE / the write-and-doors row run edge to edge, so whichever control the
  * viewport happens to end on (the FEEL stepper, at the 1080x2400/420dpi
