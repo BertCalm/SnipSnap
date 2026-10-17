@@ -50,12 +50,13 @@ machines when the point is naming the rule that forbids naming them.
 
 ### FACET — mirrorball-driven spectral pads
 
-**R2 source revision in development; listening acceptance pending.** The owner
+**R2 source revision rendered; listening acceptance pending.** The owner
 heard R1 as lo-fi and dead while confirming its macro controls worked. R1's
 full repository gate passed 4,944 tests in approximately 86 minutes. R2 passed
 26 focused engine, patch, model and integration checks with no failures or
-skips; the full repository gate has not been rerun for R2. Its new listening
-pack and the owner's verdict are pending.
+skips; the full repository gate has not been rerun for R2. Its 57-clip listening
+pack rendered and all 171 PCM24 exports were verified. The owner's verdict
+is pending.
 BLOOM and
 SHIMMER explore twelve generated harmonic beams, a deterministic nested facet
 layout, moving spectral routes and shared resonance. ILLUMINATE, ELEVATION,

@@ -59,8 +59,11 @@ failures or skips: 15 engine, patch and model tests plus 11 registry, preset
 and promotion checks. Coverage includes both R1 PCM goldens, replay, stopped
 geometry, control activity, density continuity, source-motion body retention,
 pitch, register bounds and 4×/8× aliasing comparison. The full repository gate
-has not been rerun for R2. Its 57-clip render and the owner's listening verdict
-remain pending.
+has not been rerun for R2. The 57-clip pack rendered successfully as 171 PCM24
+WAVs; all exports were decoded and verified, both C3 R1 defaults matched all
+six published raw/native/matched hashes, and pitch estimates stayed within
+.54 cents with confidence above .93. The owner's listening verdict remains
+pending.
 
 ## Controls and pitch
 
