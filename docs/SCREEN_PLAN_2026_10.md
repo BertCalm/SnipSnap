@@ -486,7 +486,14 @@ reversed before any of it is built.
 ## 6. The models — the fast follow
 
 Built and tested in `:shell` before the SDK session, so the session binds
-rather than designs. Names are proposals.
+rather than designs. **Built 2026-10-14**, under the names below, with
+one change from the proposal: the new copy that is furniture (place and
+stage labels, the dock's labels and doors, HELP by place) lives in a
+`Places` object beside `Copy` rather than inside it, because `Copy`'s
+reflective law holds every constant there to be a sentence with a full
+stop; the two new sentences (`FIRST_RUN_PLACES_NOTE`, `DOCK_READY`) are in
+`Copy`. The old tab-era copy stays until the SDK session retires the tabs,
+so the laws that read it against the menu row keep passing.
 
 ### 6.1 `Navigation`
 A pure state machine: `Place { SHELF, TAPE, PROJECT, MAKE }`, `Stage`

@@ -264,11 +264,12 @@ keep both layers on the requested
 note together with gentle tape wow/flutter. STRAIN shapes their journey,
 RETURN sets the swelling backward layer,
 IMPRINT leaves delayed traces in neighboring strips and SPLICE
-reorders short sections. Six dry presets, a sixteen-pad starter, the synth
+reorders short sections. Thirty-six dry presets, a sixteen-pad starter, the synth
 picker and CLI use the same serialized machine. HOLD loops an explicitly
 frozen imprint snapshot. Run `./gradlew :synth:generateSpoolAudition` for the
-first listening pack; [implementation notes](docs/SPOOL.md) explain its
-export semantics. The proposed 36-preset library awaits dry sonic approval.
+full preset and musical audition; [implementation notes](docs/SPOOL.md) explain its
+export semantics. The original six sounds have dry sonic approval; the expanded
+bank adds 30 recipes while preserving those originals and the starter kit.
 
 RELAY makes a compact timbral phrase inside one pitched note: a rounded
 pluck hands off to harmonic body, bell detail and soft tone, with accents
@@ -335,14 +336,16 @@ preserved models 1 and 2 for comparison.
 LACQUER is a layered-tone engine for finished keys, glass, synthetic brass,
 bass, plucks and broad sustains. RELIEF separates independent body, edge and
 trail articulation; SHEEN, BODY, CONTOUR and GLUE shape their common finish.
-Eight provisional patches retain explicit layer models, MIDI root and velocity.
+Thirty-six recipes, six per voice, retain explicit layer models, MIDI root and
+velocity. The original eight remain unchanged as the reference bank.
 HOLD's top step supplies settled loop material, with periodic layer contours
 preserving RELIEF after the initial arrivals have passed. Run
 `./gradlew :synth:generateLacquerAudition` for native/matched samples, layer solos,
 macro sweeps and interaction grids. [Implementation notes](docs/LACQUER.md)
 describe the contracts. The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
-is private to the owner's account and includes the dry sixteen-pad MPC kit.
-Dry sonic approval precedes the full preset expansion.
+is private to the owner's account and includes three twelve-preset MPC bank
+programs plus the original dry sixteen-pad starter. The expanded recipes are
+available for listening review; physical device validation remains a bench step.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -354,6 +357,17 @@ and capture/control diagnostics. The
 [private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
+
+OVERLAP is a second-listen six-delay resonator prototype: a finite strike rings
+through selectable self, three-cycle, reflected-pair or six-cycle routing.
+KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response; saved recipes
+retain MIDI root and velocity. Run `./gradlew :synth:generateOverlapAudition`
+for twelve dry raw/matched comparisons and their replayable recipes. Revision 2
+uses different cycle families, passive depth scattering and phase-gated excitation
+after the first listening verdict found the identities and breathing too similar. The
+[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site)
+awaits listening; [implementation notes](docs/OVERLAP.md) describe tuning limits
+and the prototype's scope before phone-picker or sustained-loop integration.
 
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
@@ -433,12 +447,13 @@ includes the complete factory bank and the original/revised GLASS comparisons.
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
 modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
-EDGE, BODY, LENGTH, TUNE and HOLD. Twelve provisional presets, saved operator and
+EDGE, BODY, LENGTH, TUNE and HOLD. Thirty-six factory presets, saved operator and
 material recipes, native velocity and a dry sixteen-pad kit use the same renderer.
 Run `./gradlew :synth:generateAlloyAudition` for voice/register/velocity coverage,
 five-point sweeps, interactions, FUSE ablation and settled loop listening. The
-[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) awaits
-the owner's sonic verdict before expansion to the proposed 36 presets.
+[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) includes
+six presets per voice. The owner heard the initial twelve and authorized this
+expansion on the same engine tuning; the new presets await listening review.
 [Implementation notes](docs/ALLOY.md) describe the render and export contracts.
 
 CONTOUR is an original wavetable instrument: a stable body carries the note while
@@ -995,12 +1010,27 @@ The app's brain: every screen's state machine as tested pure Kotlin, so the
 Android app is Compose bound to proven logic instead of logic written in a
 UI layer. What lives here:
 
-- **`Schemes`/`Type`/`Layout`/`Motion`** — the nine TapeOS scheme token
-  tables as data (verbatim from the design system; VENT, the ninth, from
-  the audition page `docs/DIRECTION_2026_10.md` names), pad-label ink tables
+- **`Schemes`/`Type`/`Layout`/`Motion`** — the ten TapeOS scheme token
+  tables as data (verbatim from the design system; VENT and OPENSKY, the
+  two MODERN ones, from the audition pages `docs/DIRECTION_2026_10.md`
+  names — OPENSKY the first paper scheme, which reopened the August cut
+  of light shells for the modern look only), pad-label ink tables
   for dark schemes and CLEAR, and the layout/motion constants from the
   handoff. The two-surface rule — the LCD stays dark in every scheme — is
   a unit test now.
+- **The four-place shape's models**
+  ([`docs/SCREEN_PLAN_2026_10.md`](docs/SCREEN_PLAN_2026_10.md) §6) —
+  `Navigation` (four places, the stage rows, benches, one back stack, and
+  the per-place state a stage switch keeps), `DockModel` (the transport,
+  the capture light, the line and its standing door), `ShelfModel`
+  (projects above kits, the migration on open), `PadStrip` (the tap door
+  under the grid, built on the pad sheet's own closed-box words),
+  `ProjectSessionModel` (OUT's session card over the project exporter),
+  `Places` (the rows' words, the dock's labels, HELP by place) and
+  `Scheme.look` (CLASSIC or MODERN, the second axis beside the scheme).
+  Built ahead of the SDK session that draws them, so that session binds
+  rather than designs; `UatSimTest`'s J11 walks the plan's journeys on
+  `Navigation` and counts them.
 - **`PeaksPyramid`** — min/max waveform mips with *exact* queries at any
   zoom; what makes the tape deck's canvas flat-cost at 60 fps.
 - **`TapeDeckModel`** — the trim screen's transport physics, ported

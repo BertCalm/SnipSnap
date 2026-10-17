@@ -135,6 +135,15 @@ object ProjectStore {
     fun exists(shelfRoot: File, name: String): Boolean =
         SafePath.isSafe(name) && File(dir(shelfRoot, name), FILE_NAME).isFile
 
+    /** [base], or `<base> 2`, `<base> 3`… — the first name no project on the shelf holds. */
+    fun freshName(shelfRoot: File, base: String): String {
+        val taken = list(shelfRoot).map { it.name }.toSet()
+        if (base !in taken) return base
+        var n = 2
+        while ("$base $n" in taken) n++
+        return "$base $n"
+    }
+
     /** Writes `project.json` into the project's folder, creating it. */
     fun save(shelfRoot: File, project: Project): File {
         val dir = dir(shelfRoot, project.name)

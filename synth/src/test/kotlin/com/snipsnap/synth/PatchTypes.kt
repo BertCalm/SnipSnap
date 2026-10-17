@@ -47,8 +47,9 @@ internal object PatchTypes {
      * deliberately kept out of [Presets] until the owner's listening verdict. VENT's
      * three starting points live in [VentPresets] and render only through the CLI;
      * its factory roster and phone picker stay unchanged while it is a prototype.
+     * OVERLAP's first finite comparisons likewise stay in its audition generator.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, OverlapPatch.ENGINE)
 }

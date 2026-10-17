@@ -270,16 +270,17 @@ and GLUE, plus host TUNE and HOLD. RELIEF changes actual layer onsets and
 envelope development. Held loops use periodic layer contours with separated
 phases, because initial arrivals cannot remain audible in loop-only material.
 
-Eight provisional recipes cover the six voices. Saved patches retain the layer
+Thirty-six recipes provide six per voice, preserving the original eight reference
+recipes and the sixteen-pad starter. Saved patches retain the layer
 model, timing, envelopes, processing and loop profile. The dry kit, recipes,
 velocity renderer, CLI and synth picker follow existing host paths. Finite notes
 route as TONAL; HOLD's top step routes as LOOP. The audition generator writes
 real Kotlin-rendered native/matched audio, solos, five-point sweeps, interaction
 grids and held comparisons to `testkit/lacquer-audition/`.
-[LACQUER](LACQUER.md) documents reproduction and acceptance. Owner dry sonic
-approval precedes the wider 36-preset bank; numerical checks do not establish
-that listening verdict. Android device, MPC hardware and naming checks remain
-separate acceptance work.
+[LACQUER](LACQUER.md) documents reproduction and acceptance. The expanded bank
+is available for owner listening review, with three twelve-preset MPC programs
+and the original starter. Numerical checks do not establish a listening verdict;
+Android device, MPC hardware and naming checks remain separate acceptance work.
 
 ### TANGLE — oscillators that catch and release
 
@@ -425,8 +426,10 @@ PM articulation independently. BODY preserves root support and shapes carrier
 balance; LENGTH and HOLD control finite gestures and settled periodic excitation.
 Held exports omit the initial attack and retain MATERIAL/FUSE through the same port.
 
-Six voices and twelve provisional presets form the first listening roster. The
-proposed 36-preset expansion waits for the owner's dry audition decision. Run
+The owner heard the initial twelve-preset audition and authorized expansion on
+the same engine tuning. Thirty-six factory presets now provide six per voice,
+the agreed allocation replacing the specification's uneven split. The original
+twelve retain their settings, and the new presets await listening review. Run
 `./gradlew :synth:generateAlloyAudition` for the reproducible listening pack.
 The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
 includes voice/register/velocity coverage, five-point macro sweeps, interactions,
@@ -695,14 +698,16 @@ three loaded strips, diagonal heads, audible spring return, deterministic
 splices and delayed cross-strip imprint. TUNE (C3–C5), HEAD, STRAIN, RETURN,
 IMPRINT, SPLICE and HOLD share that machine. Patch recipes retain gate/source
 duration, source roster and contact/transport/head/splice/write geometry;
-velocity changes the contact gesture. Six dry presets, `SynthKits.spool()`,
-the FRESH TAPE starter, phone picker and CLI expose the first review set.
+velocity changes the contact gesture. Thirty-six dry presets, `SynthKits.spool()`,
+the FRESH TAPE starter, phone picker and CLI expose the full factory bank.
 HOLD explicitly exports a finite `FROZEN_SNAPSHOT` imprint through repeated
 forward/return cycles. `./gradlew :synth:generateSpoolAudition` builds the
 listening pack; [SPOOL.md](SPOOL.md) describes integration and its limits.
-**Awaiting the owner's dry sonic verdict before expanding to 36 presets.**
-Published auditions and numerical probes support that review; device and
-release-name validation remain outstanding.
+The owner accepted the original six sounds and musical audition on 2026-10-14.
+The expanded bank contains eight strings, eight choir, six flute, six brass and
+eight experimental presets; the six originals and starter mapping remain unchanged.
+Published recordings and complete recipes support the new bank's listening pass;
+device and release-name validation remain outstanding.
 
 RELAY follows as S30, ported from [the supplied engineering specification](RELAY_SPEC.md).
 KEY, BASS, PLUCK, ORGAN, CHIME and FLOW share four original generated roles:

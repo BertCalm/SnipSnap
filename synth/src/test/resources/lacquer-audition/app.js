@@ -6,7 +6,7 @@
   const canvas = $('waveform');
   const drawing = canvas.getContext('2d');
   const macros = ['RELIEF', 'SHEEN', 'BODY', 'CONTOUR', 'GLUE'];
-  const state = { data: null, preset: null, clip: null, held: false, level: 'matched', tab: 'relief', group: '', playing: false, waveform: [], loading: 0 };
+  const state = { data: null, preset: null, clip: null, filter: 'all', held: false, level: 'matched', tab: 'relief', group: '', playing: false, waveform: [], loading: 0 };
   const waveformCache = new Map();
   let decoder;
   let frame;
@@ -283,14 +283,17 @@
   }
 
   function renderPresets() {
-    const presets = state.data.presets || [];
-    $('preset-count').textContent = String(presets.length).padStart(2, '0');
+    const all = state.data.presets || [];
+    const presets = all.filter(preset => state.filter === 'all' || (state.filter === 'reference' ? preset.reference === true : String(preset.voice).toUpperCase() === state.filter));
+    $('preset-count').textContent = presets.length + ' / ' + all.length;
+    $('preset-count').setAttribute('aria-label', presets.length + ' of ' + all.length + ' presets shown');
+    document.querySelectorAll('.preset-filter').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.filter === state.filter)));
     $('preset-list').replaceChildren();
     for (const [index, preset] of presets.entries()) {
       const button = element('button', 'preset-button');
       button.type = 'button';
       button.dataset.preset = preset.id;
-      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-pressed', String(state.preset?.id === preset.id));
       const glyph = element('span', 'preset-glyph');
       glyph.setAttribute('aria-hidden', 'true');
       const shapes = [[9, 20, 29, 17, 9], [15, 29, 13, 22, 8], [8, 15, 27, 24, 12], [24, 17, 29, 12, 7], [10, 29, 21, 14, 8], [10, 15, 23, 29, 21]];
@@ -303,10 +306,53 @@
       copy.append(element('span', 'preset-name', preset.name), element('span', 'preset-family', String(preset.voice || 'LACQUER').toUpperCase()));
       button.append(glyph, copy, decorativeArrow());
       button.addEventListener('click', () => selectPreset(preset));
+      button.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const buttons = [...document.querySelectorAll('.preset-button')];
+        const current = buttons.indexOf(button);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next].focus();
+        buttons[next].click();
+        buttons[next].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      });
       $('preset-list').append(button);
     }
-    if (presets.length) selectPreset(presets[0]);
-    else $('preset-list').append(element('p', 'loading', 'No presets were included in this render.'));
+    if (!presets.length) $('preset-list').append(element('p', 'loading', 'No presets were included in this render.'));
+    else if (!presets.some(preset => preset.id === state.preset?.id)) selectPreset(presets[0]);
+    $('preset-list').scrollTop = 0;
+    $('preset-list').scrollLeft = 0;
+  }
+
+  function renderPresetFilters() {
+    const presets = state.data.presets || [];
+    const filters = [
+      { id: 'all', label: 'All', count: presets.length },
+      { id: 'reference', label: 'Reference', count: presets.filter(preset => preset.reference === true).length },
+      ...['KEY', 'GLASS', 'BRASS', 'BASS', 'PLUCK', 'SILK'].map(voice => ({ id: voice, label: voice, count: presets.filter(preset => String(preset.voice).toUpperCase() === voice).length }))
+    ];
+    $('preset-filters').replaceChildren();
+    for (const filter of filters) {
+      const button = element('button', 'preset-filter');
+      button.type = 'button';
+      button.dataset.filter = filter.id;
+      button.disabled = filter.count === 0;
+      button.setAttribute('aria-controls', 'preset-list');
+      button.setAttribute('aria-pressed', String(state.filter === filter.id));
+      button.setAttribute('aria-label', filter.label + ' presets, ' + filter.count);
+      button.append(element('span', '', filter.label), element('span', 'filter-count', filter.count));
+      button.addEventListener('click', () => { state.filter = filter.id; renderPresets(); });
+      button.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const buttons = [...document.querySelectorAll('.preset-filter:not(:disabled)')];
+        const current = buttons.indexOf(button);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next].focus();
+        buttons[next].click();
+      });
+      $('preset-filters').append(button);
+    }
   }
 
   function category(clip) {
@@ -402,6 +448,7 @@
     $('report-summary').replaceChildren();
     reportRow('Audio source', 'SnipSnap offline render');
     reportRow('Sample rate', number(data.sampleRate, 44100).toLocaleString() + ' Hz / mono');
+    reportRow('Preset bank', (data.presets || []).length + ' presets / ' + new Set((data.presets || []).map(preset => preset.voice)).size + ' voices');
     reportRow('Auditions', (data.presets || []).reduce((count, preset) => count + (preset.clips || []).length, 0) + (data.diagnostics || []).length + ' rendered clips');
     if (data.revision) reportRow('Source revision', String(data.revision).slice(0, 12));
     const tests = report.tests || report.testResults;
@@ -464,8 +511,15 @@
     state.data = data;
     if (data.report?.kitFile) {
       $('kit-download').href = data.report.kitFile;
+      $('starter-kit-option').hidden = false;
       $('kit-download-panel').hidden = false;
     }
+    if (data.report?.bankKitFile) {
+      $('bank-kit-download').href = data.report.bankKitFile;
+      $('bank-kit-option').hidden = false;
+      $('kit-download-panel').hidden = false;
+    }
+    renderPresetFilters();
     renderPresets();
     renderReport();
   }).catch(error => {

@@ -29,6 +29,7 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.Look
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
 
@@ -73,6 +74,14 @@ import com.snipsnap.shell.Schemes
 fun PropertiesScreen(
     currentScheme: SchemeId,
     onScheme: (SchemeId) -> Unit,
+    /**
+     * LOOK (plan §3.7, `Scheme.look`): which drawing's schemes the picker
+     * shows, CLASSIC or MODERN. A preference beside the scheme's, written
+     * by [onLook]; the drawing itself follows in the modern-look step, so
+     * for now the row groups the schemes and nothing more.
+     */
+    currentLook: Look,
+    onLook: (Look) -> Unit,
     teachEnabled: Boolean,
     onTeach: (Boolean) -> Unit,
     exportFormatLabel: String?,
@@ -101,6 +110,28 @@ fun PropertiesScreen(
             TapeText("TAPE PROPERTIES", TapeType.display, scheme.ink.tape)
         }
 
+        // LOOK: the two drawings, the schemes under the chosen one. The same
+        // two-up toggle TEACH THE MACHINE uses below.
+        TapeText("LOOK", TapeType.display, scheme.ink.tape)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            for (look in Look.entries) {
+                val selected = look == currentLook
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                        .semantics { this.selected = selected }
+                        .tapeClick(label = "LOOK ${look.displayName}") { if (!selected) onLook(look) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(look.displayName, TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
+                }
+            }
+        }
         Column(
             Modifier
                 .fillMaxWidth()
@@ -108,7 +139,7 @@ fun PropertiesScreen(
                 .padding(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            for (s in Schemes.ALL) {
+            for (s in Schemes.byLook().getValue(currentLook)) {
                 SchemeRow(s, selected = s.id == currentScheme, onPick = { onScheme(s.id) })
             }
         }

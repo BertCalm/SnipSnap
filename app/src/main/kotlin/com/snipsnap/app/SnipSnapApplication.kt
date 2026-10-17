@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * [Application.ActivityLifecycleCallbacks], not `lifecycle-process` (not
  * a dependency here). [BubbleOverlay] hides itself while this is true:
  * "SnipSnap itself is foreground" means any of this app's own Activities
- * ([MainActivity], [LoopActivity]) is started, not just the main one, so
+ * is started, not just the main one ([MainActivity] was once joined by a second, LOOP), so
  * counting beats a single-Activity check.
  */
 class SnipSnapApplication : Application(), Application.ActivityLifecycleCallbacks {
