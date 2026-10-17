@@ -198,13 +198,20 @@ object FacetAirRevisionGenerator {
     }
     private fun runtimeHashes(): Map<String, String> {
         val hashes = linkedMapOf<String, String>()
-        for (type in listOf(Snip::class.java, Json::class.java, FacetLightStudy::class.java, javaClass)) {
-            val root = File(type.protectionDomain.codeSource.location.toURI())
-            require(root.isDirectory) { "Runtime provenance currently requires unpacked Gradle classes" }
-            root.walkTopDown().filter { it.isFile && it.extension == "class" }.forEach { file ->
+        fun included(name: String) = name.endsWith(".class") && (name.startsWith("com/snipsnap/audio/") ||
+            name.startsWith("com/snipsnap/json/") || listOf("Facet", "Dsp", "Tide", "Thump", "MacroSpec", "AuditionLevel")
+                .any { name.startsWith("com/snipsnap/synth/$it") })
+        val locations = listOf(Snip::class.java, Json::class.java, FacetLightStudy::class.java, javaClass)
+            .map { File(it.protectionDomain.codeSource.location.toURI()) }.distinct()
+        for (root in locations) {
+            if (root.isDirectory) root.walkTopDown().filter { it.isFile }.forEach { file ->
                 val name = file.relativeTo(root).invariantSeparatorsPath
-                if (name.startsWith("com/snipsnap/audio/") || name.startsWith("com/snipsnap/json/") ||
-                    listOf("Facet", "Dsp", "Tide", "Thump", "MacroSpec", "AuditionLevel").any { name.startsWith("com/snipsnap/synth/$it") }) hashes[name] = hash(file)
+                if (included(name)) hashes[name] = hash(file)
+            } else java.util.jar.JarFile(root).use { jar ->
+                for (entry in jar.entries().asSequence().filter { !it.isDirectory && included(it.name) }) {
+                    val bytes = jar.getInputStream(entry).use { it.readBytes() }
+                    hashes[entry.name] = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+                }
             }
         }
         return hashes.toSortedMap()
