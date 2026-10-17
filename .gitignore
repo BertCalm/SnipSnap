@@ -244,3 +244,6 @@ testkit/vent-isolation-audition/
 # Regenerable PRISM spectral-motion listening assets
 /testkit/prism-motion-audition/
 /testkit/prism-palette-audition/
+
+# Model-2 clean voice audio, ordinary recipes and listening evidence are generated.
+testkit/vent-voice-audition/
