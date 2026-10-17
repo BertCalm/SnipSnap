@@ -30,6 +30,8 @@
         android:name=".SnipSnapApplication"
         android:label="SnipSnap"
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <!-- singleTask: a share while the app is open lands in the running
