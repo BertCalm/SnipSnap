@@ -679,6 +679,16 @@ object SynthKits {
             }
     }
 
+    /** Eight native-note lead pads followed by the accepted Round 3 source recipes. */
+    fun openSky(): List<ArrangedPad?> {
+        val presets = OpenSkyPresets.all()
+        val lead = presets.first { it.name == "Solar Arc" }
+        val notes = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            pad(lead.copy(name = "OpenSky ${i + 1}", midi = 48 + semitone), DrumClass.TONAL)
+        }
+        return notes + presets.map { pad(it, DrumClass.TONAL) }
+    }
+
     /**
      * Fifteen dry shore/sea comparisons and one intermediate coast with extended
      * excitation. All sixteen pads are finite SWELL gestures at C4, retaining

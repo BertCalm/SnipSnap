@@ -82,6 +82,10 @@ object Cli {
         |                        (FLOCK prototype: GATHER/RIBBON/SPLIT; --all,
         |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
         |                        HOLD extends a finite flock performance)
+        |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N
+        |                        --velocity 0..1 --gate S --dry|--wet;
+        |                        --patch recipe.json loads a complete sound;
+        |                        HALO --instrument [--release S] makes keys)
         |                        (RESIN: --instrument holds a note; --drone
         |                        [--root A1 --motion 0..1 --rate 1|2|4
         |                        --bpm N --bars N --loop N] loops one)

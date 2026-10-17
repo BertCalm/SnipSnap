@@ -1114,3 +1114,14 @@ tasks.register<JavaExec>("generateShoalAudition") {
     args(providers.gradleProperty("shoalOutput").orNull ?: "${rootDir}/testkit/shoal-audition")
     if (project.hasProperty("shoalRefreshPage")) args("--refresh-page")
 }
+
+/** OPENSKY's real stereo engine listening spike and reproducible comparison WAVs. */
+tasks.register<JavaExec>("generateOpenSkyAudition") {
+    group = "distribution"
+    description = "Render OPENSKY's eight presets, dry/wet pairs, registers, musical examples, macro sweeps and held HALO loops under testkit/opensky-audition/."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OpenSkyAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/opensky-audition")
+}
