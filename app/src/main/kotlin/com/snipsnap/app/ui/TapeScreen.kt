@@ -251,12 +251,12 @@ fun TapeScreen(
     /** DONE on the catch grid: App, which owns the writes, says what landed and opens KIT on its bank. */
     onCatchDone: () -> Unit = {},
     /**
-     * [EmptyDeck]'s own route: ARM/SNIP and a kit's own fallback sample
-     * both live on the shelf (KitsScreen) — see this function's own KDoc
-     * above on why `entry` is nullable. No default — a screen that forgets
-     * to wire this fails the compile, not the user.
+     * [EmptyDeck]'s own route: SNIPS, where an earlier catch is opened onto
+     * the deck (the other way in, LISTEN · MIC, is in the dock on every
+     * screen and needs no door here). No default — a screen that forgets to
+     * wire this fails the compile, not the user.
      */
-    onNavigateKits: () -> Unit,
+    onNavigateSnips: () -> Unit,
     /**
      * True while a CATCH is live — reported up so `App` can hold a
      * share-sheet import back instead of reloading the deck out from under
@@ -347,13 +347,16 @@ fun TapeScreen(
     }
 
     val tapeData = loaded
-    if (tapeData == null) {
+    if (tapeData == null || tapeData.samples.isEmpty()) {
         // Either still decoding, or nothing resolved — no snip, no
         // last-commit source, and nothing on the (possibly empty) kit was
-        // a readable WAV — the empty-shelf face covers both; a blank LCD
-        // for the moment it takes to read a file is the honest state to
-        // show in between.
-        if (failed) EmptyDeck(onNavigateKits) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        // a readable WAV — or a file that decoded to no audio at all. The
+        // last two have no deck worth drawing: no needle to scrub, nothing
+        // to mark IN or OUT on, so the transport and edit groups give way
+        // to one panel (S4a). A blank LCD for the moment it takes to read a
+        // file is still the honest state to show in between: "no tape yet"
+        // said over a decode that is about to finish would be a lie.
+        if (failed || tapeData != null) EmptyDeck(onNavigateSnips) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
         return
     }
 
@@ -377,13 +380,13 @@ fun TapeScreen(
 }
 
 @Composable
-private fun EmptyDeck(onNavigateKits: () -> Unit) {
-    // EMPTY_SHELF ("NOTHING TAPED YET.") is genuinely TAPE's own copy —
-    // this is the screen it was written for, unlike EXPORT's borrowed use
-    // of the same string. The route: ARM/SNIP and a kit's own fallback
-    // sample both live on the shelf (KitsScreen) — see this file's own
-    // TapeScreen KDoc on why `entry` is nullable.
-    EmptyStatePanel(Copy.EMPTY_SHELF, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+private fun EmptyDeck(onNavigateSnips: () -> Unit) {
+    // The way in is named twice, because there are two: LISTEN · MIC is the
+    // dock's, on every screen, so it is a sentence and not a button here;
+    // an earlier catch is on SNIPS, which is the one door this panel draws.
+    // EMPTY_SHELF ("NOTHING TAPED YET.") stays where it is still true: the
+    // shelf's own empty list.
+    EmptyStatePanel(Copy.NO_TAPE_YET, listOf(EmptyStateRoute("SNIPS ▸", onNavigateSnips)))
 }
 
 /** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */

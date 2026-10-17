@@ -3511,7 +3511,8 @@ fun App(shelf: KitShelf) {
                             onCaptureLanded = { retrim = null },
                             onCatch = ::catchOnto,
                             onCatchDone = ::catchDone,
-                            onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            // The empty deck's door: SNIPS, a bench, like PADS' FROM SNIPS.
+                            onNavigateSnips = { nav.open(Bench.SNIPS) },
                             onCatchInFlight = { catchInFlight = it },
                         )
                         top == Bench.SETUP -> PropertiesScreen(

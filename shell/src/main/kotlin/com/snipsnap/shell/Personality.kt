@@ -28,6 +28,14 @@ object Copy {
     const val EMPTY_SHELF = "NOTHING TAPED YET."
 
     /**
+     * The deck with no tape on it: the two ways in, named in the words the
+     * controls wear. LISTEN · MIC is the dock's ([Places.LISTEN]); SNIPS is
+     * the panel's one door. Replaces the transport, IN/OUT and ZOOM groups,
+     * which were live-looking over nothing.
+     */
+    const val NO_TAPE_YET = "NO TAPE YET. TAP LISTEN · MIC BELOW, OR OPEN A SNIP."
+
+    /**
      * The product loop, named once, on the only screen a new user is
      * guaranteed to see (September UAT, finding 3: capture -> trim -> grid
      * -> export was never stated anywhere in the app). The shelf draws the
