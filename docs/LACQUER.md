@@ -6,15 +6,17 @@ softly, and quiet reinforcement adds weight where the selected voice needs it.
 Each layer has its own source and envelope; RELIEF changes their arrival and
 development rather than adding an echo to a finished sound.
 
-The first listening bank contains eight provisional recipes across KEY, GLASS,
-BRASS, BASS, PLUCK and SILK. Dry sonic acceptance and the wider 36-preset bank
-remain owner listening decisions. The sources are generated in code, without
-external PCM assets or a hidden fixed-chord recipe.
+The factory bank contains 36 recipes: six each for KEY, GLASS, BRASS, BASS,
+PLUCK and SILK. The original eight recipes remain unchanged as references;
+28 additions vary layer sources, filtering, envelopes, timing and macros.
+The sources are generated in code, without external PCM assets or a hidden
+fixed-chord recipe. The expanded bank is available for owner listening review.
 
 The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
-is private to the owner's account. It includes 163 rendered clips in native and
-level-matched versions, layer solos, macro and interaction comparisons, and the
-dry sixteen-pad MPC kit. The commands below reproduce the pack locally.
+is private to the owner's account. It includes native and level-matched clips
+for all 36 recipes, layer solos, macro and interaction comparisons, and MPC
+downloads. Voice and reference filters keep the larger bank easy to browse.
+The commands below reproduce the pack locally.
 
 ## Controls and host behavior
 
@@ -63,7 +65,6 @@ MPC hardware listening is a separate acceptance step from JVM export validation.
 ```sh
 ./gradlew --no-daemon test
 ./gradlew :synth:generateLacquerAudition
-./gradlew :synth:generateLacquerKit
 ./gradlew :cli:run --args="synth LACQUER KEY --all --out /tmp/lacquer"
 ```
 
@@ -73,10 +74,21 @@ matched samples separately. Loudness matching follows `AuditionLevel` so a
 gain change does not decide a macro comparison; solo layers are independently
 matched for audibility, with their native role levels available as evidence.
 
-The kit generator exports the sixteen dry starter pads as a native MPC 3 `.xtd`
-and an MPC 2 `.xpm` twin in one ZIP. The drum program plays each whole sample
-once, including samples of held material; it does not encode a sustained
-keygroup or attack-plus-loop region.
+The kit generator exports the original sixteen dry starter pads as a native
+MPC 3 `.xtd` and an MPC 2 `.xpm` twin in `SnipSnap-Lacquer-Kit.zip`. Its eight
+pentatonic pads and eight reference recipes retain their original ordering.
+
+`SnipSnap-Lacquer-Bank.zip` contains three twelve-preset programs, each with an
+MPC 3 track and MPC 2 twin. Together they include every complete factory recipe:
+
+| Program | Voices | Presets |
+| --- | --- | --- |
+| Keys / Glass | KEY, GLASS | 12 |
+| Brass / Bass | BRASS, BASS | 12 |
+| Pluck / Silk | PLUCK, SILK | 12 |
+
+These drum programs play each whole sample once, including samples of held
+material; they do not encode sustained keygroups or attack-plus-loop regions.
 
 The listening matrix covers notes and velocities, all five timbral controls,
 independent layer solos, RELIEF × CONTOUR, RELIEF × SHEEN, BODY × GLUE,
@@ -84,6 +96,26 @@ SHEEN × GLUE, all-high combinations and difficult held cases. Automated checks
 cover reproducibility, pitch, finite-state and raw-mix bounds, macro activity,
 classification, model serialization, routing and measured loop seams. Listening
 still decides whether these numerical properties add up to a playable instrument.
+
+Frozen complete-recipe fixtures protect the eight references. Within each voice,
+the expanded recipes are compared at a common root, velocity, neutral TUNE and
+finite HOLD after matching levels, so transposition, gain and loop mode alone
+cannot establish variety.
+
+## Physical device bench
+
+The following listening checks require actual devices and remain unverified:
+
+1. On Android, open LACQUER and confirm six presets under each voice. Compare
+   original and new recipes, edit TUNE, RELIEF and GLUE, switch finite/HOLD, and
+   check rapid edits settle to the latest requested tone.
+2. Save and reload a new custom-profile preset, send it to a pad, regenerate it,
+   and relaunch. Check its source character, layer arrivals and complete tail.
+3. On MPC, import all three bank tracks and MPC 2 twins. Confirm twelve named
+   pads per program and trigger every held recipe; held samples should play once.
+4. Import the original starter and confirm sixteen pads: eight pentatonic notes
+   followed by the eight references. Listen for clicks, missing late layers,
+   clipping and stuck notes. Record device models and firmware with the verdict.
 
 The supplied version 0.1 engineering spec is retained at
 [`superpowers/specs/2026-10-11-lacquer-engine-engineering-spec.md`](superpowers/specs/2026-10-11-lacquer-engine-engineering-spec.md).

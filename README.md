@@ -336,14 +336,16 @@ preserved models 1 and 2 for comparison.
 LACQUER is a layered-tone engine for finished keys, glass, synthetic brass,
 bass, plucks and broad sustains. RELIEF separates independent body, edge and
 trail articulation; SHEEN, BODY, CONTOUR and GLUE shape their common finish.
-Eight provisional patches retain explicit layer models, MIDI root and velocity.
+Thirty-six recipes, six per voice, retain explicit layer models, MIDI root and
+velocity. The original eight remain unchanged as the reference bank.
 HOLD's top step supplies settled loop material, with periodic layer contours
 preserving RELIEF after the initial arrivals have passed. Run
 `./gradlew :synth:generateLacquerAudition` for native/matched samples, layer solos,
 macro sweeps and interaction grids. [Implementation notes](docs/LACQUER.md)
 describe the contracts. The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
-is private to the owner's account and includes the dry sixteen-pad MPC kit.
-Dry sonic approval precedes the full preset expansion.
+is private to the owner's account and includes three twelve-preset MPC bank
+programs plus the original dry sixteen-pad starter. The expanded recipes are
+available for listening review; physical device validation remains a bench step.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share

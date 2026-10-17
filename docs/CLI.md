@@ -217,8 +217,9 @@ of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
 is supported by SKITTER, OSPREY and VENT; `--scramble` by SKITTER only;
 `--seconds` and `--model` by OSPREY only. Other engines refuse these options.
 
-LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
-eight-preset audition bank. `--midi` and `--velocity 0..1` override
+LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK with six recipes per
+voice. `--all` exports those six recipes; the original first preset for each
+voice remains the default. `--midi` and `--velocity 0..1` override
 the stored root and strike energy, while TUNE remains the saved ±12-semitone
 offset. For example:
 
@@ -228,8 +229,9 @@ snipsnap synth LACQUER GLASS --all --midi 60 --velocity 0.7 --out <dir>
 
 HOLD presets render settled loop material. The wider listening matrix and
 native/matched comparison page come from `:synth:generateLacquerAudition`;
-`:synth:generateLacquerKit` exports the dry starter pads as an MPC 3 track
-with an MPC 2 twin. These remain provisional sounds pending the owner's audition.
+`:synth:generateLacquerKit` exports the original dry starter plus three
+twelve-preset bank programs, each as an MPC 3 track with an MPC 2 twin.
+The expanded recipes are available for the owner's audition.
 
 RELAY auditions use the complete saved phrase at the requested root (each
 voice's `--midi` range is in the table above).
