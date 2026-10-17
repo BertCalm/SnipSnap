@@ -43,7 +43,7 @@ object Circuit {
 
     fun macrosFor(voice: CircuitVoice): List<MacroSpec> {
         val d = starting[voice.ordinal]
-        return listOf(MacroSpec("TUNE", .5f, neutral = .5f),
+        return listOf(MacroSpec("TUNE", 1f, neutral = .5f),
             MacroSpec("BREATH", d[0], neutral = .45f), MacroSpec("DIAMETER", d[1], neutral = .40f),
             MacroSpec("ORBIT", d[2], neutral = 0f), MacroSpec("PACE", d[3], neutral = .35f),
             MacroSpec("CANYON", d[4], neutral = .40f), MacroSpec("HOLD", 0f, neutral = 0f))

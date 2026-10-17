@@ -76,8 +76,16 @@ class Navigation(start: Location = Location(Place.SHELF)) {
     }
 
     /** A door — the dock's standing offer, or a button that lands somewhere else. */
-    fun take(door: Door): Location {
-        push(door.target)
+    fun take(door: Door): Location = goTo(door.target)
+
+    /**
+     * A landing: straight to [target], benches and all. The primitive under
+     * [take], for the code paths that know where a thing lands (a chop
+     * landing on PADS, a RE-TRIM opening the DECK) without a labelled door
+     * to walk through. A plain step back like any other.
+     */
+    fun goTo(target: Location): Location {
+        push(target)
         return location
     }
 
@@ -91,6 +99,14 @@ class Navigation(start: Location = Location(Place.SHELF)) {
         taps++
         return true
     }
+
+    /**
+     * Whether [back] has anywhere to go. The app's root Back handler reads
+     * this to decide whether to take the press or leave it to the system,
+     * which finishes the Activity: the true root of a session is having
+     * nowhere to go back to, not being on any particular place (J11).
+     */
+    val canGoBack: Boolean get() = history.isNotEmpty()
 
     /** The label the top bench's back chip reads, or null on a bare stage. */
     val backChip: String? get() = location.benches.lastOrNull()?.backChip

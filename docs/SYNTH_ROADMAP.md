@@ -280,16 +280,37 @@ and GLUE, plus host TUNE and HOLD. RELIEF changes actual layer onsets and
 envelope development. Held loops use periodic layer contours with separated
 phases, because initial arrivals cannot remain audible in loop-only material.
 
-Eight provisional recipes cover the six voices. Saved patches retain the layer
+Thirty-six recipes provide six per voice, preserving the original eight reference
+recipes and the sixteen-pad starter. Saved patches retain the layer
 model, timing, envelopes, processing and loop profile. The dry kit, recipes,
 velocity renderer, CLI and synth picker follow existing host paths. Finite notes
 route as TONAL; HOLD's top step routes as LOOP. The audition generator writes
 real Kotlin-rendered native/matched audio, solos, five-point sweeps, interaction
 grids and held comparisons to `testkit/lacquer-audition/`.
-[LACQUER](LACQUER.md) documents reproduction and acceptance. Owner dry sonic
-approval precedes the wider 36-preset bank; numerical checks do not establish
-that listening verdict. Android device, MPC hardware and naming checks remain
-separate acceptance work.
+[LACQUER](LACQUER.md) documents reproduction and acceptance. The expanded bank
+is available for owner listening review, with three twelve-preset MPC programs
+and the original starter. Numerical checks do not establish a listening verdict;
+Android device, MPC hardware and naming checks remain separate acceptance work.
+
+### WICK — ignite, cascade, recover
+
+The [supplied specification](WICK_SPEC.md) is being tested as a two-voice
+PLUCK/BUBBLE listening prototype. One pitched complex source feeds three
+parallel low-pass gates. Each has bounded charge and recoverable availability;
+real releases schedule later pulses into the next gate. SPARK, FEED, CASCADE,
+TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
+and velocity. The oscillator/filter techniques draw on TIDE; the gate network
+and release scheduler are new.
+
+Nine provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+kit support the first audition. WICK stays outside the factory preset roster,
+phone picker and starter menu pending listening. Run
+`./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point
+controls, register/velocity probes, mechanism ablations and held examples.
+The [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
+and [implementation notes](WICK.md) retain the scope and current limits.
+WOOD, BREATH, FLICKER, RATTLE and the proposed 36-preset library follow the
+owner's verdict on the finite chain and repeating BUBBLE proof.
 
 ### TANGLE — oscillators that catch and release
 
@@ -425,6 +446,25 @@ interaction corners and HOLD extremes. Run
 36-preset expansion waits for the owner's dry sonic approval. Device playback
 and release naming remain outstanding.
 
+### SHOAL — a moving population of harmonics
+
+The first Shoal audition implements GLASS and RIPPLE from the supplied
+engineering concept. DENSITY, CURRENT, COHESION, STRAY and GLOW shape an additive
+population with a protected root, conservative neighbor transport, attraction
+to occupied neighborhoods and bounded pitch departures. Root MIDI 24–84 and
+native excitation velocity are separate from the six controls, including HOLD.
+
+Eight provisional dry recipes, a sixteen-pad C minor pentatonic kit, patch
+serialization, CLI note/velocity overrides and the phone picker form the first
+integration. HOLD returns moving repeating material without the initiating
+attack; its captured periodic trajectory is an approximation to the free-running
+transport model. `./gradlew :synth:generateShoalAudition` builds the listening
+matrix. The owner's first listen found GLASS and RIPPLE too similar. Model 2
+revises their contrast while preserving saved model-1 recipes; its listening
+verdict remains pending. ORGAN, WHISTLE,
+DRIFT, SWARM and the proposed 36-preset roster are later work.
+[SHOAL](SHOAL.md) records the as-built contracts and retained proposal.
+
 ### ALLOY — generated attack entering a four-operator tonal body
 
 The [supplied engineering specification](ALLOY_ENGINE_SPEC.md) is ported to the
@@ -435,8 +475,10 @@ PM articulation independently. BODY preserves root support and shapes carrier
 balance; LENGTH and HOLD control finite gestures and settled periodic excitation.
 Held exports omit the initial attack and retain MATERIAL/FUSE through the same port.
 
-Six voices and twelve provisional presets form the first listening roster. The
-proposed 36-preset expansion waits for the owner's dry audition decision. Run
+The owner heard the initial twelve-preset audition and authorized expansion on
+the same engine tuning. Thirty-six factory presets now provide six per voice,
+the agreed allocation replacing the specification's uneven split. The original
+twelve retain their settings, and the new presets await listening review. Run
 `./gradlew :synth:generateAlloyAudition` for the reproducible listening pack.
 The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
 includes voice/register/velocity coverage, five-point macro sweeps, interactions,
@@ -705,14 +747,16 @@ three loaded strips, diagonal heads, audible spring return, deterministic
 splices and delayed cross-strip imprint. TUNE (C3–C5), HEAD, STRAIN, RETURN,
 IMPRINT, SPLICE and HOLD share that machine. Patch recipes retain gate/source
 duration, source roster and contact/transport/head/splice/write geometry;
-velocity changes the contact gesture. Six dry presets, `SynthKits.spool()`,
-the FRESH TAPE starter, phone picker and CLI expose the first review set.
+velocity changes the contact gesture. Thirty-six dry presets, `SynthKits.spool()`,
+the FRESH TAPE starter, phone picker and CLI expose the full factory bank.
 HOLD explicitly exports a finite `FROZEN_SNAPSHOT` imprint through repeated
 forward/return cycles. `./gradlew :synth:generateSpoolAudition` builds the
 listening pack; [SPOOL.md](SPOOL.md) describes integration and its limits.
-**Awaiting the owner's dry sonic verdict before expanding to 36 presets.**
-Published auditions and numerical probes support that review; device and
-release-name validation remain outstanding.
+The owner accepted the original six sounds and musical audition on 2026-10-14.
+The expanded bank contains eight strings, eight choir, six flute, six brass and
+eight experimental presets; the six originals and starter mapping remain unchanged.
+Published recordings and complete recipes support the new bank's listening pass;
+device and release-name validation remain outstanding.
 
 RELAY follows as S30, ported from [the supplied engineering specification](RELAY_SPEC.md).
 KEY, BASS, PLUCK, ORGAN, CHIME and FLOW share four original generated roles:

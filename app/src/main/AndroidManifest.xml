@@ -94,17 +94,6 @@
                 android:resource="@xml/share_paths" />
         </provider>
 
-        <!-- The six-track phasing loop grid (plan-03). No launcher filter:
-             one front door, MainActivity's. Reached from the shelf's own
-             LOOP row once a snip has been sent to a track (App.kt's
-             loopLauncher); still startable in dev via
-             adb shell am start -n com.snipsnap.app/.LoopActivity, which is
-             why it says so in words when there is no session to draw. -->
-        <activity
-            android:name=".LoopActivity"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-
         <!-- The always-listening ring's foreground session (retroactive-snip
              plan, Task 2). Never exported: only this app's own ARM buttons
              (and its own notification action and tile) ever start it. The

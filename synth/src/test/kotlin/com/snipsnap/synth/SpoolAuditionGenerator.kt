@@ -61,6 +61,8 @@ object SpoolAuditionGenerator {
         val groupKey: String? = null,
         val machine: SpoolMachine? = null,
         val excerptReread: Boolean = false,
+        val preset: SpoolPatch? = null,
+        val bankIndex: Int? = null,
     )
 
     /** Offline sampler events: each note owns a fresh finite recording machine. */
@@ -90,7 +92,7 @@ object SpoolAuditionGenerator {
         check(cases.map { it.id }.distinct().size == cases.size)
         val source = listOf(File("src/main/kotlin/com/snipsnap/synth/Spool.kt"), File("synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"))
             .first { it.isFile }
-        val sourceFiles = listOf("Spool.kt", "SpoolPatch.kt", "SpoolPresets.kt").associate { name ->
+        val sourceFiles = listOf("Spool.kt", "SpoolPatch.kt", "SpoolPresets.kt", "Dsp.kt", "Tide.kt").associate { name ->
             "synth/src/main/kotlin/com/snipsnap/synth/$name" to File(source.parentFile, name)
         }
         val sourceFileHashes = sourceFiles.mapValues { (_, file) -> sha256(file.readBytes()) }
@@ -120,7 +122,7 @@ object SpoolAuditionGenerator {
         }?.toMutableList() ?: mutableListOf()
         for ((index, case) in cases.withIndex()) {
             verifySources()
-            val macros = Spool.defaults(case.voice) + case.macros + ("TUNE" to ((case.midi - 48) / 24f))
+            val macros = case.preset?.macros ?: (Spool.defaults(case.voice) + case.macros + ("TUNE" to ((case.midi - 48) / 24f)))
             val geometry = case.machine ?: SpoolMachine.forVoice(case.voice).copy(gateSeconds = case.gate, sourceSeconds = case.sourceSeconds, motorTorque = case.motorTorque)
             val machine = if (case.companionLoad) geometry.copy(roster = geometry.roster.mapIndexed { i, strip ->
                 if (i == 2) strip.copy(tension = 2f, drag = 1f) else strip
@@ -267,6 +269,26 @@ object SpoolAuditionGenerator {
             }
             if (case.macro != null) entry["macro"] = case.macro
             if (case.section == "macros") entry["recipe"] = SpoolPatch(case.label, case.voice, macros, machine, case.velocity).toJsonValue()
+            case.preset?.let { preset ->
+                check(preset.voice == case.voice && preset.macros == macros && preset.machine == machine && preset.velocity == case.velocity) {
+                    "Preset audition must render the exact saved recipe: ${case.id}"
+                }
+                val family = if (preset.voice in setOf(SpoolVoice.PALIMPSEST, SpoolVoice.CUT)) "EXPERIMENTAL" else preset.voice.name
+                val patchPath = "patches/${case.id}.patch.json"
+                val recipe = preset.toJsonValue()
+                File(root, patchPath).apply { parentFile.mkdirs(); writeText(Json.write(recipe) + "\n") }
+                entry["presetId"] = case.id
+                entry["presetName"] = preset.name
+                entry["presetDescription"] = case.description
+                entry["shortDescription"] = case.description
+                entry["category"] = family
+                entry["libraryFamily"] = family.lowercase(Locale.ROOT)
+                entry["bankIndex"] = case.bankIndex
+                entry["recipe"] = recipe
+                entry["patchPath"] = patchPath
+                entry["recipePath"] = patchPath
+                entry["recipeStatus"] = "Exact factory preset recipe; dry native and matched render"
+            }
             if (case.excerptReread) entry["auditionWindow"] = mapOf(
                 "kind" to "finite second read after the causal write pass", "startFrame" to rereadStart,
                 "endFrame" to rereadEnd, "performanceFrames" to result.samples.size,
@@ -299,6 +321,7 @@ object SpoolAuditionGenerator {
             "exportDescription" to "The overlapping pickup motion and serialized gate are baked into each sample. Sampler pitch transposition changes gesture timing as well as pitch; playback-time release samples are not provided.",
             "levelDescription" to "Native dry files preserve measured machine level, with any PCM attenuation recorded per clip. Matched dry files share the repository's quiet audition loudness of 0.03 over the loudest 200 ms.",
             "musicalDescription" to "Musical examples sequence and sum real finite Spool recordings with complete per-note recipes. Each note has an independent machine and motor; recordings overlap as sampler voices. The examples do not introduce a shared cross-note transport or external effects. Longer chords use finite serialized gates with HOLD off.",
+            "presetLibraryDescription" to "Thirty-six exact factory recordings: eight strings, eight choirs, six flutes, six brass and eight experimental machines. Each example renders its complete saved recipe without added effects; HOLD presets export a repeating frozen-snapshot cycle.",
             "provenance" to mapOf("sourceSha256" to sourceHash, "sourceFilesSha256" to sourceFileHashes,
                 "renderer" to "com.snipsnap.synth.Spool.renderProbe", "internalRate" to Dsp.RATE * Dsp.OVERSAMPLE),
             "clips" to entries, "kit" to kit,
@@ -545,6 +568,52 @@ object SpoolAuditionGenerator {
             add(Case("repeat_$id", "repeated-loops", voice, "$voice · three consecutive cycles",
                 "Three exact consecutive exported cycles expose any repeated seam or doubled event to listening.", macros, repeatedCopies = 3))
         }
+        for ((index, preset) in SpoolPresets.all().withIndex()) {
+            val id = "preset_" + preset.name.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9]+"), "_").trim('_')
+            add(Case(id, "preset-library", preset.voice, preset.name, presetDescription(preset),
+                macros = preset.macros, midi = 48 + (preset.macros.getValue("TUNE") * 24).roundToInt(),
+                velocity = preset.velocity, machine = preset.machine, preset = preset, bankIndex = index + 1))
+        }
+    }
+
+    private fun presetDescription(preset: SpoolPatch): String = when (preset.name) {
+        "SOFT FRAME" -> "A soft bowed onset, a broad string body and a restrained returning swell."
+        "DIAGONAL HEAD" -> "The head crosses bowed, vowel and airy recordings as the return opens behind them."
+        "CLOSE BOW" -> "A close, direct bow with little inherited detail and a short answer."
+        "LONG FRAME" -> "A longer bowed recording lets the forward body and backward answer overlap."
+        "CHAMBER VEIL" -> "A softer string ensemble with neighboring vowel color under the bow."
+        "TENSION LINE" -> "Uneven strip load bends the bowed recording into a stronger fluttering motion."
+        "RETURNING BOW" -> "The bowed attack returns as a backward swell beneath the held string."
+        "FRAME CYCLE" -> "A bowed forward/return cycle repeats from a frozen imprint snapshot."
+        "RETURNING CHOIR" -> "A rounded vowel opens softly and leaves a breath of choir in the return."
+        "NEAR VOWEL" -> "A close voiced recording brings the moving vowel formants forward."
+        "LONG MURMUR" -> "A long choir gate exposes the changing vowel and its complete returning breath."
+        "DOUBLE CHOIR" -> "Doubled choir strips thicken the voiced body around one stable root."
+        "GLASS VOWEL" -> "A brighter vowel edge passes across the choir's softer voiced center."
+        "CHOIR AFTERIMAGE" -> "A second read reveals the neighboring trace inherited during the first return."
+        "BREATHED ANSWER" -> "A gentle voiced start blooms into a more exposed backward breath."
+        "VOWEL WHEEL" -> "A voiced forward/return cycle repeats with inherited detail frozen for export."
+        "FLUTE MEMORY" -> "An airy root, sparse upper harmonics and a quiet inherited return."
+        "CLOSE BREATH" -> "A close flute recording keeps the airy root clear and the answer restrained."
+        "LONG AIR" -> "A longer breath reveals the flute's sustained air and complete backward swell."
+        "FLUTE DOUBLING" -> "Doubled flute strips spread the airy recording around its clear root."
+        "PAPER WIND" -> "Stronger transport motion roughens the air with flutter and inherited texture."
+        "RETURNING AIR" -> "A flute breath swells backward beneath the end of its forward tone."
+        "WORN BRASS" -> "A bright lip-shaped attack settles into a darker worn brass body."
+        "SOFT BELL" -> "A gentler brass contact rounds the attack and leaves a softer answer."
+        "BRASS PUNCTUATION" -> "A short brass gesture puts its bright attack and quick return in focus."
+        "LONG HORN" -> "A longer horn gate exposes the darker sustain before the returning attack."
+        "THREE SPRINGS" -> "Three differently loaded strips pull against the same bright brass recording."
+        "BRASS AFTERIMAGE" -> "The brass recording carries a neighboring inherited trace into its return."
+        "GHOST COPY" -> "Bowed and vowel recordings meet through a strongly inherited return."
+        "BORROWED ATTACK" -> "A second read exposes an attack borrowed from a neighboring recording."
+        "NEIGHBOR PRINT" -> "A routed neighboring strip leaves a clear inherited trace for the next read."
+        "CARBON CYCLE" -> "A mixed-source forward/return cycle repeats a frozen inherited snapshot."
+        "SHORT SPLICE" -> "A bright brass/flute recording is folded into short, overlapping cuts."
+        "FOLDED RECORDING" -> "Reordered recorded sections return, then appear again in an inherited second read."
+        "ANGLED SPLICE" -> "Diagonal head travel changes the color of a cut and reordered recording."
+        "SPLICED CIRCLE" -> "A rearranged forward/return cycle repeats with its inherited snapshot frozen."
+        else -> descriptions.getValue(preset.voice)
     }
 
     private fun exportKit(root: File): Map<String, Any?> {

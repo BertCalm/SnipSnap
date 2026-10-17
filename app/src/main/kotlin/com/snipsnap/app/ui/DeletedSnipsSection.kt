@@ -1,19 +1,15 @@
 package com.snipsnap.app.ui
 
 import android.util.Log
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,22 +49,21 @@ import kotlinx.coroutines.withContext
 private const val EMPTY_BIN_ARM_MS = 3_000L
 
 /**
- * DELETED SNIPS (name-and-find task): the SNIPS-level listing over
+ * DELETED SNIPS, a section of the BIN bench (`BinScreen.kt`) — it used to be a
+ * screen of its own (`DeletedSnipsScreen`, reached from SNIPS) and is now the
+ * lower of the bench's two lists. The bench owns the header row, the ◄ SHELF
+ * chip and Back; this section draws one heading line and the list under it,
+ * nothing more.
+ *
+ * Originally (name-and-find task): the SNIPS-level listing over
  * `SnipStore.binned()` — what SNIPS's own DELETE sends to `snips/.bin/`
  * now gets the same shape TAKES + BIN, ROOMS's own FORGET → BIN, and
  * DELETED KITS already have (a visible listing, RESTORE, an early "EMPTY
  * THE BIN NOW"), closing the same gap for the fourth deletion path in the
  * app that used to have none at all.
- *
- * Reached from SNIPS (its own "DELETED SNIPS ▸" row, shown only when the
- * bin is non-empty) — not the shelf, since `DeletedKitsScreen` is. It's
- * nested one level deeper: `SnipsScreen`'s own `deletedSnipsOpen` renders
- * this INSTEAD of itself, so this screen owns Back entirely on its own
- * while showing (`SnipsScreen`'s dialogs/BackHandler are never composed in
- * that window — see its own KDoc on the early return).
  */
 @Composable
-fun DeletedSnipsScreen(
+internal fun DeletedSnipsSection(
     /**
      * Where snips live: the app's own files directory, NOT the shelf root.
      *
@@ -81,9 +76,11 @@ fun DeletedSnipsScreen(
      * actually in it.
      */
     snipsRoot: File,
-    onBack: () -> Unit,
     onToast: (String) -> Unit,
     onRestored: (File) -> Unit,
+    /** Reports the section's write-in-flight state up to the bench, which holds its back chip and Back while either list is busy. */
+    onBusyChange: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -94,6 +91,7 @@ fun DeletedSnipsScreen(
     }
 
     var busy by remember { mutableStateOf(false) }
+    LaunchedEffect(busy) { onBusyChange(busy) }
     var armed by remember { mutableStateOf(false) }
 
     // The armed EMPTY THE BIN NOW confirm quietly stands down if the second
@@ -107,7 +105,7 @@ fun DeletedSnipsScreen(
     }
 
     fun failure(action: String, e: Exception) {
-        Log.e("DeletedSnipsScreen", "$action: failed", e)
+        Log.e("DeletedSnipsSection", "$action: failed", e)
         onToast(Copy.actionFailed(action))
     }
 
@@ -116,7 +114,7 @@ fun DeletedSnipsScreen(
         // A RESTORE tap disarms EMPTY THE BIN NOW: the restored row
         // vanishing shifts every row (and the EMPTY button) up under the
         // finger, so whatever tap lands next must not be read as EMPTY's
-        // genuine second tap — `DeletedKitsScreen.kt`'s own `doRestore`.
+        // genuine second tap — `DeletedKitsSection.kt`'s own `doRestore`.
         armed = false
         busy = true
         scope.launch {
@@ -133,7 +131,7 @@ fun DeletedSnipsScreen(
                 } else {
                     // Not an exception — a row that outran the tap (a stale
                     // list, a second restore/sweep racing this one). Still
-                    // worth a fresh list, `DeletedKitsScreen.kt`'s own shape.
+                    // worth a fresh list, `DeletedKitsSection.kt`'s own shape.
                     binned = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot) }
                     onToast(Copy.BIN_ITEM_GONE)
                 }
@@ -168,28 +166,10 @@ fun DeletedSnipsScreen(
         }
     }
 
-    // Registered always, no-op while busy — the same reasoning
-    // `DeletedKitsScreen.kt`'s own BackHandler KDoc gives verbatim: an
-    // `enabled = !busy` here would unregister mid-write with nothing else
-    // active at this overlay's level, and Back would fall through to
-    // Activity.finish().
-    BackHandler { if (!busy) onBack() }
-
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .lcdPanel(scheme)
-                .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HeaderChip("◄ SNIPS", scheme, Modifier.width(72.dp), enabled = !busy, onClick = onBack)
-            Spacer(Modifier.weight(1f))
-            TapeText("DELETED SNIPS", TapeType.lcdHeader, scheme.lcdInk.tape)
-            Spacer(Modifier.weight(1f))
-            TapeText("${binned.size}", TapeType.lcdSmall, scheme.amber.tape)
-        }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // The shelf's section-header style; the bench's header row and Back
+        // live in `BinScreen`, not here.
+        TapeText("DELETED SNIPS · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
 
         if (binned.isEmpty()) {
             Box(
@@ -217,7 +197,7 @@ fun DeletedSnipsScreen(
                 // two snips that both read "KICK" (different capture
                 // times) still get distinct bin filenames ([SnipStore]'s
                 // own binning stamp), the same reasoning
-                // `DeletedKitsScreen.kt` gives for keying on `it.dir.name`.
+                // `DeletedKitsSection.kt` gives for keying on `it.dir.name`.
                 items(binned, key = { it.file.name }) { row ->
                     DeletedSnipRow(row, busy, onRestore = { doRestore(row) })
                 }
@@ -233,7 +213,7 @@ fun DeletedSnipsScreen(
 /** Every [DrumClass] keyed by its own [AutoPlace.nameFor] output — duplicated from `SnipsScreen.kt`'s own `CLASS_BY_NAME` (per this codebase's own duplicate-don't-hoist convention) rather than exported. */
 private val CLASS_BY_NAME: Map<String, DrumClass> = DrumClass.entries.associateBy { AutoPlace.nameFor(it) }
 
-/** Coarse relative age, duplicated from `SnipsScreen.kt`'s own `relativeTime` / `DeletedKitsScreen.kt`'s own copy — the fourth, per the house convention stated in `SnipsScreen.kt`'s `HeaderChip`. */
+/** Coarse relative age, duplicated from `SnipsScreen.kt`'s own `relativeTime` / `DeletedKitsSection.kt`'s own copy — the fourth, per the house convention stated in `SnipsScreen.kt`'s `HeaderChip`. */
 private fun relativeTime(millis: Long, nowMillis: Long = System.currentTimeMillis()): String {
     val diffMs = (nowMillis - millis).coerceAtLeast(0)
     val minutes = diffMs / 60_000
@@ -321,30 +301,6 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
         )
-    }
-}
-
-/** Duplicated from `SnipsScreen.kt`'s own private `HeaderChip` (and `DeletedKitsScreen.kt`'s/`TakesBinScreen.kt`'s) rather than exported — every screen-local button in this codebase stays private to its own file, per that file's own stated convention. */
-@Composable
-private fun HeaderChip(
-    label: String,
-    scheme: Scheme,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier
-            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            // `enabled` goes through `tapeClick`, not around it: a dimmed
-            // chip stays in the semantics tree instead of silently
-            // vanishing from it (accessibility audit finding 12).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
-            .padding(horizontal = 6.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
     }
 }
 

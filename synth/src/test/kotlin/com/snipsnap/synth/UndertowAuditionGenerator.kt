@@ -136,8 +136,9 @@ object UndertowAuditionGenerator {
 
         val manifest = Json.write(value(linkedMapOf(
             "engine" to "UNDERTOW", "quick" to quick,
-            "voiceRevision" to 2,
-            "voiceRevisionDescription" to "Revised ceramic articulation, airflow movement and shell-body balance for clearer contrast among the six voices.",
+            "voiceRevision" to 3,
+            "voiceRevisionDescription" to "SEAL pressure relief corrected for controlled closing, reopening and release at normal and strong event energy; the other five voices are unchanged.",
+            "voiceRevisions" to UndertowVoice.entries.associate { it.name to if (it == UndertowVoice.SEAL) 3 else 2 },
             "coverage" to if (quick) "Representative development subset; regenerate without -PundertowQuick for the complete acceptance roster." else "Complete section-18 audition roster.",
             "renderCount" to cases.size, "caseCount" to sections.values.sumOf { it.size },
             "wavCount" to wavs, "sampleRate" to Dsp.RATE, "bitDepth" to 24,
