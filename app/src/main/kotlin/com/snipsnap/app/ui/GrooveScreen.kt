@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -2723,17 +2724,26 @@ private fun GrooveActionButton(
 ) {
     Box(
         modifier
-            .height(Layout.MIN_HIT_TARGET.dp)
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick),
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+        // Two lines, centred: four of these share the empty BEAT's one
+        // secondary row, and START YOURS is wider than a quarter of a
+        // phone — it wraps rather than ellipsising to START YOU….
+        TapeText(
+            label,
+            TapeType.pixel.copy(textAlign = TextAlign.Center),
+            if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape,
+            maxLines = 2,
+        )
     }
 }
 
