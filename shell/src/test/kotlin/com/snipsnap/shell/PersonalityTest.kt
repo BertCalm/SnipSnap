@@ -492,13 +492,18 @@ class PersonalityTest {
         )
         assertTrue(note.endsWith("."), "still a sentence the screen says: $note")
 
-        // It names no door, which is the rule its own KDoc sets: NEW KIT ▸
-        // STARTERS is already the primary action directly under this
-        // panel, and naming it here would be a third copy of a control
-        // twice on screen.
+        // It names no door of this screen, which is the rule its own KDoc
+        // sets: NEW KIT ▸ STARTERS is already the primary action directly
+        // under this panel, and naming it here would be a third copy of a
+        // control twice on screen. The one door it does name, LISTEN · MIC,
+        // is the dock's, and is checked below against the dock's own word.
         for (door in listOf("STARTERS", "NEW KIT", "INSTANT KIT", "CATCH")) {
             assertFalse(note.contains(door), "the note names a door it does not have to name: $note")
         }
+        // ...and the door it does name is the dock's, in the dock's own word:
+        // a note pointing at a LISTEN · MIC the dock had renamed would send
+        // a new user looking for a control that is not there.
+        assertTrue(Places.LISTEN in note, "the note does not name the dock's ${Places.LISTEN}: $note")
 
         // The doors it declines to name are named where the inventory
         // lives instead. CATCH has had a line since HELP was written;

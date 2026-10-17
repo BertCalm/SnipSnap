@@ -60,14 +60,23 @@ object Copy {
      * be understood by somebody who has not used the app yet, and the word
      * they arrive at is the one on the button: WRITE KIT.
      *
-     * **The last clause does not claim the walk is compulsory** (P2.4,
+     * **The middle clause does not claim the walk is compulsory** (P2.4,
      * P3.2): a starter kit begins at step three, and INSTANT KIT and CATCH
-     * A HIT land sounds on pads without CUT. No door is named here on
-     * purpose: NEW KIT sits directly under this panel and TAPE is on the
-     * row above it, so a line pointing at either would be a third copy of
+     * A HIT land sounds on pads without CUT. No door of this screen is named
+     * here on purpose: NEW KIT sits directly under this panel and TAPE is on
+     * the row above it, so a line pointing at either would be a third copy of
      * a control already twice on screen.
+     *
+     * **The last clause names the one door that is not on this screen**
+     * (the UX review's SH1): the loop starts with a recording, and the way to
+     * one is LISTEN · MIC in the dock, below, on every screen. The sentence
+     * used to describe the loop and point at nothing.
+     *
+     * Step three stays KIT IT, not PLAY IT: `ConventionTest` holds PLAY in
+     * its list of retired tab names, and a verb that reads as a place is
+     * what that law is for.
      */
-    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN."
+    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN. TAP LISTEN · MIC BELOW TO BEGIN."
 
     /** The dock's resting line, with no door beside it. */
     const val DOCK_READY = "READY WHEN YOU ARE."
