@@ -1,0 +1,439 @@
+package com.snipsnap.synth
+
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Loudness
+import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.Json
+import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.ExpansionMeta
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Mpc3Exporter
+import com.snipsnap.kit.Preflight
+import com.snipsnap.kit.Severity
+import com.snipsnap.kit.XpnPackager
+import java.io.File
+import java.nio.file.Files
+import java.security.MessageDigest
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import kotlin.math.sqrt
+
+/**
+ * A source-based feasibility audition, not a production engine or a playable factory preset pack.
+ * All vocal content comes from the attributed human recordings in the fixture manifest. Raw and
+ * matched WAVs, exact recipes and event traces travel together; this generator never writes HTML.
+ */
+object ConfluenceAuditionGenerator {
+    private const val GENERATOR_VERSION = 1
+    private const val SEED = 20261017
+    private const val MATCHED_LOUDEST_WINDOW_RMS = .03f
+
+    private data class Fixture(
+        val id: String, val file: File, val source: ConfluenceSource,
+        val region: ConfluenceRegion, val metadata: Map<String, JsonValue>,
+    )
+
+    private data class Case(
+        val id: String, val group: String, val title: String, val description: String,
+        val profile: ConfluenceProfile = ConfluenceProfile.UNISON,
+        val count: Int = 8, val seconds: Float = 9f,
+        val fixtureKind: String = "vowel", val multiSource: Boolean = false,
+        val divergence: Float = .35f, val register: Float = .25f,
+        val response: Float = .15f, val space: Float = 0f,
+        val fixedIdentities: Boolean = true, val coordination: Boolean = true,
+        val isolatedPerformer: Int? = null,
+    )
+
+    private val groups = listOf(
+        group("source", "Original recordings and existing SECTION", "Hear the actual human recordings first. The existing six-player SECTION comparison uses the same untransformed vowel timeline at WIDTH 0. Every file is mono."),
+        group("crowd", "One voice becomes a gathering", "One, two, four and eight persistent transformed variants of the same singer. Matched playback uses the same loudest-window RMS; raw playback retains the engine's crowd gain."),
+        group("behavior", "Complete phrases and individual breaths", "UNISON and RESPONSE schedule complete marked source phrases; DRONE uses the marked sustained vowel. These are deterministic finite renders, without HOLD."),
+        group("controls", "Small control comparisons", "Compare crowd with divergence, register with divergence, and answering sections close or in a shared room. The dry clips leave source and scheduling artifacts exposed."),
+        group("identity", "Do performers stay themselves?", "Fixed versus deliberately reshuffled identities, and isolated roster slots heard across rests. These are diagnostic ablations of the same recording, not new human singers."),
+        group("coordination", "Collective influence", "The same seeded roster and source with section following enabled or disabled. Read the event trace alongside the recording; the listening verdict remains open."),
+    )
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        require(args.size <= 2) { "supply optional output and fixture directories" }
+        val root = File(args.getOrNull(0) ?: "../testkit/confluence-audition").absoluteFile
+        val fixtureRoot = args.getOrNull(1)?.let(::File)?.absoluteFile
+            ?: File(root.parentFile.parentFile, "reference/fixtures/confluence")
+        val fixtureManifest = File(fixtureRoot, "manifest.json")
+        require(fixtureManifest.isFile) { "missing human-source fixture manifest: $fixtureManifest" }
+        val fixtureJson = Json.parse(fixtureManifest.readText()).obj()
+        val fixtures = fixtureJson.getValue("sources").arr().map { loadFixture(fixtureRoot, it.obj()) }
+        require(fixtures.isNotEmpty()) { "no source fixtures" }
+        val primaryVowel = fixtures.firstOrNull { it.id == "vowel-male" }
+            ?: fixtures.first { it.metadata["kind"]?.str() == "vowel" }
+        val primaryPhrase = fixtures.firstOrNull { it.id == "phrase-male" }
+            ?: fixtures.first { it.metadata["kind"]?.str() == "phrase" }
+        val secondVowel = fixtures.firstOrNull { it.id != primaryVowel.id && it.metadata["kind"]?.str() == "vowel" }
+        root.mkdirs()
+        val sourceRecords = copySources(root, fixtures, fixtureManifest)
+        val implementationSources = copyImplementation(root, fixtureRoot)
+        val resolved = fixtures.associate { it.source.hash to it.source }
+        val clips = mutableListOf<Map<String, Any?>>()
+        val renderedById = linkedMapOf<String, Snip>()
+        val generationStarted = System.nanoTime()
+
+        fun record(
+            id: String, group: String, title: String, description: String,
+            audio: Snip, recipe: JsonValue.Obj, diagnostics: JsonValue.Obj,
+            renderMs: Double, extra: Map<String, Any?> = emptyMap(),
+        ) {
+            require(audio.channels == 1 && audio.sampleRate == 44_100)
+            require(audio.frameCount > 0 && audio.samples.all { it.isFinite() }) { "nonfinite or empty audition $id" }
+            val rawMetrics = metrics(audio)
+            val rawGain = minOf(1f, .99f / audio.peak().coerceAtLeast(1e-9f))
+            val rawExport = gain(audio, rawGain)
+            val matched = AuditionLevel.level(audio)
+            val rawPath = "raw/$id.wav"
+            val matchedPath = "matched/$id.wav"
+            val recipePath = "recipes/$id.json"
+            val diagnosticsPath = "diagnostics/$id.json"
+            val rawFile = WavWriter.write(File(root, rawPath), rawExport, WavWriter.BitDepth.PCM_24)
+            val matchedFile = WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_24)
+            val recipeFile = File(root, recipePath).apply { parentFile.mkdirs(); writeText(Json.write(recipe) + "\n") }
+            val diagnosticFile = File(root, diagnosticsPath).apply {
+                parentFile.mkdirs()
+                writeText(Json.write(json(linkedMapOf(
+                    "id" to id, "rawMetrics" to rawMetrics, "rawExportMetrics" to metrics(rawExport),
+                    "matchedMetrics" to metrics(matched), "rawExportGain" to rawGain,
+                    "renderMilliseconds" to renderMs, "engine" to diagnostics,
+                ))) + "\n")
+            }
+            clips += linkedMapOf<String, Any?>(
+                "id" to id, "group" to group, "title" to title, "description" to description,
+                "seconds" to audio.durationSeconds, "frames" to audio.frameCount,
+                "sampleRate" to audio.sampleRate, "channels" to audio.channels, "bitDepth" to 24,
+                "rawPath" to rawPath, "matchedPath" to matchedPath,
+                "recipePath" to recipePath, "diagnosticsPath" to diagnosticsPath,
+                "recipeSha256" to sha256(recipeFile), "diagnosticsSha256" to sha256(diagnosticFile),
+                "rawSha256" to sha256(rawFile), "matchedSha256" to sha256(matchedFile),
+                "rawPeak" to rawMetrics.getValue("peak"), "rawRms" to rawMetrics.getValue("rms"),
+                "rawDc" to rawMetrics.getValue("dc"), "loudestWindowRms" to rawMetrics.getValue("loudestWindowRms"),
+                "matchedLoudestWindowRms" to Loudness.of(matched), "rawExportGain" to rawGain,
+                "matchedGain" to (matched.peak() / audio.peak().coerceAtLeast(1e-9f)),
+                "renderMilliseconds" to renderMs, "finite" to true,
+            ) + extra
+            renderedById[id] = matched
+            println("Confluence audition ${clips.size}: $id (${audio.durationSeconds}s, ${renderMs.toInt()} ms)")
+        }
+
+        val vowelTimeline = referenceTimeline(primaryVowel, 9f)
+        for ((fixture, id, title, seconds) in listOf(
+            Quad(primaryVowel, "source_vowel", "Original human vowel, with rests", 9f),
+            Quad(primaryPhrase, "source_phrase", "Original human phrase", maxOf(9f, regionSeconds(primaryPhrase) + .5f)),
+        )) {
+            val audio = referenceTimeline(fixture, seconds)
+            record(id, "source", title,
+                "Untransformed ${fixture.id}; complete marked material is repeated only when it fits, with 650 ms rests. No ensemble or room.",
+                audio, referenceRecipe(fixture, seconds, "source"), json(mapOf("operation" to "source-playback", "performerCount" to 1)) as JsonValue.Obj,
+                0.0, mapOf("sourceIds" to listOf(fixture.id), "performerCount" to 1, "profile" to "SOURCE"))
+        }
+        val beforeSection = System.nanoTime()
+        val section = Ensemble.process(vowelTimeline, mapOf("SECTION" to 1f, "WIDTH" to 0f, "DEPTH" to .5f, "RATE" to .5f))
+        record("ensemble_section", "source", "Existing ENSEMBLE SECTION, mono",
+            "Six existing delay-line players over exactly the original vowel timeline. SECTION 1, WIDTH 0, DEPTH .50, RATE .50; this is the comparison baseline, not Confluence.",
+            section, referenceRecipe(primaryVowel, 9f, "ensemble-section"),
+            json(mapOf("operation" to "Ensemble.process", "SECTION" to 1f, "WIDTH" to 0f, "DEPTH" to .5f, "RATE" to .5f)) as JsonValue.Obj,
+            elapsed(beforeSection), mapOf("sourceIds" to listOf(primaryVowel.id), "performerCount" to 6, "profile" to "ENSEMBLE"))
+
+        val phraseSeconds = maxOf(12f, (regionSeconds(primaryPhrase) + .75f) * 2f + 2f)
+        val cases = cases(phraseSeconds, secondVowel != null)
+        require(cases.map { it.id }.distinct().size == cases.size)
+        var portableCheck: Map<String, Any?>? = null
+        for (case in cases) {
+            val selected = if (case.fixtureKind == "phrase") listOf(primaryPhrase)
+                else if (case.multiSource) listOf(primaryVowel, requireNotNull(secondVowel)) else listOf(primaryVowel)
+            val macros = linkedMapOf(
+                "CROWD" to Confluence.crowdForCount(case.count), "REGISTER" to case.register,
+                "DIVERGENCE" to case.divergence, "RESPONSE" to case.response, "SPACE" to case.space,
+            )
+            val recipe = ConfluenceRecipe(
+                name = case.title, profile = case.profile, regions = selected.map { it.region }, macros = macros,
+                seed = SEED, seconds = case.seconds,
+            )
+            val options = ConfluenceOptions(
+                normalize = false, fixedIdentities = case.fixedIdentities,
+                coordination = case.coordination, isolatedPerformer = case.isolatedPerformer,
+            )
+            val started = System.nanoTime()
+            val report = Confluence.render(recipe, resolved, options)
+            val renderMs = elapsed(started)
+            val recipeJson = json(linkedMapOf(
+                "format" to "snipsnap-confluence-audition-recipe", "version" to GENERATOR_VERSION,
+                "recipe" to Json.parse(recipe.toJsonText()),
+                "renderOptions" to mapOf("normalize" to false, "fixedIdentities" to case.fixedIdentities,
+                    "coordination" to case.coordination, "isolatedPerformer" to case.isolatedPerformer, "spaceBypassed" to false),
+                "sourceIds" to selected.map { it.id }, "sourcePaths" to selected.map { "sources/${it.id}.wav" },
+                "sourcePcmHashes" to selected.map { it.source.hash },
+            )) as JsonValue.Obj
+            record(case.id, case.group, case.title, case.description, report.snip, recipeJson,
+                report.diagnosticsJson(), renderMs, linkedMapOf(
+                    "profile" to case.profile.name, "performerCount" to if (case.isolatedPerformer == null) case.count else 1,
+                    "rosterCount" to case.count,
+                    "sourceIds" to selected.map { it.id }, "macros" to macros,
+                    "evidence" to mapOf("fixedIdentities" to case.fixedIdentities, "coordinationEnabled" to case.coordination,
+                        "isolatedPerformer" to case.isolatedPerformer, "hold" to false, "roomBypassedBySpaceZero" to (case.space == 0f)),
+                ))
+            if (case.id == "crowd_4") portableCheck = verifyMovedRecipe(root, recipe, options, report.snip)
+        }
+
+        val kit = writeRenderedKit(root, clips, renderedById)
+        val manifest = linkedMapOf<String, Any?>(
+            "schemaVersion" to GENERATOR_VERSION, "title" to "Confluence · first human-source proof",
+            "engineVersion" to Confluence.MODEL, "analysisVersion" to Confluence.ANALYSIS_VERSION, "generatorVersion" to GENERATOR_VERSION,
+            "implementationSources" to implementationSources,
+            "runtime" to runtime(),
+            "sourceRevision" to git("rev-parse", "HEAD"), "workingTreeChanges" to git("status", "--short"),
+            "sampleRate" to 44_100, "channels" to 1, "bitDepth" to 24, "seed" to SEED,
+            "matchedLoudestWindowRmsTarget" to MATCHED_LOUDEST_WINDOW_RMS,
+            "levelPolicy" to "Matched: repository AuditionLevel, loudest 200 ms filtered RMS .03 with .99 peak guard. Raw: prelevel renderer output; rawExportGain records any PCM peak protection. Silence and rests are not removed.",
+            "status" to "feasibility-prototype-awaiting-owner-listening",
+            "scope" to "Actual licensed human vocal sources; conservative offline transformed variants, persistent seeded roster, complete phrase schedules and a shared mono room. No 48-voice or seamless HOLD claim; no native patch/kit editing integration.",
+            "limitations" to listOf("A transformed copy is not a new human singer.", "Pitch/formant quality and phrase-boundary integrity still need listening.",
+                "Phrase regions were selected from source pauses and waveform/pitch continuity; individual words were not verified by listening or transcription.",
+                "Coordination changes bounded future entrance timing only; no pitch-consensus model is implemented.",
+                "The source bundle is a reproducible prototype archive, not a native SnipSnap project.", "The rendered MPC kit needs no source assets for playback; editing the prototype needs the separate source bundle."),
+            "sources" to sourceRecords,
+            "sourceProvenance" to fixtureJson.filterKeys { it != "sources" }.mapValues { native(it.value) },
+            "groups" to groups, "clips" to clips,
+            "portableSourceCheck" to portableCheck, "renderedKit" to kit,
+            "sourceBundlePath" to "confluence-source-bundle.zip",
+            "generationMilliseconds" to elapsed(generationStarted),
+        )
+        File(root, "manifest.json").writeText(Json.write(json(manifest)) + "\n")
+        File(root, "SOURCE-BUNDLE.txt").writeText(
+            "Confluence first source proof.\n\nRecipes and canonical human-source WAVs are bundled with their content hashes and license attribution. " +
+                "This is a prototype replay archive, not a native SnipSnap project. Use the matching repository revision and Confluence.render with the recipe's options. " +
+                "The generator verifies one recipe after moving its inputs to a new temporary directory. See manifest.json and sources/fixture-manifest.json.\n"
+        )
+        writeZip(root, File(root, "confluence-source-bundle.zip"), listOf("manifest.json", "SOURCE-BUNDLE.txt", "sources", "recipes", "diagnostics", "implementation"))
+        println("Wrote ${clips.size} raw/matched pairs, exact recipes, traces, source bundle and rendered kit under $root")
+    }
+
+    private fun cases(phraseSeconds: Float, multiSource: Boolean): List<Case> = buildList {
+        for (n in listOf(1, 2, 4, 8)) add(Case("crowd_$n", "crowd", "$n ${if (n == 1) "performer" else "performers"}, dry",
+            "Same marked human vowel and seed. CROWD retains the existing roster slots as performers join; SPACE is zero.", count = n))
+        add(Case("phrase_solo", "behavior", "One performer · original melodic contour", "One transformed performer carries the whole marked sung source region in native order. Compare its melody and articulation with the original phrase before judging the four-voice arrangement.",
+            count = 1, fixtureKind = "phrase", seconds = phraseSeconds))
+        add(Case("phrase_unison", "behavior", "Complete phrase · UNISON", "Four performers carry the complete marked phrase in source order, rest and reenter when another whole phrase fits.",
+            count = 4, fixtureKind = "phrase", seconds = phraseSeconds))
+        add(Case("phrase_response", "behavior", "Complete phrase · RESPONSE", "Two sections answer after completed source phrases. The longer file permits a complete answer rather than cutting off a word.",
+            profile = ConfluenceProfile.RESPONSE, count = 4, fixtureKind = "phrase", seconds = phraseSeconds, response = .9f))
+        add(Case("drone_4", "behavior", "Four breathing sustained voices", "Four performers reuse only the marked sustained vowel and take staggered rests. No consonants are stretched into a drone.",
+            profile = ConfluenceProfile.DRONE, count = 4))
+        add(Case("drone_8", "behavior", "Eight breathing sustained voices", "The same marked vowel and seeded slots with eight participants, still dry.", profile = ConfluenceProfile.DRONE))
+        for (n in listOf(2, 8)) for (d in listOf(.1f, .8f)) add(Case("crowd_${n}_div_${tag(d)}", "controls", "$n performers · divergence ${label(d)}",
+            "CROWD × DIVERGENCE corner: compare individual delivery and agreement at the same loudness. Register and source stay fixed.", count = n, divergence = d))
+        for (r in listOf(0f, 1f)) for (d in listOf(.1f, .8f)) add(Case("register_${tag(r)}_div_${tag(d)}", "controls", "Register ${label(r)} · divergence ${label(d)}",
+            "REGISTER × DIVERGENCE corner on eight persistent vowel variants. Register shifts are deliberately conservative in this prototype.", register = r, divergence = d))
+        for (s in listOf(0f, .75f)) add(Case("response_space_${tag(s)}", "controls", "Answering vowels · space ${label(s)}",
+            "The same eight-performer answering arrangement, close or in the shared mono room. Listen for section clarity and room masking.",
+            profile = ConfluenceProfile.RESPONSE, seconds = 18f, response = .9f, space = s))
+        add(Case("identity_fixed", "identity", "Fixed identities across rests", "Eight stable performer slots repeat the marked vowel with their habitual pitch, tone, timing and breathing tendencies intact.", seconds = 12f, divergence = .65f))
+        add(Case("identity_reshuffled", "identity", "Identities reshuffled at each phrase", "Diagnostic ablation: the same seed and source deliberately choose a new identity per phrase, exposing what persistence contributes.", seconds = 12f, divergence = .65f, fixedIdentities = false))
+        for (slot in listOf(0, 3)) add(Case("identity_solo_$slot", "identity", "Roster slot ${slot + 1}, before and after rest",
+            "Only stable roster slot ${slot + 1} is audible from the eight-performer schedule. Listen across its silence and reentry; these are transformed variants of one singer.",
+            seconds = 12f, divergence = .65f, isolatedPerformer = slot))
+        for (on in listOf(true, false)) add(Case("coordination_${if (on) "on" else "off"}", "coordination", "Section following ${if (on) "on" else "off"}",
+            "Same seed, identities and marked vowel. The causal trace shows how bounded following changes subsequent entrances; judge whether the timing difference is musically useful.",
+            seconds = 12f, divergence = .75f, response = .55f, coordination = on))
+        if (multiSource) add(Case("two_source_gathering", "behavior", "Two actual source singers", "Four slots alternate between the male and female human vowel recordings, avoiding the claim that one recording creates four different people.", count = 4, multiSource = true))
+    }
+
+    private fun loadFixture(root: File, metadata: Map<String, JsonValue>): Fixture {
+        val id = metadata.getValue("id").str()
+        require(Regex("[a-z0-9-]+").matches(id)) { "unsafe fixture ID: $id" }
+        val path = metadata.getValue("path").str()
+        val file = File(root, path).canonicalFile
+        require(file.toPath().startsWith(root.canonicalFile.toPath()) && file.isFile) { "missing or unsafe fixture: $path" }
+        metadata["sha256"]?.str()?.let { require(sha256(file) == it) { "fixture hash changed: $id" } }
+        val snip = WavReader.read(file)
+        require(snip.channels == 1 && snip.sampleRate == 44_100)
+        val source = ConfluenceSource.fromSnip(snip)
+        fun int(key: String, default: Int): Int = metadata[key]?.int() ?: default
+        val start = int("phraseStartFrame", 0)
+        val end = int("phraseEndFrame", snip.frameCount)
+        val sustainStart = metadata["sustainStartFrame"]?.takeUnless { it == JsonValue.Null }?.int()
+        val sustainEnd = metadata["sustainEndFrame"]?.takeUnless { it == JsonValue.Null }?.int()
+        val reference = metadata["referenceMidi"]?.takeUnless { it == JsonValue.Null }?.num()?.toFloat()
+        val region = ConfluenceRegion(source.hash, start, end, ConfluenceSourceMode.PITCHED, reference, sustainStart, sustainEnd)
+        return Fixture(id, file, source, region, metadata)
+    }
+
+    private fun copySources(root: File, fixtures: List<Fixture>, manifest: File): List<Map<String, Any?>> {
+        File(root, "sources").mkdirs()
+        manifest.copyTo(File(root, "sources/fixture-manifest.json"), overwrite = true)
+        for (name in listOf("README.md", "LICENSE.txt", "LICENSE.md", "LICENSE-CC-BY-4.0.txt", "provenance.json")) {
+            File(manifest.parentFile, name).takeIf { it.isFile }?.copyTo(File(root, "sources/$name"), overwrite = true)
+        }
+        return fixtures.map { fixture ->
+            val path = "sources/${fixture.id}.wav"
+            val copied = fixture.file.copyTo(File(root, path), overwrite = true)
+            fixture.metadata.mapValues { native(it.value) } + mapOf(
+                "path" to path, "sha256" to sha256(copied), "pcmSha256" to fixture.source.hash,
+                "frames" to fixture.source.frameCount, "sampleRate" to 44_100,
+            )
+        }
+    }
+
+    private fun referenceTimeline(fixture: Fixture, seconds: Float): Snip {
+        val source = WavReader.read(fixture.file).samples
+        val r = fixture.region
+        val phrase = source.copyOfRange(r.startFrame, r.endFrame)
+        val out = FloatArray((seconds * 44_100).toInt())
+        var cursor = (.15f * 44_100).toInt()
+        while (cursor + phrase.size <= out.size) {
+            phrase.copyInto(out, cursor)
+            cursor += phrase.size + (.65f * 44_100).toInt()
+        }
+        require(out.any { it != 0f }) { "reference duration cannot contain the complete selected phrase" }
+        return Snip(out, 1, 44_100)
+    }
+
+    private fun copyImplementation(root: File, fixtureRoot: File): List<Map<String, Any?>> {
+        val repo = (generateSequence(fixtureRoot) { it.parentFile } +
+            generateSequence(File(System.getProperty("user.dir"))) { it.parentFile })
+            .firstOrNull { File(it, "synth/src/main/kotlin/com/snipsnap/synth/Confluence.kt").isFile }
+            ?: error("cannot locate the exact Confluence implementation for the replay bundle")
+        val paths = listOf("synth/src/main/kotlin/com/snipsnap/synth/Confluence.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceRecipe.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceVoice.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ConfluenceAuditionGenerator.kt")
+        return paths.map { path ->
+            val source = File(repo, path)
+            val bundled = "implementation/${source.name}"
+            File(root, bundled).apply { parentFile.mkdirs(); source.copyTo(this, overwrite = true) }
+            mapOf("repositoryPath" to path, "path" to bundled, "sha256" to sha256(source))
+        }.also {
+            for (name in listOf("LICENSE", "LICENSE.md", "LICENSE.txt")) File(repo, name).takeIf { it.isFile }
+                ?.copyTo(File(root, "implementation/SnipSnap-$name"), overwrite = true)
+        }
+    }
+
+    private fun runtime(): Map<String, Any?> = linkedMapOf(
+        "javaVersion" to System.getProperty("java.version"), "javaVendor" to System.getProperty("java.vendor"),
+        "osName" to System.getProperty("os.name"), "osVersion" to System.getProperty("os.version"),
+        "architecture" to System.getProperty("os.arch"), "availableProcessors" to Runtime.getRuntime().availableProcessors(),
+        "maximumJvmHeapBytes" to Runtime.getRuntime().maxMemory(),
+        "cpuModel" to runCatching { File("/proc/cpuinfo").useLines { lines ->
+            lines.firstOrNull { it.startsWith("model name") }?.substringAfter(':')?.trim()
+        } }.getOrNull(),
+    )
+
+    private fun referenceRecipe(fixture: Fixture, seconds: Float, operation: String): JsonValue.Obj = json(linkedMapOf(
+        "format" to "snipsnap-confluence-reference", "version" to GENERATOR_VERSION, "operation" to operation,
+        "sourceId" to fixture.id, "sourcePath" to "sources/${fixture.id}.wav", "sourcePcmHash" to fixture.source.hash,
+        "startFrame" to fixture.region.startFrame, "endFrame" to fixture.region.endFrame,
+        "seconds" to seconds, "initialSilenceSeconds" to .15, "restSeconds" to .65,
+        "ensemble" to if (operation == "ensemble-section") mapOf("SECTION" to 1f, "WIDTH" to 0f, "DEPTH" to .5f, "RATE" to .5f) else null,
+    )) as JsonValue.Obj
+
+    private fun verifyMovedRecipe(root: File, recipe: ConfluenceRecipe, options: ConfluenceOptions, expected: Snip): Map<String, Any?> {
+        val moved = Files.createTempDirectory("confluence-portable-check-").toFile()
+        return try {
+            File(root, "sources").copyRecursively(File(moved, "sources"), overwrite = true)
+            File(moved, "recipe.json").writeText(recipe.toJsonText())
+            val loaded = ConfluenceRecipe.fromJsonText(File(moved, "recipe.json").readText())
+            val sources = File(moved, "sources").listFiles().orEmpty().filter { it.extension == "wav" }
+                .map { ConfluenceSource.fromSnip(WavReader.read(it)) }.associateBy { it.hash }
+            val actual = Confluence.render(loaded, sources, options).snip
+            check(expected.samples.contentEquals(actual.samples)) { "moved source recipe changed its rendered samples" }
+            mapOf("caseId" to "crowd_4", "passed" to true, "sampleIdentical" to true,
+                "absolutePathsUsed" to false, "sourceCacheUsed" to false,
+                "method" to "Copied canonical sources and serialized recipe to a new temporary directory, rebuilt source objects, rerendered and compared every float.")
+        } finally { moved.deleteRecursively() }
+    }
+
+    private fun writeRenderedKit(root: File, clips: List<Map<String, Any?>>, audio: Map<String, Snip>): Map<String, Any?> {
+        val provenance = Json.parse(File(root, "sources/fixture-manifest.json").readText()).obj()
+        val originalCredit = provenance.getValue("sources").arr().first().obj().getValue("attribution").str()
+        val credit = "$originalCredit Source: ${provenance.getValue("sourceUrl").str()}. License: ${provenance.getValue("licenseUrl").str()}. " +
+            "Modified by cropping, constant gain, source-based pitch/formant/timing processing, ensemble scheduling and optional room rendering."
+        val ids = listOf("crowd_1", "crowd_2", "crowd_4", "crowd_8", "phrase_solo", "phrase_unison", "phrase_response", "drone_4", "drone_8", "two_source_gathering")
+            .filter { it in audio }
+        val dir = File(root, "rendered-kit/Confluence First Proof").apply { mkdirs() }
+        val pads = ids.mapIndexed { i, id ->
+            val file = "A${(i + 1).toString().padStart(2, '0')}_$id.wav"
+            WavWriter.write(File(dir, file), audio.getValue(id), WavWriter.BitDepth.PCM_24)
+            KitPad(i + 1, file, clips.single { it["id"] == id }.getValue("title").toString(), DrumClass.UNKNOWN,
+                source = mapOf("origin" to "confluence-feasibility-prototype", "auditionCase" to id,
+                    "attribution" to credit,
+                    "recipe" to "See the separate confluence-source-bundle.zip; rendered pad playback is source independent."))
+        }
+        val kit = Kit("Confluence First Proof", pads)
+        KitStore.save(kit, dir)
+        File(root, "rendered-kit/SOURCE-ATTRIBUTION.txt").writeText(credit + "\n")
+        File(root, "sources/LICENSE-CC-BY-4.0.txt").takeIf { it.isFile }
+            ?.copyTo(File(root, "rendered-kit/LICENSE-CC-BY-4.0.txt"), overwrite = true)
+        val findings = Preflight.check(kit, dir)
+        check(findings.none { it.severity == Severity.FAIL })
+        Mpc3Exporter.exportTrack(kit, dir, File(root, "rendered-kit/mpc"), overwrite = true, mpc2Twin = true)
+        XpnPackager.write(kit, dir, File(root, "confluence-rendered-kit.xpn"),
+            ExpansionMeta("Confluence First Proof", identifier = "app.snipsnap.confluence.prototype", version = "0.1.0",
+                description = "Human-source vocal ensemble feasibility renders. $credit Prototype sources and recipes are supplied separately."), overwrite = true)
+        writeZip(root, File(root, "confluence-rendered-kit.zip"), listOf("rendered-kit"))
+        return mapOf("xpnPath" to "confluence-rendered-kit.xpn", "zipPath" to "confluence-rendered-kit.zip",
+            "nativeKitPath" to "rendered-kit/Confluence First Proof/kit.json", "pads" to ids.size,
+            "caseIds" to ids, "preflight" to findings.map { mapOf("severity" to it.severity.name, "message" to it.message) },
+            "editableEngine" to false, "levelPolicy" to "The same matched 24-bit audio heard on the audition page; ordinary unpitched pads, no implicit auto-retune.")
+    }
+
+    private fun writeZip(root: File, output: File, paths: List<String>) {
+        val files = paths.flatMap { path -> File(root, path).let { if (it.isDirectory) it.walkTopDown().filter(File::isFile).toList() else listOf(it) } }
+            .sortedBy { it.relativeTo(root).invariantSeparatorsPath }
+        ZipOutputStream(output.outputStream().buffered()).use { zip ->
+            for (file in files) {
+                zip.putNextEntry(ZipEntry(file.relativeTo(root).invariantSeparatorsPath).apply { time = 1_577_836_800_000L })
+                file.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+    }
+
+    private fun metrics(snip: Snip): Map<String, Any> {
+        var sum = 0.0; var energy = 0.0
+        for (sample in snip.samples) { sum += sample; energy += sample.toDouble() * sample }
+        return linkedMapOf("peak" to snip.peak(), "rms" to sqrt(energy / snip.samples.size),
+            "dc" to sum / snip.samples.size, "loudestWindowRms" to Loudness.of(snip), "finite" to snip.samples.all(Float::isFinite))
+    }
+
+    private data class Quad(val fixture: Fixture, val id: String, val title: String, val seconds: Float)
+    private fun regionSeconds(fixture: Fixture) = (fixture.region.endFrame - fixture.region.startFrame) / 44_100f
+    private fun gain(snip: Snip, amount: Float) = Snip(FloatArray(snip.samples.size) { snip.samples[it] * amount }, snip.channels, snip.sampleRate)
+    private fun elapsed(started: Long) = (System.nanoTime() - started) / 1e6
+    private fun group(id: String, title: String, description: String) = mapOf("id" to id, "title" to title, "description" to description)
+    private fun tag(v: Float) = (v * 100).toInt().toString().padStart(3, '0')
+    private fun label(v: Float) = (v * 100).toInt().toString() + "%"
+    private fun sha256(file: File) = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it.toInt() and 255) }
+    private fun git(vararg args: String): String? = runCatching {
+        val process = ProcessBuilder(listOf("git") + args).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readText().trim()
+        if (process.waitFor() == 0) output else null
+    }.getOrNull()
+    private fun native(value: JsonValue): Any? = when (value) {
+        JsonValue.Null -> null
+        is JsonValue.Str -> value.value
+        is JsonValue.Num -> value.value
+        is JsonValue.Bool -> value.value
+        is JsonValue.Arr -> value.items.map(::native)
+        is JsonValue.Obj -> value.entries.mapValues { native(it.value) }
+    }
+    private fun json(value: Any?): JsonValue = when (value) {
+        null -> JsonValue.Null
+        is JsonValue -> value
+        is String -> JsonValue.Str(value)
+        is Boolean -> JsonValue.Bool(value)
+        is Number -> JsonValue.Num(value.toDouble().also { require(it.isFinite()) })
+        is Map<*, *> -> JsonValue.Obj(value.entries.associate { it.key.toString() to json(it.value) })
+        is Iterable<*> -> JsonValue.Arr(value.map(::json))
+        else -> error("unsupported Confluence manifest value: ${value.javaClass}")
+    }
+}

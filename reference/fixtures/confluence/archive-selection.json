@@ -1,0 +1,22 @@
+[
+  {
+    "archive_member": "FULL/female1/excerpts/straight/f1_row_straight.wav",
+    "original_file": "originals/f1_row_straight.wav",
+    "bytes": 1248472
+  },
+  {
+    "archive_member": "FULL/female1/long_tones/straight/f1_long_straight_a.wav",
+    "original_file": "originals/f1_long_straight_a.wav",
+    "bytes": 1042802
+  },
+  {
+    "archive_member": "FULL/male1/excerpts/straight/m1_row_straight.wav",
+    "original_file": "originals/m1_row_straight.wav",
+    "bytes": 1335636
+  },
+  {
+    "archive_member": "FULL/male1/long_tones/straight/m1_long_straight_a.wav",
+    "original_file": "originals/m1_long_straight_a.wav",
+    "bytes": 897668
+  }
+]

@@ -164,6 +164,15 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CONFLUENCE's first recorded-source proof renders a small gathering from supplied
+vocal regions: one to eight persistent performers, complete phrase responses,
+staggered sustained vowels and a shared mono room. Run
+`./gradlew :synth:generateConfluenceAudition` for attributed human-source,
+raw/matched listening comparisons and portable prototype recipes. The
+[audition](https://confluence-snipsnap-audition.bertcalm.chatgpt.site) awaits the
+owner's listening verdict; [implementation notes](docs/CONFLUENCE.md) distinguish
+this finite renderer from the later phone editor, larger crowd and HOLD stages.
+
 THUMP, the analog-style drum voice engine — S1 of
 [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md), real. Eight voices (kick,
 snare, closed/open hat, clap, tom, cowbell, rim), every macro normalized 0..1
