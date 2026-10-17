@@ -20,6 +20,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.RegistersPatch
@@ -373,6 +374,13 @@ object UserPresets {
      * constructor. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is EmbouchurePatch && patch.model == Embouchure.BRASS_GROW_MODEL) {
+            // The original roster's p helper constructs model 2 before .copy runs;
+            // it cannot accept a GROW macro. Construct the saved model directly.
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "EmbouchurePatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is OpenSkyPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")

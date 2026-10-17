@@ -610,12 +610,15 @@ object SynthKits {
      * Finite notes are TONAL; Held Effort is a settled LOOP for repeated playback.
      */
     fun embouchure(): List<ArrangedPad?> {
-        val lead = EmbouchurePresets.all().first { it.name == "Leaning Reed" }
+        // The original sixteen-pad acceptance kit is a saved factory contract.
+        // Experimental GROW presets are available in SYNTH without changing that kit.
+        val presets = EmbouchurePresets.legacy()
+        val lead = presets.first { it.name == "Leaning Reed" }
         val notes = PENTATONIC.take(8).mapIndexed { i, semitone ->
             lead.copy(name = "Reed ${i + 1}", midi = Embouchure.rootMidi(lead.voice) + semitone,
                 macros = lead.macros + ("TUNE" to 0f))
         }
-        return (notes + EmbouchurePresets.all()).map {
+        return (notes + presets).map {
             pad(it, Embouchure.drumClassFor(it.voice, it.macros)).copy(displayName = it.name)
         }
     }

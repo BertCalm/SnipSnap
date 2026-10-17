@@ -31,6 +31,11 @@ recipe contracts, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
 
+**Brass GROW.** [`engineering/brass-grow-prototype.md`](engineering/brass-grow-prototype.md)
+records the experimental single-source EMBOUCHURE BRASS mode, its saved-model
+boundary, pad workflow and reproducible register/velocity checks. The published
+audition remains a sound reference; the in-app prototype still needs device playing.
+
 **Tangle.** [`TANGLE.md`](TANGLE.md) records the implemented experimental
 engine, six controls, patch and kit contracts, and held-loop limits. The
 [private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
