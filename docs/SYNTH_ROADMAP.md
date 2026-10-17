@@ -428,7 +428,9 @@ serialization, CLI note/velocity overrides and the phone picker form the first
 integration. HOLD returns moving repeating material without the initiating
 attack; its captured periodic trajectory is an approximation to the free-running
 transport model. `./gradlew :synth:generateShoalAudition` builds the listening
-matrix. The owner's dry listening verdict remains pending. ORGAN, WHISTLE,
+matrix. The owner's first listen found GLASS and RIPPLE too similar. Model 2
+revises their contrast while preserving saved model-1 recipes; its listening
+verdict remains pending. ORGAN, WHISTLE,
 DRIFT, SWARM and the proposed 36-preset roster are later work.
 [SHOAL](SHOAL.md) records the as-built contracts and retained proposal.
 

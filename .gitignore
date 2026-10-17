@@ -237,3 +237,4 @@ testkit/vent-audition/
 testkit/vent-isolation-audition/
 # Generated Shoal listening assets; recipes and player sources live under synth/.
 testkit/shoal-audition/
+testkit/shoal-audition-v1/

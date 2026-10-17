@@ -2,11 +2,15 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -86,6 +90,68 @@ class ShoalTest {
                 assertContentEquals(left.strayCents, right.strayCents)
             }
         }
+    }
+
+    @Test
+    fun `legacy model one reproduces PCM captured before the voice revision`() {
+        // These PCM24 data hashes were read from the original v1 listening pack before model 2
+        // was implemented (clean source 7980d06f3465ef126f303f12651792bf5f80c456). The test
+        // embeds their recipes and needs no generated/untracked audition files at runtime.
+        data class Fixture(val voice: ShoalVoice, val midi: Int, val velocity: Float,
+            val hold: Float, val frames: Int, val hash: String)
+        val fixtures = listOf(
+            Fixture(ShoalVoice.GLASS, 48, 1f, 0f, 197568, "eba498325b846eda42dc1e55247b0b571723d9249600eb9d2bec0f16f6aa6d8d"),
+            Fixture(ShoalVoice.RIPPLE, 48, 1f, 0f, 255780, "6974a6735b7cd0f4ca9475bcba2ebf582d2e82794491fc83d1ed651cecf68175"),
+            Fixture(ShoalVoice.GLASS, 48, 1f, 1f, 153728, "dac90cb5be234133364eb2d5928cbb7f9b3bf0f36b598570bcf6d2811b9e3535"),
+            Fixture(ShoalVoice.RIPPLE, 48, 1f, 1f, 177664, "96a186a5a4629639fa57a1ea5d9320570b94ccd2caef585d9fcd58cc9a482984"),
+            Fixture(ShoalVoice.GLASS, 84, .25f, 0f, 197568, "12086eea886519d0e6f14d6cf19cedaf8b3fafe089c68a31f6fd7ede8be8f74d"),
+            Fixture(ShoalVoice.RIPPLE, 24, .25f, 0f, 255780, "72322cf56486dcb37879cc150a9660e77f0cccde3d4c335935c2e2832603ccec"),
+        )
+        for (fixture in fixtures) {
+            val macros = if (fixture.voice == ShoalVoice.GLASS) mapOf(
+                "DENSITY" to .30f, "CURRENT" to .20f, "COHESION" to .70f, "STRAY" to .05f, "GLOW" to .40f,
+            ) else mapOf("DENSITY" to .45f, "CURRENT" to .70f, "COHESION" to .60f, "STRAY" to .15f, "GLOW" to .50f)
+            val p = Shoal.probe(fixture.voice, macros + ("HOLD" to fixture.hold), fixture.midi, fixture.velocity,
+                model = Shoal.LEGACY_MODEL_VERSION)
+            assertEquals(fixture.frames, p.samples.size, "$fixture legacy duration changed")
+            assertEquals(fixture.hash, pcm24Hash(p.samples), "$fixture legacy synthesis changed")
+        }
+    }
+
+    @Test
+    fun `glass and ripple have different normalized timbres at the same controls note and effort`() {
+        val macros = mapOf("DENSITY" to .45f, "CURRENT" to .50f, "COHESION" to .60f,
+            "STRAY" to 0f, "GLOW" to .50f, "HOLD" to 0f)
+        for (midi in listOf(48, 60, 72)) {
+            val root = Keys.midiHz(midi).toDouble()
+            val glass = Shoal.probe(ShoalVoice.GLASS, macros, midi, .7f, seconds = 1.2f)
+            val ripple = Shoal.probe(ShoalVoice.RIPPLE, macros, midi, .7f, seconds = 1.2f)
+            // Identical windows and normalized harmonic power reject gain, duration and random
+            // oscillator phase as explanations. STRAY is zero for both voices in this comparison.
+            for (start in listOf(.04, .65)) {
+                val a = harmonicPower(glass.samples, root, start)
+                val b = harmonicPower(ripple.samples, root, start)
+                val distance = distributionDistance(a, b)
+                val upperDistance = distributionDistance(a.copyOfRange(1, a.size), b.copyOfRange(1, b.size))
+                assertTrue(distance >= .18, "MIDI$midi at ${start}s voices differ too little in total normalized timbre ($distance)")
+                assertTrue(upperDistance >= .25, "MIDI$midi at ${start}s upper populations retain the same timbre ($upperDistance)")
+                assertTrue(harmonicCentroid(a) >= 1.3 * harmonicCentroid(b),
+                    "MIDI$midi at ${start}s GLASS has not separated from RIPPLE's lower spectral body")
+                assertTrue(a[0] >= .03 && b[0] >= .03,
+                    "MIDI$midi at ${start}s voice distinction buried the root (${a[0]}, ${b[0]})")
+                println("SHOAL VOICES MIDI$midi at ${start}s: spectral TV=$distance upper TV=$upperDistance " +
+                    "harmonic centroids=${harmonicCentroid(a)}/${harmonicCentroid(b)} root=${a[0]}/${b[0]}")
+            }
+            val glassBody = windowRms(glass.samples, .65) / windowRms(glass.samples, .04)
+            val rippleBody = windowRms(ripple.samples, .65) / windowRms(ripple.samples, .04)
+            assertTrue(glassBody < .80 * rippleBody,
+                "MIDI$midi struck GLASS and supplied RIPPLE retain the same articulation ($glassBody/$rippleBody)")
+        }
+        val glassHeld = Shoal.probe(ShoalVoice.GLASS, macros + ("HOLD" to 1f), 60, .7f)
+        val rippleHeld = Shoal.probe(ShoalVoice.RIPPLE, macros + ("HOLD" to 1f), 60, .7f)
+        assertTrue(distributionDistance(harmonicPower(glassHeld.samples, glassHeld.effectiveHz, .5),
+            harmonicPower(rippleHeld.samples, rippleHeld.effectiveHz, .5)) >= .18,
+            "HOLD removes the timbral distinction and leaves only finite-note articulation")
     }
 
     @Test
@@ -259,6 +325,36 @@ class ShoalTest {
     }
 
     private fun rms(a: FloatArray) = sqrt(a.sumOf { it.toDouble() * it } / a.size.coerceAtLeast(1))
+
+    private fun harmonicPower(samples: FloatArray, root: Double, fromSeconds: Double): DoubleArray {
+        val size = 8192
+        val from = (fromSeconds * Dsp.RATE).toInt()
+        val spectrum = Fft.magnitudeSpectrum(samples.copyOfRange(from, from + size), size)
+        val power = DoubleArray(Shoal.MOVING_PARTIALS + 1)
+        for (bin in 1 until spectrum.size) {
+            val harmonic = (bin.toDouble() * Dsp.RATE / size / root + .5).toInt()
+            if (harmonic in 1..power.size) power[harmonic - 1] += spectrum[bin].toDouble() * spectrum[bin]
+        }
+        val sum = power.sum().coerceAtLeast(1e-30)
+        return DoubleArray(power.size) { power[it] / sum }
+    }
+
+    private fun harmonicCentroid(power: DoubleArray) = power.indices.sumOf { (it + 1) * power[it] } / power.sum()
+
+    private fun windowRms(samples: FloatArray, fromSeconds: Double): Double {
+        val from = (fromSeconds * Dsp.RATE).toInt()
+        return rms(samples.copyOfRange(from, from + 8192))
+    }
+
+    private fun pcm24Hash(samples: FloatArray): String {
+        val bytes = ByteArrayOutputStream().also {
+            WavWriter.write(it, Snip(samples, 1, Dsp.RATE), WavWriter.BitDepth.PCM_24)
+        }.toByteArray()
+        assertEquals("data", bytes.copyOfRange(36, 40).decodeToString())
+        val size = ByteBuffer.wrap(bytes, 40, 4).order(ByteOrder.LITTLE_ENDIAN).int
+        return MessageDigest.getInstance("SHA-256").digest(bytes.copyOfRange(44, 44 + size))
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
 
     private fun normalizedDistance(a: FloatArray, b: FloatArray): Double {
         val n = minOf(a.size, b.size)

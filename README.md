@@ -437,7 +437,8 @@ ROOT and VELOCITY remain independent controls. Eight provisional dry recipes,
 saved patches, a sixteen-pad starter kit, CLI rendering and the phone picker
 support the first listen. Run `./gradlew :synth:generateShoalAudition` for the
 audition. The remaining four proposed voices and 36-preset expansion await
-later work; the owner's listening verdict is pending.
+later work. The first listen found the two voices too similar; model 2 revises
+their contrast and awaits another listen. Saved model-1 recipes retain their sound.
 [Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
 
 ALLOY is an original attack-driven four-operator PM engine: generated wood,

@@ -6,6 +6,8 @@ import com.snipsnap.json.JsonValue
 /**
  * A reproducible Shoal recipe. Root and playing energy remain independent of
  * its six controls; partial energies, phases and transport state are rebuilt.
+ * Saved model versions retain their renderer. Recipes without model metadata
+ * belong to the first audition and remain model 1.
  */
 data class ShoalPatch(
     override val name: String,
@@ -19,12 +21,12 @@ data class ShoalPatch(
         Patches.validateMacros(this, Shoal.macrosFor(voice))
         require(midi in Shoal.MIN_MIDI..Shoal.MAX_MIDI) { "SHOAL MIDI out of ${Shoal.MIN_MIDI}..${Shoal.MAX_MIDI}: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "SHOAL velocity out of 0..1: $velocity" }
-        require(model == Shoal.MODEL_VERSION) { "unsupported SHOAL model $model" }
+        require(Shoal.supportsModel(model)) { "unsupported SHOAL model $model" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Shoal.render(voice, macros, midi, velocity)
+    override fun render() = Shoal.render(voice, macros, midi, velocity, model = model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -44,7 +46,7 @@ data class ShoalPatch(
             return Patches.decode(value, ENGINE, { name -> ShoalVoice.entries.firstOrNull { it.name == name } }) { name, voice, macros ->
                 val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Shoal.rootMidi(voice)
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
-                val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: Shoal.MODEL_VERSION
+                val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: Shoal.LEGACY_MODEL_VERSION
                 ShoalPatch(name, voice, macros, midi, velocity, model)
             }
         }

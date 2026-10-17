@@ -21,7 +21,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** A bounded, dry, reproducible first proof: two voices, 88 listening cases. */
+/** Model 2's 88-case matrix plus six same-note identity/revision comparisons. */
 object ShoalAuditionGenerator {
     private val timbre = listOf("DENSITY", "CURRENT", "COHESION", "STRAY", "GLOW")
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
@@ -34,6 +34,8 @@ object ShoalAuditionGenerator {
         group("pitch-velocity", "Register & effort", "MIDI 24 / 48 / 84, each at velocity .25 and 1. The defaults supply the C3 / hard cells."),
         group("extremes", "All controls high", "All five timbral controls at 1; a finite note with HOLD 0."),
         group("held", "Keep the shoal moving", "Sustain-only loops using a captured periodic energy/STRAY trajectory from the same population model. The nonlinear state is not claimed to converge. Repeat for several wraps; the original attack is absent."),
+        group("identity", "The voices at C4", "Revised GLASS and RIPPLE, the same C4 root and full velocity."),
+        group("legacy", "Original model 1", "Legacy GLASS and RIPPLE at C3 and C4. Model 1 C3 WAVs are checked against the preserved original defaults when that archive is present."),
     )
 
     private data class Case(
@@ -62,7 +64,10 @@ object ShoalAuditionGenerator {
             return
         }
         val cases = cases()
-        check(cases.size == 88 && cases.map { it.id }.distinct().size == cases.size)
+        check(cases.size == 94 && cases.map { it.id }.distinct().size == cases.size)
+        val legacyRoot = File(root.parentFile, "shoal-audition-v1")
+        val legacyManifest = File(legacyRoot, "manifest.json").takeIf { it.isFile }?.let { Json.parse(it.readText()).obj() }
+        val legacyRows = legacyManifest?.getValue("clips")?.arr()?.associateBy { it.obj().getValue("id").str() }.orEmpty()
         val started = System.nanoTime()
         val rows = mutableListOf<Map<String, Any?>>()
         val references = mutableMapOf<ShoalVoice, FloatArray>()
@@ -72,7 +77,7 @@ object ShoalAuditionGenerator {
             val macros = Shoal.defaults(p.voice) + p.macros
             val held = macros.getValue("HOLD") >= Shoal.LOOP_THRESHOLD
             val before = System.nanoTime()
-            val probe = Shoal.probe(p.voice, macros, p.midi, p.velocity, case.seconds, case.ablation)
+            val probe = Shoal.probe(p.voice, macros, p.midi, p.velocity, case.seconds, case.ablation, model = p.model)
             val elapsed = (System.nanoTime() - before) / 1_000_000.0
             val raw = Snip(probe.samples, channels = 1, sampleRate = Dsp.RATE)
             require(raw.samples.isNotEmpty() && raw.samples.all { it.isFinite() } && raw.peak() < 1f) {
@@ -81,10 +86,10 @@ object ShoalAuditionGenerator {
             require(probe.raw.all { it.isFinite() }) { "${case.id}: non-finite internal output" }
             val matched = AuditionLevel.level(raw)
             require(matched.samples.all { it.isFinite() } && matched.peak() <= .991f)
-            val rawPath = "raw/${case.id}.wav"
-            val matchedPath = "matched/${case.id}.wav"
-            val recipePath = "recipes/${case.id}.json"
-            val tracePath = "traces/${case.id}.json"
+            val rawPath = "raw/v${p.model}/${case.id}.wav"
+            val matchedPath = "matched/v${p.model}/${case.id}.wav"
+            val recipePath = "recipes/v${p.model}/${case.id}.json"
+            val tracePath = "traces/v${p.model}/${case.id}.json"
             val sampler = SmplChunk(p.midi, if (held) SmplChunk.Loop(0, raw.frameCount.toLong()) else null)
             for ((path, snip) in listOf(rawPath to raw, matchedPath to matched)) {
                 val file = File(root, path).apply { parentFile.mkdirs() }
@@ -92,7 +97,7 @@ object ShoalAuditionGenerator {
             }
             val recipe = JsonValue.Obj(p.toJsonValue().entries + ("audition" to json(linkedMapOf(
                 "diagnosticAblation" to case.ablation.name, "requestedSeconds" to case.seconds,
-                "render" to "Shoal.probe(voice, macros, midi, velocity, seconds, ablation); raw samples before melodic leveling",
+                "render" to "Shoal.probe(voice, macros, midi, velocity, seconds, ablation, model = model); raw samples before melodic leveling",
             ))))
             File(root, recipePath).apply { parentFile.mkdirs(); writeText(Json.write(recipe) + "\n") }
             val trace = probe.energyTrace.let { frames ->
@@ -113,6 +118,13 @@ object ShoalAuditionGenerator {
             }
             if (case.group == "defaults") references[p.voice] = matched.samples
             val d = probe.diagnostics
+            val rawHash = sha256(File(root, rawPath))
+            val matchedHash = sha256(File(root, matchedPath))
+            val originalId = "${p.voice.name.lowercase()}_default".takeIf { p.model == 1 && p.midi == 48 && case.group == "legacy" }
+            val original = originalId?.let { legacyRows[it]?.obj() }
+            if (original != null) require(original.getValue("rawSha256").str() == rawHash && original.getValue("matchedSha256").str() == matchedHash) {
+                "${case.id}: legacy replay differs from preserved original model1 PCM"
+            }
             rows += linkedMapOf(
                 "id" to case.id, "group" to case.group, "title" to case.title, "question" to case.question,
                 "voice" to p.voice.name, "midi" to p.midi, "note" to note(p.midi), "velocity" to p.velocity,
@@ -134,6 +146,7 @@ object ShoalAuditionGenerator {
                 "headClassifierConfidence" to headClass.confidence,
                 "energyTrace" to trace, "energyTraceOriginalFrames" to probe.energyTrace.size,
                 "normalizedDistanceFromDefault" to references[p.voice]?.let { distance(it, matched.samples) },
+                "referenceModelVersion" to Shoal.MODEL_VERSION,
                 "seamError" to if (held) probe.seamError else null,
                 "stateError" to if (held) probe.stateError else null,
                 "cycleDifferenceRatio" to if (held) cycleDifference(requireNotNull(previous), raw.samples) else null,
@@ -141,7 +154,9 @@ object ShoalAuditionGenerator {
                 "supplyCutoffSeconds" to probe.supplyCutoffSeconds.takeIf { it.isFinite() }, "sustainedSupply" to held,
                 "wrapStep" to if (held) abs(raw.samples.first().toDouble() - raw.samples.last()) else null,
                 "renderMilliseconds" to elapsed, "renderMillisecondsPerAudioSecond" to elapsed / raw.durationSeconds,
-                "rawSha256" to sha256(File(root, rawPath)), "matchedSha256" to sha256(File(root, matchedPath)),
+                "rawSha256" to rawHash, "matchedSha256" to matchedHash,
+                "legacyClipId" to originalId, "legacyHashVerified" to (original != null),
+                "baselineSourceRevision" to if (p.model == 1) legacyManifest?.get("sourceRevision") else null,
             )
             println("SHOAL ${index + 1}/${cases.size} ${case.id}: ${raw.frameCount} frames, ${elapsed.roundToInt()} ms")
         }
@@ -149,13 +164,27 @@ object ShoalAuditionGenerator {
             .filter { it.isFile && it.extension in listOf("wav", "json") && it.relativeTo(root).invariantSeparatorsPath !in retained }
             .forEach { check(it.delete()) { "Cannot prune obsolete generated asset $it" } }
         val firstListen = listOf("glass_default", "ripple_default", "ripple_no_transport", "ripple_no_local_cohesion", "ripple_no_stray", "ripple_hold")
-        val compact = rows.filter { it["group"] in listOf("defaults", "ablations", "held") }
+        val compact = rows.filter { it["group"] in listOf("defaults", "ablations", "held", "identity", "legacy") }
+        val legacyZip = File(legacyRoot, "shoal-first-listen.zip")
+        val legacyArchive = if (legacyZip.isFile) {
+            val destination = File(root, "legacy-v1").apply { mkdirs() }
+            legacyZip.copyTo(File(destination, legacyZip.name), overwrite = true)
+            File(legacyRoot, "README.md").takeIf { it.isFile }?.copyTo(File(destination, "README.md"), overwrite = true)
+            File(destination, "provenance.json").writeText(Json.write(json(linkedMapOf(
+                "modelVersion" to 1, "sourceRevision" to legacyManifest?.get("sourceRevision"),
+                "sourceTreeDirty" to legacyManifest?.get("sourceTreeDirty"), "archiveSha256" to sha256(legacyZip),
+                "description" to "Preserved original ten-clip model1 listening ZIP, copied without modifying its bytes.",
+            ))) + "\n")
+            "legacy-v1/shoal-first-listen.zip"
+        } else null
         val manifest = linkedMapOf(
             "schemaVersion" to 1, "engine" to "SHOAL", "modelVersion" to Shoal.MODEL_VERSION,
             "title" to "Shoal / SnipSnap listening room", "sourceRevision" to git("rev-parse", "HEAD"),
             "sourceTreeDirty" to (git("status", "--porcelain")?.isNotBlank()),
             "sourceDescription" to "Actual offline SnipSnap Kotlin engine renders. No samples, browser synthesis or rack effects.",
-            "sonicAcceptance" to "Provisional first proof. Owner listening completes sonic acceptance.",
+            "sonicAcceptance" to "Model2 revision addresses insufficient voice contrast in model1. Owner listening completes sonic acceptance.",
+            "auditionRevision" to "model2-voice-contrast", "legacyArchive" to legacyArchive,
+            "legacySourceRevision" to legacyManifest?.get("sourceRevision"), "legacyBaselineCount" to 4,
             "sampleRate" to Dsp.RATE, "internalSampleRate" to Dsp.RATE * Dsp.OVERSAMPLE,
             "bitDepth" to 24, "channels" to 1, "clipCount" to rows.size, "wavCount" to rows.size * 2,
             "listeningTarget" to .03, "loudnessMeasure" to "AuditionLevel: loudest 200 ms RMS window, .99 peak guard",
@@ -181,13 +210,15 @@ object ShoalAuditionGenerator {
             "id" to row.getValue("id"), "recipe" to Json.parse(File(root, row.getValue("recipePath") as String).readText()),
         ) })) + "\n")
         File(root, "README.md").writeText("""
-            # Shoal — first listening proof
+            # Shoal — model2 voice comparison
 
-            88 dry engine cases; 176 mono 24-bit WAVs at 44.1 kHz. GLASS and RIPPLE only.
+            94 dry engine cases; 188 mono 24-bit WAVs at 44.1 kHz. GLASS and RIPPLE only.
+            The original 88-case matrix now uses model2. Six additional cases provide
+            model2 C4 and model1 C3/C4 identity comparisons, all at velocity 1.
             Reproduce with `./gradlew :synth:generateShoalAudition`.
             Refresh only the page and compact manifest, keeping existing audio unchanged, with
             `./gradlew :synth:generateShoalAudition -PshoalRefreshPage`.
-            This is an initial model, with sonic acceptance pending owner listening.
+            This revises model1's insufficient voice contrast. Sonic acceptance awaits listening.
 
             Start with GLASS, then RIPPLE, then the three RIPPLE mechanism removals.
             Repeat each moving HOLD for several cycles. Matched files use the shared .03
@@ -204,9 +235,12 @@ object ShoalAuditionGenerator {
             Energy heatmaps show actual simulated moving-partial state, not an audio FFT.
             traces/ retains up to 96 actual state snapshots per case and original counts.
 
-            shoal-first-listen.zip contains 10 matched default/ablation/HOLD WAVs,
-            their recipes and measurement summaries. The complete 88-case collection
+            shoal-first-listen.zip contains 16 matched default/ablation/HOLD/identity WAVs,
+            their recipes and measurement summaries. The complete 94-case collection
             remains on the page with individual raw/matched WAV and recipe downloads.
+            When the preserved original pack is present, legacy-v1/ contains its ten-clip
+            ZIP copied byte for byte, README and provenance. Model 1 C3 replays are
+            checked against the original raw/matched SHA256 fingerprints.
             Serve this folder over HTTP(S) for sample-accurate Web Audio looping.
 
             $METRIC_NOTES
@@ -269,14 +303,19 @@ object ShoalAuditionGenerator {
             add(case(voice, "all_high", "extremes", "${voice.name} · all high", "Is the busiest corner still pitched, bounded and useful?", timbre.associateWith { 1f }))
             add(case(voice, "hold", "held", "${voice.name} · moving HOLD", "Listen over several wraps: does the population keep moving without a fresh attack?", mapOf("HOLD" to 1f)))
         }
+        for (voice in voices) {
+            add(case(voice, "identity_m60", "identity", "${voice.name} · C4", "At the same C4 root, are the two revised voice identities easy to distinguish?", midi = 60))
+            for (midi in listOf(48, 60)) add(case(voice, "v1_m$midi", "legacy", "Original v1 · ${voice.name}",
+                "Compare the original voice with its model2 revision at the same root and shared listening level.", midi = midi, model = 1))
+        }
     }
 
     private fun case(voice: ShoalVoice, suffix: String, group: String, title: String, question: String,
                      overrides: Map<String, Float> = emptyMap(), midi: Int = 48, velocity: Float = 1f,
                      ablation: Shoal.Ablation = Shoal.Ablation.NONE, macro: String? = null, step: Float? = null,
-                     pair: String? = null, values: List<Float>? = null, seconds: Float? = null) =
+                     pair: String? = null, values: List<Float>? = null, seconds: Float? = null, model: Int = Shoal.MODEL_VERSION) =
         Case("${voice.name.lowercase()}_$suffix", group, title, question,
-            ShoalPatch("${voice.name} · $title", voice, Shoal.defaults(voice) + overrides, midi, velocity), ablation, macro, step, pair, values, seconds)
+            ShoalPatch("${voice.name} · $title", voice, Shoal.defaults(voice) + overrides, midi, velocity, model), ablation, macro, step, pair, values, seconds)
 
     private fun metrics(snip: Snip) = linkedMapOf(
         "peak" to snip.peak(), "rms" to sqrt(snip.samples.sumOf { it.toDouble() * it } / snip.samples.size),

@@ -21,7 +21,8 @@ import kotlin.random.Random
 enum class ShoalVoice { GLASS, RIPPLE }
 
 /**
- * SHOAL model 1. Harmonics exchange nonnegative energy before they become oscillator amplitudes.
+ * SHOAL. Model 2 gives GLASS and RIPPLE distinct material populations; model 1 is retained.
+ * Harmonics exchange nonnegative energy before they become oscillator amplitudes.
  * CURRENT biases conservative neighbor transfers; COHESION reads the previous energy snapshot.
  * The protected fundamental never participates in this graph.
  *
@@ -34,7 +35,9 @@ enum class ShoalVoice { GLASS, RIPPLE }
  * All voicing numbers are provisional and await the owner's listening verdict.
  */
 object Shoal {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    const val LEGACY_MODEL_VERSION = 1
+    fun supportsModel(model: Int): Boolean = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION
     const val MIN_MIDI = 24
     const val MAX_MIDI = 84
     const val MOVING_PARTIALS = 24
@@ -151,7 +154,7 @@ object Shoal {
         return bestFrames to bestHz
     }
 
-    private fun trajectory(voice: ShoalVoice, m: Map<String, Float>, noteHz: Double, velocity: Double,
+    private fun legacyTrajectory(voice: ShoalVoice, m: Map<String, Float>, noteHz: Double, velocity: Double,
         seconds: Float?, ablation: Ablation, cancel: () -> Boolean): Trajectory {
         val density = m.getValue("DENSITY").toDouble()
         val current = m.getValue("CURRENT").toDouble()
@@ -282,6 +285,181 @@ object Shoal {
         return Trajectory(freezeMean(nodes, ablation), dt, frames, hz, cutoff, residual, fullSeconds)
     }
 
+    /** Model 2 is a material change, not a set of different knob defaults. GLASS excites separated
+     * upper harmonic resonances and exchanges mainly along four-harmonic links. RIPPLE starts in
+     * a rounded low/middle body, receives a traveling supply packet, and flows through adjacent
+     * harmonics. Both remain integer-harmonic instruments with the same protected fundamental. */
+    private fun materialTrajectory(voice: ShoalVoice, m: Map<String, Float>, noteHz: Double, velocity: Double,
+        seconds: Float?, ablation: Ablation, cancel: () -> Boolean): Trajectory {
+        val glass = voice == ShoalVoice.GLASS
+        val density = m.getValue("DENSITY").toDouble()
+        val current = m.getValue("CURRENT").toDouble()
+        val cohesion = m.getValue("COHESION").toDouble()
+        val glow = m.getValue("GLOW").toDouble()
+        val stray = if (ablation == Ablation.NO_STRAY) 0.0 else m.getValue("STRAY").toDouble()
+        val held = isLoop(m.getValue("HOLD"))
+        val fullSeconds = if (glass) 2.4 + 3.4 * glow else 4.4 + 2.8 * glow
+        val finiteSeconds = seconds?.takeIf { it.isFinite() && it > 0f }?.toDouble()?.coerceAtMost(fullSeconds) ?: fullSeconds
+        val plan = if (held) loopPlan(noteHz, if (glass) 3.4 else 4.0)
+            else (finiteSeconds * Dsp.RATE).roundToInt() to noteHz
+        val frames = plan.first
+        val hz = plan.second
+        val steps = ceil(frames.toDouble() / CONTROL_FRAMES).toInt()
+        val dt = CONTROL_FRAMES.toDouble() / Dsp.RATE
+        val reserve = 2.0.pow((if (held) 84.0 else 42.0) / 1200.0)
+        val count = (2..MOVING_PARTIALS + 1).count { it * hz * reserve < BAND_END }
+        val profile = normalized(DoubleArray(count) { i ->
+            val n = i + 2.0
+            val material = if (glass) {
+                val w = .17 + .58 * density
+                .10 * gaussian(n - 3.0, w) + .35 * gaussian(n - 7.0, w) +
+                    .32 * gaussian(n - 11.0, w * 1.10) + .20 * gaussian(n - 16.0, w * 1.20) +
+                    .13 * gaussian(n - 21.0, w * 1.25) + .045 * gaussian(n - 2.5, .65) +
+                    (.004 + .15 * density.pow(1.5)) / n.pow(.65)
+            } else {
+                (gaussian(n - 3.3, 1.05 + 2.0 * density) + .35 * gaussian(n - 7.0, 1.4 + 1.5 * density) +
+                    (.05 + .40 * density) / n.pow(.8)) * exp(-max(0.0, n - 10.0) / 3.0)
+            }
+            material * guard(n * hz * reserve).pow(2)
+        })
+        val initialProfile = normalized(DoubleArray(count) { i ->
+            val n = i + 2.0
+            val effort = if (glass) {
+                // Hard strikes reach the upper glass resonances; soft strikes keep their sparse
+                // locations while weighting the lower members. This changes shape at equal gain.
+                (.35 + .65 * velocity) + (.20 + .80 * velocity) * (n / 11.0).pow(.75)
+            } else {
+                .18 + gaussian(n - (2.5 + .7 * velocity), (1.0 + 1.7 * density) * (.7 + .5 * velocity)) +
+                    .30 * gaussian(n - 6.0, 1.2 + density)
+            }
+            profile[i] * effort
+        })
+        // Both families start with the same finite spectral budget. Their identities come from
+        // where this energy is put, how it is fed, and which graph moves it, not initial gain.
+        var energy = DoubleArray(count) { initialProfile[it] * (.40 + .60 * velocity) * velocity * velocity }
+        val offsets = DoubleArray(count)
+        val cutoff = if (held) Double.POSITIVE_INFINITY else if (glass) .035 + .11 * glow else 1.6 + 1.5 * glow
+        val blend = if (held) max(16, steps / 5) else 0
+        val preroll = if (held) steps else 0
+        val runSteps = if (held) preroll + steps + blend else steps
+        val captured = ArrayList<Node>(runSteps + 1)
+        var residual = 0.0
+        val centerScale = min(1.0, (count + 1.0) / 22.0)
+        val motionHz = if (glass) .10 + .24 * current else .16 + .90 * current
+        for (step in 0..runSteps) {
+            if (step % 32 == 0) checkCancelled(cancel)
+            val t = step * dt
+            val phase = TWO_PI * motionHz * t
+            val centers = if (glass) doubleArrayOf((7.0 + .85 * sin(phase)) * centerScale,
+                (14.0 + 1.9 * sin(phase + .9)) * centerScale)
+            else doubleArrayOf(4.5 + 2.5 * sin(phase - .7), 8.0 + 2.5 * sin(phase - 1.5))
+            val supply = if (t < cutoff) {
+                // Supply is ENERGY, so it follows the same velocity effort as the initial
+                // bank. An amplitude-like v supply over a v² strike made soft notes grow toward
+                // a late loud crest instead of establishing a quiet, sustained population.
+                (if (glass) { if (held) .34 else .45 } else .88) * (.40 + .60 * glow) *
+                    (.40 + .60 * velocity) * velocity * velocity
+            } else 0.0
+            captured += Node(energy.copyOf(), centers, offsets.copyOf(), supply)
+            if (step == runSteps) break
+            val old = energy
+            val total = old.sum().coerceAtLeast(1e-30)
+            val local = DoubleArray(count) { i ->
+                (old[i] + (if (i > 0) old[i - 1] else 0.0) + (if (i + 1 < count) old[i + 1] else 0.0)) / total
+            }
+            val next = old.copyOf()
+            val flow = DoubleArray(count)
+            val direction = if (glass) cos(phase + .3) else cos(phase - .7)
+            val rate = if (glass) current * 7.0 + cohesion * .9 else current * 20.0 + cohesion * 3.0
+            val fraction = 1.0 - exp(-rate * dt)
+            for (j in 0 until count) {
+                val receivers = if (glass) intArrayOf(j - 4, j - 1, j + 1, j + 4)
+                    else intArrayOf(j - 1, j + 1, j + 2)
+                val weights = DoubleArray(receivers.size)
+                for (edge in receivers.indices) {
+                    val i = receivers[edge]
+                    if (i !in 0 until count) continue
+                    val n = i + 2.0
+                    val width = if (glass) .55 + .70 * density else 1.0 + 1.15 * density
+                    val attraction = gaussian(n - centers[0], width) + .65 * gaussian(n - centers[1], width * 1.2)
+                    val occupied = if (ablation == Ablation.NO_LOCAL_COHESION) 0.0 else local[i]
+                    val gathering = .18 + cohesion * (5.0 * attraction + 7.0 * occupied)
+                    val baseline = (profile[i].coerceAtLeast(1e-12) / profile[j].coerceAtLeast(1e-12))
+                        .pow(if (glass) .65 else .27).coerceIn(.10, 8.0)
+                    val link = if (glass) {
+                        if (abs(i - j) == 4) 1.0 else .035 + .65 * density
+                    } else if (i - j == 2) .18 + .35 * current else 1.0
+                    weights[edge] = link * gathering * baseline * exp((i - j).coerceIn(-1, 1) * current * direction * (if (glass) .65 else 1.8))
+                }
+                val sum = weights.sum()
+                if (sum > 0.0) {
+                    val outgoing = old[j] * fraction
+                    next[j] -= outgoing
+                    flow[j] -= outgoing
+                    for (edge in receivers.indices) if (weights[edge] > 0.0) {
+                        val i = receivers[edge]
+                        val amount = outgoing * weights[edge] / sum
+                        next[i] += amount
+                        flow[i] += amount
+                    }
+                }
+            }
+            residual = max(residual, abs(next.sum() - old.sum()))
+            // RIPPLE's source travels inside the bank. It feeds a rounded packet around the
+            // passing center, rather than sweeping a filter or the finished audio's brightness.
+            val feed = if (glass) profile else normalized(DoubleArray(count) { i ->
+                profile[i] * (.16 + gaussian(i + 2.0 - centers[0], .75 + .85 * density))
+            })
+            for (i in 0 until count) {
+                val n = i + 2.0
+                val region = i.toDouble() / max(1, count - 1)
+                val loss = if (glass) {
+                    // Modal residence differs even among upper glass groups: the sparse groups
+                    // ring rather than dissolving into a common envelope. GLOW lengthens them.
+                    (1.35 - .90 * glow) + region * (.8 - .6 * glow) +
+                        (.35 - .22 * glow) * (.5 + .5 * cos(n * 1.63))
+                } else (.98 - .48 * glow) + region * (2.0 - 1.2 * glow)
+                next[i] = next[i].coerceAtLeast(0.0) * exp(-loss * dt) + supply * feed[i] * dt
+                if (!held) {
+                    val a = release(t, fullSeconds, glow)
+                    val b = release(t + dt, fullSeconds, glow)
+                    next[i] *= if (a > 1e-20) (b / a).pow(2) else 0.0
+                }
+            }
+            val sum = next.sum()
+            // With a .15 moving amplitude scale and at most 24 partials, this tighter model-2
+            // supply budget preserves a coherent mix bound below .96, even in the top register.
+            if (sum > 1.2) for (i in next.indices) next[i] *= 1.2 / sum
+            energy = next
+            for (i in offsets.indices) {
+                val n = i + 2.0
+                val c0 = gaussian(n - centers[0], if (glass) 1.1 else 1.8)
+                val c1 = gaussian(n - centers[1], if (glass) 1.6 else 2.3)
+                val grouped = (c0 * sin(phase * (if (glass) .67 else 1.0)) +
+                    c1 * sin(phase * (if (glass) .91 else 1.0) + 1.2)) / (c0 + c1 + .15)
+                val loose = .40 * sin(TWO_PI * (.17 + .018 * i) * t + i * .71)
+                val moving = (flow[i] / total / dt).coerceIn(-1.0, 1.0)
+                val target = (if (glass) 40.0 else 28.0) * stray.pow(.75) *
+                    (.80 * (cohesion * grouped + (1.0 - cohesion) * loose) + .20 * moving)
+                offsets[i] += (target - offsets[i]) * (1.0 - exp(-dt / (if (glass) .045 + .18 * glow else .08 + .25 * glow)))
+            }
+        }
+        if (!held) return Trajectory(freezeMean(captured, ablation), dt, frames, hz, cutoff, residual, fullSeconds)
+        val nodes = ArrayList<Node>(steps + 1)
+        for (i in 0 until steps) {
+            val a = captured[preroll + i]
+            if (i < blend) {
+                val b = captured[preroll + steps + i]
+                val w = smooth(i.toDouble() / blend)
+                nodes += Node(DoubleArray(count) { b.energy[it] * (1 - w) + a.energy[it] * w },
+                    DoubleArray(2) { b.centers[it] * (1 - w) + a.centers[it] * w },
+                    DoubleArray(count) { b.cents[it] * (1 - w) + a.cents[it] * w }, a.supply)
+            } else nodes += a
+        }
+        nodes += nodes.first().let { Node(it.energy.copyOf(), it.centers.copyOf(), it.cents.copyOf(), it.supply) }
+        return Trajectory(freezeMean(nodes, ablation), dt, frames, hz, cutoff, residual, fullSeconds)
+    }
+
     /** Counterfactual audition: remove distribution motion without changing the average spectrum.
      * Trapezoidal control-time weights preserve each partial's integrated energy, total energy at
      * every node, and the original supply/STRAY/center trajectories. The normal model is simulated
@@ -302,13 +480,16 @@ object Shoal {
 
     internal fun probe(voice: ShoalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
         velocity: Float = 1f, seconds: Float? = null, ablation: Ablation = Ablation.NONE,
-        cancelled: () -> Boolean = { false }): Probe {
+        cancelled: () -> Boolean = { false }, model: Int = MODEL_VERSION): Probe {
         checkCancelled(cancelled)
+        require(supportsModel(model)) { "unsupported SHOAL model $model" }
         require(midi in MIN_MIDI..MAX_MIDI) { "SHOAL MIDI must be $MIN_MIDI..$MAX_MIDI" }
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f).toDouble()
         val m = settled(voice, macros)
         val held = isLoop(m.getValue("HOLD"))
-        val trajectory = trajectory(voice, m, Keys.midiHz(midi).toDouble(), v, seconds, ablation, cancelled)
+        val trajectory = if (model == LEGACY_MODEL_VERSION)
+            legacyTrajectory(voice, m, Keys.midiHz(midi).toDouble(), v, seconds, ablation, cancelled)
+        else materialTrajectory(voice, m, Keys.midiHz(midi).toDouble(), v, seconds, ablation, cancelled)
         val nodes = trajectory.nodes
         val count = nodes.first().energy.size
         val dt = trajectory.stepSeconds
@@ -327,18 +508,29 @@ object Shoal {
         val integral = Array(nodes.size) { DoubleArray(count) }
         for (k in 0 until intervals) for (p in 0 until count)
             integral[k + 1][p] = integral[k][p] + .5 * (delta[k][p] + delta[k + 1][p]) * dt
+        // Model 1's constants and arithmetic remain untouched. Model 2 gives the population
+        // comparable power to its root, and restores extra root support only in the top register.
+        val upperRegister = smooth((hz - 420.0) / 470.0)
+        val movingGain = if (model == LEGACY_MODEL_VERSION) MOVING_GAIN
+            else if (voice == ShoalVoice.GLASS) .15 - .01 * upperRegister else .15 - .015 * upperRegister
+        val rootGain = if (model == LEGACY_MODEL_VERSION) ROOT_GAIN
+            else if (voice == ShoalVoice.GLASS) .125 + .065 * upperRegister else .14 + .06 * upperRegister
         val amplitude = Array(nodes.size) { k -> DoubleArray(count) { p ->
-            MOVING_GAIN * sqrt(nodes[k].energy[p]) * guard((p + 2.0) * hz + delta[k][p])
+            movingGain * sqrt(nodes[k].energy[p]) * guard((p + 2.0) * hz + delta[k][p])
         } }
-        val phases = Dsp.phases(count + 1, Dsp.seedFor("SHOAL", MODEL_VERSION, voice.name, midi))
+        val phases = Dsp.phases(count + 1, Dsp.seedFor("SHOAL", model, voice.name, midi))
         val frames = if (held) 3 * trajectory.frames + 512 else trajectory.frames
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val raw = FloatArray(frames * Dsp.OVERSAMPLE)
         val glow = m.getValue("GLOW").toDouble()
         val density = m.getValue("DENSITY").toDouble()
-        val rootAttack = (if (voice == ShoalVoice.GLASS) .004 else .012) * (1.65 - .80 * v)
-        val rootLoss = if (voice == ShoalVoice.GLASS) 1.05 - .72 * glow else .75 - .49 * glow
-        val rootLevel = ROOT_GAIN * v.pow(.85) * (1.0 - .12 * density)
+        val rootAttack = (if (model == LEGACY_MODEL_VERSION) {
+            if (voice == ShoalVoice.GLASS) .004 else .012
+        } else if (voice == ShoalVoice.GLASS) .0016 else .024) * (1.65 - .80 * v)
+        val rootLoss = if (model == LEGACY_MODEL_VERSION) {
+            if (voice == ShoalVoice.GLASS) 1.05 - .72 * glow else .75 - .49 * glow
+        } else if (voice == ShoalVoice.GLASS) .80 - .45 * glow else .35 - .20 * glow
+        val rootLevel = rootGain * v.pow(.85) * (1.0 - .12 * density)
         val loopSeconds = trajectory.frames.toDouble() / Dsp.RATE
         var peak = 0.0
         var sum = 0.0
@@ -406,9 +598,9 @@ object Shoal {
     }
 
     fun render(voice: ShoalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
-        velocity: Float = 1f, cancelled: () -> Boolean = { false }): Snip {
+        velocity: Float = 1f, cancelled: () -> Boolean = { false }, model: Int = MODEL_VERSION): Snip {
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
-        val out = probe(voice, macros, midi, v, cancelled = cancelled).samples
+        val out = probe(voice, macros, midi, v, cancelled = cancelled, model = model).samples
         checkCancelled(cancelled)
         if (v > 0f) Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET * v.pow(.65f))
         return Snip(out, channels = 1, sampleRate = Dsp.RATE)

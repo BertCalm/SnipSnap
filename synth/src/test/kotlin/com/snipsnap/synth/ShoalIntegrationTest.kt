@@ -13,18 +13,18 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ShoalIntegrationTest {
-    private fun patch(voice: ShoalVoice = ShoalVoice.RIPPLE) = ShoalPatch(
+    private fun patch(voice: ShoalVoice = ShoalVoice.RIPPLE, model: Int = Shoal.MODEL_VERSION) = ShoalPatch(
         "Saved population", voice, Shoal.defaults(voice) + mapOf("CURRENT" to .62f, "STRAY" to .31f),
-        midi = 57, velocity = .63f, model = Shoal.MODEL_VERSION,
+        midi = 57, velocity = .63f, model = model,
     )
 
     @Test
     fun `patch and pad recipe JSON reproduce the saved root velocity model and population`() {
-        for (voice in ShoalVoice.entries) {
-            val source = patch(voice)
+        for (voice in ShoalVoice.entries) for (model in listOf(Shoal.LEGACY_MODEL_VERSION, Shoal.MODEL_VERSION)) {
+            val source = patch(voice, model)
             val restored = assertIs<ShoalPatch>(Patches.fromJsonText(source.toJsonText()))
             assertEquals(source, restored)
-            assertContentEquals(source.render().samples, restored.render().samples, "$voice serialized replay")
+            assertContentEquals(source.render().samples, restored.render().samples, "$voice model$model serialized replay")
         }
         val source = patch()
         val rack = FxChain(reverse = true)
@@ -39,20 +39,23 @@ class ShoalIntegrationTest {
 
     @Test
     fun `macro edits and native velocity retain explicit pitch and synthesis model`() {
-        val source = patch()
-        val changed = source.macros + ("COHESION" to .82f)
-        val edited = assertIs<ShoalPatch>(Patches.edited(source, "Edited population", changed))
-        assertEquals(source.copy(name = "Edited population", macros = changed), edited)
-        assertEquals(source.copy(macros = changed), source.withMacros(changed))
+        for (model in listOf(Shoal.LEGACY_MODEL_VERSION, Shoal.MODEL_VERSION)) {
+            val source = patch(model = model)
+            val changed = source.macros + ("COHESION" to .82f)
+            val edited = assertIs<ShoalPatch>(Patches.edited(source, "Edited population", changed))
+            assertEquals(source.copy(name = "Edited population", macros = changed), edited)
+            assertEquals(source.copy(macros = changed), source.withMacros(changed))
+            assertEquals(PadRecipe(edited), PadRecipe.fromJsonText(PadRecipe(edited).toJsonText()))
 
-        val soft = Velocity.atVelocity(edited, .27f)
-        assertContentEquals(edited.copy(velocity = .27f).render().samples, soft.samples,
-            "velocity did not regenerate the saved instrument")
-        val original = edited.render()
-        assertFalse(original.samples.contentEquals(soft.samples), "native velocity has no effect")
-        assertFalse(Velocity.soften(original, .73f).samples.contentEquals(soft.samples),
-            "velocity fell back to filtering the completed sample")
-        assertTrue(Velocity.canUseAtVelocity(original, edited, null))
+            val soft = Velocity.atVelocity(edited, .27f)
+            assertContentEquals(edited.copy(velocity = .27f).render().samples, soft.samples,
+                "model$model velocity did not regenerate the saved instrument")
+            val original = edited.render()
+            assertFalse(original.samples.contentEquals(soft.samples), "model$model native velocity has no effect")
+            assertFalse(Velocity.soften(original, .73f).samples.contentEquals(soft.samples),
+                "model$model velocity fell back to filtering the completed sample")
+            assertTrue(Velocity.canUseAtVelocity(original, edited, null))
+        }
     }
 
     @Test
@@ -64,8 +67,13 @@ class ShoalIntegrationTest {
         val restored = assertIs<ShoalPatch>(ShoalPatch.fromJsonValue(JsonValue.Obj(fields)))
         assertEquals(Shoal.rootMidi(source.voice), restored.midi)
         assertEquals(1f, restored.velocity)
-        assertEquals(Shoal.MODEL_VERSION, restored.model)
+        assertEquals(Shoal.LEGACY_MODEL_VERSION, restored.model, "an old recipe must not silently change synthesis model")
         assertEquals(mapOf("GLOW" to .4f), restored.macros)
+        assertContentEquals(Shoal.render(restored.voice, restored.macros, restored.midi, restored.velocity,
+            model = Shoal.LEGACY_MODEL_VERSION).samples, restored.render().samples)
+        val nullModel = assertIs<ShoalPatch>(ShoalPatch.fromJsonValue(JsonValue.Obj(fields + ("model" to JsonValue.Null))))
+        assertEquals(restored, nullModel)
+        assertEquals(Shoal.MODEL_VERSION, patch().model, "newly created recipes should use the current model")
 
         for (midi in listOf(Shoal.MIN_MIDI - 1, Shoal.MAX_MIDI + 1)) {
             val error = assertFailsWith<IllegalArgumentException> { source.copy(midi = midi) }
@@ -93,7 +101,10 @@ class ShoalIntegrationTest {
             assertTrue(group.isNotEmpty(), "$voice has no first-listen recipe")
             assertEquals(group, Presets.forVoice(ShoalPatch.ENGINE, voice.name))
             assertTrue(group.any { Shoal.isLoop(it.macros.getValue("HOLD")) }, "$voice has no moving HOLD example")
-            for (preset in group) assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
+            for (preset in group) {
+                assertEquals(Shoal.MODEL_VERSION, preset.model, "${preset.name} still selects the indistinct legacy model")
+                assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
+            }
         }
 
         val arranged = SynthKits.shoal()
@@ -103,6 +114,7 @@ class ShoalIntegrationTest {
             val recipe = PadRecipe.fromJsonValue(assertNotNull(pad.recipe))
             assertEquals(null, recipe.fx, "pad ${i + 1} needs an effect to establish its identity")
             val saved = assertIs<ShoalPatch>(recipe.patch)
+            assertEquals(Shoal.MODEL_VERSION, saved.model, "pad ${i + 1} still selects the legacy model")
             val expected = if (Shoal.isLoop(saved.macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
             assertEquals(expected, pad.drumClass)
             assertEquals(44_100, pad.snip.sampleRate)
