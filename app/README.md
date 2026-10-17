@@ -82,8 +82,9 @@ CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHW
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
-six original recorded-material voices, a dry 16-pad starter and CLI note/velocity
-auditions; its presets also remain provisional pending listening review.
+six original recorded-material voices with 36 presets, a dry 16-pad starter and CLI note/velocity
+auditions. Its original six sounds and musical examples have owner approval;
+the expanded preset bank is available for a further listening pass.
 EMBOUCHURE adds eight dry player gestures, a sixteen-pad starter and native
 velocity response. Saved MIDI base, renderer model and gesture survive edits;
 TUNE stays within the selected voice's supported register. Its identity and

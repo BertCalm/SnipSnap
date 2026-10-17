@@ -264,11 +264,12 @@ keep both layers on the requested
 note together with gentle tape wow/flutter. STRAIN shapes their journey,
 RETURN sets the swelling backward layer,
 IMPRINT leaves delayed traces in neighboring strips and SPLICE
-reorders short sections. Six dry presets, a sixteen-pad starter, the synth
+reorders short sections. Thirty-six dry presets, a sixteen-pad starter, the synth
 picker and CLI use the same serialized machine. HOLD loops an explicitly
 frozen imprint snapshot. Run `./gradlew :synth:generateSpoolAudition` for the
-first listening pack; [implementation notes](docs/SPOOL.md) explain its
-export semantics. The proposed 36-preset library awaits dry sonic approval.
+full preset and musical audition; [implementation notes](docs/SPOOL.md) explain its
+export semantics. The original six sounds have dry sonic approval; the expanded
+bank adds 30 recipes while preserving those originals and the starter kit.
 
 RELAY makes a compact timbral phrase inside one pitched note: a rounded
 pluck hands off to harmonic body, bell detail and soft tone, with accents
