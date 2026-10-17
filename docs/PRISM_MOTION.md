@@ -64,3 +64,7 @@ retain a fixed-Hz envelope at a different root.
 
 The first decision is whether this motion adds a useful audible character to
 PRISM. The roster remains a listening experiment pending the owner's verdict.
+
+The owner's first verdict heard the movement but did not favor the underlying
+source sounds. The [source-palette round](PRISM_PALETTE.md) auditions eight
+broader candidates as original source, static imprint and moving imprint.
