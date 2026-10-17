@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -285,12 +286,47 @@ private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
 private const val SETTINGS_PRESET_PREFIX = "preset."
+private const val SETTINGS_PATCH_PREFIX = "patch."
+
+/** Initial shelf read only; the screen's public API and normal disk reader stay unchanged. */
+internal val LocalSynthPresetReader = staticCompositionLocalOf<
+    (File) -> Pair<List<UserPresets.Saved>, List<UserPresets.Binned>>
+> { { root -> UserPresets.read(root) to UserPresets.bin(root) } }
 
 private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): String =
     "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}.$macro"
 
 private fun presetSettingsKey(engine: Engine, voice: Enum<*>): String =
     "$SETTINGS_PRESET_PREFIX${engine.name}.${voice.name}"
+
+private fun embouchureSettingsKey(voice: EmbouchureVoice): String =
+    "$SETTINGS_PATCH_PREFIX${EmbouchurePatch.ENGINE}.${voice.name}"
+
+/** The selected BRASS model survives edits even after the preset highlight clears. */
+private fun storedEmbouchurePatch(settings: Map<String, String>, voice: EmbouchureVoice): EmbouchurePatch? =
+    settings[embouchureSettingsKey(voice)]?.let { text ->
+        runCatching { EmbouchurePatch.fromJsonText(text) }.getOrNull()?.takeIf { it.voice == voice }
+    }
+
+/** Restore only the selected model's controls; a legacy BRASS recipe never inherits GROW. */
+private fun restoredMacros(
+    engine: Engine,
+    voice: Enum<*>,
+    settings: Map<String, String>,
+    patch: Patch?,
+): Map<String, Float> {
+    val defaults = if (patch is EmbouchurePatch) Embouchure.defaults(patch.voice, patch.model)
+        else engine.defaults(voice)
+    return defaults.mapValues { (name, fallback) ->
+        val value = settings[macroSettingsKey(engine, voice, name)]?.toFloatOrNull()
+            ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f)
+            ?: if (patch is EmbouchurePatch) patch.macros[name] ?: fallback else fallback
+        if (name == "TUNE" && patch is EmbouchurePatch) {
+            val remaining = (Embouchure.midiRange(patch.voice).last - patch.midi) / Embouchure.TUNE_SEMITONES.toFloat()
+            value.coerceIn(0f, remaining.coerceIn(0f, 1f))
+        } else value
+    }
+}
 
 /**
  * The highlighted-preset names the bag holds, by (engine, voice). A name the
@@ -348,11 +384,14 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    0..1) for every (engine, voice) the player has touched.
  *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
  *    last tapped on that voice and not edited since.
+ *  - `patch.EMBOUCHURE.<VOICE>` — the active player recipe, including its
+ *    model, gesture, MIDI and velocity. This keeps an edited BRASS GROW
+ *    patch in its four-control mode after returning to SYNTH.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
- * Not kept: the loaded patch's non-macro recipe (a MURMUR root, a REVEL
- * phrase...) unless a preset carries it, the audition, and every sheet.
+ * Other engines' non-macro recipe (a MURMUR root, a REVEL phrase...) is
+ * not kept unless a preset carries it. Neither the audition nor sheets are kept.
  */
 @Composable
 fun SynthScreen(
@@ -386,6 +425,7 @@ fun SynthScreen(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
+    val presetReader = LocalSynthPresetReader.current
 
     // Seeded from the bag (§3.6) with the factory start as the fallback: a
     // name the bag holds that this build cannot resolve is ignored, and a
@@ -400,6 +440,32 @@ fun SynthScreen(
     }
     LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
     LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
+    val seededPresets = remember { storedPresetNames(settings) }
+    // An unresolved YOURS recipe arrives after the default panel starts writing.
+    // Keep its original macro bag so that temporary legacy defaults cannot erase GROW.
+    val seededMacroSettings = remember { settings.toMap() }
+    val seededPatches = remember {
+        buildMap<Pair<Engine, Enum<*>>, Patch> {
+            for ((pair, name) in seededPresets) {
+                Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
+                    ?.let { put(pair, editablePreset(it)) }
+            }
+            for (v in EmbouchureVoice.entries) {
+                storedEmbouchurePatch(settings, v)?.let { put(Engine.EMBOUCHURE to v, it) }
+            }
+        }
+    }
+    val loadedPatchesByVoice = remember {
+        mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply { putAll(seededPatches) }
+    }
+    val pendingEmbouchureRestores = remember {
+        mutableStateMapOf<Pair<Engine, Enum<*>>, Boolean>().apply {
+            for (pair in seededPresets.keys) {
+                if (pair.first == Engine.EMBOUCHURE && pair !in seededPatches) put(pair, true)
+            }
+        }
+    }
+    val awaitingEmbouchureRestore = pendingEmbouchureRestores.containsKey(engine to voice)
     // Per-(engine, voice) macro state, seeded with factory defaults and kept
     // for the life of the screen: switching engine or voice (or coming back
     // to one) restores whatever was last touched on it, same as the
@@ -412,14 +478,10 @@ fun SynthScreen(
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
             for (e in Engine.entries) {
                 for (v in e.voices()) {
-                    val defaults = e.defaults(v)
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
-                    put(e to v, if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
-                        settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
-                            ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
-                    })
+                    put(e to v, restoredMacros(e, v, settings, seededPatches[e to v]))
                 }
             }
         }
@@ -428,7 +490,13 @@ fun SynthScreen(
     // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
     // (engine, voice), so this is the one place the bag needs to follow; the
     // pairs the player left earlier already wrote theirs when they were open.
-    LaunchedEffect(engine, voice, macros) {
+    LaunchedEffect(engine, voice, macros, awaitingEmbouchureRestore) {
+        // Temporary model-2 controls must not replace a still-unread YOURS recipe.
+        if (awaitingEmbouchureRestore) return@LaunchedEffect
+        if (engine == Engine.EMBOUCHURE) {
+            val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
+            settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
+        }
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
@@ -447,19 +515,16 @@ fun SynthScreen(
     // and re-adopted whole, so an engine whose recipe lives outside its macros
     // comes back sounding as it did; a YOURS preset is on the shelf, not yet
     // read, and is adopted when that read lands (below).
-    val seededPresets = remember { storedPresetNames(settings) }
-    val loadedPatchesByVoice = remember {
-        mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply {
-            for ((pair, name) in seededPresets) {
-                val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
-                if (factory != null) put(pair, editablePreset(factory))
-            }
-        }
-    }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
         Patches.edited(it, name, macros)
     } ?: engine.buildPatch(name, voice, macros)
+    LaunchedEffect(engine, voice, macros, loadedPatch, awaitingEmbouchureRestore) {
+        if (engine == Engine.EMBOUCHURE && !awaitingEmbouchureRestore) {
+            settings[embouchureSettingsKey(voice as EmbouchureVoice)] =
+                buildCurrentPatch(engine.patchDisplayName(voice)).toJsonText()
+        }
+    }
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
     // "a starting point to wreck, not a locked sound", so this clears the
@@ -495,6 +560,7 @@ fun SynthScreen(
     }
     fun updateMacro(name: String, value: Float) {
         touched = true
+        pendingEmbouchureRestores.remove(engine to voice)
         currentPresetByVoice.remove(engine to voice)
         macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value.coerceIn(macroRange(name)))
     }
@@ -521,9 +587,13 @@ fun SynthScreen(
         // someone loaded a pre-PUNCH preset.
         // OSPREY's saved model selects its defaults too: filling a partial
         // legacy recipe with the current model's values would change its sound.
-        val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
-            else engine.defaults(voice)
+        val defaults = when (editable) {
+            is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
+            is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
+            else -> engine.defaults(voice)
+        }
         macrosByVoice[engine to voice] = defaults + editable.macros
+        pendingEmbouchureRestores.remove(engine to voice)
         currentPresetByVoice[engine to voice] = patch.name
     }
 
@@ -539,7 +609,7 @@ fun SynthScreen(
     var binnedPresets by remember { mutableStateOf<List<UserPresets.Binned>>(emptyList()) }
     LaunchedEffect(Unit) {
         try {
-            val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+            val (live, bin) = withContext(Dispatchers.IO) { presetReader(shelfRoot) }
             userPresets = live
             binnedPresets = bin
             // The YOURS presets the bag named (§3.6), now that the shelf has
@@ -547,11 +617,21 @@ fun SynthScreen(
             // preset was forgotten while the lab was away. Live state is
             // re-read here, after the await: a preset tapped meanwhile wins.
             for ((pair, name) in seededPresets) {
-                if (currentPresetByVoice[pair] != name || loadedPatchesByVoice[pair] != null) continue
+                if (currentPresetByVoice[pair] != name || loadedPatchesByVoice[pair] != null) {
+                    pendingEmbouchureRestores.remove(pair)
+                    continue
+                }
                 val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
                     .firstOrNull { it.patch.name == name }?.patch
-                if (mine != null) loadedPatchesByVoice[pair] = editablePreset(mine)
+                if (mine != null) {
+                    val editable = editablePreset(mine)
+                    loadedPatchesByVoice[pair] = editable
+                    if (editable is EmbouchurePatch) {
+                        macrosByVoice[pair] = restoredMacros(pair.first, pair.second, seededMacroSettings, editable)
+                    }
+                }
                 else currentPresetByVoice.remove(pair)
+                pendingEmbouchureRestores.remove(pair)
             }
         } catch (e: CancellationException) {
             throw e
@@ -642,6 +722,7 @@ fun SynthScreen(
                 }
                 userPresets = all
                 currentPresetByVoice[savedEngine to savedVoice] = saved.name
+                pendingEmbouchureRestores.remove(savedEngine to savedVoice)
                 onToast(if (check is UserPresets.Check.Replaces) Copy.presetReplaced(name) else Copy.presetSaved(name))
             } catch (e: CancellationException) {
                 throw e
@@ -1540,7 +1621,16 @@ fun SynthScreen(
                     }
                 }
 
-                val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
+                if (loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL) {
+                    TapeText(
+                        "GROW: ROUGH → CENTERED → EXPRESSIVE. HELD SAMPLE EXCLUDES ATTACK; PADS PLAY ONE LOOP LENGTH.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                    )
+                }
+                val macroSpecs = remember(engine, voice, (loadedPatch as? EmbouchurePatch)?.model) {
+                    if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
+                    else engine.macrosFor(voice)
+                }
                 val registersRoot = if (engine == Engine.REGISTERS)
                     (buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch).midi else null
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1600,6 +1690,7 @@ fun SynthScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         touched = true
+                        pendingEmbouchureRestores.remove(engine to voice)
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {

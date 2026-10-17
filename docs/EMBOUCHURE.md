@@ -7,6 +7,12 @@ All six finite default voices remain sample-identical to model 1. Eight
 starting presets are available; the proposed larger roster waits for listening
 approval of the revised controls.
 
+The opt-in [BRASS GROW prototype](engineering/brass-grow-prototype.md) adds two
+separate model-3 presets with a four-control panel. It leaves the original
+eight presets and starter kit unchanged. The legacy model-1/model-2 controls
+and saved-sound contracts described below still apply to ordinary patches;
+the linked prototype notes describe the new single-source GROW path.
+
 The source brief is [Embouchure engine engineering specification](engineering/embouchure-engine-spec.md).
 That brief refers to a supplied edited Gyre integration contract, but no such
 separate contract accompanied the attachment. The port follows the interfaces
@@ -31,7 +37,7 @@ synthesis, with no VL1 algorithm or factory-data compatibility claim.
 The saved gesture is one of SOFT_ENTRY, LEANING_SWELL, OVERPRESSURE,
 PRESSURE_RELEASE or BOWED_CAPTURE. Named segment profiles are versioned with
 the renderer. Model 1 is frozen, including its complete loop policy, so existing
-saved recipes retain their sound. New patches and factory presets use model 2.
+saved recipes retain their sound. Ordinary new patches and the original factory presets use model 2.
 Both versions use the original voice/note seed for direct comparisons.
 
 Model 2 makes EFFORT change the player trajectory and capture speed as well as

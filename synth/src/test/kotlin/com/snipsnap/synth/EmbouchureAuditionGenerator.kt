@@ -100,7 +100,7 @@ object EmbouchureAuditionGenerator {
         }
 
         group("PRESETS", "Eight starting gestures", "Eight dry starting points for owner listening. Held Effort is a settled loop; the other presets play a finite gesture.")
-        EmbouchurePresets.all().forEach { p ->
+        EmbouchurePresets.legacy().forEach { p ->
             specs += Spec("preset_${slug(p.name)}", p.name, "PRESETS",
                 presetDescription(p.name), p, preset = p.name)
         }

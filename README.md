@@ -418,6 +418,14 @@ The revised controls await owner listening approval before preset expansion;
 [implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
 
+An experimental [BRASS GROW mode](docs/engineering/brass-grow-prototype.md)
+adds two BRASS presets with TUNE, GROW, LENGTH and HOLD. GROW shapes one
+performance from rough through centered to expressive, rather than mixing
+separate takes. It explicitly saves model 3; ordinary patches, the original
+eight presets and the sixteen-pad starter retain their previous models.
+Run `./gradlew :synth:generateBrassGrowPrototype` for its register/velocity
+validation pack. Device playing and listening remain the next acceptance step.
+
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
