@@ -45,6 +45,12 @@ python scripts/build-confluence-audition-site.py
 ./gradlew --no-daemon test
 ```
 
+For an independent signal and phrase-trace review, run
+`python scripts/review-confluence-audio.py` after generation. This optional
+analysis needs NumPy and SciPy; see the [reviewer usage notes](../scripts/review-confluence-audio.md).
+Its report is tied to the exact audition manifest hash and includes matched
+levels, participation, complete-region events and solo pitch-contour measurements.
+
 The generator writes real recorded-source WAVs under
 `testkit/confluence-audition/`, with raw/matched files, exact recipes,
 measurements, source provenance and causal event traces. It also packages a
