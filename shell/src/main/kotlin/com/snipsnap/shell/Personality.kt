@@ -174,6 +174,13 @@ object Copy {
      * the same box, so the box is open when that toast fires.
      */
     const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CUT AND TRY GRID, OR TAPE SOMETHING ELSE."
+    /**
+     * CUT's page when the chop has no slices, in place of the pad preview:
+     * the sentence beside a TRY GRID ▸ button that makes the chop in place,
+     * so unlike [CHOP_NO_HITS] (a toast about a control that may be hidden
+     * in the closed CUT box) it needs no "OPEN CUT AND".
+     */
+    const val CHOP_NO_HITS_FOUND = "NO HITS FOUND."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 

@@ -1161,7 +1161,12 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
     }
 }
 
-/** The primary action per the handoff: 52dp, rimmed, dark fill. */
+/**
+ * The primary action per the handoff: 52dp, rimmed, dark fill. Disabled it
+ * is not the same button dimmed: the accent rim and the dark fill are what
+ * say "tap me", so both go, and it draws as a disabled [ActionButton] does
+ * (the raised bevel, `ink3` text) at the primary's height.
+ */
 @Composable
 fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
     val scheme = LocalScheme.current
@@ -1175,8 +1180,13 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(Layout.PRIMARY_ACTION_H.dp)
-            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-            .then(rim)
+            .then(
+                if (enabled) {
+                    Modifier.background(scheme.lcd.tape, RoundedCornerShape(6.dp)).then(rim)
+                } else {
+                    Modifier.raisedBevel(scheme)
+                },
+            )
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -1187,7 +1197,7 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
         TapeText(
             label,
             TapeType.displayBig,
-            if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.5f),
+            if (enabled) scheme.lcdInk.tape else scheme.ink3.tape,
         )
     }
 }
