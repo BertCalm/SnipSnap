@@ -516,25 +516,3 @@ fun CaptureSheet(onMic: () -> Unit, onInside: () -> Unit, onDismiss: () -> Unit)
         onDismiss,
     )
 }
-
-/**
- * MAKE as a list (`docs/SCREEN_PLAN_2026_10.md` §3.6), the frame's own
- * first cut: one row per lab, each opening the lab as a bench. The
- * subtitles ("last: RESIN · KICK, to A09") and the INSTRUMENTS row come
- * with the MAKE step of the plan; this is the door, so the three labs
- * stay reachable the day their tabs go.
- */
-@Composable
-fun MakeList(onOpen: (Bench) -> Unit) {
-    val scheme = LocalScheme.current
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(4.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        for (lab in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE)) {
-            ActionButton("${lab.label} ▸", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = { onOpen(lab) })
-        }
-    }
-}

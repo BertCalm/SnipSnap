@@ -73,6 +73,7 @@ import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.Dock
 import com.snipsnap.app.ui.DoorChip
 import com.snipsnap.app.ui.GearSheet
+import com.snipsnap.app.ui.InstrumentsBench
 import com.snipsnap.app.ui.PlaceRow
 import com.snipsnap.app.ui.OrbitScreen
 import com.snipsnap.app.ui.OrbitStep
@@ -438,6 +439,13 @@ fun App(shelf: KitShelf) {
     // Keyed on the place, not the whole location: a bench opening over the
     // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf.
     val onShelf = location.place == Place.SHELF
+    // The instruments are MAKE's list now (plan §3.6), read when MAKE is the
+    // place and re-read when a lab writes one (`roomsRevision` bumps on
+    // every shelf asset a lab writes).
+    val onMake = location.place == Place.MAKE
+    LaunchedEffect(onMake, roomsRevision) {
+        if (onMake) instruments = withContext(Dispatchers.IO) { shelf.instruments() }
+    }
     LaunchedEffect(kits, onShelf, roomsRevision, binOpen) {
         if (onShelf) {
             // Opening the shelf adopts every unheld kit into a project of
@@ -455,7 +463,6 @@ fun App(shelf: KitShelf) {
                     .onFailure { Log.e(TAG, "shelf open: projects unreadable", it) }
                     .getOrDefault(emptyList())
             }
-            instruments = withContext(Dispatchers.IO) { shelf.instruments() }
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
             binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
             binnedCount = withContext(Dispatchers.IO) {
@@ -3074,7 +3081,6 @@ fun App(shelf: KitShelf) {
                                 projects = projects,
                                 onOpenProject = { openProject(it.project) },
                                 onNewProject = ::newProject,
-                                instruments = instruments,
                                 busy = busy != null,
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
@@ -3129,7 +3135,6 @@ fun App(shelf: KitShelf) {
                                         }
                                     }
                                 },
-                                onOpenInstrument = { openInstrument = it; landOn(AppScreen.KEYS) },
                                 onFresh = ::fresh,
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
@@ -3604,6 +3609,8 @@ fun App(shelf: KitShelf) {
                             val synthEntry = open
                             SynthScreen(
                                 entry = synthEntry,
+                                // The lab's work, kept across a trip to the grid (plan §3.6).
+                                settings = nav.make.settings(Bench.SYNTH),
                                 shelfRoot = shelf.root,
                                 onToast = { dock.say(it) },
                                 onKitUpdated = { updatedKit ->
@@ -3654,6 +3661,8 @@ fun App(shelf: KitShelf) {
                             val snapEntry = open
                             SnapScreen(
                                 entry = snapEntry,
+                                // The lab's work, kept across a trip to the grid (plan §3.6).
+                                settings = nav.make.settings(Bench.SNAP),
                                 busy = busy != null,
                                 onToast = { dock.say(it) },
                                 onKitUpdated = { updatedKit ->
@@ -3671,6 +3680,7 @@ fun App(shelf: KitShelf) {
                         }
                         top == Bench.SURFACE -> SurfaceScreen(
                             entry = open,
+                            settings = nav.make.settings(Bench.SURFACE),
                             onToast = { dock.say(it) },
                             // A print is a snip on the shelf: the same reload
                             // request a share-sheet import raises.
@@ -3806,6 +3816,11 @@ fun App(shelf: KitShelf) {
                             }
                         }
                         top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) })
+                        top == Bench.INSTRUMENTS -> InstrumentsBench(
+                            instruments = instruments,
+                            onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
+                            onBack = { nav.closeBench() },
+                        )
                         // The pad benches (PAD SHEET, GRAIN FIELD, SPLICE,
                         // STACK, SPREAD, VERSIONS, PAD CAPTURE), BIN, SNIPS,
                         // SONG, LOOP and the rest of the bench roster are
