@@ -17,19 +17,21 @@ object ContourAuditionGenerator {
     private val AUDITION_DEPTH = WavWriter.BitDepth.PCM_16
     private const val MATCHED_TARGET = .12f
     private const val MATCHED_CEILING = .90f
+    private const val VOICING_TARGET = "Target character: about 25% earlier edge (R02), 75% rounded tone (R03)."
+    private const val VOICING_METHODOLOGY = "Preset-voicing intent drawing on R02 edge and R03 roundness; the percentages do not describe a literal audio blend."
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val timbral = listOf("SCAN", "OFFSET", "MOTION", "FILTER", "DRIVE")
     private val interactions = listOf("SCAN" to "OFFSET", "OFFSET" to "MOTION", "SCAN" to "FILTER", "FILTER" to "DRIVE")
     private val presetDescriptions = mapOf(
-        "Rounded Edge" to "Intended character: a gentler, rounded bass entrance.",
-        "Moving Corner" to "Intended character: a slower, pulsing bass contour.",
+        "Rounded Edge" to "Intended character: a rounded bass entrance.",
+        "Moving Corner" to "Intended character: a slow, pulsing bass contour.",
         "Dark Table" to "Intended character: dark bass that opens gradually.",
         "Copper Scan" to "Intended character: a mellow key with a delayed bloom.",
         "Soft Digital" to "Intended character: a soft key with a rounded entrance.",
         "Bright Margin" to "Intended character: a rounded plucked tone.",
-        "Twin Outline" to "Intended character: a sustained lead with slower movement.",
+        "Twin Outline" to "Intended character: a sustained lead with slow movement.",
         "Hollow Step" to "Intended character: a soft hollow tone with a gradual entrance.",
-        "Long Contour" to "Intended character: a slower, evolving held tone.",
+        "Long Contour" to "Intended character: a slowly evolving held tone.",
     )
     private val macroNotes = mapOf(
         "SCAN" to "Hear the spectral path change while the root stays recognizable. Motion is frozen for this sweep.",
@@ -80,7 +82,7 @@ object ContourAuditionGenerator {
         val sourceHashes = sourceFiles.mapValues { sha256(it.value) }
         val sourceHash = sha256(sourceHashes.entries.joinToString("\n") { "${it.key}:${it.value}" }.toByteArray())
         val recipeHash = sha256(cases.joinToString("\n") { "${it.id}|${it.voice}|${it.macros.toSortedMap()}|${it.velocity}|${it.config}|${it.diagnostic}" }.toByteArray())
-        val listeningRound = "contour-r03-${sourceHash.take(12)}-${recipeHash.take(12)}"
+        val listeningRound = "contour-r04-${sourceHash.take(12)}-${recipeHash.take(12)}"
         val started = System.nanoTime()
         val clips = cases.mapIndexed { index, case ->
             check(sourceFiles.all { sha256(it.value) == sourceHashes.getValue(it.key) }) {
@@ -151,6 +153,7 @@ object ContourAuditionGenerator {
             "sourceSha256" to sourceHash, "sourceFiles" to sourceHashes, "recipeSha256" to recipeHash,
             "sampleRate" to Dsp.RATE, "bitDepth" to AUDITION_DEPTH.bits, "channels" to 1,
             "clipCount" to clips.size, "sonicAcceptance" to "Pending owner listening. Nine dry presets are provisional; expansion awaits review.",
+            "voicingTarget" to VOICING_TARGET, "voicingMethodology" to VOICING_METHODOLOGY,
             "levelPolicy" to linkedMapOf(
                 "matchedTarget" to MATCHED_TARGET, "matchedPeakCeiling" to MATCHED_CEILING,
                 "hostNormalizedTarget" to Dsp.MELODIC_LOUDNESS_TARGET, "hostNormalizedPeakCeiling" to .99f,
@@ -186,6 +189,8 @@ object ContourAuditionGenerator {
             Default playback is independently level matched to SnipSnap loudness 0.12 with a 0.90 peak ceiling. Presets and center-note voice references also expose shared host normalization. Raw files preserve the synthesis level, except recorded attenuation when PCM headroom requires it. The manifest records original and exported measurements. No rack effects are used.
 
             Nine recipes are provisional. A passing build and finite measurements do not establish sonic acceptance. Owner listening approval is pending before preset expansion.
+
+            $VOICING_TARGET $VOICING_METHODOLOGY
 
             Regenerate: ./gradlew :synth:generateContourAudition
             Refresh page only: ./gradlew :synth:generateContourAudition -PcontourRefreshPage=true

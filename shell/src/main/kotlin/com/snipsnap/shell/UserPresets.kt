@@ -9,10 +9,12 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -23,7 +25,9 @@ import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
+import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
@@ -350,7 +354,7 @@ object UserPresets {
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
+     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE and WICK also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
      * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
@@ -363,7 +367,8 @@ object UserPresets {
      * the JSON constructor. SPOOL writes its complete machine constructor, including
      * recording roster and HOLD memory mode. RELAY retains its complete source and
      * phrase schedules. MURMUR keeps its root, velocity and complete
-     * operator/formant/envelope definition. OPENSKY retains its complete source
+     * operator/formant/envelope definition. FLOCK retains its note, velocity,
+     * model and exact 64-bit seed. OPENSKY retains its complete source
      * timbre, pitch, velocity, gate, wet mode and render model through the JSON
      * constructor. Names and embedded JSON are escaped Kotlin string literals.
      */
@@ -399,6 +404,11 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is FlockPatch) {
+            val seed = if (patch.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${patch.seed}L"
+            return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
         if (patch is SpoolPatch) {
             val m = patch.machine
             val roster = m.roster.joinToString(", ") {
@@ -416,6 +426,8 @@ object UserPresets {
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is ShoalPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
@@ -424,6 +436,7 @@ object UserPresets {
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
             is BellowsPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = BellowsGesture.${patch.gesture.name})"
             is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
+            is OspreyPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, durationSeconds = ${patch.durationSeconds}f, modelVersion = ${patch.modelVersion})"
             is RevelPatch -> {
                 val c = patch.configuration
                 fun values(items: List<*>, literal: (Any?) -> String): String =

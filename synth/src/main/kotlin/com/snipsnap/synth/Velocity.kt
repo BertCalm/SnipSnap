@@ -239,6 +239,7 @@ object Velocity {
         is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
         is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
+        is OspreyPatch -> Osprey.macrosFor(patch.voice)
         is OpenSkyPatch -> OpenSky.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
         is AlloyPatch -> Alloy.macrosFor(patch.voice)
@@ -247,9 +248,13 @@ object Velocity {
         is LacquerPatch -> Lacquer.macrosFor(patch.voice)
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
+        is OverlapPatch -> Overlap.macrosFor(patch.topology)
+        is FlockPatch -> Flock.macrosFor(patch.voice)
+        is ShoalPatch -> Shoal.macrosFor(patch.voice)
         is RelayPatch -> Relay.macrosFor(patch.voice)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
+        is WickPatch -> Wick.macrosFor(patch.voice)
     }
 
     /**
@@ -330,16 +335,18 @@ object Velocity {
      * SKITTER changes excitation, oscillator recovery and filter provocation together.
      * TANGLE changes early energy, filter opening and bounded modulation effort
      * while preserving the oscillator recipe and requested note.
+     * SHOAL changes the initial spectral supply and attack effort without moving its controls.
      * RELAY scales source excitation and accent energy while retaining its saved phrase.
      * REGISTERS uses its saved note and model while velocity changes rank/reed excitation once.
      * VENT scales the onset perturbation while retaining the saved trajectory controls, note and seed.
+     * WICK changes admitted gate charge and excitation effort, retaining the saved note and six controls.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is RegistersPatch || patch is VentPatch || patch is OpenSkyPatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is OverlapPatch || patch is FlockPatch || patch is ShoalPatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is OspreyPatch || patch is RegistersPatch || patch is VentPatch || patch is WickPatch || patch is OpenSkyPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -378,6 +385,7 @@ object Velocity {
                 is EmbouchurePatch -> patch.copy(velocity = v).render()
                 is BellowsPatch -> patch.copy(velocity = v).render()
                 is MurmurPatch -> patch.copy(velocity = v).render()
+                is OspreyPatch -> patch.copy(velocity = v).render()
                 is OpenSkyPatch -> patch.copy(velocity = v).render()
                 is PrismPatch -> patch.copy(velocity = v).render()
                 is AlloyPatch -> patch.copy(velocity = v).render()
@@ -387,9 +395,13 @@ object Velocity {
                 is LacquerPatch -> patch.copy(velocity = v).render()
                 is SkitterPatch -> patch.copy(velocity = v).render()
                 is TanglePatch -> patch.copy(velocity = v).render()
+                is OverlapPatch -> patch.copy(velocity = v).render()
+                is FlockPatch -> patch.copy(velocity = v).render()
+                is ShoalPatch -> patch.copy(velocity = v).render()
                 is RelayPatch -> patch.copy(velocity = v).render()
                 is RegistersPatch -> patch.copy(velocity = v).render()
                 is VentPatch -> patch.copy(velocity = v).render()
+                is WickPatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 is SpoolPatch -> patch.copy(velocity = v).render()

@@ -10,6 +10,8 @@ package com.snipsnap.synth
  * An unregistered engine name (or a future one with no roster yet)
  * returns an empty list rather than throwing, so the UI can ask before
  * checking what exists.
+ * Provisional VENT and WICK recipes stay in their own tables and are
+ * auditioned through the CLI before joining this factory roster.
  */
 object Presets {
 
@@ -150,6 +152,10 @@ object Presets {
             val v = MurmurVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MurmurPresets.forVoice(v)
         }
+        OspreyPatch.ENGINE -> {
+            val v = OspreyVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OspreyPresets.forVoice(v)
+        }
         PrismPatch.ENGINE -> {
             val v = PrismVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             PrismPresets.forVoice(v)
@@ -177,6 +183,10 @@ object Presets {
         TanglePatch.ENGINE -> {
             val v = TangleVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TanglePresets.forVoice(v)
+        }
+        ShoalPatch.ENGINE -> {
+            val v = ShoalVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ShoalPresets.forVoice(v)
         }
         RelayPatch.ENGINE -> {
             val v = RelayVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
@@ -222,7 +232,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() +
-            LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() +
-            EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + RegistersPresets.all() + OpenSkyPresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all()
 }

@@ -158,9 +158,10 @@ object Corolla {
             cycles / duration)
     }
 
-    /** Full internal object, including the attack. HOLD's public buffer is cut from its settled tail. */
+    /** Full internal object, including the attack. HOLD's public buffer is cut from its settled tail.
+     * A held release time is absolute elapsed seconds; explicit captures still keep their length. */
     internal fun play(voice: CorollaVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
-        probe: Probe = Probe(), seconds: Float? = null): Played {
+        probe: Probe = Probe(), seconds: Float? = null, releaseAtSeconds: Float? = null): Played {
         val m = settled(macros, voice)
         val s = shape(voice)
         val pull = m.getValue("PULL").toDouble()
@@ -170,6 +171,9 @@ object Corolla {
         val chamber = m.getValue("CHAMBER").toDouble()
         val hold = m.getValue("HOLD").toDouble()
         val held = isLoop(hold.toFloat())
+        val noteOff = if (held && releaseAtSeconds != null)
+            (if (releaseAtSeconds.isFinite()) releaseAtSeconds.coerceIn(.1f, 10f) else 4f).toDouble()
+            else null
         val strength = if (velocity.isFinite()) velocity.coerceIn(0f, 1f).toDouble() else 1.0
         val requestedHz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val plan = loopPlan(requestedHz, field.toFloat(), voice)
@@ -177,10 +181,12 @@ object Corolla {
         val w0 = 2 * PI * hz
         val resting = .08 + .66 * bloom
         val driveEnd = .35 + 1.3 * field + 1.3 * hold
-        val naturalTail = seconds == null && !held
+        val driveStopsAt = noteOff ?: driveEnd
+        val naturalTail = seconds == null && (!held || noteOff != null)
         val periodN = plan.frames * Dsp.OVERSAMPLE
         val prerollN = (max(2.0, s.t60 * .65) * INTERNAL_RATE).toInt() / periodN * periodN + periodN
         val n = if (seconds != null) (seconds.coerceIn(.01f, 30f) * INTERNAL_RATE).toInt()
+            else if (noteOff != null) ceil((noteOff + MAX_FINITE_SECONDS) * RATE).toInt() * Dsp.OVERSAMPLE
             else if (held) prerollN + 3 * periodN else (MAX_FINITE_SECONDS * INTERNAL_RATE).toInt()
         val out = FloatArray(n)
         val taps = if (probe.record) Taps(n) else null
@@ -424,8 +430,8 @@ object Corolla {
                 e = energy()
             }
             var work = 0.0
-            val envelope = if (held) 1.0 else if (sample * STEP <= driveEnd) 1.0
-                else (.5 + .5 * cos(PI * ((sample * STEP - driveEnd) / .25).coerceIn(0.0, 1.0)))
+            val envelope = if (held && noteOff == null) 1.0 else if (sample * STEP <= driveStopsAt) 1.0
+                else (.5 + .5 * cos(PI * ((sample * STEP - driveStopsAt) / .25).coerceIn(0.0, 1.0)))
             if (powerBudget > 0 && envelope > 0 && sample >= pullN) {
                 // Powered velocity feedback is a force inside the modes: it offsets their
                 // losses, with a rotating spatial preference and amplitude-dependent gain.
@@ -525,7 +531,7 @@ object Corolla {
                 // Let the same unpowered object resolve. Stored energy prevents a
                 // cancellation trough from ending a note; quiet pickup and a sustained
                 // quiet window make the final click-prevention fade inaudible.
-                val quiet = sample * STEP >= driveEnd + .25 &&
+                val quiet = sample * STEP >= driveStopsAt + .25 &&
                     e <= peakEnergy * 1e-8 && abs(out[sample].toDouble()) <= peakPickup * 1e-4
                 quietSamples = if (quiet) quietSamples + 1 else 0
                 if (quietSamples >= quietWindow && (sample + 1) * STEP >= 2.2 &&
@@ -537,17 +543,22 @@ object Corolla {
         }
         return Played(if (renderedN == n) out else out.copyOf(renderedN),
             if (renderedN == n) taps else taps?.trimmed(renderedN),
-            if (held && seconds == null) n - periodN else -1)
+            if (held && noteOff == null && seconds == null) n - periodN else -1)
     }
 
-    internal fun finish(raw: FloatArray, normalize: Boolean = true, fade: Boolean = true): FloatArray {
+    /** Event strength survives the instrument's loudness calibration. */
+    private fun velocityLevel(velocity: Float): Float = Dsp.MELODIC_LOUDNESS_TARGET *
+        if (velocity.isFinite()) velocity.coerceIn(0f, 1f) else 1f
+
+    internal fun finish(raw: FloatArray, normalize: Boolean = true, fade: Boolean = true,
+        velocity: Float = 1f): FloatArray {
         val filtered = raw.copyOf()
         Tide.bandLimit(filtered, INTERNAL_RATE)
         val out = Dsp.decimate(filtered, RATE)
         val mean = if (out.isEmpty()) 0f else (out.sumOf { it.toDouble() } / out.size).toFloat()
         val hp = Dsp.OnePole(RATE)
         for (i in out.indices) { val x = out[i] - mean; out[i] = x - hp.lp(x, 20f) }
-        if (normalize) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        if (normalize) Dsp.levelTo(out, RATE, velocityLevel(velocity))
         if (fade) Dsp.fadeTail(out)
         return out
     }
@@ -569,7 +580,7 @@ object Corolla {
         val end = if (difference(start) < difference(start + period)) start else start + period
         val buf = finished.copyOfRange(end - 2 * period, end)
         wrapCrossfade(buf, period)
-        if (normalize) Dsp.levelTo(buf, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        if (normalize) Dsp.levelTo(buf, RATE, velocityLevel(velocity))
         // A zero-velocity note is exactly silent; the relative seam metric is undefined (0/0).
         if (buf.any { it != 0f }) Keys.requireSeam("COROLLA $voice", buf, period)
         return buf to period
@@ -581,6 +592,15 @@ object Corolla {
         val (buffer, start) = loopBuffer(voice, macros, velocity, normalize)
         return buffer.copyOfRange(start, buffer.size)
     }
+
+    /** A complete held gesture, from its pull through note-off and passive settling.
+     * The note-off removes internal field work over .25 seconds without changing modal
+     * state, tuning or pickup. This recording is separate from the reusable sustain loop.
+     * [holdSeconds] is elapsed time from the pull, clamped to .1–10 seconds (non-finite: 4). */
+    fun renderHeldNote(voice: CorollaVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
+        holdSeconds: Float = 4f, normalize: Boolean = true): FloatArray =
+        finish(play(voice, macros + ("HOLD" to 1f), velocity,
+            releaseAtSeconds = holdSeconds).raw, normalize = normalize, velocity = velocity)
 
     // Tremor's proven, unity-sum smoothstep wrap: no equal-power boost on correlated tones.
     private fun wrapCrossfade(buf: FloatArray, start: Int) {
@@ -598,6 +618,6 @@ object Corolla {
     fun render(voice: CorollaVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
         val m = settled(macros, voice)
         return Snip(if (isLoop(m.getValue("HOLD"))) renderLoop(voice, m, velocity)
-            else finish(play(voice, m, velocity).raw), channels = 1, sampleRate = RATE)
+            else finish(play(voice, m, velocity).raw, velocity = velocity), channels = 1, sampleRate = RATE)
     }
 }

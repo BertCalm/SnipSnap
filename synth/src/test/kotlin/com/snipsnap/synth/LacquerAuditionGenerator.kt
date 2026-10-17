@@ -16,13 +16,13 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * Actual Kotlin DSP evidence for the provisional Lacquer listening page. Each synthesis is
+ * Actual Kotlin DSP evidence for the Lacquer preset-bank listening page. Each synthesis is
  * exported once at native level and once at an independent, declared comparison level.
  * A diagnostic solo keeps its original role gain in the native file; its matched file is
  * independently raised so the quieter support can be heard. No browser synthesis is used.
  *
  * Run :synth:generateLacquerAudition. One positional destination or --out destination is
- * accepted; --quick renders the eight finite/held preset pairs for a tooling smoke check.
+ * accepted; --quick renders finite/held preset pairs without register and diagnostic coverage.
  * This pack records measurements and leaves sonic acceptance to the owner.
  */
 object LacquerAuditionGenerator {
@@ -84,6 +84,7 @@ object LacquerAuditionGenerator {
         val root = destination?.let(::File) ?: File(repository, "testkit/lacquer-audition")
         root.mkdirs()
         val presets = LacquerPresets.all()
+        val referenceNames = LacquerPresets.references().map { it.name }.toSet()
         val cases = presetCases(presets, quick) + if (quick) emptyList() else diagnosticCases()
         require(cases.map { it.id }.distinct().size == cases.size) { "duplicate audition IDs" }
         val evidence = mutableListOf<Map<String, Any?>>()
@@ -185,11 +186,24 @@ object LacquerAuditionGenerator {
         val kitFile = if (kitSource.isFile) kitSource.name.also { name ->
             kitSource.copyTo(File(root, name), overwrite = true)
         } else null
+        val bankSource = File(repository, "testkit/SnipSnap-Lacquer-Bank.zip")
+        val bankFile = if (bankSource.isFile) bankSource.name.also { name ->
+            bankSource.copyTo(File(root, name), overwrite = true)
+        } else null
+        val bankManifest = File(repository, "testkit/SnipSnap Lacquer Bank/bank.json")
+        val bankPrograms = if (bankManifest.isFile) {
+            Json.parse(bankManifest.readText()).obj().getValue("programs").arr().map { program ->
+                JsonValue.Obj(program.obj().filterKeys {
+                    it in setOf("name", "voices", "presetCount", "presetNames", "programFile", "recipeFile")
+                })
+            }
+        } else emptyList()
         val report = linkedMapOf<String, Any?>(
-            "sonicAcceptance" to "Pending owner listening; these measurements do not establish sonic approval.",
-            "coverage" to if (quick) "Tooling smoke check: eight finite/held preset pairs." else "Eight recipes, six voices, MIDI 36/48/60/72, velocities 0.35/0.70/1.00, five-point macro sweeps, independent role solos, four 3×3 interaction grids, all-high extremes, late-onset duration boundaries and difficult held loops.",
+            "sonicAcceptance" to "Original reference recipes are preserved. New recipes await owner listening; measurements do not establish sonic approval.",
+            "coverage" to if (quick) "Tooling smoke check: ${presets.size} finite/held preset pairs." else "${presets.size} recipes, six voices, MIDI 36/48/60/72, velocities 0.35/0.70/1.00, five-point macro sweeps, independent role solos, four 3×3 interaction grids, all-high extremes, late-onset duration boundaries and difficult held loops.",
             "synthesisCount" to evidence.size, "wavCount" to evidence.size * 2,
             "presetCount" to presets.size, "diagnosticCount" to evidence.count { it["presetId"] == null },
+            "referencePresetCount" to referenceNames.size, "newPresetCount" to presets.count { it.name !in referenceNames },
             "sampleRate" to RATE, "channels" to 1, "bitDepth" to 16,
             "listeningTarget" to TARGET, "listeningPeakCeiling" to CEILING,
             "levelMatching" to "Each clip is independently matched using shared SnipSnap AuditionLevel: loudest 200-ms low-cut RMS target 0.03, peak ceiling 0.99. Native clips preserve synthesis gain unless the recorded PCM safety gain is below 1. Solo matching is independent and does not express its gain within the full mix.",
@@ -208,12 +222,16 @@ object LacquerAuditionGenerator {
             "testStatus" to "Generator verified finite samples, file export and declared deterministic rerenders. Repository test results are recorded separately.",
             "evidenceFile" to "evidence.json", "metricsFile" to "metrics.csv",
             "kitFile" to kitFile, "kitSha256" to kitFile?.let { fileHash(File(root, it)) },
-            "kitPlayback" to "The kit is an MPC drum program: every pad plays its sample once, including held material. It is not a sustained keygroup instrument.",
+            "bankKitFile" to bankFile, "bankKitSha256" to bankFile?.let { fileHash(File(root, it)) },
+            "bankKitPrograms" to bankPrograms,
+            "kitPlayback" to "The starter and full bank are MPC drum programs: every pad plays its sample once, including held material. These are not sustained keygroup instruments.",
         )
         val presetRows = presets.map { preset ->
             val id = slug(preset.name)
             linkedMapOf<String, Any?>("id" to id, "name" to preset.name, "voice" to preset.voice.name,
-                "description" to presetDescription(preset.voice), "macros" to preset.macros,
+                "reference" to (preset.name in referenceNames),
+                "description" to (LacquerPresets.descriptionFor(preset.name) ?: presetDescription(preset.voice)),
+                "macros" to preset.macros, "recipe" to preset.toJsonValue(),
                 "clips" to evidence.filter { it["presetId"] == id })
         }
         val manifest = linkedMapOf<String, Any?>(
