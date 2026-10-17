@@ -302,8 +302,12 @@ fun GrooveScreen(
     onTransport: (DockModel.Transport) -> Unit = {},
     /** After every save of the kit's grooves, so the project's beat can follow (`DIRECTION_2026_10.md` §2: the kit-side file still backs the per-kit exports). */
     onBeatWritten: () -> Unit = {},
-    /** READ_GROOVE_NEEDS_KIT's own route, for [EmptyGroove] below: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    /** NO_PROJECT_OPEN's own route, for [EmptyGroove] below: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
+    /** Whether a project is open: with one, the empty face offers + FROM SHELF; without, the shelf. */
+    hasProject: Boolean,
+    /** [EmptyGroove]'s + FROM SHELF: the shelf in pick mode, returning with the kit added to the project. */
+    onAddFromShelf: () -> Unit,
     /**
      * Bug fix (tab-switch data loss): FEEL, SWING and the selected program
      * used to be `remember(kitDir)` locals only, so App.kt's bare
@@ -373,7 +377,7 @@ fun GrooveScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyGroove(onNavigateKits)
+        EmptyGroove(hasProject, onAddFromShelf, onNavigateKits)
         return
     }
 
@@ -573,7 +577,7 @@ fun GrooveScreen(
     if (kit.pads.isEmpty()) {
         // Nothing to record with, groove or no groove — same shelf
         // treatment as an empty kit list everywhere else in this app.
-        EmptyGroove(onNavigateKits)
+        EmptyGroove(hasProject, onAddFromShelf, onNavigateKits)
         return
     }
 
@@ -2548,8 +2552,8 @@ fun GrooveScreen(
 }
 
 @Composable
-private fun EmptyGroove(onNavigateKits: () -> Unit) {
-    EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+private fun EmptyGroove(hasProject: Boolean, onAddFromShelf: () -> Unit, onNavigateKits: () -> Unit) {
+    NoKitPanel(Copy.READ_GROOVE_NEEDS_KIT, hasProject, onAddFromShelf, onNavigateKits)
 }
 
 /**

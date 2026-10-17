@@ -56,8 +56,7 @@ import com.snipsnap.app.ui.CaptureSheet
 import com.snipsnap.app.ui.ChoiceSheet
 import com.snipsnap.app.ui.SheetRow
 import com.snipsnap.app.ui.DoublesScreen
-import com.snipsnap.app.ui.EmptyStatePanel
-import com.snipsnap.app.ui.EmptyStateRoute
+import com.snipsnap.app.ui.NoKitPanel
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
@@ -2802,6 +2801,18 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * `+ FROM SHELF`: the shelf in pick mode, returning here with the kit
+     * tapped added to the open project. With no project open there is
+     * nothing to add to, and the pages that offer this door only offer it
+     * when one is open.
+     */
+    fun addFromShelf() {
+        val p = project ?: return
+        goToScreen(AppScreen.KITS)
+        pendingAddTo = p
+    }
+
+    /**
      * The kit switcher (plan §3.3): [kitFolder] becomes the open project's
      * active kit, saved through `ShelfModel.activate`, and the grid shows
      * it. A failure says so and leaves the grid where it was.
@@ -3394,13 +3405,7 @@ fun App(shelf: KitShelf) {
                                     // its kit list, and the shelf in pick mode.
                                     switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
                                     onSwitchKit = { kitSheetOpen = true },
-                                    onAddFromShelf = {
-                                        val p = project
-                                        if (p != null) {
-                                            goToScreen(AppScreen.KITS)
-                                            pendingAddTo = p
-                                        }
-                                    },
+                                    onAddFromShelf = ::addFromShelf,
                                     // The grid's state, held by the navigation model.
                                     bank = nav.padsBank,
                                     onBankChange = { nav.padsBank = it },
@@ -3448,6 +3453,8 @@ fun App(shelf: KitShelf) {
                                         dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
                                     },
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                    hasProject = project != null,
+                                    onNavigateTape = { goToScreen(AppScreen.TAPE) },
                                 )
                             }
                         }
@@ -3606,6 +3613,7 @@ fun App(shelf: KitShelf) {
                             appScope = scope,
                             onToast = { dock.say(it) },
                             onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            onAddFromShelf = ::addFromShelf,
                             // OUT's second card (plan §3.5): the whole project
                             // as one session, over the open project.
                             project = project,
@@ -3738,6 +3746,8 @@ fun App(shelf: KitShelf) {
                                     onTransport = { dock.transport = it },
                                     onBeatWritten = ::mirrorBeat,
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                    hasProject = project != null,
+                                    onAddFromShelf = ::addFromShelf,
                                     feel = grooveFeel,
                                     onFeelChange = { grooveFeel = it },
                                     swingPercent = grooveSwingPercent,
@@ -3781,7 +3791,12 @@ fun App(shelf: KitShelf) {
                             // GROOVE's ORBIT ▸ (plan §3.4). It needs only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
-                                EmptyStatePanel(Copy.NO_KIT_FOR_ORBIT, listOf(EmptyStateRoute("SHELF ▸", { goToScreen(AppScreen.KITS) })))
+                                NoKitPanel(
+                                    Copy.NO_KIT_FOR_ORBIT,
+                                    hasProject = project != null,
+                                    onAddFromShelf = ::addFromShelf,
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                )
                             } else {
                                 OrbitScreen(
                                     entry = orbitEntry,

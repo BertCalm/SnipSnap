@@ -231,8 +231,10 @@ fun ExportScreen(
      * scroll, with this screen's button pinned at the bottom.
      */
     onNote: (LandingNote.Note) -> Unit,
-    /** NO_KIT_FOR_EXPORT's own route. No default — a screen that forgets to wire this fails the compile, not the user. */
+    /** NO_PROJECT_OPEN's own route: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
+    /** NO_KIT_FOR_EXPORT's own route, offered when a [project] is open: the shelf in pick mode, returning with the kit added. */
+    onAddFromShelf: () -> Unit,
     /**
      * The open project, for OUT's second card (`docs/SCREEN_PLAN_2026_10.md`
      * §3.5). The card is drawn only when both this and [shelfRoot] are
@@ -250,7 +252,7 @@ fun ExportScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+        NoKitPanel(Copy.NO_KIT_FOR_EXPORT, project != null, onAddFromShelf, onNavigateKits)
         return
     }
 

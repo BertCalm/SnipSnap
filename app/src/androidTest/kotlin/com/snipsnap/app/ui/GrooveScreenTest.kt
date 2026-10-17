@@ -127,6 +127,8 @@ class GrooveScreenTest : ComposeScreenTest() {
                 appScope = appScope,
                 onToast = { toasts += it },
                 onNavigateKits = {},
+                hasProject = true,
+                onAddFromShelf = {},
             )
         }
         // The kit's grooves are read off disk in a LaunchedEffect, so the

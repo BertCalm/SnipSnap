@@ -82,16 +82,33 @@ object Copy {
     const val EMPTY_KIT = "16 EMPTY PADS."
     /** GROOVE with a kit open and nothing in it yet: the three ways in, named. TAPE's [EMPTY_SHELF] sent people to the wrong screen. */
     const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
-    /** ORBIT from the menu row with no kit open. */
-    const val NO_KIT_FOR_ORBIT = "ORBIT PUTS A KIT ON RINGS. OPEN ONE FROM SHELF FIRST."
     /**
-     * EXPORT with no kit open — distinct from [EMPTY_SHELF], which this
+     * PROJECT with no project open: the page has nothing to show, so it
+     * says so once and sends the user to the shelf, where a project is
+     * opened or started. Replaces the tab era's two empties (a switcher
+     * reading NO KITS YET above a deck that was never the point).
+     */
+    const val NO_PROJECT_OPEN = "NO PROJECT OPEN. OPEN ONE ON THE SHELF, OR START ONE."
+    /**
+     * PROJECT with a project open and no kit in it: the two ways to give it
+     * one, named, and both on the panel (+ FROM SHELF and TAPE ▸).
+     */
+    const val PROJECT_HAS_NO_KIT = "THIS PROJECT HAS NO KIT YET. ADD ONE FROM THE SHELF, OR RECORD IN TAPE."
+    /**
+     * The other places that need a kit (BEAT, OUT, ORBIT) in project words:
+     * the kit is added to the project, not "opened". Each is the one fact
+     * that place needs, said after the lead; with no project open at all
+     * they give way to [NO_PROJECT_OPEN].
+     */
+    const val NO_KIT_FOR_ORBIT = "ADD A KIT TO THIS PROJECT FIRST. ORBIT PUTS IT ON RINGS."
+    /**
+     * EXPORT with no kit in the project — distinct from [EMPTY_SHELF], which this
      * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
      * but EXPORT dubs a *kit*, and STARTERS makes one without taping
      * anything at all, so a user with kits and no tape was told nothing
      * existed. Same shape as [NO_KIT_FOR_ORBIT].
      */
-    const val NO_KIT_FOR_EXPORT = "EXPORT DUBS A KIT FOR THE MPC. OPEN ONE FROM SHELF FIRST."
+    const val NO_KIT_FOR_EXPORT = "ADD A KIT TO THIS PROJECT FIRST. EXPORT DUBS IT FOR THE MPC."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
     /**
@@ -1092,7 +1109,7 @@ object Copy {
     // to it. See feelRolled/FEEL_RECENTRED below for its replacements.
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
     const val READ_GROOVE_BUSY = "LISTENING…"
-    const val READ_GROOVE_NEEDS_KIT = "OPEN A KIT FIRST. THE EAR NEEDS PADS TO PLAY ON."
+    const val READ_GROOVE_NEEDS_KIT = "ADD A KIT TO THIS PROJECT FIRST. THE EAR NEEDS PADS TO PLAY ON."
     /** The reading landed: how much was heard, and where it plays. */
     fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
         "HEARD ${countOf(hits, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")} AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
@@ -2600,7 +2617,11 @@ object Copy {
     const val NOTHING_DELETED = "NOTHING DELETED."
     /** SNIPS' own empty state. */
     const val SNIPS_EMPTY = "NO SNIPS YET."
-    /** KIT/PLAY with no tape ever committed to this kit - both screens' own empty deck. */
+    /**
+     * The deck with no tape committed. Reserved for the deck: PROJECT's cold
+     * page no longer borrows it (it speaks project words now,
+     * [NO_PROJECT_OPEN] and [PROJECT_HAS_NO_KIT]).
+     */
     const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM SHELF."
     /** IN KEY's row when the kit holds no tonal pad at all. */
     const val NO_TONAL_PADS = "NO TONAL PADS. DRUMS LAND AS CAPTURED."
