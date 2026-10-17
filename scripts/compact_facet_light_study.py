@@ -86,7 +86,8 @@ for document in (report, manifest):
     if "metricNotes" in document:
         document["metricNotes"] = document["metricNotes"].replace(old_note, new_note)
 readme_path = root / "light-study/README.txt"
-readme_path.write_text(readme_path.read_text().replace(old_note, new_note))
+readme_path.write_text(readme_path.read_text().replace(old_note, new_note).replace(
+    "Previous R2 assets remain intact.", "Previous R2 clip audio remains intact."))
 write_json(report_path, report)
 write_json(manifest_path, manifest)
 
