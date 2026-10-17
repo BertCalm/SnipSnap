@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -17,9 +18,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,13 +31,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.MicSessionService
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -51,6 +58,8 @@ import com.snipsnap.shell.Navigation
 import com.snipsnap.shell.Place
 import com.snipsnap.shell.Places
 import com.snipsnap.shell.Stage
+import com.snipsnap.audio.SilenceWatch
+import kotlin.math.sqrt
 
 /*
  * The frame of the four-place shape (`docs/SCREEN_PLAN_2026_10.md` §1):
@@ -243,9 +252,15 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  *   ▶/■ move in from GROOVE with the BEAT stage — so it says `■` and
  *   nothing more until something plays, rather than drawing a button
  *   that would do nothing.
- * - **capture**: the light and counter the shelf's ArmControl shows,
- *   now on every screen, and SNIP while armed. The light is amber while
- *   the tape rolls and dark otherwise, doubled by the words beside it.
+ * - **capture**: the capture session's one control, which used to be the
+ *   shelf's ArmControl and nowhere else. Idle, the light is dark and the
+ *   words (`LISTEN · MIC`) are the door to arming — a tap opens the
+ *   two-source choice ([onArm]), since arming the mic and recording an
+ *   app are different consents. Armed, the light is amber, the counter
+ *   ticks, the level meter shows the input (a flat meter beside a ticking
+ *   counter reads unmistakably as *recording, hearing nothing*), and SNIP
+ *   and STOP sit beside it. Colour is never the only signal: the words
+ *   change with the light.
  * - **now**: the line and its door. The line is what the toast used to
  *   say and stays until the next one; the door stays until taken. A
  *   `liveRegion` on the line keeps the "did DELETE work" channel the
@@ -259,7 +274,9 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
 fun Dock(
     dock: DockState,
     busy: String?,
+    onArm: () -> Unit,
     onSnip: () -> Unit,
+    onEject: () -> Unit,
     onTakeDoor: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -283,25 +300,28 @@ fun Dock(
     ) {
         // Transport.
         TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
-        // Capture: the light, the words, SNIP while armed.
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            Box(
+        // Capture.
+        if (!armed) {
+            Row(
                 Modifier
-                    .size(8.dp)
-                    .background(if (armed) scheme.amber.tape else scheme.lcdInk.tape.copy(alpha = 0.25f), CircleShape),
-            )
-            TapeText(dock.captureLabel, TapeType.pixelSmall, if (armed) scheme.amber.tape else scheme.lcdInk.tape)
-            if (armed) {
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .tapeClick(label = Places.SNIP, onClick = onSnip)
-                        .padding(horizontal = 6.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(Places.SNIP, TapeType.pixelSmall, scheme.amber.tape)
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .tapeClick(label = Places.LISTEN, onClick = onArm)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                CaptureLight(lit = false)
+                TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                CaptureLight(lit = true)
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
+                    CaptureMeter(Modifier.width(72.dp).height(6.dp))
                 }
+                DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
+                DockChip(Places.STOP, BinRedGlow, onClick = onEject, border = BIN_RED_BORDER)
             }
         }
         // Now: the line, then its door.
@@ -322,14 +342,85 @@ fun Dock(
     }
 }
 
+/** The capture light: amber while the tape rolls, a dark dot otherwise. */
+@Composable
+private fun CaptureLight(lit: Boolean) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .size(8.dp)
+            .background(if (lit) scheme.amber.tape else scheme.lcdInk.tape.copy(alpha = 0.25f), CircleShape),
+    )
+}
+
 /**
- * Behind the gear in the title bar: two rows, SETUP ▸ and HELP ▸, one
- * tap from every screen. The shelf's own pop-up shape (a scrim, a raised
- * card, a CANCEL), so it reads as the same kind of thing the TOOLS menu
- * is. Opening a row is a navigation; opening the sheet is not.
+ * The armed session's input level, collected right here rather than
+ * hoisted: it updates at ~21 Hz (`READ_BLOCK_FRAMES` @ 44.1 kHz), so this
+ * is the smallest composable scope that should recompose on every tick.
+ * On a MIC session the empty field tints the instant the block reads
+ * exact digital silence — a per-block observation, deliberately weaker
+ * than `MicSessionService.micSilent`'s multi-second verdict, and honest
+ * precisely because it never claims more than the one block it saw.
  */
 @Composable
-fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
+private fun CaptureMeter(modifier: Modifier) {
+    val scheme = LocalScheme.current
+    val level by MicSessionService.level.collectAsState()
+    val source by MicSessionService.source.collectAsState()
+    val possiblyMuted = source == MicSessionService.Source.MIC && level <= SilenceWatch.DEFAULT_THRESHOLD
+    val filled = sqrt(level.coerceIn(0f, 1f))
+    val fieldColor = if (possiblyMuted) MUTE_WARN_FIELD else scheme.field.tape
+    Canvas(modifier.semantics { contentDescription = "MIC LEVEL METER" }) {
+        drawRect(color = fieldColor, size = size)
+        if (filled > 0f) drawRect(color = scheme.amber.tape, size = Size(size.width * filled, size.height))
+    }
+}
+
+/**
+ * The meter's empty-field tint on exact digital silence — a deliberate,
+ * scheme-independent constant like [BIN_RED_BORDER]: "something's off"
+ * has to read the same in every scheme. A different colour from the
+ * bin-red pair on purpose: a warning about a live session, not the end
+ * of one.
+ */
+private val MUTE_WARN_FIELD = Color(0xFF4A2E14)
+
+/**
+ * BIN red, the house constant for a session-ending action (STOP here,
+ * EMPTY THE BIN there), the same in every scheme. The glow half is the
+ * tuned token `BinRedGlow`; this is its border, duplicated per file by
+ * the convention the other copies state rather than hoisted.
+ */
+private val BIN_RED_BORDER = Color(0xFF6A2020)
+
+/** A small chip on the LCD: a word in a one-pixel frame, a hit target tall. */
+@Composable
+private fun DockChip(label: String, ink: Color, onClick: () -> Unit, border: Color = ink) {
+    Box(
+        Modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .border(1.dp, border, RoundedCornerShape(4.dp))
+            .tapeClick(label = label, onClick = onClick)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(label, TapeType.pixelSmall, ink)
+    }
+}
+
+/** One row of a [ChoiceSheet]: its label and what it does. The label carries its own ▸ when it opens a screen. */
+data class SheetRow(val label: String, val onClick: () -> Unit)
+
+/**
+ * A short menu over the screen — the shelf's own pop-up shape (a scrim, a
+ * raised card, a CANCEL), so it reads as the same kind of thing the TOOLS
+ * menu is. Tapping outside the card is a genuine dismiss path and needs
+ * its own label even though CANCEL below also reaches it; the card
+ * swallows the tap so it does not fall through to the scrim. Opening a
+ * row may be a navigation; opening the sheet never is.
+ */
+@Composable
+fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
     val scheme = LocalScheme.current
     BackHandler(onBack = onDismiss)
     Box(
@@ -348,11 +439,34 @@ fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
                 .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            ActionButton("${Places.GEAR_SETUP} ▸", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onSetup)
-            ActionButton("${Places.GEAR_HELP} ▸", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onHelp)
+            for (row in rows) {
+                ActionButton(row.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = row.onClick)
+            }
             ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
         }
     }
+}
+
+/** Behind the gear in the title bar: SETUP ▸ and HELP ▸, one tap from every screen. */
+@Composable
+fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
+    ChoiceSheet(
+        listOf(SheetRow("${Places.GEAR_SETUP} ▸", onSetup), SheetRow("${Places.GEAR_HELP} ▸", onHelp)),
+        onDismiss,
+    )
+}
+
+/**
+ * Behind the dock's idle capture chip: the two sources the shelf's
+ * ArmControl offered as two buttons — the room through the mic, or
+ * another app's audio with the projection consent.
+ */
+@Composable
+fun CaptureSheet(onMic: () -> Unit, onInside: () -> Unit, onDismiss: () -> Unit) {
+    ChoiceSheet(
+        listOf(SheetRow(Places.LISTEN, onMic), SheetRow(Places.ARM_INSIDE, onInside)),
+        onDismiss,
+    )
 }
 
 /**

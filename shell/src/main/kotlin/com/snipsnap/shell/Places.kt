@@ -42,6 +42,12 @@ object Places {
     /** The dock's SNIP, shown while armed. No arrow: it takes the last 60 s, it opens nothing. */
     const val SNIP = "SNIP"
 
+    /** The dock's STOP, beside SNIP while armed: the session ends. The shelf's ArmControl said the same word in bin red. */
+    const val STOP = "STOP"
+
+    /** The second row of the dock's capture choice: another app's audio, with the projection consent. The arrow: it opens that consent. */
+    const val ARM_INSIDE = "APP AUDIO ▸ RECORD AN APP"
+
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {
         val s = secondsOnTape.coerceAtLeast(0)

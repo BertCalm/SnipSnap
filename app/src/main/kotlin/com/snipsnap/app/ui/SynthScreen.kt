@@ -1633,7 +1633,7 @@ private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Uni
 }
 
 /**
- * DELETED PRESETS: the bin's own listing, `DeletedKitsScreen`'s shape as an
+ * DELETED PRESETS: the bin's own listing, `DeletedKitsSection`'s shape as an
  * overlay of this screen (the `SlotChooserOverlay` frame): one row per
  * forgotten preset — its name, its engine and voice, when it went, the days
  * it has left (the last two in `warn`, as every bin counts down) — and
@@ -1733,7 +1733,7 @@ private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boole
     }
 }
 
-// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsScreen.kt`'s
+// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsSection.kt`'s
 // own `BIN_RED_BORDER`, deliberately constant across every scheme so a
 // delete reads as "red" even in a scheme with no red anywhere else in it.
 private val BIN_RED_BORDER = Color(0xFF6A2020)

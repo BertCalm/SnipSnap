@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -183,13 +184,22 @@ fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> U
  * more thing per screen to keep in step. A raised bevel at the bar's right
  * end: the Win9x button-on-a-title-bar, which is what this is.
  *
+ * [projectName] is the open project, at the bar's right (plan §1): the
+ * one word of state the title carries, since the status bar that carried
+ * the open kit's name is gone and the project is the unit now.
+ *
  * [onGear] is the gear (`docs/SCREEN_PLAN_2026_10.md` §1): SETUP and HELP
  * behind one chip at the bar's right end, one tap from every screen, where
  * the two used to be the twelfth and thirteenth tabs of a row that fit
  * nine. Drawn as the same button-on-a-bar the NOTE chip is.
  */
 @Composable
-fun TitleBar(modifier: Modifier = Modifier, onNote: (() -> Unit)? = null, onGear: () -> Unit) {
+fun TitleBar(
+    modifier: Modifier = Modifier,
+    projectName: String? = null,
+    onNote: (() -> Unit)? = null,
+    onGear: () -> Unit,
+) {
     val scheme = LocalScheme.current
     val brush =
         if (scheme.id == SchemeId.OILSLICK) {
@@ -213,6 +223,9 @@ fun TitleBar(modifier: Modifier = Modifier, onNote: (() -> Unit)? = null, onGear
         // true one on, and a hardcoded tag is exactly what went stale before.
         TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (projectName != null) {
+                TapeText(projectName.uppercase(), TapeType.pixel, scheme.titleInk.tape, Modifier.widthIn(max = 140.dp))
+            }
             if (onNote != null) {
                 TitleChip("NOTE", label = "NOTE", onClick = onNote)
             }
