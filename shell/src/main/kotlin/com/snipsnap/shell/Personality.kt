@@ -2650,6 +2650,30 @@ object Copy {
      * [NO_PROJECT_OPEN] and [PROJECT_HAS_NO_KIT]).
      */
     const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM SHELF."
+    /**
+     * MAKE's header: what the place is, and where its sounds land. Every lab
+     * sends to the active kit, so the line says the one thing the four rows
+     * under it share.
+     */
+    const val MAKE_HEADER = "SOUND FROM NOTHING. EACH ONE LANDS ON THE ACTIVE KIT."
+    /**
+     * The line under MAKE's header when no kit is active, and the same
+     * project words the empty BEAT and OUT use for it ([NO_KIT_FOR_EXPORT]).
+     */
+    const val ADD_KIT_FIRST = "ADD A KIT TO THIS PROJECT FIRST."
+    /**
+     * What each MAKE row means, under its name: [Bench.SYNTH] and the three
+     * others the list draws. The words follow `Places.HELP`'s MAKE lines,
+     * shortened to fit under a name, so the two cannot disagree about what a
+     * lab is.
+     */
+    fun makeSub(bench: Bench): String = when (bench) {
+        Bench.SYNTH -> "TUNE AN ENGINE."
+        Bench.SNAP -> "A PICTURE INTO A SOUND."
+        Bench.SURFACE -> "PLAY A TOUCH SURFACE."
+        Bench.INSTRUMENTS -> "WHAT YOU MADE, ON 16 PADS."
+        else -> ""
+    }
     /** IN KEY's row when the kit holds no tonal pad at all. */
     const val NO_TONAL_PADS = "NO TONAL PADS. DRUMS LAND AS CAPTURED."
     /** SNIPS → PAD's own header hint once the shelf has a kit to tap - [EMPTY_SHELF_FOR_ASSIGN] carries the instruction when it doesn't. */

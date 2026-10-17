@@ -3846,7 +3846,7 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) })
+                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) }, hasKit = open != null)
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
                             onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
