@@ -34,11 +34,15 @@ for clip in clips:
         assert not relative.is_absolute() and '..' not in relative.parts, f'Unsafe {field}'
         assert (output / relative).is_file(), f'Missing {relative}'
     assert clip['finite'] and clip['channels'] == 1 and clip['sampleRate'] == 44100
-manifest['sourceRepository'] = 'https://github.com/BertCalm/SnipSnap/tree/codex/confluence-first-audition'
-manifest['sourceCommit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip()
-manifest['sourceTreeCleanAtPackaging'] = not bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=repo, text=True).strip())
-manifest['publication'] = {'title': 'Confluence — SnipSnap audition', 'finitePrototype': True, 'maxPerformers': 8}
-(output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+# Preserve the renderer manifest byte-for-byte: independent reviews and the
+# replay bundle identify it by SHA-256. Site staging metadata belongs separately.
+publication = {
+    'sourceRepository': 'https://github.com/BertCalm/SnipSnap/tree/codex/confluence-first-audition',
+    'sourceCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip(),
+    'sourceTreeCleanAtPackaging': not bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=repo, text=True).strip()),
+    'title': 'Confluence — SnipSnap audition', 'finitePrototype': True, 'maxPerformers': 8,
+}
+(output / 'site-build.json').write_text(json.dumps(publication, indent=2) + '\n')
 for item in output.rglob('*'):
     if item.is_file():
         assert item.stat().st_size <= 25 * 1024 * 1024, f'Hosting asset exceeds 25 MiB: {item}'
