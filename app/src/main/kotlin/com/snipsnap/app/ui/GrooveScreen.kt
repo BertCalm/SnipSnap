@@ -862,7 +862,12 @@ fun GrooveScreen(
     LaunchedEffect(playRequest) {
         if (playRequest != lastPlayRequest) {
             lastPlayRequest = playRequest
-            if (!recording && !countingIn) playing = !playing
+            if (!recording && !countingIn) {
+                // A beat with no notes has nothing to start: say so, rather
+                // than let the chip do nothing and the dock stay silent. A
+                // running clock is always allowed to stop.
+                if (!playing && currentClip?.notes.isNullOrEmpty()) onToast(Copy.NOTHING_TO_PLAY) else playing = !playing
+            }
         }
     }
     // What the dock reads: the bar advances with the needle, RECORD shows
@@ -1976,7 +1981,10 @@ fun GrooveScreen(
                             // plays a whole take into a blank grid.
                             liveNotes = take?.notes().orEmpty(),
                         )
-                        else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        // Top-aligned, not centred: the sentence is the page's
+                        // heading, and the controls under it start where it ends
+                        // rather than a screen-height away from it (S4b).
+                        else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopStart) {
                             TapeText(Copy.EMPTY_GROOVE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
                         }
                     }
@@ -2036,6 +2044,41 @@ fun GrooveScreen(
                             TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
                         }
                     } else {
+                        // RECORD is the one filled button: the way in that needs
+                        // nothing but the pads, and the one every other control
+                        // on this screen exists to feed (the loaded screen's own
+                        // RECORD, below its scroll, is the same button).
+                        PrimaryAction(
+                            label = "● RECORD",
+                            enabled = !busy,
+                            onClick = ::startRecording,
+                        )
+                        // The other ways in, one secondary row: tap it, ring it,
+                        // lay it into a song, or phase it against snips. ORBIT,
+                        // SONG and LOOP need no groove at all, so they belong
+                        // here as much as on the full screen's action rows.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // One name for one editor (J19). This, EDIT STEPS and EDIT
+                            // THIS TAKE were three doors into the same step
+                            // editor, named three different ways, none of them
+                            // naming the program they land on — and the toast
+                            // that follows all three says YOURS. They now say
+                            // where they go: this one starts it from nothing,
+                            // the other two fork into it.
+                            GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
+                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onOrbit()
+                            }
+                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onArrange(swingPercent, feel / 100f, feelTemplate)
+                            }
+                            GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onLoop()
+                            }
+                        }
                         // BARS: how long a from-scratch take runs (J17).
                         //
                         // `recordBars` was a `var` nothing could reassign —
@@ -2068,24 +2111,6 @@ fun GrooveScreen(
                             )
                             GrooveActionButton("▶", scheme, Modifier.weight(1f), enabled = !busy) {
                                 recordBars = LiveRecord.barsAfter(recordBars, 1)
-                            }
-                        }
-                        // Three ways in, side by side: play it, tap it, or ring it.
-                        // ORBIT needs no groove at all, so it belongs here as much
-                        // as on the full screen's action row.
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            GrooveActionButton("● RECORD", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startRecording() }
-                            // One name for one editor (J19). This, EDIT STEPS and EDIT
-                            // THIS TAKE were three doors into the same step
-                            // editor, named three different ways, none of them
-                            // naming the program they land on — and the toast
-                            // that follows all three says YOURS. They now say
-                            // where they go: this one starts it from nothing,
-                            // the other two fork into it.
-                            GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
-                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
-                                clearJustLanded()
-                                onOrbit()
                             }
                         }
                     }

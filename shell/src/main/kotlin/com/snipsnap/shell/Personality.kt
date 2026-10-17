@@ -88,8 +88,15 @@ object Copy {
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
     const val EMPTY_KIT = "16 EMPTY PADS."
-    /** GROOVE with a kit open and nothing in it yet: the three ways in, named. TAPE's [EMPTY_SHELF] sent people to the wrong screen. */
-    const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
+    /**
+     * GROOVE with a kit open and nothing in it yet: the way in that needs only
+     * the pads, named; the other ways (START YOURS, ORBIT, SONG, LOOP) are the
+     * buttons under it, so the sentence no longer lists them. TAPE's
+     * [EMPTY_SHELF] sent people to the wrong screen.
+     */
+    const val EMPTY_GROOVE = "NO BEAT YET. TAP RECORD AND PLAY PADS."
+    /** The dock's play chip, tapped on BEAT with no notes in the beat: it would start a clock over nothing, so it says so instead of staying silent. */
+    const val NOTHING_TO_PLAY = "NOTHING TO PLAY YET. RECORD OR TAP STEPS IN."
     /**
      * PROJECT with no project open: the page has nothing to show, so it
      * says so once and sends the user to the shelf, where a project is
