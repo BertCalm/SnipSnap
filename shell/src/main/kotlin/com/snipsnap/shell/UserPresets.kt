@@ -9,6 +9,7 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
@@ -361,7 +362,8 @@ object UserPresets {
      * the JSON constructor. SPOOL writes its complete machine constructor, including
      * recording roster and HOLD memory mode. RELAY retains its complete source and
      * phrase schedules. MURMUR keeps its root, velocity and complete
-     * operator/formant/envelope definition. Names and embedded JSON are escaped Kotlin string literals.
+     * operator/formant/envelope definition. FLOCK retains its note, velocity,
+     * model and exact 64-bit seed. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is LacquerPatch) {
@@ -390,6 +392,11 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is FlockPatch) {
+            val seed = if (patch.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${patch.seed}L"
+            return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
         if (patch is SpoolPatch) {
             val m = patch.machine
             val roster = m.roster.joinToString(", ") {

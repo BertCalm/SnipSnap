@@ -247,3 +247,7 @@ testkit/vent-isolation-audition/
 
 # Model-2 clean voice audio, ordinary recipes and listening evidence are generated.
 testkit/vent-voice-audition/
+
+# FLOCK's generated finite listening pack, source snapshots, and diagnostic traces.
+testkit/flock-audition/
+testkit/flock-flow-audition/

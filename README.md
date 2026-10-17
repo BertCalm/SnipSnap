@@ -369,6 +369,20 @@ after the first listening verdict found the identities and breathing too similar
 awaits listening; [implementation notes](docs/OVERLAP.md) describe tuning limits
 and the prototype's scope before phone-picker or sustained-loop integration.
 
+FLOCK is a finite oscillator-flock listening proof: twenty-four oscillators
+scatter and respond through changing local neighborhoods around a played note.
+GATHER, RIBBON and SPLIT share SPREAD, PULL, FLOW, SCATTER, EDGE and HOLD;
+HOLD is two to six seconds, with no loop mode. Exact seeded patches, recipes,
+physical velocity and CLI auditions are implemented; its nine provisional
+presets stay outside the factory roster and phone picker pending listening.
+Run `./gradlew :synth:generateFlockAudition` for real raw/matched WAVs,
+fixed/independent comparisons and one-particle disturbance measurements.
+The [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site)
+and [implementation notes](docs/FLOCK.md) describe the proof and its limits.
+After the first listen, model 2 gives FLOW a slow-to-fast clock for the flock;
+original model-1 recipes and each voice's default sound remain exact. The
+audition includes five Previous/Revised FLOW pairs, with its other clips retained.
+
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
 with relative TUNE, native velocity, saved playing gestures and settled HOLD

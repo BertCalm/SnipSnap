@@ -13,6 +13,29 @@ tasks.register<JavaExec>("generateOverlapAudition") {
     args("${rootDir}/testkit/overlap-audition")
 }
 
+/** First finite FLOCK experiment: interacting particles, controls and causal comparisons. */
+tasks.register<JavaExec>("generateFlockAudition") {
+    group = "distribution"
+    description = "Render FLOCK raw/matched PCM16 clips, recipes, pitch traces, source provenance and a downloadable ZIP under testkit/flock-audition/."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlockAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockOutput").orNull ?: "${rootDir}/testkit/flock-audition")
+}
+
+/** Revise FLOW's five recordings while preserving the complete accepted first-flight baseline. */
+tasks.register<JavaExec>("generateFlockFlowAudition") {
+    group = "distribution"
+    description = "Render five model-2 FLOCK FLOW rates, preserve the original 51-clip baseline and export a 56-clip comparison audition."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlockFlowAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockFlowOutput").orNull ?: "${rootDir}/testkit/flock-flow-audition")
+    args(providers.gradleProperty("flockBaseline").orNull ?: "${rootDir}/testkit/flock-audition")
+}
+
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */
 tasks.register<JavaExec>("generateOspreyAudition") {
     group = "distribution"
