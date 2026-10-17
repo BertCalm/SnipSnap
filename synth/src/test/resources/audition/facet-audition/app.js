@@ -91,6 +91,8 @@
   }
 
   function sourceLabel(clip) {
+    if (clip.directionLabel || clip.auditionLabel) return clip.directionLabel || clip.auditionLabel;
+    if (clip.comparison && typeof clip.comparison === 'object' && clip.comparison.label) return clip.comparison.label;
     return { r1: 'R1 original', r2_clean: 'R2 motion off', r2_living: 'R2 full source' }[sourceVariant(clip)] || clip.sourceModelLabel || null;
   }
 
@@ -138,7 +140,7 @@
 
   function createClip(clip, index, options = {}) {
     const article = node('article', 'clip-card');
-    const safeId = String(clip.id || `clip-${index}`).replace(/[^a-zA-Z0-9_-]/g, '-');
+    const safeId = `${options.prefix || ''}${String(clip.id || `clip-${index}`).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
     const titleId = `title-${safeId}-${players.length}`;
     article.setAttribute('aria-labelledby', titleId);
 
@@ -153,7 +155,8 @@
     title.id = titleId;
     article.append(top, title);
     if (options.sourceComparison) {
-      const badge = node('div', `source-status ${sourceVariant(clip) === 'r2_living' ? 'is-current' : ''}`, sourceVariant(clip) === 'r2_living' ? 'Current default' : sourceVariant(clip) === 'r1' ? 'Original source' : 'Beam motion off');
+      const status = clip.directionStatus || clip.auditionStatus || (options.archive ? 'Previous study' : 'Reference');
+      const badge = node('div', 'source-status', status);
       article.append(badge);
     }
     if (clip.description) article.append(node('p', 'clip-description', clip.description));
@@ -233,7 +236,7 @@
     const recipeDetails = createRecipe(clip);
     if (recipeDetails) article.append(recipeDetails);
 
-    const record = { clip, audio, article, download, variantNote, file, unavailable, transition: 0 };
+    const record = { clip, audio, article, download, variantNote, file, unavailable, transition: 0, isArchive: !!options.archive };
     players.push(record);
     updateVariantNote(record);
     audio.addEventListener('play', () => {
@@ -274,7 +277,7 @@
     });
   }
 
-  function createSourceComparisons(clips) {
+  function createSourceComparisons(clips, options = {}) {
     const container = node('div', 'revision-groups');
     const jump = node('nav', 'revision-jump');
     jump.setAttribute('aria-label', 'Choose a voice and register to compare');
@@ -289,12 +292,12 @@
       groupClips.sort((a, b) => (a.comparison && a.comparison.order || 0) - (b.comparison && b.comparison.order || 0));
       const groupElement = node('div', 'revision-group');
       const label = `${groupClips[0].voice || 'FACET'} · ${noteName(groupClips[0].midi) || groupClips[0].noteName || ''}`;
-      groupElement.id = `source-${String(key).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      groupElement.id = `source-${options.prefix || ''}${String(key).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
       const jumpLink = node('a', '', label);
       jumpLink.href = `#${groupElement.id}`;
       jump.append(jumpLink);
       const heading = node('div', 'revision-group-heading');
-      heading.append(node('h4', '', label), node('span', '', 'Same note · same geometry'));
+      heading.append(node('h4', '', label), node('span', '', options.archive ? 'Previous listening study' : 'Same voice · same note'));
       const tools = node('div', 'source-switch-tools');
       const buttons = node('div', 'source-switch-buttons');
       buttons.setAttribute('role', 'group');
@@ -304,7 +307,7 @@
       const grid = node('div', 'clip-grid revision-grid');
       const group = { key, records: [], last: null, status, request: 0 };
       groupClips.forEach((clip, index) => {
-        grid.append(createClip(clip, index, { headingTag: 'h5', title: sourceLabel(clip), sourceComparison: true }));
+        grid.append(createClip(clip, index, { ...options, headingTag: 'h5', title: sourceLabel(clip), sourceComparison: true }));
         const record = players[players.length - 1];
         const button = node('button', '', sourceLabel(clip));
         button.type = 'button';
@@ -359,8 +362,7 @@
     }
   }
 
-  function renderDownloads(downloads) {
-    const target = document.getElementById('downloads');
+  function renderDownloads(downloads, target = document.getElementById('downloads')) {
     const entries = [
       ['First-listen pack', downloads && (downloads.zip || downloads.audio || downloads.allAudio)],
       ['Engine & render source', downloads && (downloads.source || downloads.sourceZip)],
@@ -384,13 +386,9 @@
     }
   }
 
-  function render(data) {
-    if (!data || !Array.isArray(data.sections) || !data.sections.length) throw new Error('The audition manifest has no listening sections.');
-    elements.sections.replaceChildren();
-    elements.nav.replaceChildren();
-    players.length = 0;
+  function renderSections(data, target, nav, options = {}) {
     data.sections.forEach((section, i) => {
-      const id = `comparison-${String(section.id || i + 1).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      const id = `comparison-${options.prefix || ''}${String(section.id || i + 1).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
       const number = String(i + 1).padStart(2, '0');
       const wrapper = node('section', 'audition-section');
       wrapper.id = id;
@@ -407,18 +405,91 @@
       wrapper.append(heading);
       if (section.id === 'revision' || clips.some(clip => clip.comparison && typeof clip.comparison === 'object' && clip.comparison.group)) {
         wrapper.classList.add('source-study');
-        wrapper.append(createSourceComparisons(clips));
+        wrapper.append(createSourceComparisons(clips, options));
       } else {
         const grid = node('div', `clip-grid${clips.length === 1 ? ' solo' : ''}`);
-        clips.forEach((clip, index) => grid.append(createClip(clip, index)));
+        clips.forEach((clip, index) => grid.append(createClip(clip, index, options)));
         wrapper.append(grid);
       }
-      elements.sections.append(wrapper);
+      target.append(wrapper);
       const navLink = node('a');
       navLink.href = `#${id}`;
       navLink.append(node('span', 'nav-number', number), document.createTextNode(section.navTitle || section.title || `Comparison ${i + 1}`));
-      elements.nav.append(navLink);
+      nav.append(navLink);
     });
+  }
+
+  function preparePrevious(config) {
+    const details = document.getElementById('previous-study');
+    const content = document.getElementById('previous-content');
+    if (!config) { details.hidden = true; return; }
+    details.hidden = false;
+    let loaded = false;
+    let loading = false;
+    const previousPath = assetPath(typeof config === 'string' ? config : config.manifest || config.url || config.path);
+    const openLink = node('a', '', 'Earlier studies');
+    openLink.href = '#previous-study';
+    openLink.addEventListener('click', () => { details.open = true; });
+    elements.nav.append(openLink);
+
+    async function loadPrevious() {
+      if (loaded || loading) return;
+      loading = true;
+      const status = node('p', 'archive-status', 'Loading the previous listening study…');
+      status.setAttribute('role', 'status');
+      content.replaceChildren(status);
+      try {
+        let previous = config;
+        if (!previous || !Array.isArray(previous.sections)) {
+          if (!previousPath) throw new Error('No previous manifest path was supplied.');
+          const response = await fetch(previousPath, { cache: 'no-cache' });
+          if (!response.ok) throw new Error(`Previous manifest returned ${response.status}`);
+          previous = await response.json();
+        }
+        if (!Array.isArray(previous.sections) || !previous.sections.length) throw new Error('The previous listening study is empty.');
+        const count = previous.sections.reduce((sum, section) => sum + (Array.isArray(section.clips) ? section.clips.length : 0), 0);
+        document.getElementById('previous-title').textContent = `Previous study · R1/R2 · ${count} renders`;
+        const provenance = node('div', 'previous-provenance');
+        provenance.append(node('p', '', typeof config === 'object' && config.description || 'The earlier R1/R2 comparisons are preserved here for reference. Their files, settings, and measurements belong to that study.'));
+        const revision = [previous.title || (typeof config === 'object' && config.title), previous.revision ? `Revision ${previous.revision}` : '', previous.generatedAt ? `Rendered ${previous.generatedAt}` : ''].filter(Boolean).join(' · ');
+        if (revision) provenance.append(node('p', 'render-revision', revision));
+        const nav = node('nav', 'section-nav archive-nav');
+        nav.setAttribute('aria-label', 'Previous R1/R2 listening comparisons');
+        const archiveSections = node('div', 'archive-sections');
+        const archiveDownloads = node('div', 'downloads archive-downloads');
+        renderDownloads(previous.downloads, archiveDownloads);
+        if (previousPath) {
+          const manifestLink = node('a', 'download-link', 'Previous study manifest');
+          manifestLink.href = previousPath;
+          manifestLink.download = '';
+          manifestLink.append(arrowIcon());
+          archiveDownloads.prepend(manifestLink);
+        }
+        renderSections(previous, archiveSections, nav, { prefix: 'previous-', archive: true });
+        content.replaceChildren(provenance, nav, archiveSections, archiveDownloads);
+        loaded = true;
+      } catch (error) {
+        const retry = node('button', 'retry-button', 'Try loading the previous study again');
+        retry.type = 'button';
+        retry.addEventListener('click', loadPrevious);
+        content.replaceChildren(node('p', 'archive-status', 'The previous study could not be loaded. The new comparisons are still available above.'), retry);
+        console.error('FACET previous study:', error);
+      } finally { loading = false; }
+    }
+
+    details.addEventListener('toggle', () => {
+      if (details.open) loadPrevious();
+      else players.filter(record => record.isArchive).forEach(record => record.audio.pause());
+    });
+  }
+
+  function render(data) {
+    if (!data || !Array.isArray(data.sections) || !data.sections.length) throw new Error('The audition manifest has no listening sections.');
+    elements.sections.replaceChildren();
+    elements.nav.replaceChildren();
+    players.length = 0;
+    renderSections(data, elements.sections, elements.nav);
+    preparePrevious(data.previousStudy);
     elements.status.hidden = true;
     elements.nav.hidden = false;
     elements.footer.hidden = false;

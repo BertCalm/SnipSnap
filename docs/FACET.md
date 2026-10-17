@@ -11,6 +11,36 @@ sample-free, deterministic offline mono renderer at 44.1 kHz, with 4× internal
 oversampling. It is a finite listening prototype, not the complete six-voice
 engine in the supplied engineering specification.
 
+## Light study after R2
+
+The owner heard R2 as an Operation buzzer rather than light shimmer. Its
+richer harmonic spectrum did not establish the intended identity. The next
+step is a finite directional study, `FacetLightStudy`, with **GLASS_GLINTS**
+and **AIRY_WASH**. It is a separate experiment; model 2 remains the default,
+and the study does not enter `FacetPatch` or the patch registry as model 3.
+
+The implemented study uses soft excitation packets at beam/facet receiver
+alignments, a few selected upper modes per packet, shared decays, and a quiet
+pitch anchor. Glass emphasizes distinct lingering glints; air uses weaker,
+longer overlaps and restrained shaped noise. These are listening hypotheses,
+not an accepted solution or a brightness adjustment to the continuous R2
+harmonic stack.
+
+The comparison defines twelve six-second clips: BLOOM and SHIMMER at
+C3 and C4, each heard as the R2 reference, glass and air under the same
+controls, velocity .8 and seed 17. The previous 57-clip R2 study remains
+available in collapsed sections on the listening page. **31 focused checks
+passed**, with no failures or skips: 20 engine, patch, model and light-study
+checks plus 11 registry, preset and promotion checks. The five study tests
+cover replay, stopped geometry, options, parameter corners, distinct
+directions, packet activity, all five coarse macro controls and 4×/8×
+convergence. That rate comparison includes causal filter/state and event
+discretization differences; it is not a pure alias measurement. The full
+repository gate has not been rerun for this study. Listening acceptance
+remains pending. Noise-driven excitation and independently
+decaying glints need not produce high periodicity confidence; a pitch-detector
+score does not decide whether these textures meet the listening goal.
+
 ## R1 feedback and R2 source revision
 
 The owner heard R1 and described the core sound as lo-fi and dead, while
@@ -62,8 +92,9 @@ pitch, register bounds and 4×/8× aliasing comparison. The full repository gate
 has not been rerun for R2. The 57-clip pack rendered successfully as 171 PCM24
 WAVs; all exports were decoded and verified, both C3 R1 defaults matched all
 six published raw/native/matched hashes, and pitch estimates stayed within
-.54 cents with confidence above .93. The owner's listening verdict remains
-pending.
+.54 cents with confidence above .93. The owner's later Operation-buzzer
+feedback prompted the separate light study above; these checks did not
+establish the intended sound.
 
 ## Controls and pitch
 
@@ -131,16 +162,27 @@ alignment and authored beam settings.
 
 ## Listening and delivery scope
 
-Run `./gradlew :synth:generateFacetAudition` to write the listening page,
+The light study has its own task, `./gradlew :synth:generateFacetLightStudy`,
+with `-PfacetLightOutput=/path/to/output` to choose a destination instead of
+`testkit/facet-audition`. The task writes twelve focused comparisons rendered
+by `FacetLightStudy` and the preserved R2 reference renderer, adding them
+to the front of the page while retaining the previous R2 assets, reports
+and archives. `light-study.zip` contains matched audio and full replay
+settings; raw and native files are individually downloadable. Study
+settings identify `FacetLightStudy`, its study version, direction and render
+arguments, rather than masquerading as saved `FacetPatch` recipes.
+
+The preserved R2 page can be generated separately with
+`./gradlew :synth:generateFacetAudition` to write its listening page,
 WAVs, patch JSON and diagnostics under `testkit/facet-audition`. Add
 `-PfacetQuick` for a smaller development run, or
 `-PfacetOutput=/path/to/output` to choose another destination. Section ZIPs
-contain matched WAVs with their recipes, settings and traces; the first-light
+contain matched WAVs with their recipes, settings and traces; its first-light
 ZIP supplies sixteen matched clips: twelve R1/R2 comparisons, the two current
 defaults and two slow-motion examples. Raw and native WAVs remain available
 as individual downloads.
 
-The full R2 pack has 57 clips. Its first twelve compare each voice at C3 and
+The previous R2 pack has 57 clips. Its first twelve compare each voice at C3 and
 C4 using the preserved R1 source, the denser R2 source with source motion
 disabled, and full R2 with source motion enabled. This separates added harmonic
 body from the subtle upper-partial beating. The remaining 45 clips exercise
@@ -162,8 +204,8 @@ moving color and lingering reflections that the common-gain comparison loses.
 
 Diagnostics and numerical checks can establish bounded output, determinism
 and control activity. They cannot establish that the result sounds like a
-coherent illuminated instrument. R1's core sound received revision feedback;
-the owner's verdict on R2 remains open.
+coherent illuminated instrument. Both R1 and R2 received core-sound revision
+feedback; the light study remains a directional listening experiment.
 
 The first experiment does not register Facet in the Android picker, add a
 factory kit, publish a 36-preset roster, or provide the expanded beam editor.

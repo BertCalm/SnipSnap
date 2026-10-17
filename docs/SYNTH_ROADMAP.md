@@ -50,13 +50,22 @@ machines when the point is naming the rule that forbids naming them.
 
 ### FACET — mirrorball-driven spectral pads
 
-**R2 source revision rendered; listening acceptance pending.** The owner
-heard R1 as lo-fi and dead while confirming its macro controls worked. R1's
+**Light study implemented after R2 feedback; listening acceptance pending.** The
+owner heard R1 as lo-fi and dead while confirming its macro controls worked,
+then heard R2 as an Operation buzzer rather than light shimmer. R1's
 full repository gate passed 4,944 tests in approximately 86 minutes. R2 passed
 26 focused engine, patch, model and integration checks with no failures or
 skips; the full repository gate has not been rerun for R2. Its 57-clip listening
-pack rendered and all 171 PCM24 exports were verified. The owner's verdict
-is pending.
+pack rendered and all 171 PCM24 exports were verified; those checks did not
+establish its sonic identity. A separate finite `FacetLightStudy` compares
+GLASS_GLINTS and AIRY_WASH against R2: soft alignment-driven excitation
+packets, selected upper modes, shared decays and a quiet pitch anchor. Its
+twelve six-second comparisons cover both voices at C3/C4 in three
+versions, at velocity .8 and seed 17. The combined focused gate passed
+31 checks with no failures or skips, including five new study tests; the
+full repository gate has not been rerun. Listening acceptance remains pending.
+It is not model 3, a patch-registry entry or a new default. The prior R2
+study remains available in collapsed listening-page sections.
 BLOOM and
 SHIMMER explore twelve generated harmonic beams, a deterministic nested facet
 layout, moving spectral routes and shared resonance. ILLUMINATE, ELEVATION,

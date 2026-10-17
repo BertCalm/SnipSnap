@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Twelve bounded directional light studies, alongside the unchanged published R2 reference. */
+tasks.register<JavaExec>("generateFacetLightStudy") {
+    group = "distribution"
+    description = "Render FACET glass-glint / airy-wash listening studies and preserve the prior R2 audition."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FacetLightStudyGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("facetLightOutput").orNull ?: "${rootDir}/testkit/facet-audition")
+}
+
 /** FACET's finite dry prototype, saved diagnostic A/Bs and real-engine listening pack. */
 tasks.register<JavaExec>("generateFacetAudition") {
     group = "distribution"
