@@ -1,35 +1,61 @@
-# CREASE — first listening prototype
+# CREASE — second listening prototype
 
 CREASE is an original, offline pitched engine inspired by phase-distortion synthesis.
 Its gesture is bend → crease → unfold: pressure changes two periodic phase maps,
 and the maps remember and release that pressure at different rates.
 
-This milestone proves three sounds: ROUND, PINCH and RUBBER. Numeric voicing is
-provisional. The six-voice/36-preset factory roster and production app, patch,
-kit and keyboard-instrument registration remain later work, after listening.
+The first audition was rejected by its owner for sounding too similar. Harmonic
+power analysis confirmed that the three defaults placed about 99% of their
+harmonic energy in the fundamental. Small numerical changes passed the original
+checks without establishing useful timbral variation.
+
+Model 2 broadens the phase maps themselves. It explores ROUND, PINCH and RUBBER;
+voicing remains provisional. The six-voice/36-preset factory roster and production
+app, patch, kit and keyboard-instrument registration remain later work.
 
 ## Controls and performance
 
-The requested MIDI note and velocity are render arguments, leaving the controls
-for FOLD, PRESSURE, DRAG, SPLIT, RELAX and HOLD. FOLD sets the base geometry;
-PRESSURE sets its excursion; DRAG delays its response; SPLIT separates the two
-layers' shapes and timing; RELAX sets their recovery. HOLD's top setting renders
-a recurring pressure gesture as a sustained loop.
+MIDI pitch and velocity are render arguments, leaving FOLD, PRESSURE, DRAG,
+SPLIT, RELAX and HOLD as the six controls. FOLD sets phase geometry; PRESSURE
+sets its excursion; DRAG delays its response; SPLIT separates layer shapes and
+timing; RELAX sets their recovery. Finite HOLD extends the gate; its top setting
+renders a recurring pressure gesture as a sustained loop.
 
-The prototype accepts MIDI 24–84. The automated pitch matrix covers six notes
-across that range; the audition grid covers MIDI 36, 60 and 84 at three
-velocities. Higher-register expansion requires another probe pass.
+The supported range is MIDI 24–84. The two oscillators share the requested root.
+Phase mapping changes waveform shape within each cycle, with no detune or phase
+reversal. No samples or effects are required.
 
-The two oscillators share the requested root. Deformation changes the reading
-of each waveform within a cycle. The initial map is a smooth sinusoidal basis
-with `sum(k * abs(c[k])) <= 0.9`, guaranteeing a positive derivative floor of
-0.1. This bounded family is the first sound experiment; dense tearing is not
-an established result. No phase reversal, noise assets or external samples are
-used.
+## Two saved synthesis models
 
-The reciprocal detector measures waveform shape before output leveling. The
-STATEFUL/INSTANTANEOUS and coupling/independent render modes expose mechanism
-comparisons while retaining the same excitation and amplitude envelopes.
+Model 1 is preserved in `CreaseV1.kt` for exact old recipe replay and comparison.
+It uses a short Fourier warp with `sum(k * abs(c[k])) <= 0.9`, guaranteeing
+`0.1 <= w'(phase) <= 1.9`. That deliberately limited family proved too restrained
+in the first listening test.
+
+Model 2 uses smooth positive analytic phase maps with wider compression:
+
+- ROUND uses a full-cycle Möbius map, moving from a rounded wave toward a rich
+  all-harmonic shape.
+- PINCH uses a half-cycle elliptical map with odd-harmonic narrow pulses. A
+  bounded lead between fast deformation and slow recovery makes a push pinch
+  ahead of equilibrium and open again as pressure falls.
+- RUBBER composes the two maps so pressure and recovery move harmonic lobes and
+  notches as well as pulse width.
+
+Each map is periodic and monotonic. Its derivative has a positive analytic bound;
+total absolute log compression is capped at 3.6 through C4 and gradually reduced
+to 2.85 at C6, constraining the sharper shapes. The model-1
+Fourier coefficient budget does not apply to model 2. Diagnostics therefore report
+that budget only for model 1 and report map slope and curvature separately.
+
+The shape-sensitive reciprocal detector runs before output leveling. STATEFUL /
+INSTANTANEOUS and coupled / independent probes retain identical pressure and
+amplitude schedules. Every held boundary check includes deformation, detector,
+filter, DC and decimator memory; the preceding audio period is evolved separately.
+
+Public `render`, `probe` and `synthesize` calls default to model 2 and accept an
+explicit `model`. New audition recipes save that field. Old recipes without it
+select model 1, preserving the first audition's behavior.
 
 ## Reproduce the audition
 
@@ -38,44 +64,50 @@ From the repository root:
 ```sh
 ./gradlew --no-daemon :synth:test --tests com.snipsnap.synth.CreaseTest
 ./gradlew --no-daemon :synth:generateCreaseAudition
+./gradlew --no-daemon :synth:generateCreaseAudition -PcreaseFull
 ```
 
-The generator writes real Kotlin-engine mono WAVs, recipes, control traces and
-diagnostics under `testkit/crease-audition/`. Browser playback uses those files;
-the browser does not implement a second synthesis model.
+The default compact audition writes to `testkit/crease-audition-r2/`: three voice
+examples, three matched model-1/model-2 pairs, three-step control sweeps, two
+registers, held loops and 4×/16× reference pairs. `-PcreaseFull` adds quarter steps,
+velocity coverage, mechanism comparisons, interactions and held RELAX probes.
+The first audition's output directory is retained separately.
 
-The listening matrix includes voice defaults, five-step timbral control sweeps,
-history and coupling comparisons, pitch/velocity coverage, interacting controls,
-all-high settings, higher-rate references and held loops. Matched files use the
-repository's common audition loudness. Separate prelevel files retain original
-render dynamics. The JSON files are standalone audition recipes, not registered
-SnipSnap production Patch objects.
+Browser playback uses these Kotlin-engine WAVs. Matched files use the common
+audition loudness; separate prelevel WAVs retain original dynamics. The JSON files
+are standalone audition recipes, not registered production SnipSnap Patch objects.
 
-The first verdict belongs to listening: pressure should crease the tone, drag
-should reveal lag, split should reveal differing shapes, and relax should make
-their return audible. Numerical checks establish repeatability, bounds and
-loop readiness; they do not establish musical acceptance.
+Replay a downloaded recipe with:
 
-The first validated build passed 12 focused tests. Its 54 pitch cases measured
-at most 0.223 cents of root error. Default/all-high bounds stayed below a 0.705
-weighted coefficient budget with a measured derivative floor above 0.295.
-The three default held loops converged in 3–4 periods, with full-state error
-below 8e-13 and zero measured float/PCM24 recurrence seam error. The audition
-generator separately checks every exported held comparison at PCM16 precision.
+```sh
+./gradlew --no-daemon :synth:generateCreaseAudition -PcreaseRecipe=/absolute/path/recipe.json -PcreaseOutput=/absolute/path/output
+```
+
+## Listening and verification
+
+The owner's listening verdict remains the acceptance gate. The revision checks
+require substantial gain- and phase-independent harmonic differences between
+voices and over time, alongside pitch, aliasing, deterministic replay, numerical
+bounds and independently measured held seams. Original model 1 must fail the new
+contrast checks, so tiny spectral differences cannot stand in for useful variation.
+
+Pressure should audibly crease the tone; DRAG should reveal lag; SPLIT should
+expose differing shapes; RELAX should make their return audible. Numerical
+contrasts describe the rendered sound and do not establish musical acceptance.
 
 ## Delivery and integration
 
-`Crease.kt` is the engine, `CreaseTest.kt` checks its contracts, and
-`CreaseAuditionGenerator.kt` generates the evidence. The audition site's static
-source is kept in its own Sites source repository.
+`Crease.kt` implements model 2; `CreaseV1.kt` preserves model 1. `CreaseTest.kt`
+checks the contracts, and `CreaseAuditionGenerator.kt` generates the evidence.
+The audition site's static source is kept in its own Sites source repository.
 
-When the prototype's sound is accepted, use the explicit MIDI/velocity recipe
-pattern in `TanglePatch.kt`. Full integration also needs `Patches`, `Presets`,
-`Velocity`'s native renderer, `SynthKits`, shell starter visibility, CLI overrides
-and the phone's engine adapter. The generic classifier files long finite sounds
-as LOOP by length, so engine filing should distinguish finite TONAL from actual
-HOLD loops explicitly.
+After listening acceptance, follow the explicit MIDI/velocity recipe pattern in
+`TanglePatch.kt`. Full integration also needs `Patches`, `Presets`, native
+`Velocity` routing, `SynthKits`, shell starter visibility, CLI overrides and the
+phone's engine adapter. Generic classification files long finite sounds as LOOP
+by length; finite TONAL filing and actual HOLD readiness need separate handling.
 
-The JVM gate is `./gradlew --no-daemon test` when the Android SDK is absent.
-CI also builds Android separately; JVM success alone cannot validate future
-phone UI wiring.
+The full production JVM gate is `./gradlew --no-daemon test` without an Android
+SDK. CI builds Android separately; JVM checks cannot validate future phone UI
+wiring. This listening revision uses focused engine, replay, audio and browser
+checks; it does not claim a completed repository-wide regression run.

@@ -48,7 +48,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
-### CREASE — pressure memory in a phase map (first listening prototype)
+### CREASE — pressure memory in a phase map (second listening prototype)
 
 ROUND, PINCH and RUBBER share two smooth, monotonic phase-distortion layers.
 FOLD sets their geometry; PRESSURE drives bounded deformation; DRAG delays it;
@@ -59,7 +59,9 @@ history/instantaneous and coupled/independent probes, higher-rate references and
 raw diagnostics make the mechanism reviewable before factory voicing.
 
 `./gradlew :synth:generateCreaseAudition` generates the dry listening matrix and
-standalone audition recipes in `testkit/crease-audition/`. This milestone awaits
+standalone audition recipes in `testkit/crease-audition-r2/`. The first audition
+was rejected for insufficient variation; model 2 broadens the analytic phase maps
+and adds matched old/new pairs. Model 1 remains replayable. This revision awaits
 the owner's listening verdict; the remaining three voices, 36 factory presets
 and production patch/phone/kit registration follow that gate. [CREASE](CREASE.md)
 records the prototype scope and reproduction commands.

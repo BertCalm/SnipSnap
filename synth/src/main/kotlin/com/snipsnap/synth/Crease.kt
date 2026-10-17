@@ -15,11 +15,14 @@ data class CreaseTrace(
 
 data class CreaseDiagnostics(
     val rawPeak: Double, val rawRms: Double, val rawDc: Double,
-    val maxCoefficientBudget: Double, val minMapDerivative: Double, val maxAbsState: Double,
+    /** V1 Fourier weighted budget; null for V2's positive analytic maps. */
+    val maxCoefficientBudget: Double?, val minMapDerivative: Double, val maxAbsState: Double,
     val requestedHz: Double, val renderedHz: Double,
     val held: Boolean, val loopFrames: Int, val rootCycles: Int,
     val seamError: Double, val stateError: Double, val converged: Boolean,
     val prerollCycles: Int, val renderNanos: Long,
+    val maxMapDerivative: Double = 1.9, val maxMapCurvature: Double = 0.0,
+    val modelVersion: Int = 1,
 )
 
 /** [prelevel] is conditioned 44.1 kHz audio before the shared melodic gain.
@@ -40,24 +43,35 @@ data class CreaseProbe(
  * following time; SPLIT separates geometry/recovery; RELAX changes return time and finite release.
  * HOLD >= .99 renders one converged periodic gesture. No phase reversal, detune, samples or FX.
  *
- * The initial smooth Fourier family is intentionally limited: sum(k*abs(c[k])) <= .9,
- * hence .1 <= w'(phase) <= 1.9. This proof does not imply that every advertised future
- * Crease texture can be achieved. The audition is intended to establish that sonic range.
+ * Model 2 replaces V1's restricted Fourier offsets with analytic positive phase maps.
+ * ROUND uses a full-circle Mobius map; PINCH uses its mirrored half-cycle counterpart;
+ * RUBBER composes them so pressure moves a symmetric pair of narrow phase features.
+ * Every map fixes 0 and pi: its sine fundamental remains positive and phase-aligned.
+ * Total absolute log compression is bounded, with a lower ceiling in high registers.
+ * V1 remains reproducible through model=1 and never silently acquires the new sound.
  */
 object Crease {
+    const val MODEL_VERSION = 2
     const val RATE = 44100
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 24
     const val MIDI_MAX = 84
     const val HOLD_LOOP = .99f
     const val MAX_FINITE_SECONDS = 8.0
+    /** Preserved model 1 only; model 2 is bounded by total log compression instead. */
     const val COEFFICIENT_BUDGET = .9
+    const val MAX_MAP_LOG_COMPRESSION = 3.6
+    const val HIGH_MAP_LOG_COMPRESSION = 2.85
+    const val MAX_MAP_DERIVATIVE = 36.59823444367799 // exp(3.6)
+    const val MAX_MAP_CURVATURE = 75000.0 // conservative 1.5*exp(3*3.6) bound
     const val LOOP_STATE_TOLERANCE = 1e-7
     const val MAX_PREROLL_CYCLES = 18
     private const val TAU = 2.0 * PI
     private const val TRACE_HZ = 200
 
-    fun macrosFor(voice: CreaseVoice): List<MacroSpec> {
+    fun macrosFor(voice: CreaseVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
+        require(model == 1 || model == MODEL_VERSION) { "Unknown CREASE model $model" }
+        if (model == 1) return CreaseV1.macrosFor(voice)
         val values = when (voice) {
             CreaseVoice.ROUND -> floatArrayOf(.20f, .25f, .15f, .15f, .30f)
             CreaseVoice.PINCH -> floatArrayOf(.70f, .55f, .20f, .45f, .35f)
@@ -68,7 +82,8 @@ object Crease {
         } + MacroSpec("HOLD", 0f, 0f)
     }
 
-    fun defaults(voice: CreaseVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
+    fun defaults(voice: CreaseVoice, model: Int = MODEL_VERSION): Map<String, Float> =
+        macrosFor(voice, model).associate { it.name to it.default }
     fun isLoop(hold: Float) = hold >= HOLD_LOOP
 
     private fun settled(voice: CreaseVoice, macros: Map<String, Float>) =
@@ -77,19 +92,21 @@ object Crease {
         }
 
     fun render(voice: CreaseVoice, macros: Map<String, Float> = emptyMap(),
-        midi: Int = DEFAULT_MIDI, velocity: Float = .75f): Snip =
-        Snip(synthesize(voice, macros, midi, velocity).samples, 1, RATE)
+        midi: Int = DEFAULT_MIDI, velocity: Float = .75f, model: Int = MODEL_VERSION): Snip =
+        Snip(synthesize(voice, macros, midi, velocity, model = model).samples, 1, RATE)
 
     fun probe(voice: CreaseVoice, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = .75f,
         history: CreaseHistory = CreaseHistory.STATEFUL, coupling: Boolean = true,
-        oversample: Int = 4, normalize: Boolean = true): CreaseProbe =
-        synthesize(voice, macros, midi, velocity, history, coupling, oversample, normalize)
+        oversample: Int = 4, normalize: Boolean = true, model: Int = MODEL_VERSION): CreaseProbe =
+        synthesize(voice, macros, midi, velocity, history, coupling, oversample, normalize, model)
 
     fun synthesize(voice: CreaseVoice, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = .75f,
         history: CreaseHistory = CreaseHistory.STATEFUL, coupling: Boolean = true,
-        oversample: Int = 4, normalize: Boolean = true): CreaseProbe {
+        oversample: Int = 4, normalize: Boolean = true, model: Int = MODEL_VERSION): CreaseProbe {
+        require(model == 1 || model == MODEL_VERSION) { "Unknown CREASE model $model" }
+        if (model == 1) return CreaseV1.synthesize(voice, macros, midi, velocity, history, coupling, oversample, normalize)
         require(midi in MIDI_MIN..MIDI_MAX) { "CREASE supports MIDI $MIDI_MIN..$MIDI_MAX" }
         require(oversample == 4 || oversample == 16) { "CREASE diagnostic oversample must be 4 or 16" }
         val started = System.nanoTime()
@@ -106,7 +123,7 @@ object Crease {
             else (shape.duration * RATE).roundToInt()
         val renderedHz = if (held) rootCycles * RATE.toDouble() / frames else requestedHz
         val rate = RATE * oversample
-        val model = Model(shape, rate, renderedHz, history, coupling)
+        val circuit = Model(shape, rate, renderedHz, history, coupling)
         val output = OutputPath(rate, oversample)
         val stats = Stats()
         val traces = TraceBuilder()
@@ -117,7 +134,7 @@ object Crease {
         var endState = DoubleArray(0)
         var previous = FloatArray(0)
 
-        fun state() = model.state() + output.state()
+        fun state() = circuit.state() + output.state()
         fun cycle(record: Boolean): FloatArray {
             val out = FloatArray(frames)
             val internalFrames = frames * oversample
@@ -131,12 +148,12 @@ object Crease {
                 // accumulator is reset while carrying residual phase error across the seam.
                 val phase = if (held) TAU * ((i.toDouble() * rootCycles / internalFrames) % 1.0)
                     else TAU * ((time * renderedHz) % 1.0)
-                val raw = model.step(phase, time, if (held) i.toDouble() / internalFrames else null)
+                val raw = circuit.step(phase, time, if (held) i.toDouble() / internalFrames else null)
                 val value = output.step(raw)
                 if (value != null) out[at++] = value.toFloat()
                 if (record) {
-                    stats.add(raw, model)
-                    if (i % traceStride == 0) traces.add(time, model)
+                    stats.add(raw, circuit)
+                    if (i % traceStride == 0) traces.add(time, circuit)
                 }
             }
             check(at == frames) { "CREASE decimator did not complete a period" }
@@ -183,9 +200,10 @@ object Crease {
         check(!held || seam < 1e-3) { "CREASE $voice HOLD audio did not recur: $seam" }
         return CreaseProbe(samples, prelevel, RATE, CreaseDiagnostics(
             stats.peak, sqrt(stats.square / stats.count.coerceAtLeast(1)), stats.sum / stats.count.coerceAtLeast(1),
-            stats.budget, stats.derivative, max(stats.state, output.maxAbsState),
+            null, stats.derivative, max(stats.state, output.maxAbsState),
             requestedHz, renderedHz, held, if (held) frames else 0, rootCycles,
             seam, stateError, converged, preroll, System.nanoTime() - started,
+            stats.maxDerivative, stats.curvature, MODEL_VERSION,
         ), traces.finish(), previous, startState, endState)
     }
 
@@ -211,26 +229,6 @@ object Crease {
         val rise = .002 * 40.0.pow(sqrt(drag)) * if (voice == CreaseVoice.RUBBER) 1.5 else 1.0
         // This range describes T60, not a 1.5-second time constant requiring a ten-second tail.
         val recovery = (.10 * 18.0.pow(relax)) / ln(1000.0)
-        val baseBudget = .035 + .29 * fold
-        val excursion = .14 + .43 * pressure
-        // Provisional per-geometry calibration: compare deformation energy to an attainable
-        // amount for that shape, rather than allowing a rounded map's tiny feature to vanish.
-        val loadCalibration = when (voice) { CreaseVoice.ROUND -> 12.0; CreaseVoice.PINCH -> 8.0; CreaseVoice.RUBBER -> 10.0 }
-        val geometry = when (voice) {
-            CreaseVoice.ROUND -> doubleArrayOf(.86, .12, .02)
-            CreaseVoice.PINCH -> doubleArrayOf(.65, -.30, .05)
-            CreaseVoice.RUBBER -> doubleArrayOf(.08, -.78, .14)
-        }
-        val crease = when (voice) {
-            CreaseVoice.ROUND -> doubleArrayOf(.70, -.24, .06)
-            CreaseVoice.PINCH -> doubleArrayOf(.10, -.85, .05)
-            CreaseVoice.RUBBER -> doubleArrayOf(.82, -.14, .04)
-        }
-        val other = when (voice) {
-            CreaseVoice.ROUND -> doubleArrayOf(.0, -.88, .12)
-            CreaseVoice.PINCH -> doubleArrayOf(.80, .16, .04)
-            CreaseVoice.RUBBER -> doubleArrayOf(.18, -.76, .06)
-        }
 
         fun amplitude(t: Double): Double {
             if (held) return velocity * .68
@@ -257,13 +255,48 @@ object Crease {
         }
     }
 
+    /** Analytic composition E_b(F_a(phi)). F is a full-circle Mobius phase map;
+     * E is atan2(exp(b)*sin(phi), cos(phi)), evaluated without atan or wrap branches.
+     * Their positive derivatives are bounded by exp(abs(a)+abs(b)); both fix 0 and pi.
+     * Negative b pinches each half cycle, preserving odd-only PINCH harmonics.
+     */
+    private class Warp {
+        var sine = 0.0; var cosine = 1.0
+        var derivative = 1.0; var curvature = 0.0; var gain = 1.0
+        fun evaluate(s: Double, c: Double, a: Double, b: Double) {
+            val qa = exp(a)
+            val ch = .5 * (qa + 1.0 / qa)
+            val sh = .5 * (qa - 1.0 / qa)
+            val den = ch - sh * c
+            val sm = s / den
+            val cm = (ch * c - sh) / den
+            val dm = 1.0 / den
+            val ddm = -sh * s / (den * den)
+            val qb = exp(b)
+            val qb2 = qb * qb
+            val len2 = cm * cm + qb2 * sm * sm
+            val len = sqrt(len2)
+            sine = qb * sm / len
+            cosine = cm / len
+            val de = qb / len2
+            val dde = -2.0 * qb * (qb2 - 1.0) * sm * cm / (len2 * len2)
+            derivative = de * dm
+            curvature = dde * dm * dm + de * ddm
+            // Exact RMS compensation for each elementary map, bounded for compositions.
+            // This keeps a narrow phase ribbon audible relative to the restrained root.
+            gain = min(3.0, sqrt((ch + 1.0) * .5) * sqrt((1.0 + qb) / (2.0 * qb)))
+        }
+    }
+
     private class Model(val shape: Shape, rate: Int, hz: Double,
         val history: CreaseHistory, val coupled: Boolean) {
         var pressure = 0.0
         var dA = 0.0; var dB = 0.0
         var recoveryA = 0.0; var recoveryB = 0.0
         var loadA = 0.0; var loadB = 0.0
-        var budget = 0.0; var minDerivative = 1.0
+        private var energyA = 0.0; private var energyB = 0.0
+        var minDerivative = 1.0; var maxDerivative = 1.0; var maxCurvature = 0.0
+        private val warpA = Warp(); private val warpB = Warp()
         private val dt = 1.0 / rate
         private val riseA = exp(-dt / shape.rise)
         private val riseB = exp(-dt / (shape.rise * (1.0 + 2.8 * shape.split)))
@@ -273,24 +306,32 @@ object Crease {
         private val recoverB = exp(-dt / ((.012 + shape.recovery * 1.5) * (1.0 + 2.2 * shape.split)))
         private val pressureRise = exp(-dt / .003)
         private val pressureFall = exp(-dt / .022)
-        // Two or more root cycles make the feature substantially register-independent.
         private val loadPole = exp(-dt / max(2.0 / hz, .008 + .060 * shape.drag))
+        // Start reducing compression above C4; C6 retains a broad positive 17.3:1 speed range.
+        private val register = (ln(hz / 261.6255653) / ln(4.0)).coerceIn(0.0, 1.0)
+        private val logCeiling = mix(MAX_MAP_LOG_COMPRESSION, HIGH_MAP_LOG_COMPRESSION, register)
+        private val residualScale = MAX_MAP_DERIVATIVE + 1.0
+        private val loadHalf = .35 / (residualScale * residualScale)
 
-        fun state() = doubleArrayOf(pressure, dA, dB, recoveryA, recoveryB, loadA, loadB)
+        fun state() = doubleArrayOf(pressure, dA, dB, recoveryA, recoveryB, energyA, energyB, loadA, loadB)
+
+        private fun map(warp: Warp, s: Double, c: Double, a: Double, b: Double) {
+            val total = abs(a) + abs(b)
+            val scale = if (total > logCeiling) logCeiling / total else 1.0
+            warp.evaluate(s, c, a * scale, b * scale)
+        }
 
         fun step(phase: Double, t: Double, loop: Double?): Double {
             val amplitude = shape.amplitude(t)
             val force = shape.forcing(t, loop) * 1.25 * shape.velocity.pow(1.25)
-            // Energy estimate of the unwarped root excitation, not the final leveled signal.
-            // It is shared by the ablations, so their pressure and amplitude schedules match.
             val excitation = if (shape.velocity == 0.0) 0.0 else (amplitude / shape.velocity).pow(2.0)
             val pTarget = (force * (.90 + .10 * excitation)).coerceIn(0.0, 1.0)
             val pp = if (pTarget > pressure) pressureRise else pressureFall
             pressure = pTarget + (pressure - pTarget) * pp
-            val coupling = if (coupled) .90 * (.40 + .60 * shape.split) else 0.0
-            // Both loads are the previous completed update. No algebraic feedback loop.
+            // Previous completed outputs load the two layers; coupling has its own bound.
+            val coupling = if (coupled) .55 * (.30 + .70 * shape.split) else 0.0
             val targetA = (pressure * (1.0 - coupling * loadB)).coerceIn(0.0, 1.0)
-            val targetB = (pressure * (1.0 + .65 * coupling * loadA)).coerceIn(0.0, 1.0)
+            val targetB = (pressure * (1.0 + .40 * coupling * loadA)).coerceIn(0.0, 1.0)
             if (history == CreaseHistory.INSTANTANEOUS) {
                 dA = targetA; dB = targetB; recoveryA = dA; recoveryB = dB
             } else {
@@ -300,39 +341,60 @@ object Crease {
                 recoveryB = dB + (recoveryB - dB) * recoverB
             }
             val s = sin(phase); val c = cos(phase)
-            val s2 = 2.0 * s * c; val c2 = 2.0 * c * c - 1.0
-            val s3 = s * (3.0 - 4.0 * s * s); val c3 = c * (4.0 * c * c - 3.0)
-            val amountA = (shape.baseBudget + shape.excursion * dA).coerceAtMost(COEFFICIENT_BUDGET)
-            val amountB = (shape.baseBudget + shape.excursion * dB).coerceAtMost(COEFFICIENT_BUDGET)
-            val motionA = (.16 + .60 * dA + .24 * recoveryA).coerceIn(0.0, 1.0)
-            val motionB = (.16 + .60 * dB + .24 * recoveryB).coerceIn(0.0, 1.0)
-            var mapA = phase; var mapB = phase
-            var derivativeA = 1.0; var derivativeB = 1.0
-            var boundA = 0.0; var boundB = 0.0
-            for (k in 0..2) {
-                val a = mix(shape.geometry[k], shape.crease[k], motionA) * amountA
-                val commonB = mix(shape.geometry[k], shape.crease[k], motionB)
-                val b = mix(commonB, shape.other[k], shape.split * (.60 + .40 * recoveryB)) * amountB
-                val sine = when (k) { 0 -> s; 1 -> s2; else -> s3 }
-                val cosine = when (k) { 0 -> c; 1 -> c2; else -> c3 }
-                mapA += a * sine / (k + 1)
-                mapB += b * sine / (k + 1)
-                derivativeA += a * cosine
-                derivativeB += b * cosine
-                boundA += abs(a); boundB += abs(b)
+            when (shape.voice) {
+                CreaseVoice.ROUND -> {
+                    val base = .02 + .65 * shape.fold
+                    val excursion = .10 + 2.0 * shape.pressure
+                    val a = base + excursion * (.80 * dA + .20 * recoveryA)
+                    val b = base * (1.0 + .30 * shape.split) + excursion *
+                        (.55 * dB + .45 * recoveryB) * (1.0 + .40 * shape.split)
+                    map(warpA, s, c, a, 0.0)
+                    map(warpB, s, c, b, 0.0)
+                }
+                CreaseVoice.PINCH -> {
+                    val base = .55 + .70 * shape.fold
+                    val excursion = .45 + 3.60 * shape.pressure
+                    // The fast state bends ahead of the recovery state on a push, then
+                    // opens again as pressure falls. At equilibrium the lead is exactly d.
+                    // This is bounded two-state spectral overshoot, not amplitude clipping.
+                    val depthA = (dA + .65 * (dA - recoveryA)).coerceIn(0.0, 1.0)
+                    val depthB = (dB + .65 * (dB - recoveryB)).coerceIn(0.0, 1.0)
+                    val a = base + excursion * depthA
+                    val b = (base + excursion * depthB) * (1.0 + .16 * shape.split)
+                    map(warpA, s, c, 0.0, -a)
+                    map(warpB, s, c, 0.0, -b)
+                }
+                CreaseVoice.RUBBER -> {
+                    val base = .20 + 1.15 * shape.fold
+                    val excursion = 1.45 + .65 * shape.pressure
+                    val unfold = .65 + .35 * shape.pressure
+                    val a = (base + excursion * dA - unfold * recoveryA).coerceIn(.10, 2.4)
+                    val common = base + excursion * dB - unfold * recoveryB
+                    val other = base * (1.0 - .45 * shape.split) + excursion *
+                        (.35 * dB + .65 * recoveryB) - unfold * (.85 * dB + .15 * recoveryB)
+                    val b = mix(common, other, shape.split).coerceIn(.10, 2.4)
+                    val width = .80 + .70 * shape.fold
+                    val squeeze = .80 + .80 * shape.pressure
+                    val widthA = width + squeeze * (.80 * dA + .20 * recoveryA)
+                    val widthB = (width + squeeze * (.20 * dB + .80 * recoveryB)) * (1.0 + .20 * shape.split)
+                    map(warpA, s, c, a, -widthA)
+                    map(warpB, s, c, b, -widthB)
+                }
             }
-            val a = sin(mapA); val b = sin(mapB)
-            // Squared root-normalized waveform-derivative residual detects spectral deformation
-            // even when RMS/crest are invariant (e.g. phi+c*sin(3phi)). No velocity/gain ambiguity.
-            val featureA = (shape.loadCalibration * (cos(mapA) * derivativeA - c).pow(2.0)).coerceIn(0.0, 1.0)
-            val featureB = (shape.loadCalibration * (cos(mapB) * derivativeB - c).pow(2.0)).coerceIn(0.0, 1.0)
-            loadA = featureA + (loadA - featureA) * loadPole
-            loadB = featureB + (loadB - featureB) * loadPole
-            budget = max(boundA, boundB)
-            minDerivative = min(derivativeA, derivativeB)
-            // Symmetric maps keep each fundamental's phase aligned. A small fixed root retains
-            // the requested pitch through extreme geometry without concealing its harmonics.
-            return amplitude * (.45 * a + .41 * b + .14 * s)
+            // Smooth the bounded residual ENERGY before compressing its mean. Pointwise
+            // clipping would erase the sharp features that distinguish these stronger maps.
+            val residualA = (warpA.cosine * warpA.derivative - c) / residualScale
+            val residualB = (warpB.cosine * warpB.derivative - c) / residualScale
+            energyA = residualA * residualA + (energyA - residualA * residualA) * loadPole
+            energyB = residualB * residualB + (energyB - residualB * residualB) * loadPole
+            loadA = energyA / (energyA + loadHalf)
+            loadB = energyB / (energyB + loadHalf)
+            minDerivative = min(warpA.derivative, warpB.derivative)
+            maxDerivative = max(warpA.derivative, warpB.derivative)
+            maxCurvature = max(abs(warpA.curvature), abs(warpB.curvature))
+            // Bounded analytic RMS compensation plus fixed linear headroom. Even if both
+            // maps and the root peak together, abs(raw) <= .32*(.92*3+.08)*velocity < .91.
+            return .32 * amplitude * (.48 * warpA.gain * warpA.sine + .44 * warpB.gain * warpB.sine + .08 * s)
         }
     }
 
@@ -415,11 +477,12 @@ object Crease {
 
     private class Stats {
         var count = 0L; var sum = 0.0; var square = 0.0; var peak = 0.0
-        var budget = 0.0; var derivative = 1.0; var state = 0.0
+        var derivative = 1.0; var maxDerivative = 1.0; var curvature = 0.0; var state = 0.0
         fun add(raw: Double, model: Model) {
             check(raw.isFinite()) { "CREASE produced a non-finite sample" }
             count++; sum += raw; square += raw * raw; peak = max(peak, abs(raw))
-            budget = max(budget, model.budget); derivative = min(derivative, model.minDerivative)
+            derivative = min(derivative, model.minDerivative)
+            maxDerivative = max(maxDerivative, model.maxDerivative); curvature = max(curvature, model.maxCurvature)
             state = max(state, max(max(model.pressure, max(model.dA, model.dB)),
                 max(max(model.recoveryA, model.recoveryB), max(model.loadA, model.loadB))))
         }

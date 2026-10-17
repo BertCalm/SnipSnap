@@ -6,6 +6,9 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -26,6 +29,100 @@ import kotlin.test.assertTrue
  */
 class CreaseTest {
     private val timbral = listOf("FOLD", "PRESSURE", "DRAG", "SPLIT", "RELAX")
+    private val bodyWindows = listOf(.04, .12, .25, .5, .8)
+
+    @Test
+    fun `published model one recipes retain their exact original sample hashes`() {
+        data class Original(val voice: CreaseVoice, val macros: Map<String, Float>, val history: CreaseHistory,
+            val normalized: String, val prelevel: String)
+        val expressive = mapOf("FOLD" to .6f, "PRESSURE" to .85f, "DRAG" to .85f, "SPLIT" to .7f, "RELAX" to .8f, "HOLD" to 0f)
+        val originals = listOf(
+            Original(CreaseVoice.ROUND, mapOf("FOLD" to .2f, "PRESSURE" to .25f, "DRAG" to .15f, "SPLIT" to .15f, "RELAX" to .3f, "HOLD" to 0f),
+                CreaseHistory.STATEFUL, "59ae9d4d7c8156e35df33ffad07c543b7877e0dcc8be54e42a2e7f4460957fdb", "aa9b6cbe90584372c8cf89d58c6d6efa638ecee0726b40ad476ad56b5734b2a1"),
+            Original(CreaseVoice.PINCH, expressive, CreaseHistory.INSTANTANEOUS,
+                "a76ba325fd2b58d853f550b255a16a52f91d776bff798ee55cde5a6483dc497f", "de6f8bc278bacf0bf4a572586e3d6538af418d013f61dd04f40dd9aed023e7c4"),
+            Original(CreaseVoice.RUBBER, expressive + ("HOLD" to 1f), CreaseHistory.STATEFUL,
+                "26e13098d6f571797b3461a356561d5466d3a346fc8420028817c5ee2f94183c", "bb55f3f44a8afcc2e36e75cca86d33d155505439de7b5f7c7c884998d28417d5"),
+        )
+        for (original in originals) {
+            val p = Crease.probe(original.voice, original.macros, midi = 60, velocity = .8f, history = original.history, model = 1)
+            assertEquals(original.normalized, hash(p.samples), "${original.voice} published normalized audio changed")
+            assertEquals(original.prelevel, hash(p.prelevel), "${original.voice} published prelevel audio changed")
+            assertEquals(1, p.diagnostics.modelVersion)
+        }
+    }
+
+    @Test
+    fun `default voices have substantial gain independent harmonic separation that model one lacks`() {
+        val issues = mutableListOf<String>()
+        val profiles = CreaseVoice.entries.associateWith { voice ->
+            val probe = Crease.probe(voice, midi = 60, velocity = .8f)
+            assertEquals(2, probe.diagnostics.modelVersion, "new auditions must select model two explicitly or by default")
+            bodyWindows.map { harmonicProfile(probe.prelevel, Keys.midiHz(60).toDouble(), it) }
+        }
+        for (voice in CreaseVoice.entries) {
+            val overtones = profiles.getValue(voice).map { 1.0 - it[0] }
+            println("CREASE identity $voice overtoneMean=${overtones.average()} overtonePeak=${overtones.max()} windows=$overtones")
+            if (voice == CreaseVoice.ROUND) continue
+            val meanFloor = if (voice == CreaseVoice.PINCH) .20 else .15
+            val peakFloor = if (voice == CreaseVoice.PINCH) .25 else .20
+            issues.expect(overtones.average() >= meanFloor, "$voice still spends nearly all its power on the fundamental: mean overtone power ${overtones.average()} < $meanFloor")
+            issues.expect(overtones.max() >= peakFloor, "$voice never develops substantive upper harmonics: peak overtone power ${overtones.max()} < $peakFloor")
+        }
+        val voices = CreaseVoice.entries
+        for (i in voices.indices) for (j in i + 1 until voices.size) {
+            val a = averageProfile(profiles.getValue(voices[i]))
+            val b = averageProfile(profiles.getValue(voices[j]))
+            val separation = powerDistance(a, b)
+            println("CREASE voice pair ${voices[i]}/${voices[j]} harmonicPowerDistance=$separation")
+            issues.expect(separation >= .12, "${voices[i]}/${voices[j]} remain spectrally similar: only $separation of harmonic power moves")
+        }
+        // The rejected build is a negative control: its original published controls put
+        // 98.9–99.4% of harmonic power into the root, with pair distances below .006.
+        // Large distances between inaudible residual harmonics cannot pass the new gates.
+        val legacy = CreaseVoice.entries.associateWith { voice ->
+            val p = Crease.probe(voice, originalDefaults(voice), midi = 60, velocity = .8f, model = 1)
+            averageProfile(bodyWindows.map { harmonicProfile(p.prelevel, Keys.midiHz(60).toDouble(), it) })
+        }
+        for (i in voices.indices) for (j in i + 1 until voices.size) {
+            val oldDistance = powerDistance(legacy.getValue(voices[i]), legacy.getValue(voices[j]))
+            println("CREASE rejected model one ${voices[i]}/${voices[j]} harmonicPowerDistance=$oldDistance")
+            assertTrue(oldDistance < .02, "the frozen rejected build unexpectedly passes the separation control")
+        }
+        assertTrue(issues.isEmpty(), issues.joinToString("\n"))
+    }
+
+    @Test
+    fun `expressive pressure moves audible harmonic power through the note instead of only moving phase`() {
+        val issues = mutableListOf<String>()
+        for (voice in CreaseVoice.entries) {
+            val macros = Crease.defaults(voice) + mapOf("FOLD" to .7f, "PRESSURE" to .85f, "DRAG" to .7f, "SPLIT" to .65f, "RELAX" to .7f)
+            val p = Crease.probe(voice, macros, midi = 60, velocity = .8f)
+            val profiles = bodyWindows.map { harmonicProfile(p.prelevel, Keys.midiHz(60).toDouble(), it) }
+            val overtones = profiles.map { 1.0 - it[0] }
+            val ratiosDb = overtones.map { 10.0 * ln(it.coerceAtLeast(1e-12) / (1.0 - it).coerceAtLeast(1e-12)) / ln(10.0) }
+            val motion = profiles.indices.maxOf { i -> profiles.indices.maxOf { j -> powerDistance(profiles[i], profiles[j]) } }
+            val spanDb = ratiosDb.max() - ratiosDb.min()
+            // Formant/notch movement can redistribute upper harmonics while preserving
+            // their combined power. Require a 4dB movement in a useful individual band,
+            // with at least 3% peak and 1.5% mean signal power, rather than counting a
+            // large ratio change in the rejected model's tiny residual harmonics.
+            val usefulBands = (1..15).filter { harmonic ->
+                val powers = profiles.map { it[harmonic] }
+                powers.max() >= .03 && powers.average() >= .015
+            }.map { harmonic ->
+                val db = profiles.map { 10.0 * ln(it[harmonic].coerceAtLeast(1e-12) / it[0].coerceAtLeast(1e-12)) / ln(10.0) }
+                (harmonic + 1) to (db.max() - db.min())
+            }
+            val usefulBand = usefulBands.maxByOrNull { it.second }
+            val usefulSpan = usefulBand?.second ?: 0.0
+            println("CREASE harmonic motion $voice maximumPowerDistance=$motion overtoneRootDbSpan=$spanDb usefulHarmonic=${usefulBand?.first} usefulBandRootDbSpan=$usefulSpan overtonePower=$overtones ratioDb=$ratiosDb")
+            issues.expect(motion >= .08, "$voice has little actual harmonic motion: $motion < .08")
+            issues.expect(overtones.max() >= .10, "$voice motion occurs only in weak residual harmonics: ${overtones.max()}")
+            issues.expect(usefulSpan >= 4.0, "$voice has no 4dB movement in a substantial harmonic/root band: $usefulSpan dB")
+        }
+        assertTrue(issues.isEmpty(), issues.joinToString("\n"))
+    }
 
     @Test
     fun `repeat renders and reordered macro maps are sample identical`() {
@@ -56,13 +153,22 @@ class CreaseTest {
             }
             assertTrue(d.rawPeak.isFinite() && d.rawPeak < 1.1, "$label raw peak ${d.rawPeak}")
             assertTrue(d.maxAbsState.isFinite() && d.maxAbsState < 1.01, "$label runaway state ${d.maxAbsState}")
-            assertTrue(d.maxCoefficientBudget <= .900001, "$label phase-map coefficient budget ${d.maxCoefficientBudget}")
-            assertTrue(d.minMapDerivative >= .099999, "$label phase reversal ${d.minMapDerivative}")
+            assertEquals(2, d.modelVersion, "$label unexpectedly rendered the rejected model")
+            assertEquals(null, d.maxCoefficientBudget, "$label reported a Fourier budget for a different map family")
+            // Model two bounds the positive derivative directly. Its maximum low-register
+            // log-compression is 3.6, so importing model one's .1 derivative floor would
+            // reject useful compression for the wrong mathematical reason.
+            val maximumDerivative = kotlin.math.exp(3.6)
+            assertTrue(d.minMapDerivative >= 1.0 / maximumDerivative - 1e-6, "$label phase reversal or excess compression ${d.minMapDerivative}")
+            assertTrue(d.maxMapDerivative.isFinite() && d.maxMapDerivative <= maximumDerivative + 1e-4,
+                "$label unbounded phase rate ${d.maxMapDerivative}")
+            assertTrue(d.maxMapCurvature.isFinite() && d.maxMapCurvature <= Crease.MAX_MAP_CURVATURE,
+                "$label unbounded map curvature ${d.maxMapCurvature}")
             assertTrue(rms(p.prelevel) > 1e-4, "$label silent raw signal")
             assertTrue(abs(p.prelevel.average()) < .01, "$label prelevel DC ${p.prelevel.average()}")
             assertTrue(abs(p.samples.average()) < .01, "$label exported DC ${p.samples.average()}")
             assertTrue(p.samples.all { it in -1f..1f }, "$label clipped final output")
-            println("CREASE bounds $label rawPeak=${d.rawPeak} state=${d.maxAbsState} budget=${d.maxCoefficientBudget} derivative=${d.minMapDerivative} dc=${p.prelevel.average()}")
+            println("CREASE bounds $label rawPeak=${d.rawPeak} state=${d.maxAbsState} derivative=${d.minMapDerivative}..${d.maxMapDerivative} curvature=${d.maxMapCurvature} dc=${p.prelevel.average()}")
         }
     }
 
@@ -258,15 +364,38 @@ class CreaseTest {
     }
 
     @Test
+    fun `DRAG delays the same held pressure rise rather than only changing a static colour`() {
+        val issues = mutableListOf<String>()
+        for (voice in CreaseVoice.entries) {
+            val base = Crease.defaults(voice) + mapOf("HOLD" to 1f, "PRESSURE" to .85f, "SPLIT" to .5f)
+            val fast = Crease.probe(voice, base + ("DRAG" to 0f))
+            val slow = Crease.probe(voice, base + ("DRAG" to 1f))
+            assertContentEquals(fast.trace.pressure, slow.trace.pressure, "$voice DRAG also changed the held player gesture")
+            val fastTime = risingHalfTime(fast.trace.timeSeconds, fast.trace.deformationA)
+            val slowTime = risingHalfTime(slow.trace.timeSeconds, slow.trace.deformationA)
+            val delay = slowTime - fastTime
+            println("CREASE DRAG $voice fastHalfTime=$fastTime slowHalfTime=$slowTime responseDelay=$delay")
+            issues.expect(delay >= .015, "$voice DRAG does not add a measured body response lag: $delay seconds")
+        }
+        assertTrue(issues.isEmpty(), issues.joinToString("\n"))
+    }
+
+    @Test
     fun `four times oversampling remains close to a sixteen times high register reference`() {
+        val issues = mutableListOf<String>()
         for (voice in CreaseVoice.entries) {
             val macros = Crease.defaults(voice) + timbral.associateWith { 1f }
             val normal = Crease.probe(voice, macros, midi = 84, velocity = 1f, oversample = 4)
             val reference = Crease.probe(voice, macros, midi = 84, velocity = 1f, oversample = 16)
             val spectral = trajectoryDistance(normal.prelevel, reference.prelevel)
-            println("CREASE reference $voice MIDI84 all-high spectralDistance4x16x=$spectral")
-            assertTrue(spectral < 1e-4, "$voice four-times output differs materially from sixteen-times reference: $spectral")
+            val off4 = offHarmonicPower(normal.prelevel, Keys.midiHz(84).toDouble())
+            val off16 = offHarmonicPower(reference.prelevel, Keys.midiHz(84).toDouble())
+            val excess = (off4 - off16).coerceAtLeast(0.0)
+            println("CREASE reference $voice MIDI84 all-high spectralDistance4x16x=$spectral offHarmonic4x=$off4 offHarmonic16x=$off16 excessOffHarmonicPower=$excess")
+            issues.expect(spectral < 1e-4, "$voice four-times output differs materially from sixteen-times reference: $spectral")
+            issues.expect(excess < 1e-4, "$voice adds non-harmonic power above its high-rate reference: $excess")
         }
+        assertTrue(issues.isEmpty(), issues.joinToString("\n"))
     }
 
     private fun rms(samples: FloatArray): Double = sqrt(samples.sumOf { it.toDouble() * it } / samples.size.coerceAtLeast(1))
@@ -305,6 +434,72 @@ class CreaseTest {
         return DoubleArray(bands.size) { bands[it] / total }
     }
 
+    /** Actual overtone power, rather than coherent-root loss caused by a moving amplitude
+     * envelope. Hann-windowed bands include the main lobe around each of 32 harmonics. */
+    private fun harmonicProfile(samples: FloatArray, fundamental: Double, fromSeconds: Double): DoubleArray {
+        val from = (fromSeconds * Dsp.RATE).toInt()
+        val count = minOf((.25 * Dsp.RATE).toInt(), samples.size - from)
+        require(count > 1024) { "no body window after $fromSeconds seconds" }
+        val size = 65536
+        val real = FloatArray(size)
+        val imaginary = FloatArray(size)
+        val mean = (from until from + count).sumOf { samples[it].toDouble() } / count
+        for (i in 0 until count) {
+            val window = .5 - .5 * cos(2.0 * PI * i / (count - 1))
+            real[i] = ((samples[from + i] - mean) * window).toFloat()
+        }
+        Fft.forward(real, imaginary)
+        val powers = DoubleArray(32)
+        for (harmonic in 1..32) {
+            val center = fundamental * harmonic
+            if (center >= Dsp.RATE / 2.0 - 12.0) continue
+            val low = ((center - 12.0) * size / Dsp.RATE).toInt().coerceAtLeast(1)
+            val high = ((center + 12.0) * size / Dsp.RATE).toInt().coerceAtMost(size / 2)
+            for (bin in low..high) powers[harmonic - 1] += real[bin].toDouble() * real[bin] + imaginary[bin].toDouble() * imaginary[bin]
+        }
+        val total = powers.sum().coerceAtLeast(1e-30)
+        return DoubleArray(powers.size) { powers[it] / total }
+    }
+
+    private fun averageProfile(profiles: List<DoubleArray>): DoubleArray =
+        DoubleArray(profiles.first().size) { i -> profiles.sumOf { it[i] } / profiles.size }
+
+    private fun powerDistance(a: DoubleArray, b: DoubleArray): Double = a.indices.sumOf { abs(a[it] - b[it]) } / 2.0
+
+    /** Harmonic/control sidebands receive a 30Hz guard. Excess against the identical
+     * higher-rate render is a practical alias-spur diagnostic, not total alias energy. */
+    private fun offHarmonicPower(samples: FloatArray, fundamental: Double): Double {
+        val size = 16384
+        val start = (.12 * Dsp.RATE).toInt()
+        val magnitude = Fft.magnitudeSpectrum(samples.copyOfRange(start, start + size), size)
+        var total = 0.0
+        var outside = 0.0
+        for (bin in 1 until magnitude.size) {
+            val hz = bin * Dsp.RATE.toDouble() / size
+            if (hz < 30.0 || hz > 20000.0) continue
+            val power = magnitude[bin].toDouble() * magnitude[bin]
+            total += power
+            val harmonic = kotlin.math.round(hz / fundamental)
+            if (harmonic < 1.0 || abs(hz - harmonic * fundamental) > 30.0) outside += power
+        }
+        return outside / total.coerceAtLeast(1e-30)
+    }
+
+    private fun originalDefaults(voice: CreaseVoice): Map<String, Float> {
+        val values = when (voice) {
+            CreaseVoice.ROUND -> floatArrayOf(.20f, .25f, .15f, .15f, .30f)
+            CreaseVoice.PINCH -> floatArrayOf(.70f, .55f, .20f, .45f, .35f)
+            CreaseVoice.RUBBER -> floatArrayOf(.50f, .70f, .75f, .55f, .65f)
+        }
+        return timbral.mapIndexed { i, name -> name to values[i] }.toMap() + ("HOLD" to 0f)
+    }
+
+    private fun hash(samples: FloatArray): String {
+        val bytes = ByteBuffer.allocate(samples.size * Float.SIZE_BYTES).order(ByteOrder.LITTLE_ENDIAN)
+        for (sample in samples) bytes.putFloat(sample)
+        return MessageDigest.getInstance("SHA-256").digest(bytes.array()).joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+
     private fun toneShare(samples: FloatArray, hz: Double, rate: Int): Double {
         val from = (.12 * rate).toInt()
         val to = minOf(samples.size, from + (.6 * rate).toInt())
@@ -321,6 +516,13 @@ class CreaseTest {
     }
 
     private fun span(values: FloatArray): Double = (values.maxOrNull()!! - values.minOrNull()!!).toDouble()
+
+    private fun risingHalfTime(time: FloatArray, values: FloatArray): Double {
+        val peak = values.indices.maxBy { values[it] }
+        val trough = (0..peak).minBy { values[it] }
+        val threshold = (values[trough] + values[peak]) / 2f
+        return time[(trough..peak).first { values[it] >= threshold }].toDouble()
+    }
 
     private fun MutableList<String>.expect(condition: Boolean, message: String) {
         if (!condition) add(message)

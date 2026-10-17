@@ -22,7 +22,7 @@ import kotlin.math.sqrt
 
 /** Real JVM-engine listening evidence. These replay recipes are audition probes, not production patches. */
 object CreaseAuditionGenerator {
-    private const val MODEL = 1
+    private const val MODEL = 2
     private const val ZIP_LIMIT = 24L * 1024 * 1024
     private val controls = listOf("FOLD", "PRESSURE", "DRAG", "SPLIT", "RELAX")
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
@@ -43,14 +43,17 @@ object CreaseAuditionGenerator {
         val control: String? = null,
         val step: Float? = null,
         val pair: String? = null,
+        val model: Int = MODEL,
     )
 
     @JvmStatic
     fun main(args: Array<String>) {
         val recipeArg = args.firstOrNull { it.startsWith("--recipe=") }?.substringAfter('=')
-        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/crease-audition")
+        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/crease-audition-r2")
         root.mkdirs()
-        val clips = if (recipeArg == null) cases() else listOf(readRecipe(File(recipeArg)))
+        val full = "--full" in args
+        val clips = if (recipeArg == null) cases(full) else listOf(readRecipe(File(recipeArg)))
+        val mainModel = if (recipeArg == null) MODEL else clips.single().model
         val commit = sourceCommit()
         val generatedAt = Instant.now().toString()
         val entries = mutableListOf<Map<String, Any?>>()
@@ -64,7 +67,7 @@ object CreaseAuditionGenerator {
             require(clip.midi in 0..127 && clip.velocity in 0f..1f) { "${clip.id}: invalid performance" }
             val began = System.nanoTime()
             val probe = Crease.synthesize(clip.voice, clip.macros, clip.midi, clip.velocity,
-                clip.history, clip.coupling, oversample = clip.oversample, normalize = true)
+                clip.history, clip.coupling, oversample = clip.oversample, normalize = true, model = clip.model)
             val renderMs = (System.nanoTime() - began) / 1e6
             val raw = Snip(probe.prelevel, channels = 1, sampleRate = probe.sampleRate)
             val native = Snip(probe.samples, channels = 1, sampleRate = probe.sampleRate)
@@ -72,9 +75,10 @@ object CreaseAuditionGenerator {
             require(raw.samples.all { it.isFinite() && abs(it) <= 1f }) { "${clip.id}: raw audio is nonfinite or clips PCM16" }
             require(native.samples.all { it.isFinite() && abs(it) <= 1f }) { "${clip.id}: normalized audio is nonfinite or clips PCM16" }
             val matched = AuditionLevel.level(native)
-            val audioPath = "audio/${clip.id}.wav"
-            val rawPath = "raw/${clip.id}.wav"
-            val recipePath = "recipes/${clip.id}.json"
+            val assetStem = "${clip.id}-m${clip.model}"
+            val audioPath = "audio/$assetStem.wav"
+            val rawPath = "raw/$assetStem.wav"
+            val recipePath = "recipes/$assetStem.json"
             WavWriter.write(File(root, audioPath), matched, WavWriter.BitDepth.PCM_16)
             WavWriter.write(File(root, rawPath), raw, WavWriter.BitDepth.PCM_16)
             val decoded = WavReader.read(File(root, audioPath))
@@ -84,7 +88,15 @@ object CreaseAuditionGenerator {
             val fundamental = FineTuning.measuredHz(native, expected.toFloat(), .12f, .4f)
             val held = probe.diagnostics.held
             val diagnostics = diagnosticMap(probe)
-            check(probe.diagnostics.maxCoefficientBudget <= Crease.COEFFICIENT_BUDGET + 1e-6 && probe.diagnostics.minMapDerivative >= .1 - 1e-6) { "${clip.id}: phase map violates the monotonic coefficient bound" }
+            check(probe.diagnostics.modelVersion == clip.model) { "${clip.id}: renderer selected the wrong phase-map model" }
+            if (clip.model == 1) {
+                val budget = requireNotNull(probe.diagnostics.maxCoefficientBudget) { "${clip.id}: legacy map has no coefficient-budget diagnostic" }
+                check(budget <= Crease.COEFFICIENT_BUDGET + 1e-6 && probe.diagnostics.minMapDerivative >= .1 - 1e-6 && probe.diagnostics.maxMapDerivative <= 1.9 + 1e-6) { "${clip.id}: legacy phase map violates its Fourier coefficient bound" }
+            } else {
+                check(probe.diagnostics.maxCoefficientBudget == null) { "${clip.id}: the new phase map incorrectly reports a Fourier coefficient budget" }
+                check(probe.diagnostics.minMapDerivative >= 1.0 / Crease.MAX_MAP_DERIVATIVE - 1e-6 && probe.diagnostics.maxMapDerivative <= Crease.MAX_MAP_DERIVATIVE + 1e-6) { "${clip.id}: phase map violates its positive-derivative bound" }
+            }
+            check(probe.diagnostics.maxMapCurvature.isFinite() && probe.diagnostics.maxMapCurvature <= Crease.MAX_MAP_CURVATURE) { "${clip.id}: phase-map curvature exceeds its bound" }
             check(probe.diagnostics.maxAbsState <= 1.0 + 1e-6) { "${clip.id}: deformation/load state exceeds its bound" }
             val metrics = linkedMapOf<String, Any?>(
                 "durationSeconds" to native.durationSeconds,
@@ -93,6 +105,9 @@ object CreaseAuditionGenerator {
                 "peak" to native.peak(), "rms" to rms(native.samples), "dc" to native.samples.average(),
                 "matchedPeak" to decoded.peak(), "matchedLoudness" to Loudness.of(decoded),
                 "finite" to true, "rawExportGain" to 1.0,
+                "minMapDerivative" to probe.diagnostics.minMapDerivative,
+                "maxMapDerivative" to probe.diagnostics.maxMapDerivative,
+                "maxMapCurvature" to probe.diagnostics.maxMapCurvature,
                 "pitchHz" to pitch?.hz, "pitchCents" to pitch?.let { cents(it.hz.toDouble(), expected) },
                 "pitchConfidence" to pitch?.confidence,
                 "requestedRootHz" to expected, "fundamentalHz" to fundamental,
@@ -134,9 +149,10 @@ object CreaseAuditionGenerator {
             val trace = traceMap(probe)
             entries += linkedMapOf(
                 "id" to clip.id, "title" to clip.title, "section" to clip.section,
-                "voice" to clip.voice.name, "midi" to clip.midi, "velocity" to clip.velocity,
+                "voice" to clip.voice.name, "model" to clip.model, "midi" to clip.midi, "velocity" to clip.velocity,
                 "macros" to clip.macros, "audio" to audioPath, "rawAudio" to rawPath, "recipe" to recipePath,
                 "mode" to when (clip.section) {
+                    "revision" -> if (clip.model == 1) "BEFORE" else "AFTER"
                     "memory" -> clip.history.name
                     "coupling" -> if (clip.coupling) "COUPLED" else "INDEPENDENT"
                     "aliasing" -> "${clip.oversample}×"
@@ -151,7 +167,7 @@ object CreaseAuditionGenerator {
                 val restored = readRecipe(File(root, recipePath))
                 check(restored == clip) { "${clip.id}: recipe JSON changed the audition settings" }
                 val again = Crease.synthesize(restored.voice, restored.macros, restored.midi, restored.velocity,
-                    restored.history, restored.coupling, oversample = restored.oversample, normalize = true)
+                    restored.history, restored.coupling, oversample = restored.oversample, normalize = true, model = restored.model)
                 check(probe.samples.contentEquals(again.samples) && probe.prelevel.contentEquals(again.prelevel)) { "${clip.id}: nondeterministic render" }
                 metrics["deterministic"] = true
                 metrics["recipeRoundtrip"] = true
@@ -166,10 +182,13 @@ object CreaseAuditionGenerator {
         val summary = linkedMapOf<String, Any?>(
             "title" to "Crease prototype evidence",
             "clips" to entries.size, "voices" to clips.map { it.voice.name }.distinct(),
+            "models" to clips.map { it.model }.distinct().sorted(),
             "sections" to entries.groupingBy { it["section"].toString() }.eachCount(),
             "finiteClips" to entries.size, "maxRawPeak" to maximum("rawPeak"),
             "maxSeamError" to maximum("seamError"), "maxExportedSeamError" to maximum("exportedSeamError"),
             "maxStateError" to maximum("stateError"),
+            "maxMapDerivative" to maximum("maxMapDerivative"),
+            "maxMapCurvature" to maximum("maxMapCurvature"),
             "maxPitchCents" to measurements.mapNotNull { (it["pitchCents"] as? Number)?.toDouble()?.let(::abs) }.maxOrNull(),
             "drumClassifications" to drumReadings,
             "pitchWarnings" to entries.filter { ((it.getValue("metrics") as Map<*, *>)["pitchCents"] as? Number)?.toDouble()?.let { c -> abs(c) > 25 } == true }.map { it["id"] },
@@ -177,12 +196,14 @@ object CreaseAuditionGenerator {
             "acceptance" to "Requires owner listening; pitch and classifier readings are diagnostics, not sonic acceptance.",
         )
         val header = linkedMapOf<String, Any?>(
-            "engine" to "CREASE", "title" to "Crease — pressure leaves a shape", "model" to MODEL,
+            "engine" to "CREASE", "title" to "Crease — wider shapes", "schemaVersion" to 2, "model" to mainModel,
+            "models" to clips.map { it.model }.distinct().sorted(), "fullMatrix" to full,
             "generatedAt" to generatedAt, "sourceCommit" to commit,
             "sampleRate" to Dsp.RATE, "bitDepth" to 16,
             "rawExportGain" to 1.0, "rawExportNote" to "Raw WAVs are the unscaled, prelevel engine output. Matched WAVs use SnipSnap's shared loudest-200-ms audition rule, with one scalar gain per clip.",
             "pitchMeasurement" to "House autocorrelation detector (40–1200 Hz), plus an independent spectral search within one semitone of the requested fundamental. Weak extreme textures may be uncertain.",
             "classifierNote" to "The generic classifier may label long finite notes LOOP. expectedClass records intended TONAL/LOOP behavior; the generic duration label does not establish pitched-engine acceptance.",
+            "derivativeDiagnostics" to "Both models record observed minimum/maximum phase-map derivative and curvature. Model 1 obeys its Fourier coefficient budget; model 2 uses bounded positive analytic maps with no Fourier budget.",
             "summary" to summary,
         )
         writeJson(File(root, "manifest.json"), header + ("clips" to entries))
@@ -191,8 +212,10 @@ object CreaseAuditionGenerator {
             "reports" to reports,
         ))
         File(root, "README.txt").writeText("""
-            CREASE model $MODEL — dry prototype listening pack
+            CREASE model $mainModel — dry prototype listening pack
             Three original phase-deformation voices: ROUND, PINCH, RUBBER.
+            Revision A/B clips compare model 1 with model 2 using identical current controls, MIDI and velocity.
+            Default pack is the compact listening set; -PcreaseFull adds the full engineering matrix.
             audio/: mono 44.1 kHz PCM16, shared matched audition loudness.
             raw/: original prelevel output at unity gain; velocity dynamics are preserved.
             recipes/: standalone audition schema; these are not production SnipSnap Patch files.
@@ -201,53 +224,61 @@ object CreaseAuditionGenerator {
             Held files contain one converged synthesis period. Use repeat on the audition page.
             Higher-rate A/B pairs isolate 4x versus 16x oversampling; their measured difference is not a direct alias-energy measurement.
             Reproduce all: ./gradlew :synth:generateCreaseAudition
+            Full matrix: ./gradlew :synth:generateCreaseAudition -PcreaseFull
             Replay one: ./gradlew :synth:generateCreaseAudition -PcreaseRecipe=/absolute/path/to/recipe.json -PcreaseOutput=/absolute/output
-            Source commit: $commit (prototype changes may be uncommitted; recipes name model $MODEL).
+            Legacy recipes with no model field replay model 1. Every newly emitted recipe records its model explicitly.
+            Source commit: $commit (prototype changes may be uncommitted).
             Final sonic acceptance requires listening.
         """.trimIndent() + "\n")
-        val packs = writeDownloads(root)
+        val packs = writeDownloads(root, mainModel)
         val downloads = packs.map { it.getValue("file").toString() }
         writeJson(File(root, "manifest.json"), header + mapOf("clips" to entries, "download" to downloads.firstOrNull(), "downloads" to downloads, "packs" to packs))
         println("CREASE wrote ${entries.size} clips under ${root.absolutePath}; ${downloads.size} download pack(s).")
         println(Json.write(json(summary)))
     }
 
-    private fun cases(): List<Clip> = buildList {
+    private fun cases(full: Boolean): List<Clip> = buildList {
         for (voice in CreaseVoice.entries) {
             val defaults = Crease.defaults(voice)
             val stem = voice.name.lowercase()
             add(Clip("voice-$stem", voice.name, "voices", voice, defaults,
-                "Dry voice at middle C. Hear the pressure attack leave a moving deformation and then unfold."))
-            for (control in controls) for (step in steps) {
+                "Current voice at middle C and velocity 80%. Compare the stronger geometry and pressure movement at exactly the same pitch across all three voices."))
+            for (model in listOf(1, 2)) {
+                add(Clip("revision-$stem-v$model", "${voice.name} · version $model", "revision", voice, defaults,
+                    "Only the engine model changes. Both versions use identical current voice controls, middle C, velocity 80%, deformation memory and layer coupling.",
+                    pair = "revision-$stem", model = model))
+            }
+            for (control in controls) for (step in if (full) steps else listOf(0f, .5f, 1f)) {
                 add(Clip("macro-$stem-${control.lowercase()}-${percent(step)}", "$control ${percent(step)}%", "macros", voice,
                     defaults + (control to step), "Only $control changes. Other controls, pitch and velocity stay at the voice defaults.",
                     control = control, step = step))
             }
             val expressive = defaults + mapOf("FOLD" to .60f, "PRESSURE" to .85f, "DRAG" to .85f, "SPLIT" to .7f, "RELAX" to .8f)
-            for (history in CreaseHistory.entries) {
+            if (full) for (history in CreaseHistory.entries) {
                 add(Clip("memory-$stem-${history.name.lowercase()}", if (history == CreaseHistory.STATEFUL) "With memory" else "Instantaneous", "memory", voice,
                     expressive, "Identical controls and pressure gesture. Only deformation history changes; the instantaneous version follows the current target directly.",
                     history = history, pair = "memory-$stem"))
             }
-            for (coupled in listOf(false, true)) {
+            if (full) for (coupled in listOf(false, true)) {
                 add(Clip("coupling-$stem-${if (coupled) "on" else "off"}", if (coupled) "Layers coupled" else "Layers independent", "coupling", voice,
                     expressive, "Identical layers and controls. Only shape-sensitive cross-layer loading changes; oscillator pitch rates remain fixed.",
                     coupling = coupled, pair = "coupling-$stem"))
             }
-            for (midi in listOf(36, 60, 84)) for (velocity in listOf(.25f, .6f, 1f)) {
+            for (midi in if (full) listOf(36, 60, 84) else listOf(36, 84)) for (velocity in if (full) listOf(.25f, .6f, 1f) else listOf(.8f)) {
                 add(Clip("note-$stem-$midi-${percent(velocity)}", "MIDI $midi · velocity ${percent(velocity)}%", "notes", voice,
-                    defaults, "Voice defaults across three registers and three velocities. Matched playback compares timbre; raw WAVs retain actual velocity levels.",
+                    defaults, if (full) "Voice defaults across three registers and three velocities. Matched playback compares timbre; raw WAVs retain actual velocity levels."
+                    else "Current voice defaults at low and high registers, velocity 80%. Compare pitch stability and the change in shape across registers.",
                     midi = midi, velocity = velocity))
             }
             add(Clip("held-$stem", "${voice.name} held motion", "held", voice, expressive + ("HOLD" to 1f),
                 "One converged loop with a repeating pressure gesture. DRAG, SPLIT and RELAX continue shaping the motion. Enable repeat to inspect the wrap."))
-            for (relax in listOf(0f, 1f)) {
+            if (full) for (relax in listOf(0f, 1f)) {
                 add(Clip("held-relax-$stem-${percent(relax)}", "${voice.name} · ${if (relax == 0f) "fast" else "slow"} relaxation", "held", voice,
                     expressive + mapOf("HOLD" to 1f, "RELAX" to relax),
                     "The same repeating pressure gesture and constant held amplitude. Only RELAX changes: compare how long the deformation afterimage survives each push.",
                     control = "RELAX", step = relax, pair = "held-relax-$stem"))
             }
-            for (midi in listOf(36, 84)) {
+            if (full) for (midi in listOf(36, 84)) {
                 add(Clip("extreme-$stem-$midi", "${voice.name} · all high · MIDI $midi", "interactions", voice,
                     defaults + controls.associateWith { 1f }, "All five timbral controls at maximum. A bounded extreme, with HOLD kept finite.", midi = midi, velocity = 1f,
                     pair = "extreme-$stem"))
@@ -259,7 +290,7 @@ object CreaseAuditionGenerator {
             }
         }
         val voice = CreaseVoice.RUBBER
-        for ((a, b) in interactions) for (x in listOf(0f, 1f)) for (y in listOf(0f, 1f)) {
+        if (full) for ((a, b) in interactions) for (x in listOf(0f, 1f)) for (y in listOf(0f, 1f)) {
             add(Clip("interaction-${a.lowercase()}-${percent(x)}-${b.lowercase()}-${percent(y)}", "$a ${percent(x)}% · $b ${percent(y)}%", "interactions", voice,
                 Crease.defaults(voice) + mapOf(a to x, b to y), "RUBBER: four corners of $a × $b. Every remaining control, note and velocity stays fixed.",
                 pair = "interaction-${a.lowercase()}-${b.lowercase()}"))
@@ -267,7 +298,7 @@ object CreaseAuditionGenerator {
     }
 
     private fun recipe(clip: Clip, commit: String) = linkedMapOf<String, Any?>(
-        "schema" to "snipsnap.crease-audition", "schemaVersion" to 1, "model" to MODEL,
+        "schema" to "snipsnap.crease-audition", "schemaVersion" to 2, "model" to clip.model,
         "engine" to "CREASE", "id" to clip.id, "title" to clip.title, "section" to clip.section,
         "description" to clip.description, "voice" to clip.voice.name, "macros" to clip.macros,
         "midi" to clip.midi, "velocity" to clip.velocity, "history" to clip.history.name,
@@ -278,13 +309,15 @@ object CreaseAuditionGenerator {
 
     private fun readRecipe(file: File): Clip {
         val r = Json.parse(file.readText()).obj()
-        require(r.getValue("schema").str() == "snipsnap.crease-audition" && r.getValue("model").int() == MODEL) { "Unsupported audition recipe schema/model" }
+        val model = r["model"]?.int() ?: 1
+        val schemaVersion = r["schemaVersion"]?.int() ?: 1
+        require(r.getValue("schema").str() == "snipsnap.crease-audition" && schemaVersion in 1..2 && model in 1..MODEL) { "Unsupported audition recipe schema/model" }
         fun optionalString(key: String) = r[key]?.takeUnless { it == JsonValue.Null }?.str()
         return Clip(r.getValue("id").str(), r.getValue("title").str(), r.getValue("section").str(),
             CreaseVoice.valueOf(r.getValue("voice").str()), r.getValue("macros").obj().mapValues { it.value.num().toFloat() },
             r.getValue("description").str(), r.getValue("midi").int(), r.getValue("velocity").num().toFloat(),
             CreaseHistory.valueOf(r.getValue("history").str()), r.getValue("coupling").bool(), r.getValue("oversample").int(),
-            optionalString("control"), r["step"]?.takeUnless { it == JsonValue.Null }?.num()?.toFloat(), optionalString("pair"))
+            optionalString("control"), r["step"]?.takeUnless { it == JsonValue.Null }?.num()?.toFloat(), optionalString("pair"), model)
     }
 
     // Kept explicit so reports describe the actual DSP contract rather than Java object internals.
@@ -292,6 +325,7 @@ object CreaseAuditionGenerator {
         linkedMapOf(
             "internalRawPeak" to d.rawPeak, "internalRawRms" to d.rawRms, "internalRawDc" to d.rawDc,
             "maxCoefficientBudget" to d.maxCoefficientBudget, "minMapDerivative" to d.minMapDerivative,
+            "maxMapDerivative" to d.maxMapDerivative, "maxMapCurvature" to d.maxMapCurvature, "modelVersion" to d.modelVersion,
             "maxAbsState" to d.maxAbsState, "requestedHz" to d.requestedHz, "renderedHz" to d.renderedHz,
             "held" to d.held, "loopFrames" to d.loopFrames, "rootCycles" to d.rootCycles,
             "seamError" to d.seamError, "stateError" to d.stateError, "converged" to d.converged,
@@ -310,7 +344,7 @@ object CreaseAuditionGenerator {
         }
     }
 
-    private fun writeDownloads(root: File): List<Map<String, Any?>> {
+    private fun writeDownloads(root: File, mainModel: Int): List<Map<String, Any?>> {
         val files = root.walkTopDown().filter { it.isFile && it.extension != "zip" && it.parentFile.name != "raw" }
             .sortedBy { it.relativeTo(root).path }.toList()
         // Partition by uncompressed bytes: compressed packs cannot exceed this conservative file budget.
@@ -326,7 +360,7 @@ object CreaseAuditionGenerator {
             bytes += file.length()
         }
         return groups.mapIndexed { index, group ->
-            val name = if (groups.size == 1) "crease-audition.zip" else "crease-audition-part-${index + 1}.zip"
+            val name = if (groups.size == 1) "crease-audition-m$mainModel.zip" else "crease-audition-m$mainModel-part-${index + 1}.zip"
             ZipOutputStream(File(root, name).outputStream().buffered()).use { zip ->
                 zip.setLevel(9)
                 for (file in group) {
