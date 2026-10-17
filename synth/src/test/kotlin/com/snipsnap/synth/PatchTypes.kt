@@ -44,11 +44,15 @@ internal object PatchTypes {
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
-     * deliberately kept out of [Presets] until the owner's listening verdict. VENT
-     * and WICK keep their provisional starting points in their own preset objects
-     * and render through the CLI while awaiting that verdict.
+     * deliberately kept out of [Presets] until the owner's listening verdict. VENT's
+     * six provisional recipes span two models in [VentPresets] and render through the CLI;
+     * its factory roster and phone picker stay unchanged while it is a prototype.
+     * OVERLAP's first finite comparisons likewise stay in its audition generator.
+     * FLOCK's finite recipes have a dedicated audition generator and CLI access.
+     * WICK keeps its provisional starting points in its own preset object and
+     * renders through the CLI while awaiting that verdict.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, WickPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, OverlapPatch.ENGINE, FlockPatch.ENGINE, WickPatch.ENGINE)
 }

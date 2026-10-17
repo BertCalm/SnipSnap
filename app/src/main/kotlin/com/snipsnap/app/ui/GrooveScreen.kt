@@ -84,6 +84,7 @@ import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.Chart
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -163,9 +164,10 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  * `MenuRow` (Chrome.kt, September UAT finding 10) already establishes the
  * house rule for this class of problem — "it scrolled with no arrow, fade
  * or cue of any kind" was itself the bug — but it solves it with a
- * reserved gutter and a directional glyph, because a tab strip has no
- * content living at the edge to protect: the row is padded in from
- * [Layout.MENU_EDGE_W] on both sides, so the cue never overlaps a tab.
+ * reserved gutter and a directional glyph, because a tab strip had no
+ * content living at the edge to protect: the row was padded in from
+ * a gutter on both sides, so the cue never overlapped a tab (that row is
+ * the four-place row now, which does not scroll).
  * This screen's scroll region has no such margin — TRANSPORT / SHAPE THE
  * GROOVE / the write-and-doors row run edge to edge, so whichever control the
  * viewport happens to end on (the FEEL stepper, at the 1080x2400/420dpi
@@ -287,6 +289,19 @@ fun GrooveScreen(
     onArrange: (swingPercent: Int, feel: Float, feelTemplate: GrooveFeel.Template) -> Unit = { _, _, _ -> },
     /** ORBIT ▸ — opens the circular sequencer, the same overlay shape as ARRANGE. */
     onOrbit: () -> Unit = {},
+    /** LOOP ▸ — the six-track grid, the third bench off BEAT (plan §3.4). */
+    onLoop: () -> Unit = {},
+    /**
+     * The dock's ▶ / ■ (plan §3.4): a one-shot ask to flip play, counted
+     * like [reloadRequest] so each press is its own event. The clock stays
+     * this screen's — BOUNCE, RECORD and the audition all ride it — so
+     * leaving BEAT stops the beat, and [onTransport] says so.
+     */
+    playRequest: Int = 0,
+    /** What the dock's transport reads: stopped, playing with the bar, or recording. Reported on every change and as Stopped when this screen leaves. */
+    onTransport: (DockModel.Transport) -> Unit = {},
+    /** After every save of the kit's grooves, so the project's beat can follow (`DIRECTION_2026_10.md` §2: the kit-side file still backs the per-kit exports). */
+    onBeatWritten: () -> Unit = {},
     /** READ_GROOVE_NEEDS_KIT's own route, for [EmptyGroove] below: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
     /**
@@ -833,6 +848,39 @@ fun GrooveScreen(
     val currentClip = remember(progIndex, base, swingPercent, feel, feelTemplate, eClip) {
         base?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
     }
+
+    // The dock's ▶ / ■ (plan §3.4). A request counter rather than a hoisted
+    // `playing`: the clock, BOUNCE's arming and RECORD's count-in all set
+    // `playing` themselves, so the dock asks for a flip and this screen
+    // keeps deciding what a flip means. The first value is the one the
+    // screen composed with, not a press.
+    var lastPlayRequest by remember(kitDir) { mutableIntStateOf(playRequest) }
+    LaunchedEffect(playRequest) {
+        if (playRequest != lastPlayRequest) {
+            lastPlayRequest = playRequest
+            if (!recording && !countingIn) playing = !playing
+        }
+    }
+    // What the dock reads: the bar advances with the needle, RECORD shows
+    // as ● while a take is going in, and leaving the screen — which stops
+    // the clock, since the clock is this screen's frame loop — says
+    // Stopped, so the dock never claims a beat nobody can hear.
+    val transportBar = run {
+        val barSteps = currentClip?.let { GrooveEdit.stepsPerBar(it) } ?: GrooveEdit.STEPS_PER_BAR
+        (posSteps / barSteps).toInt() + 1
+    }
+    LaunchedEffect(playing, recording, countingIn, transportBar, kit.tempoBpm) {
+        onTransport(
+            when {
+                recording || countingIn -> DockModel.Transport.Recording(transportBar)
+                playing -> DockModel.Transport.Playing(kit.tempoBpm ?: KitPreview.DEFAULT_BPM, transportBar)
+                else -> DockModel.Transport.Stopped
+            },
+        )
+    }
+    DisposableEffect(kitDir) {
+        onDispose { onTransport(DockModel.Transport.Stopped) }
+    }
     // Playback and MIDI export cover every note; the roll's seven NAMED
     // lane columns only cover seven of the kit's pads (the design) — a note
     // outside them still draws too, since Fix 3, just under the eighth
@@ -932,6 +980,7 @@ fun GrooveScreen(
         try {
             withContext(Dispatchers.IO) { GrooveEdit.save(kitDir, c) }
             editorDirty = false
+            onBeatWritten()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             failure("SAVE", e)
@@ -1768,6 +1817,7 @@ fun GrooveScreen(
             try {
                 val clip = LiveRecord.toClip(t, name, existing = landBase)
                 withContext(Dispatchers.IO) { LiveRecord.land(kitDir, clip) }
+                onBeatWritten()
                 base = clip
                 justLanded = true
                 // The take's own count, not the merged clip's: "TOOK n
@@ -1809,6 +1859,7 @@ fun GrooveScreen(
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { LiveRecord.undo(kitDir, snapshot) }
+                onBeatWritten()
                 base = snapshot
                 progIndex = 0
                 onToast(
@@ -2242,18 +2293,13 @@ fun GrooveScreen(
                             Modifier.fillMaxSize().verticalScroll(groupedControlsScroll),
                             verticalArrangement = Arrangement.spacedBy(9.dp),
                         ) {
-                            TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink3.tape)
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(Layout.MIN_HIT_TARGET.dp)
-                                    .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-                                    .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                                    .tapeClick(label = if (playing) "STOP" else "PLAY") { playing = !playing },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                TapeText(if (playing) "■ STOP" else "► PLAY", TapeType.pixel, scheme.lcdInk.tape)
-                            }
+                            // ► PLAY / ■ STOP are the dock's now (plan §3.4):
+                            // the frame's foot carries the transport on every
+                            // screen and asks this screen for the flip through
+                            // `playRequest`. BOUNCE stays here — it prints
+                            // what the clock is playing and needs the clip's
+                            // own controls beside it.
+                            TapeText("TRANSPORT · PLAY AND STOP ARE IN THE DOCK", TapeType.pixelSmall, scheme.ink3.tape)
                             // Needs a loop already running, over a clip that
                             // actually has something in it (`currentClip`,
                             // not just `playing` — a from-scratch screen
@@ -2388,6 +2434,16 @@ fun GrooveScreen(
                                     enabled = !chartBusy,
                                     accent = true,
                                 ) { exportChart() }
+                            }
+                            // The three benches off BEAT, one row (plan §3.4).
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                // ORBIT ▸ — the kit on rings of different lengths, one
+                                // needle speed: polymeter and polyrhythm from the same
+                                // pads this screen already has loaded.
+                                GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                    clearJustLanded()
+                                    onOrbit()
+                                }
                                 // SONG ▸ — the same four programs laid into a structure, not
                                 // just cycled: intro/theme/variation/the turn/reprise/outro,
                                 // one tap away from what this screen already has loaded.
@@ -2395,12 +2451,12 @@ fun GrooveScreen(
                                     clearJustLanded()
                                     onArrange(swingPercent, feel / 100f, feelTemplate)
                                 }
-                                // ORBIT ▸ — the kit on rings of different lengths, one
-                                // needle speed: polymeter and polyrhythm from the same
-                                // pads this screen already has loaded.
-                                GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                // LOOP ▸ — the six-track grid of snips, with its own
+                                // engine; it used to be the shelf's door and its own
+                                // Activity, and is a bench inside the frame now.
+                                GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
                                     clearJustLanded()
-                                    onOrbit()
+                                    onLoop()
                                 }
                             }
 

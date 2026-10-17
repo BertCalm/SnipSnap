@@ -118,6 +118,35 @@ The page provides single-clip playback, pause/resume, stop all, filtering and
 sample-accurate repeating playback. It also works from relative local assets.
 `-PtesseraQuick` selects the development pack.
 
+### Material contrast listening revision
+
+The original fixed-millisecond hammer contact suppressed the upper modes that
+identify the materials. At C4, its approximately 2.8 ms raised-cosine force put
+the tube's 2.7-times-root mode close to a spectral zero; the bar's 4-times-root
+mode was also heavily attenuated. The published isolated sources showed the
+same problem with the chamber disabled. Changing decay and returning paths
+could therefore be heard more readily than the leading material itself.
+
+The proposed revision scales the common contact duration with the root period
+so those modes remain excited across C3–C5. Wood and tube mode participation
+and radiation are rebalanced while their total pickup norms stay level or
+decrease. The original contact and rebound work stores still bound each strike.
+Material-specific spectral and decay
+checks supplement the existing tuning, passivity, collector, and HOLD gates;
+the owner's listening comparison determines whether the contrast is useful.
+
+Generate the focused comparison against a retained published audition:
+
+```text
+./gradlew :synth:generateTesseraMaterialComparison -PtesseraComparisonBaseline=/absolute/path/to/published-audition
+```
+
+The comparison retains twelve published WAVs byte for byte and renders the
+same recipes through the proposed revision, at the same listening target.
+It covers controlled MATERIAL endpoints and midpoint, WOOD/TUBE defaults
+at three registers, and isolated wood/string/tube sources. This is a listening
+candidate; the existing hardware downloads retain their recorded source revision.
+
 The numerical gates cover deterministic samples and event order, direct-source
 root calibration, full-mix tonal anchors, raw passive decay, finite collector
 energy and refractory intervals, wall bounds, causal receiving-port isolation,

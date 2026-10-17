@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class AlloyCommandTest {
     @Test
-    fun `all Alloy key candidates audition the requested pitch and energy`() {
+    fun `all six Alloy key presets audition the requested pitch and energy`() {
         val dir = createTempDirectory("alloy-cli").toFile()
         try {
             val output = ByteArrayOutputStream()
@@ -22,7 +22,7 @@ class AlloyCommandTest {
                 PrintStream(output), PrintStream(ByteArrayOutputStream()),
             ))
             val wavs = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
-            assertEquals(2, wavs.size)
+            assertEquals(6, wavs.size)
             for ((i, source) in AlloyPresets.forVoice(AlloyVoice.KEY).withIndex()) {
                 val preset = source.copy(midi = 65, velocity = .4f)
                 val expected = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }.toByteArray()
@@ -32,7 +32,7 @@ class AlloyCommandTest {
                 assertEquals(44_100, audio.sampleRate)
                 assertTrue(audio.peak() > 0f)
             }
-            assertTrue("2 rendered into" in output.toString())
+            assertTrue("6 rendered into" in output.toString())
         } finally {
             dir.deleteRecursively()
         }
@@ -63,7 +63,7 @@ class AlloyCommandTest {
             for (flags in listOf(
                 arrayOf("--midi", "23"), arrayOf("--midi", "97"), arrayOf("--midi", "48.5"),
                 arrayOf("--velocity", "NaN"), arrayOf("--velocity", "Infinity"), arrayOf("--velocity", "1.1"),
-                arrayOf("--preset", "3"), arrayOf("--midi", "60", "--instrument"), arrayOf("--velocity", ".5", "--drone"),
+                arrayOf("--preset", "7"), arrayOf("--midi", "60", "--instrument"), arrayOf("--velocity", ".5", "--drone"),
             )) {
                 val errors = ByteArrayOutputStream()
                 assertTrue(Cli.run(

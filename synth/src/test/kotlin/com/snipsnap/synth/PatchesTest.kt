@@ -45,6 +45,8 @@ class PatchesTest {
         GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
+        OverlapPresets.all().first(),
+        FlockPresets.all().first(),
         WickPresets.all().first(),
     )
 
