@@ -98,6 +98,7 @@ object Patches {
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
             WickPatch.ENGINE -> WickPatch.fromJsonValue(value)
+            OhmPatch.ENGINE -> OhmPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
