@@ -3760,6 +3760,7 @@ fun App(shelf: KitShelf) {
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
                                     hasProject = project != null,
                                     onAddFromShelf = ::addFromShelf,
+                                    onNavigatePads = { goToStage(Stage.PADS) },
                                     feel = grooveFeel,
                                     onFeelChange = { grooveFeel = it },
                                     swingPercent = grooveSwingPercent,
@@ -3884,7 +3885,22 @@ fun App(shelf: KitShelf) {
                     // The transport is a button only while BEAT is the stage:
                     // the clock is GrooveScreen's, so off BEAT there is nothing
                     // to flip and the region is a readout (Frame.kt's Dock KDoc).
-                    onPlayToggle = if (location.stage == Stage.BEAT && location.top == null) ({ beatPlayRequest++ }) else null,
+                    onPlayToggle = if (location.stage == Stage.BEAT && location.top == null) {
+                        ({
+                            // GrooveScreen answers an empty beat itself, but it
+                            // returns early on no kit and on a kit with no pads,
+                            // before its play request is read: those two are
+                            // answered here, so the chip is never silent.
+                            val playable = open
+                            when {
+                                playable == null -> dock.say(Copy.ADD_KIT_FIRST)
+                                playable.kit.pads.isEmpty() -> dock.say(Copy.BEAT_NEEDS_PADS)
+                                else -> beatPlayRequest++
+                            }
+                        })
+                    } else {
+                        null
+                    },
                     onSnip = {
                         MicSessionService.snip(context)
                         // Optimistic — the real commit hasn't started yet, let

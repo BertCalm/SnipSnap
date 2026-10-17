@@ -95,6 +95,12 @@ object Copy {
      * [EMPTY_SHELF] sent people to the wrong screen.
      */
     const val EMPTY_GROOVE = "NO BEAT YET. TAP RECORD AND PLAY PADS."
+    /**
+     * BEAT with a kit in the project but no pads in the kit: ADD A KIT would
+     * be the wrong ask, so it names the real blocker and the place that fixes
+     * it (PADS ▸ is the panel's door). Also the dock's play chip's answer.
+     */
+    const val BEAT_NEEDS_PADS = "THIS KIT HAS NO PADS YET. FILL SOME ON PADS FIRST."
     /** The dock's play chip, tapped on BEAT with no notes in the beat: it would start a clock over nothing, so it says so instead of staying silent. */
     const val NOTHING_TO_PLAY = "NOTHING TO PLAY YET. RECORD OR TAP STEPS IN."
     /**

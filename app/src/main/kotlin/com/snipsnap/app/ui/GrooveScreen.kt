@@ -308,6 +308,8 @@ fun GrooveScreen(
     hasProject: Boolean,
     /** [EmptyGroove]'s + FROM SHELF: the shelf in pick mode, returning with the kit added to the project. */
     onAddFromShelf: () -> Unit,
+    /** The pad-less kit's door: PADS, where a pad is filled. No default, for the same reason as [onNavigateKits]. */
+    onNavigatePads: () -> Unit,
     /**
      * Bug fix (tab-switch data loss): FEEL, SWING and the selected program
      * used to be `remember(kitDir)` locals only, so App.kt's bare
@@ -575,9 +577,10 @@ fun GrooveScreen(
         return
     }
     if (kit.pads.isEmpty()) {
-        // Nothing to record with, groove or no groove — same shelf
-        // treatment as an empty kit list everywhere else in this app.
-        EmptyGroove(hasProject, onAddFromShelf, onNavigateKits)
+        // Nothing to record with, groove or no groove. The kit IS in the
+        // project, so ADD A KIT would be the wrong ask: it needs pads, and
+        // PADS is where they are filled.
+        EmptyStatePanel(Copy.BEAT_NEEDS_PADS, listOf(EmptyStateRoute("PADS ▸", onNavigatePads)))
         return
     }
 
