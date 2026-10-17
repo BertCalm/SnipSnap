@@ -76,9 +76,12 @@ Git; the renderer, generator, page source and vocal fixtures are retained.
 Start with the three-role study: low foundation, airy upper group, clear answer,
 foundation plus airy voices, then the complete gathering. These 24-second clips
 share one arrangement: three low voices, three upper variants and two responders.
-The airy gestures finish before the answering phrase begins; foundation voices
-take individual breath rests underneath. Every source retains its native pitch
-range, with only the existing small identity deviations.
+One complete 7.20-second breathy arpeggio call finishes before the 7.25-second
+answering phrase begins; foundation voices take individual breath rests
+underneath and continue into a quiet coda. Every source retains its native pitch
+range and melodic contour, with only the existing small identity deviations.
+The audition checks that the upper and answering source durations are comparable
+and records their source lengths, performed phrase durations and exchange count.
 
 The role clips use **one playback gain derived from the complete gathering**.
 The same gain also applies to the isolated parts and the cumulative pair, so
@@ -124,14 +127,19 @@ create additional recorded singers: single-source clips are transformed variants
 of one recording; the two-singer comparisons use separately supplied singers.
 
 The three-role study uses VocalSet male singer 3's low sustained `/a/`, female
-singer 1's actual **breathy** `/a/` gesture and male singer 1's articulated phrase.
-The upper recording is the final native C4 vowel from a breathy arpeggio. Its
-1.20-second canonical excerpt has an explicitly recorded 80 ms entrance fade at
-the crop; its natural quiet release is retained. Breathiness comes from the
-recorded performance, without adding synthesized breath or treating ordinary
-EQ as a different singing technique. `source_airy` exposes that source before
-ensemble processing. The source and rendered downloads retain the attribution,
-CC BY 4.0 link and modification notice, including the entrance fade.
+singer 1's actual **breathy** `/a/` arpeggio and male singer 1's articulated phrase.
+The upper source now preserves the complete 7.20-second native C4–C5–C4 arpeggio,
+with its natural quiet entrance and release. It uses constant gain without added
+fades; no short vowel was stretched or repeated to manufacture a longer call.
+This replaces the earlier 1.20-second final-vowel excerpt, which left the upper
+voice too brief beside the answer. The earlier short excerpt and its explicit
+80 ms entrance-fade metadata remain as a separate retained fixture.
+
+Breathiness comes from the recorded performance, without adding synthesized
+breath or treating ordinary EQ as a different singing technique. `source_airy`
+exposes the full new arpeggio before ensemble processing. The source and rendered
+downloads retain the attribution, CC BY 4.0 link and source-specific modification
+notices.
 
 The source bundle has the canonical sources and recipes required to rerender
 without relying on local paths or caches. The generator checks a moved-directory
