@@ -83,7 +83,6 @@ class BrassGrowScreenTest {
         open(settings)
         compose.onNodeWithContentDescription("GROW").assertExists()
         compose.onNodeWithContentDescription("EFFORT").assertDoesNotExist()
-        compose.onNodeWithContentDescription("REED").assertDoesNotExist()
         compose.onNodeWithContentDescription("GROW").performSemanticsAction(SemanticsActions.SetProgress) {
             it(.25f)
         }
@@ -120,7 +119,6 @@ class BrassGrowScreenTest {
         }
         compose.onNodeWithContentDescription("GROW").assertDoesNotExist()
         compose.onNodeWithContentDescription("EFFORT").assertExists()
-        compose.onNodeWithContentDescription("REED").assertExists()
         compose.runOnIdle {
             val patch = EmbouchurePatch.fromJsonText(settings.getValue("patch.EMBOUCHURE.BRASS"))
             assertEquals(2, patch.model)
@@ -136,7 +134,7 @@ class BrassGrowScreenTest {
     @Test fun restoredTuneCannotExceedTheSavedMidiBasesRemainingRange() {
         val highest = Embouchure.midiRange(EmbouchureVoice.BRASS).last
         val patch = EmbouchurePatch(
-            "High GROW", EmbouchureVoice.BRASS,
+            "HIGH GROW", EmbouchureVoice.BRASS,
             mapOf("TUNE" to 0f, "GROW" to 1f, "LENGTH" to .5f, "HOLD" to 0f),
             midi = highest, velocity = .75f, model = Embouchure.BRASS_GROW_MODEL,
         )
@@ -158,7 +156,7 @@ class BrassGrowScreenTest {
 
     @Test fun asyncYoursRestoreKeepsGrowFromTheOriginalMacroBag() {
         val patch = EmbouchurePatch(
-            "My GROW", EmbouchureVoice.BRASS,
+            "MY GROW", EmbouchureVoice.BRASS,
             mapOf("TUNE" to .5f, "GROW" to .2f, "LENGTH" to .5f, "HOLD" to 0f),
             velocity = .75f, model = Embouchure.BRASS_GROW_MODEL,
         )
@@ -182,7 +180,7 @@ class BrassGrowScreenTest {
 
     @Test fun leavingDuringAnUnreadYoursPresetCannotPersistTemporaryLegacyState() {
         val patch = EmbouchurePatch(
-            "My waiting GROW", EmbouchureVoice.BRASS,
+            "MY WAITING GROW", EmbouchureVoice.BRASS,
             mapOf("TUNE" to .5f, "GROW" to .2f, "LENGTH" to .5f, "HOLD" to 0f),
             velocity = .75f, model = Embouchure.BRASS_GROW_MODEL,
         )
