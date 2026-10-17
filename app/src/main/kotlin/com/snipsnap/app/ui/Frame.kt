@@ -41,7 +41,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.MicSessionService
-import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
+import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -278,7 +279,7 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.amber.tape)
+        TapeText(label, TapeType.pixel, scheme.amberOnChrome)
     }
 }
 
@@ -369,7 +370,7 @@ fun Dock(
                     CaptureMeter(Modifier.width(72.dp).height(6.dp))
                 }
                 DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
-                DockChip(Places.STOP, BinRedGlow, onClick = onEject, border = BIN_RED_BORDER)
+                DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)
             }
         }
         // Now: the line, then its door.

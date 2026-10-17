@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -47,32 +48,44 @@ class ContrastTest {
     // ==================== Finding 5: destructive-action text ====================
 
     @Test
-    fun `BIN_RED_GLOW clears AA text contrast against every scheme's chrome gray`() {
+    fun `every scheme's bin red clears AA text contrast against its chrome gray`() {
         // gray (raisedBevel's fill) is the lightest of the backgrounds this
         // text is actually drawn on across the 6 screens that use it — the
         // other sites use lcd/field/sunkenField, all darker, so gray is the
         // binding constraint. Was 0xC86050: 3.26-4.49:1, failing in all 8
-        // schemes (audit finding 5).
+        // schemes (audit finding 5). The red is per scheme now
+        // (`Scheme.bin`, BIN_RED_GLOW by default): the glow tuned for dark
+        // chrome is 2.5:1 on paper, and a paper scheme brings its own.
         for (scheme in Schemes.ALL) {
-            val ratio = Scheme.contrastRatio(Schemes.BIN_RED_GLOW, scheme.gray)
+            val ratio = Scheme.contrastRatio(scheme.bin, scheme.gray)
             assertTrue(
                 ratio >= AA_TEXT,
-                "${scheme.id}: BIN_RED_GLOW vs gray = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
+                "${scheme.id}: bin vs gray = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
             )
+        }
+        // The dark-chrome default is still the dark-chrome default.
+        for (scheme in Schemes.ALL.filter { Scheme.luma(it.gray) < 90 }) {
+            assertEquals(Schemes.BIN_RED_GLOW, scheme.bin, "${scheme.id}: a dark scheme has no reason to depart from the one tuned glow")
         }
     }
 
     @Test
-    fun `BIN_RED_GLOW also clears AA against every scheme's lcd surface`() {
-        // The darker of the two backgrounds it's drawn on — passes with
-        // more margin than gray by construction (lcd is darker than gray
-        // in every scheme), checked directly rather than assumed.
+    fun `every scheme's lcd bin red clears AA against its lcd surface`() {
+        // The darker of the two backgrounds the word is drawn on — the
+        // dock's STOP sits on the LCD in every scheme. Where the chrome is
+        // dark one red does both (`binLcd` defaults to `bin`, checked
+        // below); on paper no single red can, since the luminance a paper
+        // chrome needs is below what a dark surface needs, so a paper
+        // scheme gives the LCD its own.
         for (scheme in Schemes.ALL) {
-            val ratio = Scheme.contrastRatio(Schemes.BIN_RED_GLOW, scheme.lcd)
+            val ratio = Scheme.contrastRatio(scheme.binLcd, scheme.lcd)
             assertTrue(
                 ratio >= AA_TEXT,
-                "${scheme.id}: BIN_RED_GLOW vs lcd = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
+                "${scheme.id}: binLcd vs lcd = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
             )
+        }
+        for (scheme in Schemes.ALL.filter { Scheme.luma(it.gray) < 90 }) {
+            assertEquals(scheme.bin, scheme.binLcd, "${scheme.id}: dark chrome needs one red, not two")
         }
     }
 
@@ -95,18 +108,21 @@ class ContrastTest {
     }
 
     @Test
-    fun `ink2 clears AA against the darker filled-pad backdrop too`() {
-        // KitScreen/PlayScreen's filled-pad tag sits on darken(gray, 0.30)
-        // as its base layer (before any class-colour wash on top of it —
-        // see the next test for that composited case, which the app now
-        // sidesteps with an opaque backing chip rather than relying on
-        // this alone).
+    fun `ink2 clears AA against the filled-pad backdrop too`() {
+        // KitScreen's filled-pad tag sits on the pad's base fill (before
+        // any class-colour wash on top of it — see the next test for that
+        // composited case, which the app now sidesteps with an opaque
+        // backing chip rather than relying on this alone). The base fill
+        // is the look's: darken(gray, 0.30) under the classic drawing, the
+        // `raised` card under the modern one (`docs/MODERN_LOOK.md` §3,
+        // §4.2) — darkening paper gives a mid-tone nothing reads on, which
+        // is why the modern pad is a card and not a darkened chrome.
         for (scheme in Schemes.ALL) {
-            val bg = Schemes.darken(scheme.gray, 0.30f)
+            val bg = if (scheme.look == Look.MODERN) scheme.raised else Schemes.darken(scheme.gray, 0.30f)
             val ratio = Scheme.contrastRatio(scheme.ink2, bg)
             assertTrue(
                 ratio >= AA_TEXT,
-                "${scheme.id}: ink2 vs darken(gray,0.30) = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
+                "${scheme.id}: ink2 vs the filled-pad base = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
             )
         }
     }

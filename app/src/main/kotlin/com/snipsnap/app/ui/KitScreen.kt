@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -76,6 +77,7 @@ import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Look
 import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -86,6 +88,7 @@ import com.snipsnap.shell.PadStrip
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Places
 import com.snipsnap.shell.Provenance
+import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.TextureKits
@@ -970,7 +973,9 @@ private fun KitSwitcherRow(switcherLine: String, onSwitchKit: () -> Unit, onAddF
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            TapeText(switcherLine, TapeType.pixel, scheme.ink.tape, maxLines = 1)
+            // Two lines: the modern label face is wider than the pixel one and
+            // "N KITS IN THIS PROJECT" is the half a user needs to read.
+            TapeText(switcherLine, TapeType.pixel, scheme.ink.tape, maxLines = 2)
         }
         DoorChip(Places.ADD_FROM_SHELF, onAddFromShelf)
     }
@@ -1242,8 +1247,8 @@ private fun PadCell(
         Box(
             modifier
                 .height(Layout.PAD_H.dp)
+                .then(if (selected) Modifier.border(2.dp, (if (scheme.look == Look.MODERN) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
                 .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
-                .then(if (selected) Modifier.border(1.dp, scheme.amber.tape, shape) else Modifier)
                 // The raw pointerInput below fires onTap on release
                 // (a hint, not an action) and starts a hand-rolled
                 // long-press timer on down — neither registers a
@@ -1330,15 +1335,35 @@ private fun PadCell(
     // a brighter fill than a fresh hit produces.
     val lit = maxOf(0.35f * glow.value, 0.35f * (echo?.value ?: 0f), if (held) PAD_HELD_ALPHA else 0f)
 
+    val modern = scheme.look == Look.MODERN
     Box(
         modifier
             .height(Layout.PAD_H.dp)
-            .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-            .border(if (held) 3.dp else 2.dp, cls.tape, shape)
-            // The selection ring, over the outer pixel of the class rim:
-            // the rim's width is the held state and its hue the drum class,
-            // so the ring takes the one thing neither already says.
-            .then(if (selected) Modifier.border(1.dp, scheme.amber.tape, shape) else Modifier)
+            // The selection ring, OUTSIDE the class rim with the rim inset
+            // under it: the rim's width is the held state and its hue the
+            // drum class, so the ring takes the one thing neither already
+            // says. It used to be a 1dp line drawn over the rim's outer
+            // pixel, which the first run on a phone could not see at all.
+            .then(if (selected) Modifier.border(2.dp, (if (modern) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
+            .then(
+                if (modern) {
+                    // `docs/MODERN_LOOK.md` §3: the raised fill, a hairline,
+                    // and the class colour as a 4dp bottom edge — no rim,
+                    // no glow. The hit's flash below stays: it is feedback,
+                    // not decoration.
+                    Modifier
+                        .background(scheme.raised.tape, shape)
+                        .border(1.dp, scheme.grayEdge.tape, shape)
+                        .drawBehind {
+                            val edge = 4.dp.toPx()
+                            drawRect(cls.tape, topLeft = Offset(0f, size.height - edge), size = Size(size.width, edge))
+                        }
+                } else {
+                    Modifier
+                        .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
+                        .border(if (held) 3.dp else 2.dp, cls.tape, shape)
+                },
+            )
             .background(cls.tape.copy(alpha = lit), shape)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
@@ -1424,18 +1449,25 @@ private fun PadCell(
         // data-dependent (whatever the waveform happens to render at this
         // corner) and can still fall to ~2.4:1 for a bright class colour
         // like HAT_OPEN even with ink2 fixed — see ContrastTest.
+        // On paper the chip is the card itself (ink2 clears AA on it —
+        // ContrastTest's backdrop law reads `raised` under the modern
+        // look); darkening paper gives a grey block nothing needs.
+        val paper = Scheme.luma(scheme.gray) >= 90
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .background(Schemes.darken(scheme.gray, 0.30f).tape, RoundedCornerShape(3.dp))
+                .background((if (paper) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape, RoundedCornerShape(3.dp))
                 .padding(horizontal = 3.dp, vertical = 1.dp),
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
+        // The name: tinted toward white on a dark pad (the handoff's rule),
+        // darkened just until it reads on a paper one, so lime stays lime
+        // either way (`Schemes.classInkOn`).
         TapeText(
             pad.displayName,
             TapeType.marker,
-            classTint(cls),
+            if (paper) Schemes.classInkOn(cls, scheme.raised).tape else classTint(cls),
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )
