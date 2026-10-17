@@ -29,7 +29,7 @@ private const val TAG = "LoopBounce"
  *
  * - the finished render posted its toast back through the dead activity, and
  *   held it alive for the length of the render to do so;
- * - and a second `LoopActivity` opened while the first render was still going
+ * - and a second LOOP screen (an Activity of its own then) opened while the first render was still going
  *   had its own executor and its own "not bouncing" flag, so BOUNCE could be
  *   pressed again and the same grid rendered twice, into two snips.
  *

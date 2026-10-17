@@ -286,10 +286,14 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  * The dock at the foot of every screen, on the LCD surface. Three
  * regions, left to right, each read from [dock]:
  *
- * - **transport**: the project's beat. A readout for now — the beat's
- *   ▶/■ move in from GROOVE with the BEAT stage — so it says `■` and
- *   nothing more until something plays, rather than drawing a button
- *   that would do nothing.
+ * - **transport**: the project's beat, from GROOVE's own TRANSPORT group.
+ *   While BEAT is the stage, [onPlayToggle] is set and the readout is a
+ *   button — ▶ to play, ■ to stop, ● while a take goes in; off BEAT the
+ *   clock is not running (it is GrooveScreen's frame loop, which BOUNCE,
+ *   RECORD and the audition all ride) so the region is a readout that
+ *   says `■`, never a button that would do nothing. Keeping the beat
+ *   playing across benches wants that clock pulled out of the screen; the
+ *   dock is ready for it, the screen is not yet.
  * - **capture**: the capture session's one control, which used to be the
  *   shelf's ArmControl and nowhere else. Idle, the light is dark and the
  *   words (`LISTEN · MIC`) are the door to arming — a tap opens the
@@ -313,6 +317,7 @@ fun Dock(
     dock: DockState,
     busy: String?,
     onArm: () -> Unit,
+    onPlayToggle: (() -> Unit)?,
     onSnip: () -> Unit,
     onEject: () -> Unit,
     onTakeDoor: () -> Unit,
@@ -337,7 +342,12 @@ fun Dock(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Transport.
-        TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
+        if (onPlayToggle != null) {
+            val playing = dock.transport !is DockModel.Transport.Stopped
+            DockChip(dock.transportLabel, scheme.amber.tape, onClick = onPlayToggle, label = if (playing) Places.STOP_BEAT else Places.PLAY_BEAT)
+        } else {
+            TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
+        }
         // Capture.
         if (!armed) {
             Row(
@@ -433,7 +443,7 @@ private val BIN_RED_BORDER = Color(0xFF6A2020)
 
 /** A small chip on the LCD: a word in a one-pixel frame, a hit target tall. */
 @Composable
-private fun DockChip(label: String, ink: Color, onClick: () -> Unit, border: Color = ink) {
+private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Color = ink, label: String = text) {
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -442,7 +452,7 @@ private fun DockChip(label: String, ink: Color, onClick: () -> Unit, border: Col
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixelSmall, ink)
+        TapeText(text, TapeType.pixelSmall, ink)
     }
 }
 

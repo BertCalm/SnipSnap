@@ -67,6 +67,7 @@ import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
+import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.Dock
@@ -110,6 +111,8 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Project
+import com.snipsnap.kit.ProjectStore
+import com.snipsnap.kit.GrooveStore
 import com.snipsnap.loop.Arp
 import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Orbit
@@ -617,15 +620,9 @@ fun App(shelf: KitShelf) {
     // the shelf as always, and from an empty pad's FROM SNIPS ▸ over PADS
     // (plan §3.3), so it has to be drawable over either place.
     // LOOP (plan-03's front door): the six-track grid lives in its own
-    // activity, and its session lives in this one folder. Held here rather
-    // than inside SNIPS because two screens read it — SNIPS' own → LOOP fills
-    // it, and the shelf's LOOP row is only shown once something is in it.
+    // bench under BEAT now, and its session lives in this one folder. Held
+    // here because SNIPS' own → LOOP and SYNTH's drone send both fill it.
     val loopDir = remember(context) { LoopWrites.dir(context) }
-    // How many of the six tracks hold a snip. Read once on mount and then
-    // maintained by `sendSnipToLoop`'s own result — re-read on every return
-    // from LOOP as well, since clearing a track there changes it behind this
-    // screen's back.
-    var loopTracks by remember { mutableStateOf(0) }
     // X-RAY: same shelf-level shape as snipsOpen above, reached from
     // KitsScreen's own X-RAY ▸ INSPECT A FILE row — but there's no kit
     // it could belong to even in principle (the file picked is never
@@ -964,25 +961,6 @@ fun App(shelf: KitShelf) {
             // never fall into [captureBlocked].
             micPermissionDenied = true
         }
-    }
-
-    /**
-     * LOOP's own door, launched for a result only so there is a callback when
-     * it closes: clearing a track happens over there, so the shelf's count
-     * would otherwise keep showing what was true before the trip. Nothing is
-     * read from the result itself — the session on disk is the answer.
-     */
-    val loopLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        scope.launch { loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) } }
-        // The one thing the result does carry: the empty grid's SNIPS door,
-        // so leaving through it lands where the line promised instead of on
-        // the shelf the trip started from.
-        if (result.data?.getBooleanExtra(LoopActivity.EXTRA_OPEN_SNIPS, false) == true) nav.open(Bench.SNIPS)
-    }
-    LaunchedEffect(Unit) {
-        loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) }
     }
 
     fun requestArm() {
@@ -1842,7 +1820,7 @@ fun App(shelf: KitShelf) {
                     .onFailure { e -> Log.e(TAG, "sendSnipToLoop: decode failed", e) }
                     .getOrNull()
                 if (audio == null || audio.frameCount <= 0) {
-                    return@withContext LoopSend(Copy.LOOP_NOTHING_TO_SEND, null)
+                    return@withContext LoopSend(Copy.LOOP_NOTHING_TO_SEND)
                 }
 
                 // Read-modify-write, so the whole of it is one writer's turn.
@@ -1860,14 +1838,14 @@ fun App(shelf: KitShelf) {
                         runCatching { SessionStore.load(loopDir) }
                             .onFailure { e -> Log.e(TAG, "sendSnipToLoop: session unreadable", e) }
                             .getOrNull()
-                            ?: return@writing LoopSend(Copy.LOOP_UNREADABLE, null)
+                            ?: return@writing LoopSend(Copy.LOOP_UNREADABLE)
                     } else {
                         SessionBuilder.empty(deviceSampleRate(context))
                     }
                     val at = SessionBuilder.nextEmpty(session)
                     // Said in words rather than by a dead button on the row: a
                     // disabled → LOOP would not say WHICH of its reasons applied.
-                    if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
+                    if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT))
 
                     // Past the decode, the only way this fails is a write — so
                     // it reports a write failure, never "no audio", which would
@@ -1877,12 +1855,12 @@ fun App(shelf: KitShelf) {
                     }
                         .onFailure { e -> Log.e(TAG, "sendSnipToLoop: cut failed", e) }
                         .getOrNull()
-                        ?: return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+                        ?: return@writing LoopSend(Copy.LOOP_SEND_FAILED)
 
                     val saved = runCatching { SessionStore.save(sent.session, loopDir) }
                         .onFailure { e -> Log.e(TAG, "sendSnipToLoop: save failed", e) }
                         .isSuccess
-                    if (!saved) return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+                    if (!saved) return@writing LoopSend(Copy.LOOP_SEND_FAILED)
 
                     // 1-based: the column a player counts across the grid.
                     val track = sent.trackIndex + 1
@@ -1892,12 +1870,10 @@ fun App(shelf: KitShelf) {
                         } else {
                             Copy.loopTrackFilled(info.displayName, track, sent.blocks)
                         },
-                        SessionBuilder.filled(sent.session),
                     )
                 }
             }
             dock.say(outcome.toast)
-            outcome.filled?.let { loopTracks = it }
         }
     }
 
@@ -1927,12 +1903,12 @@ fun App(shelf: KitShelf) {
                         runCatching { SessionStore.load(loopDir) }
                             .onFailure { e -> Log.e(TAG, "sendDroneToLoop: session unreadable", e) }
                             .getOrNull()
-                            ?: return@writing LoopSend(Copy.LOOP_UNREADABLE, null)
+                            ?: return@writing LoopSend(Copy.LOOP_UNREADABLE)
                     } else {
                         SessionBuilder.empty(deviceSampleRate(context))
                     }
                     val at = SessionBuilder.nextEmpty(session)
-                    if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
+                    if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT))
 
                     // Falls back to RESIN's own pitch-only estimate on any
                     // failure — safe (proven no worse than SIREN's true
@@ -1951,14 +1927,13 @@ fun App(shelf: KitShelf) {
                     val saved = runCatching { SessionStore.save(sent, loopDir) }
                         .onFailure { e -> Log.e(TAG, "sendDroneToLoop: save failed", e) }
                         .isSuccess
-                    if (!saved) return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+                    if (!saved) return@writing LoopSend(Copy.LOOP_SEND_FAILED)
 
                     val bars = sent.tracks[at].chain.size * sent.barsPerInterval
-                    LoopSend(Copy.droneLanded(Scales.nameOf(rootMidi), at + 1, bars), SessionBuilder.filled(sent))
+                    LoopSend(Copy.droneLanded(Scales.nameOf(rootMidi), at + 1, bars))
                 }
             }
             dock.say(outcome.toast)
-            outcome.filled?.let { loopTracks = it }
         }
     }
 
@@ -2873,6 +2848,30 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    // The dock's ▶ / ■ for the beat: a one-shot ask GrooveScreen flips on,
+    // counted so each press is its own event (plan §3.4).
+    var beatPlayRequest by remember { mutableIntStateOf(0) }
+
+    /**
+     * After every groove write on BEAT, the project's beat follows: the
+     * kit-side `groove.json` is copied to the project's `beat/`, so OUT's
+     * session card exports what BEAT shows. The kit keeps its file because
+     * every per-kit exporter still reads it (`DIRECTION_2026_10.md` §2);
+     * reading the beat from the project instead waits for the exporters to
+     * take a project. A failed copy is logged, not toasted: the kit-side
+     * write — the one the user asked for — has already landed.
+     */
+    fun mirrorBeat() {
+        val p = project ?: return
+        val kitDir = open?.dir ?: return
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                runCatching { ProjectStore.saveBeat(ProjectStore.dir(shelf.root, p.name), GrooveStore.load(kitDir)) }
+                    .onFailure { Log.e(TAG, "mirrorBeat: the project's beat did not follow", it) }
+            }
+        }
+    }
+
     // The gear's two-row sheet. Open/closed state, not a navigation: the
     // sim counts HELP as one step from anywhere and this is the half of
     // that step that moves nothing.
@@ -3137,8 +3136,6 @@ fun App(shelf: KitShelf) {
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
                                 onDoubles = { doublesOpen = true },
                                 onSnips = { nav.open(Bench.SNIPS) },
-                                loopTracks = loopTracks,
-                                onLoop = { loopLauncher.launch(Intent(context, LoopActivity::class.java)) },
                                 assigningSnip = pendingSnipAssign != null,
                                 addingTo = pendingAddTo?.name,
                                 breedingFrom = pendingBreedWith,
@@ -3417,7 +3414,6 @@ fun App(shelf: KitShelf) {
                                     // already be on the shelf — BREED can't
                                     // offer a pick with nothing else there.
                                     canBreed = kits.size > 1,
-                                    onShare = ::shareKit,
                                     onSplit = { landOn(AppScreen.SPLIT) },
                                     onDustAll = ::dustAll,
                                     onEmptyLongPress = { slot ->
@@ -3590,6 +3586,15 @@ fun App(shelf: KitShelf) {
                             appScope = scope,
                             onToast = { dock.say(it) },
                             onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            // OUT's second card (plan §3.5): the whole project
+                            // as one session, over the open project.
+                            project = project,
+                            shelfRoot = shelf.root,
+                            // SHARE, moved in from KIT's action row: it is an
+                            // output. The beat's writers (BOUNCE, MIDI, CHART)
+                            // live on BEAT and are listed here as a door.
+                            onShareKit = ::shareKit,
+                            onBeatWriters = { goToStage(Stage.BEAT) },
                         )
                         top == Bench.SYNTH -> {
                             // Captured here, at this composition, so a SEND TO PAD write that
@@ -3703,6 +3708,10 @@ fun App(shelf: KitShelf) {
                                     reloadRequest = grooveReload,
                                     onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { nav.open(Bench.ORBIT) },
+                                    onLoop = { nav.open(Bench.LOOP) },
+                                    playRequest = beatPlayRequest,
+                                    onTransport = { dock.transport = it },
+                                    onBeatWritten = ::mirrorBeat,
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
                                     feel = grooveFeel,
                                     onFeelChange = { grooveFeel = it },
@@ -3776,6 +3785,14 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
+                        top == Bench.LOOP -> LoopBench(
+                            onBack = { nav.closeBench() },
+                            onToast = { dock.say(it) },
+                            // The empty grid's SNIPS door: SNIPS takes LOOP's place on
+                            // the stack, so Back from it returns to BEAT, where the
+                            // LOOP ▸ chip is.
+                            onGoToSnips = { nav.closeBench(); nav.open(Bench.SNIPS) },
+                        )
                         top == Bench.KEYS -> {
                             val inst = openInstrument
                             if (inst == null) {
@@ -3807,6 +3824,10 @@ fun App(shelf: KitShelf) {
                     dock = dock,
                     busy = busy,
                     onArm = { captureSheetOpen = true },
+                    // The transport is a button only while BEAT is the stage:
+                    // the clock is GrooveScreen's, so off BEAT there is nothing
+                    // to flip and the region is a readout (Frame.kt's Dock KDoc).
+                    onPlayToggle = if (location.stage == Stage.BEAT && location.top == null) ({ beatPlayRequest++ }) else null,
                     onSnip = {
                         MicSessionService.snip(context)
                         // Optimistic — the real commit hasn't started yet, let
@@ -3942,15 +3963,4 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
  * A tiny type rather than a Pair so the null half cannot be read as "zero
  * tracks", which is what a bare Int would have let it mean on every failure.
  */
-private data class LoopSend(val toast: String, val filled: Int?)
-
-/**
- * How many of the loop grid's tracks hold a snip, straight off disk.
- *
- * Zero for every reason a session might not be readable — none written yet,
- * a sidecar that will not parse — because the count's only job is to decide
- * whether the shelf shows a door at all, and a door onto an unreadable
- * session is the same mistake as a door onto an empty one.
- */
-private fun filledLoopTracks(dir: File): Int =
-    runCatching { SessionBuilder.filled(SessionStore.load(dir)) }.getOrDefault(0)
+private data class LoopSend(val toast: String)
