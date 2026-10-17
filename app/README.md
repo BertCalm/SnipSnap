@@ -100,9 +100,9 @@ OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
 owner's positive feedback; final listening and phone/MPC handoff remain open for
 its fifteen presets and sixteen-pad starter.
-PRISM adds six additive voices, eight review presets and a dry pitched
+PRISM adds six additive voices, thirty-six factory presets and a dry pitched
 starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-precedes further preset expansion.
+includes the full bank and the original/revised GLASS comparisons.
 ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
 sixteen-pad starter kit. The owner heard the initial twelve and authorized six
 presets per voice on the same engine tuning; the additions await listening review.

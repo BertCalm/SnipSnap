@@ -436,12 +436,12 @@ describe compatibility and export behavior. MUSETTE remains provisional.
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
 plucks, organs, basses, glass and sustained veils whose harmonics develop at
 different rates. GRAIN, DRIFT, SHAPE, STRIKE and BODY shape the dry note; HOLD
-exports settled periodic loops. Eight audition presets, a dry sixteen-pad kit,
+exports settled periodic loops. Thirty-six factory presets, a dry sixteen-pad kit,
 patch recipes, CLI and the phone picker share the Kotlin renderer. Run
 `./gradlew :synth:generatePrismAudition` for raw/matched voices, macro sweeps,
 interaction grids, velocity and loop probes. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-awaits the owner's dry listening verdict before expanding the preset roster.
+includes the complete factory bank and the original/revised GLASS comparisons.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 
 ALLOY is an original attack-driven four-operator PM engine: generated wood,

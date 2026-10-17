@@ -704,16 +704,19 @@ object SynthKits {
      * and contours; finite notes are TONAL and the held veil is LOOP.
      */
     fun prism(): List<ArrangedPad?> {
+        // Keep the original sixteen-pad layout as the selectable factory bank grows.
+        val bank = PrismPresets.all()
+        val presets = listOf(
+            "Soft Facets", "Wooden Spectrum", "Partial Tines", "Hollow Register",
+            "Root Glass", "Slow Separation", "Small Prism", "Amber Veil",
+        ).map { name -> bank.first { it.name == name } }
         fun note(n: Int, semitone: Int) = PrismPatch(
             "Prism $n", PrismVoice.KEY,
-            PrismPresets.forVoice(PrismVoice.KEY).first().macros +
+            presets.first().macros +
                 ("TUNE" to semitone / Prism.TUNE_SEMITONES.toFloat()),
         ).let { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
-        val presets = PrismPresets.all()
-        val finite = presets.filterNot { Prism.isLoop(it.macros.getValue("HOLD")) }
-        val held = presets.filter { Prism.isLoop(it.macros.getValue("HOLD")) }
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
-            (finite + held).map { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
+            presets.map { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
     }
 
     /**
