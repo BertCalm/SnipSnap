@@ -201,7 +201,7 @@
         const loading = fetch(path, {credentials:'same-origin'}).then(response => {
           if (!response.ok) throw new Error('Audio unavailable');
           return response.arrayBuffer();
-        }).then(bytes => new Promise((resolve, reject) => ctx.decodeAudioData(bytes, resolve, reject)));
+        }).then(bytes => ctx.decodeAudioData(bytes));
         buffers.set(path, loading);
         loading.catch(() => { if (buffers.get(path) === loading) buffers.delete(path); });
       }
@@ -239,8 +239,8 @@
       if (/^https?:$/.test(location.protocol) && !clip.nativeOnly && typeof fetch === 'function') {
         try { ctx = audioContext(); resumed = ctx.resume(); } catch (_) { ctx = null; }
       }
-      stopOthers(clip);
       active = {clip, ticket, backend:'loading'};
+      stopOthers(clip);
       update(clip); announce(`Loading ${clip.title}…`);
       if (!ctx) { await nativePlay(clip, ticket); return; }
       try {
