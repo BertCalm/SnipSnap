@@ -820,7 +820,7 @@ object SynthKits {
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
      * Eight PLUCK roots walk C minor pentatonic; the remaining eight pads
-     * compare every provisional recipe, including two settled held buffers.
+     * compare the calm BUBBLE default and seven other recipes, including two held buffers.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
@@ -833,7 +833,7 @@ object SynthKits {
         // The first scale pad already contains PLUCK's Small Spark default. Use its former
         // upper-bank duplicate for the calmer BUBBLE default and retain the busy reference.
         val bubble = WickPatch("Calm Bubbles", WickVoice.BUBBLE, Wick.defaults(WickVoice.BUBBLE))
-        val recipes = listOf(bubble) + WickPresets.all().filter { it.name != "Small Spark" }
+        val recipes = listOf(bubble) + WickPresets.all().filter { it.name !in setOf("Small Spark", "Bubble Chain") }
         return notes + recipes.map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
     }
 

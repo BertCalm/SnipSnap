@@ -70,11 +70,11 @@ class WickPatchTest {
     @Test
     fun `provisional library remains outside factory routing and every recipe is valid and recoverable`() {
         val recipes = WickPresets.all()
-        assertEquals(8, recipes.size)
+        assertEquals(9, recipes.size)
         assertEquals(recipes.size, recipes.map { it.name }.distinct().size)
         assertTrue(Presets.all().none { it.engine == WickPatch.ENGINE })
         for (voice in WickVoice.entries) {
-            assertEquals(4, WickPresets.forVoice(voice).size)
+            assertEquals(if (voice == WickVoice.PLUCK) 4 else 5, WickPresets.forVoice(voice).size)
             assertEquals(recipes.filter { it.voice == voice }, WickPresets.forVoice(voice))
             assertTrue(Presets.forVoice(WickPatch.ENGINE, voice.name).isEmpty())
             assertTrue(WickPresets.forVoice(voice).any { Wick.isLoop(it.macros.getValue("HOLD")) }, "$voice has no held audition recipe")

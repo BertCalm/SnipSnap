@@ -104,7 +104,7 @@ import kotlin.random.Random
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * VENT accepts `--seed N` for its initial trajectory. Its three provisional
  * starting recipes are available here while remaining outside the factory roster.
- * WICK likewise offers its eight provisional PLUCK/BUBBLE recipes without adding a phone engine.
+ * WICK likewise offers its nine provisional PLUCK/BUBBLE recipes without adding a phone engine.
  */
 object SynthCommand {
 

@@ -343,7 +343,7 @@ object WickAuditionGenerator {
                 "The same initial excitation and release network used by every normal patch.",
             "defaults", voice, "defaults", "Start here · two dry voices",
         ))
-        for (preset in WickPresets.all().filter { it.name != "Small Spark" }) add(Case(
+        for (preset in WickPresets.all().filter { it.name !in setOf("Small Spark", "Bubble Chain") }) add(Case(
             "preset_${slug(preset.name)}", preset.name,
             if (preset.name == "Busy Bubbles") "Original BUBBLE default, preserved at FEED 65%. Compare with the calmer FEED 25% first spark; all other controls, pitch and velocity match."
             else "Provisional ${preset.voice.name.lowercase()} recipe. Dry engine output, with no rack effects.",

@@ -291,7 +291,7 @@ TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
 and velocity. The oscillator/filter techniques draw on TIDE; the gate network
 and release scheduler are new.
 
-Eight provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+Nine provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
 kit support the first audition. WICK stays outside the factory preset roster,
 phone picker and starter menu pending listening. Run
 `./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point

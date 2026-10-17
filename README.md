@@ -347,7 +347,7 @@ Dry sonic approval precedes the full preset expansion.
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
 PLUCK and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Eight provisional recipes stay outside
+saved MIDI 24–84 roots and velocity. Nine provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
 `./gradlew :synth:generateWickAudition` for dry native/matched clips, mechanism
 comparisons, control sweeps, held loops and causal traces. The

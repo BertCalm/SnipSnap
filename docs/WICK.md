@@ -7,7 +7,7 @@ excitation; repeated pulses deplete that availability, which recovers over
 time. This is an articulation model, not a claim of physical energy conservation.
 
 The supplied [engineering specification](WICK_SPEC.md) is preserved as the
-proposal. This first listening round implements **PLUCK and BUBBLE**, eight
+proposal. This first listening round implements **PLUCK and BUBBLE**, nine
 provisional recipes and a dry sixteen-pad kit. WOOD, BREATH, FLICKER, RATTLE
 and the proposed 36-preset library await the owner's listening verdict.
 Numerical checks do not establish that the cascade is musically convincing.
