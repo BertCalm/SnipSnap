@@ -1849,6 +1849,13 @@ object Copy {
     fun sentToPads(sliceCount: Int, chokeSet: Boolean): String =
         "${countOf(sliceCount, "SLICE", "SLICES")} ON THE PADS." + if (chokeSet) " CHOKE GROUP SET." else ""
     /**
+     * The kit switcher changed which kit the grid plays (F4): the one fact
+     * the header alone used to carry. "ON THE GRID" is the phrase the
+     * switcher's sheet already marks the active kit with; here it is said
+     * once, as a landing line, when the pick takes effect.
+     */
+    fun onTheGrid(kitName: String): String = "ON THE GRID: ${kitName.uppercase(java.util.Locale.ROOT)}."
+    /**
      * INSTANT KIT: the one tap, what it chopped, then the same words SEND TO
      * PADS says.
      *

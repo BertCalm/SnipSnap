@@ -2830,7 +2830,12 @@ fun App(shelf: KitShelf) {
                 return@launch
             }
             project = updated
-            open = kits.firstOrNull { it.dir.name == kitFolder }
+            val activated = kits.firstOrNull { it.dir.name == kitFolder }
+            open = activated
+            // The grid changes under the user's finger: say which kit it is
+            // now (F4). A switch that said nothing left the header as the
+            // only evidence.
+            if (activated != null) dock.say(Copy.onTheGrid(activated.kit.name))
         }
     }
 
@@ -3575,6 +3580,12 @@ fun App(shelf: KitShelf) {
                             onToast = { dock.say(it) },
                             onSentToGrid = { newEntry ->
                                 landKit(newEntry)
+                                // The new kit is the grid's now (F4). The offer
+                                // just below replaces the whole line whenever
+                                // the kit has pads, so this shows only for an
+                                // empty one until the dock's lines are scoped
+                                // (the UX review's S1) and can carry both.
+                                dock.say(Copy.onTheGrid(newEntry.kit.name))
                                 // Step 3 → step 4 (J10), and only when the
                                 // kit has pads: a door onto an empty EXPORT
                                 // is a worse answer than no door.

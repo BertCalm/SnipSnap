@@ -117,6 +117,8 @@ class PersonalityTest {
         // SEND TO PADS reports the real slice count.
         assertEquals("7 SLICES ON THE PADS. CHOKE GROUP SET.", Copy.sentToPads(7, chokeSet = true))
         assertEquals("3 SLICES ON THE PADS.", Copy.sentToPads(3, chokeSet = false))
+        // The kit switcher names the kit it put on the grid, in capitals.
+        assertEquals("ON THE GRID: FUNK ROOM.", Copy.onTheGrid("Funk Room"))
         // A single slice sent to the pads is singular too — sentToPads used
         // to say "1 SLICES" (and so did instantKit, which routes through it).
         assertEquals("1 SLICE ON THE PADS.", Copy.sentToPads(1, chokeSet = false))
