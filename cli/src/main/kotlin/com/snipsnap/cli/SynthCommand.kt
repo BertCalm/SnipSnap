@@ -75,6 +75,8 @@ import com.snipsnap.synth.VentPresets
 import com.snipsnap.synth.VentVoice
 import com.snipsnap.synth.Wick
 import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.OhmPatch
+import com.snipsnap.synth.OhmPresets
 import com.snipsnap.synth.WickPresets
 import com.snipsnap.synth.WickVoice
 import java.io.File
@@ -119,6 +121,7 @@ import kotlin.random.Random
  * FLOCK GATHER/RIBBON/SPLIT also keep provisional recipes outside that roster;
  * `--seed N` accepts the full signed 64-bit range for their finite performances.
  * WICK likewise offers its nine provisional PLUCK/BUBBLE recipes without adding a phone engine.
+ * OHM STRING offers five finite family encounters, with --midi 48..72, --velocity and --seed.
  */
 object SynthCommand {
 
@@ -163,6 +166,7 @@ object SynthCommand {
             VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
             FlockPatch.ENGINE -> FlockVoice.entries.firstOrNull { it.name == voice }?.let { FlockPresets.forVoice(it) } ?: emptyList()
             WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
+            OhmPatch.ENGINE -> if (voice == "STRING") OhmPresets.all() else emptyList()
             else -> Presets.forVoice(engine, voice)
         }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
@@ -195,6 +199,7 @@ object SynthCommand {
                 VentPatch.ENGINE -> Vent.MIDI_MIN..Vent.MIDI_MAX
                 FlockPatch.ENGINE -> Flock.MIN_MIDI..Flock.MAX_MIDI
                 WickPatch.ENGINE -> Wick.MIN_MIDI..Wick.MAX_MIDI
+                OhmPatch.ENGINE -> 48..72
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
                     val root = Prism.rootMidi(prismVoice)
@@ -215,7 +220,7 @@ object SynthCommand {
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
@@ -291,6 +296,7 @@ object SynthCommand {
                 )
                 is TanglePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is WickPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OhmPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ShoalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
@@ -346,6 +352,7 @@ object SynthCommand {
                 modelVersion = modelOverride ?: withNote.modelVersion,
             ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is FlockPatch && flockSeedOverride != null) withNote.copy(seed = flockSeedOverride)
+            else if (withNote is OhmPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else withNote
         }
 
