@@ -51,6 +51,11 @@ analysis needs NumPy and SciPy; see the [reviewer usage notes](../scripts/review
 Its report is tied to the exact audition manifest hash and includes matched
 levels, participation, complete-region events and solo pitch-contour measurements.
 
+The source-only ending check can run before rendering:
+`python scripts/review-confluence-audio.py --fixtures-only --output /tmp/confluence-source-endings.json`.
+The fixture guards inspect the selected region's terminal amplitude and pitch,
+as well as the marked sustain.
+
 The generator writes real recorded-source WAVs under
 `testkit/confluence-audition/`, with raw/matched files, exact recipes,
 measurements, source provenance and causal event traces. It also packages a
@@ -101,6 +106,13 @@ engine running on the MPC. Broad pitch changes, rough/multiphonic sources,
 48-performer mobile budgets and seamless linguistic looping remain unvalidated.
 
 ## Next stages
+
+The first listening revision exposed a source-preparation error: the male vowel
+crop included the next higher note and ended at substantial amplitude. The
+corrected audition uses a complete sustained gesture from VocalSet male singer
+3, including its natural release. The original rejected recording remains for
+the ending regression check. Audio URLs include their content hashes so revisiting
+the page loads revised files; saved notes retain the recipe version heard.
 
 After a useful dry listening verdict, develop source preparation in TAPE/pad
 workflows, explicit asset resolution and relinking, an editable native source

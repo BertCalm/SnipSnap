@@ -6,7 +6,7 @@
   const LEVEL_KEY = 'snipsnap-confluence-listening-level-v1';
   const $ = (id) => document.getElementById(id);
   const audio = $('audio');
-  const state = { manifest: null, clips: [], selected: null, group: 'all', level: 'matched', notes: {}, storageAvailable: true, loadToken: 0 };
+  const state = { manifest: null, clips: [], selected: null, group: 'all', level: 'matched', notes: {}, heardRecipes: {}, storageAvailable: true, loadToken: 0 };
   let toastTimer;
 
   function el(tag, className, text) {
@@ -38,6 +38,16 @@
       const url = new URL(path, new URL('manifest.json', document.baseURI));
       return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
     } catch (_) { return null; }
+  }
+
+  function clipAudioUrl(clip, level) {
+    const matched = level === 'matched';
+    const path = safeUrl(matched ? clip.matchedPath : clip.rawPath);
+    if (!path) return null;
+    const url = new URL(path);
+    const hash = matched ? clip.matchedSha256 : clip.rawSha256;
+    if (typeof hash === 'string' && hash) url.searchParams.set('sha256', hash);
+    return url.href;
   }
 
   function addLink(parent, label, path, download = true) {
@@ -85,7 +95,12 @@
     $('notes-summary').textContent = state.storageAvailable
       ? `${count ? `${count} recording${count === 1 ? '' : 's'} with notes. ` : ''}Your notes stay in this browser until you export them.`
       : 'Browser storage is unavailable. Export your notes before closing this page.';
-    $('note-save-state').textContent = state.storageAvailable ? 'Saved on this device' : 'Export to keep your notes';
+    const note = state.notes[state.selected?.id];
+    const hasNote = note && (note.verdict || note.note?.trim());
+    const version = !hasNote ? '' : !note.recipeSha256 ? 'Version unknown' :
+      state.selected?.recipeSha256 && note.recipeSha256 !== state.selected.recipeSha256 ? 'Earlier version' : '';
+    const saved = state.storageAvailable ? 'Saved on this device' : 'Export to keep your notes';
+    $('note-save-state').textContent = version ? `${version} · ${saved}` : saved;
   }
 
   function saveNote() {
@@ -95,7 +110,7 @@
       verdict,
       note: $('listening-note').value,
       updatedAt: new Date().toISOString(),
-      recipeSha256: state.selected.recipeSha256 || ''
+      recipeSha256: state.heardRecipes[state.selected.id] || state.notes[state.selected.id]?.recipeSha256 || ''
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.notes)); }
     catch (_) { state.storageAvailable = false; }
@@ -147,8 +162,8 @@
     for (const radio of document.querySelectorAll('input[name="verdict"]')) radio.checked = radio.value === note.verdict;
     $('listening-note').value = note.note || '';
     $('selected-links').replaceChildren();
-    addLink($('selected-links'), 'Matched audio ↓', clip.matchedPath);
-    addLink($('selected-links'), 'Raw audio ↓', clip.rawPath);
+    addLink($('selected-links'), 'Matched audio ↓', clipAudioUrl(clip, 'matched'));
+    addLink($('selected-links'), 'Raw audio ↓', clipAudioUrl(clip, 'raw'));
     addLink($('selected-links'), 'Render recipe ↓', clip.recipePath);
     addLink($('selected-links'), 'Diagnostics ↓', clip.diagnosticsPath);
     updateNotesSummary();
@@ -195,8 +210,7 @@
   }
 
   function loadAudio(clip, shouldPlay = true, resumeAt = 0) {
-    const path = state.level === 'matched' ? clip.matchedPath : clip.rawPath;
-    const url = safeUrl(path);
+    const url = clipAudioUrl(clip, state.level);
     if (!url) { showToast('This recording is missing its audio file.'); return; }
     const token = ++state.loadToken;
     audio.pause();
@@ -437,6 +451,11 @@
     $('listening-note').focus({ preventScroll: true });
   });
   audio.addEventListener('play', updatePlayerState);
+  audio.addEventListener('playing', () => {
+    if (state.selected && audio.currentSrc === clipAudioUrl(state.selected, state.level)) {
+      state.heardRecipes[state.selected.id] = state.selected.recipeSha256 || '';
+    }
+  });
   audio.addEventListener('pause', updatePlayerState);
   audio.addEventListener('ended', () => { updatePlayerState(); $('player-status').textContent = 'Recording finished.'; });
   audio.addEventListener('timeupdate', updateTimeline);

@@ -2,21 +2,31 @@
   {
     "archive_member": "FULL/female1/excerpts/straight/f1_row_straight.wav",
     "original_file": "originals/f1_row_straight.wav",
-    "bytes": 1248472
+    "bytes": 1248472,
+    "sha256": "1f813de45396a2e8671aa3ad93248378668f14648a6a564fa4765abe07e59309"
   },
   {
     "archive_member": "FULL/female1/long_tones/straight/f1_long_straight_a.wav",
     "original_file": "originals/f1_long_straight_a.wav",
-    "bytes": 1042802
+    "bytes": 1042802,
+    "sha256": "e1ff90d89de7e30a4dd717dd642173e57b083832f38e74eb8033d349c02bc340"
   },
   {
     "archive_member": "FULL/male1/excerpts/straight/m1_row_straight.wav",
     "original_file": "originals/m1_row_straight.wav",
-    "bytes": 1335636
+    "bytes": 1335636,
+    "sha256": "601f875d9f550b1ac2e6ea95814b0634fcb6d8567b258f0f8522f704500f0911"
   },
   {
     "archive_member": "FULL/male1/long_tones/straight/m1_long_straight_a.wav",
     "original_file": "originals/m1_long_straight_a.wav",
-    "bytes": 897668
+    "bytes": 897668,
+    "sha256": "27abc074bca36086b1abc0093e920bc750e30ac37a52bd22ae9de1e89620dd72"
+  },
+  {
+    "archive_member": "FULL/male3/long_tones/straight/m3_long_straight_a.wav",
+    "original_file": "originals/m3_long_straight_a.wav",
+    "bytes": 1037528,
+    "sha256": "0220658c4ac8b96392c2bbcc3348fa757ed6264185610d31daef87ec0399cf4f"
   }
 ]

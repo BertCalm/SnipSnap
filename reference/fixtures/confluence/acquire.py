@@ -15,6 +15,7 @@ import zlib
 
 ROOT = Path(__file__).resolve().parent
 MANIFEST = json.loads((ROOT / "manifest.json").read_text())
+ORIGINALS = json.loads((ROOT / "archive-selection.json").read_text())
 URL = MANIFEST["sourceArchiveUrl"]
 
 
@@ -80,18 +81,20 @@ def digest(data):
 
 
 def main():
-    missing = [s for s in MANIFEST["sources"] if not (ROOT / s["originalPath"]).exists()]
+    missing = [s for s in ORIGINALS if not (ROOT / s["original_file"]).exists()]
     directory = central_directory() if missing else {}
-    for source in MANIFEST["sources"]:
-        original = ROOT / source["originalPath"]
+    for item in ORIGINALS:
+        original = ROOT / item["original_file"]
         if not original.exists():
-            payload = download_member(source["originalArchiveMember"], directory[source["originalArchiveMember"]])
-            if digest(payload) != source["originalSha256"]:
+            payload = download_member(item["archive_member"], directory[item["archive_member"]])
+            if digest(payload) != item["sha256"]:
                 raise RuntimeError("Pinned original SHA-256 mismatch")
             original.parent.mkdir(parents=True, exist_ok=True)
             original.write_bytes(payload)
-        if digest(original.read_bytes()) != source["originalSha256"]:
+        if digest(original.read_bytes()) != item["sha256"]:
             raise RuntimeError(f"Original content changed: {original}")
+    for source in MANIFEST["sources"]:
+        original = ROOT / source["originalPath"]
         with wave.open(str(original), "rb") as recording:
             if recording.getnchannels() != 1 or recording.getsampwidth() != 2 or recording.getframerate() != 44100:
                 raise RuntimeError("Expected mono 44.1 kHz PCM16 original")

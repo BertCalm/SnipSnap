@@ -13,14 +13,14 @@ enum class ConfluenceProfile { UNISON, RESPONSE, DRONE }
 enum class ConfluenceSourceMode { PITCHED, TEXTURE }
 
 /** A resolved canonical asset. The caller's mutable PCM never becomes rendering state. */
-class ConfluenceSource(val hash: String, samples: FloatArray, val sampleRate: Int = 44_100) {
+class ConfluenceSource(val hash: String, samples: FloatArray, val sampleRate: Int = Confluence.RATE) {
     internal val pcm: FloatArray = samples.copyOf()
     val frameCount: Int get() = pcm.size
 
     init {
         require(hash.matches(Regex("[0-9a-f]{64}"))) { "Confluence asset identity must be a SHA-256 hash" }
-        require(sampleRate == 44_100) { "Confluence sources must be canonical mono 44.1 kHz assets" }
-        require(pcm.size in 256..44_100 * 30) { "Confluence source must contain 256 frames to 30 seconds" }
+        require(sampleRate == Confluence.RATE) { "Confluence sources must be canonical mono 44.1 kHz assets" }
+        require(pcm.size in 256..Confluence.RATE * 30) { "Confluence source must contain 256 frames to 30 seconds" }
         require(pcm.all { it.isFinite() }) { "Confluence source contains nonfinite audio" }
         require(hash == canonicalHash(pcm, sampleRate)) { "Confluence source hash does not match canonical PCM; reassign and reanalyze changed material" }
     }
@@ -28,7 +28,7 @@ class ConfluenceSource(val hash: String, samples: FloatArray, val sampleRate: In
     companion object {
         /** Identity of the canonical little-endian float PCM, including its rate and length. */
         fun fromSnip(snip: Snip): ConfluenceSource {
-            require(snip.channels == 1 && snip.sampleRate == 44_100) { "resolve/downmix/resample the source before Confluence" }
+            require(snip.channels == 1 && snip.sampleRate == Confluence.RATE) { "resolve/downmix/resample the source before Confluence" }
             return ConfluenceSource(canonicalHash(snip.samples, snip.sampleRate), snip.samples, snip.sampleRate)
         }
 

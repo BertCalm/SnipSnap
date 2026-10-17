@@ -21,7 +21,7 @@ import kotlin.math.sqrt
  * No oscillator, learned voice, phoneme labeling, or generated breath enters the signal path.
  */
 internal object ConfluenceVoice {
-    private const val RATE = 44_100
+    private const val RATE = Confluence.RATE
     private const val ANALYSIS_DIVISOR = 4
     private const val HOP = 64
     private const val WINDOW = 512

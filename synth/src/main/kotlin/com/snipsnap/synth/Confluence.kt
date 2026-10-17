@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import kotlin.math.PI
@@ -120,7 +121,7 @@ data class ConfluenceReport(
 object Confluence {
     const val MODEL = 1
     const val ANALYSIS_VERSION = 1
-    const val RATE = 44_100
+    const val RATE = WavWriter.MPC_SAMPLE_RATE
     const val MAX_PERFORMERS = 8
     val MACRO_NAMES = setOf("CROWD", "REGISTER", "DIVERGENCE", "RESPONSE", "SPACE")
     val DEFAULTS = linkedMapOf("CROWD" to .4f, "REGISTER" to .25f, "DIVERGENCE" to .3f, "RESPONSE" to .25f, "SPACE" to .4f)

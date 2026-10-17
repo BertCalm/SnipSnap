@@ -67,10 +67,10 @@ def metrics(path):
             'loudestFiltered200msRms': loudness(y, rate)}
 
 
-def pitch_at(y, rate, seconds):
-    size = int(.10 * rate)
+def pitch_at(y, rate, seconds, window_seconds=.10):
+    size = int(window_seconds * rate)
     center = int(seconds * rate)
-    if center - size // 2 < 0 or center + size // 2 >= len(y):
+    if center - size // 2 < 0 or center + size // 2 > len(y):
         return None
     x = y[center - size // 2:center + size // 2].copy()
     x -= x.mean()
@@ -133,19 +133,96 @@ def pitch_compare(root, clip, diagnostics, recipe):
             'method':'Independent normalized autocorrelation, 100ms windows every40ms; source time mapped through recorded duration ratio and event entrance. No phoneme or perceptual inference.'}
 
 
+def fixture_boundary(source, rate, y):
+    """Review the selected phrase end, not merely the complete WAV's end."""
+    guard = source['boundaryGuard']
+    start, end = source['phraseStartFrame'], source['phraseEndFrame']
+    ss, se = source['sustainStartFrame'], source['sustainEndFrame']
+    if not (0 <= start < ss < se <= end <= len(y)):
+        return {'passed': False, 'failures': ['invalid phrase or sustain marker bounds']}
+    selected = y[start:end]
+    sustain = y[ss:se]
+    body_rms = float(np.sqrt(np.mean(sustain*sustain)))
+    tail = selected[-guard['tailWindowFrames']:]
+    tail_rms = float(np.sqrt(np.mean(tail*tail)))
+    ratio = tail_rms/max(body_rms, 1e-12)
+    failures = []
+    if tail_rms > guard['maxTailRms'] or ratio > guard['maxTailToSustainRmsRatio']:
+        failures.append('selected phrase ends while high-energy: tail amplitude exceeds fixture guard')
+    sustain_pitches = []
+    for t in np.arange(.06, len(sustain)/rate-.051, .025):
+        p = pitch_at(sustain, rate, t)
+        if p:
+            sustain_pitches.append(p[0])
+    baseline = float(np.median(sustain_pitches)) if sustain_pitches else source['referenceHz']
+    sustain_excursion = max((abs(1200*math.log2(f/baseline)) for f in sustain_pitches), default=0)
+    if sustain_excursion > guard['maxSustainPitchExcursionCents']:
+        failures.append('marked sustain contains an unexpected pitch excursion')
+    tail_pitches = []
+    scan = guard['tailPitchScanFrames']/rate
+    for t in np.arange(max(.06, len(selected)/rate-scan), len(selected)/rate-.02499, .025):
+        a, b = int((t-.025)*rate), int((t+.025)*rate)
+        local_rms = float(np.sqrt(np.mean(selected[a:b]**2)))
+        if local_rms < body_rms*guard['pitchEnergyFractionOfSustain']:
+            continue
+        p = pitch_at(selected, rate, t, window_seconds=.05)
+        if p:
+            tail_pitches.append({'secondsBeforeSelectedEnd': len(selected)/rate-t,
+                                 'hz': p[0], 'rms': local_rms,
+                                 'excursionCents': abs(1200*math.log2(p[0]/baseline))})
+    excursion = max((p['excursionCents'] for p in tail_pitches), default=0)
+    if excursion > guard['maxHighEnergyTailPitchExcursionCents']:
+        failures.append('high-energy selected tail includes another pitch gesture')
+    return {'passed': not failures, 'failures': failures,
+            'selectedStartFrame': start, 'selectedEndFrame': end, 'canonicalFrames': len(y),
+            'tailRms': tail_rms, 'sustainRms': body_rms, 'tailToSustainRmsRatio': ratio,
+            'sustainMedianHz': baseline, 'maxSustainPitchExcursionCents': sustain_excursion,
+            'maxHighEnergyTailPitchExcursionCents': excursion,
+            'highEnergyTailPitchWindows': tail_pitches,
+            'scope': 'Fixture-specific boundary check over selected region and marked sustain; no arbitrary user-source restriction or listening verdict.'}
+
+
+def review_fixture_boundaries(root):
+    path = root/'manifest.json'
+    if not path.is_file():
+        path = root/'fixture-manifest.json'
+    manifest = json.loads(path.read_text())
+    checks = {}
+    for source in manifest['sources']:
+        if 'boundaryGuard' in source:
+            rate, y = read(root/source['path'])
+            checks[source['id']] = fixture_boundary(source, rate, y)
+    return {'fixtureManifestSha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+            'fixtures': checks,
+            'passed': all(c['passed'] for c in checks.values())}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--audition', type=Path, default=DEFAULT_AUDITION,
                         help='Audition directory containing manifest.json (default: repository testkit/confluence-audition)')
     parser.add_argument('--output', type=Path,
                         help='Review JSON destination (default: AUDITION/source-signal-review.json)')
+    parser.add_argument('--fixtures', type=Path,
+                        help='Fixture directory for boundary guards (default: AUDITION/sources)')
+    parser.add_argument('--fixtures-only', action='store_true',
+                        help='Review only fixture boundaries; default fixture directory is repository reference/fixtures/confluence')
     args = parser.parse_args()
     root = args.audition.resolve()
     output = args.output.resolve() if args.output else root / 'source-signal-review.json'
+    fixtures = args.fixtures.resolve() if args.fixtures else (Path(__file__).resolve().parents[1]/'reference/fixtures/confluence' if args.fixtures_only else root/'sources')
+    boundaries = review_fixture_boundaries(fixtures)
+    if args.fixtures_only:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(boundaries, indent=2)+'\n')
+        print(json.dumps(boundaries, indent=2))
+        return 0 if boundaries['passed'] else 1
     manifest = json.loads((root/'manifest.json').read_text())
     clips = {c['id']: c for c in manifest['clips']}
     assessments = {}
     issues = []
+    if not boundaries['passed']:
+        issues.append({'issue': 'Fixture source boundary regression', 'details': boundaries})
     diagnostics_by_id = {}
     for id, clip in clips.items():
         raw = metrics(root/clip['rawPath'])
@@ -218,6 +295,7 @@ def main():
             'maximumAbsoluteRawDc':max(abs(c['raw']['dc']) for c in assessments.values()),'maximumExportedRawPeak':max(c['raw']['peak'] for c in assessments.values()),
             'maximumAbsoluteEngineRawDc':max(abs(c['raw']['dc']) for c in engine_cases.values()),
             'completeRegionEventCount':sum(c['trace']['completeRegionEvents'] for c in engine_cases.values()),
+            'fixtureBoundaryReview':boundaries,
             'cases':assessments}
     serialized=json.dumps(review,indent=2)+'\n'
     output.parent.mkdir(parents=True, exist_ok=True)

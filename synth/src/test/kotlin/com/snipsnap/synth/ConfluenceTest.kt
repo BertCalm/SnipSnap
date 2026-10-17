@@ -2,9 +2,15 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
+import com.snipsnap.json.Json
+import com.snipsnap.json.JsonValue
+import java.io.File
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -177,5 +183,69 @@ class ConfluenceTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `committed vowel phrases retain quiet natural releases and reject the retired hot crop`() {
+        val fixtureDir = listOf(File("../reference/fixtures/confluence"), File("reference/fixtures/confluence"))
+            .firstOrNull { File(it, "manifest.json").isFile }
+            ?: error("Confluence source fixtures are required for the boundary regression")
+        val manifest = Json.parse(File(fixtureDir, "manifest.json").readText()).obj()
+        val vowels = manifest.getValue("sources").arr().map { it.obj() }.filter { it.getValue("kind").str() == "vowel" }
+        assertTrue(vowels.size >= 2, "both human vowel fixtures must be covered")
+
+        fun rms(samples: FloatArray, from: Int, end: Int): Double =
+            sqrt((from until end).sumOf { samples[it].toDouble() * samples[it] } / (end - from))
+
+        fun requireQuietRelease(label: String, samples: FloatArray, source: Map<String, JsonValue>, guard: Map<String, JsonValue>) {
+            val phraseStart = source.getValue("phraseStartFrame").int()
+            val phraseEnd = source.getValue("phraseEndFrame").int()
+            val sustainStart = source.getValue("sustainStartFrame").int()
+            val sustainEnd = source.getValue("sustainEndFrame").int()
+            val tailFrames = guard.getValue("tailWindowFrames").int()
+            val absoluteLimit = guard.getValue("maxTailRms").num()
+            val relativeLimit = guard.getValue("maxTailToSustainRmsRatio").num()
+            assertTrue(phraseStart >= 0 && phraseStart <= sustainStart && sustainStart < sustainEnd &&
+                sustainEnd <= phraseEnd && phraseEnd <= samples.size, "$label: invalid phrase or sustain markers")
+            assertTrue(tailFrames > 0 && tailFrames <= phraseEnd - phraseStart, "$label: invalid tail window")
+            assertTrue(absoluteLimit.isFinite() && absoluteLimit in 0.0..1.0 &&
+                relativeLimit.isFinite() && relativeLimit in 0.0..1.0, "$label: invalid boundary guard limits")
+            val sustainRms = rms(samples, sustainStart, sustainEnd)
+            // Read the selected phrase boundary, which need not be the end of the asset file.
+            val tailRms = rms(samples, phraseEnd - tailFrames, phraseEnd)
+            assertTrue(sustainRms > 1e-5, "$label: a silent sustain cannot qualify a quiet release")
+            assertTrue(tailRms <= absoluteLimit,
+                "$label: phrase ends while hot (tail RMS $tailRms, limit $absoluteLimit)")
+            assertTrue(tailRms / sustainRms <= relativeLimit,
+                "$label: phrase release is too loud relative to its sustain (ratio ${tailRms / sustainRms}, limit $relativeLimit)")
+        }
+
+        for (source in vowels) {
+            val id = source.getValue("id").str()
+            val audio = WavReader.read(File(fixtureDir, source.getValue("path").str()))
+            assertEquals(1, audio.channels, "$id: canonical fixture must be mono")
+            assertEquals(44_100, audio.sampleRate, "$id: canonical fixture rate")
+            assertEquals(source.getValue("frames").int(), audio.frameCount, "$id: manifest frame count")
+            val guard = source["boundaryGuard"]?.obj() ?: error("$id: held-vowel boundaryGuard is required")
+            requireQuietRelease(id, audio.samples, source, guard)
+        }
+
+        // Reconstruct the exact rejected selection from its retained original and documented gain.
+        // The first implementation's frame-count and zero-edge checks accepted this next-octave onset.
+        val retired = manifest.getValue("retiredVowelMale").obj().getValue("previousSource").obj()
+        val original = WavReader.read(File(fixtureDir, retired.getValue("originalPath").str()))
+        assertEquals(1, original.channels)
+        assertEquals(44_100, original.sampleRate)
+        val from = retired.getValue("originalCropStartFrame").int()
+        val end = retired.getValue("originalCropEndFrame").int()
+        val gain = 10.0.pow(retired.getValue("gainDb").num() / 20)
+        val rejected = original.samples.copyOfRange(from, end).also { samples ->
+            for (i in samples.indices) samples[i] = (samples[i] * gain).toFloat()
+        }
+        assertEquals(retired.getValue("frames").int(), rejected.size)
+        val guard = vowels.first { it.getValue("id").str() == "vowel-male" }.getValue("boundaryGuard").obj()
+        val failure = assertFailsWith<AssertionError> { requireQuietRelease("retired male1 crop", rejected, retired, guard) }
+        assertTrue(failure.message.orEmpty().contains("phrase ends while hot"),
+            "the regression must fail for its audible hot boundary, not malformed markers: ${failure.message}")
     }
 }

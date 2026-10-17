@@ -29,3 +29,21 @@ These checks cannot establish word intelligibility, plausible human identity,
 or whether the result sounds like performers joining. Those remain listening
 judgments. Rerun this script after regenerating the audition so the report
 matches the published audio and manifest.
+
+Held-vowel fixture manifests can declare `boundaryGuard` settings. The reviewer
+checks the **selected phrase end**, final 50 ms amplitude, full last-500 ms
+high-energy pitch trajectory, and marked sustain pitch range. These guards are
+specific to the curated audition fixtures, not restrictions on user audio.
+Check source fixtures before regenerating the audition with:
+
+```sh
+python scripts/review-confluence-audio.py --fixtures-only \
+  --output /tmp/confluence-fixture-boundaries.json
+```
+
+Use `--fixtures /path/to/fixtures` to override the fixture directory. Ordinary
+audition review checks the copied manifest and recordings in `AUDITION/sources`.
+Run `python scripts/test_confluence_fixture_boundaries.py` for the three
+regressions: current vowels pass, the retired male1 crop fails both amplitude
+and pitch checks, and a stale selected end marker fails even if the complete
+canonical file has a quiet tail.
