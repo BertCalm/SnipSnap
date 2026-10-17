@@ -6,8 +6,9 @@ import com.snipsnap.json.JsonValue
 import java.util.Collections
 
 /**
- * A reproducible finite Facet prototype recipe. The six controls keep pitch and
- * playing effort separate; geometry tables and resonator memories are rebuilt.
+ * A reproducible, versioned finite Facet prototype recipe. The six controls keep
+ * pitch and playing effort separate; geometry tables and resonator memories are
+ * rebuilt by the saved model. Missing JSON model metadata always means R1.
  *
  * MACRO creates every beam from the voice and controls and requires an empty
  * override list. OVERRIDE replaces the listed stable beam IDs after macro
@@ -37,7 +38,7 @@ class FacetPatch(
         require(initialAlignment.isFinite() && initialAlignment in 0f..1f) {
             "FACET initialAlignment must be 0..1 turns"
         }
-        require(modelVersion == MODEL_VERSION) { "unsupported FACET model $modelVersion" }
+        require(Facet.supportsModel(modelVersion)) { "unsupported FACET model $modelVersion" }
         require(beamMode == "MACRO" || beamMode == "OVERRIDE") { "FACET beamMode must be MACRO or OVERRIDE" }
         require(beamMode != "MACRO" || this.beams.isEmpty()) { "FACET MACRO mode cannot discard beam overrides; select OVERRIDE" }
         require(this.beams.map { it.id }.distinct().size == this.beams.size) { "FACET beam IDs must be unique" }
@@ -56,7 +57,7 @@ class FacetPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Facet.render(voice, macros, midi = midi, velocity = velocity, seed = seed,
-        initialAlignment = initialAlignment, beams = beams, beamMode = beamMode)
+        initialAlignment = initialAlignment, beams = beams, beamMode = beamMode, modelVersion = modelVersion)
     override fun withMacros(macros: Map<String, Float>): FacetPatch = copy(macros = macros)
 
     fun copy(
@@ -106,7 +107,7 @@ class FacetPatch(
     companion object {
         const val ENGINE = "FACET"
         const val VERSION = Patches.VERSION
-        const val MODEL_VERSION = 1
+        const val MODEL_VERSION = Facet.MODEL_VERSION
 
         private fun number(value: Number) = JsonValue.Num(value.toDouble())
 
@@ -131,7 +132,8 @@ class FacetPatch(
                         initialAlignment = obj["initialAlignment"]?.num()?.toFloat() ?: 0f,
                         beams = beams,
                         beamMode = obj["beamMode"]?.str() ?: "MACRO",
-                        modelVersion = obj["modelVersion"]?.int() ?: MODEL_VERSION,
+                        // An old recipe must not silently acquire the current source model.
+                        modelVersion = obj["modelVersion"]?.int() ?: Facet.LEGACY_MODEL_VERSION,
                     )
                 } catch (e: IllegalArgumentException) {
                     throw JsonException(e.message ?: "invalid FACET patch")

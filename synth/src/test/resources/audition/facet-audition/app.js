@@ -81,6 +81,19 @@
     if (text) parent.append(node('span', '', text));
   }
 
+  function sourceVariant(clip) {
+    const comparison = clip.comparison && typeof clip.comparison === 'object' ? clip.comparison : {};
+    const variant = String(comparison.variant || clip.variant || clip.sourceModel || '').toLowerCase();
+    if (variant === 'r1' || variant.includes('original') || Number(clip.modelVersion) === 1) return 'r1';
+    if (variant.includes('clean') || clip.sourceMotion === false) return 'r2_clean';
+    if (variant.includes('living') || Number(clip.modelVersion) === 2) return 'r2_living';
+    return null;
+  }
+
+  function sourceLabel(clip) {
+    return { r1: 'R1 original', r2_clean: 'R2 motion off', r2_living: 'R2 full source' }[sourceVariant(clip)] || clip.sourceModelLabel || null;
+  }
+
   function createRecipe(clip) {
     const recipe = clip.recipe;
     const recipeUrl = assetPath(recipe);
@@ -93,6 +106,8 @@
       midi: clip.midi,
       velocity: clip.velocity,
       seconds: clip.seconds,
+      modelVersion: clip.modelVersion,
+      sourceMotion: clip.sourceMotion,
       macros: clip.macros,
       alignment: clip.alignment
     }, null, 2));
@@ -121,7 +136,7 @@
     return svg;
   }
 
-  function createClip(clip, index) {
+  function createClip(clip, index, options = {}) {
     const article = node('article', 'clip-card');
     const safeId = String(clip.id || `clip-${index}`).replace(/[^a-zA-Z0-9_-]/g, '-');
     const titleId = `title-${safeId}-${players.length}`;
@@ -134,12 +149,17 @@
     mark.setAttribute('aria-hidden', 'true');
     voice.append(mark, document.createTextNode(voiceName));
     top.append(voice, node('span', 'clip-duration', secondsText(clip.seconds)));
-    const title = node('h4', 'clip-title', clip.title || prettyName(clip.id || `Reflection ${index + 1}`));
+    const title = node(options.headingTag || 'h4', 'clip-title', options.title || clip.title || prettyName(clip.id || `Reflection ${index + 1}`));
     title.id = titleId;
     article.append(top, title);
+    if (options.sourceComparison) {
+      const badge = node('div', `source-status ${sourceVariant(clip) === 'r2_living' ? 'is-current' : ''}`, sourceVariant(clip) === 'r2_living' ? 'Current default' : sourceVariant(clip) === 'r1' ? 'Original source' : 'Beam motion off');
+      article.append(badge);
+    }
     if (clip.description) article.append(node('p', 'clip-description', clip.description));
 
     const meta = node('div', 'clip-meta');
+    if (!options.sourceComparison && sourceLabel(clip)) addMeta(meta, sourceLabel(clip));
     if (clip.midi !== undefined && clip.midi !== null) addMeta(meta, `${noteName(clip.midi) || 'Note'} · MIDI ${clip.midi}`);
     if (clip.velocity !== undefined && clip.velocity !== null) addMeta(meta, `Velocity ${displayNumber(clip.velocity)}`);
     if (clip.alignment !== undefined && clip.alignment !== null) {
@@ -220,6 +240,10 @@
       if (activePlayer && activePlayer !== audio) activePlayer.pause();
       activePlayer = audio;
       article.classList.add('is-playing');
+      if (record.comparisonGroup) {
+        record.comparisonGroup.last = record;
+        record.comparisonGroup.records.forEach(item => item.switchButton.setAttribute('aria-pressed', String(item === record)));
+      }
     });
     const stop = () => article.classList.remove('is-playing');
     audio.addEventListener('pause', stop);
@@ -229,6 +253,74 @@
       unavailable.hidden = false;
     });
     return article;
+  }
+
+  function switchSource(record, group) {
+    const current = group.records.find(item => item.audio === activePlayer) || group.last;
+    const time = current ? current.audio.currentTime || 0 : 0;
+    const request = ++group.request;
+    if (activePlayer && activePlayer !== record.audio) activePlayer.pause();
+    const seek = () => {
+      if (group.request !== request) return;
+      const duration = record.audio.duration;
+      record.audio.currentTime = Math.min(time, Number.isFinite(duration) ? Math.max(0, duration - .05) : time);
+      group.status.textContent = `${sourceLabel(record.clip)} · ${displayNumber(record.audio.currentTime, 1)} sec`;
+    };
+    if (record.audio.readyState >= 1) seek();
+    else record.audio.addEventListener('loadedmetadata', seek, { once: true });
+    // Keep play() inside the click gesture; metadata can arrive after playback is requested.
+    record.audio.play().catch(() => {
+      if (group.request === request && record.audio === activePlayer) group.status.textContent = 'Use the audio play button to continue.';
+    });
+  }
+
+  function createSourceComparisons(clips) {
+    const container = node('div', 'revision-groups');
+    const jump = node('nav', 'revision-jump');
+    jump.setAttribute('aria-label', 'Choose a voice and register to compare');
+    container.append(jump);
+    const groups = new Map();
+    clips.forEach(clip => {
+      const key = clip.comparison && typeof clip.comparison === 'object' && clip.comparison.group || `${clip.voice || 'FACET'}-${clip.midi}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(clip);
+    });
+    groups.forEach((groupClips, key) => {
+      groupClips.sort((a, b) => (a.comparison && a.comparison.order || 0) - (b.comparison && b.comparison.order || 0));
+      const groupElement = node('div', 'revision-group');
+      const label = `${groupClips[0].voice || 'FACET'} · ${noteName(groupClips[0].midi) || groupClips[0].noteName || ''}`;
+      groupElement.id = `source-${String(key).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      const jumpLink = node('a', '', label);
+      jumpLink.href = `#${groupElement.id}`;
+      jump.append(jumpLink);
+      const heading = node('div', 'revision-group-heading');
+      heading.append(node('h4', '', label), node('span', '', 'Same note · same geometry'));
+      const tools = node('div', 'source-switch-tools');
+      const buttons = node('div', 'source-switch-buttons');
+      buttons.setAttribute('role', 'group');
+      buttons.setAttribute('aria-label', `Switch source at the same position for ${label}`);
+      const status = node('span', 'source-switch-status', 'Start any version; switch at the same position.');
+      status.setAttribute('aria-live', 'polite');
+      const grid = node('div', 'clip-grid revision-grid');
+      const group = { key, records: [], last: null, status, request: 0 };
+      groupClips.forEach((clip, index) => {
+        grid.append(createClip(clip, index, { headingTag: 'h5', title: sourceLabel(clip), sourceComparison: true }));
+        const record = players[players.length - 1];
+        const button = node('button', '', sourceLabel(clip));
+        button.type = 'button';
+        button.setAttribute('aria-label', `Hear ${sourceLabel(clip)} at the same position for ${label}`);
+        button.setAttribute('aria-pressed', 'false');
+        button.addEventListener('click', () => switchSource(record, group));
+        record.comparisonGroup = group;
+        record.switchButton = button;
+        group.records.push(record);
+        buttons.append(button);
+      });
+      tools.append(node('span', 'source-switch-label', 'Switch source'), buttons, status);
+      groupElement.append(heading, tools, grid);
+      container.append(groupElement);
+    });
+    return container;
   }
 
   function updateVariantNote(record) {
@@ -272,7 +364,9 @@
     const entries = [
       ['First-listen pack', downloads && (downloads.zip || downloads.audio || downloads.allAudio)],
       ['Engine & render source', downloads && (downloads.source || downloads.sourceZip)],
-      ['Listening report', downloads && (downloads.report || downloads.analysis)]
+      ['Listening report', downloads && (downloads.report || downloads.analysis)],
+      ['R1 original measurements', downloads && (downloads.r1Measurements || downloads.originalMeasurements || downloads.r1Metadata)],
+      ['R1 original metadata archive', downloads && (downloads.r1Archive || downloads.originalArchive)]
     ];
     const added = [];
     if (downloads && Array.isArray(downloads.archives)) {
@@ -310,9 +404,15 @@
       if (section.description) titleWrap.append(node('p', 'comparison-description', section.description));
       const clips = Array.isArray(section.clips) ? section.clips : [];
       heading.append(node('span', 'comparison-number', number), titleWrap, node('span', 'comparison-count', `${clips.length} ${clips.length === 1 ? 'reflection' : 'reflections'}`));
-      const grid = node('div', `clip-grid${clips.length === 1 ? ' solo' : ''}`);
-      clips.forEach((clip, index) => grid.append(createClip(clip, index)));
-      wrapper.append(heading, grid);
+      wrapper.append(heading);
+      if (section.id === 'revision' || clips.some(clip => clip.comparison && typeof clip.comparison === 'object' && clip.comparison.group)) {
+        wrapper.classList.add('source-study');
+        wrapper.append(createSourceComparisons(clips));
+      } else {
+        const grid = node('div', `clip-grid${clips.length === 1 ? ' solo' : ''}`);
+        clips.forEach((clip, index) => grid.append(createClip(clip, index)));
+        wrapper.append(grid);
+      }
       elements.sections.append(wrapper);
       const navLink = node('a');
       navLink.href = `#${id}`;

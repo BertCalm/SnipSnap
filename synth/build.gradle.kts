@@ -12,6 +12,7 @@ tasks.register<JavaExec>("generateFacetAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("facetOutput").orNull ?: "${rootDir}/testkit/facet-audition")
     if (project.hasProperty("facetQuick")) args("--quick")
+    providers.gradleProperty("facetR1Baseline").orNull?.let { args("--r1=$it") }
 }
 
 /** First Osprey proof: real five-shore SWELL renders and reproducible listening evidence. */

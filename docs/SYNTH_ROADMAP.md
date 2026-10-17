@@ -50,14 +50,24 @@ machines when the point is naming the rule that forbids naming them.
 
 ### FACET — mirrorball-driven spectral pads
 
-**Finite prototype in development; listening acceptance pending.** BLOOM and
+**R2 source revision in development; listening acceptance pending.** The owner
+heard R1 as lo-fi and dead while confirming its macro controls worked. R1's
+full repository gate passed 4,944 tests in approximately 86 minutes. R2 passed
+26 focused engine, patch, model and integration checks with no failures or
+skips; the full repository gate has not been rerun for R2. Its new listening
+pack and the owner's verdict are pending.
+BLOOM and
 SHIMMER explore twelve generated harmonic beams, a deterministic nested facet
 layout, moving spectral routes and shared resonance. ILLUMINATE, ELEVATION,
 CHROMA, REVOLVE, FACETS and HOLD remain separate controls; MIDI root and
 excitation velocity live in the recipe. Initial alignment, seed and sparse
 stable-ID beam overrides survive JSON and macro edits. REVOLVE zero is exactly
 stopped. HOLD below .99 sets finite duration; the loop setting is explicitly
-rejected until phase and resonator closure are implemented. The other four
+rejected until phase and resonator closure are implemented. R2 replaces R1's
+eight-carrier source with 32 partials across three beam groups and subtle
+upper-harmonic beating, retaining a locked fundamental and the geometry/control
+mapping. Saved model-1 recipes retain the preserved R1 renderer; new recipes
+default to model 2, and absent model metadata means model 1. The other four
 voices, Android picker, expanded beam editor, presets and factory kit wait for
 the initial dry listening proof. See [FACET.md](FACET.md) for scope, override
 precedence and the distinction between finite kit pads and held keygroups.

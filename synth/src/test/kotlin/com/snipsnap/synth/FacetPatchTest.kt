@@ -13,7 +13,7 @@ class FacetPatchTest {
     private fun raw(patch: FacetPatch) = Facet.probe(patch.voice, patch.macros,
         midi = patch.midi, velocity = patch.velocity, seed = patch.seed,
         initialAlignment = patch.initialAlignment, beams = patch.beams, beamMode = patch.beamMode,
-        options = FacetOptions(seconds = .5f)).raw
+        options = FacetOptions(seconds = .5f), modelVersion = patch.modelVersion).raw
 
     @Test
     fun `default and sparse override recipes regenerate the same bytes after dispatch`() {
@@ -85,7 +85,7 @@ class FacetPatchTest {
         fun changed(field: String, value: JsonValue) = JsonValue.Obj(
             LinkedHashMap(patch.toJsonValue().entries).apply { put(field, value) })
         for ((field, value) in listOf(
-            "modelVersion" to JsonValue.Num(2.0),
+            "modelVersion" to JsonValue.Num(3.0),
             "midi" to JsonValue.Num(48.5),
             "seed" to JsonValue.Num(1.5),
             "beamMode" to JsonValue.Str("MIX"),

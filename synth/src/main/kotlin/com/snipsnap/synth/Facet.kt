@@ -39,6 +39,7 @@ data class FacetOptions(
     val resonance: Boolean = true,
     val commonGainRouting: Boolean = false,
     val oversample: Int = 4,
+    val sourceMotion: Boolean = true,
 ) {
     init {
         require(seconds == null || seconds.isFinite() && seconds in .5f..24f) {
@@ -75,13 +76,20 @@ data class FacetRender(
 )
 
 object Facet {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    const val LEGACY_MODEL_VERSION = 1
     const val DEFAULT_MIDI = 48
     private const val TABLE_SIZE = 2048
-    private const val PARTIALS = 8
-    private val bloomHarmonics = intArrayOf(1, 2, 3, 4, 5, 6, 8, 10)
-    private val shimmerHarmonics = intArrayOf(1, 2, 3, 4, 6, 10, 16, 24)
+    private const val PARTIALS = 32
+    private const val SOURCE_GROUPS = 3
+    private const val ROUTES = PARTIALS * SOURCE_GROUPS
+    private const val GEOMETRY_VERSION = 1
+    private const val DETUNE_CENTS = 2.5
+    private const val DETUNE_HZ_CEILING = .9
+    private val harmonics = IntArray(PARTIALS) { it + 1 }
     private val levels = intArrayOf(8, 16, 32, 64, 128)
+
+    fun supportsModel(modelVersion: Int): Boolean = modelVersion == LEGACY_MODEL_VERSION || modelVersion == MODEL_VERSION
 
     fun macrosFor(voice: FacetVoice): List<MacroSpec> {
         val bloom = voice == FacetVoice.BLOOM
@@ -118,7 +126,8 @@ object Facet {
         beams: List<FacetBeam> = emptyList(),
         beamMode: String = "MACRO",
         options: FacetOptions = FacetOptions(),
-    ): Snip = probe(voice, macros, midi, velocity, seed, initialAlignment, beams, beamMode, options).snip
+        modelVersion: Int = MODEL_VERSION,
+    ): Snip = probe(voice, macros, midi, velocity, seed, initialAlignment, beams, beamMode, options, modelVersion).snip
 
     fun probe(
         voice: FacetVoice,
@@ -130,7 +139,12 @@ object Facet {
         beams: List<FacetBeam> = emptyList(),
         beamMode: String = "MACRO",
         options: FacetOptions = FacetOptions(),
+        modelVersion: Int = MODEL_VERSION,
     ): FacetRender {
+        require(supportsModel(modelVersion)) { "Unsupported Facet model version: $modelVersion" }
+        if (modelVersion == LEGACY_MODEL_VERSION) return FacetModel1.probe(
+            voice, macros, midi, velocity, seed, initialAlignment, beams, beamMode, options,
+        )
         val preparationStart = System.nanoTime()
         require(midi in 0..127) { "Facet MIDI note must be in 0..127" }
         require(velocity.isFinite() && velocity in 0f..1f) { "Facet velocity must be in 0..1" }
@@ -145,7 +159,6 @@ object Facet {
         val elevation = m.getValue("ELEVATION")
         val chroma = m.getValue("CHROMA")
         val density = m.getValue("FACETS")
-        val harmonics = if (voice == FacetVoice.BLOOM) bloomHarmonics else shimmerHarmonics
         val rotor = rotationHz(m.getValue("REVOLVE"), voice)
         val activeBeams = generatedBeams(illumination, elevation, chroma, voice).toMutableList()
         for (beam in beams) activeBeams[beam.id] = beam
@@ -154,14 +167,19 @@ object Facet {
         val densityPosition = density.toDouble() * 4.0
         val lower = floor(densityPosition).toInt().coerceAtMost(3)
         val blend = (densityPosition - lower).coerceIn(0.0, 1.0)
-        val renderSeed = Dsp.seedFor("FACET", MODEL_VERSION, voice, seed)
-        val random = Random(renderSeed)
-        val phases = DoubleArray(PARTIALS) { random.nextDouble() * 2.0 * PI }
-        val beamPhases = Array(12) { DoubleArray(PARTIALS) { (random.nextDouble() - .5) * .8 } }
+        // Source revisions must not rearrange the surface used by a saved patch.
+        val renderSeed = Dsp.seedFor("FACET", GEOMETRY_VERSION, voice, seed)
+        val phases = DoubleArray(PARTIALS) { p ->
+            Random(Dsp.seedFor(renderSeed, "source", harmonics[p])).nextDouble() * 2.0 * PI
+        }
+        val beamPhases = Array(12) { b -> DoubleArray(PARTIALS) { p ->
+            (Random(Dsp.seedFor(renderSeed, "beam", b, harmonics[p])).nextDouble() - .5) * .8
+        } }
         // The angular response is a finite trigonometric polynomial: max degree 28.
         // Its fastest sideband is therefore 28*rotorHz, not an unbounded pulse edge.
         val modulationBandwidth = 28.0 * rotor
-        val sourceCeiling = 16_000.0 - modulationBandwidth
+        // The guard is identical for clean/living comparisons; only frequencies move.
+        val sourceCeiling = 16_000.0 - modulationBandwidth - DETUNE_HZ_CEILING
         val partialGuard = DoubleArray(PARTIALS) { p ->
             val ratio = frequency * harmonics[p] / sourceCeiling
             when { ratio >= 1.0 -> 0.0; ratio <= .82 -> 1.0; else -> .5 + .5 * cos(PI * (ratio - .82) / .18) }
@@ -169,7 +187,7 @@ object Facet {
         val lowTable = prepare(levels[lower], lower, activeBeams, beamPhases, illumination, velocity, partialGuard, renderSeed, harmonics)
         val highTable = if (blend == 0.0) lowTable else
             prepare(levels[lower + 1], lower + 1, activeBeams, beamPhases, illumination, velocity, partialGuard, renderSeed, harmonics)
-        val table = Array(PARTIALS * 2) { c ->
+        val table = Array(ROUTES * 2) { c ->
             FloatArray(TABLE_SIZE) { i -> (lowTable[c][i] * (1.0 - blend) + highTable[c][i] * blend).toFloat() }
         }
         if (options.commonGainRouting) useCommonGain(table)
@@ -179,13 +197,22 @@ object Facet {
         val rate = Dsp.RATE * options.oversample
         val frames = (seconds * Dsp.RATE).toInt()
         val internal = FloatArray(frames * options.oversample)
-        val oscillatorSin = DoubleArray(PARTIALS) { sin(phases[it]) }
-        val oscillatorCos = DoubleArray(PARTIALS) { cos(phases[it]) }
-        val stepSin = DoubleArray(PARTIALS) { sin(2.0 * PI * frequency * harmonics[it] / rate) }
-        val stepCos = DoubleArray(PARTIALS) { cos(2.0 * PI * frequency * harmonics[it] / rate) }
-        // Twelve strictly stable complex poles. Four longer duplicate harmonic modes
-        // let a glint linger while the shorter modes reveal the following alignment.
-        val modeSource = intArrayOf(0, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 5)
+        val oscillatorCount = if (options.sourceMotion) ROUTES else PARTIALS
+        val oscillatorSin = DoubleArray(oscillatorCount) { sin(phases[it % PARTIALS]) }
+        val oscillatorCos = DoubleArray(oscillatorCount) { cos(phases[it % PARTIALS]) }
+        val oscillatorHz = DoubleArray(oscillatorCount) { i ->
+            val p = i % PARTIALS
+            val nominal = frequency * harmonics[p]
+            val group = i / PARTIALS
+            val offset = if (p == 0 || !options.sourceMotion) 0.0 else
+                min(DETUNE_HZ_CEILING, nominal * (2.0.pow(DETUNE_CENTS / 1200.0) - 1.0)) * (group - 1)
+            nominal + offset
+        }
+        val stepSin = DoubleArray(oscillatorCount) { sin(2.0 * PI * oscillatorHz[it] / rate) }
+        val stepCos = DoubleArray(oscillatorCount) { cos(2.0 * PI * oscillatorHz[it] / rate) }
+        // Stable, root-related modes now cover the upper material as well as the body.
+        // The fundamental is supported without being reinforced by most of the bank.
+        val modeSource = intArrayOf(0, 1, 2, 3, 5, 7, 9, 11, 15, 19, 23, 31)
         val modeReal = DoubleArray(modeSource.size)
         val modeImag = DoubleArray(modeSource.size)
         val poleReal = DoubleArray(modeSource.size)
@@ -193,8 +220,8 @@ object Facet {
         val injection = DoubleArray(modeSource.size)
         for (j in modeSource.indices) {
             val p = modeSource[j]
-            val tail = (if (voice == FacetVoice.BLOOM) 1.4 else .8) *
-                (1.25 - .65 * p / 7.0) * (if (j >= PARTIALS) 1.8 else 1.0) * (1.15 - .3 * chroma)
+            val tail = (if (voice == FacetVoice.BLOOM) 1.7 else 1.25) *
+                (1.1 - .55 * p / (PARTIALS - 1.0)) * (1.15 - .3 * chroma)
             val radius = exp(-ln(1000.0) / (tail * rate))
             val w = 2.0 * PI * frequency * harmonics[p] / rate
             poleReal[j] = radius * cos(w)
@@ -206,7 +233,8 @@ object Facet {
         val phaseStep = rotor.toDouble() / rate
         val trace = ArrayList<FacetTrace>()
         val traceEvery = max(1, rate / 50)
-        val route = FloatArray(PARTIALS * 2)
+        val route = FloatArray(ROUTES * 2)
+        lookupInto(table, startPhase * TABLE_SIZE, route)
         val partial = DoubleArray(PARTIALS)
         var statePeak = 0.0
         val tailSeconds = min(seconds * .36, 1.1)
@@ -218,11 +246,22 @@ object Facet {
             val a = smooth((t / attack).coerceIn(0.0, 1.0))
             val release = 1.0 - smooth(((t - releaseStart) / releaseSeconds).coerceIn(0.0, 1.0))
             val envelope = a * release * velocity
-            val position = phase * TABLE_SIZE
-            for (c in route.indices) route[c] = lookup(table[c], position)
+            if (rotor != 0f) lookupInto(table, phase * TABLE_SIZE, route)
             var reflected = 0.0
             for (p in 0 until PARTIALS) {
-                partial[p] = (oscillatorSin[p] * route[p * 2] + oscillatorCos[p] * route[p * 2 + 1]) * envelope
+                var excitation = 0.0
+                for (g in 0 until SOURCE_GROUPS) {
+                    val source = if (options.sourceMotion) g * PARTIALS + p else p
+                    val c = (g * PARTIALS + p) * 2
+                    // Keep the illuminated carrier present while a quieter part of
+                    // each beam beats around it. Detuning the entire beam made the
+                    // upper spectrum periodically cancel and exposed the root again.
+                    val center = if (options.sourceMotion) PARTIALS + p else p
+                    val sourceSin = if (options.sourceMotion) .70 * oscillatorSin[center] + .30 * oscillatorSin[source] else oscillatorSin[p]
+                    val sourceCos = if (options.sourceMotion) .70 * oscillatorCos[center] + .30 * oscillatorCos[source] else oscillatorCos[p]
+                    excitation += sourceSin * route[c] + sourceCos * route[c + 1]
+                }
+                partial[p] = excitation * envelope
                 reflected += partial[p]
             }
             var resonance = 0.0
@@ -232,16 +271,23 @@ object Facet {
                 modeReal[j] = poleReal[j] * re - poleImag[j] * im + injection[j] * partial[modeSource[j]]
                 modeImag[j] = poleImag[j] * re + poleReal[j] * im
                 statePeak = max(statePeak, max(abs(modeReal[j]), abs(modeImag[j])))
-                resonance += modeReal[j] * (if (j < PARTIALS) .65 else .23)
+                resonance += modeReal[j] * (if (j == 0) .2 else .52 + .2 * modeSource[j] / (PARTIALS - 1.0))
             }
-            val root = oscillatorSin[0] * .17 * illuminated * envelope
+            val root = oscillatorSin[0] * .04 * illuminated * envelope
             internal[n] = (.52 * reflected + .68 * resonance + root).toFloat()
             if (n % traceEvery == 0) trace.add(FacetTrace(t.toFloat(), phase,
-                List(PARTIALS) { p -> sqrt(route[p * 2] * route[p * 2] + route[p * 2 + 1] * route[p * 2 + 1]) }))
-            for (p in 0 until PARTIALS) {
-                val oldSin = oscillatorSin[p]
-                oscillatorSin[p] = oldSin * stepCos[p] + oscillatorCos[p] * stepSin[p]
-                oscillatorCos[p] = oscillatorCos[p] * stepCos[p] - oldSin * stepSin[p]
+                List(PARTIALS) { p ->
+                    var energy = 0.0
+                    for (g in 0 until SOURCE_GROUPS) {
+                        val c = (g * PARTIALS + p) * 2
+                        energy += sqrt((route[c] * route[c] + route[c + 1] * route[c + 1]).toDouble())
+                    }
+                    energy.toFloat()
+                }))
+            for (i in oscillatorSin.indices) {
+                val oldSin = oscillatorSin[i]
+                oscillatorSin[i] = oldSin * stepCos[i] + oscillatorCos[i] * stepSin[i]
+                oscillatorCos[i] = oscillatorCos[i] * stepCos[i] - oldSin * stepSin[i]
             }
             if (rotor != 0f) {
                 phase += phaseStep
@@ -334,7 +380,7 @@ object Facet {
     ): Array<FloatArray> {
         val tiles = layout(depth, seed)
         check(tiles.size == count)
-        val result = Array(PARTIALS * 2) { FloatArray(TABLE_SIZE) }
+        val result = Array(ROUTES * 2) { FloatArray(TABLE_SIZE) }
         val exponent = 1 + depth * 3
         for (beam in beams) {
             if (beam.intensity == 0f) continue
@@ -366,11 +412,13 @@ object Facet {
                 val spectrum = DoubleArray(PARTIALS) { p ->
                     val h = harmonics[p].toDouble()
                     val band = ln(h) / ln(harmonics.last().toDouble())
-                    val warmth = 1.0 / h.pow(1.65 - .9 * beam.color)
+                    // A dense illuminated spectrum, rather than eight isolated sines.
+                    // The palette tilts the source but leaves upper energy at its warm end.
+                    val warmth = (if (p == 0) .65 else 1.0) / h.pow(.82 - .30 * beam.color)
                     val hollow = if (harmonics[p] % 2 == 0) 1.0 - .72 * sin(PI * beam.color) else 1.0
                     val illuminationBrightness = 1.0 + (illumination * .8 + velocity * .3) * band
-                    val region = .055 + 1.8 * exp(-.5 * ((band - color) / .17).pow(2.0)) +
-                        .30 * exp(-.5 * ((band - (1.0 - color)) / .16).pow(2.0))
+                    val region = .14 + 1.65 * exp(-.5 * ((band - color) / .21).pow(2.0)) +
+                        .55 * exp(-.5 * ((band - (1.0 - color)) / .18).pow(2.0))
                     warmth * hollow * illuminationBrightness * region
                 }
                 val budget = spectrum.sum()
@@ -383,8 +431,11 @@ object Facet {
                     val amplitude = scale * spectrum[p] / budget * guard[p]
                     val c = amplitude * cos(phases[beam.id][p])
                     val s = amplitude * sin(phases[beam.id][p])
-                    val real = result[p * 2]
-                    val imag = result[p * 2 + 1]
+                    // Grouping happens while beam energy is reflected, so changing
+                    // alignment changes which independently beating beams are heard.
+                    val channel = ((beam.id % SOURCE_GROUPS) * PARTIALS + p) * 2
+                    val real = result[channel]
+                    val imag = result[channel + 1]
                     for (i in 0 until TABLE_SIZE) {
                         val weight = kernel[(i + offset) and (TABLE_SIZE - 1)]
                         real[i] += (weight * c).toFloat()
@@ -398,12 +449,12 @@ object Facet {
 
     /** Destructive mechanism control: retain one envelope and fixed spectral balance. */
     private fun useCommonGain(table: Array<FloatArray>) {
-        val means = DoubleArray(PARTIALS) { p ->
+        val means = DoubleArray(ROUTES) { p ->
             (0 until TABLE_SIZE).sumOf { i -> sqrt((table[p * 2][i] * table[p * 2][i] + table[p * 2 + 1][i] * table[p * 2 + 1][i]).toDouble()) } / TABLE_SIZE
         }
-        val phaseReal = DoubleArray(PARTIALS)
-        val phaseImag = DoubleArray(PARTIALS)
-        for (p in 0 until PARTIALS) {
+        val phaseReal = DoubleArray(ROUTES)
+        val phaseImag = DoubleArray(ROUTES)
+        for (p in 0 until ROUTES) {
             val real = table[p * 2].average()
             val imag = table[p * 2 + 1].average()
             val magnitude = sqrt(real * real + imag * imag)
@@ -414,23 +465,32 @@ object Facet {
         if (sum == 0.0) return
         for (i in 0 until TABLE_SIZE) {
             var gain = 0.0
-            for (p in 0 until PARTIALS) gain += sqrt((table[p * 2][i] * table[p * 2][i] + table[p * 2 + 1][i] * table[p * 2 + 1][i]).toDouble())
-            for (p in 0 until PARTIALS) {
+            for (p in 0 until ROUTES) gain += sqrt((table[p * 2][i] * table[p * 2][i] + table[p * 2 + 1][i] * table[p * 2 + 1][i]).toDouble())
+            for (p in 0 until ROUTES) {
                 table[p * 2][i] = (gain * means[p] / sum * phaseReal[p]).toFloat()
                 table[p * 2 + 1][i] = (gain * means[p] / sum * phaseImag[p]).toFloat()
             }
         }
     }
 
-    /** Cubic periodic lookup; >70 samples per highest angular cycle at every density. */
-    private fun lookup(table: FloatArray, position: Double): Float {
+    /** Cubic periodic lookup; the interpolation basis is shared by all source groups. */
+    private fun lookupInto(table: Array<FloatArray>, position: Double, output: FloatArray) {
         val i = position.toInt()
         val x = position - i
-        val a = table[(i - 1) and (TABLE_SIZE - 1)].toDouble()
-        val b = table[i and (TABLE_SIZE - 1)].toDouble()
-        val c = table[(i + 1) and (TABLE_SIZE - 1)].toDouble()
-        val d = table[(i + 2) and (TABLE_SIZE - 1)].toDouble()
-        return (b + .5 * x * (c - a + x * (2.0 * a - 5.0 * b + 4.0 * c - d + x * (3.0 * (b - c) + d - a)))).toFloat()
+        val x2 = x * x
+        val x3 = x2 * x
+        val wa = -.5 * x + x2 - .5 * x3
+        val wb = 1.0 - 2.5 * x2 + 1.5 * x3
+        val wc = .5 * x + 2.0 * x2 - 1.5 * x3
+        val wd = -.5 * x2 + .5 * x3
+        val ia = (i - 1) and (TABLE_SIZE - 1)
+        val ib = i and (TABLE_SIZE - 1)
+        val ic = (i + 1) and (TABLE_SIZE - 1)
+        val id = (i + 2) and (TABLE_SIZE - 1)
+        for (c in output.indices) {
+            val channel = table[c]
+            output[c] = (wa * channel[ia] + wb * channel[ib] + wc * channel[ic] + wd * channel[id]).toFloat()
+        }
     }
 
     private fun rotationHz(value: Float, voice: FacetVoice): Float {
