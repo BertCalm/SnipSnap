@@ -167,7 +167,10 @@ and device transfer; small state still backs up.
   before the session's time ceiling — `:json :xpm :audio :kit :mpc3
   :loop :cli` — all green, 1,481 tests, 0 failures.
 - `:kit:test` again after the `Kit` guard: green, including the new
-  `KitNameTest` (hostile names refused, ordinary names untouched).
+  `KitNameTest` (hostile names refused, ordinary names untouched). The
+  kit-adjacent `:shell` suites (`KitBuilder`, `ShelfImport`,
+  `StarterKits`, `SnipStore`, `SidecarFuzz` — 121 tests) are green
+  against it too; the full `:shell`/`:synth` suites remain for CI.
 - `:app` was not assembled (no Android SDK reachable here, per
   `settings.gradle.kts`); the manifest/resource change is declarative,
   and CI's `android-build` is its proof.
