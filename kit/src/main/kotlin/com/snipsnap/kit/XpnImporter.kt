@@ -64,6 +64,28 @@ object XpnImporter {
     /** The default cap for one archive's worth of sample writes — [com.snipsnap.shell.ShelfImport]'s own ZIP budget, held here too since `:kit` doesn't depend on `:shell`. */
     const val DEFAULT_BUDGET_BYTES: Long = 512L * 1024 * 1024
 
+    /**
+     * The most entries one archive may declare. The byte budget bounds
+     * what lands on disk, but the entry list itself is materialized
+     * before any sample is written — a crafted archive of millions of
+     * empty entries would cost heap and CPU the budget never sees.
+     * Same ceiling `ShelfImport.unzipSafely` and [KitBackup] hold.
+     */
+    const val MAX_ENTRIES = 10_000
+
+    /** Every non-directory entry, counted as it is read — never an unbounded list first. */
+    private fun entriesOf(zip: ZipFile): List<java.util.zip.ZipEntry> {
+        val out = ArrayList<java.util.zip.ZipEntry>()
+        val all = zip.entries()
+        while (all.hasMoreElements()) {
+            val e = all.nextElement()
+            if (e.isDirectory) continue
+            out += e
+            require(out.size <= MAX_ENTRIES) { "the archive declares more than $MAX_ENTRIES entries - refused" }
+        }
+        return out
+    }
+
     data class ImportResult(
         val kit: Kit,
         val directory: File,
@@ -86,7 +108,7 @@ object XpnImporter {
     ): ImportResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
-            val entries = zip.entries().toList().filter { !it.isDirectory }
+            val entries = entriesOf(zip)
             val programEntry = programEntries(entries).firstOrNull()
                 ?: throw IllegalArgumentException("no .xpm program inside $xpnFile")
             return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite, budget)
@@ -109,7 +131,7 @@ object XpnImporter {
     ): AllResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
-            val entries = zip.entries().toList().filter { !it.isDirectory }
+            val entries = entriesOf(zip)
             val programs = programEntries(entries)
             require(programs.isNotEmpty()) { "no .xpm program inside $xpnFile" }
             val kits = mutableListOf<ImportResult>()

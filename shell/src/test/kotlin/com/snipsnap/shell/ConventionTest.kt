@@ -451,12 +451,14 @@ class ConventionTest {
     private val justifiedReads = listOf(
         ReadAllow(
             file = "MediaDecode.kt",
-            line = "return WavReader.read(bytes)",
-            justification = "`bytes` is already gated a few lines up by " +
-                "`require(bytes.size <= MAX_WAV_BYTES)` (96 MB, MediaDecode.MAX_WAV_BYTES) before this line runs. " +
-                "WavReader.readCapped(file: File, maxDurationSec: Float, ...) (audio/.../WavReader.kt:148) only " +
-                "has a File-based overload — there is no capped entry point for an in-memory ByteArray — so this " +
-                "IS the correct call for this input shape, not a gap the guardrail should chase.",
+            line = "return WavReader.read(bytes, DecodeLimits.MAX_FRAMES)",
+            justification = "`bytes` is gated a few lines up by " +
+                "`require(bytes.size <= MAX_WAV_BYTES)` (96 MB, MediaDecode.MAX_WAV_BYTES), and the call itself " +
+                "is the frame-capped ByteArray overload: the header's frame count is refused past " +
+                "DecodeLimits.MAX_FRAMES before the float buffer is allocated, because 96 MB of 8-bit mono " +
+                "is ~96M frames (~384 MB decoded) — the byte gate alone did not bound the allocation. " +
+                "WavReader.readCapped (audio/.../WavReader.kt) has only a File-based overload, so this " +
+                "capped in-memory call IS the correct shape for this input, not a gap the guardrail should chase.",
         ),
     )
 

@@ -111,12 +111,21 @@ object Cleanup {
 
         for (ch in 0 until snip.channels) {
             var sum = 0.0
+            var count = 0
             var i = ch
             while (i < out.size) {
-                sum += out[i]
+                // Non-finite samples are not audio and not bias: one NaN
+                // in the sum would make the mean NaN and the whole snip
+                // with it. Snip.peak already skips them; the mean now
+                // holds the same rule, over the finite count.
+                if (out[i].isFinite()) {
+                    sum += out[i]
+                    count++
+                }
                 i += snip.channels
             }
-            val mean = (sum / snip.frameCount).toFloat()
+            if (count == 0) continue
+            val mean = (sum / count).toFloat()
             if (mean == 0f) continue
 
             i = ch
