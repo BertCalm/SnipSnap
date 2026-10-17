@@ -82,8 +82,9 @@ CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHW
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
-six original recorded-material voices, a dry 16-pad starter and CLI note/velocity
-auditions; its presets also remain provisional pending listening review.
+six original recorded-material voices with 36 presets, a dry 16-pad starter and CLI note/velocity
+auditions. Its original six sounds and musical examples have owner approval;
+the expanded preset bank is available for a further listening pass.
 EMBOUCHURE adds eight dry player gestures, a sixteen-pad starter and native
 velocity response. Saved MIDI base, renderer model and gesture survive edits;
 TUNE stays within the selected voice's supported register. Its identity and
@@ -99,11 +100,12 @@ OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
 owner's positive feedback; final listening and phone/MPC handoff remain open for
 its fifteen presets and sixteen-pad starter.
-PRISM adds six additive voices, eight review presets and a dry pitched
+PRISM adds six additive voices, thirty-six factory presets and a dry pitched
 starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-precedes further preset expansion.
-ALLOY adds six attack-driven PM voices, twelve provisional presets and a dry
-sixteen-pad starter kit; its first listening set also awaits owner approval.
+includes the full bank and the original/revised GLASS comparisons.
+ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
+sixteen-pad starter kit. The owner heard the initial twelve and authorized six
+presets per voice on the same engine tuning; the additions await listening review.
 CONTOUR adds six wavetable voices with SCAN, OFFSET, MOTION, FILTER,
 DRIVE and HOLD. Loading, editing and saving a preset retains its authored
 table pair, layer relationship and envelopes along with the macros.

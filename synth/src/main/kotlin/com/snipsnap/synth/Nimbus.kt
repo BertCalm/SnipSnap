@@ -44,6 +44,7 @@ object Nimbus {
     private const val DEFAULT_CONTROL_STRIDE = 128
     private const val SNAPSHOT_STRIDE = 4096
     private const val HOLD_PREROLL_CYCLES = 6
+    private const val CONTACT_HOLD_PREROLL_CYCLES = 18
     private const val OUTPUT_TRIM = .34
     private const val MASS = .08
     private const val RIM_SCALE = 6.0
@@ -66,6 +67,21 @@ object Nimbus {
         NimbusVoice.THROAT -> Shape(.45f, .45f, .15f, .50f, .85f, 3, .69, .24, -2.00, 1.50, 1.45, .65, 1)
         NimbusVoice.CONTACT -> Shape(.65f, .10f, .50f, .55f, .55f, 5, .65, .17, .90, .80, 1.06, .34, 4)
         NimbusVoice.SUSPEND -> Shape(.30f, .55f, .55f, .65f, .65f, 1, 1.20, .22, -.10, 1.65, .72, 2.60, 2)
+    }
+    /** A player's material and felt choices for the powered roll, before any radiation. */
+    private data class RollTouch(
+        val contactMillis: Double, val spatialRatio: Double, val spatialHz: Double,
+        val principal: Double, val materials: DoubleArray, val hardCompression: Double = 0.0,
+    )
+    private fun rollTouch(voice: NimbusVoice) = when (voice) {
+        // Body, Bell, Paper, Dark, Flex, Wire. All six are struck; the preferred
+        // face and its companions change with the instrument's finite identity.
+        NimbusVoice.RING -> RollTouch(1.40, 9.0, 4800.0, .130, doubleArrayOf(1.80, .90, .75, .75, .95, .70))
+        NimbusVoice.SHIMMER -> RollTouch(1.20, 12.0, 6200.0, .095, doubleArrayOf(.75, .75, 1.95, .70, .90, 1.10))
+        NimbusVoice.GATHER -> RollTouch(1.25, 10.0, 5200.0, .115, doubleArrayOf(.85, .75, .90, .75, 2.15, .75))
+        NimbusVoice.THROAT -> RollTouch(1.05, 8.0, 4800.0, .140, doubleArrayOf(1.05, .82, .75, 1.60, .90, .75))
+        NimbusVoice.CONTACT -> RollTouch(1.40, 12.0, 6000.0, .100, doubleArrayOf(.70, .70, .90, .70, .85, 2.20), hardCompression = .45)
+        NimbusVoice.SUSPEND -> RollTouch(1.50, 9.5, 4800.0, .125, doubleArrayOf(.85, 2.10, .75, .75, .90, .70))
     }
     fun macrosFor(voice: NimbusVoice): List<MacroSpec> {
         val s = shape(voice)
@@ -115,6 +131,7 @@ object Nimbus {
         val controlStride: Int = DEFAULT_CONTROL_STRIDE,
         val poweredDriveEnabled: Boolean = true,
         val snapshotStride: Int = SNAPSHOT_STRIDE,
+        val singleMalletStroke: Boolean = false,
     )
     internal data class StateSnapshot(
         val timeSeconds: Float,
@@ -130,6 +147,7 @@ object Nimbus {
         val plateEnergy: DoubleArray = DoubleArray(0),
         val plateUpperEnergy: DoubleArray = DoubleArray(0),
         val bodyReservoirEnergy: DoubleArray = DoubleArray(0),
+        val malletForce: FloatArray = FloatArray(0),
     )
     internal data class BodyTransferEvent(
         val timeSeconds: Float,
@@ -139,6 +157,16 @@ object Nimbus {
         val injectedEnergy: Double,
         val gathering: Boolean,
         val gap: Float,
+    )
+    internal data class MalletStrokeEvent(
+        val timeSeconds: Float,
+        val cymbal: Int,
+        val durationSeconds: Float,
+        val signedWork: Double,
+        val positiveWork: Double,
+        val returnedWork: Double,
+        val impulse: Float,
+        val peakForce: Float,
     )
     internal data class Probe(
         val samples: FloatArray,
@@ -161,6 +189,10 @@ object Nimbus {
         val loopStartFrame: Int = 0,
         val selectedCymbal: Int = 0,
         val bodyTransfers: List<BodyTransferEvent> = emptyList(),
+        val malletStrokes: List<MalletStrokeEvent> = emptyList(),
+        val positivePoweredWork: Double = 0.0,
+        val returnedPoweredWork: Double = 0.0,
+        val peakMalletForceStep: Float = 0f,
     )
 
     // Body, Bell, Paper, Dark, Flex, Wire. These are persistent identities, not voice enums.
@@ -200,9 +232,14 @@ object Nimbus {
         val cycleFrames = ((hz * 1.35).roundToInt() * RATE / hz).roundToInt().coerceAtLeast(1024)
         val root = if (held) (hz * 1.35).roundToInt() * RATE.toDouble() / cycleFrames else hz
         val cycle = if (held) cycleFrames * Dsp.OVERSAMPLE else 0
+        // Repeated compliant rim impacts settle more slowly than the freely ringing
+        // stack. Let that complete physical state converge before capturing two real
+        // adjacent cycles; silent/drive-disabled diagnostics retain their original span.
+        val prerollCycles = if (held && options.poweredDriveEnabled && options.contactsEnabled &&
+            m.getValue("SPACING") <= .28f) CONTACT_HOLD_PREROLL_CYCLES else HOLD_PREROLL_CYCLES
         val padding = if (held) 256 * Dsp.OVERSAMPLE else 0
-        val start = if (held) HOLD_PREROLL_CYCLES * cycle - padding else 0
-        val frames = if (held) (HOLD_PREROLL_CYCLES + 2) * cycle + padding else
+        val start = if (held) prerollCycles * cycle - padding else 0
+        val frames = if (held) (prerollCycles + 2) * cycle + padding else
             (((options.durationSeconds?.takeIf { it.isFinite() } ?: (5.0f + 1.4f * m.getValue("FIELD") + .5f * m.getValue("FUNNEL") + 1.7f * m.getValue("HOLD"))).coerceIn(.10f, MAX_SECONDS)) * INTERNAL_RATE).roundToInt()
         val seed = Dsp.seedFor("NIMBUS", voice, frequencyFor(voice, m.getValue("TUNE")), velocity, options.seedContext)
         stopIfUnwanted(cancelled)
@@ -227,7 +264,7 @@ object Nimbus {
         stopIfUnwanted(cancelled)
         val seam = if (held && previous.any { it != 0f }) Keys.seamError(previous + audio, previous.size) else 0.0
         fun tap(i: Int): FloatArray = if (taps[i].isEmpty()) taps[i] else if (held) taps[i].copyOfRange(pad + cycleFrames, pad + 2 * cycleFrames) else taps[i]
-        val offset = if (held) (HOLD_PREROLL_CYCLES + 1) * cycle.toFloat() / INTERNAL_RATE else 0f
+        val offset = if (held) (prerollCycles + 1) * cycle.toFloat() / INTERNAL_RATE else 0f
         val snapshots = if (held) result.snapshots.filter { it.timeSeconds >= offset && it.timeSeconds < offset + cycle.toFloat() / INTERNAL_RATE }
             .map { it.copy(timeSeconds = it.timeSeconds - offset) } else result.snapshots
         return Probe(audio, Array(CYMBALS) { tap(it + 1) }, tap(7), tap(8), tap(9), snapshots,
@@ -236,7 +273,12 @@ object Nimbus {
             result.contacts, simulation.driveWork, previous, seam,
             selectedCymbal = (options.selectedCymbal ?: shape(voice).selected).coerceIn(0, CYMBALS - 1),
             bodyTransfers = if (held) simulation.bodyTransfers.filter { it.timeSeconds >= offset && it.timeSeconds < offset + cycle.toFloat() / INTERNAL_RATE }
-                .map { it.copy(timeSeconds = it.timeSeconds - offset) } else simulation.bodyTransfers.toList())
+                .map { it.copy(timeSeconds = it.timeSeconds - offset) } else simulation.bodyTransfers.toList(),
+            malletStrokes = if (held) simulation.malletStrokes.filter { it.timeSeconds >= offset && it.timeSeconds < offset + cycle.toFloat() / INTERNAL_RATE }
+                .map { it.copy(timeSeconds = it.timeSeconds - offset) } else simulation.malletStrokes.toList(),
+            positivePoweredWork = simulation.positiveDriveWork,
+            returnedPoweredWork = simulation.returnedDriveWork,
+            peakMalletForceStep = simulation.peakMalletForceStep.toFloat())
     }
 
     /** Exact energy-normalized free rotation; a finite impulse is a velocity increment. */
@@ -304,6 +346,7 @@ object Nimbus {
         private val cycle: Int, private val cancelled: () -> Boolean,
     ) {
         private val shape = shape(voice)
+        private val rollTouch = rollTouch(voice)
         private val excite = m.getValue("EXCITE").toDouble()
         private val spacing = m.getValue("SPACING").toDouble()
         private val height = m.getValue("HEIGHT").toDouble()
@@ -383,46 +426,71 @@ object Nimbus {
             if (j == 0) ROOT_DECAY[i] * shape.decay else
                 (UPPER_DECAY[i] * shape.upperDecay / RATIOS[i][j].pow(LOSS_EXP[i])).coerceAtMost(4.5)
         } }
-        private val driveX = Array(CYMBALS) { DoubleArray(MODES) }
-        private val driveY = Array(CYMBALS) { DoubleArray(MODES) }
-        private val driveCos = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> cos(2 * PI * rates[i][j] / INTERNAL_RATE) } }
-        private val driveSin = Array(CYMBALS) { i -> DoubleArray(MODES) { j -> sin(2 * PI * rates[i][j] / INTERNAL_RATE) } }
-        private val drivePhase = Array(CYMBALS) { i -> DoubleArray(MODES) { j ->
-            if (j == 0) {
-                val offset = if (hold > 0.0) 1.15 else .90
-                (if (i % 2 == 0) -offset else offset) + .03 * random.nextDouble()
-            } else 2 * PI * random.nextDouble()
-        } }
-        // A strike can spend its short attack on bright partials. Sustained field force
-        // instead favors the plates' lower flexural bodies: continuously replacing all
-        // fast upper losses would turn the finite metal response into a fixed squeal.
-        // Keep each native vector's total participation while redistributing that force.
-        private val heldBody = Array(CYMBALS) { i ->
+        // Consume exactly the 96 draws used by the former drive, even for HOLD=0/off.
+        // They now describe finite mallet strokes, never modal oscillator phases.
+        private val rollDraws = DoubleArray(CYMBALS * MODES) { random.nextDouble() }
+        private val rollFrames = if (cycle > 0) cycle else (1.35 * INTERNAL_RATE).roundToInt()
+        private val strokesPerCycle = 36
+        // SUSPEND's two hands lead/lag slightly across alternating material groups.
+        // This avoids a repeat-pattern notch in its quiet principal without tracking
+        // modal phase, retuning a plate, or changing the other excitation preferences.
+        private val handTiming = if (voice == NimbusVoice.SUSPEND) .0012 * INTERNAL_RATE else 0.0
+        private val strokeStarts = IntArray(strokesPerCycle) { s ->
+            ((s + .5 + .20 * (strokeDraw(s, 0) - .5) + .04 * (strokeDraw(s, 3) - .5)) * rollFrames / strokesPerCycle +
+                (if (strokePlate(s) % 2 == 0) -handTiming else handTiming)).roundToInt()
+        }
+        // Contact follows the native period so higher notes retain their material's
+        // upper body. Only Wire uses a firmer felt that compresses under harder EXCITE;
+        // its fast touch also keeps the close rim's physical response repeatable.
+        private val feltCompression = 1 - rollTouch.hardCompression * max(0.0, excite - shape.excite.toDouble())
+        private val strokeWidths = IntArray(strokesPerCycle) { s ->
+            (rollTouch.contactMillis * .001 * (261.625565 / root) * feltCompression *
+                (.88 + .24 * strokeDraw(s, 2)) * INTERNAL_RATE).roundToInt().coerceAtLeast(24)
+        }
+        private val strokePlates = IntArray(strokesPerCycle) { s -> strokePlate(s) }
+        private fun strokePlate(s: Int): Int {
+            val traversal = intArrayOf(0, 3, 1, 4, 2, 5)
+            return (selected + traversal[s % CYMBALS] + s / CYMBALS) % CYMBALS
+        }
+        // Normalize touch preferences in impulse energy, not in the listener taps.
+        // A different favored face does not silently give one voice a larger budget.
+        private val rollPreferenceScale = .86 / sqrt(rollTouch.materials.sumOf { it * it } / CYMBALS)
+        private val strokeImpulses = DoubleArray(strokesPerCycle) { s ->
+            val preference = rollTouch.materials[strokePlates[s]] * rollPreferenceScale
+            (.12 + .02 * excite) * (.94 + .12 * strokeDraw(s, 1)) * preference * sqrt(24.0 / strokesPerCycle)
+        }
+        // Additional strokes reuse and decorrelate the old draws, never advance the RNG.
+        private fun strokeDraw(stroke: Int, parameter: Int): Double =
+            (rollDraws[(4 * stroke + parameter) % rollDraws.size] +
+                (stroke / (rollDraws.size / 4)) * .3819660112501051 * (parameter + 1)) % 1.0
+        // A felt contact is a fixed spatial projection into the real native modes.
+        // The broad force pulse supplies its own temporal low-pass; there is no inverse
+        // damping compensation and no oscillator following any mode between contacts.
+        private val feltContact = Array(CYMBALS) { i ->
             val b = normalize(DoubleArray(MODES) { j ->
                 if (j == 0 || !supported[i][j]) 0.0 else {
                     val ratio = RATIOS[i][j]
                     val hz = root * ratio
-                    bodyImpulse[i][j] / sqrt((1 + (ratio / 3.8).pow(6.0)) * (1 + (hz / 2200).pow(4.0)))
+                    bodyImpulse[i][j] / sqrt((1 + (ratio / rollTouch.spatialRatio).pow(4.0)) *
+                        (1 + (hz / rollTouch.spatialHz).pow(4.0)))
                 }
             })
-            for (j in b.indices) b[j] *= sqrt(1 - rootShare)
+            for (j in b.indices) b[j] *= sqrt(1 - rollTouch.principal * rollTouch.principal - .01 * .01)
+            b[0] = rollTouch.principal
             b
         }
-        private val driveAmplitude = Array(CYMBALS) { i -> DoubleArray(MODES) { j ->
-            val preference = .30 + .70 * exp(-abs(i - selected) * (.58 + .32 * excite))
-            val target = if (j == 0) (if (selected == 5) .20 else .09) * sqrt(rootShare) * preference else
-                (.115 + .035 * funnel) * heldBody[i][j] * shape.releaseStrength * preference
-            2 * 6.907755278982137 / lossTimes[i][j] / INTERNAL_RATE * target
-        } }
-        // These index-derived phases consume no random draws. The smooth stagger changes
-        // supplied energy, not output gain or pitch, and completes exactly one loop cycle.
-        private val breathingFrames = if (cycle > 0) cycle else (1.35 * INTERNAL_RATE).roundToInt()
-        private val breathingCos = cos(2 * PI / breathingFrames)
-        private val breathingSin = sin(2 * PI / breathingFrames)
-        private val breathingPhaseCos = DoubleArray(CYMBALS) { cos(2 * PI * (it - selected) / CYMBALS) }
-        private val breathingPhaseSin = DoubleArray(CYMBALS) { sin(2 * PI * (it - selected) / CYMBALS) }
-        private var breathingX = 1.0
-        private var breathingY = 0.0
+        private val malletForce = DoubleArray(CYMBALS)
+        private var activeMalletEvent = -1
+        private var activeMalletWork = 0.0
+        private var activeMalletPositive = 0.0
+        private var activeMalletReturned = 0.0
+        private var activeMalletPeak = 0.0
+        private var activeMalletImpulse = 0.0
+        private var lastMalletForce = 0.0
+        val malletStrokes = ArrayList<MalletStrokeEvent>()
+        var positiveDriveWork = 0.0; private set
+        var returnedDriveWork = 0.0; private set
+        var peakMalletForceStep = 0.0; private set
         var driveWork = 0.0; private set
         private val incomingNeighbors = DoubleArray(10)
         private val outgoingNeighbors = DoubleArray(10)
@@ -458,14 +526,72 @@ object Nimbus {
             load()
             val ratios = doubleArrayOf(.73, 1.57, 2.91, 4.43)
             for (j in 0 until 4) chamber.tune(j, root * ratios[j] * (.91 + .17 * funnel), .16 + .46 * funnel + .11 * (3 - j))
-            resetDrive()
         }
-        private fun resetDrive() {
-            for (i in 0 until CYMBALS) for (j in 0 until MODES) {
-                driveX[i][j] = cos(drivePhase[i][j]); driveY[i][j] = sin(drivePhase[i][j])
+        private fun finishMalletEvent() {
+            if (activeMalletEvent >= 0) {
+                val event = malletStrokes[activeMalletEvent]
+                malletStrokes[activeMalletEvent] = event.copy(signedWork = activeMalletWork,
+                    positiveWork = activeMalletPositive, returnedWork = activeMalletReturned,
+                    impulse = activeMalletImpulse.toFloat(), peakForce = activeMalletPeak.toFloat())
+                activeMalletEvent = -1
             }
-            breathingX = 1.0
-            breathingY = 0.0
+        }
+        /** Finite, soft felt contact followed by unforced native ringing. */
+        private fun rollMallet(frame: Int, envelope: Double) {
+            malletForce.fill(0.0)
+            val within = frame % rollFrames
+            val stroke = (within.toLong() * strokesPerCycle / rollFrames).toInt().coerceAtMost(strokesPerCycle - 1)
+            val age = within - strokeStarts[stroke]
+            val width = strokeWidths[stroke]
+            val active = envelope > 0.0 && age in 0 until width &&
+                (!options.singleMalletStroke || (frame < rollFrames && stroke == 0))
+            if (!active) {
+                finishMalletEvent()
+                peakMalletForceStep = max(peakMalletForceStep, abs(lastMalletForce))
+                lastMalletForce = 0.0
+                return
+            }
+            val plate = strokePlates[stroke]
+            if (age == 0) {
+                finishMalletEvent()
+                activeMalletWork = 0.0; activeMalletPositive = 0.0; activeMalletReturned = 0.0
+                activeMalletPeak = 0.0; activeMalletImpulse = 0.0
+                if (options.recordDiagnostics) {
+                    activeMalletEvent = malletStrokes.size
+                    malletStrokes.add(MalletStrokeEvent(frame.toFloat() / INTERNAL_RATE, plate,
+                        width.toFloat() / INTERNAL_RATE, 0.0, 0.0, 0.0, 0f, 0f))
+                }
+            }
+            // sin^4 has zero value and slope at both ends; its discrete integral is one.
+            val pulse = if (age == 0 || age == width - 1) 0.0 else
+                sin(PI * age / (width - 1)).pow(4.0) * 8.0 / (3 * (width - 1))
+            val impulse = strokeImpulses[stroke] * envelope * pulse
+            val force = impulse * INTERNAL_RATE
+            malletForce[plate] = force
+            peakMalletForceStep = max(peakMalletForceStep, abs(force - lastMalletForce))
+            lastMalletForce = force
+            var work = 0.0
+            for (j in 0 until MODES) {
+                val dv = feltContact[plate][j] * impulse
+                work += plates[plate].v[j] * dv + .5 * dv * dv
+                plates[plate].v[j] += dv
+            }
+            // The same downward stroke has a small rigid-body projection. Its kinetic
+            // work includes the current velocity cross term, just like every modal kick.
+            val suspensionDv = -.01 * impulse / sqrt(MASS)
+            work += MASS * (velocity[plate] * suspensionDv + .5 * suspensionDv * suspensionDv)
+            velocity[plate] += suspensionDv
+            val supplied = max(0.0, work)
+            val returned = max(0.0, -work)
+            driveWork += work
+            positiveDriveWork += supplied
+            returnedDriveWork += returned
+            activeMalletWork += work
+            activeMalletPositive += supplied
+            activeMalletReturned += returned
+            activeMalletImpulse += impulse
+            activeMalletPeak = max(activeMalletPeak, force)
+            if (age == width - 1) finishMalletEvent()
         }
         private fun load() {
             for (i in 0 until CYMBALS - 1) {
@@ -527,8 +653,8 @@ object Nimbus {
             for (plate in plates) taken += plate.deplete(amount * plate.energy() / total)
             return taken
         }
-        private fun control() {
-            val dt = controlStride.toDouble() / INTERNAL_RATE
+        private fun control(frames: Int = controlStride) {
+            val dt = frames.toDouble() / INTERNAL_RATE
             val envelope = exp(-dt / .037)
             for (i in 0 until CYMBALS) {
                 smoothedEnergy[i] = envelope * smoothedEnergy[i] + (1 - envelope) * plates[i].energy()
@@ -696,7 +822,13 @@ object Nimbus {
             for (frame in 0 until frames) {
                 if (frame % 8192 == 0) stopIfUnwanted(cancelled)
                 if (bodyWindow && frame >= BODY_ONSET_SECONDS * INTERNAL_RATE) { bodyWindow = false; load() }
-                if (frame % controlStride == 0) control()
+                if (cycle > 0 && options.poweredDriveEnabled) {
+                    // The physical force pattern repeats at the loop period. Sample its
+                    // slow response on that same grid, including the final short block;
+                    // a global control clock otherwise drifts between adjacent cycles.
+                    val within = frame % cycle
+                    if (within % controlStride == 0) control(minOf(controlStride, cycle - within))
+                } else if (frame % controlStride == 0) control()
                 for (plate in plates) plate.step()
                 chamber.step()
                 if (options.primaryStrikeEnabled && frame < eventFrames && eventVelocity > 0) {
@@ -729,23 +861,7 @@ object Nimbus {
                 val driveEnvelope = if (cycle > 0) 1.0 else if (hold > 0.0 && time < finiteDriveSeconds) {
                     hold * minOf(1.0, time / .08) * minOf(1.0, (finiteDriveSeconds - time) / .20)
                 } else 0.0
-                if (driveEnvelope > 0.0 && options.poweredDriveEnabled) {
-                    if (cycle > 0 && frame % cycle == 0) resetDrive()
-                    val oldBreathingX = breathingX
-                    breathingX = breathingCos * oldBreathingX - breathingSin * breathingY
-                    breathingY = breathingSin * oldBreathingX + breathingCos * breathingY
-                    for (i in 0 until CYMBALS) {
-                        val supplied = driveEnvelope * (.65 + .35 * (breathingX * breathingPhaseCos[i] - breathingY * breathingPhaseSin[i]))
-                        for (j in 0 until MODES) {
-                            val old = driveX[i][j]
-                            driveX[i][j] = driveCos[i][j] * old - driveSin[i][j] * driveY[i][j]
-                            driveY[i][j] = driveSin[i][j] * old + driveCos[i][j] * driveY[i][j]
-                            val dv = driveAmplitude[i][j] * driveX[i][j] * supplied
-                            driveWork += plates[i].v[j] * dv + .5 * dv * dv
-                            plates[i].v[j] += dv
-                        }
-                    }
-                }
+                if (hold > 0.0 && options.poweredDriveEnabled) rollMallet(frame, driveEnvelope)
                 var returnAudio = 0.0
                 if (options.couplingEnabled) {
                     for (p in neighbors.indices) incomingNeighbors[p] = neighbors[p].read()
@@ -823,6 +939,7 @@ object Nimbus {
                 }
                 if (options.recordDiagnostics && (frame % snapshotStride == snapshotStride - 1 || frame == frames - 1)) snapshots.add(snapshot(frame + 1))
             }
+            finishMalletEvent()
             return RunResult(taps, snapshots, initialEnergy, selectedPeak, selectedContacts)
         }
         private fun snapshot(frame: Int) = StateSnapshot(
@@ -832,6 +949,7 @@ object Nimbus {
                 (0 until CYMBALS - 1).all { z[it + 1] - z[it] >= .017 },
             DoubleArray(CYMBALS) { plates[it].energy() }, DoubleArray(CYMBALS) { plates[it].upperEnergy() },
             DoubleArray(CYMBALS) { bodyReservoir[it] + bodyPending[it] },
+            if (hold > 0.0 && options.poweredDriveEnabled) malletForce.map(Double::toFloat).toFloatArray() else FloatArray(0),
         )
     }
     private fun normalize(values: DoubleArray): DoubleArray {

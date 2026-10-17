@@ -23,6 +23,7 @@ import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LacquerPresets
 import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
@@ -275,6 +276,7 @@ class StarterKitsTest {
                     patch
                 }
                 assertEquals(LacquerVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(LacquerPresets.references(), patches.drop(8), "the sixteen-pad starter preserves its original eight reference recipes")
                 assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
                 assertEquals(1, model.kit.pads.count { it.drumClass == DrumClass.LOOP })
                 val source = model.kit.pads.first()

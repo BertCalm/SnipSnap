@@ -44,6 +44,8 @@ import com.snipsnap.loop.LoopBlock
 import com.snipsnap.loop.PatternBlock
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
+import com.snipsnap.app.theme.LocalScheme
+import com.snipsnap.app.theme.tape
 import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Scales
 import com.snipsnap.shell.Copy
@@ -51,25 +53,17 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.SnipStore
 
 /**
- * TapeOS palette for this screen.
+ * The dimmed tier of the LCD's own ink: a muted track's name, a disabled
+ * step, the number on an empty cell, BOUNCING….
  *
- * Fixed rather than themed for now — this becomes a `Scheme` lookup like every
- * other screen later, and hardcoding one keeps this task about the grid. The
- * roster it will read is `SchemeId`, whose source of truth is
- * `design/Schemes.dc.html`. This comment used to point at `docs/UI_DESIGN.md`
- * instead, naming a set of schemes that no longer exists — see that file's own
- * superseded note.
+ * The scheme has three text tiers (`ink`, `ink2`, `ink3`) but all three are
+ * chrome inks, written against the working-surface gray. This grid draws text
+ * on the dark LCD fills as well, where only `lcdInk` is guaranteed to read in
+ * every scheme (the two-surface rule), so the dim form is that same ink at
+ * reduced opacity. The 0.55 is the alpha the filled cell's number already used
+ * before the grid read the scheme.
  */
-private object Tape {
-    val Desk = Color(0xFF2B2B2B)
-    val Panel = Color(0xFFBFBFB4)
-    val BevelLight = Color(0xFFE8E8DE)
-    val BevelDark = Color(0xFF6E6E64)
-    val Lcd = Color(0xFF17251C)
-    val Amber = Color(0xFFE8A33A)
-    val Ink = Color(0xFF1C1C18)
-    val Dim = Color(0xFF8A8A80)
-}
+private fun Color.dim(): Color = copy(alpha = 0.55f)
 
 /**
  * The six-column grid.
@@ -95,15 +89,19 @@ fun LoopGrid(
     /**
      * A nudge to the tempo, in whole BPM. The grid shows the new number at
      * once; what the caller does about the audio is its own business — see
-     * `LoopActivity`, which warms the new interval before applying it.
+     * `LoopBench`, which warms the new interval before applying it.
      */
     onBpm: (Int) -> Unit,
     /** True while that render runs — it is seconds of work, and the button says so rather than looking dead. */
     bouncing: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    // No background of its own: the grid used to paint a fixed dark desk
+    // because it was an Activity with nothing behind it. As a bench it sits on
+    // the frame's surface, which is the scheme's.
+    val scheme = LocalScheme.current
     Column(
-        modifier = modifier.fillMaxSize().background(Tape.Desk).padding(8.dp),
+        modifier = modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = LayoutArrangement.spacedBy(6.dp),
     ) {
         // Which block was last tapped, if any — pure screen state, so it
@@ -141,7 +139,7 @@ fun LoopGrid(
                 // more than the instructions for asking it.
                 text = selected?.let { (t, b) -> Copy.loopBlock(t + 1, b + 1, describe(session, t, b)) }
                     ?: Copy.LOOP_LEGEND,
-                color = if (selected != null) Tape.Panel else Tape.Dim,
+                color = if (selected != null) scheme.ink.tape else scheme.ink2.tape,
                 fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
                 // A renamed snip's name is user text with no length cap
@@ -210,15 +208,16 @@ private fun describe(session: Session, track: Int, block: Int): String? {
  */
 @Composable
 private fun TempoControl(bpm: Float, onBpm: (Int) -> Unit) {
+    val scheme = LocalScheme.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = LayoutArrangement.spacedBy(2.dp)) {
         TempoStep(label = "−", enabled = bpm > Session.MIN_BPM) { onBpm(-1) }
         androidx.compose.material3.Text(
             text = "${bpm.toInt()} BPM",
-            color = Tape.Amber,
+            color = scheme.amber.tape,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
-            modifier = Modifier.background(Tape.Lcd).padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.background(scheme.lcd.tape).padding(horizontal = 8.dp, vertical = 6.dp),
         )
         TempoStep(label = "+", enabled = bpm < Session.MAX_BPM) { onBpm(1) }
     }
@@ -226,12 +225,13 @@ private fun TempoControl(bpm: Float, onBpm: (Int) -> Unit) {
 
 @Composable
 private fun TempoStep(label: String, enabled: Boolean, onStep: () -> Unit) {
+    val scheme = LocalScheme.current
     Box(
         modifier = Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .widthIn(min = Layout.MIN_HIT_TARGET.dp)
-            .background(if (enabled) Tape.Panel else Tape.Lcd)
-            .border(width = 2.dp, color = Tape.BevelDark)
+            .background(if (enabled) scheme.gray.tape else scheme.lcd.tape)
+            .border(width = 2.dp, color = scheme.ink2.tape)
             // A label, because the glyph is a single character TalkBack would
             // otherwise read as punctuation — the exception `tapeClick`'s own
             // KDoc names.
@@ -240,7 +240,7 @@ private fun TempoStep(label: String, enabled: Boolean, onStep: () -> Unit) {
     ) {
         androidx.compose.material3.Text(
             text = label,
-            color = if (enabled) Tape.Ink else Tape.Dim,
+            color = if (enabled) scheme.ink.tape else scheme.lcdInk.tape.dim(),
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
@@ -253,13 +253,14 @@ private fun TempoStep(label: String, enabled: Boolean, onStep: () -> Unit) {
  *
  * The number is [Bouncer.intervalsWithin]'s, not the raw cycle: a cycle is the
  * least common multiple of the chain lengths and can run for half an hour,
- * which no snip can hold. `LoopActivity` renders through the same function
+ * which no snip can hold. `LoopBench` renders through the same function
  * when the button is pressed, so what is printed here and what lands in SNIPS
  * cannot drift apart — the shared quantity is one function, not one number
  * copied twice.
  */
 @Composable
 private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Unit) {
+    val scheme = LocalScheme.current
     val bars = Bouncer.intervalsWithin(session, SnipStore.IMPORT_MAX_SEC) * session.barsPerInterval
     // A Box with the text centred in it, not a Text with a minimum height:
     // `heightIn` on the text itself makes the box taller and leaves the
@@ -272,8 +273,8 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
             // screen a finger has to find, and every other action row in the
             // app is built to this floor.
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .background(if (bouncing) Tape.Lcd else Tape.Panel)
-            .border(width = 2.dp, color = Tape.BevelDark)
+            .background(if (bouncing) scheme.lcd.tape else scheme.gray.tape)
+            .border(width = 2.dp, color = scheme.ink2.tape)
             // Through the app's own wrapper rather than a raw `clickable`: it
             // drops Compose's ripple (TapeOS draws its own feedback) and makes
             // the accessible-name decision explicit.
@@ -300,7 +301,7 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
     ) {
         androidx.compose.material3.Text(
             text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else Copy.loopBounceButton(bars),
-            color = if (bouncing) Tape.Dim else Tape.Ink,
+            color = if (bouncing) scheme.lcdInk.tape.dim() else scheme.ink.tape,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
@@ -319,23 +320,25 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
  */
 @Composable
 fun LoopEmpty(line: String, modifier: Modifier = Modifier, onGoToSnips: (() -> Unit)? = null) {
+    val scheme = LocalScheme.current
     Box(
-        modifier = modifier.fillMaxSize().background(Tape.Desk).padding(24.dp),
+        modifier = modifier.fillMaxSize().padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             androidx.compose.material3.Text(
                 text = line,
-                color = Tape.Panel,
+                color = scheme.ink.tape,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
                 textAlign = TextAlign.Center,
             )
             // The route the line above names, offered rather than described.
-            // This screen is its own Activity, so unlike every other empty
-            // state in the app there is no tab row behind it: without this
-            // button the only way out is the system Back gesture, which is
-            // the one real dead end the journey review found.
+            // This used to be its own Activity with no tab row behind it, and
+            // without this button the only way out was the system Back
+            // gesture — the one real dead end the journey review found. The
+            // bench has a ◄ BEAT chip now, but the door to SNIPS is still the
+            // route the line names.
             //
             // Null for LOOP_UNREADABLE — that line says the sidecar will not
             // parse, and sending another snip is refused precisely so the
@@ -345,15 +348,15 @@ fun LoopEmpty(line: String, modifier: Modifier = Modifier, onGoToSnips: (() -> U
                 Spacer(Modifier.height(16.dp))
                 Box(
                     Modifier
-                        .background(Tape.Lcd)
-                        .border(width = 1.dp, color = Tape.BevelDark)
+                        .background(scheme.lcd.tape)
+                        .border(width = 1.dp, color = scheme.ink2.tape)
                         .tapeClick(label = "SNIPS", onClick = onGoToSnips)
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     androidx.compose.material3.Text(
                         text = "SNIPS \u25b8",
-                        color = Tape.Ink,
+                        color = scheme.lcdInk.tape,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -401,16 +404,17 @@ private fun TrackColumn(
 
 @Composable
 private fun TrackHeader(name: String, engaged: Boolean, onToggle: () -> Unit) {
+    val scheme = LocalScheme.current
     androidx.compose.material3.Text(
         text = name.uppercase(),
-        color = if (engaged) Tape.Panel else Tape.Dim,
+        color = if (engaged) scheme.lcdInk.tape else scheme.lcdInk.tape.dim(),
         fontSize = 10.sp,
         fontWeight = FontWeight.Bold,
         fontFamily = FontFamily.Monospace,
         modifier = Modifier
             .fillMaxWidth()
-            .background(Tape.Lcd)
-            .border(width = 1.dp, color = Tape.BevelDark)
+            .background(scheme.lcd.tape)
+            .border(width = 1.dp, color = scheme.ink2.tape)
             // The visible text is the track's name alone; ON vs MUTED lives
             // only in the ink colour, which a screen reader cannot read. The
             // label carries the state and what a tap does, like ORBIT's ring
@@ -473,23 +477,25 @@ private fun BlockCell(
     // read inside it sees the latest callback.
     val currentOnSelect by rememberUpdatedState(onSelect)
     val currentOnClear by rememberUpdatedState(onClear)
+    val scheme = LocalScheme.current
     androidx.compose.material3.Text(
         text = label,
-        // Dark ink on the panel, but the LCD green an empty cell draws on is
-        // nearly the same value as that ink — so an empty cell takes the dim
-        // panel colour instead of a number no one could read.
-        color = if (lit) Tape.Ink else if (filled) Tape.Ink.copy(alpha = 0.55f) else Tape.Dim,
+        // The lit cell is amber, so its number is the LCD's dark (dark in
+        // every scheme) rather than a chrome ink that would vanish on it. A
+        // filled cell is chrome-surface, so its number is chrome ink. An empty
+        // cell sits on the LCD fill and takes the LCD's own dimmed ink.
+        color = if (lit) scheme.lcd.tape else if (filled) scheme.ink2.tape else scheme.lcdInk.tape.dim(),
         fontSize = 11.sp,
         fontFamily = FontFamily.Monospace,
         modifier = modifier
             .aspectRatio(1.2f)
-            .background(if (lit) Tape.Amber else if (filled) Tape.Panel else Tape.Lcd)
+            .background(if (lit) scheme.amber.tape else if (filled) scheme.gray.tape else scheme.lcd.tape)
             .border(
                 width = 2.dp,
                 // Selection reads as a lighter rim, not a fill: the fill is
                 // already saying which block is playing, and one cell must not
                 // be able to claim both.
-                color = if (selected || lit) Tape.BevelLight else Tape.BevelDark,
+                color = if (selected || lit) scheme.ink.tape else scheme.ink2.tape,
             )
             // The tap is on every cell, an empty track's included — "nothing
             // sent here yet" is an answer. The hold is only where there is
