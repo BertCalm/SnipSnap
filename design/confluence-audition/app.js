@@ -258,8 +258,8 @@
   function renderRoles() {
     const roles = [
       { id: 'low_foundation', label: 'Low foundation.', tag: 'ISOLATED ROLE / LOW', description: 'Hear the sustained lower role on its own.', color: 'low' },
-      { id: 'airy_upper', label: 'Airy upper group.', tag: 'ISOLATED ROLE / UPPER', description: 'Hear the recorded breathy upper voices, with the other roles silent.', color: 'airy' },
-      { id: 'clear_answer', label: 'Clear answering phrase.', tag: 'ISOLATED ROLE / ANSWER', description: 'A clear phrase answers the upper group. Its opening rest is part of the arrangement.', color: 'answer' },
+      { id: 'airy_upper', label: 'Airy upper group.', tag: 'ISOLATED ROLE / UPPER', description: 'Hear a complete recorded breathy phrase, with the other roles silent.', color: 'airy' },
+      { id: 'clear_answer', label: 'Clear answering phrase.', tag: 'ISOLATED ROLE / ANSWER', description: 'A clear phrase answers the upper group.', color: 'answer' },
       { id: 'role_gathering', label: 'The complete gathering.', tag: 'ALL THREE ROLES', description: 'The low foundation, airy upper group and clear answer, together.', color: 'gathering' }
     ];
     const fragment = document.createDocumentFragment();
@@ -275,7 +275,9 @@
       const top = el('span', 'role-top');
       top.append(el('span', 'role-index', String(index + 1).padStart(2, '0')), el('span', 'role-tag', role.tag));
       const copy = el('span', 'role-copy');
-      const description = el('span', 'role-description', role.description);
+      const entryNote = role.id === 'clear_answer' && Number.isFinite(clip.firstEntranceSeconds)
+        ? ` Enters around ${Math.round(clip.firstEntranceSeconds)} seconds, after the airy phrase.` : '';
+      const description = el('span', 'role-description', role.description + entryNote);
       description.id = `role-description-${role.id}`;
       button.setAttribute('aria-describedby', description.id);
       copy.append(el('span', 'role-title', role.label), description);

@@ -241,9 +241,66 @@
         "maxHighEnergyTailPitchExcursionCents": 300,
         "maxSustainPitchExcursionCents": 150
       }
+    },
+    {
+      "id": "airy-phrase-female",
+      "path": "airy-phrase-female.wav",
+      "title": "Female singer 1 — complete recorded breathy arpeggio",
+      "kind": "airy-phrase",
+      "sourceTechnique": "breathy",
+      "roleEligibility": [
+        "AIRY_UPPER"
+      ],
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 317520,
+      "seconds": 7.2,
+      "sha256": "9d1553fbf203f035e97606bd36845f90e6fd63e5504291d051772cf2cca1ecfe",
+      "phraseStartFrame": 0,
+      "phraseEndFrame": 317520,
+      "sustainStartFrame": 17640,
+      "sustainEndFrame": 35280,
+      "referenceMidi": 60,
+      "referenceHz": 262.80781829311303,
+      "referencePolicy": "Manual initial C4 reference supported by autocorrelation; preserve the complete native C4–C5–C4 arpeggio contour. Do not flatten this source to a held note.",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://zenodo.org/records/1193957",
+      "doi": "10.5281/zenodo.1193957",
+      "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+      "originalPath": "originals/f1_arpeggios_breathy_a.wav",
+      "originalArchiveMember": "FULL/female1/arpeggios/breathy/f1_arpeggios_breathy_a.wav",
+      "originalSha256": "18306bdc3d68f0fbd55828ed6d0ec225b9df84fbbacd6d15a4d551e27f4ef7f7",
+      "originalCropStartFrame": 8820,
+      "originalCropEndFrame": 326340,
+      "gainDb": 20.868749927546347,
+      "modificationOrder": [
+        "crop with natural entrance and release margins",
+        "constant gain to -3 dBFS sample peak",
+        "PCM16 quantization"
+      ],
+      "modifications": "Retained the complete recorded breathy arpeggio with its naturally quiet entrance, full native melodic contour, natural release, and quiet ending. Only source crop and constant -3 dBFS peak normalization were applied. No fades, stretching, repeated excerpt, EQ, generated breath/noise, denoising, or pitch shift. Full original recording and earlier short final-vowel proof retained.",
+      "selectionBasis": "Original0.20–7.40s contains the whole single /a/ arpeggio: initial native C4 gesture from around0.5s, ascending to C5 and returning to C4, then natural voiced release around6.85–7.00s followed by quiet room tone. No adjacent gesture occurs within the original recording. Dataset explicitly labels the technique breathy; perceptual listening approval remains open.",
+      "pitchObservation": {
+        "medianHz": 262.80781829311303,
+        "medianAutocorrelation": 0.9470747759560232,
+        "windows": 13,
+        "region": "Marked initial C4 only; the complete phrase intentionally moves through other notes."
+      },
+      "originalRegionPeak": 0.064056396484375,
+      "originalRegionRms": 0.014517733356890453,
+      "nativeContourDescription": "Complete native C4–C5–C4 vowel arpeggio; duration comes from the recording.",
+      "tailBoundaryGuard": {
+        "policy": "Fixture-specific amplitude-only quiet-ending check for a complete melodic phrase; pitch is intentionally not constrained to a flat vowel.",
+        "tailWindowFrames": 2205,
+        "referenceStartFrame": 0,
+        "referenceEndFrame": 317520,
+        "maxTailRms": 0.006,
+        "maxTailToRegionRmsRatio": 0.04
+      }
     }
   ],
-  "fixtureVersion": 3,
+  "fixtureVersion": 4,
   "retiredVowelMale": {
     "reason": "The original0.15–3.65s male1 crop included the start of the next register gesture around3.5–3.6s and ended while hot; canonical last50msRMS.15147 and~246Hz instead of~128Hz. Original preserved for provenance and regression comparison.",
     "previousSource": {
@@ -285,5 +342,7 @@
       "originalRegionRms": 0.00435607053018591
     }
   },
-  "primaryAiryId": "airy-female"
+  "primaryAiryId": "airy-phrase-female",
+  "primaryAiryPhraseId": "airy-phrase-female",
+  "primaryShortAiryId": "airy-female"
 }

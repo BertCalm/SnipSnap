@@ -182,6 +182,26 @@ def fixture_boundary(source, rate, y):
             'scope': 'Fixture-specific boundary check over selected region and marked sustain; no arbitrary user-source restriction or listening verdict.'}
 
 
+def fixture_tail_boundary(source, rate, y):
+    """Amplitude-only ending check for a melodic phrase whose pitch may change."""
+    guard = source['tailBoundaryGuard']
+    start, end = source['phraseStartFrame'], source['phraseEndFrame']
+    rs, re = guard['referenceStartFrame'], guard['referenceEndFrame']
+    if not (0 <= start < end <= len(y) and 0 <= rs < re <= len(y)):
+        return {'passed': False, 'failures': ['invalid phrase or reference marker bounds']}
+    body_rms = float(np.sqrt(np.mean(y[rs:re]**2)))
+    tail = y[max(start, end-guard['tailWindowFrames']):end]
+    tail_rms = float(np.sqrt(np.mean(tail**2)))
+    ratio = tail_rms/max(body_rms, 1e-12)
+    failures = []
+    if tail_rms > guard['maxTailRms'] or ratio > guard['maxTailToRegionRmsRatio']:
+        failures.append('selected melodic phrase ends while high-energy: tail amplitude exceeds fixture guard')
+    return {'passed': not failures, 'failures': failures,
+            'selectedStartFrame': start, 'selectedEndFrame': end, 'canonicalFrames': len(y),
+            'tailRms': tail_rms, 'referenceRegionRms': body_rms, 'tailToRegionRmsRatio': ratio,
+            'scope': 'Amplitude-only selected phrase ending; native melodic pitch changes are allowed.'}
+
+
 def review_fixture_boundaries(root):
     path = root/'manifest.json'
     if not path.is_file():
@@ -192,6 +212,9 @@ def review_fixture_boundaries(root):
         if 'boundaryGuard' in source:
             rate, y = read(root/source['path'])
             checks[source['id']] = fixture_boundary(source, rate, y)
+        elif 'tailBoundaryGuard' in source:
+            rate, y = read(root/source['path'])
+            checks[source['id']] = fixture_tail_boundary(source, rate, y)
     return {'fixtureManifestSha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'fixtures': checks,
             'passed': all(c['passed'] for c in checks.values())}
@@ -364,8 +387,14 @@ def main():
                         failures.append({'round':round,'reason':'answer precedes complete upper release and configured gap'})
                     if previous_answer_end is not None and call_start-previous_answer_end < int(r['exchangeRestSeconds']*clip['sampleRate'])-1:
                         failures.append({'round':round,'reason':'next call precedes complete prior answer and rest'})
+                    call_span=(call_end-call_start)/clip['sampleRate']
+                    answer_span=(answer_end-answer_start)/clip['sampleRate']
+                    span_ratio=call_span/answer_span
+                    if not .75 <= span_ratio <= 1.5:
+                        failures.append({'round':round,'reason':'airy call and answer have unbalanced phrase durations','ratio':span_ratio})
                     exchanges.append({'round':round,'callStartFrame':call_start,'callEndFrame':call_end,
-                                      'answerStartFrame':answer_start,'answerEndFrame':answer_end,'answerGapFrames':gap})
+                                      'answerStartFrame':answer_start,'answerEndFrame':answer_end,'answerGapFrames':gap,
+                                      'callSpanSeconds':call_span,'answerSpanSeconds':answer_span,'callToAnswerSpanRatio':span_ratio})
                     previous_answer_end=answer_end
                 if maximum != engine['maximumSimultaneousPerformers'] or maximum > 8:
                     failures.append({'reason':'assembly simultaneous performer count mismatch or over budget'})

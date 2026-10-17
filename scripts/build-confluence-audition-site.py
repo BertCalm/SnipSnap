@@ -46,7 +46,9 @@ if role_family:
     for clip in role_family:
         assert clip['roleIds'] and set(clip['roleIds']) <= {'FOUNDATION', 'AIRY', 'ANSWER'}
         assert clip['evidence']['sharedSchedule'] and clip['evidence']['sharedMasterGain']
-    airy = next(item for item in manifest['sources'] if item['id'] == 'airy-female')
+    airy_clip = next(clip for clip in role_family if clip['id'] == 'airy_upper')
+    assert len(airy_clip['sourceIds']) == 1, 'The upper role needs one explicit recorded source'
+    airy = next(item for item in manifest['sources'] if item['id'] == airy_clip['sourceIds'][0])
     assert airy['license'] and airy['licenseUrl'] and airy['attribution'] and airy['modifications']
     assert hashlib.sha256((output / airy['path']).read_bytes()).hexdigest() == airy['sha256'], 'Airy source provenance does not match its WAV'
 # Preserve the renderer manifest byte-for-byte: independent reviews and the

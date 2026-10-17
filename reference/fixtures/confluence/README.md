@@ -19,7 +19,7 @@ dataset authors or singers endorse SnipSnap.
 
 All canonical files are mono, 44.1 kHz, PCM16 WAV. The canonical versions are
 cropped and given constant gain to a -3 dBFS sample peak. The airy vowel has the
-explicit entrance fade described below; the other four files have no fades.
+explicit entrance fade described below; the other five files have no fades.
 No denoising, EQ, tuning, stretching, synthetic replacement, or generative
 processing was applied. Six complete original recordings remain in `originals/`, including the
 retired male1 vowel recording retained for the boundary regression history.
@@ -31,6 +31,7 @@ retired male1 vowel recording retained for the boundary regression history.
 | `phrase-male.wav` | 7.25 s | Initial C3 / 129.217 Hz | 22050–37485 |
 | `phrase-female.wav` | 6.55 s | Initial C4 / 263.697 Hz | 26460–39690 |
 | `airy-female.wav` | 1.20 s | C4 / 261.898 Hz | 6615–30870 |
+| `airy-phrase-female.wav` | 7.20 s | Initial C4 / 262.808 Hz | 17640–35280 |
 
 Frame intervals are half-open: start inclusive, end exclusive. Each complete
 canonical file is also its selected phrase. `manifest.json` is authoritative
@@ -59,6 +60,19 @@ added hiss, or a synthesis technique claim. Final 50 ms RMS is about 0.00688,
 its median pitch. The source is tagged `AIRY_UPPER` for the mixed-role audition.
 Whether it sounds sufficiently airy in the gathering remains a listening
 judgment.
+
+The longer `airy-phrase-female.wav` retains the **complete recorded breathy
+arpeggio**, original 0.20–7.40 seconds, with a naturally quiet entrance and
+release. The source moves from native C4 up to C5 and back to C4; its length
+comes from the recording. It has only constant peak gain, with **no fade,
+stretching, repeated excerpt, EQ, or generated breath**. Its initial C4 marker
+is original 0.60–1.00 seconds. The short final-note source remains available as
+the earlier proof; the new mixed-role audition uses the complete phrase.
+
+The long phrase's first and last 50 ms RMS are approximately 0.00188 and 0.00263.
+Its final 50 ms is 1.64% of whole-phrase RMS. An amplitude-only
+`tailBoundaryGuard` verifies this quiet ending without asserting a flat pitch
+over the intentional C4–C5–C4 contour.
 
 The phrase files retain the first
 source section of the dataset's `row_straight` excerpt through its substantial

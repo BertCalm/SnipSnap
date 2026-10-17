@@ -78,12 +78,14 @@ object ConfluenceAuditionGenerator {
         require(fixtures.isNotEmpty()) { "no source fixtures" }
         val primaryVowel = fixtures.firstOrNull { it.id == "vowel-male" }
             ?: fixtures.first { it.metadata["kind"]?.str() == "vowel" }
-        val primaryPhrase = fixtures.firstOrNull { it.id == "phrase-male" }
-            ?: fixtures.first { it.metadata["kind"]?.str() == "phrase" }
+        val primaryPhraseId = fixtureJson.getValue("primaryPhraseId").str()
+        val primaryPhrase = fixtures.firstOrNull { it.id == primaryPhraseId }
+            ?: error("the audition needs its assigned answering phrase $primaryPhraseId")
         val secondVowel = fixtures.firstOrNull { it.id != primaryVowel.id && it.metadata["kind"]?.str() == "vowel" }
-        val airy = fixtures.firstOrNull { it.id == "airy-female" }
-            ?: error("the three-role audition needs the real airy-female fixture and its provenance")
-        require(airy.metadata["kind"]?.str() == "airy") { "the airy group requires an explicitly identified airy source" }
+        val primaryAiryId = fixtureJson.getValue("primaryAiryId").str()
+        val airy = fixtures.firstOrNull { it.id == primaryAiryId }
+            ?: error("the three-role audition needs its assigned complete airy source $primaryAiryId and its provenance")
+        require(airy.metadata["kind"]?.str() == "airy-phrase") { "the airy group requires an explicitly identified complete breathy phrase" }
         root.mkdirs()
         val sourceRecords = copySources(root, fixtures, fixtureManifest)
         val implementationSources = copyImplementation(root, fixtureRoot)
@@ -147,7 +149,7 @@ object ConfluenceAuditionGenerator {
         for ((fixture, id, title, seconds) in listOf(
             Quad(primaryVowel, "source_vowel", "Original human vowel, with rests", 9f),
             Quad(primaryPhrase, "source_phrase", "Original human phrase", maxOf(9f, regionSeconds(primaryPhrase) + .5f)),
-            Quad(airy, "source_airy", "Original breathy upper gesture", 9f),
+            Quad(airy, "source_airy", "Original complete breathy arpeggio", maxOf(9f, regionSeconds(airy) + 1.5f)),
         )) {
             val audio = referenceTimeline(fixture, seconds)
             record(id, "source", title,
@@ -209,6 +211,10 @@ object ConfluenceAuditionGenerator {
             ConfluenceRole.AIRY to airy,
             ConfluenceRole.ANSWER to primaryPhrase,
         )
+        val airyToAnswerDurationRatio = regionSeconds(airy) / regionSeconds(primaryPhrase)
+        require(airyToAnswerDurationRatio in .75f..1.5f) {
+            "this audition requires comparably complete airy and answering phrases; source duration ratio is $airyToAnswerDurationRatio"
+        }
         val assemblyRecipe = ConfluenceAssemblyRecipe(
             name = "Low foundation, breathy upper voices and a clear answer",
             roles = listOf(
@@ -221,6 +227,25 @@ object ConfluenceAuditionGenerator {
         val assemblyStarted = System.nanoTime()
         val assembly = ConfluenceAssembly.render(assemblyRecipe, resolved, normalize = false)
         val assemblyMs = elapsed(assemblyStarted)
+        val roleExposure = assemblyRecipe.roles.associate { spec ->
+            val entrances = assembly.events.filter { it.role == spec.role && it.state == "ENTER" }
+            val durations = entrances.map { entrance ->
+                val release = assembly.events.single { it.role == spec.role && it.performerId == entrance.performerId &&
+                    it.eventIndex == entrance.eventIndex && it.state == "RELEASE" }
+                (release.endFrame - entrance.startFrame) / 44_100f
+            }
+            spec.role.name to mapOf(
+                "sourceId" to roleSources.getValue(spec.role).id,
+                "sourceRegionSeconds" to if (spec.role == ConfluenceRole.FOUNDATION)
+                    (spec.region.sustainEndFrame!! - spec.region.sustainStartFrame!!) / 44_100f
+                    else (spec.region.endFrame - spec.region.startFrame) / 44_100f,
+                "completePhrasesPerPerformer" to entrances.groupingBy { it.performerId }.eachCount().mapKeys { it.key.toString() },
+                "minimumPerformedPhraseSeconds" to durations.minOrNull(),
+                "maximumPerformedPhraseSeconds" to durations.maxOrNull(),
+                "firstEntranceSeconds" to entrances.minOf { it.startFrame } / 44_100.0,
+                "lastReleaseSeconds" to assembly.events.filter { it.role == spec.role && it.state == "RELEASE" }.maxOf { it.endFrame } / 44_100.0,
+            )
+        }
         val roleSum = sum(ConfluenceRole.entries.map { assembly.rawStems.getValue(it) })
         val stemSumError = roleSum.samples.indices.maxOf { abs(roleSum.samples[it] - assembly.raw[it]) }
         check(stemSumError <= 2e-6f) { "role stems do not reconstruct the full raw gathering: $stemSumError" }
@@ -231,15 +256,18 @@ object ConfluenceAuditionGenerator {
         )
         val roleCases = listOf(
             RoleCase("low_foundation", "Low foundation", "Three persistent low voices use the actual low source's marked sustain, with individual breath rests. This is the foundation stem from the full gathering, at its original mix level.", setOf(ConfluenceRole.FOUNDATION)),
-            RoleCase("airy_upper", "Real airy upper group", "Three upper voices reuse the supplied breathy female vowel gesture. The airy quality is in the recording; this part keeps its full-gathering schedule and mix level.", setOf(ConfluenceRole.AIRY)),
-            RoleCase("clear_answer", "Clear answering phrase", "Two responders carry the complete marked sung phrase after the upper group's gesture. The full schedule remains in the trace while only this part is heard.", setOf(ConfluenceRole.ANSWER)),
+            RoleCase("airy_upper", "Complete airy upper phrase", "Three upper voices carry the full native 7.20-second breathy arpeggio, C4 to C5 and back to C4. It is a complete recorded phrase, not a lengthened or repeated short vowel; this part keeps its full-gathering schedule and mix level.", setOf(ConfluenceRole.AIRY)),
+            RoleCase("clear_answer", "Clear answering phrase", "Two responders carry the complete 7.25-second marked sung phrase after the upper group's complete breathy phrase. The full schedule remains in the trace while only this part is heard.", setOf(ConfluenceRole.ANSWER)),
             RoleCase("foundation_airy", "Foundation and airy upper group", "The same low bed and breathy upper group together, before the answering phrase is added. Their gain and entrances are unchanged.", setOf(ConfluenceRole.FOUNDATION, ConfluenceRole.AIRY)),
-            RoleCase("role_gathering", "The complete gathering", "The three roles together: three low foundation voices, three actual breathy upper variants and two clear phrase responders. Compare with the isolated parts without changing volume.", ConfluenceRole.entries.toSet()),
+            RoleCase("role_gathering", "The complete gathering", "The three roles together: a low foundation, one complete 7.20-second breathy upper call and its 7.25-second sung answer, then a quiet foundation coda. Compare with the isolated parts without changing volume.", ConfluenceRole.entries.toSet()),
         )
         for (case in roleCases) {
             val audio = if (case.roles.size == ConfluenceRole.entries.size) assembly.mix
                 else sum(case.roles.map { assembly.rawStems.getValue(it) })
             val selectedSources = case.roles.map { roleSources.getValue(it) }
+            val selectedEvents = assembly.events.filter { it.role in case.roles }
+            val firstEntranceSeconds = selectedEvents.filter { it.state == "ENTER" }.minOf { it.startFrame } / 44_100.0
+            val lastReleaseSeconds = selectedEvents.filter { it.state == "RELEASE" }.maxOf { it.endFrame } / 44_100.0
             val recipeJson = json(linkedMapOf(
                 "format" to "snipsnap-confluence-assembly-audition", "version" to GENERATOR_VERSION,
                 "assembly" to Json.parse(assemblyRecipe.toJsonText()),
@@ -252,14 +280,17 @@ object ConfluenceAuditionGenerator {
                 put("selectedRoles", json(case.roles.map { it.name }))
                 put("allRolesScheduled", JsonValue.Bool(true))
                 put("stemSumRawMaximumAbsoluteError", json(stemSumError))
+                put("roleExposure", json(roleExposure))
             })
             record(case.id, "roles", case.title, case.description, audio, recipeJson, diagnostics, assemblyMs,
                 linkedMapOf(
                     "profile" to "ASSEMBLY", "performerCount" to assemblyRecipe.roles.filter { it.role in case.roles }.sumOf { it.performerIds.size },
                     "rosterCount" to 8, "roleIds" to case.roles.map { it.name },
+                    "firstEntranceSeconds" to firstEntranceSeconds, "lastReleaseSeconds" to lastReleaseSeconds,
                     "sourceIds" to selectedSources.map { it.id }, "assemblySourceIds" to roleSources.values.map { it.id },
                     "evidence" to mapOf("sharedSchedule" to true, "sharedMasterGain" to true, "hold" to false,
-                        "fullGatheringReferenceId" to "role_gathering", "stemSumRawMaximumAbsoluteError" to stemSumError),
+                        "fullGatheringReferenceId" to "role_gathering", "stemSumRawMaximumAbsoluteError" to stemSumError,
+                        "completedExchanges" to assembly.exchanges, "roleExposure" to roleExposure),
                 ), familyGains)
         }
         val assemblyPortableCheck = verifyMovedAssembly(root, assemblyRecipe, assembly.mix)
@@ -288,7 +319,10 @@ object ConfluenceAuditionGenerator {
                 "performersPerRole" to assemblyRecipe.roles.associate { it.role.name to it.performerIds.size },
                 "seconds" to assemblyRecipe.seconds, "matchingPolicy" to "shared-gathering-gain",
                 "matchedGain" to familyGains.matched, "rawExportGain" to familyGains.raw,
-                "stemSumRawMaximumAbsoluteError" to stemSumError),
+                "stemSumRawMaximumAbsoluteError" to stemSumError, "completedExchanges" to assembly.exchanges,
+                "airySourceSeconds" to regionSeconds(airy), "answerSourceSeconds" to regionSeconds(primaryPhrase),
+                "airyToAnswerSourceDurationRatio" to airyToAnswerDurationRatio,
+                "roleExposure" to roleExposure),
             "sourceBundlePath" to "confluence-source-bundle.zip",
             "generationMilliseconds" to elapsed(generationStarted),
         )
@@ -460,7 +494,7 @@ object ConfluenceAuditionGenerator {
         val provenance = Json.parse(File(root, "sources/fixture-manifest.json").readText()).obj()
         val originalCredit = provenance.getValue("sources").arr().first().obj().getValue("attribution").str()
         val credit = "$originalCredit Source: ${provenance.getValue("sourceUrl").str()}. License: ${provenance.getValue("licenseUrl").str()}. " +
-            "Modified by cropping, constant gain, source-based pitch/formant/timing processing, ensemble scheduling and optional room rendering. The cropped breathy vowel has an explicit 80 ms entrance fade; its breathiness comes from the original recording."
+            "Modified by source-specific cropping, constant gain, source-based pitch/formant/timing processing, ensemble scheduling and optional room rendering. The full 7.20-second breathy arpeggio retains its natural entrance and release; no short vowel was stretched or repeated to lengthen that source."
         val ids = listOf("crowd_1", "crowd_2", "crowd_4", "crowd_8", "phrase_solo", "phrase_unison", "phrase_response", "drone_4", "drone_8", "two_source_gathering", "role_gathering")
             .filter { it in audio }
         val dir = File(root, "rendered-kit/Confluence First Proof").apply { mkdirs() }
