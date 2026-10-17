@@ -16,11 +16,13 @@ import com.snipsnap.shell.TouchSurface
  * Close it. A [SurfaceEngine] holds a native stream; [close] is idempotent
  * and every other call after it is a no-op rather than a crash.
  *
- * Every method is synchronised on the engine: [stopPrint] waits (bounded)
- * for the callback's last write and belongs on a worker thread, while
- * [control] and [close] come from the UI - serialising them is what makes
- * a close during a stop safe, and an uncontended monitor costs nothing at
- * screen rate.
+ * Every native call is synchronised on the engine: [stopPrint] waits
+ * (bounded) for the callback's last write and belongs on a worker thread,
+ * while [control] and [close] come from the UI - serialising the native
+ * calls is what makes a close during a stop safe, and an uncontended
+ * monitor costs nothing at screen rate. [stopPrint] does its waiting
+ * between those calls, not inside the monitor, so the UI's calls are not
+ * held up while a print lands.
  */
 class SurfaceEngine(preferredSampleRate: Int) {
 
@@ -207,14 +209,30 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
     /**
      * Stop and take the print as a mono snip at the engine's rate; null when
-     * nothing was captured. Waits up to half a second for the callback's last
-     * write, so call it off the main thread.
+     * nothing was captured, or when the callback has not finished it within
+     * half a second (the print is left alone then, not freed). Waits, so
+     * call it off the main thread.
+     *
+     * The stop is asked for under the lock and the print taken under it,
+     * but the wait in between is not: it polls [printState], so the main
+     * thread's per-frame calls go on while the print lands. Both locked
+     * steps re-check [open], so a [close] during the wait ends the stop with
+     * null rather than touching a freed engine. Assumes nothing re-arms the
+     * print during the wait - a new [armPrint] would start over the finished
+     * take - which holds because the screen offers PRINT again only once the
+     * last one has landed.
      */
-    @Synchronized
     fun stopPrint(): Snip? {
-        if (!open) return null
-        val frames = NativeSurface.stopPrint(handle) ?: return null
-        return Snip(frames, 1, sampleRate)
+        synchronized(this) {
+            if (!open) return null
+            NativeSurface.requestStopPrint(handle)
+        }
+        awaitPrintStopped { printState() == PrintState.STOPPING }
+        return synchronized(this) {
+            if (!open || printState() != PrintState.DONE) return null
+            val frames = NativeSurface.stopPrint(handle) ?: return null
+            Snip(frames, 1, sampleRate)
+        }
     }
 
     @Synchronized

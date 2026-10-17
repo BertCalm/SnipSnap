@@ -59,5 +59,6 @@ object NativePads {
      */
     external fun armPrint(handle: Long, maxFrames: Int): Boolean
     external fun printState(handle: Long): Int
+    external fun requestStopPrint(handle: Long)
     external fun stopPrint(handle: Long): FloatArray?
 }

@@ -43,6 +43,7 @@ jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, 
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong, jint);
 jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
+void Java_com_snipsnap_app_NativePads_requestStopPrint(JNIEnv*, jobject, jlong);
 jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
@@ -56,6 +57,8 @@ void Java_com_snipsnap_app_NativeSurface_setSwarm(JNIEnv*, jobject, jlong, jint,
 void Java_com_snipsnap_app_NativeSurface_setEchoTime(JNIEnv*, jobject, jlong, jfloat);
 void Java_com_snipsnap_app_NativeSurface_setModulation(JNIEnv*, jobject, jlong, jfloatArray);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
+jint Java_com_snipsnap_app_NativeSurface_printState(JNIEnv*, jobject, jlong);
+void Java_com_snipsnap_app_NativeSurface_requestStopPrint(JNIEnv*, jobject, jlong);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
 }
 
@@ -767,6 +770,59 @@ TEST(jni_a_pad_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     CHECK(Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h) == nullptr);
 
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_request_stop_print_returns_at_once_and_stop_print_then_takes_the_print) {
+    // The split the Kotlin wrappers use to keep their lock free while a
+    // print lands: requestStopPrint only asks, leaving the state at
+    // Stopping for the callback to finish; once a callback has (Done),
+    // stopPrint hands the print over without waiting.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 256);
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
+    Java_com_snipsnap_app_NativePads_noteOn(e, nullptr, h, 1, 0, 0, 900, -1, 1.0f, 1.0f, 1.0, JNI_FALSE);
+    pull(pads, 256);
+    const size_t frames = pads->printFrames();
+    CHECK(frames > 0);
+
+    Java_com_snipsnap_app_NativePads_requestStopPrint(e, nullptr, h);
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Stopping));
+    pull(pads, 256);  // the callback makes its last pass and flips to Done
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Done));
+
+    jfloatArray got = Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h);
+    CHECK(got != nullptr);
+    CHECK_EQ(static_cast<int>(impl(got)->length), static_cast<int>(frames * 2));
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Idle));
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+
+    // The surface's twin, mono.
+    const jlong s = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+    auto* surf = reinterpret_cast<SurfaceEngine*>(s);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, s, floats(ramp(1000)), 48000, 0);
+    CHECK(Java_com_snipsnap_app_NativeSurface_armPrint(e, nullptr, s, 4096) == JNI_TRUE);
+    for (int i = 0; i < 8; ++i) pull(surf, 256);
+    const size_t surfFrames = surf->printFrames();
+    CHECK(surfFrames > 0);
+    Java_com_snipsnap_app_NativeSurface_requestStopPrint(e, nullptr, s);
+    CHECK(Java_com_snipsnap_app_NativeSurface_printState(e, nullptr, s) ==
+          static_cast<jint>(PrintBuffer::State::Stopping));
+    pull(surf, 256);
+    jfloatArray mono = Java_com_snipsnap_app_NativeSurface_stopPrint(e, nullptr, s);
+    CHECK(mono != nullptr);
+    CHECK_EQ(static_cast<int>(impl(mono)->length), static_cast<int>(surfFrames));
+    CHECK(Java_com_snipsnap_app_NativeSurface_printState(e, nullptr, s) ==
+          static_cast<jint>(PrintBuffer::State::Idle));
+    Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, s);
 }
 
 TEST(jni_stop_print_times_out_rather_than_reading_a_print_still_stopping) {
