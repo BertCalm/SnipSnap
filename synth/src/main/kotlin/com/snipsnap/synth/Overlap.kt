@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 
 /** Six audible delay lines, with topology-specific scattering. */
 enum class OverlapTopology { SELF, TREFOIL, MIRROR, TORUS }
@@ -13,7 +14,7 @@ object Overlap {
     const val MODEL_VERSION = 2
     const val MIN_MIDI = 24
     const val MAX_MIDI = 84
-    const val SAMPLE_RATE = 44_100
+    const val SAMPLE_RATE = WavWriter.MPC_SAMPLE_RATE
 
     data class Diagnostics(
         val rawPeak: Double, val rawRms: Double, val rawDc: Double,

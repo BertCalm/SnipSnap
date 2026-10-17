@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -45,7 +46,7 @@ import kotlin.math.tanh
  * excitation, with a slow onset at high HOLD instead of a dominating initial click.
  */
 internal object OverlapV2 {
-    private const val RATE = 44_100
+    private const val RATE = WavWriter.MPC_SAMPLE_RATE
     private const val OVERSAMPLE = 4
     private const val DAMPING = .22
     private const val CONTROL_STRIDE = 32

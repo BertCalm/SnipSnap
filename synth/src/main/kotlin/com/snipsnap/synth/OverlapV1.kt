@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.synth.Overlap.Diagnostics
 import com.snipsnap.synth.Overlap.Probe
 import kotlin.math.PI
@@ -40,7 +41,7 @@ import kotlin.math.tanh
 internal object OverlapV1 {
     const val MIN_MIDI = 24
     const val MAX_MIDI = 84
-    const val SAMPLE_RATE = 44_100
+    const val SAMPLE_RATE = WavWriter.MPC_SAMPLE_RATE
     private const val OVERSAMPLE = 4
     private const val DAMPING = .22
     private const val CONTROL_STRIDE = 64
