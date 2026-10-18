@@ -21,13 +21,13 @@ data class OhmPatch(
         Patches.validateMacros(this, Ohm.MACROS)
         require(midi in 48..72) { "OHM midi out of 48..72: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "OHM velocity out of 0..1: $velocity" }
-        require(model == Ohm.MODEL_VERSION) { "unsupported OHM model $model" }
+        require(Ohm.supportsModel(model)) { "unsupported OHM model $model" }
     }
 
     override val engine get() = ENGINE
     val voice get() = OhmVoice.STRING
     override val voiceName get() = voice.name
-    override fun render() = Ohm.render(macros, midi, velocity, seed, gesture)
+    override fun render() = Ohm.render(macros, midi, velocity, seed, gesture, model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(

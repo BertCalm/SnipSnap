@@ -270,3 +270,4 @@ testkit/shoal-audition-v1/
 
 # Reproducible OHM listening assets; sources and recipes live under synth/.
 testkit/ohm-audition/
+testkit/ohm-audition-v1/

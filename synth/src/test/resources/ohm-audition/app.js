@@ -4,7 +4,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const audio = $("audio");
-  const storageKey = "snipsnap.ohm.first-listen.notes.v1";
+  let storageKey = "snipsnap.ohm.first-listen.notes.v1";
   const macroNames = ["TOUCH", "BODY", "LENGTH", "MEDDLING", "COMMUNE"];
   const identityCopy = {
     solo: { title: "Solo", description: "The foreground pluck, with room to breathe.", caption: "ONE CLEAR VOICE" },
@@ -18,9 +18,9 @@
     BODY: "From a lean string to a fuller resonant character.",
     LENGTH: "From a short reply to a longer ring.",
     MEDDLING: "Bring the companions into the conversation. COMMUNE stays at the middle setting.",
-    COMMUNE: "Draw separate voices into a shared resonance. MEDDLING stays at the middle setting."
+    COMMUNE: "Draw separate voices into a shared resonance. MEDDLING stays at 65%."
   };
-  const state = { manifest: null, clips: [], byId: new Map(), selected: null, level: "matched", loading: false, audioError: false, notes: {}, storageAvailable: true };
+  const state = { manifest: null, clips: [], byId: new Map(), selected: null, level: "matched", loading: false, audioError: false, notes: {}, storageAvailable: true, comparisonMode: "revision", comparisonPhase: null, revisionClip: null };
 
   function node(tag, className, text) {
     const element = document.createElement(tag);
@@ -29,8 +29,14 @@
     return element;
   }
 
-  function clipTitle(clip) { return identityCopy[clip.id]?.title || clip.title || clip.id; }
-  function clipDescription(clip) { return identityCopy[clip.id]?.description || clip.description || "A rendered listening example."; }
+  function clipTitle(clip) {
+    if (clip.comparison) return `${clip.comparison.control} · ${clip.comparison.kind === "revision" ? "Original / Revised" : "25% / 75%"}`;
+    return identityCopy[clip.id]?.title || clip.title || clip.id;
+  }
+  function clipDescription(clip) {
+    if (clip.comparison) return clip.comparison.kind === "revision" ? "Original 25%, original 75%, revised 25%, revised 75%. One note and seed, with short pauses between the four parts." : `Revision 2 at 25%, then 75%. ${clip.comparison.context === "solo" ? "The string plays alone." : "The companions stay active."} A short pause separates the two parts.`;
+    return identityCopy[clip.id]?.description || clip.description || "A rendered listening example.";
+  }
   function formatTime(seconds) {
     const value = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
     return `${Math.floor(value / 60)}:${Math.floor(value % 60).toString().padStart(2, "0")}`;
@@ -43,7 +49,9 @@
   }
   function setPlaybackState(label) { $("playback-state").textContent = label; }
 
-  function readNotes() {
+  function readNotes(modelVersion) {
+    storageKey = `snipsnap.ohm.first-listen.notes.v${modelVersion || 1}`;
+    state.notes = {};
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
       if (saved && typeof saved === "object" && !Array.isArray(saved)) {
@@ -77,21 +85,22 @@
     saveNote();
     const entries = state.clips.filter((clip) => state.notes[clip.id]).map((clip) => ({
       id: clip.id, title: clipTitle(clip), note: state.notes[clip.id], macros: clip.macros,
-      midi: clip.midi, velocity: clip.velocity, recipe: clip.recipe
+      midi: clip.midi, velocity: clip.velocity, recipe: clip.recipe,
+      modelVersion: clip.modelVersion ?? state.manifest?.modelVersion, comparison: clip.comparison || null
     }));
     const exportedAt = new Date().toISOString();
-    const documentData = { title: "OHM / SnipSnap — First-listen notes", exportedAt, playbackLevel: state.level, notes: entries };
+    const documentData = { title: "OHM / SnipSnap — First-listen notes", modelVersion: state.manifest?.modelVersion, exportedAt, playbackLevel: state.level, notes: entries };
     let text;
     if (format === "json") text = JSON.stringify(documentData, null, 2) + "\n";
     else {
-      text = `OHM / SnipSnap — First-listen notes\n${exportedAt}\nPlayback level: ${state.level}\n\n`;
+      text = `OHM / SnipSnap — First-listen notes\nModel ${state.manifest?.modelVersion || 1}\n${exportedAt}\nPlayback level: ${state.level}\n\n`;
       text += entries.length ? entries.map((entry) => `${entry.title}\n${"—".repeat(entry.title.length)}\n${entry.note}\n`).join("\n") : "No listening notes recorded yet.\n";
     }
     const blob = new Blob([text], { type: format === "json" ? "application/json" : "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = node("a");
     anchor.href = url;
-    anchor.download = `ohm-listening-notes-${exportedAt.slice(0, 10)}.${format}`;
+    anchor.download = `ohm-r${state.manifest?.modelVersion || 1}-listening-notes-${exportedAt.slice(0, 10)}.${format}`;
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
@@ -159,6 +168,33 @@
 
   function renderControls() {
     const control = $("control-select").value;
+    const revised = Number(state.manifest?.modelVersion) >= 2;
+    $("control-context-wrap").hidden = !revised;
+    $("controls-intro").textContent = revised ? "Try five settings of one control, with the others held in place. Each button plays a fresh note, so you can move between neighboring steps." : "Compare three settings of one control, with the others held in place.";
+    if (revised) {
+      const soloAllowed = ["TOUCH", "BODY", "LENGTH"].includes(control);
+      $("control-context").querySelector('option[value="solo"]').disabled = !soloAllowed;
+      if (!soloAllowed) $("control-context").value = "active";
+      const context = $("control-context").value;
+      const clips = state.clips.filter((clip) => !clip.comparison && clip.sweepMacro === control && (clip.context || "active") === context).sort((a, b) => a.sweepValue - b.sweepValue);
+      $("control-description").textContent = controlDescriptions[control];
+      $("control-context-note").textContent = soloAllowed ? "Compare neighboring steps, or hear the 25% / 75% pair together in Revision 2." : "These checks keep companions active. MEDDLING introduces their activity; COMMUNE has no effect when they are absent.";
+      $("control-clips").className = "control-step-grid";
+      $("control-clips").replaceChildren(...clips.map((clip) => {
+        const button = node("button", "control-step clip-select");
+        button.type = "button";
+        button.dataset.clip = clip.id;
+        const percent = macroPercent(clip.sweepValue);
+        button.setAttribute("aria-label", `Play ${control} at ${percent} percent, ${context === "solo" ? "solo string" : "companions active"}`);
+        button.setAttribute("aria-pressed", String(state.selected?.id === clip.id));
+        button.append(node("span", "step-value", `${percent}%`), node("span", "step-action", "▶ PLAY"));
+        button.addEventListener("click", () => { selectClip(clip.id); playSelected(true); });
+        return button;
+      }));
+      return;
+    }
+    $("control-clips").className = "comparison-list";
+    $("control-context-note").textContent = "";
     $("control-description").textContent = controlDescriptions[control];
     const ids = control === "MEDDLING" ? ["matrix-m0-c1", "matrix-m1-c1", "matrix-m2-c1"] : control === "COMMUNE" ? ["matrix-m1-c0", "matrix-m1-c1", "matrix-m1-c2"] : [0, 1, 2].map((n) => `${control.toLowerCase()}-${n}`);
     const titles = ["Low", "Middle", "High"];
@@ -166,6 +202,77 @@
       const clip = state.byId.get(id);
       return makeClipCard(clip, { title: titles[i], caption: control, description: `${macroPercent(clip?.macros?.[control])}% ${control.toLowerCase()}`, bottom: "SELECT" });
     }));
+  }
+
+  function renderRevision(select = false) {
+    const control = $("revision-control").value;
+    const revisedOnly = state.comparisonMode === "range";
+    const soloAllowed = ["TOUCH", "BODY", "LENGTH"].includes(control);
+    $("revision-context-wrap").hidden = !revisedOnly;
+    $("revision-context").querySelector('option[value="solo"]').disabled = !soloAllowed;
+    if (!soloAllowed || !revisedOnly) $("revision-context").value = "active";
+    const context = revisedOnly ? $("revision-context").value : "active";
+    const id = revisedOnly ? `r2-range-${control}-${context}` : `r2-revision-${control}-active`;
+    const clip = state.byId.get(id);
+    state.revisionClip = clip || null;
+    $("play-comparison").disabled = !clip;
+    $("revision-sequence").textContent = clip?.comparison?.parts?.map((part) => part.label).join(" → ") || "This comparison is not available.";
+    $("revision-caption").textContent = revisedOnly ? `Two settings of Revision 2, with ${context === "solo" ? "the string alone" : "companions active"}. Matched playback levels each part; Raw keeps its original dynamics.` : "Same note and seed in both models. Matched playback levels each part for comparison; Raw preserves the original dynamics.";
+    if (select && clip) selectClip(clip.id, false);
+  }
+
+  function comparisonParts() {
+    const parts = state.selected?.comparison?.parts;
+    return Array.isArray(parts) ? parts : [];
+  }
+
+  function renderComparison(clip) {
+    const parts = comparisonParts();
+    $("comparison-display").hidden = !parts.length;
+    $("player").classList.toggle("has-comparison", parts.length > 0);
+    $("comparison-parts").style.setProperty("--part-count", String(parts.length || 1));
+    state.comparisonPhase = null;
+    $("comparison-phase").textContent = "Ready to compare";
+    $("comparison-parts").replaceChildren(...parts.map((part, index) => {
+      const button = node("button", "comparison-part");
+      button.type = "button";
+      button.dataset.part = String(index);
+      button.setAttribute("aria-label", `Play from ${part.label}`);
+      button.append(node("span", "part-index", String(index + 1).padStart(2, "0")), node("span", "part-label", part.label), node("span", "part-time", `${formatTime(part.startSeconds)}–${formatTime(part.endSeconds)}`));
+      button.addEventListener("click", () => playFromPart(part));
+      return button;
+    }));
+    if (parts[0]?.macros) renderMacroValues({ macros: parts[0].macros });
+    const policy = clip.matchedLevelPolicy || clip.comparison?.matchedLevelPolicy;
+    $("selected-source-note").textContent = typeof policy === "string" ? policy : policy ? JSON.stringify(policy) : parts.length ? "For joined comparisons, the manifest records the source parts, their timing, model versions, and the level policy used before joining." : "";
+  }
+
+  function updateComparisonPhase() {
+    const parts = comparisonParts();
+    if (!parts.length) return;
+    const time = audio.currentTime || 0;
+    const index = parts.findIndex((part) => time >= part.startSeconds && time < part.endSeconds);
+    const phase = audio.ended ? "ended" : index >= 0 ? index : "gap";
+    if (phase === state.comparisonPhase) return;
+    state.comparisonPhase = phase;
+    $("comparison-phase").textContent = phase === "ended" ? "Comparison complete" : index >= 0 ? parts[index].label : "Short pause";
+    document.querySelectorAll(".comparison-part").forEach((button, i) => {
+      button.classList.toggle("is-current", i === index && !audio.ended);
+      if (i === index && !audio.ended) button.setAttribute("aria-current", "true");
+      else button.removeAttribute("aria-current");
+    });
+    if (index >= 0 && parts[index].macros) renderMacroValues({ macros: parts[index].macros });
+  }
+
+  async function playFromPart(part) {
+    if (state.audioError) loadSelectedAudio();
+    try {
+      audio.currentTime = Number(part.startSeconds) || 0;
+      await audio.play();
+      updateProgress();
+    } catch (error) {
+      if (error?.name !== "AbortError") setAudioStatus("This part could not play. Press Play to retry the comparison.", true);
+    }
   }
 
   function renderPhrases() {
@@ -236,14 +343,23 @@
     $("duration").textContent = formatTime(state.selected.seconds);
   }
 
-  function selectClip(id) {
+  function scrollPlayerIntoView() {
+    if (window.matchMedia("(max-width: 1100px)").matches) {
+      $("player").scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }
+  }
+
+  function selectClip(id, scrollToPlayer = true) {
     const clip = state.byId.get(id);
     if (!clip) return;
-    if (state.selected?.id === id) return;
+    if (state.selected?.id === id) {
+      if (scrollToPlayer) scrollPlayerIntoView();
+      return;
+    }
     saveNote();
     state.selected = clip;
     const index = state.clips.indexOf(clip) + 1;
-    const category = clip.group === "phrases" ? "MUSICAL PHRASE" : clip.group === "matrix" ? "THE RELATIONSHIP" : clip.group === "controls" ? "CONTROL STUDY" : clip.group === "register" ? "NOTE & TOUCH" : "FIRST LISTEN";
+    const category = clip.comparison ? (clip.comparison.kind === "revision" ? "ORIGINAL / REVISION 2" : "REVISION 2 / MIDRANGE") : clip.group === "phrases" ? "MUSICAL PHRASE" : clip.group === "matrix" ? "THE RELATIONSHIP" : clip.group === "controls" ? "CONTROL STUDY" : clip.group === "register" ? "NOTE & TOUCH" : "FIRST LISTEN";
     $("player-category").textContent = `${category} / ${String(index).padStart(2, "0")}`;
     $("player-title").textContent = clipTitle(clip);
     $("player-description").textContent = clipDescription(clip);
@@ -251,13 +367,15 @@
     $("player-context").textContent = clip.midi === null || clip.midi === undefined ? "PHRASE" : `${clip.noteLabel || `MIDI ${clip.midi}`} · ${Math.round((clip.velocity || 0) * 100)}%`;
     $("patch-download").href = clip.recipe;
     $("patch-download").download = `${clip.id}.json`;
-    $("patch-download").textContent = clip.recipeType === "OHM_PHRASE" ? "Selected phrase score ↓" : "Selected patch ↓";
+    $("patch-download").textContent = clip.comparison ? "Comparison score ↓" : clip.recipeType === "OHM_PHRASE" ? "Selected phrase score ↓" : "Selected patch ↓";
     $("note-clip-title").textContent = clipTitle(clip);
     $("listening-note").value = state.notes[clip.id] || "";
     $("notes-status").textContent = state.notes[clip.id] ? "Your saved note for this example." : "Nothing leaves this device.";
     renderMacroValues(clip);
+    renderComparison(clip);
     updateSelectedButtons();
     loadSelectedAudio();
+    if (scrollToPlayer) scrollPlayerIntoView();
   }
 
   async function playSelected(fromStart = false) {
@@ -284,6 +402,7 @@
     $("duration").textContent = formatTime(duration);
     $("progress").value = duration > 0 ? String(Math.round((current / duration) * 1000)) : "0";
     $("progress").setAttribute("aria-valuetext", `${formatTime(current)} of ${formatTime(duration)}`);
+    updateComparisonPhase();
   }
 
   function setTab(name, moveFocus = false) {
@@ -314,13 +433,21 @@
       state.manifest = manifest;
       state.clips = manifest.clips;
       state.byId = new Map(state.clips.map((clip) => [clip.id, clip]));
+      readNotes(manifest.modelVersion);
+      const hasRevision = state.byId.has("r2-revision-BODY-active");
+      $("tab-revision").hidden = !hasRevision;
+      $("original-page").hidden = !manifest.originalPage;
+      if (manifest.originalPage) $("original-page").href = manifest.originalPage;
       renderFirst();
       renderRelationship();
       renderControls();
       renderPhrases();
       renderRange();
+      renderRevision();
       $("bundle-download").href = manifest.bundle || "assets/ohm-first-listen.zip";
-      $("bundle-download").download = "ohm-first-listen.zip";
+      $("bundle-download").download = (manifest.bundle || "ohm-first-listen.zip").split("/").pop();
+      const bundleCount = manifest.bundleScope?.clipIds?.length;
+      if (Number.isInteger(bundleCount)) $("bundle-download").textContent = manifest.bundleScope?.includesUi === false ? `${bundleCount} comparisons + recipes (.zip) ↓` : `Download ${bundleCount}-clip comparison ZIP ↓`;
       $("library-summary").textContent = `${state.clips.length} rendered examples · finite notes & phrases`;
       const technicalNotes = [
         `${(manifest.sampleRate || 44100).toLocaleString()} Hz · ${manifest.channels === 2 ? "stereo" : "mono"} WAV audio`,
@@ -334,7 +461,8 @@
       $("library-status").hidden = true;
       $("audition-content").hidden = false;
       state.selected = null;
-      selectClip(state.byId.has("solo") ? "solo" : state.clips[0].id);
+      setTab(hasRevision ? "revision" : "first");
+      selectClip(hasRevision ? "r2-revision-BODY-active" : state.byId.has("solo") ? "solo" : state.clips[0].id, false);
     } catch (error) {
       $("library-status").hidden = true;
       $("library-error").hidden = false;
@@ -351,7 +479,7 @@
   document.querySelectorAll("[data-tab]").forEach((tab) => {
     tab.addEventListener("click", () => setTab(tab.dataset.tab));
     tab.addEventListener("keydown", (event) => {
-      const tabs = [...document.querySelectorAll("[data-tab]")];
+      const tabs = [...document.querySelectorAll("[data-tab]")].filter((item) => !item.hidden);
       const index = tabs.indexOf(tab);
       let next;
       if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
@@ -362,6 +490,25 @@
     });
   });
   $("control-select").addEventListener("change", () => { renderControls(); updateSelectedButtons(); });
+  $("control-context").addEventListener("change", () => { renderControls(); updateSelectedButtons(); });
+  $("revision-control").addEventListener("change", () => renderRevision(true));
+  $("revision-context").addEventListener("change", () => renderRevision(true));
+  document.querySelectorAll("[data-comparison-mode]").forEach((button) => button.addEventListener("click", () => {
+    state.comparisonMode = button.dataset.comparisonMode;
+    document.querySelectorAll("[data-comparison-mode]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    renderRevision(true);
+  }));
+  $("play-comparison").addEventListener("click", () => {
+    if (!state.revisionClip) return;
+    selectClip(state.revisionClip.id);
+    playSelected(true);
+  });
+  $("open-five-steps").addEventListener("click", () => {
+    $("control-select").value = $("revision-control").value;
+    $("control-context").value = $("revision-context").value;
+    renderControls();
+    setTab("controls", true);
+  });
   $("register-select").addEventListener("change", () => { renderRange(); updateSelectedButtons(); });
   $("play-button").addEventListener("click", () => playSelected());
   $("replay-button").addEventListener("click", () => playSelected(true));
@@ -388,7 +535,7 @@
     $("play-text").textContent = "Pause";
     $("play-button").setAttribute("aria-label", "Pause selected example");
     setPlaybackState("NOW LISTENING");
-    setAudioStatus(state.selected?.gesture === "GATHER" ? "Listen as the companions arrive, then come together." : "");
+    setAudioStatus(state.selected?.comparison ? "The labeled parts will play in order, with short pauses." : state.selected?.gesture === "GATHER" ? "Listen as the companions arrive, then come together." : "");
   });
   audio.addEventListener("pause", () => {
     $("player").classList.remove("is-playing");
@@ -414,6 +561,5 @@
     setPlaybackState("AUDIO UNAVAILABLE");
     setAudioStatus("This audio file could not load. Check your connection, then press Play to try again.", true);
   });
-  readNotes();
   loadLibrary();
 })();

@@ -1,8 +1,9 @@
 # Which document to trust
 
-**OHM.** [`OHM.md`](OHM.md) records the first dry coupled-string listening
-prototype, complete saved recipes and the finite solo/argument/communion
-audition. The owner's listening verdict remains open.
+**OHM.** [`OHM.md`](OHM.md) records the dry coupled-string listening
+prototype, versioned recipes and the control-authority revision. Its audition
+compares the original and revised renderers directly. The owner's listening
+verdict remains open.
 
 The tree has moved faster than some of the notes. When two of them
 disagree, this is the order.
