@@ -2973,11 +2973,10 @@ fun App(shelf: KitShelf) {
     // ORBIT, SPLIT, ARRANGE and LOOP each make the sound they show with an
     // engine of their own, and a second stream on a device falls back to the
     // shared path for the rest of its life, so the beat stops when one opens
-    // (v1) and is not offered while one is up. The PADS grid has an engine of
-    // its own until it shares the beat's host.
+    // (v1) and is not offered while one is up. The PADS grid is not among
+    // them: it holds the same host the beat plays through.
     val beatMustStop = location.top == Bench.ORBIT || location.top == Bench.SPLIT || location.top == Bench.LOOP ||
-        (location.top == null && location.stage == Stage.BEAT && arrangeOpen && open != null) ||
-        (location.top == null && location.stage == Stage.PADS)
+        (location.top == null && location.stage == Stage.BEAT && arrangeOpen && open != null)
 
     /**
      * After every groove write on BEAT, the project's beat follows: the
@@ -3456,8 +3455,8 @@ fun App(shelf: KitShelf) {
                                         // Same shape as PAD SHEET's own
                                         // onKitUpdated above: bumping
                                         // `open.kit`'s identity is what
-                                        // makes KIT's engine reload its bank
-                                        // (`LaunchedEffect(entry.kit)`),
+                                        // makes the kit's host reload its bank
+                                        // (`PadHost.request`),
                                         // so a restored sample is heard,
                                         // not the stale cached one — but only
                                         // onto the kit this restore actually
@@ -3488,7 +3487,7 @@ fun App(shelf: KitShelf) {
                                         onKitUpdated = { updatedKit ->
                                             // Same shape as PAD SHEET/TAKES+BIN's own
                                             // onKitUpdated: bump `open.kit`'s identity
-                                            // so KIT's engine reloads the pad GRAB
+                                            // so the kit's host reloads the pad GRAB
                                             // just filled, not a stale cached (empty)
                                             // sample — guarded the same way, against
                                             // `sheetEntry` captured at this
@@ -3564,6 +3563,7 @@ fun App(shelf: KitShelf) {
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
                                     hasProject = project != null,
                                     onNavigateTape = { goToScreen(AppScreen.TAPE) },
+                                    hosts = hosts,
                                 )
                             }
                         }
@@ -3767,7 +3767,7 @@ fun App(shelf: KitShelf) {
                                 onKitUpdated = { updatedKit ->
                                     // Same shape as PAD SHEET/CHOP's own
                                     // onKitUpdated: bump `open.kit`'s identity so
-                                    // KIT's engine reloads the pad SEND TO PAD
+                                    // the kit's host reloads the pad SEND TO PAD
                                     // just replaced, not a stale cached sample.
                                     if (open?.dir == synthEntry?.dir) open = open?.copy(kit = updatedKit)
                                     scope.launch {
@@ -3837,7 +3837,7 @@ fun App(shelf: KitShelf) {
                             // request a share-sheet import raises.
                             onPrinted = { importCount++ },
                             // A print on a pad: bump `open.kit`'s identity so
-                            // KIT's engine and the surface reload it.
+                            // the kit's host and the surface reload it.
                             onKitUpdated = { updatedKit ->
                                 open = open?.copy(kit = updatedKit)
                                 scope.launch {

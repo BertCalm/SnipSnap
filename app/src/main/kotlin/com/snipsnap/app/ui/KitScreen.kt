@@ -37,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -63,7 +62,8 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.PadEngine
-import com.snipsnap.app.deviceSampleRate
+import com.snipsnap.app.PadHosts
+import com.snipsnap.app.rememberPadHost
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.amberOnChrome
@@ -191,6 +191,14 @@ fun KitScreen(
     hasProject: Boolean,
     /** PROJECT_HAS_NO_KIT's second route: TAPE, where a kit's first sound is recorded. */
     onNavigateTape: () -> Unit,
+    /**
+     * Where the kit's engine comes from: the grid holds the kit's host for as
+     * long as it is up, and it is the beat's host too whenever the beat is
+     * playing, so a hit here and the beat's own voices are one engine's. No
+     * default, so a screen built without one fails the compile and not the
+     * ear.
+     */
+    hosts: PadHosts,
 ) {
     val scheme = LocalScheme.current
 
@@ -219,53 +227,34 @@ fun KitScreen(
     // out fully too; the allocator still exists so a mute group still
     // chokes on this screen, and so a stolen or choked voice is stopped
     // rather than left ringing.
+    //
+    // The engine and the allocator are the kit's `PadHost`, held here while
+    // the grid is composed and shared with whatever else is sounding the
+    // kit: while the beat plays it is the same engine, so a hit on the grid
+    // chokes and steals against the beat's own voices, and there is one
+    // stream, not two. The host closes with its last holder.
     val engineContext = LocalContext.current
     val haptics = LocalHaptics.current
-    val player = remember(entry.dir) { PadEngine(deviceSampleRate(engineContext)) }
-    var engineUp by remember(entry.dir) { mutableStateOf(false) }
-    DisposableEffect(entry.dir) {
-        engineUp = player.start()
-        onDispose { player.close() }
-    }
+    val host = rememberPadHost(hosts, entry.dir)
+    val player = host.engine
     // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
     // showing it; the engine's bank doesn't know that on its own, so a
     // fresh `kit` reference (its identity changes on every real edit —
-    // see PadSheetScreen's `onKitUpdated`) reloads it. Keyed separately
-    // from the dir-scoped effect above so this also covers the very first
-    // composition, without a redundant load from that one.
-    LaunchedEffect(entry.kit) { withContext(Dispatchers.IO) { player.load(entry) } }
+    // see PadSheetScreen's `onKitUpdated`) asks the host to reload it. The
+    // host waits out a burst of edits before it rebuilds, and loads the
+    // first at once, so this also covers the very first composition.
+    LaunchedEffect(host, entry.kit) { host.request(entry) }
     // Built at the engine's own polyphony so the status line and the
     // engine cannot drift: at the cap the engine steals exactly the voice
     // the allocator said it would.
-    val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
-    // Only the fullscreen grid's status line reads these two (inside its
-    // Popup, so this body never recomposes on a voice coming or going):
-    // what the allocator counts, and what the device says a round trip
-    // costs. The latency is polled about once a second - it reads a
-    // timestamp, so it is cheap but not free, and it does not move fast
-    // enough to want a frame.
-    var voiceCount by remember(entry.dir) { mutableIntStateOf(0) }
-    var latency by remember(entry.dir) { mutableStateOf(StreamFacts.latency(null)) }
+    val allocator: VoiceAllocator = host.allocator
     // The endings ring, drained at screen rate - the allocator's
     // bookkeeping (who's oldest, who's still sounding) never drifts from
     // what the engine actually did, and a route change reopens the stream
-    // from here too.
-    LaunchedEffect(player) {
-        var lastLatencyAt = 0L
-        while (true) {
-            val now = withFrameNanos { it }
-            val ended = player.drainEnded()
-            if (ended.isNotEmpty()) {
-                for (id in ended) allocator.voiceEnded(id)
-                voiceCount = allocator.activeCount
-            }
-            if (player.needsRestart()) engineUp = player.start()
-            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
-                lastLatencyAt = now
-                latency = StreamFacts.latency(player.latencyMillis(), player.isShared())
-            }
-        }
-    }
+    // from here too. The fullscreen grid's status line reads the voice
+    // count and the latency the host keeps, inside its Popup, so this body
+    // never recomposes on a voice coming or going.
+    LaunchedEffect(host) { host.pumpLoop() }
     // W12: every pad's mini-waveform, read off the main thread once per
     // kit edit (the same `kit` identity the engine reload keys on) and
     // kept as columns only. Cleared first, so neither a fresh kit nor an
@@ -301,7 +290,7 @@ fun KitScreen(
 
     fun hit(slot: Int, velocity: Float = 1f) {
         val pad = kit.pad(slot) ?: return
-        if (!engineUp || !player.isUp()) return
+        if (!host.up || !player.isUp()) return
         // oneShot forced true, not read off the pad: this screen has no
         // release gesture to call noteOff with, so a gate pad's own
         // metadata would otherwise sit unused - forcing it here says so,
@@ -313,7 +302,6 @@ fun KitScreen(
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
         if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
-        voiceCount = allocator.activeCount
     }
 
     // The two paths below are PLAY's, folded in (section 5, decision 4): a
@@ -326,7 +314,7 @@ fun KitScreen(
         // report an ending, and the voice count would climb and stick.
         // `isUp` reads the native dead-stream flag, so the window between
         // a route change and the frame loop's restart is covered too.
-        if (!engineUp || !player.isUp()) return
+        if (!host.up || !player.isUp()) return
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, pad.oneShot)
         for (voice in allocation.choked + allocation.stolen) {
             player.stop(voice.id)
@@ -342,7 +330,6 @@ fun KitScreen(
             // must not count a voice that never sounded.
             allocator.voiceEnded(allocation.started.id)
         }
-        voiceCount = allocator.activeCount
         flash(slot)
     }
 
@@ -350,14 +337,11 @@ fun KitScreen(
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
         for (voice in stopped) player.stop(voice.id)
-        voiceCount = allocator.activeCount
         extinguish(slot)
     }
 
     fun panic() {
-        allocator.allOff()
-        player.allOff()
-        voiceCount = allocator.activeCount
+        host.allOff()
         for (slot in glow.keys) extinguish(slot)
     }
     // Read through rememberUpdatedState wherever something outlives one
@@ -997,8 +981,8 @@ fun KitScreen(
         }
     }
 
-    // The fullscreen grid, drawn from this screen's own engine, allocator
-    // and glow (see the orientation note above). It plays through
+    // The fullscreen grid, drawn from the kit's host and this screen's
+    // glow (see the orientation note above). It plays through
     // `playHeld`/`release`, not the window's one-shot-forced `hit`: the
     // fullscreen pads have a release, so a gate pad holds while a finger
     // does. The status line is read here, inside the Popup, so only the
@@ -1011,7 +995,7 @@ fun KitScreen(
             FullscreenPlayGrid(
                 kit = kit,
                 glow = glow,
-                status = StreamFacts.playStatus(engineUp, voiceCount, PadEngine.MAX_VOICES, latency),
+                status = StreamFacts.playStatus(host.up, host.voiceCount, PadEngine.MAX_VOICES, host.latency),
                 onHit = { s, v, _ -> playHeld(s, v) },
                 onRelease = { s, _ -> release(s) },
                 onExit = exitFullscreen,

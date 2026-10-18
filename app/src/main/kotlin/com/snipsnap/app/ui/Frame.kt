@@ -313,9 +313,8 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  *   set and the readout is a button — ▶ to play (what a tap does, so the
  *   stopped chip says ▶, not ■), the running readout to stop, ● while a
  *   take goes in. It is null where the beat cannot run — a bench that
- *   makes its own sound (ORBIT, SPLIT, LOOP, ARRANGE, and PADS for now) —
- *   and there a stopped beat draws nothing, never a button that would do
- *   nothing.
+ *   makes its own sound (ORBIT, SPLIT, LOOP, ARRANGE) — and there a
+ *   stopped beat draws nothing, never a button that would do nothing.
  * - **capture**: the capture session's one control, which used to be the
  *   shelf's ArmControl and nowhere else. Idle, the light is dark and the
  *   words (`LISTEN · MIC`) are the door to arming — a tap opens the
