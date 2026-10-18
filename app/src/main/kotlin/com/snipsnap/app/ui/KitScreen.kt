@@ -470,9 +470,9 @@ fun KitScreen(
         // the name a second and third time - then the pad count, the
         // shelf's door, and the fullscreen grid. A floor of one hit target
         // tall, not a height: the 40dp this was clamped every chip in it.
-        // The key, tempo and bank, when there are any, sit on a line of
-        // their own beneath, so a long kit name never has to share the row
-        // with them.
+        // The key and tempo, when there are any, sit on a line of their
+        // own beneath, so a long kit name never has to share the row with
+        // them; the bank has its own row below.
         Column(
             Modifier
                 .fillMaxWidth()
@@ -537,8 +537,10 @@ fun KitScreen(
             }
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
             val keyed = kit.key?.let { KeyPicker.label(it) + "  " } ?: ""
-            val banks = if (bankCount > 1 || showing > 0) PadBanks.letter(showing) + "  " else ""
-            val facts = (keyed + tempo + banks).trim()
+            // The bank is not a fact for this line: the bank row under it
+            // names both banks and marks the one showing, so a bare "A"
+            // here read as a stray letter on the walk.
+            val facts = (keyed + tempo).trim()
             if (facts.isNotEmpty()) {
                 TapeText(facts, TapeType.lcdSmall, scheme.amber.tape, Modifier.padding(bottom = 6.dp), maxLines = 1)
             }
