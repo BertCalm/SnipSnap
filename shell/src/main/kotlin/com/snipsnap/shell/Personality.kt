@@ -1311,6 +1311,16 @@ object Copy {
     /** The chart is written but no app took it; [where] is the path under the app's own files, so it isn't lost. */
     fun chartKept(where: String): String = "CHART KEPT AT $where. $SHARE_NOWHERE"
 
+    // ---- GROOVE: SHARE ▸ — the pattern as two passes of audio, off to the share sheet ----
+    /** The dock's line while the render runs: a progress line, not a landing, so no full stop (like [CHART_BUSY]). */
+    const val BEAT_SHARE_BUSY = "RENDERING THE BEAT…"
+    /** The render threw - an empty kit, a pad file that would not read, no external storage to write to. */
+    const val BEAT_SHARE_FAILED = "COULDN'T RENDER THE BEAT."
+    /** The file is written and the chooser is up. [fileName] is the one the receiver sees, `<KIT> · BEAT.wav`. */
+    fun beatShared(fileName: String): String = "BEAT SHARED AS ${fileName.uppercase(java.util.Locale.ROOT)}."
+    /** The file is written but no app took it; [where] is the path under the app's own files, so it isn't lost. */
+    fun beatKept(where: String): String = "BEAT KEPT AT $where. $SHARE_NOWHERE"
+
     // ---- ARRANGE ----
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
     const val ARRANGE_MIXING = "MIXING…"
