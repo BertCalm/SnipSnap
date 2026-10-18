@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
@@ -331,13 +332,17 @@ internal fun PlayPad(
     val scheme = LocalScheme.current
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
     val tag = padTag(slot)
+    // A tick under the finger, on every hit this cell makes - assigned, or
+    // an empty one CATCH A HIT can land on. The hit itself is the caller's.
+    val haptics = LocalHaptics.current
+    val hitWithFeel: (Int, Float, Long) -> Unit = { s, v, t -> onHit(s, v, t); haptics.pad(v) }
 
     if (pad == null || glow == null) {
         Box(
             modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
-                .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", onHit, onRelease) else Modifier),
+                .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", hitWithFeel, onRelease) else Modifier),
             contentAlignment = Alignment.TopEnd,
         ) {
             // Full-opacity ink2, not a dimmed copy — the alpha reduction
@@ -371,7 +376,7 @@ internal fun PlayPad(
             // is for playing): the press-and-release gesture and its
             // accessibility floor live in `padGesture`, shared with the
             // empty slot CATCH can land on.
-            .padGesture(slot, "PAD $tag: ${pad.displayName}", onHit, onRelease)
+            .padGesture(slot, "PAD $tag: ${pad.displayName}", hitWithFeel, onRelease)
             .padding(5.dp),
     ) {
         // Full-opacity ink2 on its own solid backing chip, not a dimmed

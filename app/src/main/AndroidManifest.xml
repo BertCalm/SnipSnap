@@ -10,6 +10,10 @@
          foreground service to carry the mediaProjection type. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- HAPTICS (SETUP): the motor under pads, steppers and landings. A
+         normal permission - granted at install, never asked. Haptics.kt
+         keeps it silent while the mic is armed. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- The Bubble (Task 5): optional. Granted via
          ACTION_MANAGE_OVERLAY_PERMISSION, offered once from the ARM flow —
          never required, the notification's own SNIP action is the whole

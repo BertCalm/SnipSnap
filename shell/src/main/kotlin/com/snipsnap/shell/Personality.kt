@@ -924,6 +924,10 @@ object Copy {
     // ---- Settings: what TEACH THE MACHINE actually sends (X4.4) ----
     const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
 
+    // ---- Settings: HAPTICS, the motor under pads, steppers and landings ----
+    /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
+    const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
+
     // ---- Settings: the WORKSHOP, the developer's tools behind a knock (docs/WORKSHOP.md) ----
     /** Under the WORKSHOP heading at the foot of SETUP, once the knock has opened it: what the section is, and what it is not. */
     const val WORKSHOP_NOTE = "TOOLS FOR THE BENCH, NOT FOR PLAYING. NOTHING HERE CHANGES HOW THE APP SOUNDS."

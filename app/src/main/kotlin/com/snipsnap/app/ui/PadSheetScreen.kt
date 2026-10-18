@@ -62,6 +62,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MediaDecode
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.OutsideSession
@@ -3186,6 +3187,9 @@ internal fun StepperSlider(
     // whichever ones were captured the first time it started.
     val currentOnChange by rememberUpdatedState(onFractionChange)
     val currentOnCommit by rememberUpdatedState(onFractionCommit)
+    // A notch where the value is set - the release, or TalkBack's adjust - not
+    // along the drag, which would buzz continuously under a sliding finger.
+    val haptics = LocalHaptics.current
 
     Row(
         Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
@@ -3216,6 +3220,7 @@ internal fun StepperSlider(
                             val clamped = target.coerceIn(0f, 1f)
                             currentOnChange(clamped)
                             currentOnCommit()
+                            haptics.tick()
                             true
                         }
                     } else {
@@ -3235,6 +3240,7 @@ internal fun StepperSlider(
                                 if (!change.pressed) {
                                     currentOnChange(fractionAt(change.position.x))
                                     currentOnCommit()
+                                    haptics.tick()
                                     change.consume()
                                     break
                                 }
