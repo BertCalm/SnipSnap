@@ -344,7 +344,7 @@ object ChamberAuditionGenerator {
                     compareGroup = "$slug-glass", variant = label, tags = listOf("glass-comparison", label)))
             }
             for (control in controls) for (step in steps) {
-                add(Case("$slug-${control.lowercase(Locale.ROOT)}-${(step * 100).toInt()}", "${voice.name}: $control $step", "controls",
+                add(Case("$slug-sweep-${control.lowercase(Locale.ROOT)}-${(step * 100).toInt()}", "${voice.name}: $control $step", "controls",
                     defaults.copy(name = "${voice.name} $control $step", macros = defaults.macros + (control to step)),
                     "Five-step $control sweep. Other macros, note, event velocity, seed and saved room stay at the voice default. Full mixes are matched by the common audition rule.",
                     "Is the low-to-middle step useful, and does the high end retain the quartet?",
