@@ -179,8 +179,8 @@ class WahTest {
     /**
      * What makes AUTO a wah and not a filter: the centroid of the first 600 ms covers at least 1.5
      * octaves, where the same pad dry covers under 1.5 (the negative control: a pad's own decay moves
-     * its centroid a little, so the bar alone could be met without a wah; probed at 0.7 octave on the
-     * choir and 1.1 on JANGLE). The shipped CONTOUR recipe this section replaces settled in 22 to
+     * its centroid a little, so the bar alone could be met without a wah; measured at 0.53 octave on the
+     * choir and 1.13 on JANGLE, channel 0). The shipped CONTOUR recipe this section replaces settled in 22 to
      * 37 ms on the guitars. The spike measured 2.56 octaves on the choir and 2.82 on JANGLE after the
      * landing amp. Whether it keeps moving is the period test's job.
      */
@@ -220,7 +220,7 @@ class WahTest {
      * Q is a real resonance, the right way round, and the band sits where it should on any pad's
      * rate: ROCK parked at the heel (after its 750 ms gesture) on seeded noise, the Welch-averaged
      * spectrum of the last four seconds. At Q 1 the peak is within 3 percent of 280 Hz at 44.1 and
-     * 48 kHz (a filter built at its default rate would sit 8 percent low at 48 kHz); at Q 1 the peak
+     * 48 kHz (a filter built at its default 44.1 kHz would sit about 9 percent high, near 305 Hz, at 48 kHz); at Q 1 the peak
      * stands well clear of the surround, and at Q 0 it does not.
      */
     @Test
