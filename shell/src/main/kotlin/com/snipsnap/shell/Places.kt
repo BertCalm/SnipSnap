@@ -55,6 +55,14 @@ object Places {
     const val PLAY_BEAT = "PLAY THE BEAT"
     const val STOP_BEAT = "STOP THE BEAT"
 
+    /**
+     * The first row of the dock's capture choice: the room, through the mic.
+     * The chip above already says LISTEN · MIC, so the row repeating it told
+     * nobody what it was for; this says it, as [ARM_INSIDE] does for the other.
+     * The row's accessible name stays [LISTEN].
+     */
+    const val ARM_MIC = "MIC ▸ RECORD THIS ROOM"
+
     /** The second row of the dock's capture choice: another app's audio, with the projection consent. The arrow: it opens that consent. */
     const val ARM_INSIDE = "APP AUDIO ▸ RECORD AN APP"
 

@@ -103,7 +103,12 @@ object Copy {
      * (NEW KIT, right below this panel) rather than denying the snip exists.
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
-    const val EMPTY_KIT = "16 EMPTY PADS."
+    /**
+     * A kit with no pads in it: what is true, and the way in. "16 EMPTY
+     * PADS." said the first and left a person to guess the second (the UX
+     * review's minor list).
+     */
+    const val EMPTY_KIT = "NO PADS YET. TAP A PAD TO HEAR NOTHING, OR HOLD ONE TO CATCH A SOUND."
 
     /**
      * The PADS strip before any pad is tapped: tapping is how the strip

@@ -566,7 +566,7 @@ fun KitScreen(
                     .padding(10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Copy.EMPTY_KIT, TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.EMPTY_KIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
             }
         }
 

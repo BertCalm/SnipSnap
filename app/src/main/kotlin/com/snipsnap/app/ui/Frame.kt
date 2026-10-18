@@ -498,8 +498,13 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
     }
 }
 
-/** One row of a [ChoiceSheet]: its label and what it does. The label carries its own ▸ when it opens a screen. */
-data class SheetRow(val label: String, val onClick: () -> Unit)
+/**
+ * One row of a [ChoiceSheet]: its label and what it does. The label carries
+ * its own ▸ when it opens a screen. [accessibilityLabel] is the accessible
+ * name when it should not be the label - the name the dock's chip already
+ * wears for the same door.
+ */
+data class SheetRow(val label: String, val accessibilityLabel: String? = null, val onClick: () -> Unit)
 
 /**
  * A short menu over the screen — the shelf's own pop-up shape (a scrim, a
@@ -530,7 +535,7 @@ fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             for (row in rows) {
-                ActionButton(row.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = row.onClick)
+                ActionButton(row.label, scheme, enabled = true, accessibilityLabel = row.accessibilityLabel, modifier = Modifier.fillMaxWidth(), onClick = row.onClick)
             }
             ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
         }
@@ -541,7 +546,7 @@ fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
 @Composable
 fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
     ChoiceSheet(
-        listOf(SheetRow("${Places.GEAR_SETUP} ▸", onSetup), SheetRow("${Places.GEAR_HELP} ▸", onHelp)),
+        listOf(SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup), SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp)),
         onDismiss,
     )
 }
@@ -554,7 +559,7 @@ fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun CaptureSheet(onMic: () -> Unit, onInside: () -> Unit, onDismiss: () -> Unit) {
     ChoiceSheet(
-        listOf(SheetRow(Places.LISTEN, onMic), SheetRow(Places.ARM_INSIDE, onInside)),
+        listOf(SheetRow(Places.ARM_MIC, accessibilityLabel = Places.LISTEN, onClick = onMic), SheetRow(Places.ARM_INSIDE, onClick = onInside)),
         onDismiss,
     )
 }
