@@ -904,8 +904,9 @@ plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
 hit's onset, on a pad that was never a synth), WAH (a resonant band-pass
 swept between a heel and a toe by three moves held as weights, TOUCH from the
-hit's own envelope, AUTO a free-running sine and ROCK one heel-toe-heel
-gesture, with SPEED and Q beside them; the first pedal on the board, in front of
+hit's own envelope, AUTO a sine with a flat top (it rests at the toe for 39
+percent of each cycle at AMT 100 and 14 percent at AMT 70) and ROCK one
+heel-toe-heel gesture, with SPEED and Q beside them; the first pedal on the board, in front of
 the compressor and the amp), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
 tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply

@@ -11,7 +11,7 @@ import kotlin.math.max
 /**
  * WAH - a resonant band-pass swept between a heel and a toe, the way a wah pedal's foot sweeps it,
  * by one of three moves: TOUCH (the pad's own envelope opens it on the hit and closes it as the
- * note dies), AUTO (a free-running sine) or ROCK (one heel-to-toe-to-heel gesture, then it waits).
+ * note dies), AUTO (a sine with a flat top) or ROCK (one heel-to-toe-to-heel gesture, then it waits).
  * The three are weights, not a switch: the app has no per-section dials, and AMT fades every
  * macro of a recipe toward its neutral, which would flip a stepped MODE macro part-way; a recipe
  * chooses a move by setting its weight to 1, and AMT shrinks the sweep smoothly.
@@ -22,7 +22,10 @@ import kotlin.math.max
  * The moves are the owner's round-two prototypes (docs/superpowers/specs/2026-10-17-wah-section-design.md):
  * the shipped CONTOUR recipe this replaces settled in about 30 ms; these keep a resonant
  * filter travelling for hundreds of milliseconds. TOUCH and ROCK park at the heel after their
- * move (about 3 s of a 4 s guitar note); AUTO never parks.
+ * move (about 3.25 to 3.5 s of a 4 s guitar note at the default SPEED); AUTO never parks.
+ * The position is stretched by [REACH_GAIN] and clamped, so AUTO rests at the toe for 39 percent of
+ * each cycle at AMT 100 and 14 percent at AMT 70, and ROCK at full weight is at the toe from 152 ms to
+ * 446 ms at the default SPEED: its audible rise is 152 ms, not 250.
  */
 object Wah {
 
@@ -30,7 +33,7 @@ object Wah {
         MacroSpec("TOUCH", 0f),                       // the envelope-follower move's weight
         MacroSpec("AUTO", 0f),                        // the LFO move's weight
         MacroSpec("ROCK", 0f),                        // the one-rock gesture's weight
-        MacroSpec("SPEED", 0.5f, neutral = 0.5f),     // LFO rate SLOW_HZ..FAST_HZ; the follower and the rock scale with it
+        MacroSpec("SPEED", 0.5f, neutral = 0.5f),     // LFO rate SLOW_HZ..FAST_HZ; the follower's release and the rock's length scale with the LFO period
         MacroSpec("Q", 0.6f, neutral = 0.6f),         // resonance: damping OPEN..TIGHT
     )
 
@@ -57,11 +60,11 @@ object Wah {
     private const val ROCK_UP_S = 0.250f
     private const val ROCK_DOWN_S = 0.500f
 
-    /** Q 0..1 maps to damping OPEN (gentle) .. TIGHT (squealing); 0.6 is about 0.23, the Q of 5 the owner heard. */
+    /** Q 0..1 maps to damping OPEN (gentle) .. TIGHT (squealing); 0.6 is about 0.23, a Q of about 4.35 (the owner's prototype used 0.2, a Q of 5). */
     private const val DAMPING_OPEN = 0.8f
     private const val DAMPING_TIGHT = 0.1f
 
-    /** The weights times this, capped at 1: the chip's first tap at the pad sheet's default AMT 0.7 is full strength (shape). */
+    /** The weights times this, capped at 1: the chip's first tap at the pad sheet's default AMT 0.7 is full strength (shape), and it stretches the position too, which holds AUTO and ROCK at the toe for part of each move. */
     private const val REACH_GAIN = 1.5f
 
     /** Weights summing under this are a bypass. */
@@ -79,10 +82,10 @@ object Wah {
     internal fun reach(macros: Map<String, Float>): Float =
         (REACH_GAIN * ((macros["TOUCH"] ?: 0f) + (macros["AUTO"] ?: 0f) + (macros["ROCK"] ?: 0f))).coerceIn(0f, 1f)
 
-    /** AUTO's position, 0 (heel) to 1 (toe): a sine that starts at the heel. */
+    /** AUTO's position, 0 (heel) to 1 (toe): a sine that starts at the heel, which the stretch by [REACH_GAIN] flat-tops at the toe (39 percent of each cycle at weight 1, 14 percent at 0.7). */
     internal fun autoAt(t: Float, hz: Float): Float = (0.5 - 0.5 * cos(2.0 * PI * hz * t)).toFloat()
 
-    /** ROCK's position at [t] seconds: up over 250 ms times [scale], down over 500 ms times [scale], then the heel. */
+    /** ROCK's position at [t] seconds: up over 250 ms times [scale], down over 500 ms times [scale], then the heel; at weight 1 the stretch by [REACH_GAIN] holds the toe from 152 ms to 446 ms at scale 1. */
     internal fun rockAt(t: Float, scale: Float): Float {
         val up = ROCK_UP_S * scale
         val down = ROCK_DOWN_S * scale

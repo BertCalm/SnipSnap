@@ -503,6 +503,8 @@ object Wah {
 - Consumes: `Treatments.apply`, `Treatments.chain`, `Wah.process`, `Magnet.render`, `Magnet.landingChain`, `FxChain.withSection`, `Thump.render`, `Vox.render`, `AuditionLevel.level`, `WavWriter`.
 - Produces: `testkit/wah-audition/<source>/<id>.wav` (git-ignored) and `manifest.json` (rows `{"source","id","file","label"}`) for the controller's listening page.
 
+**Amendment (final review):** this task's "36 clips" and "SNARE 5" (the `check(entries.size == 36)` in Step 1 and the expected output in Step 3) are superseded: 35 clips shipped, with SNARE at 4, because the SNARE ROCK clip was dropped. On a pad shorter than about 350 ms at the default SPEED, ROCK is the same audio as AUTO.
+
 - [ ] **Step 1: Write the generator** (read `PedalAuditionGenerator.kt` first: copy its `mono` fold and `write` helper, including the comment on why a stereo clip is folded):
 
 ```kotlin

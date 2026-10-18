@@ -7,7 +7,9 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
+import kotlin.math.log10
 import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -15,6 +17,12 @@ import kotlin.test.assertTrue
 class WahTest {
 
     private val rate = WavWriter.MPC_SAMPLE_RATE
+
+    /** The other rate a pad can come in at: the rack must not assume the MPC's. */
+    private val hiRate = 48_000
+
+    /** The hop of [centroidTrack], in frames: about 5 ms. */
+    private val hop = rate / 200
 
     /** The power-weighted log-frequency centroid of one Hann window: 48 log-spaced Goertzel probes, 100 Hz to 8 kHz. */
     private fun centroidHz(x: FloatArray, from: Int, n: Int): Double {
@@ -41,7 +49,6 @@ class WahTest {
     /** The centroid of the first [ms] of [s]'s first channel, a 1024-sample window every 5 ms. */
     private fun centroidTrack(s: Snip, ms: Int): List<Double> {
         val x = FloatArray(s.frameCount) { s.samples[it * s.channels] }
-        val hop = rate / 200
         val out = mutableListOf<Double>()
         var at = 0
         while (at * 1000 / rate < ms && at + 1024 <= x.size) {
@@ -53,12 +60,60 @@ class WahTest {
 
     private fun octaves(track: List<Double>) = ln(track.max() / track.min()) / ln(2.0)
 
-    /** How long, in ms, the track keeps differing from where it ends up (its median over the last 20 windows) by more than a quarter octave. */
-    private fun movingMs(track: List<Double>): Int {
-        val final = track.takeLast(20).sorted()[10]
-        val last = track.indexOfLast { abs(ln(it / final) / ln(2.0)) > 0.25 }
-        return (last + 1) * 5
+    /** Seeded white noise at 0.3: a broadband source whose own spectrum is flat, so what comes out is the wah's. */
+    private fun noise(seed: Long, frames: Int): FloatArray {
+        val random = java.util.Random(seed)
+        return FloatArray(frames) { (random.nextGaussian() * 0.3).toFloat() }
     }
+
+    /** The rate, in Hz, at which [track] (one value per [hopS] seconds) has the most energy once its mean is removed: a 1 percent log grid from 0.25 to 16 Hz. */
+    private fun dominantHz(track: List<Double>, hopS: Double): Double {
+        val mean = track.average()
+        var best = 0.0
+        var bestPower = -1.0
+        var g = 0.25
+        while (g <= 16.0) {
+            var re = 0.0
+            var im = 0.0
+            for ((i, v) in track.withIndex()) {
+                val phase = 2.0 * PI * g * i * hopS
+                re += (v - mean) * cos(phase)
+                im += (v - mean) * sin(phase)
+            }
+            val power = re * re + im * im
+            if (power > bestPower) { bestPower = power; best = g }
+            g *= 1.01
+        }
+        return best
+    }
+
+    /** The power of [x] from frame [from] on at each of [freqs]: Goertzel probes on Hann windows of 8192 frames, half overlapped, averaged. */
+    private fun welchPower(x: FloatArray, from: Int, sampleRate: Int, freqs: DoubleArray): DoubleArray {
+        val n = 8192
+        val hann = DoubleArray(n) { 0.5 - 0.5 * cos(2.0 * PI * it / (n - 1)) }
+        val power = DoubleArray(freqs.size)
+        var segments = 0
+        var at = from
+        while (at + n <= x.size) {
+            for ((b, f) in freqs.withIndex()) {
+                val c = 2.0 * cos(2.0 * PI * f / sampleRate)
+                var s1 = 0.0
+                var s2 = 0.0
+                for (i in 0 until n) {
+                    val s = x[at + i] * hann[i] + c * s1 - s2
+                    s2 = s1
+                    s1 = s
+                }
+                power[b] += s1 * s1 + s2 * s2 - c * s1 * s2
+            }
+            segments++
+            at += n / 2
+        }
+        return DoubleArray(freqs.size) { power[it] / segments }
+    }
+
+    /** [count] probes from [lowHz] up, each [step] times the last. */
+    private fun logGrid(lowHz: Double, step: Double, count: Int) = DoubleArray(count) { lowHz * step.pow(it) }
 
     private fun endDb(s: Snip): Double {
         val n = (0.02f * s.sampleRate).toInt() * s.channels
@@ -123,24 +178,73 @@ class WahTest {
 
     /**
      * What makes AUTO a wah and not a filter: the centroid of the first 600 ms covers at least 1.5
-     * octaves and is still moving at least 100 ms in (the shipped CONTOUR recipe this section
-     * replaces settled in 22 to 37 ms on the guitars). The spike measured 2.56 octaves on the choir
-     * and 2.82 on JANGLE after the landing amp; measure the dry JANGLE note too and report it.
+     * octaves, where the same pad dry covers under 1.5 (the negative control: a pad's own decay moves
+     * its centroid a little, so the bar alone could be met without a wah; probed at 0.7 octave on the
+     * choir and 1.1 on JANGLE). The shipped CONTOUR recipe this section replaces settled in 22 to
+     * 37 ms on the guitars. The spike measured 2.56 octaves on the choir and 2.82 on JANGLE after the
+     * landing amp. Whether it keeps moving is the period test's job.
      */
     @Test
-    fun `AUTO sweeps the centroid by at least one and a half octaves and keeps it moving`() {
+    fun `AUTO sweeps the centroid by at least one and a half octaves, which the dry pad does not`() {
         val jangle = Magnet.render(MagnetVoice.JANGLE)
         val sources = mapOf(
             "choir" to Vox.render(VoxVoice.CHOIR),
             "jangle after its amp" to Magnet.landingChain(MagnetVoice.JANGLE).process(jangle),
         )
         for ((name, src) in sources) {
-            val track = centroidTrack(Wah.process(src, mapOf("AUTO" to 1f)), 600)
-            val oct = octaves(track)
-            val moving = movingMs(track)
-            assertTrue(oct >= 1.5, "$name: AUTO covers only $oct octaves of centroid in the first 600 ms (the bar is 1.5)")
-            assertTrue(moving >= 100, "$name: AUTO settles after only $moving ms (the bar is 100)")
+            val dry = octaves(centroidTrack(src, 600))
+            assertTrue(dry < 1.5, "$name: the dry pad already covers $dry octaves of centroid in 600 ms, so the 1.5 bar would prove nothing")
+            val oct = octaves(centroidTrack(Wah.process(src, mapOf("AUTO" to 1f)), 600))
+            assertTrue(oct >= 1.5, "$name: AUTO covers only $oct octaves of centroid in the first 600 ms (the bar is 1.5, the dry pad covers $dry)")
         }
+    }
+
+    /**
+     * AUTO's period is 1 / f, and SPEED sets f: noise through AUTO at weight 0.5 (reach 0.75, so the
+     * position never reaches the toe and the swept centre is a clean sine), the log-centroid track
+     * of the output, and the rate at which that track repeats, at SPEED 0, 0.5 and 1.
+     */
+    @Test
+    fun `AUTO's period is one over the rate SPEED sets, at both ends and the default`() {
+        for ((speed, hz) in listOf(0f to 0.5, 0.5f to 2.0, 1f to 8.0)) {
+            val seconds = 4.0 / hz
+            val src = Snip(noise(21, (seconds * rate).toInt()), 1, rate)
+            val out = Wah.process(src, mapOf("AUTO" to 0.5f, "SPEED" to speed))
+            val track = centroidTrack(out, (seconds * 1000).toInt()).map { ln(it) }
+            val measured = dominantHz(track, hop.toDouble() / rate)
+            assertTrue(abs(measured / hz - 1.0) <= 0.05, "SPEED $speed: the swept centre repeats at $measured Hz, not within 5 percent of $hz Hz")
+        }
+    }
+
+    /**
+     * Q is a real resonance, the right way round, and the band sits where it should on any pad's
+     * rate: ROCK parked at the heel (after its 750 ms gesture) on seeded noise, the Welch-averaged
+     * spectrum of the last four seconds. At Q 1 the peak is within 3 percent of 280 Hz at 44.1 and
+     * 48 kHz (a filter built at its default rate would sit 8 percent low at 48 kHz); at Q 1 the peak
+     * stands well clear of the surround, and at Q 0 it does not.
+     */
+    @Test
+    fun `Q narrows the band the right way round, and the heel stays at 280 Hz at both sample rates`() {
+        val peakGrid = logGrid(200.0, 1.005, 140)
+        val surroundGrid = logGrid(1_120.0, 1.05, 15)
+        val contrastDb = mutableMapOf<Float, Double>()
+        for (sampleRate in listOf(rate, hiRate)) {
+            for (q in listOf(1f, 0f)) {
+                val src = Snip(noise(33, sampleRate * 5), 1, sampleRate)
+                val out = Wah.process(src, mapOf("ROCK" to 1f, "Q" to q)).samples
+                val peak = welchPower(out, sampleRate, sampleRate, peakGrid)
+                val at = peakGrid[peak.indices.maxBy { peak[it] }]
+                val surround = welchPower(out, sampleRate, sampleRate, surroundGrid).average()
+                val db = 10.0 * log10(peak.max() / surround)
+                if (sampleRate == rate) contrastDb[q] = db
+                if (q == 1f) {
+                    assertTrue(abs(at / Wah.HEEL_HZ - 1.0) <= 0.03, "$sampleRate Hz, Q 1: the band peaks at $at Hz, not within 3 percent of ${Wah.HEEL_HZ} Hz")
+                }
+            }
+        }
+        val tight = contrastDb.getValue(1f)
+        val open = contrastDb.getValue(0f)
+        assertTrue(tight - open >= 6.0, "Q 1 stands $tight dB over the surround and Q 0 $open dB: Q 1 should be at least 6 dB tighter")
     }
 
     @Test
