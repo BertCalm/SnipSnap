@@ -209,7 +209,7 @@ object StarterKits {
         ) { SynthKits.relay() },
         Starter(
             "shoal", "SHOAL",
-            "Glass and ripples gather into moving harmonic groups in C minor pentatonic.",
+            "Wood, bowl and wire bodies carried by moving energy in C minor pentatonic.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.shoal() },

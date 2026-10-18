@@ -189,6 +189,11 @@ velocity. The ranges are `SynthCommand`'s note-range
 table; a `--midi` outside the voice's range is refused with the range in
 the message.
 
+SHOAL also accepts `--material WOOD|BOWL|WIRE|HARMONIC`. Material selects the
+resonant body; GLASS/RIPPLE still select its movement. WOOD, BOWL and WIRE play
+finite notes, so overriding a held preset with one of those materials is refused
+before any output is written. HARMONIC supports the captured HOLD loop.
+
 | Engine | `--midi` |
 |---|---|
 | ALLOY | 24–96 |

@@ -44,6 +44,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -201,6 +203,7 @@ import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Shoal
+import com.snipsnap.synth.ShoalMaterial
 import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.ShoalVoice
 import com.snipsnap.synth.Tangle
@@ -285,6 +288,14 @@ private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
 private const val SETTINGS_PRESET_PREFIX = "preset."
+private const val SETTINGS_SHOAL_PATCH_PREFIX = "shoal.patch."
+
+private fun shoalPatchSettingsKey(voice: ShoalVoice): String = "$SETTINGS_SHOAL_PATCH_PREFIX${voice.name}"
+
+private fun storedShoalPatch(settings: Map<String, String>, voice: ShoalVoice): ShoalPatch? =
+    settings[shoalPatchSettingsKey(voice)]?.let { text ->
+        runCatching { ShoalPatch.fromJsonText(text) }.getOrNull()?.takeIf { it.voice == voice }
+    }
 
 private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): String =
     "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}.$macro"
@@ -348,10 +359,12 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    0..1) for every (engine, voice) the player has touched.
  *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
  *    last tapped on that voice and not edited since.
+ *  - `shoal.patch.<VOICE>` — the complete Shoal recipe, retaining material,
+ *    synthesis model, pitch and velocity after edits clear a preset highlight.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
- * Not kept: the loaded patch's non-macro recipe (a MURMUR root, a REVEL
+ * Not kept outside SHOAL: the loaded patch's non-macro recipe (a MURMUR root, a REVEL
  * phrase...) unless a preset carries it, the audition, and every sheet.
  */
 @Composable
@@ -424,13 +437,6 @@ fun SynthScreen(
             }
         }
     }
-    val macros = macrosByVoice.getValue(engine to voice)
-    // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
-    // (engine, voice), so this is the one place the bag needs to follow; the
-    // pairs the player left earlier already wrote theirs when they were open.
-    LaunchedEffect(engine, voice, macros) {
-        for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
-    }
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // REGISTERS retains its synthesis model, saved pitch and velocity.
@@ -454,12 +460,53 @@ fun SynthScreen(
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
+            for (v in ShoalVoice.entries) {
+                val pair = Engine.SHOAL to v
+                val restored = storedShoalPatch(settings, v)
+                if (restored != null) {
+                    // The complete snapshot is authoritative for material, model,
+                    // pitch, energy and macros, even after a preset was edited.
+                    put(pair, restored)
+                    macrosByVoice[pair] = Shoal.defaults(v) + restored.macros
+                } else if (!containsKey(pair)) {
+                    val values = macrosByVoice.getValue(pair)
+                    val oldMacroState = Shoal.macrosFor(v).any { settings.containsKey(macroSettingsKey(Engine.SHOAL, v, it.name)) }
+                    if (oldMacroState || Shoal.isLoop(values["HOLD"] ?: 0f)) {
+                        // Earlier bags stored macros alone. Those were harmonic
+                        // notes; a restored HOLD must never enter finite WOOD.
+                        put(pair, ShoalPatch(Engine.SHOAL.patchDisplayName(v), v, values,
+                            model = Shoal.HARMONIC_MODEL_VERSION, material = ShoalMaterial.HARMONIC))
+                    }
+                }
+                val patch = get(pair) as? ShoalPatch
+                if (patch != null && !Shoal.supportsHold(patch.model, patch.material)) {
+                    macrosByVoice[pair] = macrosByVoice.getValue(pair) + ("HOLD" to 0f)
+                }
+            }
         }
+    }
+    val macros = macrosByVoice.getValue(engine to voice)
+    // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
+    // (engine, voice), so this is the one place the bag needs to follow; the
+    // pairs the player left earlier already wrote theirs when they were open.
+    LaunchedEffect(engine, voice, macros) {
+        for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
         Patches.edited(it, name, macros)
     } ?: engine.buildPatch(name, voice, macros)
+    // Keep complete Shoal recipes for every voice, rather than only the currently
+    // selected preset name. Material and legacy model survive ordinary edits and
+    // tab/voice switches alongside independent root and playing energy.
+    val shoalSettingsPatches = ShoalVoice.entries.associateWith { v ->
+        val values = macrosByVoice.getValue(Engine.SHOAL to v)
+        val saved = loadedPatchesByVoice[Engine.SHOAL to v] as? ShoalPatch
+        saved?.withMacros(values) ?: ShoalPatch(Engine.SHOAL.patchDisplayName(v), v, values)
+    }
+    LaunchedEffect(shoalSettingsPatches) {
+        for ((v, patch) in shoalSettingsPatches) settings[shoalPatchSettingsKey(v)] = patch.toJsonText()
+    }
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
     // "a starting point to wreck, not a locked sound", so this clears the
@@ -547,11 +594,16 @@ fun SynthScreen(
             // preset was forgotten while the lab was away. Live state is
             // re-read here, after the await: a preset tapped meanwhile wins.
             for ((pair, name) in seededPresets) {
-                if (currentPresetByVoice[pair] != name || loadedPatchesByVoice[pair] != null) continue
+                if (currentPresetByVoice[pair] != name) continue
+                val factory = Presets.byName(pair.first.name, pair.second.name, name)
+                if (loadedPatchesByVoice[pair] != null && (pair.first != Engine.SHOAL || factory != null)) continue
                 val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
                     .firstOrNull { it.patch.name == name }?.patch
-                if (mine != null) loadedPatchesByVoice[pair] = editablePreset(mine)
-                else currentPresetByVoice.remove(pair)
+                if (mine != null) {
+                    val editable = editablePreset(mine)
+                    loadedPatchesByVoice[pair] = editable
+                    if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
+                } else currentPresetByVoice.remove(pair)
             }
         } catch (e: CancellationException) {
             throw e
@@ -1270,6 +1322,7 @@ fun SynthScreen(
             ) {
                 ScopeLcd(snip, rendering, scheme, Modifier.fillMaxWidth().height(104.dp))
 
+                if (engine == Engine.SHOAL) TapeText("MOTION", TapeType.pixelSmall, scheme.ink2.tape)
                 VoicePicker(engine, voice, scheme, onSelect = { touched = true; voice = it })
 
                 PresetList(
@@ -1362,6 +1415,38 @@ fun SynthScreen(
                 // Shoal's root and excitation energy are independent of its six controls.
                 if (engine == Engine.SHOAL) {
                     val shoalPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
+                    TapeText("MATERIAL", TapeType.pixelSmall, scheme.ink2.tape)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (material in ShoalMaterial.entries) {
+                            val selectedMaterial = material == shoalPatch.material
+                            ActionButton(
+                                if (material == ShoalMaterial.HARMONIC) "HARM" else material.name,
+                                scheme,
+                                enabled = true,
+                                lit = selectedMaterial,
+                                modifier = Modifier.weight(1f).semantics { selected = selectedMaterial },
+                                accessibilityLabel = "MATERIAL ${material.name}",
+                            ) {
+                                if (material != shoalPatch.material) {
+                                    val current = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
+                                    val nextMacros = if (Shoal.supportsHold(Shoal.MODEL_VERSION, material)) macros
+                                        else macros + ("HOLD" to 0f)
+                                    touched = true
+                                    currentPresetByVoice.remove(engine to voice)
+                                    macrosByVoice[engine to voice] = nextMacros
+                                    loadedPatchesByVoice[engine to voice] = current.copy(
+                                        macros = nextMacros, model = Shoal.MODEL_VERSION, material = material,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    TapeText(
+                        if (Shoal.supportsHold(shoalPatch.model, shoalPatch.material))
+                            "HARMONIC TONE CAN LOOP. WOOD, BOWL AND WIRE TURN HOLD OFF."
+                        else "MATERIAL NOTES ARE FINITE. HOLD IS AVAILABLE FOR HARMONIC TONE.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                    )
                     MacroSlider(
                         label = "ROOT",
                         value = (shoalPatch.midi - Shoal.MIN_MIDI).toFloat() / (Shoal.MAX_MIDI - Shoal.MIN_MIDI),
@@ -1543,6 +1628,10 @@ fun SynthScreen(
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 val registersRoot = if (engine == Engine.REGISTERS)
                     (buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch).midi else null
+                val shoalHoldSupported = if (engine == Engine.SHOAL) {
+                    val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
+                    Shoal.supportsHold(patch.model, patch.material)
+                } else true
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
                         MacroSlider(
@@ -1555,6 +1644,7 @@ fun SynthScreen(
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
                             readout = when {
+                                engine == Engine.SHOAL && spec.name == "HOLD" && !shoalHoldSupported -> "NOTE"
                                 engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1588,6 +1678,7 @@ fun SynthScreen(
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
                             valueRange = macroRange(spec.name),
+                            enabled = spec.name != "HOLD" || shoalHoldSupported,
                         )
                     }
                 }
@@ -2684,7 +2775,7 @@ private enum class Engine {
         SPOOL -> Spool.render(voice as SpoolVoice, macros)
         SKITTER -> Skitter.render(voice as SkitterVoice, macros)
         TANGLE -> Tangle.render(voice as TangleVoice, macros)
-        SHOAL -> Shoal.render(voice as ShoalVoice, macros)
+        SHOAL -> ShoalPatch("Preview", voice as ShoalVoice, macros).render()
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
@@ -3143,10 +3234,11 @@ internal fun MacroSlider(
      */
     readout: String? = null,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    enabled: Boolean = true,
 ) {
     val currentOnChange by rememberUpdatedState(onValueChange)
     Row(
-        Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+        Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).alpha(if (enabled) 1f else .45f),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -3166,10 +3258,11 @@ internal fun MacroSlider(
                 .semantics {
                     contentDescription = label
                     progressBarRangeInfo = ProgressBarRangeInfo(value.coerceIn(valueRange), valueRange)
-                    setProgress { target -> currentOnChange(target.coerceIn(valueRange)); true }
+                    if (enabled) setProgress { target -> currentOnChange(target.coerceIn(valueRange)); true }
+                    else disabled()
                 }
-                .pointerInput(valueRange) {
-                    awaitEachGesture {
+                .pointerInput(valueRange, enabled) {
+                    if (enabled) awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         fun fractionAt(x: Float) = valueRange.start +
                             (x / size.width.toFloat()).coerceIn(0f, 1f) * (valueRange.endInclusive - valueRange.start)
