@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -236,7 +238,10 @@ fun PlaceRow(current: Place, onSelect: (Place) -> Unit, modifier: Modifier = Mod
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(Layout.MENU_ROW_H.dp),
+            .heightIn(min = Layout.MENU_ROW_H.dp)
+            // The chips fill the row; the row is as tall as its tallest
+            // chip, so a large font grows it instead of clipping the label.
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -351,7 +356,7 @@ fun Dock(
     Row(
         modifier
             .fillMaxWidth()
-            .height(Layout.DOCK_H.dp)
+            .heightIn(min = Layout.DOCK_H.dp)
             .lcdPanel(scheme)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -377,6 +382,7 @@ fun Dock(
             Row(
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .widthIn(min = Layout.MIN_HIT_TARGET.dp)
                     .tapeClick(label = Places.LISTEN, onClick = onArm)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -471,6 +477,7 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, border, RoundedCornerShape(4.dp))
             .tapeClick(label = label, onClick = onClick)
             .padding(horizontal = 6.dp),
