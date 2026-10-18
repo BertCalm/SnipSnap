@@ -490,8 +490,8 @@ object Layout {
      * the standing line with its door. Taller than [MIN_HIT_TARGET] so a
      * two-line sentence fits beside a door chip without either shrinking.
      * It replaces the status bar at the frame's foot, whose three cells it
-     * absorbs; [STATUS_BAR_H] stays for the one row still cut to it, the
-     * fullscreen grid's own header.
+     * absorbs; [STATUS_BAR_H] is no longer cut to by any row (the fullscreen
+     * grid's header is a hit target tall).
      */
     const val DOCK_H = 56
     const val STATUS_BAR_H = 26

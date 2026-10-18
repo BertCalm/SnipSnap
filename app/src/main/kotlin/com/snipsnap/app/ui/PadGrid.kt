@@ -6,7 +6,6 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,8 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -73,9 +70,10 @@ import com.snipsnap.shell.Schemes
  * One bank as the 4×4 window every portrait screen draws — KIT's grid,
  * PLAY's in-window view, GROOVE's record grid, and CATCH on TAPE — top
  * row first, bottom-up numbering, so B is laid out exactly as A.
- * [BankRow] is the landscape shape: two banks of eight abreast, whose
- * floor (888 dp for both) a portrait phone never meets; the app is
- * portrait-locked at the manifest everywhere but PLAY's fullscreen route.
+ * [BankRow] is the landscape shape: both banks abreast, each this same
+ * 4×4 (440 dp for the pair, which a portrait phone's 360 does not meet);
+ * the app is portrait-locked at the manifest everywhere but PLAY's
+ * fullscreen route.
  */
 internal fun windowRows(bank: Int): List<IntRange> {
     val base = bank * PadBanks.SIZE
@@ -83,8 +81,6 @@ internal fun windowRows(bank: Int): List<IntRange> {
 }
 
 internal val WINDOW_GRID_ROWS = windowRows(0)
-internal val BANK_A_ROWS = listOf(9..16, 1..8)
-internal val BANK_B_ROWS = listOf(25..32, 17..24)
 
 /**
  * Touch-Y velocity: top of the pad is softest, bottom is full velocity.
@@ -184,13 +180,17 @@ internal fun padTagBacking(scheme: Scheme): Color =
     (if (scheme.isPaper()) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape
 
 /**
- * Both banks, side by side. `Layout.MIN_HIT_TARGET` is non-negotiable
- * (Lessons), so this measures the available width first: wide enough for
- * both banks at the floor width, share it with `weight` so pads grow to
- * fill a roomy landscape screen; too narrow (a compact phone's landscape
- * width, minus insets, can land under 8 pads' worth of 44dp), fall back to
- * fixed floor-width banks inside a horizontal scroll — `weight` and
- * `horizontalScroll` can't be combined in the same axis, hence the split.
+ * Both banks at once, each the same 4×4 [windowRows] draws on every
+ * portrait screen - A on the left, B on the right, MPC order in both
+ * (bottom-left is 01, 17). Two blocks of four rather than two banks of
+ * eight by two: a landscape phone gives ~780-860 dp after insets, which
+ * seats two 216 dp banks with room to grow, where eight columns a bank
+ * needed 888 dp, fell to a scroll with 48 × 125 dp slivers and left B08
+ * off-screen with no hint.
+ * `Layout.MIN_HIT_TARGET` is non-negotiable (Lessons), so the width is
+ * measured first: wide enough for two banks at the floor, they share it
+ * with `weight` so pads grow to fill a roomy screen; too narrow, B stacks
+ * under A - still 4×4 each, never a scroll.
  */
 @Composable
 internal fun BankRow(
@@ -201,26 +201,23 @@ internal fun BankRow(
     modifier: Modifier = Modifier,
     emptyHits: Boolean = false,
 ) {
-    val bankFloor = (Layout.MIN_HIT_TARGET * 8 + Layout.PAD_GAP * 7).dp
+    val bankFloor = (Layout.MIN_HIT_TARGET * 4 + Layout.PAD_GAP * 3).dp
     BoxWithConstraints(modifier) {
         if (maxWidth >= bankFloor * 2 + Layout.PAD_GAP.dp) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
-                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
-                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
+                PlayBank(kit, windowRows(0), glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
+                PlayBank(kit, windowRows(1), glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
             }
         } else {
-            Row(
-                Modifier.fillMaxHeight().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
-            ) {
-                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight(), emptyHits)
-                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight(), emptyHits)
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
+                PlayBank(kit, windowRows(0), glow, onHit, onRelease, Modifier.weight(1f).fillMaxWidth(), emptyHits)
+                PlayBank(kit, windowRows(1), glow, onHit, onRelease, Modifier.weight(1f).fillMaxWidth(), emptyHits)
             }
         }
     }
 }
 
-/** One bank's 8×2 block — [rows] is top-row-first, matching KIT's own bottom-up numbering. */
+/** One bank's block - [rows] is top-row-first, matching KIT's own bottom-up numbering ([windowRows]). */
 @Composable
 internal fun PlayBank(
     kit: Kit,

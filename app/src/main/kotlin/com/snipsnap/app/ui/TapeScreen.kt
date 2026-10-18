@@ -668,7 +668,7 @@ private fun TapeDeckContent(
     // as EXPORT's own overwrite arm.
     DisposableEffect(Unit) { onDispose { onCatchInFlight(false) } }
     // Which bank the 4×4 grid shows (0 is A). TAPE is a portrait screen,
-    // so both banks abreast never fit (PadGrid's `windowRows`); the grid
+    // so both banks abreast never fit (PadGrid's `BankRow`); the grid
     // opens on the first bank with a free pad and a switch flips it.
     var catchBank by remember(model) { mutableStateOf(0) }
     val catchGlow = remember(model) { (1..PadBanks.SIZE * 2).associateWith { Animatable(0f) } }
@@ -977,11 +977,12 @@ private fun TapeDeckContent(
             // CATCH A HIT (docs/CATCH.md): the grid takes the controls'
             // place while the loop runs — one bank as the 4×4 window every
             // portrait screen draws, with a switch for the other. Not
-            // `BankRow`: that is PLAY's landscape shape, two banks of eight
-            // abreast, and on this portrait screen it fell to its scroll
-            // branch, so bank A's last column was clipped and bank B was a
-            // scroll away during a hold (September wiring review, finding
-            // 3). A pad that lands shows its name the moment App's write
+            // `BankRow`: that is PLAY's landscape shape, two banks abreast,
+            // and this portrait screen is under its 440 dp floor, so it
+            // would stack them and halve every pad; this grid was once
+            // `BankRow` and fell to a scroll, so bank A's last column was
+            // clipped and bank B was a scroll away during a hold
+            // (September wiring review, finding 3). A pad that lands shows its name the moment App's write
             // comes back as `entry.kit`; a pad that had a sound already
             // refuses at the press. PLAY/STOP stays, since the transport
             // row is under this; DONE puts the deck back and hands over to
