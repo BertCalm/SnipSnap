@@ -113,7 +113,7 @@ class DspTest {
         kotlin.math.sqrt(buf.sumOf { (it * it).toDouble() } / buf.size).toFloat()
 
     @Test
-    fun `decimate rejects a tone above the target rate's Nyquist more than a single direct step would`() {
+    fun `decimate rejects a tone above the target rate's Nyquist outright, as a direct step now also does`() {
         val oversampledRate = Dsp.RATE * Dsp.OVERSAMPLE
         // 30kHz sits above 44.1kHz's 22.05kHz Nyquist but well inside the
         // oversampled rate's own Nyquist (88.2kHz) - exactly the band the
@@ -123,12 +123,15 @@ class DspTest {
         val before = rms(above)
         val cascaded = rms(Dsp.decimate(above.copyOf(), Dsp.RATE))
         // Compared against a single direct 4:1 Resampler.resample call, not
-        // a hardcoded ratio: measured for this exact tone, a direct step
-        // already rejects it to ~6% of `before` - comfortably under a loose
-        // fixed threshold like 0.3x, so a regression to the single-step
-        // approach this PR chose against would pass a threshold-only
-        // version of this test. The cascaded approach has to actually beat
-        // that, not just clear an arbitrary bar.
+        // a hardcoded ratio. This test used to require the cascade to beat
+        // the direct step 2:1, because the direct step's fixed 16-tap
+        // kernel genuinely was weak here. The Resampler's far-ratio kernel
+        // widening (docs/DSP_REVIEW.md) closed that gap - measured for
+        // this exact tone, cascaded and direct now land within a few
+        // percent of each other. The cascade stays because every shipped
+        // render is pinned to its exact arithmetic, not because the
+        // direct step is still weak; what must not regress is that BOTH
+        // reject outright.
         val direct = rms(
             com.snipsnap.audio.Resampler.resample(
                 com.snipsnap.audio.Snip(above.copyOf(), channels = 1, sampleRate = oversampledRate),
@@ -136,13 +139,12 @@ class DspTest {
             ).samples,
         )
         assertTrue(
-            cascaded < direct * 0.5f,
-            "two cascaded 2x steps should reject a 30kHz tone well below a single direct 4:1 step: " +
-                "cascaded=$cascaded direct=$direct (before=$before)",
+            cascaded < before * 0.05f,
+            "decimate must reject a 30kHz tone outright: $before -> $cascaded",
         )
         assertTrue(
-            cascaded < before * 0.05f,
-            "and reject it outright, not just relatively better than the alternative: $before -> $cascaded",
+            direct < before * 0.05f,
+            "a direct 4:1 step must now reject it outright too: $before -> $direct",
         )
     }
 

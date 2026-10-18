@@ -61,7 +61,7 @@ is an audition decision. The measured door now exists for it.
 a triangle kernel, ~4 dB down at a quarter of the sample rate, imaging
 on pitch-downs. It now takes `cubic = true` for Catmull-Rom reading
 (edge frames replicated); measured RMS error on a quarter-rate sine at
-half speed is under a third of the linear read's (`DspResampleTest`).
+half speed is ~0.4× the linear read's (`DspResampleTest`).
 Default stays linear: both shipped stages were voiced against it, so
 adoption is a per-stage audition, not a silent retune.
 
@@ -118,5 +118,11 @@ place. Bit-identical — Loudness never mutated its input.
 `:audio:test` green including the new `TruePeakTest`, the far-ratio
 `ResamplerTest` cases and the DFT-accuracy `FftTest` case; before/after
 probe numbers are quoted above from temporary measurement tests run
-against the unmodified code (and removed). Full-suite results are in
-the pull request.
+against the unmodified code (and removed). Full JVM suite: 5,153 tests,
+the only failures on first run being two of this pass's own assertions
+(an over-strong cubic bound, and the pre-existing cascade-vs-direct
+decimate test whose premise the resampler widening deliberately
+obsoleted — both updated to the measured reality, with the reasoning
+recorded at the test). One side-effect worth knowing: the widening
+also closed the gap `Dsp.decimate`'s cascade was built for; the cascade
+is retained for render bit-identity, and its doc now says so.

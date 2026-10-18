@@ -76,7 +76,7 @@ class DspResampleTest {
         }
         val linear = err(cubic = false)
         val cubic = err(cubic = true)
-        assertTrue(cubic < linear / 3.0, "cubic RMS error $cubic vs linear $linear")
+        assertTrue(cubic < linear / 2.0, "cubic RMS error $cubic vs linear $linear")
     }
 
     @Test

@@ -742,11 +742,14 @@ internal object Dsp {
      * Decimates [buf] (rendered at `rate * OVERSAMPLE`) back down to [rate],
      * via [Resampler] - the same windowed-sinc kernel already used for
      * device-rate conversion at bake time. Two cascaded 2x steps, not one
-     * 4x step: `Resampler`'s own doc comment scopes its well-rejected range
-     * to roughly 0.5x-2x of unity, and a straight 4:1 pass measured only
-     * -10.9 dB rejection just above the new Nyquist versus -17.9 dB
-     * cascaded (25 kHz probe, 176.4 kHz source) - each stage this way stays
-     * inside the kernel's own documented comfort zone.
+     * 4x step. Historically that was a rejection decision (a straight 4:1
+     * pass measured only -10.9 dB just above the new Nyquist versus
+     * -17.9 dB cascaded on a 25 kHz probe); since `Resampler`'s far-ratio
+     * kernel widening, a direct 4:1 step rejects within a few percent of
+     * the cascade at every probed frequency (DspTest). The cascade stays
+     * because every shipped render is pinned to its exact arithmetic —
+     * switching would re-voice every oversampled engine for no measured
+     * gain — not because the direct step is still weak.
      *
      * Each channel is resampled on its own. Running the kernel straight down
      * an interleaved buffer would interpolate across the L/R boundary -
@@ -812,9 +815,10 @@ internal object Dsp {
      * [cubic] opts into Catmull-Rom interpolation over the four nearest
      * frames (edge frames replicated): linear interpolation is a triangle
      * kernel whose response falls ~4 dB at a quarter of the sample rate
-     * and images audibly on a pitch-down, while the cubic tracks a sine
-     * there to a fraction of a dB and can overshoot slightly on steps —
-     * the sampler-era trade, offered per call rather than imposed. It is
+     * and images audibly on a pitch-down, while the cubic reads the same
+     * sine at ~0.4x the linear read's RMS error (measured, DspResampleTest)
+     * and can overshoot slightly on steps — the sampler-era trade, offered
+     * per call rather than imposed. It is
      * off by default because both shipped stages were voiced and tested
      * against the linear read; adopting it is a per-stage audition.
      */
