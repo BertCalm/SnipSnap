@@ -18,8 +18,8 @@ import kotlin.math.sqrt
 
 /**
  * Actual JVM-engine listening evidence, with untouched native PCM and the repository's
- * shared audition level. The default 151-case library is bounded for browser use;
- * --full renders the complete 195-case pitch/velocity and interaction matrix.
+ * shared audition level. The compact library is bounded for browser use;
+ * --full adds the complete pitch/velocity and interaction matrix.
  * All presets and sonic conclusions remain provisional until the owner's listening.
  */
 object MurmurAuditionGenerator {
@@ -28,6 +28,9 @@ object MurmurAuditionGenerator {
     private val NOTES = listOf(36, 60, 96)
     private val VELOCITIES = listOf(.25f, .6f, 1f)
     private const val LISTENING_TARGET = .03f
+    private const val CURRENT_MODEL = 2
+    private const val LEGACY_MODEL = 1
+    private const val LEGACY_REFERENCE_REVISION = "46e1d838ea67ac9398e504a3409f10daf9e1c53e"
 
     private data class Case(
         val id: String,
@@ -35,11 +38,14 @@ object MurmurAuditionGenerator {
         val title: String,
         val description: String,
         val patch: MurmurPatch,
+        val referenceClipId: String? = null,
     )
 
     private val groups = linkedMapOf(
-        "first-listen" to ("First listen" to "Twelve original dry preset proposals. Start here; the planned 36-preset roster awaits your sonic approval."),
-        "defaults" to ("Six dry defaults" to "Same C4 root and full velocity, one voice at a time. No rack effects."),
+        "defaults" to ("Compare six voices" to "Model 2, same C4 root, velocity 1 and matched listening level. Each voice retains its own defaults and full articulation. Listen for source color as well as attack, sustain and release; duration alone does not establish identity."),
+        "voice-before-after" to ("Before / after · full gestures" to "Each voice alternates model 1 (previously published) and model 2 (revised). Same C4, velocity 1 and default macro settings; each model keeps its full gesture. Model 1 is rendered again with its saved algorithm, with the original source revision linked below."),
+        "held-before-after" to ("Before / after · settled sustain" to "The same six model pairs with HOLD 1. The original attack is absent: compare sustained source color and mouth shaping beyond note length or onset speed. Repeat the settled buffer and check each clip's measured duration."),
+        "first-listen" to ("Preset proposals" to "Twelve original dry presets using model 2. Settings and names remain provisional; the planned 36-preset roster awaits your sonic approval."),
         "body-sweeps" to ("BODY · thin to full" to "All six voices at C4, velocity 1. Compare 0, .25, .5, .75 and 1 at matched level: listen for low/mid weight, direct support and upper damping. All other controls retain each voice's defaults."),
         "motion-sweeps" to ("MOTION · still to moving" to "All six voices at C4, velocity 1. Compare 0, .25, .5, .75 and 1. Listen through the whole note for a wider, developing vowel contour; all other controls retain each voice's defaults."),
         "pitch-velocity" to ("Pitch & velocity" to "C2, C4 and C7 span the declared MIDI 36–96 range. Compare native level to hear excitation energy; matched level makes timbre easier to compare."),
@@ -58,6 +64,8 @@ object MurmurAuditionGenerator {
         require(args.filter { it.startsWith("--") }.all { it == "--full" }) { "Unknown MURMUR audition option" }
         val full = "--full" in args
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/murmur-audition")
+        val compactCount = cases(false).size
+        val fullCount = cases(true).size
         val cases = cases(full)
         check(cases.map { it.id }.distinct().size == cases.size) { "Duplicate audition IDs" }
         root.mkdirs()
@@ -112,6 +120,11 @@ object MurmurAuditionGenerator {
                 "id" to case.id, "group" to case.group, "section" to groups.getValue(case.group).first,
                 "title" to case.title, "label" to case.title, "description" to case.description,
                 "voice" to p.voice.name, "midi" to p.midi, "velocity" to p.velocity,
+                "model" to p.config.model,
+                "modelLabel" to when { p.config.model == LEGACY_MODEL -> "Before · model 1"; case.referenceClipId != null -> "After · model 2"; else -> "Current · model 2" },
+                "listeningCue" to if (p.config.model == LEGACY_MODEL) "Previous shared-formant voice; retained for direct comparison." else roleDescription(p.voice),
+                "referenceClipId" to case.referenceClipId,
+                "referenceSourceRevision" to LEGACY_REFERENCE_REVISION.takeIf { case.referenceClipId != null },
                 "macros" to settings, "config" to p.toJsonValue().obj().getValue("config"),
                 "loop" to loop, "attackIncluded" to !loop, "requestedHz" to midiHz(p.midi),
                 "renderedRootHz" to probe.rootHz, "durationSeconds" to raw.durationSeconds,
@@ -151,7 +164,11 @@ object MurmurAuditionGenerator {
             "engine" to "MURMUR", "schemaVersion" to 1, "title" to "Murmur · SnipSnap audition",
             "sourceRevision" to git("rev-parse", "HEAD"), "sourceTreeDirty" to (git("status", "--porcelain")?.isNotBlank()),
             "source" to "Real offline SnipSnap JVM engine renders; no browser synthesis or sample assets",
+            "renderModel" to CURRENT_MODEL, "comparisonModels" to listOf(LEGACY_MODEL, CURRENT_MODEL),
+            "legacyReferenceRevision" to LEGACY_REFERENCE_REVISION,
+            "comparisonProvenance" to "Both models are rendered by the source revision above. Model 1 retains the previously published algorithm; its original source revision is the legacy reference. Raw/matched hashes and complete model-bearing recipes identify every clip.",
             "full" to full, "clipCount" to rows.size, "wavCount" to rows.size * 2,
+            "compactClipCount" to compactCount, "fullClipCount" to fullCount,
             "sampleRate" to Dsp.RATE, "bitDepth" to 24, "channels" to 1, "internalOversampling" to 4,
             "listeningTarget" to LISTENING_TARGET, "loudnessMetric" to "Loudness.of: loudest 200 ms RMS window after the shared gentle low cut",
             "sonicAcceptance" to "Pending owner listening; twelve provisional presets, expansion to 36 deferred until approval",
@@ -178,13 +195,19 @@ object MurmurAuditionGenerator {
 
             ${rows.size} actual JVM-engine cases; ${rows.size * 2} mono 24-bit WAVs at 44.1 kHz.
             Generated with `./gradlew :synth:generateMurmurAudition${if (full) " -PmurmurFull" else ""}`.
-            The default compact set has 151 cases; `--full` adds the complete 3 × 3 pitch/velocity
-            matrix and 3 × 3 interaction grids (195 cases). No rack effects are applied.
+            The default compact set has $compactCount cases; `--full` adds the complete 3 × 3 pitch/velocity
+            matrix and 3 × 3 interaction grids ($fullCount cases). No rack effects are applied.
             BODY and MOTION each have five-point comparisons for all six voices; MOUTH,
             EDGE and BREATH retain five-point KEY comparisons.
 
             Open index.html, or serve the folder over HTTP for sample-accurate Web Audio playback.
-            Start with the twelve first-listen presets and six defaults. Use matched level to compare
+            Start with Compare six voices: model 2 at C4 and velocity 1. Then compare interleaved
+            model 1/model 2 full gestures and settled HOLD pairs. The 24 before/after cases use the
+            same root, velocity and macro defaults; compare sustained color as well as articulation.
+            The model 1 reference was published from $LEGACY_REFERENCE_REVISION; all files here
+            are rendered again from the source revision recorded in manifest.json. Their hashes,
+            model-bearing recipes and original reference clip IDs preserve the comparison trail.
+            The twelve preset proposals remain available. Use matched level to compare
             timbre at the repository's shared .03 target, and raw level to compare excitation energy.
             Raw WAVs retain the engine's pre-leveling gain; the generator refuses out-of-range PCM.
             HOLD exports contain settled sustaining material only. Repeat buffers without retriggering
@@ -203,7 +226,19 @@ object MurmurAuditionGenerator {
             "Original dry ${p.voice.name.lowercase()} proposal at ${note(p.midi)}. Settings and name await listening review." +
                 if (Murmur.isLoop(p.macros.getValue("HOLD"))) " Settled sustain only; repeat to inspect the wrap." else "", p))
         for (voice in MurmurVoice.entries) add(case("default_${voice.name.lowercase()}", "defaults", voice,
-            "${voice.name} · C4", "Dry voice defaults at the same C4 root and velocity 1."))
+            "${voice.name} · C4", "Same C4 root and velocity 1; each revised voice keeps its own full dry gesture."))
+        for (held in listOf(false, true)) for (voice in MurmurVoice.entries) for (model in listOf(LEGACY_MODEL, CURRENT_MODEL)) {
+            val group = if (held) "held-before-after" else "voice-before-after"
+            val reference = if (held) "${voice.name.lowercase()}_held" else "default_${voice.name.lowercase()}"
+            val title = "${voice.name} · ${if (model == LEGACY_MODEL) "before" else "after"} · model $model"
+            val settings = Murmur.defaults(voice) + ("HOLD" to if (held) 1f else 0f)
+            add(Case("identity_${voice.name.lowercase()}_${if (held) "held" else "finite"}_model$model", group, title,
+                "Same C4, velocity 1 and voice defaults. " +
+                    if (held) "Settled sustain only: compare color without the original attack."
+                    else "Full gesture: compare source color, articulation and release.",
+                MurmurPatch(title, voice, settings, midi = 60, velocity = 1f, config = Murmur.configurationFor(voice, model)),
+                reference))
+        }
         for (voice in MurmurVoice.entries) for (midi in NOTES) for (velocity in VELOCITIES) {
             if (midi == 60 && velocity == 1f) continue // The six default cards already provide these cells.
             if (!full && midi != 60 && velocity != 1f) continue
@@ -239,11 +274,20 @@ object MurmurAuditionGenerator {
             add(case("${voice.name.lowercase()}_held_all_high", "held", voice, "${voice.name} · held all high",
                 "All five timbral macros and HOLD at 1. Compare the formant/breath texture across wraps.", TIMBRE.associateWith { 1f } + ("HOLD" to 1f)))
         }
-    }
+    }.sortedBy { groups.keys.indexOf(it.group) }
 
     private fun case(id: String, group: String, voice: MurmurVoice, title: String, description: String,
                      macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = 1f) =
         Case(id, group, title, description, MurmurPatch(title, voice, Murmur.defaults(voice) + macros, midi, velocity))
+
+    private fun roleDescription(voice: MurmurVoice): String = when (voice) {
+        MurmurVoice.BASS -> "Listen for rounded, FM-first talking body."
+        MurmurVoice.KEY -> "Listen for a struck tine color and third-harmonic carrier."
+        MurmurVoice.PLUCK -> "Listen for a dry, short fourth-harmonic pluck."
+        MurmurVoice.LEAD -> "Listen for a sustained nasal or reed-like stack."
+        MurmurVoice.CHOIR -> "Listen for soft near-unison hum and integrated air."
+        MurmurVoice.METAL -> "Listen for persistent high-carrier ringing FM."
+    }
 
     private fun audioMetrics(snip: Snip, loop: Boolean): Map<String, Any?> {
         val x = snip.samples

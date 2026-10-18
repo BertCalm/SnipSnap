@@ -501,7 +501,7 @@ object UserPresets {
         return "MurmurConfig(routing = MurmurRouting.${config.routing.name}, ratios = ${values(config.ratios)}, " +
             "trajectory = MurmurTrajectory.${config.trajectory.name}, direction = ${config.direction}, " +
             "referenceSeconds = ${config.referenceSeconds}, attack = ${config.attack}, decay = ${config.decay}, " +
-            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets)"
+            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets, model = ${config.model})"
     }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */

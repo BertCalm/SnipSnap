@@ -61,8 +61,10 @@ data class MurmurConfig(
     val sustain: Double,
     val release: Double,
     val targets: List<MurmurFormantTarget>,
+    val model: Int = 2,
 ) {
     init {
+        require(model in 1..2) { "unsupported Murmur model $model" }
         require(ratios.size == 4 && ratios.all { it.isFinite() && it in .5..8.0 }) { "Murmur needs four bounded operator ratios" }
         require(ratios[0] == 1.0) { "Murmur's principal carrier must bear the requested root" }
         require(direction == -1 || direction == 1) { "Murmur trajectory direction must be -1 or +1" }
@@ -150,7 +152,7 @@ object Murmur {
         MurmurFormantTarget("Narrow", listOf(360.0, 2_050.0, 2_850.0, 3_800.0, 4_800.0),
             listOf(110.0, 230.0, 350.0, 420.0, 580.0), listOf(1.1, 1.35, .75, .30, .12), .30),
     )
-    fun configurationFor(voice: MurmurVoice): MurmurConfig {
+    private fun legacyConfigurationFor(voice: MurmurVoice): MurmurConfig {
         val targets = originalTargets()
         return when (voice) {
             MurmurVoice.BASS -> MurmurConfig(MurmurRouting.PAIRS, listOf(1.0, 1.0, 2.0, 2.0), MurmurTrajectory.ATTACK, 1, .55, .009, .25, .52, .55, targets)
@@ -159,7 +161,161 @@ object Murmur {
             MurmurVoice.LEAD -> MurmurConfig(MurmurRouting.PARALLEL, listOf(1.0, 2.0, 3.0, 1.0), MurmurTrajectory.CYCLE, 1, 1.50, .025, .25, .72, 1.00, targets)
             MurmurVoice.CHOIR -> MurmurConfig(MurmurRouting.PARALLEL, listOf(1.0, 1.0, 2.0, 1.0015), MurmurTrajectory.CYCLE, -1, 2.20, .16, .45, .82, 1.10, targets)
             MurmurVoice.METAL -> MurmurConfig(MurmurRouting.STACK, listOf(1.0, 2.0, 3.0, 5.0), MurmurTrajectory.ATTACK, -1, .65, .004, .65, .20, .90, targets)
+        }.copy(model = 1)
+    }
+
+    /**
+     * Model 1 is the published shared-source instrument. Model 2 gives each musical role its
+     * own source, sustained index, carrier balance and original spectral voicing. The patch
+     * still owns its actual ratios, targets and envelope: profiles never replace saved edits.
+     */
+    fun configurationFor(voice: MurmurVoice, model: Int = 2): MurmurConfig {
+        require(model in 1..2) { "unsupported Murmur model $model" }
+        if (model == 1) return legacyConfigurationFor(voice)
+        val targets = voicedTargets(voice)
+        return when (voice) {
+            MurmurVoice.BASS -> MurmurConfig(MurmurRouting.PAIRS, listOf(1.0, 1.0, 2.0, 3.0), MurmurTrajectory.ATTACK, 1, .52, .008, .24, .60, .50, targets)
+            MurmurVoice.KEY -> MurmurConfig(MurmurRouting.PAIRS, listOf(1.0, 2.0, 3.0, 5.0), MurmurTrajectory.ATTACK, -1, .52, .005, .70, .24, .90, targets)
+            MurmurVoice.PLUCK -> MurmurConfig(MurmurRouting.PAIRS, listOf(1.0, 1.0, 4.0, 3.0), MurmurTrajectory.ATTACK, 1, .48, .002, .24, .08, .35, targets)
+            MurmurVoice.LEAD -> MurmurConfig(MurmurRouting.STACK, listOf(1.0, 1.0, 2.0, 3.0), MurmurTrajectory.CYCLE, 1, 1.35, .018, .20, .88, .85, targets)
+            MurmurVoice.CHOIR -> MurmurConfig(MurmurRouting.PARALLEL, listOf(1.0, 1.0, 2.0, 1.003), MurmurTrajectory.CYCLE, -1, 2.20, .24, .75, .92, 1.20, targets)
+            MurmurVoice.METAL -> MurmurConfig(MurmurRouting.STACK, listOf(1.0, 2.0, 5.0, 7.0), MurmurTrajectory.ATTACK, -1, .72, .003, .95, .36, 1.00, targets)
         }
+    }
+
+    private fun voicedTargets(voice: MurmurVoice): List<MurmurFormantTarget> {
+        val centers: List<Double>
+        val widths: List<Double>
+        val gains: List<Double>
+        val airScale: Double
+        val airOffset: Double
+        when (voice) {
+            MurmurVoice.BASS -> {
+                centers = listOf(.82, .92, .92, .95, .96)
+                widths = listOf(1.4, 1.2, 1.0, 1.0, 1.0)
+                gains = listOf(.65, 1.1, .55, .40, .30); airScale = .70; airOffset = .04
+            }
+            MurmurVoice.KEY -> {
+                centers = listOf(1.35, 1.15, 1.10, 1.05, 1.0)
+                widths = listOf(.85, .90, .85, .90, 1.0)
+                gains = listOf(.45, 1.1, 1.7, 1.4, 1.1); airScale = .50; airOffset = .0
+            }
+            MurmurVoice.PLUCK -> {
+                centers = listOf(1.05, 1.05, 1.12, 1.10, 1.0)
+                widths = listOf(.90, .90, .85, .80, .85)
+                gains = listOf(.65, .90, 1.3, .90, .65); airScale = .40; airOffset = .01
+            }
+            MurmurVoice.LEAD -> {
+                centers = listOf(1.50, 1.80, 1.65, 1.35, 1.20)
+                widths = listOf(.70, .65, .80, .85, 1.0)
+                gains = listOf(.60, 1.9, 2.5, 1.8, 1.5); airScale = .85; airOffset = .05
+            }
+            MurmurVoice.CHOIR -> {
+                centers = listOf(.95, .92, .97, 1.0, 1.0)
+                widths = listOf(1.8, 1.7, 1.6, 1.4, 1.3)
+                gains = listOf(.70, .85, 1.0, .80, .60); airScale = .55; airOffset = .30
+            }
+            MurmurVoice.METAL -> {
+                centers = listOf(1.45, 1.35, 1.20, 1.10, 1.05)
+                widths = listOf(.80, .80, .65, .65, .75)
+                gains = listOf(.45, .75, 1.8, 2.2, 1.7); airScale = .50; airOffset = .02
+            }
+        }
+        return originalTargets().map { target ->
+            target.copy(
+                name = "${voice.name.lowercase()} ${target.name}",
+                centers = target.centers.mapIndexed { band, value -> value * centers[band] },
+                widths = target.widths.mapIndexed { band, value -> (value * widths[band]).coerceIn(60.0, 2_000.0) },
+                gains = target.gains.mapIndexed { band, value -> (value * gains[band]).coerceAtMost(3.0) },
+                sourceBalance = (target.sourceBalance * airScale + airOffset).coerceIn(0.0, 1.0),
+            )
+        }
+    }
+
+    /** Fixed, versioned role coefficients. They shape sustain as well as the finite onset. */
+    private data class VoiceProfile(
+        val mainCarrier: Double,
+        val carrierStrike: Double,
+        val indexFloor: Double,
+        val indexEdge: Double,
+        val indexSustain: Double,
+        val indexBite: Double,
+        val indexDecay: Double,
+        val bankFm: Double,
+        val bankUpper: Double,
+        val oddSource: Boolean,
+        val bankGain: Double,
+        val root: Double,
+        val direct: Double,
+        val chestSecond: Double,
+        val chestThird: Double,
+        val thinCarrier: Double,
+        val ringOperator: Int,
+        val ringGain: Double,
+        val air: Double,
+        val airHz: Double,
+        val contact: Double,
+        val cutoffThin: Double,
+        val cutoffFull: Double,
+        val naturalDecay: Double,
+        val trim: Double,
+    )
+
+    private fun profileFor(voice: MurmurVoice): VoiceProfile = when (voice) {
+        // Rounded, weighty paired FM with a low moving mouth and a modest initial punch.
+        MurmurVoice.BASS -> VoiceProfile(
+            mainCarrier = .86, carrierStrike = .10,
+            indexFloor = .18, indexEdge = 3.0, indexSustain = 1.0, indexBite = .55, indexDecay = .40,
+            bankFm = .80, bankUpper = .18, oddSource = false, bankGain = .90,
+            root = .36, direct = .90, chestSecond = .50, chestThird = .12, thinCarrier = .42,
+            ringOperator = 2, ringGain = .0, air = 2.5, airHz = 4_000.0, contact = .50,
+            cutoffThin = 4_800.0, cutoffFull = 1_300.0, naturalDecay = 7.0, trim = .95,
+        )
+        // A tine-like third carrier keeps ringing after the strike's modulation has relaxed.
+        MurmurVoice.KEY -> VoiceProfile(
+            mainCarrier = .62, carrierStrike = .60,
+            indexFloor = .12, indexEdge = 4.0, indexSustain = .55, indexBite = 1.05, indexDecay = .20,
+            bankFm = .25, bankUpper = .16, oddSource = false, bankGain = .95,
+            root = .18, direct = .95, chestSecond = .14, chestThird = .42, thinCarrier = .38,
+            ringOperator = 2, ringGain = .18, air = 1.7, airHz = 7_000.0, contact = .90,
+            cutoffThin = 9_000.0, cutoffFull = 3_000.0, naturalDecay = 2.8, trim = .90,
+        )
+        // A clear fourth carrier and rapidly relaxing excitation make a short, dry pluck.
+        MurmurVoice.PLUCK -> VoiceProfile(
+            mainCarrier = .46, carrierStrike = .90,
+            indexFloor = .10, indexEdge = 3.0, indexSustain = .30, indexBite = 1.10, indexDecay = .25,
+            bankFm = .35, bankUpper = .24, oddSource = false, bankGain = .90,
+            root = .20, direct = .95, chestSecond = .26, chestThird = .20, thinCarrier = .42,
+            ringOperator = 2, ringGain = .12, air = 3.0, airHz = 7_500.0, contact = 1.40,
+            cutoffThin = 7_500.0, cutoffFull = 2_300.0, naturalDecay = 2.5, trim = .90,
+        )
+        // A continuously excited reed: odd-rich source, nasal upper bands and sustained index.
+        MurmurVoice.LEAD -> VoiceProfile(
+            mainCarrier = .78, carrierStrike = .0,
+            indexFloor = .20, indexEdge = 3.6, indexSustain = 1.25, indexBite = .25, indexDecay = .80,
+            bankFm = .85, bankUpper = .40, oddSource = true, bankGain = 1.20,
+            root = .30, direct = .95, chestSecond = .22, chestThird = .30, thinCarrier = .38,
+            ringOperator = 2, ringGain = .08, air = 1.4, airHz = 5_500.0, contact = .30,
+            cutoffThin = 7_600.0, cutoffFull = 2_400.0, naturalDecay = .0, trim = .75,
+        )
+        // Near-unison carriers, soft onset and shaped air; little common ramp or sharp contact.
+        MurmurVoice.CHOIR -> VoiceProfile(
+            mainCarrier = .52, carrierStrike = .0,
+            indexFloor = .08, indexEdge = 2.0, indexSustain = .40, indexBite = .08, indexDecay = 1.0,
+            bankFm = .28, bankUpper = .12, oddSource = true, bankGain = 1.15,
+            root = .26, direct = .55, chestSecond = .30, chestThird = .16, thinCarrier = .26,
+            ringOperator = 3, ringGain = .0, air = 4.8, airHz = 3_600.0, contact = .08,
+            cutoffThin = 4_300.0, cutoffFull = 1_700.0, naturalDecay = .0, trim = .90,
+        )
+        // A bright sustained stack plus a fifth carrier; its ring does not disappear at sustain.
+        MurmurVoice.METAL -> VoiceProfile(
+            mainCarrier = .78, carrierStrike = .0,
+            indexFloor = .20, indexEdge = 3.8, indexSustain = .95, indexBite = .55, indexDecay = .70,
+            bankFm = .65, bankUpper = .10, oddSource = false, bankGain = 1.0,
+            root = .30, direct = .95, chestSecond = .22, chestThird = .18, thinCarrier = .40,
+            ringOperator = 2, ringGain = .32, air = 1.6, airHz = 8_000.0, contact = .70,
+            cutoffThin = 10_000.0, cutoffFull = 4_200.0, naturalDecay = 4.0, trim = .75,
+        )
     }
 
     fun render(
@@ -324,6 +480,7 @@ object Murmur {
         plan: LoopPlan?, gate: Double, attack: Double, preroll: Int, keep: Int,
     ): FloatArray {
         val held = plan != null
+        val profile = if (config.model == 2) profileFor(voice) else null
         val root = plan?.root ?: Keys.midiHz(midi).toDouble()
         val ratios = plan?.ratios ?: config.ratios.toDoubleArray()
         val upperOperator = ratios.indices.maxBy { ratios[it] }
@@ -337,7 +494,8 @@ object Murmur {
         val targets = config.targets
         val bands = Array(targets.first().centers.size) { Formant() }
         val indexCeiling = minOf(MAX_INDEX_RADIANS, 7_200.0 / (root * ratios.max())).coerceAtLeast(.12)
-        val indexBase = minOf(indexCeiling, (.10 + edge * 3.8) * (.25 + .75 * velocity))
+        val indexBase = if (profile == null) minOf(indexCeiling, (.10 + edge * 3.8) * (.25 + .75 * velocity))
+            else minOf(indexCeiling, (profile.indexFloor + edge * profile.indexEdge) * (.25 + .75 * velocity))
         // A struck voice gets a clearly articulated journey rather than spending nearly its
         // entire note at the endpoint of a 150 ms gesture. Cycles are slow enough to hear the
         // distinct mouth shapes, with whole-cycle quantization in HOLD below.
@@ -357,10 +515,11 @@ object Murmur {
         val out = FloatArray(keep)
         val phases = DoubleArray(4)
         val steps = DoubleArray(4) { root * ratios[it] / INTERNAL_RATE }
-        val noiseA = exp(-2.0 * PI * 6_000.0 / INTERNAL_RATE)
+        val noiseA = exp(-2.0 * PI * (profile?.airHz ?: 6_000.0) / INTERNAL_RATE)
         // BODY's damping acts within the musical spectrum, while a register floor preserves
         // the root and a little overtone space at the top of the supported keyboard.
-        val bodyCutoff = max(root * 1.5, 5_200.0 * (1_500.0 / 5_200.0).pow(fullness))
+        val bodyCutoff = if (profile == null) max(root * 1.5, 5_200.0 * (1_500.0 / 5_200.0).pow(fullness))
+            else max(root * 1.5, profile.cutoffThin * (profile.cutoffFull / profile.cutoffThin).pow(fullness))
         val highA = exp(-2.0 * PI * bodyCutoff / INTERNAL_RATE)
         val dcA = exp(-2.0 * PI * 12.0 / INTERNAL_RATE)
         var noiseLow = 0.0
@@ -368,7 +527,7 @@ object Murmur {
         var dcLow = 0.0
         var sourceBalance = 0.0
         var sourceStep = 0.0
-        val excitationGain = .24 * velocity.pow(.8)
+        val excitationGain = if (profile == null) .24 * velocity.pow(.8) else .18 * profile.trim * velocity.pow(.8)
         // Mostly absolute formants, with only a small extreme-register shift and broader sparse
         // harmonic sampling at the top. The mouth is never retuned to the requested note.
         val registerShift = 2.0.pow(((midi - 60).coerceIn(-24, 36) / 12.0) * .035)
@@ -421,42 +580,69 @@ object Murmur {
                     t < attack + config.decay -> 1.0 + (config.sustain - 1.0) * smooth((t - attack) / config.decay)
                     else -> config.sustain
                 }
-                beforeRelease * (1.0 - smooth((t - gate) / config.release))
+                val envelope = beforeRelease * (1.0 - smooth((t - gate) / config.release))
+                if (profile == null || profile.naturalDecay <= 0.0) envelope
+                else envelope * exp(-max(0.0, t - attack) / max(.04, config.decay * profile.naturalDecay))
             }
-            val transient = if (held) .25 else exp(-t / (.025 + config.decay * .35))
-            val index = minOf(indexCeiling, indexBase * (.65 + .55 * edge * transient) * (1.0 + .18 * sourceBalance))
+            val transient = if (profile == null) {
+                if (held) .25 else exp(-t / (.025 + config.decay * .35))
+            } else if (held) .0 else exp(-max(0.0, t - attack) / (.012 + config.decay * profile.indexDecay))
+            val index = if (profile == null) {
+                minOf(indexCeiling, indexBase * (.65 + .55 * edge * transient) * (1.0 + .18 * sourceBalance))
+            } else minOf(indexCeiling, indexBase *
+                (profile.indexSustain + profile.indexBite * (.35 + .65 * edge) * transient) * (1.0 + .18 * sourceBalance))
             val p0 = phases[0] * 2.0 * PI
             val p1 = phases[1] * 2.0 * PI
             val p2 = phases[2] * 2.0 * PI
             val p3 = phases[3] * 2.0 * PI
             // One carrier sine serves both the ramp's fundamental removal and the anchor.
             val sinP0 = sin(p0)
-            val fm = when (config.routing) {
+            val fm = if (profile == null) when (config.routing) {
                 MurmurRouting.PARALLEL -> .78 * sin(p0 + index * (.65 * sin(p1) + .35 * sin(p2))) + .22 * sin(p3)
                 MurmurRouting.PAIRS -> .74 * sin(p0 + index * sin(p1)) + .26 * sin(p2 + .6 * index * sin(p3))
+                MurmurRouting.STACK -> sin(p0 + .8 * index * sin(p1 + .55 * index * sin(p2 + .35 * index * sin(p3))))
+            } else when (config.routing) {
+                MurmurRouting.PARALLEL -> profile.mainCarrier * sin(p0 + index * (.65 * sin(p1) + .35 * sin(p2))) +
+                    (1.0 - profile.mainCarrier) * sin(p3)
+                MurmurRouting.PAIRS -> profile.mainCarrier * sin(p0 + index * sin(p1)) +
+                    (1.0 - profile.mainCarrier) * (1.0 + profile.carrierStrike * transient) * sin(p2 + .6 * index * sin(p3))
                 MurmurRouting.STACK -> sin(p0 + .8 * index * sin(p1 + .55 * index * sin(p2 + .35 * index * sin(p3))))
             }
             val ramp = 2.0 * phases[0] - 1.0 - polyBlep(phases[0], steps[0])
             val upperRamp = ramp + (2.0 / PI) * sinP0
-            val voiced = (.55 * fm + (.40 + .20 * sqrt(motion)) * upperRamp) * (.94 - .18 * breath)
+            val voiced = if (profile == null) (.55 * fm + (.40 + .20 * sqrt(motion)) * upperRamp) * (.94 - .18 * breath)
+            else {
+                val upper = if (!profile.oddSource) upperRamp else {
+                    val opposite = if (phases[0] < .5) phases[0] + .5 else phases[0] - .5
+                    val pulse = (if (phases[0] < .5) 1.0 else -1.0) +
+                        polyBlep(phases[0], steps[0]) - polyBlep(opposite, steps[0])
+                    pulse - (4.0 / PI) * sinP0
+                }
+                (profile.bankFm * fm + profile.bankUpper * (1.0 + .50 * sqrt(motion)) * upper) * (.94 - .18 * breath)
+            }
             val n = repeatedNoise?.get(cycleFrame)?.toDouble() ?: noise.next().toDouble()
             noiseLow = noiseA * noiseLow + (1.0 - noiseA) * n
-            val contact = if (held || t >= contactSeconds) 0.0 else sin(PI * t / contactSeconds).pow(2) * (.12 + .40 * edge)
+            val contact = (if (held || t >= contactSeconds) 0.0 else sin(PI * t / contactSeconds).pow(2) * (.12 + .40 * edge)) *
+                (profile?.contact ?: 1.0)
             // Motion x breath and mouth x breath share the trajectory's changing source balance.
-            val unvoiced = 3.0 * noiseLow * breath * ((.38 + .42 * sourceBalance) * (.70 + .30 * amplitude) + contact) * (0.6 + .4 * velocity)
+            val unvoiced = (profile?.air ?: 3.0) * noiseLow * breath * ((.38 + .42 * sourceBalance) * (.70 + .30 * amplitude) + contact) * (0.6 + .4 * velocity)
             val drive = voiced + unvoiced
             var formant = 0.0
             for (band in bands) formant += band.next(drive)
-            val anchor = sinP0 * (.30 + .20 * fullness)
+            val anchor = if (profile == null) sinP0 * (.30 + .20 * fullness) else sinP0 * (profile.root + .18 * fullness)
             // Chesty support contains pitched second/third harmonics, not an added sub or a
             // louder sine. Thin BODY keeps the existing upper carrier and a clearer FM edge;
             // full BODY supports low mids and rounds away upper-formant/direct brightness.
             // Quadrature keeps the chest partials from cancelling the ramp's sine harmonics
             // around rounded targets: full BODY must contain audible low mids, not revert to
             // an almost pure fundamental after shared loudness matching.
-            val chest = fullness * (.55 * cos(2.0 * p0) + .24 * cos(3.0 * p0))
-            val direct = fm * (.60 - .42 * fullness) + .40 * (1.0 - fullness) * cos(2.0 * PI * phases[upperOperator])
-            var y = anchor + chest + direct + formant * (1.30 + .60 * sqrt(motion))
+            val chest = if (profile == null) fullness * (.55 * cos(2.0 * p0) + .24 * cos(3.0 * p0))
+                else fullness * (profile.chestSecond * cos(2.0 * p0) + profile.chestThird * cos(3.0 * p0))
+            val direct = if (profile == null) fm * (.60 - .42 * fullness) + .40 * (1.0 - fullness) * cos(2.0 * PI * phases[upperOperator])
+            else fm * profile.direct * (1.25 - .80 * fullness) +
+                profile.thinCarrier * (1.0 - fullness) * cos(2.0 * PI * phases[upperOperator]) +
+                profile.ringGain * (.65 + .35 * edge) * (if (held) 1.0 else .55 + .45 * transient) * cos(2.0 * PI * phases[profile.ringOperator])
+            var y = anchor + chest + direct + formant * (1.30 + .60 * sqrt(motion)) * (profile?.bankGain ?: 1.0)
             highLow = highA * highLow + (1.0 - highA) * y
             y = .06 * y + .94 * highLow
             y *= excitationGain * amplitude
