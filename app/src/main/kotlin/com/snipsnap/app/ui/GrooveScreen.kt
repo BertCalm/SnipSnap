@@ -85,6 +85,7 @@ import com.snipsnap.kit.Names
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.Audition
+import com.snipsnap.shell.BeatClock
 import com.snipsnap.shell.Chart
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DockModel
@@ -128,9 +129,6 @@ import kotlinx.coroutines.withContext
  * RECORD reads the same clock to interpolate a touch's own timestamp
  * against it (see `recordHit`).
  */
-
-/** Ceiling on one clock tick's elapsed time — a stale `withFrameNanos` gap (backgrounding, a debugger pause) must never fast-forward the needle. */
-private const val GROOVE_STEP_MAX_NANOS = 100_000_000L
 
 /** E's debounced disk write — one save per burst of taps, not one per tap (the PAD SHEET lesson). */
 private const val GROOVE_SAVE_DEBOUNCE_MS = 1000L
@@ -1175,7 +1173,7 @@ fun GrooveScreen(
         try {
             while (isActive) {
                 withFrameNanos { now ->
-                    val dtNanos = (now - lastNanos).coerceIn(0, GROOVE_STEP_MAX_NANOS)
+                    val dtNanos = BeatClock.dtNanos(now, lastNanos)
                     lastNanos = now
                     val currentBase = base
                     val clip = currentBase?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
@@ -1202,10 +1200,9 @@ fun GrooveScreen(
                     val totalSteps = (clip?.let { GrooveEdit.stepsInClip(it) } ?: (recordBars * GrooveEdit.STEPS_PER_BAR)).toFloat()
                     val barSteps = clip?.let { GrooveEdit.stepsPerBar(it) } ?: GrooveEdit.STEPS_PER_BAR
                     val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                    val stepsPerSecond = bpm / 60.0 * 4.0
-                    val inc = (dtNanos / 1_000_000_000.0 * stepsPerSecond).toFloat()
-                    var np = lastPos + inc
-                    val wrapped = np >= totalSteps
+                    val stepsPerSecond = BeatClock.stepsPerSecond(bpm)
+                    var np = BeatClock.advance(lastPos, dtNanos, stepsPerSecond)
+                    val wrapped = BeatClock.wrapped(np, totalSteps)
 
                     // BOUNCE start/stop, ahead of the note dispatch below on
                     // purpose (review's own finding): `hit()` only queues a
@@ -1235,23 +1232,22 @@ fun GrooveScreen(
                     }
 
                     if (clip != null && clip.notes.isNotEmpty()) {
-                        for (n in clip.notes) {
-                            val p = n.timePulses.toFloat() / GrooveEdit.STEP_PULSES.toFloat()
-                            val crossed = (p > lastPos && p <= np) ||
-                                (np >= totalSteps && p + totalSteps > lastPos && p + totalSteps <= np)
+                        // `BeatClock.crossed` is the old inline test, wrap clause
+                        // and all (`BeatClockTest` pins it).
+                        BeatClock.forEachNoteCrossed(clip, lastPos, np, totalSteps) { n ->
                             // Mpc3Note.slotFor, not `note - 35`: the map wraps, so
                             // notes 0..35 are pads 93..128 and subtracting alone
                             // gives them a slot no kit has. A clip that plays on
                             // the MPC would be silent in this roll.
                             //
                             // AUDITION's own seam: `np`, the playhead THIS
-                            // frame is advancing to, not `p` (the note's own
+                            // frame is advancing to, not the note's own
                             // position within the clip, which the wrap clause
-                            // above can offset by a full `totalSteps`) - `np`
+                            // can offset by a full `totalSteps` - `np`
                             // is what `posSteps` is about to become, so it's
                             // the same "which bar is this" the screen itself
                             // will show a moment later.
-                            if (crossed) hit(Mpc3Note.slotFor(n.note), auditionPos = np, auditionBarSteps = barSteps)
+                            hit(Mpc3Note.slotFor(n.note), auditionPos = np, auditionBarSteps = barSteps)
                         }
                     }
                     // Fix 1 — the metronome through the WHOLE take, not just the
@@ -1268,10 +1264,8 @@ fun GrooveScreen(
                     // only a take actually in progress gets a click to play
                     // against.
                     if (recording) {
-                        for (b in 0 until totalSteps.toInt() step 4) {
-                            val crossed = (b > lastPos && b <= np) ||
-                                (np >= totalSteps && b + totalSteps > lastPos && b + totalSteps <= np)
-                            if (crossed) player.clickHit(accent = b % barSteps == 0)
+                        BeatClock.forEachBeatCrossed(totalSteps, lastPos, np, barSteps) { accent ->
+                            player.clickHit(accent = accent)
                         }
                     }
                     // The rare early-DONE case (PadEngine's own byte budget
@@ -1283,7 +1277,7 @@ fun GrooveScreen(
                     // whole bounce over a ceiling that exists for memory,
                     // not for musical correctness.
                     if (bouncing && !wrapped && player.printState() == PadEngine.PrintState.DONE) finishBounce()
-                    if (wrapped) np -= totalSteps
+                    np = BeatClock.wrap(np, totalSteps)
                     lastPos = np
                     posSteps = np
                     clockAnchor.nanos = now
@@ -1594,7 +1588,7 @@ fun GrooveScreen(
      * is valid from that same instant). So capture during a count-in is
      * additionally gated on being close enough to that anchor to plausibly
      * BE the downbeat, not an exploratory tap on an earlier count-in beat:
-     * a hit more than [GROOVE_STEP_MAX_NANOS] before the anchor is outside
+     * a hit more than [BeatClock.STEP_MAX_NANOS] before the anchor is outside
      * the clamp window below regardless, so filtering it out here (instead
      * of letting it fall through to a clamped, identical-every-time
      * position) avoids piling every early count-in tap onto the same
@@ -1626,11 +1620,10 @@ fun GrooveScreen(
         // downbeat," per this fn's own KDoc — a tap on an earlier
         // count-in beat is more than the clamp window away and is simply
         // not captured, same as before blocker A's fix.
-        if (countingIn && hitNanos < clockAnchor.nanos - GROOVE_STEP_MAX_NANOS) return
-        val dtNanos = (hitNanos - clockAnchor.nanos).coerceIn(-GROOVE_STEP_MAX_NANOS, GROOVE_STEP_MAX_NANOS)
+        if (countingIn && hitNanos < clockAnchor.nanos - BeatClock.STEP_MAX_NANOS) return
         val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-        val stepsPerSecond = bpm / 60.0 * 4.0
-        val posAtHit = clockAnchor.pos + (dtNanos / 1_000_000_000.0 * stepsPerSecond)
+        val stepsPerSecond = BeatClock.stepsPerSecond(bpm)
+        val posAtHit = BeatClock.posAtHit(clockAnchor.pos, clockAnchor.nanos, hitNanos, stepsPerSecond)
         // Steps -> the "elapsed seconds" LiveRecord.pulsesFor wants, via
         // the SAME stepsPerSecond — dividing back out is exact algebra,
         // not a second, independently-tuned conversion: pulsesFor(s, bpm)
