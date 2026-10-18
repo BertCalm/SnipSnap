@@ -247,6 +247,11 @@ class BeatPlayer(
                 say(Copy.actionFailed("PLAY"))
                 return@launch
             }
+            // The disk read took a moment, and the user did not stop: if they
+            // have since opened another kit, what was just loaded is for a kit
+            // that is no longer on screen, and nothing here is theirs to start
+            // or to refuse.
+            if (kitNow()?.dir != entry.dir || programDir != entry.dir) return@launch
             startOrSay(say)
         }
     }
@@ -266,7 +271,7 @@ class BeatPlayer(
      * know it. A program index that names a YOURS that is not there falls
      * back to the captured program, as the screen does.
      */
-    private suspend fun loadProgram(entry: KitShelf.Entry) {
+    private suspend fun loadProgram(entry: KitShelf.Entry, replacing: Boolean = false) {
         val dir = entry.dir
         val (base, yours) = withContext(Dispatchers.IO) {
             GrooveStore.load(dir).firstOrNull { !GrooveEdit.isProgE(it) } to GrooveEdit.loadAll(dir)
@@ -276,9 +281,39 @@ class BeatPlayer(
         val prog = if (s.progIndex >= (if (e != null) 5 else 4)) 0 else s.progIndex
         val computed = base?.let { GrooveProgram.compute(prog, it, s.swingPercent, s.feel, GrooveFeel.generated(s.seed), e) }
         // A screen that came up while the disk was read has pushed the live
-        // program, and its answer wins; so does the kit having changed.
-        if (programDir == dir || kitNow()?.dir != dir) return
+        // program, and its answer wins; so does the kit having changed. A
+        // reload is asked for because the disk changed under a program that
+        // was already here, so it is the one case that replaces.
+        if ((!replacing && programDir == dir) || kitNow()?.dir != dir) return
         setProgram(dir, computed, LiveRecord.DEFAULT_BARS * GrooveEdit.STEPS_PER_BAR)
+        // A beat left playing over nothing is a clock counting silence.
+        if (replacing && !audible) stop()
+    }
+
+    /**
+     * The kit's grooves were rewritten on disk while no GROOVE was up to read
+     * them again - TAPE's READ AS GROOVE and STEAL THE FEEL, ORBIT's CLIP ▸
+     * KIT - and the beat that is playing would otherwise go on with
+     * yesterday's. Read them, and swap the program under the running clock.
+     *
+     * With a program neither pushed nor loaded for this kit there is nothing
+     * to swap: the next [toggle] reads the disk fresh. With GROOVE up, its own
+     * reload pushes its own program, which is the one to hear (it knows which
+     * of the player's programs is on screen; this does not), so the caller
+     * does not ask then.
+     */
+    fun reloadFromDisk(say: (String) -> Unit) {
+        val entry = kitNow() ?: return
+        if (programDir != entry.dir) return
+        scope.launch {
+            try {
+                loadProgram(entry, replacing = true)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "reloadFromDisk: the kit's grooves would not read", e)
+                say(Copy.actionFailed("RELOAD BEAT"))
+            }
+        }
     }
 
     /** The kit's bank follows an edit made elsewhere, for the beat when it is the only one holding the host. */

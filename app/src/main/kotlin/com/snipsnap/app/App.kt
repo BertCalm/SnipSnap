@@ -2937,6 +2937,15 @@ fun App(shelf: KitShelf) {
     val beat = remember {
         BeatPlayer(hosts = hosts, scope = scope, kitNow = { open }, settings = { grooveSettings })
     }
+    // A groove rewritten on disk while GROOVE is not up to reload itself
+    // (TAPE's READ AS GROOVE and STEAL THE FEEL, ORBIT's CLIP ▸ KIT, all of
+    // which bump `grooveReload`) would leave the beat playing yesterday's.
+    // With GROOVE up it reloads from the same request and pushes its own
+    // program, which is the one to hear.
+    LaunchedEffect(grooveReload) {
+        val grooveUp = location.top == null && location.stage == Stage.BEAT && !(arrangeOpen && open != null)
+        if (grooveReload > 0 && !grooveUp) beat.reloadFromDisk { dock.say(it) }
+    }
     // A different kit is a different beat: the program, the position and the
     // hold on the old kit's pads all belonged to it. Also the end of the
     // app's composition, which is what lets the last host close.

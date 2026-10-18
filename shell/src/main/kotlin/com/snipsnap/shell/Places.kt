@@ -51,7 +51,7 @@ object Places {
     /** The dock's STOP, beside SNIP while armed: the session ends. The shelf's ArmControl said the same word in bin red. */
     const val STOP = "STOP"
 
-    /** The transport chip's accessible names while BEAT is the stage — GROOVE's own PLAY / STOP, read by what they do to the beat. */
+    /** The transport chip's accessible names, wherever a kit is open — the beat's own PLAY / STOP, read by what they do to the beat. */
     const val PLAY_BEAT = "PLAY THE BEAT"
     const val STOP_BEAT = "STOP THE BEAT"
 

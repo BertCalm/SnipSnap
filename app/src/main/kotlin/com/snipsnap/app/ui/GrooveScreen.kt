@@ -822,6 +822,7 @@ fun GrooveScreen(
     // to relay. Leaving the screen no longer says Stopped - the beat is not
     // this screen's frame loop, and a beat that goes on playing is not
     // stopped.
+
     // Playback and MIDI export cover every note; the roll's seven NAMED
     // lane columns only cover seven of the kit's pads (the design) — a note
     // outside them still draws too, since Fix 3, just under the eighth
@@ -2178,10 +2179,10 @@ fun GrooveScreen(
                         ) {
                             // ► PLAY / ■ STOP are the dock's now (plan §3.4):
                             // the frame's foot carries the transport on every
-                            // screen and asks this screen for the flip through
-                            // `playRequest`. BOUNCE stays here — it prints
-                            // what the clock is playing and needs the clip's
-                            // own controls beside it.
+                            // screen and asks the beat for the flip itself.
+                            // BOUNCE stays here — it prints what the clock is
+                            // playing and needs the clip's own controls beside
+                            // it.
                             TapeText("TRANSPORT · PLAY AND STOP ARE IN THE DOCK", TapeType.pixelSmall, scheme.ink2.tape)
                             // Needs a loop already running, over a clip that
                             // actually has something in it (`currentClip`,

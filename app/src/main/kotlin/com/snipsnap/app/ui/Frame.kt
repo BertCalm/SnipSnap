@@ -363,9 +363,9 @@ fun Dock(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Transport. A live chip that is stopped says ▶, what a tap does; the
-        // old ■ read as STOP on the one control that would start. Off BEAT a
-        // stopped beat has no readout at all: an inert ■ beside the capture
-        // light read as a button that did nothing.
+        // old ■ read as STOP on the one control that would start. Where the
+        // beat cannot run (no chip) a stopped beat has no readout at all: an
+        // inert ■ beside the capture light read as a button that did nothing.
         val stopped = dock.transport is DockModel.Transport.Stopped
         if (onPlayToggle != null) {
             DockChip(
