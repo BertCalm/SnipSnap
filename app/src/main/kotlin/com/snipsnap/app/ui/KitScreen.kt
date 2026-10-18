@@ -726,8 +726,17 @@ fun KitScreen(
         // share one row (3:2:1), SPLIT, DUST ALL and BREED each take a full
         // row, then the two texture doors; the panel below them scrolls, so
         // a short screen never pushes the grid.
+        //
+        // The padding below the scroll is inside it: a dock's height of
+        // slack after the last row, so the group's closed line can always
+        // be scrolled clear of the screen's foot (UX review P2) instead of
+        // sitting on the edge with no cue that anything lies past it.
         Column(
-            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
+            Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = Layout.DOCK_H.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             GroupBox(
