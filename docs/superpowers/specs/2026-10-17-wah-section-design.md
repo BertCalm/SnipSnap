@@ -38,7 +38,7 @@ The touch move with the first brief's numbers (5 ms attack, 150 ms release, a 30
 | AUTO | 0 | 0 | the weight of the LFO move |
 | ROCK | 0 | 0 | the weight of the one-rock gesture |
 | SPEED | 0.5 | 0.5 | the LFO rate (about 0.5 Hz at 0 to 8 Hz at 1, `Dsp.expMap`, 2 Hz at 0.5); the follower's release and the rock's length both scale with the LFO period (release 100 ms, rock 250 ms up and 500 ms down at 0.5) |
-| Q | 0.6 | 0.6 | the resonance: damping `k = Dsp.expMap(1 - Q, 0.1, 0.8)`, so 0.6 is about 0.23 (the Q of 5 the owner heard), 1 squeals at k 0.1, 0 is gentle |
+| Q | 0.6 | 0.6 | the resonance: damping `k = Dsp.expMap(1 - Q, 0.1, 0.8)`, so 0.6 is about 0.23 (a Q of about 4.35; the owner's prototype used k 0.2, a Q of 5), 1 squeals at k 0.1, 0 is gentle |
 
 A recipe sets a weight and leaves SPEED and Q out (setting a macro exactly at its neutral is one AMT could not move, and the AMT-scaling test false-fails on it).
 
@@ -59,7 +59,7 @@ A recipe sets a weight and leaves SPEED and Q out (setting a macro exactly at it
 
 Section tests (in `WahTest`, in the style of `ValveTest`, bars pinned at the measured value minus a margin the report states, each mutation-checked):
 - bit-exact copy at zero weights; deterministic; finite, in range, no DC; peak within 0.05 of the input's; a mono pad stays stereo-identical per channel;
-- AUTO at its defaults covers at least 1.5 octaves of short-time spectral centroid (a 23 ms window, 5 ms hop, over the first 600 ms) and keeps moving for at least 100 ms, on the choir and a JANGLE note, against a pinned CONTOUR-recipe baseline that does not;
+- AUTO at its defaults covers at least 1.5 octaves of short-time spectral centroid (a 23 ms window, 5 ms hop, over the first 600 ms), on the choir and a JANGLE note, against the unprocessed pad as the negative control (it swings under 1.5 octaves); a CONTOUR-recipe baseline was not built, the dry pad is the control;
 - ROCK reaches its toe at 152 ms and leaves it at 446 ms at the default SPEED (the 1.5 stretch of the position clamps it before the gesture's 250 ms peak, so the audible rise is 152 ms, not 250, and AUTO likewise rests at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70); AUTO's period matches `1 / f`; TOUCH opens within 120 ms of a hit and closes as the note decays (the envelope follows the pad), and TOUCH and ROCK parked at the heel are measured and reported, not hidden;
 - the last 20 ms of a landed note is at least 50 dB under its peak through a guitar's landing amp (VALVE lifts a quiet tail);
 - SPEED and Q sweep a real range at their ends (a plain-words line per end);

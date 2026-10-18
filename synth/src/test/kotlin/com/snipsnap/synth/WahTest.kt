@@ -155,6 +155,20 @@ class WahTest {
     }
 
     @Test
+    fun `the stretch holds AUTO and ROCK at the toe for the shares the docs give`() {
+        val stretch = 1.5f // Wah's REACH_GAIN, which is private: the position is clamp(stretch * weight * move)
+        val steps = 20_000
+        fun autoHeld(weight: Float): Float =
+            (0 until steps).count { stretch * weight * Wah.autoAt(it / steps.toFloat() / 2f, 2f) >= 1f } / steps.toFloat()
+        assertEquals(0.392f, autoHeld(1f), 0.002f, "AUTO at weight 1.0 rests at the toe for 39 percent of each cycle")
+        assertEquals(0.140f, autoHeld(0.7f), 0.002f, "and at weight 0.7 for 14 percent")
+        assertEquals(0f, autoHeld(0.5f), 0f, "weight 0.5 never reaches the toe")
+        val held = (0 until 10_000).map { it / 10_000f }.filter { stretch * Wah.rockAt(it, 1f) >= 1f }
+        assertEquals(0.152f, held.first(), 0.001f, "ROCK at weight 1 reaches the toe at 152 ms")
+        assertEquals(0.446f, held.last(), 0.001f, "and leaves it at 446 ms")
+    }
+
+    @Test
     fun `zero weights are a bit-exact copy, whatever SPEED and Q say`() {
         val snare = Thump.render(ThumpVoice.SNARE)
         val out = Wah.process(snare, mapOf("SPEED" to 0.9f, "Q" to 0.1f))

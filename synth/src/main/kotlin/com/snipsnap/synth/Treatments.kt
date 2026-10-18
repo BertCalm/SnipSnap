@@ -90,7 +90,7 @@ object Treatments {
         // owner asked for is its own section (spec, Stage 2); this recipe moves to it then. The bank's
         // "punched" is SQUASH plus CRUNCH; this has no crunch.
         "compressed" to FxChain(squash = mapOf("AMOUNT" to 1.0f, "ATTACK" to 0.05f)),
-        // A wah: a resonant band-pass swept by a free-running sine. AUTO is the owner's pick of the
+        // A wah: a resonant band-pass swept by a free-running, flat-topped sine. AUTO is the owner's pick of the
         // three moves at the pedal board's round-two listen; SPEED and Q are left out (each is its own
         // neutral, so AMT could never move it). The WAH chip is this character once its gate passes.
         "wahed" to FxChain(wah = mapOf("AUTO" to 1.0f)),

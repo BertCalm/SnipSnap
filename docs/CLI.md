@@ -477,7 +477,7 @@ a quiet tail is not lifted into a click), `compressed` (a compressor
 pedal, for now: SQUASH at its strongest, the body leaned on so the tail
 stands up; `punched` is the same section plus CRUNCH, this has no
 crunch), `wahed` (a wah: a resonant band-pass swept between a heel and a
-toe a decade above it by a sine with a flat top, which never parks and rests
+toe a decade above it by a sine with a flat top, which never parks at the heel but rests
 at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
 the hit and closes as the note dies) and `rockwahed` (one heel-to-toe-to-heel
