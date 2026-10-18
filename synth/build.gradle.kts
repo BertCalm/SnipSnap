@@ -839,6 +839,16 @@ tasks.register<JavaExec>("generatePedalAudition") {
     args("${rootDir}/testkit/pedal-audition")
 }
 
+/** Render the WAH section's gate clips and manifest under testkit/wah-audition/. See WahAuditionGenerator. */
+tasks.register<JavaExec>("generateWahAudition") {
+    group = "distribution"
+    description = "Render the WAH section's gate clips and manifest under testkit/wah-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WahAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/wah-audition")
+}
+
 tasks.register<JavaExec>("generateFlotillaKit") {
     group = "distribution"
     description = "Render the FLOTILLA acceptance kit under testkit/."
