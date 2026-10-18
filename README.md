@@ -902,7 +902,11 @@ stretched head and REVERSE's flip included — sees the pitched sound), EQ
 (three
 plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
-hit's onset, on a pad that was never a synth), SQUASH
+hit's onset, on a pad that was never a synth), WAH (a resonant band-pass
+swept between a heel and a toe by three moves held as weights, TOUCH from the
+hit's own envelope, AUTO a free-running sine and ROCK one heel-toe-heel
+gesture, with SPEED and Q beside them; the first pedal on the board, in front of
+the compressor and the amp), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
 tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
 giving way under it on loud passages, TONE after the tube, CAB from no
@@ -937,7 +941,7 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → squash → valve → crunch → ring → dub → vinyl →
+spike → eq → contour → wah → squash → valve → crunch → ring → dub → vinyl →
 tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.

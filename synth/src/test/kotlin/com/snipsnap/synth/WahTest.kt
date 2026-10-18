@@ -162,4 +162,13 @@ class WahTest {
         val parked = centroidHz(out.samples, (1.5 * rate).toInt(), 1024)
         assertTrue(atToe / parked >= 2.0, "ROCK: the centroid is $atToe Hz at the toe and $parked Hz parked, under one octave apart")
     }
+
+    @Test
+    fun `a wah in front of a guitar's landing amp still ends clean`() {
+        for (voice in MagnetVoice.values()) {
+            val landed = Magnet.landingChain(voice).withSection("wah", mapOf("AUTO" to 1f)).process(Magnet.render(voice))
+            val end = endDb(landed)
+            assertTrue(end <= -50.0, "$voice: the last 20 ms ends $end dB under the peak, over the -50 bar")
+        }
+    }
 }
