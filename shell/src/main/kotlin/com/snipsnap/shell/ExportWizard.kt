@@ -40,7 +40,14 @@ class ExportWizardModel(
      * any API level, so calling it from the shipped app crashes with
      * `NoClassDefFoundError` the instant EXPANSION or XPN gets written.
      */
-    private val artRenderer: (Kit, File, KitArt.Style) -> ByteArray = { k, d, s -> KitArt.png(k, d, s) },
+    private val artRenderer: (Kit, File, KitArt.Style) -> ByteArray = KitArt::awtPng,
+    /**
+     * How the expansion's J-Card gets painted, handed to [Inserts.write].
+     * Same story as [artRenderer]: the default is the AWT renderer, and
+     * `:app` overrides it with `AndroidJCard.png` — the J-Card was the
+     * second AWT call WRITE KIT reached on the phone, right after the tile.
+     */
+    private val jCardRenderer: (Kit, File, String?) -> ByteArray = JCard::awtPng,
 ) {
 
     enum class Stage { READY, WRITING, COMPLETE }
@@ -176,7 +183,7 @@ class ExportWizardModel(
             // the thing it verifies, and its own failure mode is a FAIL
             // row rather than a throw — so it would have degraded quietly.
             val verified = outcome.copy(readBack = readBack(outcome))
-            if (format == ExportFormat.EXPANSION) Inserts.write(kit, kitDir, outcome.primary)
+            if (format == ExportFormat.EXPANSION) Inserts.write(kit, kitDir, outcome.primary, jCardRenderer)
             stage = Stage.COMPLETE
             WriteResult.Done(verified)
         } catch (e: ExportBlockedException) {

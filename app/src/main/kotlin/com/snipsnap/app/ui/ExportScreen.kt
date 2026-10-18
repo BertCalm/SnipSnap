@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.AndroidJCard
 import com.snipsnap.app.AndroidKitArt
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
@@ -299,7 +300,12 @@ fun ExportScreen(
                     ExportSession(
                         entry.dir,
                         kit,
-                        ExportWizardModel(kit, entry.dir, artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s) }),
+                        ExportWizardModel(
+                            kit,
+                            entry.dir,
+                            artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s) },
+                            jCardRenderer = { k, d, c -> AndroidJCard.png(k, d, catalog = c) },
+                        ),
                     )
                 }.getOrNull()
             }
