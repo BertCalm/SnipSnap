@@ -58,6 +58,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
+import com.snipsnap.app.BeatPlayer
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
@@ -199,6 +200,13 @@ fun KitScreen(
      * ear.
      */
     hosts: PadHosts,
+    /**
+     * The project's beat. The grid does not play it; it lights from it: every
+     * pad the clock sounds flashes here the way a finger's hit does. No
+     * default, so a screen built without one fails the compile and not the
+     * player's eye.
+     */
+    beat: BeatPlayer,
 ) {
     val scheme = LocalScheme.current
 
@@ -444,6 +452,23 @@ fun KitScreen(
     // window instead of recreating the Activity.
     var fullscreen by remember { mutableStateOf(false) }
     val exitFullscreen = { fullscreen = false }
+
+    // The beat lights the pads it plays. The clock's notes are not fingers
+    // and not MIDI, so they have no cell gesture to light them: they come
+    // through the same echo the fullscreen grid and a MIDI note use, and
+    // only `flash` is called - never `playHeld` or `hit`, which would sound
+    // the pad a second time. A slot off the bank on screen is let go (the
+    // other bank's cells are not composed), and fullscreen shows both. The
+    // bank and the fullscreen flag are read live: this effect outlives the
+    // composition that started it. Flash state is the cell's own Animatable,
+    // so a note recomposes that one cell and never the grid.
+    val bankShown by rememberUpdatedState(showing)
+    val fullShown by rememberUpdatedState(fullscreen)
+    LaunchedEffect(beat, glow) {
+        beat.triggered.collect { slot ->
+            if (fullShown || PadBanks.bankOf(slot) == bankShown) flash(slot)
+        }
+    }
     val activity = remember(engineContext) { engineContext.findActivity() }
     // Fix round 1 (F1, CRITICAL, from PLAY): the restore must not read
     // `fullscreen` live inside onDispose - that effect runs precisely

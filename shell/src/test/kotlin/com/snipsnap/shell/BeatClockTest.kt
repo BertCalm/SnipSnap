@@ -100,6 +100,29 @@ class BeatClockTest {
     }
 
     @Test
+    fun `the slots a tick lights are the pads its notes name, and the bank shown is the filter`() {
+        // What BeatPlayer emits to a grid: Mpc3Note.slotFor of each note the
+        // tick crossed. A grid lights the ones on its bank; the wrapped notes
+        // 0..35 are pads 93..128, which no bank on screen has.
+        val clip = Mpc3Clip(
+            "T",
+            bars = 1,
+            notes = listOf(
+                Mpc3Note(note = 36, timePulses = 4 * sixteenth, velocity = 1f),
+                Mpc3Note(note = 52, timePulses = 4 * sixteenth, velocity = 1f),
+                Mpc3Note(note = 53, timePulses = 4 * sixteenth, velocity = 1f),
+                Mpc3Note(note = 0, timePulses = 4 * sixteenth, velocity = 1f),
+            ),
+        )
+        val total = GrooveEdit.stepsInClip(clip).toFloat()
+        val slots = mutableListOf<Int>()
+        BeatClock.forEachNoteCrossed(clip, 3.9f, 4.1f, total) { slots += Mpc3Note.slotFor(it.note) }
+        assertEquals(listOf(1, 17, 18, 93), slots)
+        assertEquals(listOf(1), slots.filter { PadBanks.bankOf(it) == 0 }, "bank A shows A01 and nothing else")
+        assertEquals(listOf(17, 18), slots.filter { PadBanks.bankOf(it) == 1 }, "bank B shows B01 and B02")
+    }
+
+    @Test
     fun `beats are every fourth step and a bar's downbeat is the accent`() {
         val seen = mutableListOf<Boolean>()
         BeatClock.forEachBeatCrossed(32f, 3.9f, 4.1f, 16) { seen += it }

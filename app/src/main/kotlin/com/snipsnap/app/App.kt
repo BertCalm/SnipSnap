@@ -3546,6 +3546,7 @@ fun App(shelf: KitShelf) {
                                     onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
                                     bankRequest = kitBankRequest,
                                     onBankRequestConsumed = { kitBankRequest = null },
+                                    beat = beat,
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't
