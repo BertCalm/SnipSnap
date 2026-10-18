@@ -9,11 +9,12 @@ import kotlin.math.roundToInt
  * Renders the WAH section's gate clips under testkit/wah-audition/ (gitignored), for the owner's
  * gate in docs/superpowers/specs/2026-10-17-wah-section-design.md: the shipped section (not the
  * round-two prototype) on a snare, a choir and both MAGNET guitars. AUTO (the `wahed` character) at
- * the pad sheet's AMT 70 and at 100, TOUCH and ROCK at 100 beside it, and the ends of SPEED and Q
- * (AUTO at 100) on the choir and on each guitar. Each guitar twice: tapped on the baked pad (as the
- * pad sheet does it) and in front of its landing amp (a rig: the wah section added to the landing
- * chain). Every clip shares one loudness ([AuditionLevel]). Writes manifest.json. Run via
- * `./gradlew :synth:generateWahAudition`.
+ * the pad sheet's AMT 70 and at 100, TOUCH and ROCK at 100 beside it (the snare has no ROCK clip: it
+ * ends before ROCK and AUTO part at the default SPEED, so the two would be the same audio), and the
+ * ends of SPEED and Q (AUTO at 100) on the choir and on each guitar. Each guitar twice: tapped on
+ * the baked pad (as the pad sheet does it) and in front of its landing amp (a rig: the wah section
+ * added to the landing chain). Every clip shares one loudness ([AuditionLevel]). Writes
+ * manifest.json. Run via `./gradlew :synth:generateWahAudition`.
  */
 object WahAuditionGenerator {
 
@@ -51,7 +52,11 @@ object WahAuditionGenerator {
             write(name, "dry", "$name DRY", dry)
             for (amount in AMOUNTS) write(name, "auto_${pct(amount)}", "$name WAH AUTO AT ${pct(amount)}", Treatments.apply("wahed", dry, amount).snip)
             write(name, "touch_100", "$name WAH TOUCH AT 100", Treatments.apply("touchwahed", dry, 1f).snip)
-            write(name, "rock_100", "$name WAH ROCK AT 100", Treatments.apply("rockwahed", dry, 1f).snip)
+            // Not on the snare: at the default SPEED ROCK's rise is AUTO's first half cycle, both
+            // positions clip to the toe from about 152 ms, AUTO leaves the toe at about 348 ms and
+            // ROCK at about 446 ms, and the snare ends at 333 ms, so its rock_100 is auto_100 bit
+            // for bit. Only a pad longer than about 350 ms can tell the two moves apart.
+            if (name != "SNARE") write(name, "rock_100", "$name WAH ROCK AT 100", Treatments.apply("rockwahed", dry, 1f).snip)
         }
         for ((id, macros) in ends) write("CHOIR", id, "CHOIR WAH AUTO, ${id.uppercase().replace('_', ' ')}", Wah.process(plain.getValue("CHOIR"), macros))
         for (voice in MagnetVoice.values()) {
@@ -68,7 +73,7 @@ object WahAuditionGenerator {
             rig("rig_rock_100", "WAH ROCK AT 100", mapOf("ROCK" to 1f))
             for ((id, macros) in ends) rig("rig_$id", "WAH AUTO, ${id.uppercase().replace('_', ' ')}", macros)
         }
-        check(entries.size == 36) { "expected 36 clips (SNARE 5, CHOIR 9, two guitars 11 each), wrote ${entries.size}" }
+        check(entries.size == 35) { "expected 35 clips (SNARE 4, CHOIR 9, two guitars 11 each), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         println("wah audition: ${entries.size} clips under ${root.absolutePath}")
     }
