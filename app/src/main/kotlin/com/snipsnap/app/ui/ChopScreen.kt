@@ -190,17 +190,14 @@ fun ChopScreen(
     // `ChopContent` draws a real header reading "0 SLICES — BY HITS" over
     // an empty list and an all-gray grid — fully drawn, saying nothing.
     //
-    // Said in a toast rather than swapped for an empty face, because
-    // GRID is a live way out and it lives *inside* ChopContent: the mode
+    // Said by ChopContent's own NO HITS FOUND panel rather than swapped for
+    // an empty face, because GRID is a live way out and it lives *inside*
+    // ChopContent: the mode
     // row's rechopTo(ChopMode.Grid(sliceCount.coerceIn(1, MAX_HITS)))
     // slices this same source into equal parts, and coerceIn floors the
     // zero at 1. An early return here would take the only door to it and
     // turn a merely-ugly screen into a dead end — the same escape
     // `Copy.CHOP_AUTO_NONE` already points AUTO's own no-onset case at.
-    LaunchedEffect(loadedModel) {
-        if (loadedModel.sliceCount == 0) onToast(Copy.CHOP_NO_HITS)
-    }
-
     ChopContent(
         entry = entry,
         shelf = shelf,

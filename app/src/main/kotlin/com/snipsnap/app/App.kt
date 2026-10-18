@@ -335,8 +335,10 @@ fun App(shelf: KitShelf) {
     // stranded under someone else's sentence — which is what the old two
     // vars (`toast`, `offered`) claimed and had to be compared to prove.
     // Nothing here is timed: the line stays until the next one, the door
-    // until it is taken.
-    val dock = rememberDock()
+    // until it is taken. A line is scoped to where it was said (stamped
+    // from `nav.location` at the write) and rests when the user moves to
+    // another place or stage; a door and its words survive the move.
+    val dock = rememberDock { nav.location }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond the dock's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
@@ -380,6 +382,7 @@ fun App(shelf: KitShelf) {
      */
     fun landOn(target: AppScreen) {
         nav.goTo(locationOf(target))
+        dock.moved(nav.location)
     }
 
     /**
@@ -2747,12 +2750,14 @@ fun App(shelf: KitShelf) {
     /** The place row: a place opens on the stage it was last on, benches closed. */
     fun goToPlace(place: Place) {
         nav.go(place)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
     /** The stage row: a stage of the current place, benches closed. */
     fun goToStage(stage: Stage) {
         nav.stage(stage)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
@@ -2760,6 +2765,7 @@ fun App(shelf: KitShelf) {
     fun takeDockDoor() {
         val door = dock.take() ?: return
         nav.take(door)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
@@ -2958,6 +2964,7 @@ fun App(shelf: KitShelf) {
         // over a pad sheet comes back to the pad sheet. Popping a stage or
         // a place is a departure, and abandons what a departure abandons.
         val to = nav.location
+        dock.moved(to)
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 

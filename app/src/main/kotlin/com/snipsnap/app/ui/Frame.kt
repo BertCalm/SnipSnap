@@ -157,8 +157,16 @@ fun rememberNavigation(): NavState = remember { NavState() }
  * snapshot state after it. [now] is the line and its door together, as
  * the model holds them — the door can never outlive the words it was
  * offered with, because they are one value (J10/J44).
+ *
+ * A line is stamped with where it was said, read from [locationNow] at
+ * the moment of the write, so an async `say` landing after the user left
+ * says "here", where it landed. [moved] is how navigation tells the dock
+ * the user is somewhere else.
  */
-class DockState(private val model: DockModel = DockModel()) {
+class DockState(
+    private val locationNow: () -> Location,
+    private val model: DockModel = DockModel(),
+) {
     var now: DockModel.Now by mutableStateOf(model.now)
         private set
 
@@ -181,12 +189,18 @@ class DockState(private val model: DockModel = DockModel()) {
         }
 
     fun say(text: String) {
-        model.say(text)
+        model.say(text, locationNow())
         now = model.now
     }
 
     fun offer(text: String, door: Door) {
-        model.offer(text, door)
+        model.offer(text, door, locationNow())
+        now = model.now
+    }
+
+    /** The user is at [to] now: a line said elsewhere rests, a door's words stay with it. */
+    fun moved(to: Location) {
+        model.moved(to)
         now = model.now
     }
 
@@ -206,7 +220,7 @@ class DockState(private val model: DockModel = DockModel()) {
 }
 
 @Composable
-fun rememberDock(): DockState = remember { DockState() }
+fun rememberDock(locationNow: () -> Location): DockState = remember { DockState(locationNow) }
 
 /**
  * The four places, always visible, never scrolling. The selected place is
