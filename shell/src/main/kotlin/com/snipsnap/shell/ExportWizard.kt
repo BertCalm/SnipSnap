@@ -45,6 +45,14 @@ class ExportWizardModel(
 
     enum class Stage { READY, WRITING, COMPLETE }
 
+    companion object {
+        /**
+         * What the two sides of a dub hold, as the track says it and as the
+         * landing box ([LandingNote.dubbed]) repeats it: one fact, one owner.
+         */
+        const val DUB_SIDES = "SIDE A: PROGRAMS · SIDE B: SAMPLES"
+    }
+
     var stage: Stage = Stage.READY
         private set
 
@@ -241,8 +249,8 @@ class ExportWizardModel(
      * (0..[fileCount]); the queued and done lines bracket it.
      */
     fun dubFilesLine(filesShown: Int): String = when (stage) {
-        Stage.READY -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${Copy.countOf(fileCount, "FILE", "FILES")} QUEUED"
-        Stage.WRITING -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${filesShown.coerceIn(0, fileCount)} OF ${Copy.countOf(fileCount, "FILE", "FILES")}"
+        Stage.READY -> "$DUB_SIDES · ${Copy.countOf(fileCount, "FILE", "FILES")} QUEUED"
+        Stage.WRITING -> "$DUB_SIDES · ${filesShown.coerceIn(0, fileCount)} OF ${Copy.countOf(fileCount, "FILE", "FILES")}"
         Stage.COMPLETE -> "ALL ${Copy.countOf(fileCount, "FILE", "FILES")} ON TAPE. GO MAKE THE THING."
     }
 }

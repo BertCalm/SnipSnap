@@ -2055,6 +2055,15 @@ object Copy {
      * about to carry to the MPC.
      */
     const val DUB_DONE_CARD = "DUB DONE. IT'S ON THE CARD."
+    /**
+     * The title of the box a finished dub opens ([LandingNote.dubbed]) when
+     * the card has it: the same fact as [DUB_DONE_CARD], with the thing's
+     * name in it, because a box that stays until read is the one place the
+     * name has room.
+     */
+    fun dubOnCard(kit: String): String = "${kit.uppercase(java.util.Locale.ROOT)} IS ON THE CARD."
+    /** [dubOnCard] for a dub that is on the phone only, the fact [DUB_DONE] states. */
+    fun dubOnPhone(kit: String): String = "${kit.uppercase(java.util.Locale.ROOT)} IS SAVED ON THIS PHONE."
     /** The card picker came back with a folder the system would not grant lasting access to. */
     const val CARD_REFUSED = "THAT FOLDER WON'T HOLD STILL. PICK ANOTHER."
     /**

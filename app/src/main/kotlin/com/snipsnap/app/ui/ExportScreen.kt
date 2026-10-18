@@ -534,6 +534,35 @@ private fun ExportContent(
         }
     }
 
+    // The box a dub that landed opens (LandingNote.dubbed): what is saved and
+    // where, with SHARE as its one way on. The toast stays as the dock's
+    // line; this is what is left to read once the line has moved on. The tile
+    // is the one the dub itself wrote for the formats that write one
+    // (EXPANSION, XPN), drawn again from the same renderer and the same
+    // inputs; any other format has no bitmap, so the box has no picture.
+    suspend fun landedNote(outcome: ExportOutcome, onCard: Boolean, where: String) {
+        val tile = withContext(Dispatchers.IO) {
+            val style = model.artStyle
+            if (style == null || (outcome.format != ExportFormat.EXPANSION && outcome.format != ExportFormat.XPN)) {
+                null
+            } else {
+                runCatching { LandingNote.Tile(AndroidKitArt.png(kit, session.dir, style)) }.getOrNull()
+            }
+        }
+        onNote(
+            LandingNote.dubbed(
+                kit = kit.name,
+                onCard = onCard,
+                files = model.fileCount,
+                where = where,
+                // SHARE KIT is the ALSO row's own door and is enabled on the
+                // same condition; the box offers it no more than the row does.
+                share = onShareKit.takeIf { kit.pads.isNotEmpty() },
+                tile = tile,
+            ),
+        )
+    }
+
     // The card leg itself, in one place because two callers reach it: the
     // dub that found the card clear, and the confirm for the dub that did
     // not. Suspends rather than launching its own coroutine so it inherits
@@ -562,6 +591,11 @@ private fun ExportContent(
                 else -> Copy.DUB_DONE_CARD
             },
         )
+        // A file the provider would not budge is trouble the line has said;
+        // a box titled "ON THE CARD" over it would say the opposite.
+        if (copied.contested == 0) {
+            landedNote(outcome, onCard = true, where = "${Copy.cardName(card.lastPathSegment)}/${outcome.primary.name}")
+        }
     }
 
     // The offer `dubCardWouldReplace` held back, taken. Reads the pending
@@ -633,6 +667,7 @@ private fun ExportContent(
                         stampDub(session.dir, card = null)
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
+                            landedNote(result.outcome, onCard = false, where = result.outcome.primary.absolutePath)
                         } else {
                             // What the card already holds, asked before a
                             // byte of it is written (persona review P2.3).
@@ -991,6 +1026,13 @@ private fun ProjectCard(
                         overwriting = null
                         landed = result.result
                         onToast(Copy.DUB_DONE)
+                        // The session's files: the .xpj and everything under
+                        // its data folder. No SHARE here - SHARE KIT packs the
+                        // open kit, which is not what this wrote.
+                        val files = withContext(Dispatchers.IO) {
+                            1 + (runCatching { result.result.dataDir.walkTopDown().count { it.isFile } }.getOrNull() ?: 0)
+                        }
+                        onNote(LandingNote.dubbed(project.name, onCard = false, files = files, where = result.result.xpj.absolutePath))
                     }
                     is ProjectSessionModel.WriteResult.Blocked -> {
                         overwriting = null

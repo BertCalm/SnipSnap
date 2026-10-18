@@ -1,5 +1,7 @@
 package com.snipsnap.app.ui
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -7,18 +9,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Layout
 import com.snipsnap.shell.LandingNote
 
 /**
@@ -27,6 +35,11 @@ import com.snipsnap.shell.LandingNote
  * type, its lines in a sunken field - trouble in the warn colour - and
  * the one button. It stays until read: the scrim and the button both
  * dismiss, the box itself swallows the tap.
+ *
+ * A landing may carry two more things (`LandingNote.dubbed`): a tile, drawn
+ * 96 dp square above the title, and one route, a chip between the lines and
+ * the button that closes the box and goes. A tile that will not decode is
+ * left out - the words are the box, the picture is only company.
  */
 @Composable
 fun MessageBox(note: LandingNote.Note, onDismiss: () -> Unit) {
@@ -62,6 +75,17 @@ fun MessageBox(note: LandingNote.Note, onDismiss: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            val tile = remember(note.tile) {
+                note.tile?.let { runCatching { BitmapFactory.decodeByteArray(it.png, 0, it.png.size)?.asImageBitmap() }.getOrNull() }
+            }
+            if (tile != null) {
+                Image(
+                    bitmap = tile,
+                    contentDescription = "KIT TILE",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(TILE_DP.dp),
+                )
+            }
             TapeText(note.title, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             if (note.lines.isNotEmpty()) {
                 Column(
@@ -74,7 +98,22 @@ fun MessageBox(note: LandingNote.Note, onDismiss: () -> Unit) {
                     }
                 }
             }
+            note.route?.let { route ->
+                ActionButton(
+                    route.label,
+                    scheme,
+                    enabled = true,
+                    accessibilityLabel = route.label.removeSuffix("▸").trim(),
+                    modifier = Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp),
+                ) {
+                    onDismiss()
+                    route.go()
+                }
+            }
             PrimaryAction(label = note.button, enabled = true, onClick = onDismiss)
         }
     }
 }
+
+/** The landing's tile, square. */
+private const val TILE_DP = 96
