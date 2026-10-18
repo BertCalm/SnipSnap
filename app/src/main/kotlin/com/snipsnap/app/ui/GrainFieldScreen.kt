@@ -756,11 +756,11 @@ private fun HeaderChip(
                     Modifier
                 },
             )
-            .border(1.dp, if (engaged) scheme.accent.tape else scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = accessibilityLabel ?: label, onClick = onClick)
+            .border(1.dp, if (engaged) scheme.accent.tape else scheme.lcdInk2, RoundedCornerShape(3.dp))
+            .tapeClick(label = accessibilityLabel ?: label, spoken = if (accessibilityLabel == null) spokenBack(label) else null, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (engaged) scheme.lcd.tape else scheme.ink.tape)
+        TapeText(label, TapeType.pixel, if (engaged) scheme.lcd.tape else scheme.lcdInk.tape)
     }
 }

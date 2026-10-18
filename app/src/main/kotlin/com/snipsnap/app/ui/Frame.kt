@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.MicSessionService
@@ -384,6 +385,8 @@ fun Dock(
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .widthIn(min = Layout.MIN_HIT_TARGET.dp)
                     .tapeClick(label = Places.LISTEN, onClick = onArm)
+                    // The light is an 8 dp dot: the state it shows, said.
+                    .semantics { stateDescription = if (dock.capture is DockModel.Capture.Snipped) "SNIPPED" else "MIC IDLE" }
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -393,10 +396,18 @@ fun Dock(
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                CaptureLight(lit = true)
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
-                    CaptureMeter(Modifier.width(72.dp).height(6.dp))
+                // The light, the count and the meter, one node that says the
+                // state; SNIP and STOP stay their own, so they are not merged in.
+                Row(
+                    Modifier.semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    CaptureLight(lit = true)
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
+                        CaptureMeter(Modifier.width(72.dp).height(6.dp))
+                    }
                 }
                 DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
                 DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)

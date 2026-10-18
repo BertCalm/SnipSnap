@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -165,6 +166,14 @@ fun TapeText(
  * call sites using a raw `Modifier.pointerInput { detectTapGestures {}
  * }` instead, which registers no semantics node.)
  *
+ * [spoken] is the accessible name when it should differ from [label]:
+ * a chip whose visible label carries a glyph ("SNIPS ▸", "◄ KIT") keeps
+ * the glyph on screen and gives TalkBack the words. It takes the place of
+ * [label] as the `contentDescription`, so a call site that a test finds
+ * by its visible label simply does not pass one. The node is a
+ * `Role.Button`: nothing here is a switch or a tab, and no call site has
+ * ever said otherwise.
+ *
  * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
  * its semantics node (and its name) but exposes Compose's `disabled()`
  * state instead of an actionable one, so a screen-reader user is told
@@ -172,15 +181,28 @@ fun TapeText(
  * from the tree (audit finding 12).
  */
 @Composable
-fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> Unit): Modifier =
+fun Modifier.tapeClick(label: String?, enabled: Boolean = true, spoken: String? = null, onClick: () -> Unit): Modifier =
     clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
         enabled = enabled,
+        // A button, said so: TalkBack reads "button" after the name, and a
+        // switch access scan can tell this node from a label.
+        role = Role.Button,
         onClick = onClick,
     ).let { base ->
-        if (label != null) base.semantics { contentDescription = label } else base
+        val name = spoken ?: label
+        if (name != null) base.semantics { contentDescription = name } else base
     }
+
+/**
+ * A back chip's spoken name: the glyph on the chip is a picture of an
+ * arrow, and "◄ KIT" read aloud is noise before the word. "BACK TO KIT"
+ * for anything that begins with the arrow, null for the rest, so the
+ * caller's `spoken` falls back to the visible label.
+ */
+fun spokenBack(label: String): String? =
+    if (label.startsWith("◄ ")) "BACK TO " + label.removePrefix("◄ ") else null
 
 /**
  * The title bar. [onNote] is the WORKSHOP's NOTE chip (`docs/WORKSHOP.md`,

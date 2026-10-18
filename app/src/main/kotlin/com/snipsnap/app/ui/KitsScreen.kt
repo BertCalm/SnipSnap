@@ -643,8 +643,8 @@ fun KitsScreen(
             // SNIPS and TOOLS, two chips in one row (SH1): two full-width rows
             // for two doors that are each a word was 56 dp of the shelf for
             // their descriptions. The row shows the word and its arrow; the
-            // accessible names keep the full descriptions, exactly as they
-            // were, because tests and uiautomator walks read those.
+            // accessible names say the door and what is behind it, without
+            // the arrow, which read aloud is noise.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // SNIPS: always openable, even with zero snips yet (its own
                 // empty state says so) — unlike BACKUP (now behind TOOLS),
@@ -655,7 +655,7 @@ fun KitsScreen(
                     "SNIPS ▸",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "SNIPS ▸ EVERY CATCH, ONE LIST",
+                    accessibilityLabel = "OPEN SNIPS, EVERY CATCH IN ONE LIST",
                     modifier = Modifier.weight(1f),
                     onClick = onSnips,
                 )
@@ -669,7 +669,7 @@ fun KitsScreen(
                     "TOOLS ▸",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "TOOLS ▸ BACKUP, CHOP ALL, X-RAY, DOUBLES",
+                    accessibilityLabel = "OPEN TOOLS, BACKUP, CHOP ALL, X-RAY, DOUBLES",
                     modifier = Modifier.weight(1f),
                     onClick = { toolsMenuOpen = true },
                 )

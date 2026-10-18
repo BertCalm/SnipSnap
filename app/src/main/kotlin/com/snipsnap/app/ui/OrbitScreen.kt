@@ -2868,11 +2868,11 @@ private fun HeaderChip(
     description: String? = null,
     onClick: () -> Unit,
 ) {
-    val ink = if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink.tape
+    val ink = if (!enabled) scheme.lcdInk.tape.copy(alpha = 0.4f) else if (accent) scheme.accent.tape else scheme.lcdInk.tape
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.lcdInk2, RoundedCornerShape(3.dp))
             .tapeClick(label = description ?: if (label == "▶") "PLAY" else if (label == "■") "STOP" else null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
