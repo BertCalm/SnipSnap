@@ -73,7 +73,12 @@
     }
     const response = await fetch(path);
     if (!response.ok) throw new Error('Audio unavailable (' + response.status + ')');
-    const value = await context.decodeAudioData(await response.arrayBuffer());
+    // Decode at the recorded rate so FLAC samples remain exact PCM24 values.
+    // Playback can resample the resulting buffer at the hardware output boundary.
+    const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OfflineContext) throw new Error('Exact audio decoding is unavailable');
+    const decoder = new OfflineContext(1, 1, manifest.sampleRate || 44100);
+    const value = await decoder.decodeAudioData(await response.arrayBuffer());
     audioCache.set(path, value);
     if (audioCache.size > 8) audioCache.delete(audioCache.keys().next().value);
     return value;
@@ -97,7 +102,7 @@
     native.load();
     $('fallback').hidden = true;
     state('Loading / ' + mode);
-    const path = asset(clip[mode + 'Path']);
+    const path = asset(clip[mode + 'PlaybackPath'] || clip[mode + 'Path']);
     try {
       context = context || new (window.AudioContext || window.webkitAudioContext)();
       await context.resume();
@@ -179,6 +184,110 @@
     a.download = path.split('/').pop();
     host.append(a);
   }
+  function downloadBlob(bytes, type, filename) {
+    const url = URL.createObjectURL(new Blob([bytes], { type }));
+    const link = node('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  function base64Bytes(value) {
+    const decoded = atob(value || '');
+    return Uint8Array.from(decoded, character => character.charCodeAt(0));
+  }
+  async function sha256(bytes) {
+    if (!crypto.subtle) throw new Error('This browser cannot verify the WAV download');
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+    return Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  async function originalWav(clip, kind) {
+    const envelope = clip[kind + 'WavEnvelope'];
+    const audio = await decoded(asset(clip[kind + 'PlaybackPath']));
+    if (audio.numberOfChannels !== 1 || audio.sampleRate !== (manifest.sampleRate || 44100)
+      || audio.length !== envelope.frames || envelope.dataBytes !== envelope.frames * 3) {
+      throw new Error('Decoded audio does not match the original WAV format');
+    }
+    const prefix = base64Bytes(envelope.prefixBase64), suffix = base64Bytes(envelope.suffixBase64);
+    const bytes = new Uint8Array(prefix.length + envelope.dataBytes + suffix.length);
+    bytes.set(prefix);
+    const samples = audio.getChannelData(0);
+    for (let i = 0, at = prefix.length; i < samples.length; i++, at += 3) {
+      const value = Math.max(-8388608, Math.min(8388607, Math.round(samples[i] * 8388608)));
+      bytes[at] = value & 255;
+      bytes[at + 1] = (value >> 8) & 255;
+      bytes[at + 2] = (value >> 16) & 255;
+    }
+    bytes.set(suffix, prefix.length + envelope.dataBytes);
+    const expected = clip[kind + 'Sha256'] || clip.sha256?.[kind];
+    if (!expected || await sha256(bytes) !== expected) throw new Error('Original WAV fingerprint verification failed');
+    return bytes;
+  }
+  function wavDownload(host, text, clip, kind) {
+    if (!clip[kind + 'PlaybackPath'] || !clip[kind + 'WavEnvelope']) {
+      download(host, text, clip[kind + 'Path']);
+      return;
+    }
+    const link = node('a', text, 'wav-download');
+    link.href = asset(clip[kind + 'PlaybackPath']);
+    link.download = clip[kind + 'PlaybackPath'].split('/').pop();
+    link.dataset.originalPath = clip[kind + 'Path'];
+    link.dataset.kind = kind;
+    link.onclick = async event => {
+      event.preventDefault();
+      if (link.dataset.downloading) return;
+      link.dataset.downloading = 'true';
+      link.textContent = 'Preparing WAV…';
+      try {
+        const bytes = await originalWav(clip, kind);
+        downloadBlob(bytes, 'audio/wav', clip[kind + 'Path'].split('/').pop());
+        announce('Original 24-bit WAV verified and downloaded');
+      } catch (error) {
+        announce('WAV download failed: ' + error.message);
+      } finally {
+        delete link.dataset.downloading;
+        link.textContent = text;
+      }
+    };
+    host.append(link);
+  }
+  async function traceBytes(response) {
+    let bytes = new Uint8Array(await response.arrayBuffer());
+    // HTTP Content-Encoding may already have decompressed the response.
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+      if (!window.DecompressionStream) throw new Error('Gzip decoding is unavailable');
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+    return bytes;
+  }
+  function traceDownload(host, text, clip) {
+    if (clip.traceEncoding !== 'gzip' && !clip.tracePath.endsWith('.gz')) {
+      download(host, text, clip.tracePath);
+      return;
+    }
+    const link = node('a', text, 'trace-download');
+    link.href = asset(clip.tracePath);
+    link.onclick = async event => {
+      event.preventDefault();
+      if (link.dataset.downloading) return;
+      link.dataset.downloading = 'true';
+      link.textContent = 'Preparing state…';
+      try {
+        const response = await fetch(asset(clip.tracePath));
+        if (!response.ok) throw new Error('Production state unavailable');
+        const bytes = await traceBytes(response);
+        downloadBlob(bytes, 'application/json', clip.tracePath.split('/').pop().replace(/\.gz$/i, ''));
+        announce('Production state JSON downloaded');
+      } catch (error) {
+        announce('State download failed: ' + error.message);
+      } finally {
+        delete link.dataset.downloading;
+        link.textContent = text;
+      }
+    };
+    host.append(link);
+  }
   function card(clip, index) {
     const material = materials.find(m => m.id === clip.material);
     const article = node('article', undefined, 'candidate');
@@ -205,10 +314,10 @@
     metric(metrics, 'Matched WAV SHA256', clip.matchedSha256.slice(0, 16));
     if (!blind) detail.append(metrics);
     const downloads = node('div', undefined, 'downloads');
-    download(downloads, 'Native WAV ↓', clip.nativePath);
-    download(downloads, 'Matched WAV ↓', clip.matchedPath);
+    wavDownload(downloads, 'Native WAV ↓', clip, 'native');
+    wavDownload(downloads, 'Matched WAV ↓', clip, 'matched');
     download(downloads, 'SnipSnap patch ↓', clip.recipePath);
-    download(downloads, 'Production state ↓', clip.tracePath);
+    traceDownload(downloads, 'Production state ↓', clip);
     if (!blind) detail.append(downloads);
     const textarea = node('textarea');
     textarea.placeholder = 'What rings? Does its character stay with the motion?';
@@ -309,7 +418,7 @@
       if (!data) {
         const response = await fetch(path);
         if (!response.ok) throw new Error('Controller trace unavailable');
-        data = await response.json();
+        data = JSON.parse(new TextDecoder().decode(await traceBytes(response)));
         if (!Array.isArray(data.controller) || !data.controller.length) throw new Error('No controller frames');
         traceCache.set(path, data);
         if (traceCache.size > 12) traceCache.delete(traceCache.keys().next().value);
