@@ -226,9 +226,8 @@ class KitShelf(val root: File) {
      * Synchronous and seconds-long (the synth engines render offline);
      * the caller shows DUBBING… while it runs.
      */
-    fun render(starter: StarterKits.Starter, seed: Int): Entry {
+    fun render(starter: StarterKits.Starter, seed: Int, name: String = freshName(starter.displayName)): Entry {
         root.mkdirs()
-        val name = freshName(starter.displayName)
         val dir = File(root, name)
         val kit = starter.render(name, dir, seed)
         return Entry(dir, kit)

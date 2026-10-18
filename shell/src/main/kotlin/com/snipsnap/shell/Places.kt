@@ -37,6 +37,13 @@ object Places {
 
     const val LISTEN = "LISTEN · MIC"
 
+    /**
+     * The cold shelf's one filled button: what LISTEN · MIC then SNIP does,
+     * asked for in the player's own terms. It arms the same mic session the
+     * dock's LISTEN does; its accessible name is its label.
+     */
+    const val CATCH_FIRST = "CATCH YOUR FIRST SOUND ▸"
+
     /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. The arrow: it opens that page. */
     const val OPEN_SETTINGS = "OPEN SETTINGS ▸"
     const val SNIPPED = "SNIPPED"

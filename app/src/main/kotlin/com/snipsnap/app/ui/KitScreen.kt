@@ -171,6 +171,14 @@ fun KitScreen(
     bankRequest: Int? = null,
     onBankRequestConsumed: () -> Unit = {},
     /**
+     * A pad to light once, asked for by a landing that just put a sound there
+     * (the first catch). Held until the pad is on the grid - the kit it lands
+     * on arrives a beat after the screen does - and consumed through
+     * [onLightConsumed] once it has flashed.
+     */
+    lightRequest: Int? = null,
+    onLightConsumed: () -> Unit = {},
+    /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
      * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
      * `:shell`'s tested `Breed.breed` crosses this kit's own recipes with
@@ -462,6 +470,13 @@ fun KitScreen(
     // bank and the fullscreen flag are read live: this effect outlives the
     // composition that started it. Flash state is the cell's own Animatable,
     // so a note recomposes that one cell and never the grid.
+    LaunchedEffect(lightRequest, glow) {
+        val slot = lightRequest ?: return@LaunchedEffect
+        // Not on the grid yet: keyed on `glow`, so this runs again with the kit that has it.
+        if (glow[slot] == null) return@LaunchedEffect
+        flash(slot)
+        onLightConsumed()
+    }
     val bankShown by rememberUpdatedState(showing)
     val fullShown by rememberUpdatedState(fullscreen)
     LaunchedEffect(beat, glow) {
