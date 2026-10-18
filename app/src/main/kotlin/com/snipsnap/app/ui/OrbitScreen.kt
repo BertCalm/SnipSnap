@@ -66,6 +66,7 @@ import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -2533,7 +2534,7 @@ private fun RingsCanvas(
                     textMeasurer = textMeasurer,
                     text = "${ring.name} · ${ring.steps}",
                     topLeft = Offset(labelAt.x + 6f * screenDensity, labelAt.y - 4f * screenDensity),
-                    style = labelStyle.copy(color = if (picked) amber else scheme.ink2.tape),
+                    style = labelStyle.copy(color = if (picked) amber else scheme.lcdInk2),
                 )
             }
             // The hub: a dot marking the shared centre every ring turns about.
@@ -2637,7 +2638,7 @@ private fun StripEditor(
                 // pair that isn't either of those (`PROG A · THE BREAK`,
                 // GrooveScreen.kt).
                 SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
-                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f), maxLines = 1)
             }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)

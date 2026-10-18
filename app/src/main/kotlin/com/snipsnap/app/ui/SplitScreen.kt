@@ -49,6 +49,7 @@ import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.DrumClass
@@ -659,14 +660,14 @@ private fun Fader(
             val span = (bottom - top).coerceAtLeast(1f)
             // The track, unity's mark, and the knob.
             drawLine(
-                color = scheme.ink3.tape,
+                color = scheme.lcdInk2,
                 start = Offset(trackX, top),
                 end = Offset(trackX, bottom),
                 strokeWidth = 2f,
             )
             val unityY = bottom - span * (Layers.UNITY / Layers.MAX_LEVEL)
             drawLine(
-                color = scheme.ink3.tape,
+                color = scheme.lcdInk2,
                 start = Offset(size.width * 0.2f, unityY),
                 end = Offset(size.width * 0.8f, unityY),
                 strokeWidth = 1f,

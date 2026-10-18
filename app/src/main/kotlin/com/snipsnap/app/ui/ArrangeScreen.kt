@@ -35,6 +35,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MixVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -250,7 +251,7 @@ fun ArrangeScreen(
                     TapeText(
                         shown?.reason?.uppercase() ?: "",
                         TapeType.pixelSmall,
-                        scheme.ink3.tape,
+                        scheme.lcdInk2,
                         maxLines = 2,
                     )
                 }

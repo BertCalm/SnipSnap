@@ -35,6 +35,7 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitStore
@@ -676,9 +677,9 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
             Modifier
                 .width(8.dp)
                 .heightIn(min = 8.dp)
-                .background(row.classColor ?: scheme.ink3.tape, RoundedCornerShape(2.dp)),
+                .background(row.classColor ?: scheme.lcdInk2, RoundedCornerShape(2.dp)),
         )
-        TapeText(row.entry.originalName, TapeType.marker, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(row.entry.originalName, TapeType.marker, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         TapeText("${row.daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
         Box(
             Modifier

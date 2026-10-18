@@ -74,6 +74,7 @@ import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
@@ -1823,11 +1824,11 @@ private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boole
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            TapeText(row.saved.name, TapeType.marker, scheme.ink.tape, maxLines = 1)
+            TapeText(row.saved.name, TapeType.marker, scheme.lcdInk.tape, maxLines = 1)
             TapeText(
                 "${row.saved.engine} · ${row.saved.voice.replace('_', ' ')} · ${Ages.ago(row.binnedAt, now)}",
                 TapeType.pixelSmall,
-                scheme.ink2.tape,
+                scheme.lcdInk2,
                 maxLines = 1,
             )
         }

@@ -37,6 +37,7 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Cleanup
@@ -332,7 +333,7 @@ private fun PickingStep(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    TapeText(take.label().uppercase(), TapeType.pixelSmall, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+                    TapeText(take.label().uppercase(), TapeType.pixelSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
                     ActionButton("HEAD", scheme, enabled = !busy, lit = headTake == take, modifier = Modifier.width(76.dp), onClick = { onPickHead(take) })
                     ActionButton("TAIL", scheme, enabled = !busy, lit = tailTake == take, modifier = Modifier.width(76.dp), onClick = { onPickTail(take) })
                 }
@@ -478,7 +479,7 @@ private fun SpliceLane(loaded: LoadedTake, sharedMaxFrames: Int, needleFrame: In
             val needleX = (needleFrame / framesPerPixel).toFloat().coerceIn(0f, w)
             drawLine(scheme.warn.tape, Offset(needleX, 0f), Offset(needleX, h), strokeWidth = NEEDLE_STROKE_PX)
         }
-        TapeText(label, TapeType.pixelSmall, scheme.ink3.tape, Modifier.align(Alignment.TopStart).padding(4.dp), maxLines = 1)
+        TapeText(label, TapeType.pixelSmall, scheme.lcdInk2, Modifier.align(Alignment.TopStart).padding(4.dp), maxLines = 1)
     }
 }
 

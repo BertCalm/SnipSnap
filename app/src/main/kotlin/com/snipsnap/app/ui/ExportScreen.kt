@@ -62,6 +62,7 @@ import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.etchedBox
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -1403,7 +1404,7 @@ private fun FormatPickerRow(
                             maxLines = 2,
                         )
                         // Finding 8: the reason, not just the name.
-                        TapeText(f.why, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                        TapeText(f.why, TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
                     }
                 }
             }

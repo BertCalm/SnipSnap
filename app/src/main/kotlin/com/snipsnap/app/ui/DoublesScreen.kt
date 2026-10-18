@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -120,7 +121,7 @@ fun DoublesScreen(
                 TapeText(
                     idx?.let { "${Copy.countOf(it.entries.size, "PAD", "PADS")} MEASURED" } ?: Copy.DOUBLES_BUSY,
                     TapeType.pixelSmall,
-                    scheme.ink3.tape,
+                    scheme.lcdInk2,
                     maxLines = 1,
                 )
             }
@@ -207,7 +208,7 @@ private fun MemberRow(e: Crate.Entry, onShelf: Boolean, scheme: Scheme, onGo: ()
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        TapeText(Doubles.memberLine(e), TapeType.pixelSmall, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(Doubles.memberLine(e), TapeType.pixelSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         ActionButton(
             "GO ▸",
             scheme,

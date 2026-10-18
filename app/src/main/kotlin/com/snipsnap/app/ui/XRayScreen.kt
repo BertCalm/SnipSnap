@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -61,7 +62,7 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
             HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 TapeText("X-RAY", TapeType.lcdHeader, scheme.lcdInk.tape)
-                TapeText(fileName.uppercase(), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(fileName.uppercase(), TapeType.pixelSmall, scheme.lcdInk2, maxLines = 1)
             }
             TapeText(reading.kindLabel.uppercase(), TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
         }
@@ -128,7 +129,7 @@ private fun ProgramHeader(program: MpcXRay.Program) {
         TapeText(
             (if (program.isKeygroup) "KEYGROUP" else "DRUM") + " · $used/${program.pads.size} LOADED",
             TapeType.pixelSmall,
-            scheme.ink.tape,
+            scheme.lcdInk.tape,
         )
     }
 }
@@ -150,18 +151,18 @@ private fun PadRow(pad: MpcXRay.Pad) {
                     (main?.sampleName ?: "(unnamed)").uppercase() +
                         if (pad.layers.size > 1) "  · ${pad.layers.size} LAYERS" else "",
                     TapeType.pixelSmall,
-                    scheme.ink.tape,
+                    scheme.lcdInk.tape,
                     maxLines = 1,
                 )
                 TapeText(
                     "L ${fmt(pad.level)}  P ${fmt(pad.pan)}  TUNE ${fmtInt(pad.tuneCoarse)}/${fmtInt(pad.tuneFine)}  MUTE ${fmtInt(pad.muteGroup)}",
                     TapeType.pixelSmall,
-                    scheme.ink2.tape,
+                    scheme.lcdInk2,
                     maxLines = 1,
                 )
             }
         } else {
-            TapeText("EMPTY", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f))
+            TapeText("EMPTY", TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f))
         }
     }
 }

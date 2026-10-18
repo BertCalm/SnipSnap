@@ -47,6 +47,7 @@ import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.TiltSource
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.AxesProjector
@@ -694,7 +695,7 @@ private fun GrainFieldCanvas(
                 false
             }
             drawCircle(
-                color = if (lit) scheme.accent.tape else scheme.ink2.tape,
+                color = if (lit) scheme.accent.tape else scheme.lcdInk2,
                 radius = dotRadiusPx,
                 center = center,
             )

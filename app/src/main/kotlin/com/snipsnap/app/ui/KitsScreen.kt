@@ -44,6 +44,7 @@ import com.snipsnap.app.theme.BinRedGlow
 import androidx.compose.ui.platform.LocalContext
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
@@ -887,7 +888,7 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(binned.room.name, TapeType.marker, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(binned.room.name, TapeType.marker, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
         Box(
             Modifier

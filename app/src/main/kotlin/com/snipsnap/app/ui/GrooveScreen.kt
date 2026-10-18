@@ -62,6 +62,7 @@ import com.snipsnap.app.ShareOut
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
@@ -2139,7 +2140,7 @@ fun GrooveScreen(
                             "${"%.1f".format(java.util.Locale.ROOT, bpm)} BPM · ${Copy.countOf(currentClip?.bars ?: 0, "BAR", "BARS")}$meter · " +
                                 Copy.countOf(currentClip?.notes?.size ?: 0, "NOTE", "NOTES"),
                             TapeType.lcdSmall,
-                            scheme.ink.tape,
+                            scheme.lcdInk2,
                         )
                     }
                 }
@@ -2881,10 +2882,10 @@ private fun NeedleRoll(
                 if (y < -noteH || y > size.height) return@forEach
 
                 val hot = playing && p <= posSteps && (posSteps - p) < GROOVE_LIT_WINDOW
-                // An off-lane note has no DrumClass to colour by — `scheme.ink.tape`
+                // An off-lane note has no DrumClass to colour by — `scheme.lcdInk`
                 // is already this line's own fallback, so an off-lane hit
                 // simply keeps falling through to it, same as before.
-                val color = lane?.let { LANE_DRUM_CLASS[it] }?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
+                val color = lane?.let { LANE_DRUM_CLASS[it] }?.let { Schemes.classColor(it).tape } ?: scheme.lcdInk.tape
                 val alpha = if (hot) 1f else (0.35f + 0.55f * n.velocity)
                 val x = laneLeft + laneIndex * columnW + (columnW - noteW) / 2f
 
@@ -2936,7 +2937,7 @@ private fun NeedleRoll(
             val y = Layout.NEEDLE_Y + (r - posSteps) * Layout.STEP_W
             if (y < -20f || y > maxHeightPx) continue
             val label = "${r / barSteps + 1}.${(r % barSteps) / 4 + 1}"
-            val color = if (r % barSteps == 0) scheme.amber.tape else scheme.ink3.tape
+            val color = if (r % barSteps == 0) scheme.amber.tape else scheme.lcdInk2
             TapeText(label, TapeType.pixelSmall, color, Modifier.offset(x = 4.dp, y = with(density) { y.toDp() }))
         }
 
@@ -2954,7 +2955,7 @@ private fun NeedleRoll(
             horizontalArrangement = Arrangement.Center,
         ) {
             for (lane in LANE_ORDER) {
-                val c = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
+                val c = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.lcdInk.tape
                 Box(
                     Modifier
                         .padding(horizontal = 3.dp)
@@ -2967,17 +2968,17 @@ private fun NeedleRoll(
             }
             // Fix 3's eighth column, legended: same chip shape as the seven
             // above, in the same neutral colour the saved-clip pass falls
-            // back to for an off-lane note (`scheme.ink.tape`) — not an
+            // back to for an off-lane note (`scheme.lcdInk`) — not an
             // eighth `GrooveEdit.Lane`, purely this row's own label for
             // the renderer-only column drawn above.
             Box(
                 Modifier
                     .padding(horizontal = 3.dp)
-                    .border(1.dp, scheme.ink.tape.copy(alpha = 0.4f), RoundedCornerShape(3.dp))
+                    .border(1.dp, scheme.lcdInk.tape.copy(alpha = 0.4f), RoundedCornerShape(3.dp))
                     .background(scheme.lcd.tape, RoundedCornerShape(3.dp))
                     .padding(horizontal = 5.dp, vertical = 1.dp),
             ) {
-                TapeText("OTHER", TapeType.pixelSmall, scheme.ink.tape)
+                TapeText("OTHER", TapeType.pixelSmall, scheme.lcdInk.tape)
             }
         }
     }
@@ -3052,7 +3053,7 @@ private fun StepEditorOverlay(
                     TapeText(Copy.STEP_EDIT_TITLE, TapeType.lcd(20), scheme.lcdInk.tape)
                     val ofYours = GrooveEdit.progIndexOf(clip)?.plus(1)
                     if (ofYours != null && yoursCount > 1) {
-                        TapeText(Copy.stepEditOf(ofYours, yoursCount), TapeType.pixelSmall, scheme.ink2.tape)
+                        TapeText(Copy.stepEditOf(ofYours, yoursCount), TapeType.pixelSmall, scheme.lcdInk2)
                     }
                 }
                 Box(
@@ -3115,7 +3116,7 @@ private fun StepEditorOverlay(
             // reclaiming exactly the gap that used to be unclickable.
             Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 for (lane in LANE_ORDER) {
-                    val laneColor = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
+                    val laneColor = LANE_DRUM_CLASS[lane]?.let { Schemes.classColor(it).tape } ?: scheme.lcdInk.tape
                     val laneOnSteps = onSteps.getValue(lane)
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         Box(
@@ -3161,7 +3162,7 @@ private fun StepEditorOverlay(
             TapeText(
                 Copy.stepEditFooter(totalSteps, sourceLabel),
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.lcdInk2,
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
