@@ -303,10 +303,11 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  *
  * - **transport**: the project's beat, from GROOVE's own TRANSPORT group.
  *   While BEAT is the stage, [onPlayToggle] is set and the readout is a
- *   button — ▶ to play, ■ to stop, ● while a take goes in; off BEAT the
+ *   button — ▶ to play (what a tap does, so the stopped chip says ▶, not
+ *   ■), the running readout to stop, ● while a take goes in; off BEAT the
  *   clock is not running (it is GrooveScreen's frame loop, which BOUNCE,
- *   RECORD and the audition all ride) so the region is a readout that
- *   says `■`, never a button that would do nothing. Keeping the beat
+ *   RECORD and the audition all ride) so a stopped beat draws nothing
+ *   there, never a button that would do nothing. Keeping the beat
  *   playing across benches wants that clock pulled out of the screen; the
  *   dock is ready for it, the screen is not yet.
  * - **capture**: the capture session's one control, which used to be the
@@ -356,11 +357,19 @@ fun Dock(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Transport.
+        // Transport. A live chip that is stopped says ▶, what a tap does; the
+        // old ■ read as STOP on the one control that would start. Off BEAT a
+        // stopped beat has no readout at all: an inert ■ beside the capture
+        // light read as a button that did nothing.
+        val stopped = dock.transport is DockModel.Transport.Stopped
         if (onPlayToggle != null) {
-            val playing = dock.transport !is DockModel.Transport.Stopped
-            DockChip(dock.transportLabel, scheme.amber.tape, onClick = onPlayToggle, label = if (playing) Places.STOP_BEAT else Places.PLAY_BEAT)
-        } else {
+            DockChip(
+                if (stopped) Places.PLAY_GLYPH else dock.transportLabel,
+                scheme.amber.tape,
+                onClick = onPlayToggle,
+                label = if (stopped) Places.PLAY_BEAT else Places.STOP_BEAT,
+            )
+        } else if (!stopped) {
             TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
         }
         // Capture.
