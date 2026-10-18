@@ -252,6 +252,7 @@ object Velocity {
         is FlockPatch -> Flock.macrosFor(patch.voice)
         is ShoalPatch -> Shoal.macrosFor(patch.voice)
         is RelayPatch -> Relay.macrosFor(patch.voice)
+        is OrigamiPatch -> Origami.macrosFor(patch.voice)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
@@ -384,6 +385,7 @@ object Velocity {
         is FlockPatch -> patch.copy(velocity = v).render()
         is ShoalPatch -> patch.copy(velocity = v).render()
         is RelayPatch -> patch.copy(velocity = v).render()
+        is OrigamiPatch -> patch.copy(velocity = v).render()
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
@@ -456,6 +458,8 @@ object Velocity {
      * rather than folded into [BRIGHTNESS_MACROS] itself.
      */
     fun brightnessSpec(patch: Patch): MacroSpec? {
+        // ORIGAMI's FOLD relocates partials; it is not a monotonic brightness control.
+        if (patch is OrigamiPatch) return null
         val specs = macroSpecsFor(patch)
         brightnessOverride(patch)?.let { name -> return specs.firstOrNull { it.name == name } }
         return BRIGHTNESS_MACROS.firstNotNullOfOrNull { name -> specs.firstOrNull { it.name == name } }
@@ -599,7 +603,8 @@ object Velocity {
     // FOLD is TIDE's: the folder's drive at the strike, which adds partials
     // and nothing else (`TideTest`'s FOLD sweep holds the centroid rising
     // for every voice), so a soft TIDE strike folds less, as a soft strike
-    // should. No other engine has a macro by that name.
+    // should. ORIGAMI also exposes FOLD, but its native velocity path preserves
+    // that geometry and brightnessSpec deliberately excludes it.
     //
     // FOLD and PEAK arrived from two branches at once and neither collides
     // with the other: TIDE exposes no PEAK, GLINT exposes no FOLD, and each

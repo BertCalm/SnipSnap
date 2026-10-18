@@ -242,6 +242,9 @@ import com.snipsnap.synth.AlloyVoice
 import com.snipsnap.synth.Registers
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.RegistersVoice
+import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.OrigamiVoice
 import java.io.File
 import java.util.Locale
 import kotlin.math.max
@@ -325,7 +328,7 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS and MURMUR, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, MURMUR and ORIGAMI, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -443,6 +446,7 @@ fun SynthScreen(
     // and model version. OPENSKY retains its authored timbre, note,
     // velocity, gate, effect mode and model. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
+    // ORIGAMI likewise retains its model, seed, absolute MIDI override and velocity.
     // The presets the bag names (§3.6). A factory preset is looked up by name
     // and re-adopted whole, so an engine whose recipe lives outside its macros
     // comes back sounding as it did; a YOURS preset is on the shelf, not yet
@@ -496,7 +500,14 @@ fun SynthScreen(
     fun updateMacro(name: String, value: Float) {
         touched = true
         currentPresetByVoice.remove(engine to voice)
-        macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value.coerceIn(macroRange(name)))
+        val bounded = value.coerceIn(macroRange(name))
+        macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to bounded)
+        // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
+        // must move that override too; timbral edits retain the whole saved recipe.
+        val origami = loadedPatch as? OrigamiPatch
+        if (name == "TUNE" && origami?.midi != null) {
+            loadedPatchesByVoice[engine to voice] = origami.copy(midi = Origami.midiFor(origami.voice, bounded))
+        }
     }
     fun updateStoopRoot(midi: Int) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
@@ -523,7 +534,14 @@ fun SynthScreen(
         // legacy recipe with the current model's values would change its sound.
         val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
             else engine.defaults(voice)
-        macrosByVoice[engine to voice] = defaults + editable.macros
+        val resolved = if (editable is OrigamiPatch) editable.resolvedMacros() else editable.macros
+        val absoluteMidi = (editable as? OrigamiPatch)?.midi
+        val patchMacros = if (absoluteMidi != null) {
+            // The slider reports what will sound, even when a saved absolute
+            // note intentionally differs from the patch's dormant TUNE value.
+            resolved + ("TUNE" to (absoluteMidi - Origami.MIDI_MIN).toFloat() / Origami.TUNE_SEMITONES)
+        } else resolved
+        macrosByVoice[engine to voice] = defaults + patchMacros
         currentPresetByVoice[engine to voice] = patch.name
     }
 
@@ -765,6 +783,14 @@ fun SynthScreen(
                 val padRecipe = PadRecipe(patch = patch, fx = fx)
                 val recipe = padRecipe.toJsonValue()
                 val cls = engine.drumClass(voice, macros)
+                // ORIGAMI authors its pitch. Detecting the folded upper bank
+                // can invent a cent offset and retune a correctly played note.
+                val authoredMidi = (patch as? OrigamiPatch)?.let {
+                    it.midi ?: Origami.midiFor(it.voice, it.resolvedMacros().getValue("TUNE"))
+                }
+                val origamiSource = authoredMidi?.let {
+                    mapOf("from" to "SYNTH", "rootMidi" to it.toString(), "rootNote" to Scales.nameOf(it))
+                }
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
@@ -779,12 +805,17 @@ fun SynthScreen(
                             // with) whatever it was before, while sounding like
                             // the new voice.
                             model.replaceAudio(slot, recipe) { _ -> rendered }
+                            val knownTune = authoredMidi?.let { model.tuningForKnownRoot(it) }
                             model.update(slot) { p ->
                                 p.copy(
                                     displayName = name,
                                     drumClass = cls,
                                     colorHex = AutoPlace.colorFor(cls),
                                     muteGroup = AutoPlace.muteGroupFor(cls),
+                                    tuneCoarse = knownTune?.first ?: p.tuneCoarse,
+                                    tuneFine = knownTune?.second ?: p.tuneFine,
+                                    oneShot = if (authoredMidi != null) true else p.oneShot,
+                                    source = origamiSource ?: p.source,
                                 )
                             }
                         } else {
@@ -793,7 +824,11 @@ fun SynthScreen(
                             // but has no notion of a synth recipe, so the recipe
                             // rides a follow-up `update` (its guards permit a
                             // recipe-only edit; slot/sampleFile stay put).
-                            model.assign(slot, rendered, cls, name)
+                            model.assign(
+                                slot, rendered, cls, name,
+                                source = origamiSource ?: emptyMap(),
+                                knownRootMidi = authoredMidi,
+                            )
                             model.update(slot) { p -> p.copy(recipe = recipe) }
                         }
                         model.save()
@@ -1147,6 +1182,7 @@ fun SynthScreen(
                     val midi = when (patch) {
                         is StoopPatch -> patch.midi.toFloat()
                         is OpenSkyPatch -> patch.midi.toFloat()
+                        is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
                         else -> Spread.detect(rendered)
                     }
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
@@ -1556,6 +1592,10 @@ fun SynthScreen(
                             // would say the harmonic it snapped to.
                             readout = when {
                                 engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
+                                engine == Engine.ORIGAMI && spec.name == "TUNE" -> Scales.nameOf(
+                                    (loadedPatch as? OrigamiPatch)?.midi
+                                        ?: Origami.midiFor(voice as OrigamiVoice, macros.getValue(spec.name)),
+                                )
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1609,7 +1649,12 @@ fun SynthScreen(
                                 Bellows.scramble(voice as BellowsVoice, random, near = loadedPatch)
                             else -> engine.scramble(voice, random)
                         }
-                        macrosByVoice[engine to voice] = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
+                        val next = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
+                        // ORIGAMI's six controls describe one finite pitched note.
+                        // Reroll its geometry while retaining the displayed/saved pitch.
+                        macrosByVoice[engine to voice] = if (engine == Engine.ORIGAMI) {
+                            next + ("TUNE" to macros.getValue("TUNE"))
+                        } else next
                     }
                     // Between SCRAMBLE and SEND TO PAD: the sound is kept
                     // before it is placed. No kit is needed — a preset is
@@ -2460,7 +2505,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, ORIGAMI;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2507,6 +2552,7 @@ private enum class Engine {
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
+        ORIGAMI -> OrigamiVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -2551,6 +2597,7 @@ private enum class Engine {
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
+        ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -2595,6 +2642,7 @@ private enum class Engine {
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
+        ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2639,6 +2687,9 @@ private enum class Engine {
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
+        ORIGAMI -> Origami.defaults(voice as OrigamiVoice).mapValues { (_, value) ->
+            (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
+        }
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2688,6 +2739,7 @@ private enum class Engine {
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
+        ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
     }
 
     /**
@@ -2738,6 +2790,8 @@ private enum class Engine {
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
+        // All ORIGAMI voices are finite pitched notes, including STILL.
+        ORIGAMI -> DrumClass.TONAL
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2782,6 +2836,7 @@ private enum class Engine {
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
+        ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

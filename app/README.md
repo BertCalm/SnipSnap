@@ -70,16 +70,16 @@ schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
 (`docs/BENCH.md` A1). The FRESH TAPE menu (33 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, ORIGAMI, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 41 engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has 42 engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY.
-CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY also provide
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, ORIGAMI, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY.
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, ORIGAMI, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
 six original recorded-material voices with 36 presets, a dry 16-pad starter and CLI note/velocity
@@ -94,6 +94,11 @@ VELOCITY, GATE and DRY/WET are saved beside RISE, WIDTH, GLOW, AIR and the
 complete source timbre. Its preview preserves stereo; HALO MAKE INSTRUMENT
 renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
+
+ORIGAMI adds the accepted CRANE, FAN and STILL voices, six factory presets,
+six controls and a dry sixteen-pad starter. Finite SEND TO PAD recipes preserve
+model, seed, note and velocity; authored root metadata keeps keyed placement
+accurate. HOLD and instrument sustain are deferred. See [ORIGAMI](../docs/ORIGAMI.md).
 
 REGISTERS adds PIPE and MUSETTE, seven controls, six published presets and
 MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
@@ -674,6 +679,13 @@ logcat tag to grab when something is wrong.
   laptop the zip holds `presets.json` and a manifest ending in a
   `p(ThumpVoice.KICK, "MY KICK", …)` line. Back on an open slip closes
   it and saves nothing.
+- **ORIGAMI**: open SYNTH, select ORIGAMI, and audition Paper Key,
+  Warm Fan and Tenth Bloom. Verify TUNE shows the actual note; CREASE,
+  FOLD, TURN, WARP and MOTION change the sound. Save a preset, reload it
+  after relaunch, then SEND to an empty pad and replace an existing pad.
+  The resulting pad should retain the recipe and authored root, with no
+  stale fine detuning from the old sample. FRESH TAPE → ORIGAMI supplies
+  sixteen tonal one-shots. Physical phone audio remains a listening check.
 - **FORGET a preset** (`docs/WORKSHOP.md`, WS5's follow-up): on SYNTH,
   THUMP · KICK with MY KICK under YOURS, hold the chip: a slip asks
   FORGET MY KICK? and names DELETED PRESETS and 30 days, with CANCEL and

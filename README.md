@@ -980,6 +980,12 @@ page and control comparisons. The [private audition](https://bellows-snipsnap-au
 awaits the owner's sonic verdict; [implementation notes](docs/BELLOWS.md)
 describe expression, drone and HOLD limits.
 
+ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
+CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
+model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
+SEND saves a replayable recipe and authored pitch for kit tuning. See the
+[ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
+
 ### `:mpc3`
 
 Reads **and writes** the MPC 3 container: gzip + five-line ACVS header + JSON.

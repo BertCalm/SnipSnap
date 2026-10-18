@@ -160,6 +160,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.prism() },
         Starter(
+            "origami", "ORIGAMI",
+            "Paper keys, warm fifths and soft upper chords in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.origami() },
+        Starter(
             "alloy", "ALLOY",
             "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
             seeded = false,

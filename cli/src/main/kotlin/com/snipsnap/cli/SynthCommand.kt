@@ -14,6 +14,8 @@ import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.RegistersPadMaker
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourEngine
@@ -105,7 +107,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT/FLOCK/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT/FLOCK/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -173,6 +175,7 @@ object SynthCommand {
         val noteRange = if (noteFlags.isEmpty()) null else {
             if (drone || (instrument && engine != OpenSkyPatch.ENGINE)) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
+                OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
@@ -203,7 +206,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK and WICK, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK and WICK, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -276,6 +279,7 @@ object SynthCommand {
             else -> listOf(presets.first())
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
+                is OrigamiPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is AlloyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
