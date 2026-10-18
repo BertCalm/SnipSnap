@@ -453,8 +453,25 @@
       $('provenance').textContent = 'Model 3 / '+manifest.revision+' / source '+(manifest.sourceRevision||'recorded in recipes')+(manifest.sourceTreeDirty?' with working-tree changes.':'.')+' Source snapshot SHA256: '+manifest.sourceSnapshotSha256+'.';
       $('measurement-note').textContent = (Array.isArray(manifest.metricNotes) ? manifest.metricNotes.join(' ') : manifest.metricNotes) || '';
       $('footer-revision').textContent = 'MODEL 3 / NATIVE SNIPSNAP PATCHES\n'+manifest.revision;
-      const pack = manifest.packPath || manifest.archivePath;
-      if (pack) { $('pack-link').href = asset(pack); $('pack-link').download = pack.split('/').pop(); $('pack-link').hidden = false; }
+      const listeningPacks = Array.isArray(manifest.listeningPacks)
+        ? manifest.listeningPacks.filter(pack => typeof pack.path === 'string' && pack.path.length)
+        : [];
+      if (listeningPacks.length) {
+        const links = document.createDocumentFragment();
+        for (const pack of listeningPacks) {
+          const link = node('a', (pack.label || pack.material || 'Listening pack') + ' ↓', 'listening-pack');
+          link.href = asset(pack.path);
+          link.download = pack.path.split('/').pop();
+          if (pack.material) link.dataset.material = pack.material;
+          if (pack.sha256) link.dataset.sha256 = pack.sha256;
+          links.append(link);
+        }
+        $('pack-link').hidden = true;
+        $('pack-link').after(links);
+      } else {
+        const pack = manifest.packPath || manifest.archivePath;
+        if (pack) { $('pack-link').href = asset(pack); $('pack-link').download = pack.split('/').pop(); $('pack-link').hidden = false; }
+      }
       for (const [id,path] of [['source-download',manifest.sourceArchivePath],['readme-download',manifest.readmePath],['validation-download',manifest.validationPath]]) { if(path) {$(id).href=asset(path);$(id).download=path.split('/').pop();$(id).hidden=false;} }
       $('velocity').replaceChildren(...manifest.velocityMatrix.map(v=>{const option=node('option',(v<.3?'Soft':v<.8?'Medium':'Hard')+' · '+fmt(v,2));option.value=String(v);return option}));
       $('velocity').value=String(manifest.velocityMatrix.find(v=>Math.abs(v-(manifest.defaultVelocity||.6))<1e-6));
