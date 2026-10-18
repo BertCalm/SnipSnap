@@ -164,6 +164,15 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CHAMBER's first listening prototype strikes a membrane, bar, cowbell and triangle
+together in independently assigned wood/glass or concrete/aquarium regions.
+HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
+returns into the instruments. Six provisional recipes and complete saved rooms
+work through the CLI and kit renderer, outside the phone picker pending listening.
+Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
+replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
+finite prototype from the proposed HOLD, room editor and larger library.
+
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,
 staggered sustained vowels and a shared mono room. Run

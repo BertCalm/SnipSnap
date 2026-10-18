@@ -836,6 +836,23 @@ object SynthKits {
         )
     }
 
+    /** Finite CHAMBER first-listen kit, kept outside FRESH TAPE pending listening review. */
+    fun chamber(): List<ArrangedPad?> {
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            ChamberPatch(
+                "Chamber ${index + 1}", ChamberVoice.HYBRID, Chamber.defaults(ChamberVoice.HYBRID),
+                midi = 48 + semitone,
+            ).let { pad(it, Chamber.drumClassFor(it.voice, it.macros)) }
+        }
+        val comparisons = ChamberPresets.all() + listOf(
+            ChamberPatch("Uniform Room", ChamberVoice.HYBRID,
+                Chamber.defaults(ChamberVoice.HYBRID) + ("DIVIDE" to 0f)),
+            ChamberPatch("Low Canopy", ChamberVoice.AQUARIUM,
+                Chamber.defaults(ChamberVoice.AQUARIUM) + ("PLACEMENT" to .15f)),
+        )
+        return notes + comparisons.map { pad(it, Chamber.drumClassFor(it.voice, it.macros)) }
+    }
+
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
      * Eight PLUCK roots walk C minor pentatonic; the remaining eight pads

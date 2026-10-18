@@ -47,3 +47,9 @@ loops and the owner's sonic acceptance remain open.
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
+
+**Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
+first-listen prototype, complete room recipes, passive feedback model and
+playback limits. Private audition deployment and the owner's listening verdict
+are pending. The supplied [`engineering specification`](CHAMBER_SPEC.md)
+remains the unchanged proposal; sustained HOLD and the wider library are later work.

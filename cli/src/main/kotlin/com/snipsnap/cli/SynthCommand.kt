@@ -16,6 +16,10 @@ import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.Chamber
+import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.ChamberPresets
+import com.snipsnap.synth.ChamberVoice
 import com.snipsnap.synth.ContourEngine
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourVoice
@@ -119,6 +123,8 @@ import kotlin.random.Random
  * FLOCK GATHER/RIBBON/SPLIT also keep provisional recipes outside that roster;
  * `--seed N` accepts the full signed 64-bit range for their finite performances.
  * WICK likewise offers its nine provisional PLUCK/BUBBLE recipes without adding a phone engine.
+ * CHAMBER offers finite HYBRID/AQUARIUM recipes, native note/velocity, full 64-bit
+ * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
  */
 object SynthCommand {
 
@@ -134,7 +140,7 @@ object SynthCommand {
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
 
-        val skyFlags = listOf("--patch", "--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
+        val skyFlags = listOf("--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
@@ -148,14 +154,18 @@ object SynthCommand {
             opts.has("--wet") -> true
             else -> null
         }
-        val savedSky = opts["--patch"]?.let { path ->
+        val savedPatch = opts["--patch"]?.let { path ->
+            if (engine !in setOf(OpenSkyPatch.ENGINE, ChamberPatch.ENGINE)) {
+                throw CliError("--patch is only supported by OPENSKY and CHAMBER, got $engine")
+            }
             if (opts.has("--all") || opts["--preset"] != null) throw CliError("--patch supplies one sound - cannot combine with --preset or --all")
             val patch = try {
-                OpenSkyPatch.fromJsonText(File(path).readText())
+                if (engine == ChamberPatch.ENGINE) ChamberPatch.fromJsonText(File(path).readText())
+                else OpenSkyPatch.fromJsonText(File(path).readText())
             } catch (e: Exception) {
-                throw CliError("could not read --patch '$path': ${e.message ?: "invalid OPENSKY patch"}")
+                throw CliError("could not read --patch '$path': ${e.message ?: "invalid $engine patch"}")
             }
-            if (patch.voiceName != voice) throw CliError("--patch records OPENSKY ${patch.voiceName}, requested $voice")
+            if (patch.voiceName != voice) throw CliError("--patch records $engine ${patch.voiceName}, requested $voice")
             patch
         }
 
@@ -163,6 +173,7 @@ object SynthCommand {
             VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
             FlockPatch.ENGINE -> FlockVoice.entries.firstOrNull { it.name == voice }?.let { FlockPresets.forVoice(it) } ?: emptyList()
             WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
+            ChamberPatch.ENGINE -> ChamberVoice.entries.firstOrNull { it.name == voice }?.let { ChamberPresets.forVoice(it) } ?: emptyList()
             else -> Presets.forVoice(engine, voice)
         }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
@@ -195,6 +206,7 @@ object SynthCommand {
                 VentPatch.ENGINE -> Vent.MIDI_MIN..Vent.MIDI_MAX
                 FlockPatch.ENGINE -> Flock.MIN_MIDI..Flock.MAX_MIDI
                 WickPatch.ENGINE -> Wick.MIN_MIDI..Wick.MAX_MIDI
+                ChamberPatch.ENGINE -> Chamber.MIDI_MIN..Chamber.MIDI_MAX
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
                     val root = Prism.rootMidi(prismVoice)
@@ -203,7 +215,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK and WICK, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK, WICK and CHAMBER, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -215,14 +227,14 @@ object SynthCommand {
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
-        val flockSeedOverride = if (engine == FlockPatch.ENGINE) opts["--seed"]?.let { raw ->
-            raw.toLongOrNull() ?: throw CliError("--seed for FLOCK wants a signed 64-bit integer, got '$raw'")
+        val longSeedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE)) opts["--seed"]?.let { raw ->
+            raw.toLongOrNull() ?: throw CliError("--seed for $engine wants a signed 64-bit integer, got '$raw'")
         } else null
-        val seedOverride = if (engine == FlockPatch.ENGINE) null else seedFlag("--seed")
+        val seedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE)) null else seedFlag("--seed")
         val secondsOverride = opts["--seconds"]?.let { raw ->
             if (engine != OspreyPatch.ENGINE) throw CliError("--seconds is only supported by OSPREY, got $engine")
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .25f..Osprey.MAX_SECONDS }
@@ -265,7 +277,7 @@ object SynthCommand {
         val dir = File(dirArg)
 
         val chosen: List<Patch> = (when {
-            savedSky != null -> listOf(savedSky)
+            savedPatch != null -> listOf(savedPatch)
             opts.has("--all") -> presets
             opts["--preset"] != null -> {
                 val n = opts["--preset"]!!.toIntOrNull()
@@ -291,6 +303,7 @@ object SynthCommand {
                 )
                 is TanglePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is WickPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ChamberPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ShoalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
@@ -345,7 +358,8 @@ object SynthCommand {
                 durationSeconds = secondsOverride ?: withNote.durationSeconds,
                 modelVersion = modelOverride ?: withNote.modelVersion,
             ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
-            else if (withNote is FlockPatch && flockSeedOverride != null) withNote.copy(seed = flockSeedOverride)
+            else if (withNote is FlockPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
+            else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else withNote
         }
 

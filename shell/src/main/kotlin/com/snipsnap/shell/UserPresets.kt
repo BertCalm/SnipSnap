@@ -6,6 +6,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.FlotillaPatch
@@ -373,6 +374,11 @@ object UserPresets {
      * constructor. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is ChamberPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "ChamberPatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is OpenSkyPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
