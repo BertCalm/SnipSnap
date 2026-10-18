@@ -28,6 +28,7 @@ import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
@@ -235,6 +236,11 @@ class UserPresetsTest {
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is OrigamiPatch) {
+                val promoted = origamiFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete note, seed, velocity and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
                 assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
@@ -628,6 +634,17 @@ class UserPresetsTest {
         assertTrue(call.named.isEmpty())
         val recipe = (call.positional.single() as KotlinLiteral.Str).value
         return OpenSkyPatch.fromJsonText(recipe)
+    }
+
+    private fun origamiFromRosterLine(line: String): OrigamiPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("OrigamiPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return OrigamiPatch.fromJsonText(recipe)
     }
 
     @Test
