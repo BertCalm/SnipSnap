@@ -473,15 +473,21 @@ DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
 cabinet — run four times over inside so a hot tube folds back far less),
 `driven` (a drive pedal: the tube at the top of its gain law with the
 speaker barely in, the last stretch of the pad faded ahead of the amp so
-a quiet tail is not lifted into a click) and `compressed` (a compressor
+a quiet tail is not lifted into a click), `compressed` (a compressor
 pedal, for now: SQUASH at its strongest, the body leaned on so the tail
 stands up; `punched` is the same section plus CRUNCH, this has no
-crunch).
+crunch), `wahed` (a wah: a resonant band-pass swept between a heel and a
+toe a decade above it by a free-running sine, which never parks),
+`touchwahed` (the same wah driven by the pad's own envelope: it opens on
+the hit and closes as the note dies) and `rockwahed` (one heel-to-toe-to-heel
+gesture, then the wah waits at the heel).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
-phone the same characters, less `crushed` (CRUSH already draws that era)
-and `amped` (its chip is a later layout decision), sit on the PAD SHEET's
+phone the same characters, less `crushed` (CRUSH already draws that era),
+`amped` (its chip is a later layout decision) and the three wah
+characters (the WAH chip is not on the pad sheet yet; `touchwahed` and
+`rockwahed` are CLI and saved kits only), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
