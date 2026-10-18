@@ -38,11 +38,13 @@ awaits the owner's listening verdict. The supplied
 [`engineering specification`](superpowers/specs/2026-10-11-tangle-engine-engineering-spec.md)
 is preserved unchanged as the proposal rather than an acceptance record.
 
-**Flock.** [`FLOCK.md`](FLOCK.md) records the finite oscillator-flock proof,
-its six controls and reproducible comparison contracts. Its
+**Flock.** [`FLOCK.md`](FLOCK.md) records the finite engine, SYNTH controls,
+nine factory recipes, sixteen-pad FRESH TAPE starter and MPC 2/3 kit exports.
+The owner confirmed revised FLOW is audible; saved model-1 recipes remain
+replayable. Its
 [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) compares
-neighbor interaction with fixed detuning and independent motion. Sustained
-loops and the owner's sonic acceptance remain open.
+neighbor interaction with fixed detuning and independent motion. HOLD always
+sets a finite duration; sustained loops and phone/MPC hardware checks remain open.
 
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating

@@ -319,7 +319,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 33 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's starter library. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -389,12 +389,14 @@ after the first listening verdict found the identities and breathing too similar
 awaits listening; [implementation notes](docs/OVERLAP.md) describe tuning limits
 and the prototype's scope before phone-picker or sustained-loop integration.
 
-FLOCK is a finite oscillator-flock listening proof: twenty-four oscillators
+FLOCK is a finite oscillator-flock engine: twenty-four oscillators
 scatter and respond through changing local neighborhoods around a played note.
 GATHER, RIBBON and SPLIT share SPREAD, PULL, FLOW, SCATTER, EDGE and HOLD;
-HOLD is two to six seconds, with no loop mode. Exact seeded patches, recipes,
-physical velocity and CLI auditions are implemented; its nine provisional
-presets stay outside the factory roster and phone picker pending listening.
+HOLD is two to six seconds, with no loop mode. SYNTH exposes nine factory
+recipes with saved ROOT, VELOCITY, exact 64-bit seed and rendering model.
+FRESH TAPE adds a dry sixteen-pad starter: eight C minor pentatonic GATHER
+notes and eight preset contrasts. Run `./gradlew :synth:generateFlockKit`
+for a shared-audio MPC 3/MPC 2 kit with complete editable pad recipes.
 Run `./gradlew :synth:generateFlockAudition` for real raw/matched WAVs,
 fixed/independent comparisons and one-particle disturbance measurements.
 The [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site)
@@ -402,6 +404,8 @@ and [implementation notes](docs/FLOCK.md) describe the proof and its limits.
 After the first listen, model 2 gives FLOW a slow-to-fast clock for the flock;
 original model-1 recipes and each voice's default sound remain exact. The
 audition includes five Previous/Revised FLOW pairs, with its other clips retained.
+The owner confirmed the revised FLOW difference is audible; phone and MPC
+hardware checks remain open.
 
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
@@ -763,8 +767,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY and GRAINS round out the lineup —
-forty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, FLOCK and GRAINS round out the lineup —
+forty-two engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs

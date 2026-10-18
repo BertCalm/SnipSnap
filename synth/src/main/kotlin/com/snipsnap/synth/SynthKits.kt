@@ -837,6 +837,23 @@ object SynthKits {
     }
 
     /**
+     * Sixteen dry finite flock performances. A01–A08 play First Gathering up
+     * C minor pentatonic from C4; the upper eight pads retain the other factory
+     * recipes, including every RIBBON and SPLIT. Notes share the base recipe's
+     * seed so their differences come from pitch alone. Each pad records its
+     * exact seed, model, note and velocity; HOLD extends a one-shot, never a loop.
+     */
+    fun flock(): List<ArrangedPad?> {
+        fun landed(patch: FlockPatch) = pad(patch, Flock.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName = patch.name)
+        val gathering = FlockPresets.forVoice(FlockVoice.GATHER).first()
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            landed(gathering.copy(name = "Flock Gather ${index + 1}", midi = 60 + semitone))
+        }
+        return notes + FlockPresets.all().filterNot { it == gathering }.map(::landed)
+    }
+
+    /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
      * Eight PLUCK roots walk C minor pentatonic; the remaining eight pads
      * compare the calm BUBBLE default and seven other recipes, including two held buffers.

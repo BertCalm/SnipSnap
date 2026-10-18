@@ -202,6 +202,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tangle() },
         Starter(
+            "flock", "FLOCK",
+            "Gathering notes, traveling ribbons and split harmonics in C minor pentatonic. Finite moving flocks.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.flock() },
+        Starter(
             "relay", "RELAY",
             "One note, four source roles. Ordered handoffs in C minor pentatonic.",
             seeded = false,

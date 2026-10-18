@@ -76,9 +76,9 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 41 engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has 42 engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY.
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY and FLOCK.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
@@ -100,6 +100,12 @@ MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
 remains provisional. Saved audition recipes retain note, velocity and model.
 Instrument samples preserve the finite attack before a verified held loop and
 export through the existing MPC 2/MPC 3 and phone keygroup package.
+
+FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.
+ROOT spans C2–C6; VELOCITY sets the initial disturbance. HOLD selects a finite
+2–6 second gesture. The saved 64-bit seed and model 1/2 survive control edits,
+renaming, preset storage and SEND TO PAD; SPREAD uses the saved root even when
+SPLIT emphasizes the fifth or octave. Phone playback remains a hardware check.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
 and dry starter also await owner listening review.
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps

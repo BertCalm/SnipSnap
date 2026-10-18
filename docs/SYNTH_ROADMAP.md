@@ -339,6 +339,30 @@ does not claim a circuit recreation of its historical starting point.
 [TANGLE.md](TANGLE.md) records the saved-format and integration contracts,
 HOLD constraint and remaining acceptance work.
 
+### FLOCK — finite oscillator flocks
+
+GATHER, RIBBON and SPLIT use twenty-four audible oscillators with changing
+local separation, alignment and cohesion. SPREAD, PULL, FLOW, SCATTER, EDGE
+and HOLD are the six controls; SYNTH also exposes ROOT (C2–C6) and VELOCITY.
+HOLD selects a two-to-six-second one-shot at every setting. Saved roots,
+velocities, exact 64-bit seeds and render models survive editing, preset
+storage and pad placement; SPREAD uses the authored root.
+
+The owner confirmed that revised FLOW is audible. Model 2 changes the pace of
+the existing group equations while preserving each original default exactly;
+model-1 recipes retain their original rendering behavior. Nine factory presets
+join `Presets` and the phone picker. FRESH TAPE's fixed FLOCK starter supplies
+eight GATHER notes in C minor pentatonic from C4 to F5 and eight other factory
+recipes, all dry TONAL pads without choking.
+
+`./gradlew :synth:generateFlockKit` writes `testkit/SnipSnap Flock Kit/` with
+a native MPC 3 `.xtd`, an MPC 2 `.xpm` twin and shared PCM24 WAVs in its
+`_[TrackData]` folder, complete editable recipes, a manifest and a ZIP beside
+the kit. [FLOCK.md](FLOCK.md) records the exact layout and listening evidence.
+Phone playback, render latency and MPC hardware checks remain open. Sustained
+loops, held instruments and live interaction between separately rendered notes
+remain outside this finite integration.
+
 ### EMBOUCHURE — effort changes how the note speaks
 
 A first dry prototype supplies a finite virtual-player gesture to one pitched

@@ -15,6 +15,7 @@ import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlotillaVoice
+import com.snipsnap.synth.FlockVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerRole
@@ -182,6 +183,7 @@ class UserPresetsTest {
                 "STOOP" to StoopVoice.entries.map { it.name },
                 "SKITTER" to SkitterVoice.entries.map { it.name },
                 "TANGLE" to TangleVoice.entries.map { it.name },
+                "FLOCK" to FlockVoice.entries.map { it.name },
                 "RELAY" to RelayVoice.entries.map { it.name },
                 "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
                 "BELLOWS" to BellowsVoice.entries.map { it.name },
@@ -646,6 +648,9 @@ class UserPresetsTest {
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
                     assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
                 }
+            } else if (engine == "FLOCK") {
+                val helper = "private fun p(voice: FlockVoice, name: String, seed: Long, vararg macros: Pair<String, Float>)"
+                assertTrue(helper in text, "${table.name} accepts the exact performance seed written by its roster line")
             } else {
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
