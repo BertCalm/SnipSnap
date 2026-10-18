@@ -109,6 +109,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
@@ -280,7 +281,8 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
 // §3.6, the MAKE checklist's last item). The bag is the navigation model's
 // MakeState for this lab: it outlives the composable, so the player's work
 // survives leaving to hear a pad and coming back. Everything is a string —
-// enum NAMES, floats via toString — so the model never learns an engine.
+// enum NAMES, floats via toString, recipes as JSON — so the navigation
+// model never learns an engine.
 private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
@@ -348,11 +350,13 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    0..1) for every (engine, voice) the player has touched.
  *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
  *    last tapped on that voice and not edited since.
+ *  - `recipe.<ENGINE>.<VOICE>` — the loaded patch's complete recipe, kept
+ *    after edits clear its preset highlight. The macro keys above retain
+ *    the current slider values independently of that loaded recipe.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
- * Not kept: the loaded patch's non-macro recipe (a MURMUR root, a REVEL
- * phrase...) unless a preset carries it, the audition, and every sheet.
+ * The audition and sheets are not kept.
  */
 @Composable
 fun SynthScreen(
@@ -443,18 +447,28 @@ fun SynthScreen(
     // and model version. OPENSKY retains its authored timbre, note,
     // velocity, gate, effect mode and model. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
-    // The presets the bag names (§3.6). A factory preset is looked up by name
-    // and re-adopted whole, so an engine whose recipe lives outside its macros
-    // comes back sounding as it did; a YOURS preset is on the shelf, not yet
-    // read, and is adopted when that read lands (below).
+    // A working recipe survives independently of its preset highlight:
+    // editing a slider must not discard saved pitch, velocity or model on
+    // a trip to the grid. Older bags fall back to their named factory
+    // preset; a YOURS preset is adopted when its shelf read lands below.
     val seededPresets = remember { storedPresetNames(settings) }
     val loadedPatchesByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply {
+            for (patch in SynthDrafts.read(settings)) {
+                val e = Engine.entries.firstOrNull { it.name == patch.engine } ?: continue
+                val v = e.voices().firstOrNull { it.name == patch.voiceName } ?: continue
+                put(e to v, editablePreset(patch))
+            }
             for ((pair, name) in seededPresets) {
+                if (containsKey(pair)) continue
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
         }
+    }
+    val loadedRecipes = loadedPatchesByVoice.toMap()
+    LaunchedEffect(loadedRecipes) {
+        SynthDrafts.write(settings, loadedRecipes.values)
     }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1144,11 +1158,7 @@ fun SynthScreen(
                     val rendered = if (patch is OpenSkyPatch) patch.render { !isActive } else patch.render()
                     // Authored roots survive chords, octave layers and upper
                     // shimmer that can outweigh the fundamental in detection.
-                    val midi = when (patch) {
-                        is StoopPatch -> patch.midi.toFloat()
-                        is OpenSkyPatch -> patch.midi.toFloat()
-                        else -> Spread.detect(rendered)
-                    }
+                    val midi = Spread.detect(rendered, patch)
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
                 spreadPatch = patch

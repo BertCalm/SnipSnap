@@ -9,6 +9,11 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.Patch
+import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.StoopPatch
 import kotlin.math.roundToInt
 
 /**
@@ -79,6 +84,18 @@ object Spread {
         val est = Pitch.detect(snip) ?: return null
         if (est.confidence < Tuner.MIN_CONFIDENCE) return null
         return Scales.hzToMidi(est.hz)
+    }
+
+    /**
+     * Use the authored note when a recipe guarantees it. Strong upper modes,
+     * chords or octave layers can outweigh that root in audio detection, and
+     * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
+     */
+    fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
+        is StoopPatch -> patch.midi.toFloat()
+        is OpenSkyPatch -> patch.midi.toFloat()
+        else -> detect(snip)
     }
 
     /**

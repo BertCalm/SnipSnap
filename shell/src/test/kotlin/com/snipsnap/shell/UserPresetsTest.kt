@@ -30,6 +30,7 @@ import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.PluckVoice
+import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.SkitterPatch
@@ -302,7 +303,7 @@ class UserPresetsTest {
     fun `a saved wheel retains root gesture velocity and model when promoted`() {
         val root = shelf()
         try {
-            for (model in listOf(1, 2)) {
+            for (model in 1..Pitchwheel.MODEL_VERSION) {
                 val source = PitchwheelPatch(
                     "LOW WHEEL", PitchwheelVoice.RECOIL,
                     linkedMapOf("ADHESION" to .83f, "HEAT" to .21f), midi = 36, velocity = .3f, model = model,
