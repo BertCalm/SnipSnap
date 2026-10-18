@@ -104,6 +104,13 @@ object Copy {
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
     const val EMPTY_KIT = "16 EMPTY PADS."
+
+    /**
+     * The PADS strip before any pad is tapped: tapping is how the strip
+     * gets its pad, and the hold on an empty one - which opens capture,
+     * and showed nowhere - gets its words here (UX review P1/P3).
+     */
+    const val PADS_RESTING_LINE = "TAP A PAD · IT PLAYS. HOLD AN EMPTY ONE TO CATCH A SOUND INTO IT."
     /**
      * GROOVE with a kit open and nothing in it yet: the way in that needs only
      * the pads, named; the other ways (START YOURS, ORBIT, SONG, LOOP) are the

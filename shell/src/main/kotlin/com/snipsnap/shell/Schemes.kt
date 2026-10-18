@@ -498,6 +498,15 @@ object Layout {
     const val LCD_HEADER_H = 40
     const val PAD_GAP = 8
     const val PAD_H = 76
+
+    /**
+     * PADS' own pad height. PAD_H is KEYS', SYNTH's slot chooser's and the
+     * spread preview's too, and KEYS cannot scroll; the PADS grid is the
+     * one that got 56dp back when the switcher row went into the header
+     * (UX review S6/P1), and the first look is a row of pads that should
+     * read as pads.
+     */
+    const val KIT_PAD_H = 88
     const val PAD_RADIUS = 6
     const val PRIMARY_ACTION_H = 52
 

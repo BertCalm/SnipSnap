@@ -1010,15 +1010,6 @@ fun KitScreen(
 
 
 /**
- * The strip's resting line: what it reads before any pad has been tapped.
- * It replaces the HOLD-A-PAD legend this slot used to carry (section 3.3,
- * "the two legend lines become one") - the strip says what a hold does by
- * offering OPEN ▸, so the resting line only has to say that tapping is how
- * the strip gets its pad.
- */
-private const val STRIP_RESTING_LINE = "TAP A PAD · IT PLAYS, AND THIS LINE READS IT"
-
-/**
  * The pad strip: one line for the selected pad from [PadStrip.line], then
  * one door chip per entry in its doors - OPEN ▸ for a filled pad, CAPTURE ▸
  * and FROM SNIPS ▸ for an empty one. Dispatches on the door's own label,
@@ -1040,7 +1031,10 @@ private fun PadStripLine(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (slot == null) {
-            TapeText(STRIP_RESTING_LINE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            // `Copy.PADS_RESTING_LINE`: what the strip reads before any pad
+            // has been tapped. ink2, not ink3 (3.85:1 on paper), and two
+            // lines, because the hold hint is the half nobody can guess.
+            TapeText(Copy.PADS_RESTING_LINE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             return@Row
         }
         val strip = PadStrip.line(pad, slot)
@@ -1265,7 +1259,7 @@ private fun PadCell(
     if (pad == null) {
         Box(
             modifier
-                .height(Layout.PAD_H.dp)
+                .height(Layout.KIT_PAD_H.dp)
                 .then(if (selected) Modifier.border(2.dp, (if (scheme.look == Look.MODERN) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
                 .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
                 // The raw pointerInput below fires onTap on release
@@ -1357,7 +1351,7 @@ private fun PadCell(
     val modern = scheme.look == Look.MODERN
     Box(
         modifier
-            .height(Layout.PAD_H.dp)
+            .height(Layout.KIT_PAD_H.dp)
             // The selection ring, OUTSIDE the class rim with the rim inset
             // under it: the rim's width is the held state and its hue the
             // drum class, so the ring takes the one thing neither already
@@ -1448,7 +1442,13 @@ private fun PadCell(
         // a kick reads as a kick before it's hit. Drawn first so the tag
         // and name sit over it.
         if (peaks != null && peaks.isNotEmpty()) {
-            PadWaveform(peaks, cls.tape.copy(alpha = 0.30f), Modifier.matchParentSize())
+            // On paper the colour is the name's own darkened ink and the
+            // alpha stronger: lime, mint and cyan at 0.30 vanished on cream.
+            PadWaveform(
+                peaks,
+                if (scheme.isPaper()) Schemes.classInkOn(cls, scheme.raised).tape.copy(alpha = 0.55f) else cls.tape.copy(alpha = 0.30f),
+                Modifier.matchParentSize(),
+            )
         }
         // Full-opacity ink2 on its own solid backing chip, not a dimmed
         // copy drawn straight over the cell (audit finding 5, 2.30-3.59:1
