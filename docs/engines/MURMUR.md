@@ -89,6 +89,11 @@ differences. The saved recipe identifies the model and settings behind each clip
 These comparisons support owner review; their presence and measured differences
 do not establish useful audible separation.
 
+The owner accepted the other five roles and requested a little less air in CHOIR.
+Its provisional model-2 unvoiced-source gain is reduced from 4.8 to 3.3 (31.25%),
+retaining the voiced source, spectral targets and BREATH mapping. Model 1 and the
+other five model-2 voices retain their existing rendering behavior.
+
 ## Reproduce the evidence
 
 ```sh

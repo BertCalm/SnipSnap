@@ -304,7 +304,7 @@ object Murmur {
             indexFloor = .08, indexEdge = 2.0, indexSustain = .40, indexBite = .08, indexDecay = 1.0,
             bankFm = .28, bankUpper = .12, oddSource = true, bankGain = 1.15,
             root = .26, direct = .55, chestSecond = .30, chestThird = .16, thinCarrier = .26,
-            ringOperator = 3, ringGain = .0, air = 4.8, airHz = 3_600.0, contact = .08,
+            ringOperator = 3, ringGain = .0, air = 3.3, airHz = 3_600.0, contact = .08,
             cutoffThin = 4_300.0, cutoffFull = 1_700.0, naturalDecay = .0, trim = .90,
         )
         // A bright sustained stack plus a fifth carrier; its ring does not disappear at sustain.
