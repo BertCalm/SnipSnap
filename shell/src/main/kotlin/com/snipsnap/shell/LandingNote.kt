@@ -86,14 +86,6 @@ object LandingNote {
      */
     fun dubFailed(): Note = Note(Copy.DUB_FAILED, emptyList())
 
-    /**
-     * The first DUB with something already at the destination: nothing
-     * written, and the next tap writes over [what]. Boxed so the line is
-     * read before the tap that destroys it; the WRITE button carries the
-     * arm after the box is dismissed ([Copy.replaceWhat]).
-     */
-    fun dubWouldOverwrite(what: String): Note = Note(Copy.dubWouldOverwrite(what), emptyList())
-
     /** DUST threw: the title, and [reason] — the exception's own words — in the warn colour. */
     fun dustFailed(reason: String): Note =
         Note(Copy.DUST_FAILED, listOf(Line(shout(reason.ifBlank { "it said no" }), trouble = true)))

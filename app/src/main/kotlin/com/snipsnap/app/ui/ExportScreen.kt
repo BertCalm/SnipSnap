@@ -618,7 +618,7 @@ private fun ExportContent(
                         // tap would replace - by name, so the decision is
                         // about that thing rather than an abstract "sure?".
                         session.overwriting = result.path
-                        onNote(LandingNote.dubWouldOverwrite(result.path.name))
+                        onToast(Copy.dubWouldOverwrite(result.path.name))
                     }
                     is ExportWizardModel.WriteResult.Done -> {
                         session.overwriting = null
@@ -984,7 +984,7 @@ private fun ProjectCard(
                 when (result) {
                     is ProjectSessionModel.WriteResult.WouldOverwrite -> {
                         overwriting = result.path
-                        onNote(LandingNote.dubWouldOverwrite(result.path.name))
+                        onToast(Copy.dubWouldOverwrite(result.path.name))
                     }
                     is ProjectSessionModel.WriteResult.Done -> {
                         overwriting = null
