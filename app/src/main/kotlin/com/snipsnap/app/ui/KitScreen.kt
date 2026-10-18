@@ -1207,15 +1207,6 @@ private fun TexturePanel(
     }
 }
 
-/** HANDOFF: tint for text on dark = the class colour mixed 55% to white. */
-private fun classTint(rgb: Int): Color {
-    val r = (rgb shr 16) and 0xFF
-    val g = (rgb shr 8) and 0xFF
-    val b = rgb and 0xFF
-    fun up(c: Int) = c + ((255 - c) * 0.55f).toInt()
-    return Color(0xFF shl 24 or (up(r) shl 16) or (up(g) shl 8) or up(b))
-}
-
 /** A long press that opens PAD SHEET, timed from the design's own 480ms. */
 private const val LONG_PRESS_MS = 480L
 
@@ -1260,7 +1251,7 @@ private fun PadCell(
             modifier
                 .height(Layout.PAD_H.dp)
                 .then(if (selected) Modifier.border(2.dp, (if (scheme.look == Look.MODERN) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-                .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
                 // The raw pointerInput below fires onTap on release
                 // (a hint, not an action) and starts a hand-rolled
                 // long-press timer on down — neither registers a
@@ -1357,26 +1348,16 @@ private fun PadCell(
             // says. It used to be a 1dp line drawn over the rim's outer
             // pixel, which the first run on a phone could not see at all.
             .then(if (selected) Modifier.border(2.dp, (if (modern) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-            .then(
-                if (modern) {
-                    // `docs/MODERN_LOOK.md` §3: the raised fill, a hairline,
-                    // and the class colour as a 4dp bottom edge — no rim,
-                    // no glow. The hit's flash below stays: it is feedback,
-                    // not decoration.
-                    Modifier
-                        .background(scheme.raised.tape, shape)
-                        .border(1.dp, scheme.grayEdge.tape, shape)
-                        .drawBehind {
-                            val edge = 4.dp.toPx()
-                            drawRect(cls.tape, topLeft = Offset(0f, size.height - edge), size = Size(size.width, edge))
-                        }
-                } else {
-                    Modifier
-                        .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                        .border(if (held) 3.dp else 2.dp, cls.tape, shape)
-                },
+            // The face is PadGrid's `padSkin`, shared with PlayPad. Classic
+            // is this cell's own chain: the held rim is 3dp, and the hit's
+            // flash is drawn over the border.
+            .padSkin(
+                scheme, cls, shape, lit,
+                classic = Modifier
+                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
+                    .border(if (held) 3.dp else 2.dp, cls.tape, shape)
+                    .background(cls.tape.copy(alpha = lit), shape),
             )
-            .background(cls.tape.copy(alpha = lit), shape)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
             // double-tap did nothing — a false affordance, arguably
@@ -1461,25 +1442,20 @@ private fun PadCell(
         // data-dependent (whatever the waveform happens to render at this
         // corner) and can still fall to ~2.4:1 for a bright class colour
         // like HAT_OPEN even with ink2 fixed — see ContrastTest.
-        // On paper the chip is the card itself (ink2 clears AA on it —
-        // ContrastTest's backdrop law reads `raised` under the modern
-        // look); darkening paper gives a grey block nothing needs.
-        val paper = Scheme.luma(scheme.gray) >= 90
+        // On paper the chip is the card itself (`padTagBacking`).
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .background((if (paper) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape, RoundedCornerShape(3.dp))
+                .background(padTagBacking(scheme), RoundedCornerShape(3.dp))
                 .padding(horizontal = 3.dp, vertical = 1.dp),
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        // The name: tinted toward white on a dark pad (the handoff's rule),
-        // darkened just until it reads on a paper one, so lime stays lime
-        // either way (`Schemes.classInkOn`).
+        // The name's ink is `padNameInk`: tinted on a dark pad, darkened on paper.
         TapeText(
             pad.displayName,
             TapeType.marker,
-            if (paper) Schemes.classInkOn(cls, scheme.raised).tape else classTint(cls),
+            padNameInk(scheme, cls),
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )

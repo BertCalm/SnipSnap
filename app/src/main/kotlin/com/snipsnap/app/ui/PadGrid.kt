@@ -23,8 +23,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
@@ -37,8 +41,10 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Look
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadHit
+import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 
 /**
@@ -112,13 +118,70 @@ private val CENTER_VELOCITY = PadHit.CENTER
 private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /** HANDOFF: tint for text on dark = the class colour mixed 55% to white. */
-private fun classTint(rgb: Int): Color {
+internal fun classTint(rgb: Int): Color {
     val r = (rgb shr 16) and 0xFF
     val g = (rgb shr 8) and 0xFF
     val b = rgb and 0xFF
     fun up(c: Int) = c + ((255 - c) * 0.55f).toInt()
     return Color(0xFF shl 24 or (up(r) shl 16) or (up(g) shl 8) or up(b))
 }
+
+/**
+ * A pad's face - the one skin KIT's `PadCell` and the pads here
+ * (`PlayPad`: fullscreen, GROOVE's record grid, CATCH) both wear, so the
+ * look cannot be decided in one place and forgotten in the other (UX
+ * review S3). Only the skin lives here; each site keeps its own gesture,
+ * semantics and scale where they were, because the laws that pin the
+ * literal tap code read those files.
+ *
+ * Under `Look.MODERN` (`docs/MODERN_LOOK.md` §3): the raised fill, a 1dp
+ * hairline, the class colour as a 4dp bottom edge - no rim, no glow - and
+ * the hit's flash [lit] over the top, because the flash is feedback and
+ * not decoration. A blank slot ([cls] null) is the raised card with no
+ * edge, the same bevel everything else blank wears.
+ *
+ * Under the classic look each site's own chain stands in [classic],
+ * untouched: KIT's has a held rim (3dp, then 2dp) and lit drawn after the
+ * border, PLAY's a resting wash and lit drawn before it, and merging the
+ * two would reorder layers one of them has shipped.
+ */
+internal fun Modifier.padSkin(
+    scheme: Scheme,
+    cls: Int?,
+    shape: Shape,
+    lit: Float,
+    classic: Modifier,
+): Modifier {
+    if (scheme.look != Look.MODERN) return this.then(classic)
+    if (cls == null) return this.raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+    return this
+        .background(scheme.raised.tape, shape)
+        .border(1.dp, scheme.grayEdge.tape, shape)
+        .drawBehind {
+            val edge = 4.dp.toPx()
+            drawRect(cls.tape, topLeft = Offset(0f, size.height - edge), size = Size(size.width, edge))
+        }
+        .background(cls.tape.copy(alpha = lit), shape)
+}
+
+/** Whether the scheme's chrome is paper: a pad's ink and tag chip go dark-on-light there, light-on-dark elsewhere. */
+internal fun Scheme.isPaper(): Boolean = Scheme.luma(gray) >= 90
+
+/**
+ * The name's ink: tinted toward white on a dark pad (the handoff's rule),
+ * darkened just until it reads on a paper one, so lime stays lime either
+ * way (`Schemes.classInkOn`).
+ */
+internal fun padNameInk(scheme: Scheme, cls: Int): Color =
+    if (scheme.isPaper()) Schemes.classInkOn(cls, scheme.raised).tape else classTint(cls)
+
+/**
+ * The slot tag's opaque backing chip. On paper it is the card itself (ink2
+ * clears AA on it - ContrastTest's backdrop law reads `raised` under the
+ * modern look); darkening paper gives a grey block nothing needs.
+ */
+internal fun padTagBacking(scheme: Scheme): Color =
+    (if (scheme.isPaper()) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape
 
 /**
  * Both banks, side by side. `Layout.MIN_HIT_TARGET` is non-negotiable
@@ -276,7 +339,7 @@ internal fun PlayPad(
         Box(
             modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
                 .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", onHit, onRelease) else Modifier),
             contentAlignment = Alignment.TopEnd,
         ) {
@@ -297,12 +360,16 @@ internal fun PlayPad(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .scale(1f - 0.03f * g)
-            .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-            // assigned: resting outer wash (~class@60%, flattened — see KDoc above)
-            .background(cls.tape.copy(alpha = 0.12f), shape)
-            // lit: inset wash at class@40%, driven by the trigger/choke glow
-            .background(cls.tape.copy(alpha = 0.40f * g), shape)
-            .border(2.dp, cls.tape, shape)
+            .padSkin(
+                scheme, cls, shape, 0.40f * g,
+                classic = Modifier
+                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
+                    // assigned: resting outer wash (~class@60%, flattened — see KDoc above)
+                    .background(cls.tape.copy(alpha = 0.12f), shape)
+                    // lit: inset wash at class@40%, driven by the trigger/choke glow
+                    .background(cls.tape.copy(alpha = 0.40f * g), shape)
+                    .border(2.dp, cls.tape, shape),
+            )
             // No long-press here (see this composable's own KDoc — PLAY
             // is for playing): the press-and-release gesture and its
             // accessibility floor live in `padGesture`, shared with the
@@ -321,7 +388,7 @@ internal fun PlayPad(
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .background(Schemes.darken(scheme.gray, 0.30f).tape, RoundedCornerShape(3.dp))
+                .background(padTagBacking(scheme), RoundedCornerShape(3.dp))
                 .padding(horizontal = 3.dp, vertical = 1.dp),
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
@@ -329,7 +396,7 @@ internal fun PlayPad(
         TapeText(
             pad.displayName,
             TapeType.marker,
-            classTint(cls),
+            padNameInk(scheme, cls),
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )
