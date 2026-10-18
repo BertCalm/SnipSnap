@@ -3757,7 +3757,8 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                         )
-                        top == Bench.HELP -> HelpScreen()
+                        // The place under the gear: HELP opens its section.
+                        top == Bench.HELP -> HelpScreen(cameFrom = location.place)
                         top == null && location.stage == Stage.BEAT -> {
                             val songEntry = open
                             if (arrangeOpen && songEntry != null) {
