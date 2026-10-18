@@ -3127,6 +3127,7 @@ fun App(shelf: KitShelf) {
                                 kits = kits,
                                 projects = projects,
                                 onOpenProject = { openProject(it.project) },
+                                openProjectName = project?.name,
                                 onNewProject = ::newProject,
                                 busy = busy != null,
                                 onOpen = { entry ->

@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -95,6 +96,8 @@ fun KitsScreen(
     /** The projects on the shelf, most recently edited first (`ShelfModel.projects`). */
     projects: List<ShelfModel.ProjectRow>,
     onOpenProject: (ShelfModel.ProjectRow) -> Unit,
+    /** The open project's folder name, so its row can say it is the one open; null while none is. */
+    openProjectName: String? = null,
     /** NEW PROJECT ▸: an empty project, opened. */
     onNewProject: () -> Unit,
     busy: Boolean,
@@ -470,10 +473,10 @@ fun KitsScreen(
                     // made one per kit before this screen read them.
                     if (!assigningSnip && breedingFrom == null && addingTo == null) {
                         item(key = "projects-header") {
-                            TapeText("PROJECTS · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                         }
                         items(projects, key = { "project:" + it.dir.name }) { row ->
-                            ProjectRow(row, busy, onOpenProject)
+                            ProjectRow(row, row.name == openProjectName, busy, onOpenProject)
                         }
                         // The shelf never shows two: with projects to open the
                         // button is the pinned primary below the list.
@@ -741,10 +744,13 @@ fun KitsScreen(
  * One project on the shelf (plan §3.1): its name, then `2 KITS · 94 BPM ·
  * EDITED 2 HR AGO` — the model's own subtitle plus the age the kit rows
  * already show, so the two lists read the same way. Tapping opens it;
- * `App` decides what opening means (the active kit onto PADS).
+ * `App` decides what opening means (the active kit onto PADS). The row of
+ * the project that is [isOpen] wears the selected convention - the
+ * accent border, and OPEN NOW where the rest say OPEN ▸ - so a list of
+ * sixteen that all read the same names the one you are in.
  */
 @Composable
-private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (ShelfModel.ProjectRow) -> Unit) {
+private fun ProjectRow(row: ShelfModel.ProjectRow, isOpen: Boolean, busy: Boolean, onOpen: (ShelfModel.ProjectRow) -> Unit) {
     val scheme = LocalScheme.current
     val age = Ages.agoOrNull(row.editedAtMillis, System.currentTimeMillis())
     val facts = listOfNotNull(row.subtitle, age?.let { "EDITED $it" }).joinToString("  ·  ")
@@ -752,7 +758,8 @@ private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (Shelf
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            .let { if (isOpen) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            .semantics { this.selected = isOpen }
             .tapeClick(label = "OPEN PROJECT ${row.name.uppercase(Locale.ROOT)}", enabled = !busy) { onOpen(row) }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -761,7 +768,7 @@ private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (Shelf
             TapeText(row.name, TapeType.markerBig, scheme.ink.tape)
             TapeText(facts, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText("OPEN ▸", TapeType.pixelSmall, scheme.ink2.tape)
+        TapeText(if (isOpen) "OPEN NOW" else "OPEN ▸", TapeType.pixelSmall, if (isOpen) scheme.ink.tape else scheme.ink2.tape)
     }
 }
 

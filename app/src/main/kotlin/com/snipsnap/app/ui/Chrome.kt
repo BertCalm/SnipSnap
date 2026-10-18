@@ -255,7 +255,14 @@ fun TitleBar(
         // skeleton it made a finished app look like an abandoned prototype.
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // `weight(1f, fill = false)`: the right-hand cluster is measured first
+        // and the wordmark takes what it leaves, so a long project name
+        // ellipsises itself and never pushes SNIPSNAP.EXE to an ellipsis.
+        Row(
+            Modifier.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             if (modern) {
                 // `.wordmark-square`: the page's tilted square before the name.
                 Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
@@ -264,7 +271,14 @@ fun TitleBar(
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (projectName != null) {
-                TapeText(projectName.uppercase(), TapeType.pixel, scheme.titleInk.tape, Modifier.widthIn(max = 140.dp))
+                // The bar clips the name at 140 dp; the accessible name is the whole of it.
+                val fullName = projectName.uppercase()
+                TapeText(
+                    fullName,
+                    TapeType.pixel,
+                    scheme.titleInk.tape,
+                    Modifier.widthIn(max = 140.dp).semantics { contentDescription = fullName },
+                )
             }
             if (onNote != null) {
                 TitleChip("NOTE", label = "NOTE", onClick = onNote)
