@@ -48,10 +48,11 @@ data class CreaseProbe(
  * RUBBER composes them so pressure moves a symmetric pair of narrow phase features.
  * Every map fixes 0 and pi: its sine fundamental remains positive and phase-aligned.
  * Total absolute log compression is bounded, with a lower ceiling in high registers.
- * V1 remains reproducible through model=1 and never silently acquires the new sound.
+ * Model 3 keeps these waveforms and refines their pressure/response profiles. Explicit
+ * model=1 and model=2 remain reproducible and never silently acquire a newer gesture.
  */
 object Crease {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val RATE = 44100
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 24
@@ -65,12 +66,13 @@ object Crease {
     const val MAX_MAP_DERIVATIVE = 36.59823444367799 // exp(3.6)
     const val MAX_MAP_CURVATURE = 75000.0 // conservative 1.5*exp(3*3.6) bound
     const val LOOP_STATE_TOLERANCE = 1e-7
-    const val MAX_PREROLL_CYCLES = 18
+    const val MAX_PREROLL_CYCLES = 28
+    const val MODEL2_MAX_PREROLL_CYCLES = 18
     private const val TAU = 2.0 * PI
     private const val TRACE_HZ = 200
 
     fun macrosFor(voice: CreaseVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
-        require(model == 1 || model == MODEL_VERSION) { "Unknown CREASE model $model" }
+        require(model in 1..MODEL_VERSION) { "Unknown CREASE model $model" }
         if (model == 1) return CreaseV1.macrosFor(voice)
         val values = when (voice) {
             CreaseVoice.ROUND -> floatArrayOf(.20f, .25f, .15f, .15f, .30f)
@@ -86,8 +88,8 @@ object Crease {
         macrosFor(voice, model).associate { it.name to it.default }
     fun isLoop(hold: Float) = hold >= HOLD_LOOP
 
-    private fun settled(voice: CreaseVoice, macros: Map<String, Float>) =
-        defaults(voice).toMutableMap().also { result ->
+    private fun settled(voice: CreaseVoice, macros: Map<String, Float>, model: Int) =
+        defaults(voice, model).toMutableMap().also { result ->
             for ((key, value) in macros) if (key in result && value.isFinite()) result[key] = value.coerceIn(0f, 1f)
         }
 
@@ -105,16 +107,16 @@ object Crease {
         midi: Int = DEFAULT_MIDI, velocity: Float = .75f,
         history: CreaseHistory = CreaseHistory.STATEFUL, coupling: Boolean = true,
         oversample: Int = 4, normalize: Boolean = true, model: Int = MODEL_VERSION): CreaseProbe {
-        require(model == 1 || model == MODEL_VERSION) { "Unknown CREASE model $model" }
+        require(model in 1..MODEL_VERSION) { "Unknown CREASE model $model" }
         if (model == 1) return CreaseV1.synthesize(voice, macros, midi, velocity, history, coupling, oversample, normalize)
         require(midi in MIDI_MIN..MIDI_MAX) { "CREASE supports MIDI $MIDI_MIN..$MIDI_MAX" }
         require(oversample == 4 || oversample == 16) { "CREASE diagnostic oversample must be 4 or 16" }
         val started = System.nanoTime()
-        val m = settled(voice, macros)
+        val m = settled(voice, macros, model)
         val vel = if (velocity.isFinite()) velocity.coerceIn(0f, 1f).toDouble() else .75
         val requestedHz = Keys.midiHz(midi).toDouble()
         val held = isLoop(m.getValue("HOLD"))
-        val shape = Shape(voice, m, vel)
+        val shape = Shape(voice, m, vel, model)
         check(held || shape.duration <= MAX_FINITE_SECONDS) { "CREASE finite note exceeded duration cap" }
         // Same principle as Keys.planLoop: integer root cycles, then a tiny documented retuning
         // to integer output frames. Both layers have this exact root, with no detune or fifth.
@@ -163,7 +165,8 @@ object Crease {
         val prelevel: FloatArray
         if (held) {
             var before = state()
-            for (period in 1..MAX_PREROLL_CYCLES) {
+            val prerollCap = if (model == 2) MODEL2_MAX_PREROLL_CYCLES else MAX_PREROLL_CYCLES
+            for (period in 1..prerollCap) {
                 cycle(false)
                 val after = state()
                 stateError = distance(before, after)
@@ -203,7 +206,7 @@ object Crease {
             null, stats.derivative, max(stats.state, output.maxAbsState),
             requestedHz, renderedHz, held, if (held) frames else 0, rootCycles,
             seam, stateError, converged, preroll, System.nanoTime() - started,
-            stats.maxDerivative, stats.curvature, MODEL_VERSION,
+            stats.maxDerivative, stats.curvature, model,
         ), traces.finish(), previous, startState, endState)
     }
 
@@ -211,7 +214,7 @@ object Crease {
     private fun mix(a: Double, b: Double, t: Double) = a + (b - a) * t
     private fun smooth(t: Double): Double = t.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
 
-    private class Shape(val voice: CreaseVoice, m: Map<String, Float>, val velocity: Double) {
+    private class Shape(val voice: CreaseVoice, m: Map<String, Float>, val velocity: Double, val version: Int) {
         val fold = m.getValue("FOLD").toDouble().pow(.65)
         val pressure = m.getValue("PRESSURE").toDouble().pow(.65)
         val drag = m.getValue("DRAG").toDouble()
@@ -226,9 +229,32 @@ object Crease {
             CreaseVoice.PINCH -> .35 + 1.8 * sqrt(relax); CreaseVoice.RUBBER -> .65 + 2.5 * sqrt(relax) }
         val duration = gate + releaseT60 + .035
         val loopSeconds = when (voice) { CreaseVoice.ROUND -> 1.45; CreaseVoice.PINCH -> 1.65; CreaseVoice.RUBBER -> 2.1 }
-        val rise = .002 * 40.0.pow(sqrt(drag)) * if (voice == CreaseVoice.RUBBER) 1.5 else 1.0
-        // This range describes T60, not a 1.5-second time constant requiring a ten-second tail.
-        val recovery = (.10 * 18.0.pow(relax)) / ln(1000.0)
+        private val model2Rise = .002 * 40.0.pow(sqrt(drag)) * if (voice == CreaseVoice.RUBBER) 1.5 else 1.0
+        private val defaultDrag = when (voice) {
+            CreaseVoice.ROUND -> .15f.toDouble(); CreaseVoice.PINCH -> .20f.toDouble(); CreaseVoice.RUBBER -> .75f.toDouble()
+        }
+        // The accepted default response is retained. Beyond it, DRAG gains a useful long
+        // following range: .24/.28/.48 seconds, without altering the pressure source itself.
+        val rise = if (version == 2) model2Rise else {
+            val beyondDefault = ((drag - defaultDrag) / (1.0 - defaultDrag)).coerceIn(0.0, 1.0).pow(.65)
+            val extension = when (voice) { CreaseVoice.ROUND -> 3.0; CreaseVoice.PINCH -> 3.5; CreaseVoice.RUBBER -> 4.0 }
+            model2Rise * extension.pow(beyondDefault)
+        }
+        // These ranges describe T60; the one-pole solver takes tau. RUBBER's accepted
+        // default unfolding time is an anchor between its faster and much slower extremes.
+        val recovery = if (version == 2) (.10 * 18.0.pow(relax)) / ln(1000.0) else {
+            val t60 = when (voice) {
+                CreaseVoice.ROUND -> .07 * 50.0.pow(relax)
+                CreaseVoice.PINCH -> .09 * 40.0.pow(relax)
+                CreaseVoice.RUBBER -> {
+                    val pivot = .65f.toDouble()
+                    val anchor = .10 * 18.0.pow(pivot)
+                    if (relax <= pivot) .12 * (anchor / .12).pow(relax / pivot)
+                    else anchor * (4.32 / anchor).pow((relax - pivot) / (1.0 - pivot))
+                }
+            }
+            t60 / ln(1000.0)
+        }
 
         fun amplitude(t: Double): Double {
             if (held) return velocity * .68
@@ -240,6 +266,7 @@ object Crease {
         }
 
         fun forcing(t: Double, loop: Double?): Double {
+            if (version >= 3) return gesture(t, loop)
             if (loop != null) {
                 // Smooth periodic pressure, never an amplitude attack/retrigger. The second
                 // harmonic makes rise and unfolding asymmetrical while retaining exact closure.
@@ -252,6 +279,55 @@ object Crease {
             val late = exp(-((t - gate * .74) / (.08 + .12 * relax)).pow(2.0))
             val release = if (t <= gate) 1.0 else exp(-(t - gate) / (.025 + .10 * relax))
             return ((.09 + .73 * onset + .63 * push + .24 * late) * release).coerceIn(0.0, 1.0)
+        }
+
+        /** Voice phrasing is fixed for a given note/HOLD. DRAG and RELAX act on the
+         * causal response, so their audible delay/unfolding is independent of this source. */
+        private fun gesture(t: Double, loop: Double?): Double {
+            if (loop != null) {
+                val a = .5 - .5 * cos(TAU * loop)
+                return when (voice) {
+                    CreaseVoice.ROUND -> {
+                        val b = .5 - .5 * cos(2.0 * TAU * loop + .40)
+                        .10 + .80 * a.pow(3.0) + .10 * b
+                    }
+                    CreaseVoice.PINCH -> {
+                        val b = .5 - .5 * cos(2.0 * TAU * loop + .65)
+                        .10 + .73 * a.pow(2.0) + .17 * b
+                    }
+                    CreaseVoice.RUBBER -> {
+                        val b = .5 - .5 * cos(2.0 * TAU * loop + 1.0)
+                        .08 + .74 * a + .18 * b
+                    }
+                }.coerceIn(0.0, 1.0)
+            }
+            return when (voice) {
+                CreaseVoice.ROUND -> {
+                    val onset = exp(-t / .065)
+                    val push = exp(-((t - .15) / .055).pow(2.0))
+                    val late = exp(-((t - gate * .72) / .075).pow(2.0))
+                    val release = if (t <= gate) 1.0 else exp(-(t - gate) / .045)
+                    ((.09 + .73 * onset + .44 * push + .08 * late) * release).coerceIn(0.0, 1.0)
+                }
+                CreaseVoice.PINCH -> {
+                    // Keep the accepted reed's default phrase, separating its source from
+                    // the DRAG/RELAX knobs while their response ranges become more useful.
+                    val referenceDrag = .20f.toDouble()
+                    val referenceRelax = .35f.toDouble()
+                    val onset = exp(-t / .065)
+                    val push = exp(-((t - (.17 + .15 * referenceDrag)) / (.055 + .07 * referenceDrag)).pow(2.0))
+                    val late = exp(-((t - gate * .74) / (.08 + .12 * referenceRelax)).pow(2.0))
+                    val release = if (t <= gate) 1.0 else exp(-(t - gate) / (.025 + .10 * referenceRelax))
+                    ((.09 + .73 * onset + .63 * push + .24 * late) * release).coerceIn(0.0, 1.0)
+                }
+                CreaseVoice.RUBBER -> {
+                    val onset = exp(-t / .18)
+                    val push = exp(-((t - .38) / .145).pow(2.0))
+                    val late = exp(-((t - gate * .74) / .20).pow(2.0))
+                    val release = if (t <= gate) 1.0 else exp(-(t - gate) / .10)
+                    ((.07 + .50 * onset + .78 * push + .22 * late) * release).coerceIn(0.0, 1.0)
+                }
+            }
         }
     }
 

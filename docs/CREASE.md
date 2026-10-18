@@ -1,4 +1,4 @@
-# CREASE — second listening prototype
+# CREASE — gesture and preset study
 
 CREASE is an original, offline pitched engine inspired by phase-distortion synthesis.
 Its gesture is bend → crease → unfold: pressure changes two periodic phase maps,
@@ -9,7 +9,9 @@ power analysis confirmed that the three defaults placed about 99% of their
 harmonic energy in the fundamental. Small numerical changes passed the original
 checks without establishing useful timbral variation.
 
-Model 2 broadens the phase maps themselves. It explores ROUND, PINCH and RUBBER;
+The owner preferred the wider model-2 voices. Model 3 keeps those analytic phase
+shapes and refines their pressure/recovery timing. Six listening presets explore
+fast, delayed and slowly unfolding gestures across ROUND, PINCH and RUBBER;
 voicing remains provisional. The six-voice/36-preset factory roster and production
 app, patch, kit and keyboard-instrument registration remain later work.
 
@@ -25,7 +27,7 @@ The supported range is MIDI 24–84. The two oscillators share the requested roo
 Phase mapping changes waveform shape within each cycle, with no detune or phase
 reversal. No samples or effects are required.
 
-## Two saved synthesis models
+## Versioned synthesis models
 
 Model 1 is preserved in `CreaseV1.kt` for exact old recipe replay and comparison.
 It uses a short Fourier warp with `sum(k * abs(c[k])) <= 0.9`, guaranteeing
@@ -48,12 +50,18 @@ to 2.85 at C6, constraining the sharper shapes. The model-1
 Fourier coefficient budget does not apply to model 2. Diagnostics therefore report
 that budget only for model 1 and report map slope and curvature separately.
 
+Model 3 keeps the same phase-map families and safety ceilings. Its pressure
+profiles are independent of DRAG and RELAX: DRAG changes the material response
+time, while RELAX changes deformation recovery. The finite amplitude envelopes
+retain the accepted model-2 behavior. Explicit model 2 retains its original
+pressure profiles and arithmetic for exact replay.
+
 The shape-sensitive reciprocal detector runs before output leveling. STATEFUL /
 INSTANTANEOUS and coupled / independent probes retain identical pressure and
 amplitude schedules. Every held boundary check includes deformation, detector,
 filter, DC and decimator memory; the preceding audio period is evolved separately.
 
-Public `render`, `probe` and `synthesize` calls default to model 2 and accept an
+Public `render`, `probe` and `synthesize` calls default to model 3 and accept an
 explicit `model`. New audition recipes save that field. Old recipes without it
 select model 1, preserving the first audition's behavior.
 
@@ -67,15 +75,33 @@ From the repository root:
 ./gradlew --no-daemon :synth:generateCreaseAudition -PcreaseFull
 ```
 
-The default compact audition writes to `testkit/crease-audition-r2/`: three voice
-examples, three matched model-1/model-2 pairs, three-step control sweeps, two
-registers, held loops and 4×/16× reference pairs. `-PcreaseFull` adds quarter steps,
-velocity coverage, mechanism comparisons, interactions and held RELAX probes.
-The first audition's output directory is retained separately.
+The default compact audition writes to `testkit/crease-audition-r3/`: three voice
+examples, three matched model-2/model-3 pairs, six named presets, constant-level
+DRAG/RELAX pairs, three-step control sweeps, two registers, held loops and
+4×/16× reference pairs (87 clips). `-PcreaseFull` adds quarter steps,
+velocity coverage, mechanism comparisons, interactions and held RELAX probes
+for 178 clips in total.
+The first and second auditions' output directories are retained separately.
 
 Browser playback uses these Kotlin-engine WAVs. Matched files use the common
 audition loudness; separate prelevel WAVs retain original dynamics. The JSON files
 are standalone audition recipes, not registered production SnipSnap Patch objects.
+`CreasePresets.kt` is the shared source of truth for six complete, immutable
+listening presets. The presets are available in the audition; factory registration
+in the production app remains later work.
+
+| Voice | Preset | Listening role |
+| --- | --- | --- |
+| ROUND | Corner Bass | Rounded, quick accent at MIDI 36 |
+| ROUND | Paper Keys | Richer key tone with a slower bloom |
+| PINCH | Reed Mark | Firm, focused reed accent |
+| PINCH | Return Stroke | More open reed with a longer afterimage |
+| RUBBER | Late Mark | Note onset followed by delayed deformation |
+| RUBBER | Ink Ribbon | Long vowel-like recovery |
+
+All six bank presets are finite notes. Each render starts a fresh note state;
+held comparisons evolve a recurring pressure gesture rather than simulating
+persistent legato performance.
 
 Replay a downloaded recipe with:
 
@@ -97,7 +123,7 @@ contrasts describe the rendered sound and do not establish musical acceptance.
 
 ## Delivery and integration
 
-`Crease.kt` implements model 2; `CreaseV1.kt` preserves model 1. `CreaseTest.kt`
+`Crease.kt` implements models 2 and 3; `CreaseV1.kt` preserves model 1. `CreaseTest.kt`
 checks the contracts, and `CreaseAuditionGenerator.kt` generates the evidence.
 The audition site's static source is kept in its own Sites source repository.
 

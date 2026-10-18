@@ -237,3 +237,6 @@ testkit/vent-audition/
 
 # Four controlled, uncoloured VENT trajectory studies; generated for listening.
 testkit/vent-isolation-audition/
+
+# Third Crease listening study
+/testkit/crease-audition-r3/

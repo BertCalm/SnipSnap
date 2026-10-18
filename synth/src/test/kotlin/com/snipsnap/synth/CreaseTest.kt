@@ -53,11 +53,32 @@ class CreaseTest {
     }
 
     @Test
+    fun `accepted model two voices and held gestures retain exact sample hashes`() {
+        data class Published(val voice: CreaseVoice, val held: Boolean, val normalized: String, val prelevel: String)
+        val published = listOf(
+            Published(CreaseVoice.ROUND, false, "08fb53026a98bc12f167d16bb5b23bb35ee68b624a2e9e6904c99383026fc1bc", "b5dc9623dd2ec8bd00b26cada1d944dc6934df610de27df91d6899794ca37adf"),
+            Published(CreaseVoice.PINCH, false, "f98a56d69fd0183f5013f28f844f012ac686ade245b2a26039306eda0b0fe33e", "d068ac2430931eb39a5da91111bea04d8c972ec09ca088d0b8311baafd344ed6"),
+            Published(CreaseVoice.RUBBER, false, "f8617885326cd4db045cae8404bc09e81260e78dd4f32e2f2395d3c66c96f0b2", "6873df811966cb721087a980afcb2b42507a4d83f8f9555b6bcbc592c2d3602b"),
+            Published(CreaseVoice.ROUND, true, "6ee2d94555c1b2d2a7604b87175c3176401fbd613352a716daca9d4be0733694", "533a30c5d69e2dc0ecc8a521191cb9e62d4ad22a66447bb5928cf3dffbbf3002"),
+            Published(CreaseVoice.PINCH, true, "bf7b21b6cb5b03b6a696193bc38bdd7488420f51d3e6f54e30cde35989884b5d", "cc1c311324a8a939cd01469d54b27980505265ffe888b6acc471dd2ee51d8db7"),
+            Published(CreaseVoice.RUBBER, true, "f8916c7e9752b62154b95b27a4b36743de93a5a0eb80511b6fb3f0b449d3ba40", "a3998348fb3dabe087304dd4d0c4bf9b04193bb286cbc7db875d41ce8228dbce"),
+        )
+        val held = mapOf("FOLD" to .6f, "PRESSURE" to .85f, "DRAG" to .85f, "SPLIT" to .7f, "RELAX" to .8f, "HOLD" to 1f)
+        for (original in published) {
+            val macros = if (original.held) held else originalDefaults(original.voice)
+            val p = Crease.probe(original.voice, macros, midi = 60, velocity = .8f, model = 2)
+            assertEquals(original.normalized, hash(p.samples), "${original.voice} model two HOLD${original.held} normalized audio changed")
+            assertEquals(original.prelevel, hash(p.prelevel), "${original.voice} model two HOLD${original.held} prelevel audio changed")
+            assertEquals(2, p.diagnostics.modelVersion)
+        }
+    }
+
+    @Test
     fun `default voices have substantial gain independent harmonic separation that model one lacks`() {
         val issues = mutableListOf<String>()
         val profiles = CreaseVoice.entries.associateWith { voice ->
             val probe = Crease.probe(voice, midi = 60, velocity = .8f)
-            assertEquals(2, probe.diagnostics.modelVersion, "new auditions must select model two explicitly or by default")
+            assertEquals(Crease.MODEL_VERSION, probe.diagnostics.modelVersion, "new auditions must select the current model explicitly or by default")
             bodyWindows.map { harmonicProfile(probe.prelevel, Keys.midiHz(60).toDouble(), it) }
         }
         for (voice in CreaseVoice.entries) {
@@ -153,7 +174,7 @@ class CreaseTest {
             }
             assertTrue(d.rawPeak.isFinite() && d.rawPeak < 1.1, "$label raw peak ${d.rawPeak}")
             assertTrue(d.maxAbsState.isFinite() && d.maxAbsState < 1.01, "$label runaway state ${d.maxAbsState}")
-            assertEquals(2, d.modelVersion, "$label unexpectedly rendered the rejected model")
+            assertEquals(Crease.MODEL_VERSION, d.modelVersion, "$label unexpectedly rendered a legacy model")
             assertEquals(null, d.maxCoefficientBudget, "$label reported a Fourier budget for a different map family")
             // Model two bounds the positive derivative directly. Its maximum low-register
             // log-compression is 3.6, so importing model one's .1 derivative floor would
@@ -314,13 +335,13 @@ class CreaseTest {
             assertTrue(d.held && d.converged, "$voice did not converge a held trajectory")
             assertEquals(d.loopFrames, p.samples.size, "$voice loop period does not match exported audio")
             assertEquals(p.samples.size, p.previousCycle.size, "$voice missing independent previous period")
-            assertTrue(d.prerollCycles in 2..64, "$voice unbounded or unmeasured preroll ${d.prerollCycles}")
-            assertTrue(d.stateError.isFinite() && d.stateError < 1e-3, "$voice synthesis state recurrence ${d.stateError}")
+            assertTrue(d.prerollCycles in 3..Crease.MAX_PREROLL_CYCLES, "$voice unbounded or unmeasured preroll ${d.prerollCycles}")
+            assertTrue(d.stateError.isFinite() && d.stateError < Crease.LOOP_STATE_TOLERANCE, "$voice synthesis state recurrence ${d.stateError}")
             assertTrue(p.loopStateStart.isNotEmpty(), "$voice missing full-state boundary snapshots")
             assertEquals(p.loopStateStart.size, p.loopStateEnd.size, "$voice incompatible boundary snapshots")
             val independentStateError = p.loopStateStart.indices.maxOf { abs(p.loopStateStart[it] - p.loopStateEnd[it]) }
             assertEquals(independentStateError, d.stateError, 1e-12, "$voice state-error diagnostic disagrees with snapshots")
-            assertTrue(independentStateError < 1e-3, "$voice independently measured state recurrence $independentStateError")
+            assertTrue(independentStateError < Crease.LOOP_STATE_TOLERANCE, "$voice independently measured state recurrence $independentStateError")
             assertTrue(d.rootCycles > 0, "$voice lacks a closed oscillator clock")
             assertEquals(d.rootCycles * p.sampleRate.toDouble() / p.samples.size, d.renderedHz, 1e-12,
                 "$voice oscillator did not complete an integer number of cycles")
@@ -376,6 +397,76 @@ class CreaseTest {
             val delay = slowTime - fastTime
             println("CREASE DRAG $voice fastHalfTime=$fastTime slowHalfTime=$slowTime responseDelay=$delay")
             issues.expect(delay >= .015, "$voice DRAG does not add a measured body response lag: $delay seconds")
+        }
+        assertTrue(issues.isEmpty(), issues.joinToString("\n"))
+    }
+
+    @Test
+    fun `gesture controls move substantial held harmonics through measured resistance and recovery`() {
+        val issues = mutableListOf<String>()
+        val windows = listOf(.12, .4, .7, .9, 1.1)
+        for (voice in CreaseVoice.entries) for (control in listOf("PRESSURE", "DRAG", "RELAX")) {
+            val base = Crease.defaults(voice) + mapOf("HOLD" to 1f, "PRESSURE" to .85f, "SPLIT" to .5f)
+            val low = Crease.probe(voice, base + (control to 0f), midi = 60, velocity = .8f)
+            val high = Crease.probe(voice, base + (control to 1f), midi = 60, velocity = .8f)
+            assertEquals(low.prelevel.size, high.prelevel.size, "$voice/$control changed the held gesture clock")
+            assertContentEquals(low.trace.pressure, high.trace.pressure, "$voice/$control also changed incoming held pressure")
+            val lowProfiles = windows.map { harmonicProfile(low.prelevel, Keys.midiHz(60).toDouble(), it) }
+            val highProfiles = windows.map { harmonicProfile(high.prelevel, Keys.midiHz(60).toDouble(), it) }
+            val spectralWindows = lowProfiles.zip(highProfiles).map { (a, b) -> powerDistance(a, b) }
+            val spectralMean = spectralWindows.average()
+            val riseDelay = risingHalfTime(high.trace.timeSeconds, high.trace.deformationA) -
+                risingHalfTime(low.trace.timeSeconds, low.trace.deformationA)
+            val fallDelay = fallingHalfTime(high.trace.timeSeconds, high.trace.deformationA) -
+                fallingHalfTime(low.trace.timeSeconds, low.trace.deformationA)
+            println("CREASE gesture $voice $control harmonicMeanTV=$spectralMean harmonicWindows=$spectralWindows riseDelaySeconds=$riseDelay fallDelaySeconds=$fallDelay")
+            // Declared from the accepted R2 audit before R3 measurement. These pair
+            // fixed pressure with constant amplitude: duration, gain and oscillator phase
+            // cannot supply the measured harmonic-power change or state-response lag.
+            when (control) {
+                "PRESSURE" -> issues.expect(spectralMean >= .08, "$voice PRESSURE moves little actual harmonic power: $spectralMean")
+                "DRAG" -> {
+                    issues.expect(riseDelay >= .030 - 1e-6, "$voice DRAG adds less than 30ms resistance: $riseDelay seconds")
+                    issues.expect(spectralMean >= .025, "$voice DRAG changes little held harmonic evolution: $spectralMean")
+                }
+                "RELAX" -> {
+                    issues.expect(fallDelay >= .100 - 1e-6, "$voice RELAX adds less than 100ms unfolding: $fallDelay seconds")
+                    issues.expect(spectralMean >= .04, "$voice RELAX changes little held harmonic evolution: $spectralMean")
+                }
+            }
+        }
+        assertTrue(issues.isEmpty(), issues.joinToString("\n"))
+    }
+
+    @Test
+    fun `native preset pairs remain distinct at the same pitch and velocity`() {
+        val issues = mutableListOf<String>()
+        val presets = CreasePresets.all()
+        assertEquals(6, presets.size, "the listening bank should contain two complete recipes per voice")
+        assertEquals(presets.size, presets.map { it.id }.distinct().size, "duplicate preset IDs would overwrite audition recipes")
+        for (voice in CreaseVoice.entries) {
+            val pair = presets.filter { it.voice == voice }
+            assertEquals(2, pair.size, "$voice needs two listening positions")
+            val probes = pair.map { preset ->
+                assertEquals(Crease.MODEL_VERSION, preset.model, "${preset.id} unexpectedly selects a legacy model")
+                // Corner Bass normally starts at MIDI36. Auditing every pair at middle C
+                // prevents transposition or velocity from supplying its measured contrast.
+                Crease.probe(preset.voice, preset.macros, midi = 60, velocity = .8f, model = preset.model)
+            }
+            val profiles = probes.map { probe -> bodyWindows.map { harmonicProfile(probe.prelevel, Keys.midiHz(60).toDouble(), it) } }
+            val windows = profiles[0].zip(profiles[1]).map { (a, b) -> powerDistance(a, b) }
+            val mean = windows.average()
+            val maximum = windows.max()
+            val peakTimes = probes.map { probe ->
+                val i = probe.trace.deformationA.indices.maxBy { probe.trace.deformationA[it] }
+                probe.trace.timeSeconds[i].toDouble()
+            }
+            val shift = abs(peakTimes[1] - peakTimes[0])
+            println("CREASE preset $voice ids=${pair.map { it.id }} harmonicMeanTV=$mean harmonicMaximumTV=$maximum harmonicWindows=$windows deformationPeakTimes=$peakTimes absolutePeakShiftSeconds=$shift")
+            // Declared before the first bank probe. A delayed bloom may count, provided
+            // it also moves substantial signal power; extra duration alone cannot pass.
+            issues.expect(mean >= .05 || (maximum >= .08 && shift >= .050 - 1e-6),
+                "$voice preset pair is too similar at the same performance: mean=$mean maximum=$maximum peakShift=$shift")
         }
         assertTrue(issues.isEmpty(), issues.joinToString("\n"))
     }
@@ -522,6 +613,13 @@ class CreaseTest {
         val trough = (0..peak).minBy { values[it] }
         val threshold = (values[trough] + values[peak]) / 2f
         return time[(trough..peak).first { values[it] >= threshold }].toDouble()
+    }
+
+    private fun fallingHalfTime(time: FloatArray, values: FloatArray): Double {
+        val peak = values.indices.maxBy { values[it] }
+        val trough = (peak..values.lastIndex).minBy { values[it] }
+        val threshold = (values[trough] + values[peak]) / 2f
+        return time[(peak..trough).first { values[it] <= threshold }].toDouble()
     }
 
     private fun MutableList<String>.expect(condition: Boolean, message: String) {
