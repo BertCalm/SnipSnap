@@ -26,6 +26,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Origami
@@ -55,8 +56,9 @@ class OrigamiSynthScreenTest {
     private val fixtures = mutableListOf<File>()
     private var entry by mutableStateOf<KitShelf.Entry?>(null)
     private var kitUpdates = 0
-    // Start beside ORIGAMI so the real picker is exercised without rendering every unrelated engine.
-    private val settings = mutableMapOf("engine" to "OPENSKY")
+    // Restore through the production navigation bag without rendering unrelated engines.
+    private val settings = mutableMapOf("engine" to "ORIGAMI")
+    private var latestToast: String? = null
     private var showing by mutableStateOf(true)
 
     @After
@@ -87,7 +89,7 @@ class OrigamiSynthScreenTest {
                     SynthScreen(
                         entry = entry,
                         shelfRoot = shelf,
-                        onToast = {},
+                        onToast = { latestToast = it },
                         onKitUpdated = { updated -> entry = KitShelf.Entry(kitDir, updated); kitUpdates += 1 },
                         onShelfAssetWritten = {},
                         onDroneToLoop = { _, _, _ -> },
@@ -134,12 +136,17 @@ class OrigamiSynthScreenTest {
 
     private fun send(slot: Int): OrigamiPatch {
         val before = kitUpdates
+        latestToast = null
         val old = entry!!.kit.pad(slot)
         click("SEND TO PAD")
         click("A%02d, %s".format(slot, old?.displayName ?: "EMPTY"))
-        val deadline = System.currentTimeMillis() + 30_000
+        // Unaccelerated emulator rendering can exceed a phone-sized wall-clock deadline.
+        val deadline = System.currentTimeMillis() + 180_000
         while (kitUpdates == before) {
-            if (System.currentTimeMillis() > deadline) throw AssertionError("ORIGAMI did not land on pad $slot")
+            if (latestToast == Copy.SYNTH_PAD_REFUSED || latestToast == Copy.SEND_FAILED) {
+                throw AssertionError("ORIGAMI SEND failed: $latestToast")
+            }
+            if (System.currentTimeMillis() > deadline) throw AssertionError("ORIGAMI did not land on pad $slot; latest toast: $latestToast")
             pump(16)
         }
         val pad = KitStore.load(entry!!.dir).pad(slot)!!
