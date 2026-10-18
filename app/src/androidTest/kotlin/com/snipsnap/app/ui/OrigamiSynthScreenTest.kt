@@ -55,7 +55,8 @@ class OrigamiSynthScreenTest {
     private val fixtures = mutableListOf<File>()
     private var entry by mutableStateOf<KitShelf.Entry?>(null)
     private var kitUpdates = 0
-    private val settings = mutableMapOf<String, String>()
+    // Start beside ORIGAMI so the real picker is exercised without rendering every unrelated engine.
+    private val settings = mutableMapOf("engine" to "OPENSKY")
     private var showing by mutableStateOf(true)
 
     @After
