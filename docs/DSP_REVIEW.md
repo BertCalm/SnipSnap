@@ -90,11 +90,14 @@ place. Bit-identical — Loudness never mutated its input.
   seeded from it and goldens/classifications pin the exact sequence.
   A xorshift/PCG swap is a re-voicing of every noise-bearing preset:
   audition-gated, not a correctness fix.
-- **`Dsp.Biquad` is direct-form I in `Float`.** At 100 Hz shelves on a
-  176.4 kHz oversampled render, coefficient quantisation is a real
-  (if small) accuracy term; DF-II transposed is the standard answer.
-  It changes every EQ'd render's low-order bits, so it should land
-  with a measured before/after sweep, not folded into this pass.
+- **`Dsp.Biquad` was direct-form I in `Float`.** Fixed in the follow-up
+  pass: probed first (Float DF-I off by up to 0.25 dB at a 60 Hz/+9 dB
+  shelf at 176.4 kHz), then converted to transposed direct form II with
+  Double coefficients and state — the probe showed the Float coefficient
+  computation itself carried much of the error, so structure alone was
+  not enough. `BiquadTest` pins the promised gain to <0.05 dB there.
+  Also in the follow-up: `WavWriter` gained an opt-in `truePeakCeiling`
+  (null = the historical bytes), the export-level door for `TruePeak`.
 - **`Pitch.detect` autocorrelation is O(n·lag).** Fine at its 250 ms
   window (~10⁷ ops); an FFT/NSDF rewrite only pays off if windows
   grow, and risks re-opening the octave-error behaviour its local-peak

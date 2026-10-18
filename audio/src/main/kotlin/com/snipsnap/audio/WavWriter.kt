@@ -42,17 +42,37 @@ object WavWriter {
         depth: BitDepth = BitDepth.PCM_24,
         allowNonMpcRate: Boolean = false,
         smpl: SmplChunk? = null,
+        truePeakCeiling: Float? = null,
     ): File {
         require(allowNonMpcRate || snip.sampleRate == MPC_SAMPLE_RATE) {
             "sample rate ${snip.sampleRate} is not MPC-native ($MPC_SAMPLE_RATE); " +
                 "capture at 44.1 kHz or pass allowNonMpcRate"
         }
         file.parentFile?.mkdirs()
-        BufferedOutputStream(file.outputStream()).use { write(it, snip, depth, smpl) }
+        BufferedOutputStream(file.outputStream()).use { write(it, snip, depth, smpl, truePeakCeiling) }
         return file
     }
 
-    fun write(out: OutputStream, snip: Snip, depth: BitDepth = BitDepth.PCM_24, smpl: SmplChunk? = null) {
+    /**
+     * [truePeakCeiling], when given, first scales the snip down (only
+     * down) so its inter-sample peak sits at that ceiling — see
+     * [TruePeak]. Null, the default, writes exactly the bytes this
+     * writer has always written: enabling it moves exported loudness,
+     * which is a kit-level decision a caller makes explicitly, in dB
+     * terms it can state, rather than a silent change to every kit.
+     */
+    fun write(
+        out: OutputStream,
+        snip: Snip,
+        depth: BitDepth = BitDepth.PCM_24,
+        smpl: SmplChunk? = null,
+        truePeakCeiling: Float? = null,
+    ) {
+        val toWrite = if (truePeakCeiling == null) snip else TruePeak.limit(snip, truePeakCeiling)
+        writeEncoded(out, toWrite, depth, smpl)
+    }
+
+    private fun writeEncoded(out: OutputStream, snip: Snip, depth: BitDepth, smpl: SmplChunk?) {
         smpl?.requireInside(snip.frameCount)
         val bytesPerSample = depth.bytesPerSample
         val blockAlign = snip.channels * bytesPerSample
