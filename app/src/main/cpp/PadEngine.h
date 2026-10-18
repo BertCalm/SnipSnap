@@ -67,7 +67,7 @@ struct PadCommand {
  * The pads' voice (M4) and the keys' (a looping voice is a keygroup's
  * sustain; a note-off is a Stop with the instrument's release as its
  * fade). Up to [kMaxVoices] sample players, each a windowed, repitched,
- * linearly interpolated read of one bank sample, mixed to stereo under
+ * four-point cubic (Catmull-Rom) read of one bank sample, mixed to stereo under
  * Oboe's callback. The UI keys every
  * voice by the id the tested VoiceAllocator gave it; the engine reports
  * each voice's end back on a second ring, so the allocator learns of an
