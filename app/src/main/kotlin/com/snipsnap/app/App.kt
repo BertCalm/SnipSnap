@@ -202,6 +202,9 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
+/** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
+private const val DOCK_LINE_CHARS = 44
+
 /** The most a shared kit file may be before it is copied for the shelf: a whole backup fits, a video never needs to. */
 private const val LANDING_MAX_BYTES = 512L * 1024 * 1024
 /** CHOP ALL's own per-file cache-copy ceiling — sized for one WAV, not a whole kit/backup zip like [LANDING_MAX_BYTES] above (same 96 MB reasoning as MediaDecode's own MAX_WAV_BYTES). */
@@ -372,6 +375,14 @@ fun App(shelf: KitShelf) {
         AppScreen.PROPERTIES -> nav.location.copy(benches = nav.location.benches + Bench.SETUP)
         AppScreen.HELP -> nav.location.copy(benches = nav.location.benches + Bench.HELP)
     }
+
+    /**
+     * SEND TO PADS' line: what it did, and which kit is on the grid now,
+     * when the two fit the dock's two lines of about 44; what it did alone
+     * when they do not.
+     */
+    fun sentAndOnTheGrid(sent: String, entry: KitShelf.Entry): String =
+        "$sent ${Copy.onTheGrid(entry.kit.name)}".takeIf { it.length <= 2 * DOCK_LINE_CHARS } ?: sent
 
     /**
      * A landing: the screen changes and whatever hand-off state the landing
@@ -3585,30 +3596,34 @@ fun App(shelf: KitShelf) {
                             teachEnabled = teachEnabled,
                             workshopOpen = workshopOpen,
                             onToast = { dock.say(it) },
-                            onSentToGrid = { newEntry ->
+                            onSentToGrid = { newEntry, sent ->
                                 landKit(newEntry)
-                                // The new kit is the grid's now (F4). The offer
-                                // just below replaces the whole line whenever
-                                // the kit has pads, so this shows only for an
-                                // empty one until the dock's lines are scoped
-                                // (the UX review's S1) and can carry both.
-                                dock.say(Copy.onTheGrid(newEntry.kit.name))
                                 // Step 3 → step 4 (J10), and only when the
                                 // kit has pads: a door onto an empty EXPORT
                                 // is a worse answer than no door.
                                 if (newEntry.kit.pads.isNotEmpty()) {
                                     offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR, AppScreen.EXPORT)
                                 }
+                                // What SEND did is the line and the offer is
+                                // the door: the offer replaces the whole
+                                // line, so the sentence is said after it, and
+                                // a line keeps the door. The new kit is the
+                                // grid's now (F4); its name rides along when
+                                // both fit the dock's two lines.
+                                dock.say(sentAndOnTheGrid(sent, newEntry))
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
-                            onLandedOnto = { updated, bank ->
+                            onLandedOnto = { updated, bank, landed ->
                                 landKit(updated)
                                 kitBankRequest = bank
                                 if (updated.kit.pads.isNotEmpty()) {
                                     offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR, AppScreen.EXPORT)
                                 }
+                                // The landing sentence, after the offer, for
+                                // the same reason SEND's is.
+                                dock.say(landed)
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }

@@ -107,9 +107,10 @@ fun ChopScreen(
     /** The WORKSHOP is open (docs/WORKSHOP.md, WS2): the BENCH row — CONFIRM ALL and the stars — shows above the slices. */
     workshopOpen: Boolean,
     onToast: (String) -> Unit,
-    onSentToGrid: (KitShelf.Entry) -> Unit,
-    /** ONTO <kit> · BANK X landed: the kit as it is now, and the bank (0-based) to open KIT on. */
-    onLandedOnto: (KitShelf.Entry, Int) -> Unit = { e, _ -> onSentToGrid(e) },
+    /** SEND TO PADS landed: the new kit, and the sentence that says what it did. The caller says it, after its own offer, so the offer does not replace it. */
+    onSentToGrid: (KitShelf.Entry, String) -> Unit,
+    /** ONTO <kit> · BANK X landed: the kit as it is now, the bank (0-based) to open KIT on, and the sentence that says what landed. */
+    onLandedOnto: (KitShelf.Entry, Int, String) -> Unit = { e, _, line -> onSentToGrid(e, line) },
     /** EMPTY_CHOP/CHOP_SOURCE_GONE's own "tape something" route. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateTape: () -> Unit,
     /** EMPTY_CHOP's own second route: a kit with samples already on it. No default, same reasoning as [onNavigateTape]. */
@@ -359,8 +360,8 @@ private fun ChopContent(
     teachEnabled: Boolean,
     workshopOpen: Boolean,
     onToast: (String) -> Unit,
-    onSentToGrid: (KitShelf.Entry) -> Unit,
-    onLandedOnto: (KitShelf.Entry, Int) -> Unit,
+    onSentToGrid: (KitShelf.Entry, String) -> Unit,
+    onLandedOnto: (KitShelf.Entry, Int, String) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -1196,14 +1197,17 @@ private fun ChopContent(
                                 sung?.let { Hum.landGroove(kitDir, it) }
                                 KitShelf.Entry(kitDir, builder.kit) to sung?.bars
                             }
-                            onToast(
+                            // The sentence goes to the caller, not to `onToast`:
+                            // the caller's offer replaces the dock's line, so a
+                            // toast said here was gone before it was read.
+                            onSentToGrid(
+                                newEntry,
                                 when {
                                     sungBars != null -> Copy.sungGroove(sungBars)
                                     isFold -> Copy.foldedToPads(current.sliceCount, send.sliceCount, send.chokeSet)
                                     else -> Copy.sentToPads(send.sliceCount, send.chokeSet)
                                 },
                             )
-                            onSentToGrid(newEntry)
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
                             Log.e("ChopScreen", "sendToGrid: failed", e)
@@ -1286,13 +1290,16 @@ private fun ChopContent(
                             }
                         }
                         val left = send.arranged.drop(PadBanks.SIZE).count { it != null }
-                        onToast(
+                        // KIT opens on the bank it landed on, not A: the
+                        // pads that just arrived are the point of the tap.
+                        // The sentence rides along for the same reason
+                        // SEND's does: the caller's offer would replace it.
+                        onLandedOnto(
+                            updated,
+                            landBank,
                             if (isFold) Copy.foldedOnto(target.kit.name, PadBanks.letter(landBank), current.sliceCount, landed.size, left)
                             else Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left),
                         )
-                        // KIT opens on the bank it landed on, not A: the
-                        // pads that just arrived are the point of the tap.
-                        onLandedOnto(updated, landBank)
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
                         onToast("LAND FAILED: ${e.message ?: e.javaClass.simpleName}")
