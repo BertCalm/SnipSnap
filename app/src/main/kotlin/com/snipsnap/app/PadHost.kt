@@ -1,12 +1,17 @@
 package com.snipsnap.app
 
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.VoiceAllocator
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -158,5 +163,74 @@ class PadHost(preferredSampleRate: Int) {
     companion object {
         /** How long a kit change waits for the next before its bank is rebuilt. */
         const val RELOAD_DEBOUNCE_MS = 250L
+    }
+}
+
+/**
+ * The hosts that exist right now: at most one per kit folder, opened by the
+ * first holder to ask and closed when the last lets go. Whoever needs the
+ * kit's pads - the PADS grid, GROOVE's roll, the beat while it plays -
+ * takes the host from here, so two of them are never two engines.
+ *
+ * Lazy on purpose. A host is a native stream, and a kit nobody is sounding
+ * should not hold one: SURFACE, SPLIT, ORBIT and the instruments each open
+ * a stream of their own, and the second stream on a device falls back to
+ * the shared path for the rest of its life. So the host is there for the
+ * screens and the beat that need it and gone the moment none do.
+ *
+ * Main thread only. A holder is any object; it is the identity that counts,
+ * and releasing one that holds nothing is nothing.
+ */
+class PadHosts(context: Context) {
+
+    private class Slot(val host: PadHost) {
+        val holders = LinkedHashSet<Any>()
+    }
+
+    private val appContext = context.applicationContext
+    private val slots = HashMap<File, Slot>()
+
+    /** [holder] takes the host for the kit at [dir], opening it if it is the first. Asking again is the same host. */
+    fun acquire(holder: Any, dir: File): PadHost {
+        val slot = slots.getOrPut(dir) { Slot(PadHost(deviceSampleRate(appContext)).also { it.open() }) }
+        slot.holders += holder
+        return slot.host
+    }
+
+    /** The host for [dir] if someone is holding one, without becoming a holder. Cheap enough to call per hit. */
+    fun peek(dir: File): PadHost? = slots[dir]?.host
+
+    /** [holder] lets go of whatever it held. A host with no holders left is closed. */
+    fun release(holder: Any) {
+        val each = slots.entries.iterator()
+        while (each.hasNext()) {
+            val slot = each.next().value
+            if (slot.holders.remove(holder) && slot.holders.isEmpty()) {
+                slot.host.close()
+                each.remove()
+            }
+        }
+    }
+}
+
+/**
+ * The kit's host, held for as long as this call stays in the composition:
+ * taken when it first composes and let go when it leaves, or when the
+ * composition it was part of is thrown away without ever being applied.
+ */
+@Composable
+fun rememberPadHost(hosts: PadHosts, dir: File): PadHost = remember(hosts, dir) { PadLease(hosts, dir) }.host
+
+private class PadLease(private val hosts: PadHosts, dir: File) : RememberObserver {
+    val host: PadHost = hosts.acquire(this, dir)
+
+    override fun onRemembered() {}
+
+    override fun onForgotten() {
+        hosts.release(this)
+    }
+
+    override fun onAbandoned() {
+        hosts.release(this)
     }
 }
