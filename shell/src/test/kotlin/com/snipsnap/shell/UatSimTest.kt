@@ -212,7 +212,7 @@ class UatSimTest {
         note("the app then auto-navigates to KIT — user did not ask for that, but it is what they wanted")
 
         step(taps, "KIT screen. Pads are tappable and sound immediately.")
-        note("kit-open hint fires (up to 3 times): \"${Copy.PAD_SHEET_HINT}\"")
+        note("the strip reads, until a pad is tapped: \"${Copy.PADS_RESTING_LINE}\"")
 
         step(++taps, "Tap EXPORT in the menu row.")
         val wiz = ExportWizardModel(kit, dir)

@@ -162,7 +162,7 @@ class PersonalityTest {
      */
     @Test
     fun `help describes the app rather than a milestone`() {
-        val all = (Places.HELP.values.flatten() + Places.HELP.keys + Copy.HELP_MORE + Copy.HELP_MORE_HEADER)
+        val all = (Places.HELP.values.flatten() + Places.HELP.keys + Copy.HELP_MORE)
             .joinToString(" ")
         for (tag in listOf("M0", "M1", "M2", "M3", "M4", "M5", "SKELETON", "ARRIVES WITH", "NOT RECORDED")) {
             assertFalse(all.contains(tag), "HELP still talks about the build, not the app: found \"$tag\"")
@@ -394,7 +394,7 @@ class PersonalityTest {
         // reflective law exempts it for exactly that reason.
         assertFalse(Copy.SHELF_LEGEND.endsWith("."), "a permanent label is not a sentence: ${Copy.SHELF_LEGEND}")
         // Two legends on two screens must not read as the same instruction.
-        assertTrue(Copy.SHELF_LEGEND != Copy.PAD_SHEET_LEGEND)
+        assertTrue(Copy.SHELF_LEGEND != Copy.PADS_RESTING_LINE)
     }
 
     /**
@@ -515,10 +515,12 @@ class PersonalityTest {
     }
 
     @Test
-    fun `the pad sheet legend names the gesture`() {
-        assertTrue(Copy.PAD_SHEET_LEGEND.contains("HOLD"), Copy.PAD_SHEET_LEGEND)
-        assertTrue(Copy.PAD_SHEET_LEGEND.contains("PAD"), Copy.PAD_SHEET_LEGEND)
-        assertTrue(Copy.PAD_SHEET_LEGEND.length <= 52, "one line under the grid: ${Copy.PAD_SHEET_LEGEND.length}")
+    fun `the pads strip's resting line names the gesture`() {
+        // Was the pad sheet legend under the grid, one line of 52. The strip
+        // above the grid replaced it and draws its resting line on up to two.
+        assertTrue(Copy.PADS_RESTING_LINE.contains("HOLD"), Copy.PADS_RESTING_LINE)
+        assertTrue(Copy.PADS_RESTING_LINE.contains("PAD"), Copy.PADS_RESTING_LINE)
+        assertTrue(Copy.PADS_RESTING_LINE.length <= 2 * 52, "two lines on the strip: ${Copy.PADS_RESTING_LINE.length}")
     }
 
     /**
@@ -604,8 +606,7 @@ class PersonalityTest {
         // says to you once and takes away, so it does not end in a full stop
         // - and every legend must be added here when it is written, or the
         // shouting law will ask it to become a sentence.
-        // PAD_VELOCITY_LEGEND rides with PAD_SHEET_LEGEND: it is the second
-        // line of the same furniture under KIT's grid, on screen
+        // PAD_VELOCITY_LEGEND is furniture under KIT's grid, on screen
         // permanently, not a sentence the app says once.
         // The J10 door label is a button, not a sentence - "EXPORT ▸"
         // carries its own arrow the way every other door label does. (Its
@@ -615,7 +616,7 @@ class PersonalityTest {
         // literals so one law can hold all three bounces to one
         // destination word (prior #25). Labels on buttons, not sentences.
         "GROOVE_BOUNCE_BUTTON", "ORBIT_BOUNCE_BUTTON",
-        "PAD_SHEET_LEGEND", "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "HELP_MORE_HEADER", "ROOMS_LEGEND",
+        "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "ROOMS_LEGEND",
         // The empty shelf's row of places is `Places.PLACES`, not Copy, so it
         // needs no exemption here; FIRST_RUN_PLACES_NOTE, the sentence under
         // it that says what the four verbs mean, keeps its full stop.
@@ -644,9 +645,6 @@ class PersonalityTest {
         // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
-        // The status bar's third cell resting label with no kit open - a
-        // standing chip value like CARD_PICKED above, not a toast said once.
-        "NO_KIT_STATUS",
     )
 
     /**

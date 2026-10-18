@@ -94,14 +94,13 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Never a tab: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    /** A MAKE bench: reached from the INSTRUMENTS list there, left by ◄ MAKE. */
     KEYS("KEYS"),
 
     /**
-     * Nor is this one: reached from KIT's action row on the pad you want
-     * taken apart, and left by its own ◄ KIT. A menu of twelve fits no
-     * phone, and SPLIT is something you do *to a pad* — which is what KIT
-     * is for.
+     * A PADS bench: reached from the stage's action row on the pad you
+     * want taken apart, and left by ◄ PADS. SPLIT is something you do *to a
+     * pad*, which is what PADS is for.
      */
     SPLIT("SPLIT"),
 }
