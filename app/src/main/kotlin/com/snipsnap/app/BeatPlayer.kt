@@ -161,6 +161,13 @@ class BeatPlayer(
         noteBar()
     }
 
+    /**
+     * The program has something to sound. A beat playing over none is a clock
+     * counting nothing - a from-scratch take whose screen was left - and the
+     * dock would say it was playing for silence.
+     */
+    val audible: Boolean get() = clip?.notes?.isNotEmpty() == true
+
     /** Where the needle stands now; RECORD resets it to the top. */
     fun seek(pos: Float) {
         position = pos
@@ -405,6 +412,11 @@ class BeatPlayer(
         try {
             while (currentCoroutineContext().isActive) {
                 withFrameNanos { now ->
+                    // The host's housekeeping rides the beat's frame too: with
+                    // no screen up, nothing else drains the endings of the
+                    // voices this loop starts. Safe beside a screen's own turn
+                    // of it - the endings land on the one allocator either way.
+                    host.pump(now)
                     val dtNanos = BeatClock.dtNanos(now, lastNanos)
                     lastNanos = now
                     val clip = clip

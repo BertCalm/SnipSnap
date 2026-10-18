@@ -25,7 +25,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -33,13 +35,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
@@ -109,6 +116,7 @@ import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
@@ -2918,9 +2926,58 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    // The dock's ▶ / ■ for the beat: a one-shot ask GrooveScreen flips on,
-    // counted so each press is its own event (plan §3.4).
-    var beatPlayRequest by remember { mutableIntStateOf(0) }
+    // The beat (plan §3.4): one clock for the project, kept here rather than
+    // in the screen that draws it, so it plays on when the user leaves BEAT.
+    // The dock's chip is its control; GROOVE draws it, edits its program and
+    // pushes what it shows into it, and rides its clock for RECORD, BOUNCE
+    // and AUDITION. Over the open kit, read live; its settings stand in for
+    // GROOVE's own only when the beat is started with GROOVE never opened.
+    val hosts = remember { PadHosts(context) }
+    val grooveSettings by rememberUpdatedState(BeatPlayer.Settings(grooveProgIndex, grooveSwingPercent, grooveFeel, grooveSeed))
+    val beat = remember {
+        BeatPlayer(hosts = hosts, scope = scope, kitNow = { open }, settings = { grooveSettings })
+    }
+    // A different kit is a different beat: the program, the position and the
+    // hold on the old kit's pads all belonged to it. Also the end of the
+    // app's composition, which is what lets the last host close.
+    DisposableEffect(open?.dir) { onDispose { beat.forget() } }
+    // The bank follows an edit made while no screen is holding the kit's
+    // pads - the pad sheet's TUNE, heard on a beat that is playing under it.
+    LaunchedEffect(open?.kit) { open?.let { beat.kitChanged(it) } }
+    // The clock, driven from here for the life of the app. Keyed as the
+    // screen's own loop always was: the transport, the kit's folder and the
+    // kit itself.
+    LaunchedEffect(beat.playing, open?.dir, open?.kit) { beat.run() }
+    // What the dock reads. The bar is written to the beat only when it
+    // changes, so this follows at bar granularity and never reads the
+    // position, which moves every frame.
+    LaunchedEffect(beat) {
+        snapshotFlow {
+            when {
+                beat.recording || beat.countingIn -> DockModel.Transport.Recording(beat.bar)
+                beat.playing -> DockModel.Transport.Playing(open?.kit?.tempoBpm ?: KitPreview.DEFAULT_BPM, beat.bar)
+                else -> DockModel.Transport.Stopped
+            }
+        }.collect { dock.transport = it }
+    }
+    // Backgrounding the app silences the beat: it is its own audio voice, but
+    // a focus loss is not the only way the app stops being heard.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, beat) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) beat.silence()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // ORBIT, SPLIT, ARRANGE and LOOP each make the sound they show with an
+    // engine of their own, and a second stream on a device falls back to the
+    // shared path for the rest of its life, so the beat stops when one opens
+    // (v1) and is not offered while one is up. The PADS grid has an engine of
+    // its own until it shares the beat's host.
+    val beatMustStop = location.top == Bench.ORBIT || location.top == Bench.SPLIT || location.top == Bench.LOOP ||
+        (location.top == null && location.stage == Stage.BEAT && arrangeOpen && open != null) ||
+        (location.top == null && location.stage == Stage.PADS)
 
     /**
      * After every groove write on BEAT, the project's beat follows: the
@@ -3050,6 +3107,11 @@ fun App(shelf: KitShelf) {
                     // than as a nested `when` per place, so the fifteen
                     // bodies sit where the tab-era `when (screen)` left them.
                     when {
+                        // The beat stops before the screen that makes its own
+                        // sound is composed: this frame draws nothing, the
+                        // effect stops the beat and closes its host, and the
+                        // next frame composes the screen on a free stream.
+                        beatMustStop && beat.playing -> SideEffect { beat.stop() }
                         // SNIPS: a bench over the shelf, or over PADS when an
                         // empty pad's FROM SNIPS ▸ opened it for a slot.
                         top == Bench.SNIPS -> SnipsScreen(
@@ -3809,8 +3871,7 @@ fun App(shelf: KitShelf) {
                                     onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { nav.open(Bench.ORBIT) },
                                     onLoop = { nav.open(Bench.LOOP) },
-                                    playRequest = beatPlayRequest,
-                                    onTransport = { dock.transport = it },
+                                    beat = beat,
                                     onBeatWritten = ::mirrorBeat,
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
                                     hasProject = project != null,
@@ -3937,22 +3998,13 @@ fun App(shelf: KitShelf) {
                     dock = dock,
                     busy = busy,
                     onArm = { captureSheetOpen = true },
-                    // The transport is a button only while BEAT is the stage:
-                    // the clock is GrooveScreen's, so off BEAT there is nothing
-                    // to flip and the region is a readout (Frame.kt's Dock KDoc).
-                    onPlayToggle = if (location.stage == Stage.BEAT && location.top == null) {
-                        ({
-                            // GrooveScreen answers an empty beat itself, but it
-                            // returns early on no kit and on a kit with no pads,
-                            // before its play request is read: those two are
-                            // answered here, so the chip is never silent.
-                            val playable = open
-                            when {
-                                playable == null -> dock.say(Copy.ADD_KIT_FIRST)
-                                playable.kit.pads.isEmpty() -> dock.say(Copy.BEAT_NEEDS_PADS)
-                                else -> beatPlayRequest++
-                            }
-                        })
+                    // The transport is a button wherever a kit is open, and while
+                    // the beat plays: the clock is App's, so the chip is the beat's
+                    // one control from anywhere. It is still offered on BEAT with
+                    // no kit, so its answer can be ADD A KIT first. Not offered
+                    // where the beat cannot run (`beatMustStop`).
+                    onPlayToggle = if (!beatMustStop && (open != null || beat.playing || (location.stage == Stage.BEAT && location.top == null))) {
+                        ({ beat.toggle { dock.say(it) } })
                     } else {
                         null
                     },

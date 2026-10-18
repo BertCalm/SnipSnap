@@ -91,7 +91,6 @@ import com.snipsnap.shell.Audition
 import com.snipsnap.shell.BeatClock
 import com.snipsnap.shell.Chart
 import com.snipsnap.shell.Copy
-import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -124,12 +123,13 @@ import kotlinx.coroutines.withContext
  * persisted through [GrooveEdit.save]. RECORD writes a THIRD kind of
  * change — landing a whole new base clip via `LiveRecord.land` — but
  * still only ever writes `base`/E through those same two paths; there is
- * no fourth persistence route. Playback is a single `withFrameNanos`
- * clock (dt clamped — TAPE's own lesson, see `TapeScreen.kt`) advancing a
- * step position that both programs read: the needle-roll's own scroll
- * and, while [GrooveEdit] is open, the editor overlay's playhead ring;
- * RECORD reads the same clock to interpolate a touch's own timestamp
- * against it (see `recordHit`).
+ * no fourth persistence route. Playback is the beat's single
+ * `withFrameNanos` clock ([BeatPlayer], dt clamped — TAPE's own lesson, see
+ * `TapeScreen.kt`) advancing a step position that both programs read: the
+ * needle-roll's own scroll and, while [GrooveEdit] is open, the editor
+ * overlay's playhead ring; RECORD reads the same clock to interpolate a
+ * touch's own timestamp against it (see `recordHit`). The beat is App's, so
+ * it plays on when this screen is not up.
  */
 
 /** E's debounced disk write — one save per burst of taps, not one per tap (the PAD SHEET lesson). */
@@ -295,14 +295,17 @@ fun GrooveScreen(
     /** LOOP ▸ — the six-track grid, the third bench off BEAT (plan §3.4). */
     onLoop: () -> Unit = {},
     /**
-     * The dock's ▶ / ■ (plan §3.4): a one-shot ask to flip play, counted
-     * like [reloadRequest] so each press is its own event. The clock stays
-     * this screen's — BOUNCE, RECORD and the audition all ride it — so
-     * leaving BEAT stops the beat, and [onTransport] says so.
+     * The project's beat (plan §3.4), which App keeps and the dock's chip
+     * starts and stops from anywhere, so it plays on when this screen is not
+     * up. This screen draws it, edits its program and pushes what it shows
+     * into it, and rides its clock through a tap: RECORD, BOUNCE and the
+     * audition all stand next to the roll, not in the clock.
+     *
+     * Null builds a beat of this screen's own, over a host of its own, that
+     * runs and stops with it: how a screen under test, or any caller with no
+     * App to hand one in, still gets a working roll.
      */
-    playRequest: Int = 0,
-    /** What the dock's transport reads: stopped, playing with the bar, or recording. Reported on every change and as Stopped when this screen leaves. */
-    onTransport: (DockModel.Transport) -> Unit = {},
+    beat: BeatPlayer? = null,
     /** After every save of the kit's grooves, so the project's beat can follow (`DIRECTION_2026_10.md` §2: the kit-side file still backs the per-kit exports). */
     onBeatWritten: () -> Unit = {},
     /** NO_PROJECT_OPEN's own route, for [EmptyGroove] below: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
@@ -426,7 +429,8 @@ fun GrooveScreen(
     // from outrunning the engine's voices, and what chokes a hat against
     // its own mute group here exactly as it would under a finger.
     val engineContext = LocalContext.current
-    val hosts = remember { PadHosts(engineContext) }
+    val ownHosts = remember { PadHosts(engineContext) }
+    val hosts = beat?.hosts ?: ownHosts
     val host = rememberPadHost(hosts, kitDir)
     // Keyed on the kit's identity, not the dir: an edit elsewhere (the pad
     // sheet, a texture) hands back a fresh `kit`, and the bank has to
@@ -444,11 +448,13 @@ fun GrooveScreen(
     // The clock. Playing, the needle's position and the anchor a touch is
     // placed against live in the `BeatPlayer`, not here: this screen draws
     // the beat and edits its program, and pushes what it is showing in
-    // (`setProgram`, below). It is read live: the kit is always the one this
-    // screen was handed, and the settings only stand in for a program this
-    // screen has not pushed yet.
+    // (`setProgram`, below). The one App handed in is the open kit's and
+    // outlives this screen; one built here reads the kit this screen was
+    // handed, with settings that only stand in for a program this screen has
+    // not pushed yet, and is this screen's to run and to stop.
+    val ownsBeat = beat == null
     val entryNow by rememberUpdatedState(entry)
-    val beat = remember(hosts, kitDir) {
+    val beat = beat ?: remember(hosts, kitDir) {
         BeatPlayer(
             hosts = hosts,
             scope = scope,
@@ -811,37 +817,11 @@ fun GrooveScreen(
         base?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
     }
 
-    // The dock's ▶ / ■ (plan §3.4). A request counter rather than a hoisted
-    // `playing`: the clock, BOUNCE's arming and RECORD's count-in all set
-    // `playing` themselves, so the dock asks for a flip and this screen
-    // keeps deciding what a flip means. The first value is the one the
-    // screen composed with, not a press.
-    var lastPlayRequest by remember(kitDir) { mutableIntStateOf(playRequest) }
-    LaunchedEffect(playRequest) {
-        if (playRequest != lastPlayRequest) {
-            lastPlayRequest = playRequest
-            // A running clock is always allowed to stop; a beat with no notes
-            // has nothing to start, and the beat says so itself.
-            beat.toggle(onToast)
-        }
-    }
-    // What the dock reads: the bar advances with the needle, RECORD shows
-    // as ● while a take is going in, and leaving the screen — which stops
-    // the clock, since the clock is this screen's frame loop — says
-    // Stopped, so the dock never claims a beat nobody can hear.
-    val transportBar = beat.bar
-    LaunchedEffect(playing, recording, countingIn, transportBar, kit.tempoBpm) {
-        onTransport(
-            when {
-                recording || countingIn -> DockModel.Transport.Recording(transportBar)
-                playing -> DockModel.Transport.Playing(kit.tempoBpm ?: KitPreview.DEFAULT_BPM, transportBar)
-                else -> DockModel.Transport.Stopped
-            },
-        )
-    }
-    DisposableEffect(kitDir) {
-        onDispose { onTransport(DockModel.Transport.Stopped) }
-    }
+    // The dock's ▶ / ■ (plan §3.4) is App's: it asks the beat directly, and
+    // reads the beat for its transport, so there is nothing for this screen
+    // to relay. Leaving the screen no longer says Stopped - the beat is not
+    // this screen's frame loop, and a beat that goes on playing is not
+    // stopped.
     // Playback and MIDI export cover every note; the roll's seven NAMED
     // lane columns only cover seven of the kit's pads (the design) — a note
     // outside them still draws too, since Fix 3, just under the eighth
@@ -1048,12 +1028,15 @@ fun GrooveScreen(
     // The playback clock is `BeatPlayer.run`: a `withFrameNanos` loop
     // converting elapsed wall time to elapsed steps (TAPE's own dt-clamp
     // lesson against a stale frame gap fast-forwarding the needle), reading
-    // the program this screen last pushed. It is driven from here, keyed on
-    // the transport, the kit's folder and the kit itself: an edit that
-    // reaches this screen while the roll is running restarts it, and
+    // the program this screen last pushed. App drives the one it hands in,
+    // keyed on the transport, the kit's folder and the kit itself; a beat
+    // built here is driven from here with the same keys. An edit that
+    // reaches the clock while the roll is running restarts it, and
     // restarting costs nothing — the beat reads its position back from
     // state, so the needle resumes where it was.
-    LaunchedEffect(beat.playing, kitDir, entry.kit) { beat.run() }
+    if (ownsBeat) {
+        LaunchedEffect(beat.playing, kitDir, entry.kit) { beat.run() }
+    }
 
     // What this screen hangs on the clock: BOUNCE's arming and its pattern-
     // change guard, AUDITION's swap, and the cancel for a bounce the loop's
@@ -1144,16 +1127,17 @@ fun GrooveScreen(
         beat.setProgram(kitDir, currentClip, recordBars * GrooveEdit.STEPS_PER_BAR)
     }
     // Leaving the screen: the hooks come off the clock and a bounce in
-    // flight is abandoned, a take going in is dropped (the beat carries on,
-    // metronome off), and — since this screen owns the beat it built —
-    // the clock stops with it.
+    // flight is abandoned, and a take going in is dropped. The beat carries
+    // on, metronome off — unless it is the one this screen built, which has
+    // no one left to play for and stops with it, or it has nothing to sound
+    // (a from-scratch take's clock, counting bars of nothing).
     DisposableEffect(beat, host) {
         onDispose {
             beat.tap = null
             discardBounce()
             beat.recording = false
             beat.countingIn = false
-            beat.stop()
+            if (ownsBeat || !beat.audible) beat.stop()
         }
     }
 

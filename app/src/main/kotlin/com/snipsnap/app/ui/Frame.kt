@@ -307,15 +307,15 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  * The dock at the foot of every screen, on the LCD surface. Three
  * regions, left to right, each read from [dock]:
  *
- * - **transport**: the project's beat, from GROOVE's own TRANSPORT group.
- *   While BEAT is the stage, [onPlayToggle] is set and the readout is a
- *   button — ▶ to play (what a tap does, so the stopped chip says ▶, not
- *   ■), the running readout to stop, ● while a take goes in; off BEAT the
- *   clock is not running (it is GrooveScreen's frame loop, which BOUNCE,
- *   RECORD and the audition all ride) so a stopped beat draws nothing
- *   there, never a button that would do nothing. Keeping the beat
- *   playing across benches wants that clock pulled out of the screen; the
- *   dock is ready for it, the screen is not yet.
+ * - **transport**: the project's beat. The clock is App's (`BeatPlayer`),
+ *   not a screen's, so the beat plays on wherever the user goes and this
+ *   chip is its one control from anywhere a kit is open: [onPlayToggle] is
+ *   set and the readout is a button — ▶ to play (what a tap does, so the
+ *   stopped chip says ▶, not ■), the running readout to stop, ● while a
+ *   take goes in. It is null where the beat cannot run — a bench that
+ *   makes its own sound (ORBIT, SPLIT, LOOP, ARRANGE, and PADS for now) —
+ *   and there a stopped beat draws nothing, never a button that would do
+ *   nothing.
  * - **capture**: the capture session's one control, which used to be the
  *   shelf's ArmControl and nowhere else. Idle, the light is dark and the
  *   words (`LISTEN · MIC`) are the door to arming — a tap opens the

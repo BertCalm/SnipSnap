@@ -6,8 +6,8 @@ package com.snipsnap.shell
  * draws from this one object.
  *
  * - [transport]: the project's beat, which keeps playing when you leave
- *   BEAT for a pad bench. Today that lives inside GrooveScreen and stops
- *   on a tab change.
+ *   BEAT for a pad bench. The clock is App's (`BeatPlayer`), and writes
+ *   this at bar granularity.
  * - [capture]: the light and counter the shelf's ArmControl shows today,
  *   and nothing else does.
  * - [now]: the line and the standing door. The toast's words land here
