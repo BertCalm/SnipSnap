@@ -50,6 +50,6 @@ sea cycles and the owner's sonic acceptance remain open.
 
 **Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
 first-listen prototype, complete room recipes, passive feedback model and
-playback limits. Private audition deployment and the owner's listening verdict
-are pending. The supplied [`engineering specification`](CHAMBER_SPEC.md)
+playback limits. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+is published; the owner's listening verdict remains pending. The supplied [`engineering specification`](CHAMBER_SPEC.md)
 remains the unchanged proposal; sustained HOLD and the wider library are later work.

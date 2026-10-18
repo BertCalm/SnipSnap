@@ -12,9 +12,10 @@ patch replay and a sixteen-pad prototype kit. The supplied
 Its other four voices, 36-preset library, expanded room editor and sustained
 HOLD operation remain later work, subject to the owner's listening verdict.
 
-The planned [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-is pending deployment verification. Test and numerical results will be recorded
-from the completed run; implementation alone does not establish sonic acceptance.
+The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+is published with **114 clips**, raw and matched playback, mechanism comparisons,
+WAV/recipe downloads and a 16-clip starter pack. The owner's listening verdict
+remains open; numerical checks do not establish sonic acceptance.
 
 ## Controls and complete recipes
 
@@ -128,3 +129,33 @@ task writes generated audio, recipes, diagnostics and a listening page under
 `testkit/chamber-audition/`; those outputs and the prototype kit are ignored by
 Git. The page source is retained with the test resources so regeneration can
 reproduce the listening interface. No phone or MPC hardware acceptance is claimed.
+
+
+## Recorded validation (2026-10-18)
+
+The published audio was rendered from clean engine commit
+`4621959c5b66869f9aaeb04cecb8669a6faabd08`. All **114 requested cases passed**.
+A second, separate JVM render reproduced all **228 raw/matched WAVs byte for
+byte**. The manifest records each recipe and WAV hash; `source-provenance.json`
+and `source/` preserve the rendering source. The manifest's presentation hashes
+identify the published page, whose browser icon was added after audio rendering.
+
+All **35 CHAMBER checks** passed across DSP, geometry, complete patch replay,
+diagnostic PCM replay, saved presets and CLI integration. Six other module
+suites passed **1,344 tests**. The Android debug build and native CI tests passed;
+the full JVM regression gate is tracked in [PR #574](https://github.com/BertCalm/SnipSnap/pull/574).
+
+Default full mixes at MIDI 36, 60 and 84 pass the existing melodic classifier
+guard for both voices. At the maximum-control MIDI-84 comparison, the 4× versus
+8× reference spectral cosines are 0.999972 (HYBRID) and 0.999850 (AQUARIUM),
+with RMS ratios 0.9983 and 0.9603. This comparison includes integer-delay timing
+interference and is not a direct measurement of alias power. Six maximum-control,
+full-velocity probes show no unforced network-energy increase; final/peak energy
+at six seconds is below 0.000058, with unscaled peaks below 0.037.
+
+Chromium browser checks passed at 1440 px desktop and 390 px mobile widths:
+real WAV decoding, one active source, pause/resume/seek, exact finite-clip repeat,
+raw/matched switching, keyboard stop, filters, persistent notes, JSON export and
+downloads. No layout overflow, console errors or failed requests were observed.
+To open the downloaded starter page locally, serve its directory over HTTP
+(for example `python3 -m http.server`); it loads the included JSON manifest.

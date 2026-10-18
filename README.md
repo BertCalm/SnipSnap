@@ -171,7 +171,9 @@ returns into the instruments. Six provisional recipes and complete saved rooms
 work through the CLI and kit renderer, outside the phone picker pending listening.
 Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
 replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
-finite prototype from the proposed HOLD, room editor and larger library.
+finite prototype from the proposed HOLD, room editor and larger library. The
+[published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+contains 114 clips with raw/matched playback and downloadable recipes.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,

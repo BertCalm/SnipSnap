@@ -15,7 +15,9 @@ presets, CLI replay and a sixteen-pad prototype kit are available outside the
 factory roster and phone picker. This stage is finite only: positive HOLD is
 rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
 for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the source
-proposal. Private deployment verification and the owner's listening verdict are pending.
+proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+is published with 114 raw/matched clips and a starter download. The owner's listening
+verdict remains pending.
 
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
 renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry
