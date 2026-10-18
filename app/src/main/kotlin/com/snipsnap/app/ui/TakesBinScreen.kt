@@ -463,7 +463,7 @@ fun TakesBinScreen(
         // everywhere else in this screen, but this one bullet is a specific,
         // deliberate placement call the brief's author made, not a casual
         // restatement of the artboard, so it wins here.
-        TapeText(Copy.TAKES_BIN_RULE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 2)
+        TapeText(Copy.TAKES_BIN_RULE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
 
         Column(
             // The padding lands *after* verticalScroll so it insets the
@@ -617,7 +617,7 @@ private fun TakeRowLine(
                 TapeText("$headline ${if (expanded) "▾" else "▸"}", TapeType.pixelSmall, headlineInk, maxLines = 1)
             }
             Spacer(Modifier.weight(1f))
-            row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink3.tape) }
+            row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }
             if (row.current) {
                 TapeText("NOW", TapeType.pixelSmall, scheme.amber.tape)
             } else if (row.file != null) {
@@ -652,7 +652,7 @@ private fun TakeRowLine(
                         TapeText(c.text, TapeType.pixelSmall, scheme.ink.tape, maxLines = 3)
                     }
                 }
-                TapeText(Copy.TAKES_DIFF_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
+                TapeText(Copy.TAKES_DIFF_CAVEAT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             }
         }
     }

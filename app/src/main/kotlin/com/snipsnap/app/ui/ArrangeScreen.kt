@@ -275,7 +275,7 @@ fun ArrangeScreen(
                 TapeText(
                     "SAME KIT, LAID OUT AS A SONG — TAP A SECTION TO READ WHY IT'S THERE.",
                     TapeType.pixelSmall,
-                    scheme.ink3.tape,
+                    scheme.ink2.tape,
                     Modifier.fillMaxWidth(),
                     maxLines = 2,
                 )

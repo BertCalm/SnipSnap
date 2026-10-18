@@ -1580,13 +1580,13 @@ private fun CutBench(
             }
         }
         if (hits != null) {
-            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (ear in ChopReviewModel.Ear.entries) {
                     SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
-            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }

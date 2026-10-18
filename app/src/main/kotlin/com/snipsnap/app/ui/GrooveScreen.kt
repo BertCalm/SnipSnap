@@ -2332,7 +2332,7 @@ fun GrooveScreen(
                             // `playRequest`. BOUNCE stays here — it prints
                             // what the clock is playing and needs the clip's
                             // own controls beside it.
-                            TapeText("TRANSPORT · PLAY AND STOP ARE IN THE DOCK", TapeType.pixelSmall, scheme.ink3.tape)
+                            TapeText("TRANSPORT · PLAY AND STOP ARE IN THE DOCK", TapeType.pixelSmall, scheme.ink2.tape)
                             // Needs a loop already running, over a clip that
                             // actually has something in it (`currentClip`,
                             // not just `playing` — a from-scratch screen
@@ -2383,7 +2383,7 @@ fun GrooveScreen(
                                 }
                             }
 
-                            TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink3.tape)
+                            TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
                             Row(
                                 Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -2392,7 +2392,7 @@ fun GrooveScreen(
                                 SwingStepper("−", scheme, description = "SWING DOWN") { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                                    TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink3.tape)
+                                    TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
                                 }
                                 SwingStepper("+", scheme, description = "SWING UP") { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
                             }
@@ -2443,7 +2443,7 @@ fun GrooveScreen(
                             // which. The row is now sorted by what the button
                             // does, and the legend names both halves in the
                             // order they sit.
-                            TapeText("WRITE IT OUT · OR TAKE IT FURTHER", TapeType.pixelSmall, scheme.ink3.tape)
+                            TapeText("WRITE IT OUT · OR TAKE IT FURTHER", TapeType.pixelSmall, scheme.ink2.tape)
                             // Batch 3, Task 1: one row of four rather than a
                             // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
                             // label here is five characters or fewer at 9sp, so
@@ -2496,7 +2496,7 @@ fun GrooveScreen(
                             TapeText(
                                 "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
                                 TapeType.pixelSmall,
-                                scheme.ink3.tape,
+                                scheme.ink2.tape,
                                 Modifier.fillMaxWidth(),
                                 maxLines = 2,
                             )
@@ -2612,7 +2612,7 @@ private fun ProgramSelector(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (i in 0 until count) {
                 SegmentButton(
@@ -2707,7 +2707,7 @@ private fun FeelRow(
             // naming the mechanism is both shorter and exactly true:
             // SWING is handed the UNFELT take and YOURS is hand-placed,
             // which is why neither moves.
-            TapeText("RIDES THE TAKE", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("RIDES THE TAKE", TapeType.pixelSmall, scheme.ink2.tape)
         }
         SwingStepper("+", scheme, description = "FEEL LOOSER") { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
     }
@@ -2786,13 +2786,13 @@ private fun AuditionBar(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            TapeText("AUDITION · SWAPS EVERY BAR", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("AUDITION · SWAPS EVERY BAR", TapeType.pixelSmall, scheme.ink2.tape)
             Box(
                 Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp)
                     .tapeClick(label = "CANCEL AUDITION", enabled = !busy, onClick = onCancel),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("✕", TapeType.pixel, scheme.ink3.tape)
+                TapeText("✕", TapeType.pixel, scheme.ink2.tape)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

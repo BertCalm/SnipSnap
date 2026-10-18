@@ -322,7 +322,7 @@ private fun PickingStep(
         TapeText(
             Copy.SPLICE_PICK_HINT,
             TapeType.pixelSmall,
-            scheme.ink3.tape,
+            scheme.ink2.tape,
             Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             maxLines = 2,
         )

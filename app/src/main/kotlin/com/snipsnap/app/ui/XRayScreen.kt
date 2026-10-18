@@ -108,7 +108,7 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
             TapeText(
                 Copy.xrayUnlabeledFields(reading.unlabeledFieldCount),
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.ink2.tape,
                 Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                 maxLines = 2,
             )

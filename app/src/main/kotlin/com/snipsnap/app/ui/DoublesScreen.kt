@@ -128,7 +128,7 @@ fun DoublesScreen(
             TapeText("${clusters.size} ${if (clusters.size == 1) "GROUP" else "GROUPS"}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
         }
 
-        TapeText(Copy.DOUBLES_RULE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
+        TapeText(Copy.DOUBLES_RULE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
 
         // The ring, as a dial you read: three steps, the current one lit,
         // regrouped in memory - the measuring never runs again.
@@ -181,7 +181,7 @@ fun DoublesScreen(
             }
         }
 
-        TapeText(Copy.DOUBLES_TRIM_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
+        TapeText(Copy.DOUBLES_TRIM_CAVEAT, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
     }
 }
 

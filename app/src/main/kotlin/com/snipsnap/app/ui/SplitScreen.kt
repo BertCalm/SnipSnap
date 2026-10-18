@@ -584,7 +584,7 @@ private fun ChannelStrip(
             Modifier.fillMaxWidth().height(18.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("%.2f".format(java.util.Locale.ROOT, strip.level), TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("%.2f".format(java.util.Locale.ROOT, strip.level), TapeType.pixelSmall, scheme.ink2.tape)
         }
         ActionButton("REV", scheme, enabled = enabled, lit = strip.reverse, modifier = Modifier.fillMaxWidth()) { onReverse() }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
