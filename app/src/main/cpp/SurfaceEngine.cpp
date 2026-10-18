@@ -1,5 +1,6 @@
 #include "SurfaceEngine.h"
 
+#include "DspMath.h"
 #include "OboeOutput.h"
 
 #include <android/log.h>
@@ -24,28 +25,6 @@ constexpr float kPi = 3.14159265358979f;
 // (the wet mix) - see renderMono.
 constexpr float kDelayTimeMs = 220.0f;
 constexpr float kDelayFeedback = 0.35f;
-
-/**
- * 0..1, and NaN-safe: the test is written `!(v > 0)` rather than `v < 0`
- * so a NaN lands on 0 instead of sailing through - `NaN < 0` and
- * `NaN > 1` are both false, so the obvious spelling passes NaN on.
- */
-inline float clamp01(float v) { return !(v > 0.0f) ? 0.0f : (v > 1.0f ? 1.0f : v); }
-
-/**
- * A macro arriving from outside (a control frame over JNI, a corner from
- * the sidecar). A non-finite reading is not a value, so it reads as
- * `fallback`; everything else is clamped.
- *
- * This is the door, and it matters more here than in most places: the
- * smoothers and the filter carry state across callbacks, so one NaN does
- * not pass through and leave - `value_ += k * (NaN - value_)` is NaN for
- * ever, `ic1eq_`/`ic2eq_` go with it, and the surface plays NaN for the
- * rest of the session even after the reading comes back. There is a live
- * way in: a gravity sensor that reports NaN feeds TILT, and TILT is
- * resonance in XYZ.
- */
-inline float control01(float v, float fallback) { return std::isfinite(v) ? clamp01(v) : fallback; }
 
 /** 0..1 → 80 Hz .. 16 kHz, exponential, the way a filter knob reads. */
 inline float cutoffHz(float macro) { return 80.0f * std::exp2(clamp01(macro) * 7.6439f); }
@@ -796,6 +775,13 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
             springApWrite_[a] = (idx + 1) % springApBuf_[a].size();
         }
 
+        // No clamp here, unlike PadEngine's bus: a hot source with the echo
+        // and spring both up can pass full scale. The float stream hands
+        // those overs to the platform, which clips them on the way to the
+        // speaker, while the print tap keeps them as they are (WavWriter
+        // clamps whatever is still over when the print is saved). Clamping
+        // or softening here would change the sound, so it is the owner's
+        // call, not a fix.
         out[i] = (gated + wet * echo + springWet * spring) * 0.8f;
     }
 }
