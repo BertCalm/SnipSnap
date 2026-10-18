@@ -239,7 +239,7 @@ object SynthCommand {
         }
         if (instrument) {
             if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE)) throw CliError("only RESIN, REGISTERS and OPENSKY HALO export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
-            if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its speaking attack - use --release to shape the held instrument")
+            if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its authored attack - use --release to shape the held instrument")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
             if (engine == OpenSkyPatch.ENGINE) {
                 if (!OpenSkyPadMaker.supports(OpenSkyVoice.valueOf(voice))) throw CliError("--instrument supports OPENSKY HALO; $voice is a finite sound")
@@ -417,7 +417,7 @@ object SynthCommand {
             }
             RegistersPadMaker.export(name, spec, notes, dir)
             out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
-            out.println("${midis.size} zones, each holds - speaking attack retained, RELEASE ${RegistersPadMaker.secondsLabel(spec.releaseSeconds)}")
+            out.println("${midis.size} zones, each holds - authored attack retained, RELEASE ${RegistersPadMaker.secondsLabel(spec.releaseSeconds)}")
             return 0
         }
         val spec = try {

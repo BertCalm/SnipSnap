@@ -1515,20 +1515,28 @@ fun SynthScreen(
 
                 if (engine == Engine.REGISTERS) {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        val pipe = voice == RegistersVoice.PIPE
                         TapeText(
-                            if (pipe) "PIPE SPEECH, CHIFF AND SOFT SUSTAINED AIR."
-                            else "THREE BEATING REEDS, SHAPED BY BELLOWS.",
+                            when (voice as RegistersVoice) {
+                                RegistersVoice.PIPE -> "PIPE SPEECH, CHIFF AND SOFT SUSTAINED AIR."
+                                RegistersVoice.MUSETTE -> "THREE BEATING REEDS, SHAPED BY BELLOWS."
+                                RegistersVoice.TRANSISTOR -> "SQUARE-WAVE RANKS WITH A TRANSISTOR KEYER."
+                            },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
                         TapeText(
-                            if (pipe) "COLOR: BRIGHTNESS · AIR: FLOW · EDGE: CHIFF"
-                            else "COLOR: REED BODY · AIR: BELLOWS · EDGE: BUZZ",
+                            when (voice as RegistersVoice) {
+                                RegistersVoice.PIPE -> "COLOR: BRIGHTNESS · AIR: FLOW · EDGE: CHIFF"
+                                RegistersVoice.MUSETTE -> "COLOR: REED BODY · AIR: BELLOWS · EDGE: BUZZ"
+                                RegistersVoice.TRANSISTOR -> "COLOR: RANKS · AIR: KEY CLICK · EDGE: DRIVE"
+                            },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
                         TapeText(
-                            if (pipe) "SPREAD: ENSEMBLE · MOTION: TREMULANT"
-                            else "SPREAD: BEATING · MOTION: VIBRATO + SWELL",
+                            when (voice as RegistersVoice) {
+                                RegistersVoice.PIPE -> "SPREAD: ENSEMBLE · MOTION: TREMULANT"
+                                RegistersVoice.MUSETTE -> "SPREAD: BEATING · MOTION: VIBRATO + SWELL"
+                                RegistersVoice.TRANSISTOR -> "SPREAD: DETUNED RANKS · MOTION: VIBRATO"
+                            },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
                         TapeText(

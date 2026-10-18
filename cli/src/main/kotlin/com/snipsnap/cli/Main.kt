@@ -74,7 +74,7 @@ object Cli {
         |                        render factory presets to wav, to hear them
         |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY: --midi N --velocity 0..1)
         |                        (WICK: provisional PLUCK/BUBBLE; --midi 24..84 --velocity 0..1)
-        |                        (REGISTERS: PIPE/MUSETTE; --instrument [--release S])
+        |                        (REGISTERS: PIPE/MUSETTE/TRANSISTOR; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
         |                        (OSPREY SWELL: --seed N --seconds .25..12 --model 1|2|3;

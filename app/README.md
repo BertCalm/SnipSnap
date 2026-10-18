@@ -95,11 +95,13 @@ complete source timbre. Its preview preserves stereo; HALO MAKE INSTRUMENT
 renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
 
-REGISTERS adds PIPE and MUSETTE, seven controls, six published presets and
-MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
-remains provisional. Saved audition recipes retain note, velocity and model.
-Instrument samples preserve the finite attack before a verified held loop and
-export through the existing MPC 2/MPC 3 and phone keygroup package.
+REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
+MAKE INSTRUMENT. PIPE/MUSETTE retain the working audition baseline; TRANSISTOR
+adds electronic keying, square-wave ranks, vibrato and drive and awaits listening
+review. AIR controls TRANSISTOR's brief key-click. Saved audition recipes retain
+note, velocity and model; existing presets stay on model 3 and TRANSISTOR uses
+model 4. Instrument samples preserve the finite attack before a verified held
+loop and export through the existing MPC 2/MPC 3 and phone keygroup package.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
 and dry starter also await owner listening review.
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps

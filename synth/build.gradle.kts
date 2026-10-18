@@ -119,6 +119,18 @@ tasks.register<JavaExec>("generateRegistersAudition") {
     (project.findProperty("registersR2Baseline") ?: project.findProperty("registersPrevious"))?.let { args("--previous=$it") }
 }
 
+/** Extend the exact published R3 archive with dry model-4 combo-organ evidence. */
+tasks.register<JavaExec>("generateRegistersTransistorAudition") {
+    group = "distribution"
+    description = "Preserve published REGISTERS R3 audio and reviews, then append TRANSISTOR PCM24 audition cases."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersTransistorAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r4")
+    project.findProperty("registersR3Baseline")?.toString()?.let { args("--baseline=$it") }
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"

@@ -16,21 +16,23 @@
     'note-filter', 'macro-filter', 'macro-filter-wrap', 'reset-filters', 'clip-grid',
     'empty-filter', 'export-notes', 'manifest-revision', 'revision-study',
     'revision-pair', 'revision-description', 'revision-original', 'revision-revised', 'revision-eyebrow', 'revision-title',
-    'legacy-history', 'legacy-count', 'legacy-list', 'library-filters', 'listen-pipe', 'listen-musette'
+    'legacy-history', 'legacy-count', 'legacy-list', 'library-filters', 'listen-pipe', 'listen-musette', 'listen-transistor'
   ].map((id) => [id, $(id)]));
+  const voices = ['PIPE', 'MUSETTE', 'TRANSISTOR'];
   const nativeAudio = ui['native-audio'];
   const verdictButtons = [...document.querySelectorAll('[data-verdict]')];
   const sectionNames = {
     identities: 'First listen', velocity: 'Velocity', sweeps: 'Controls',
-    loops: 'Held tones', references: 'Organ references', comparisons: 'Airflow · R2 / R3',
+    loops: 'Held tones', presets: 'TRANSISTOR presets', references: 'Organ references', comparisons: 'Airflow · R2 / R3',
     'chiff-history': 'Chiff history · R1 / R2'
   };
   const sectionCopy = {
-    identities: 'PIPE and MUSETTE at three pitches, with restrained and expressive gestures. Start here, then compare the same pitch across voices.',
+    identities: 'PIPE, MUSETTE and TRANSISTOR at three pitches, with restrained and expressive gestures. Start here, then compare the same pitch across voices.',
     velocity: 'A fixed patch at different velocities. Listen for a change in speech and body as well as level.',
-    sweeps: 'One control moves at a time. Compare low, default, and high settings to hear what each gesture contributes.',
+    sweeps: 'One control moves at a time. Compare low, default, and high settings. On TRANSISTOR, AIR shapes the keyer transient, EDGE adds drive and MOTION adds vibrato.',
     loops: 'Settled, onset-free tones. The main player repeats the exact held region; listen for the seam and the persistence of the voice.',
-    references: 'Existing SnipSnap organ voices at matching pitches. Compare what PIPE and MUSETTE add to the kit.',
+    presets: 'Three TRANSISTOR registrations: the core voice, a cleaner chord sound and a driven garage-organ sound. Compare their keying, rank color, vibrato and drive.',
+    references: 'Existing SnipSnap organ voices at matching pitches. Compare what PIPE, MUSETTE and TRANSISTOR add to the kit.',
     comparisons: 'Twelve PIPE pairs: three pitches with two gestures, three AIR settings, two held tones, and a velocity example. Current R2 and With airflow R3 share the accepted attack; compare the sustained body.',
     'chiff-history': 'The earlier twelve finite PIPE comparisons, preserved: Original R1 and More chiff R2 at three pitches, three velocities, and three EDGE settings.'
   };
@@ -477,7 +479,7 @@
       ? `${versionLabel} · ${clip.label.slice(clip.comparisonLabel.length + 3)}` : clip.label;
     ui['player-detail'].textContent = clip.description || '';
     ui['player-voice'].textContent = clip.voice;
-    ['PIPE', 'MUSETTE'].forEach((voice) => ui[`listen-${voice.toLowerCase()}`].setAttribute('aria-pressed', String(clip.voice === voice)));
+    voices.forEach((voice) => ui[`listen-${voice.toLowerCase()}`].setAttribute('aria-pressed', String(clip.voice === voice)));
     ui['selected-tags'].textContent = `${clip.noteName} · ${isHeld(clip) ? 'SETTLED' : clip.gesture || `VEL ${nice(clip.velocity)}`}`;
     ui['wav-link'].href = clipUrl(clip);
     ui['wav-link'].download = `${clip.id}-${state.mode}.wav`;
@@ -494,6 +496,7 @@
       ? 'Listen for a clean wrap, a stable pitch, and a body worth holding.'
       : clip.voice === 'MUSETTE' ? 'Listen for moving reeds, a useful bellows gesture, and a clear root.'
           : clip.voice === 'PIPE' ? 'Listen to the pipe’s first speech, its wind, and the body finding its tone.'
+          : clip.voice === 'TRANSISTOR' ? 'Listen for fast keying, distinct ranks, vibrato and drive. AIR shapes the keyer transient.'
           : 'Use this existing voice as a reference. What does the prototype add?';
     renderDetails(clip);
     restoreReview();
@@ -594,7 +597,7 @@
     ui['voice-filter'].value = voice;
     ui['note-filter'].value = ''; ui['macro-filter'].value = '';
     ui['compare-a'].value = identityClip('PIPE')?.id || clip.id;
-    ui['compare-b'].value = identityClip('MUSETTE')?.id || clip.id;
+    ui['compare-b'].value = clip.voice === 'PIPE' ? identityClip('TRANSISTOR')?.id || clip.id : clip.id;
     selectClip(clip);
     renderLibrary();
     if (play) playSelected();
@@ -614,7 +617,7 @@
         ui['voice-filter'].value = ''; ui['note-filter'].value = ''; ui['macro-filter'].value = '';
         const pairs = sectionPairs();
         if (pairs.length) selectRevisionPair(pairs.find((pair) => pair.id === state.pairId) || pairs[0]);
-        else if (section.id === 'identities') selectClip(identityClip(state.selected?.voice === 'MUSETTE' ? 'MUSETTE' : 'PIPE'));
+        else if (section.id === 'identities') selectClip(identityClip(voices.includes(state.selected?.voice) ? state.selected.voice : 'TRANSISTOR'));
         renderLibrary();
       });
       ui['section-tabs'].append(button);
@@ -633,15 +636,15 @@
         ui[`compare-${slot}`].append(group);
       });
     });
-    const first = clips.find((clip) => clip.section === 'identities' && clip.voice === 'PIPE' && clip.note === 60 && clip.gesture === 'restrained') || clips[0];
-    const second = clips.find((clip) => clip.section === 'identities' && clip.voice === 'MUSETTE' && clip.note === first.note && clip.gesture === 'restrained') || clips[1] || first;
+    const first = identityClip('TRANSISTOR') || identityClip('PIPE') || clips[0];
+    const second = identityClip('PIPE') || clips[1] || first;
     ui['compare-a'].value = first.id; ui['compare-b'].value = second.id;
-    if (['PIPE', 'MUSETTE'].includes(requestedVoice) && identityClip(requestedVoice)) openIdentityVoice(requestedVoice, false);
+    if (voices.includes(requestedVoice) && identityClip(requestedVoice)) openIdentityVoice(requestedVoice, false);
     else selectClip(first);
     renderLibrary();
     reviewedCount();
     renderLegacyHistory();
-    if (['PIPE', 'MUSETTE'].includes(requestedVoice) && window.location.hash === '#listen') {
+    if (voices.includes(requestedVoice) && window.location.hash === '#listen') {
       requestAnimationFrame(() => $('listen').scrollIntoView({ block: 'start' }));
     }
   }
@@ -739,7 +742,8 @@
       } catch (_) { state.notes = {}; state.storageAvailable = false; }
       loadLegacyNotes();
       ui['player-format'].textContent = `${manifest.channels === 1 ? 'MONO' : `${manifest.channels || 1} CH`} / ${nice((manifest.sampleRate || 44100) / 1000)} kHz`;
-      ui['manifest-revision'].textContent = `Revision ${manifest.revision || 1} · ${manifest.clips.length} offline renders${manifest.previous ? ' · R1 & R2 preserved' : manifest.baseline ? ' · original R1 preserved' : ''} · awaiting sonic approval`;
+      const preserved = [...new Set(state.legacyAuditions.map((audition) => displayRevision(audition.revision)))].join(', ');
+      ui['manifest-revision'].textContent = `${displayRevision(manifest.revision || 1)} · ${manifest.clips.length} renders${preserved ? ` · ${preserved} preserved` : ''} · TRANSISTOR awaiting a listening verdict`;
       ui['load-status'].hidden = true; ui['loaded-content'].hidden = false;
       buildLibrary();
     } catch (error) {
@@ -792,7 +796,7 @@
   }
 
   ui['retry-load'].addEventListener('click', loadManifest);
-  ['PIPE', 'MUSETTE'].forEach((voice) => ui[`listen-${voice.toLowerCase()}`].addEventListener('click', () => openIdentityVoice(voice)));
+  voices.forEach((voice) => ui[`listen-${voice.toLowerCase()}`].addEventListener('click', () => openIdentityVoice(voice)));
   ui['revision-pair'].addEventListener('change', () => {
     const previous = allPairs().find((pair) => pair.id === state.pairId);
     const version = state.selected?.id === previous?.originalId ? 'original' : 'revised';
