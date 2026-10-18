@@ -135,6 +135,7 @@ import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Location
 import com.snipsnap.shell.Look
+import com.snipsnap.shell.Names
 import com.snipsnap.shell.Place
 import com.snipsnap.shell.ShelfModel
 import com.snipsnap.shell.Stage
@@ -2896,11 +2897,16 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    /** NEW PROJECT ▸: an empty project, opened on PADS with no kit, where the switcher offers the shelf. */
+    /**
+     * NEW PROJECT ▸: an empty project, opened on PADS with no kit, where the switcher offers the shelf.
+     * Its name is a roll ([Names.roll]) against the projects already on the shelf, not "New Project 2".
+     */
     fun newProject() {
         scope.launch {
             val p = try {
-                withContext(Dispatchers.IO) { shelfModel.newProject() }
+                withContext(Dispatchers.IO) {
+                    shelfModel.newProject(Names.roll(taken = shelfModel.projects().map { it.name }.toSet()))
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

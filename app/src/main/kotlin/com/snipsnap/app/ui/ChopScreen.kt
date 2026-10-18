@@ -1087,13 +1087,14 @@ private fun ChopContent(
         // the asymmetry, not the omission: one of these two buttons was
         // already doing it.
         //
-        // `freshName` is a `File.exists()` walk - one stat, plus one more
-        // per kit already holding the name. It runs once per visit to
-        // this screen rather than per recomposition, which is also the
-        // honest granularity: a name that changed under a chip tap would
-        // be a readout, not a promise.
-        val base = "${sourceFile.nameWithoutExtension} CHOP"
-        val plannedName = remember(shelf, base) { shelf.freshName(base) }
+        // The name is a roll (`KitShelf.rolledName`: one word from
+        // `Names.WORDS` that no shelf folder holds), no longer the source's
+        // name with CHOP on it. It is a directory listing and a
+        // `File.exists()` walk, so it runs once per visit to this screen
+        // rather than per recomposition, which is also the honest
+        // granularity: a name that changed under a chip tap would be a
+        // readout, not a promise.
+        val plannedName = remember(shelf, sourceFile) { shelf.rolledName() }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             SecondaryButton(
@@ -1177,7 +1178,7 @@ private fun ChopContent(
                                 // into somebody else's; showing the planned
                                 // name is not a licence to write over
                                 // whatever now holds it.
-                                val kitName = if (File(shelf.root, planned).exists()) shelf.freshName(base) else planned
+                                val kitName = if (File(shelf.root, planned).exists()) shelf.rolledName() else planned
                                 val kitDir = File(shelf.root, kitName)
                                 val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
                                 if (teachEnabled) {
@@ -1194,7 +1195,7 @@ private fun ChopContent(
                                 // THE BEAT YOU SANG (docs/CHOP_CONTROLS.md §10): a
                                 // hummed chop's own timing goes on as the new
                                 // kit's groove, on the CLASSIC layout SEND used.
-                                val sung = if (!isMelodic && !isFold) Hum.groove(current, base) else null
+                                val sung = if (!isMelodic && !isFold) Hum.groove(current, kitName) else null
                                 sung?.let { Hum.landGroove(kitDir, it) }
                                 KitShelf.Entry(kitDir, builder.kit) to sung?.bars
                             }
