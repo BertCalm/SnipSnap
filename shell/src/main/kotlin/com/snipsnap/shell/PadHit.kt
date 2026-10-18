@@ -107,9 +107,10 @@ object PadHit {
      * own level, the far side fading as pan leaves it. This is a linear
      * balance law, not constant power: both sides sit at full level at
      * centre, and a hard pan keeps one side at full level and silences the
-     * other, so a centred pad is about 3 dB louder in total than a panned
-     * one. It is the same map the SoundPool player used, so a kit sounds as
-     * it did. (KitPreview's audition uses an equal-power law instead.)
+     * other, so a centred pad is about 3 dB louder in total than a
+     * hard-panned one (the gap shrinks to nothing as pan returns to centre).
+     * It is the same map the SoundPool player used, so a kit sounds as it
+     * did. (KitPreview's audition uses an equal-power law instead.)
      */
     fun gains(level: Float, pan: Float, velocity: Float): Pair<Float, Float> {
         val v = velocity.coerceIn(0f, 1f)

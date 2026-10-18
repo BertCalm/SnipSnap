@@ -477,9 +477,11 @@ class PadEngine(preferredSampleRate: Int) {
      * taken under the lock, re-checking [open] each time so a [close]
      * during the wait is safe, but the wait in between polls [printState]
      * outside it, so the main thread's per-frame calls ([drainEnded],
-     * [needsRestart], hits) go on while the take lands. Assumes nothing
-     * re-arms the print during the wait, which holds because BOUNCE is
-     * offered again only once the last take has landed.
+     * [needsRestart], hits) go on while the take lands. A re-arm during
+     * the wait (GrooveScreen's discardBounce re-offers BOUNCE before its own
+     * stop returns) is safe: [armPrint] is refused while the print is still
+     * stopping, and once it is done a new print replaces the unwanted take,
+     * which this call then sees is no longer DONE and leaves alone.
      */
     fun stopPrint(): Snip? {
         synchronized(this) {

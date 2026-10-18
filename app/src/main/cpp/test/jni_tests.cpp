@@ -790,7 +790,11 @@ TEST(jni_request_stop_print_returns_at_once_and_stop_print_then_takes_the_print)
     const size_t frames = pads->printFrames();
     CHECK(frames > 0);
 
+    // No callback runs during the request, so a blocking implementation
+    // (the bridge's own bounded wait) would sit out its whole 500 ms here.
+    const auto asked = std::chrono::steady_clock::now();
     Java_com_snipsnap_app_NativePads_requestStopPrint(e, nullptr, h);
+    CHECK(std::chrono::steady_clock::now() - asked < std::chrono::milliseconds(100));
     CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
           static_cast<jint>(PrintBuffer::State::Stopping));
     pull(pads, 256);  // the callback makes its last pass and flips to Done

@@ -30,6 +30,7 @@ class SurfaceEngine(preferredSampleRate: Int) {
     private val open get() = handle != 0L
 
     /** The rate the device actually gave us; a printed sample carries it. */
+    @get:Synchronized
     val sampleRate: Int get() = if (open) NativeSurface.sampleRate(handle) else preferredRate
 
     private val preferredRate = preferredSampleRate

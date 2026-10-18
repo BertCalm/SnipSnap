@@ -343,8 +343,8 @@ object Velocity {
      * FLOTILLA renders velocity itself, with its saved MIDI note.
      *
      * Returns null for a voice that takes velocity through [brightnessSpec] or
-     * [soften] instead. Every engine has its own arm and there is no `else`, so
-     * a new [Patch] does not compile until someone decides which way its
+     * [soften] instead. Every engine is named in an arm and there is no `else`,
+     * so a new [Patch] does not compile until someone decides which way its
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {

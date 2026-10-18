@@ -99,8 +99,9 @@ object SfzImporter {
         // Nothing touches the disk until the kit is known good. Copying each
         // sample as its pad was read used to leave WAVs behind when the import
         // then failed (and, with overwrite, replaced a kit's samples under a
-        // kit.json that still named the old ones); a pad skipped partway left
-        // its sample as an orphan. Only samples a landed pad names are copied.
+        // kit.json that still named the old ones); a pad skipped partway, or a
+        // velocity layer dropped past the four kept, left its sample as an
+        // orphan. Only samples a landed pad names are copied.
         val named = pads.flatMapTo(HashSet()) { p -> listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile } }
         kitDir.mkdirs()
         for ((file, source) in planned) {
