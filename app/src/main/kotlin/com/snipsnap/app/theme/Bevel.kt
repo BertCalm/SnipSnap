@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.unit.Dp
@@ -175,29 +176,44 @@ fun Modifier.etchedGroove(scheme: Scheme): Modifier = this.drawBehind {
  * The dark surface where sound lives, scanlines included: a 1px line of
  * 30% black every 3px, drawn over the content so text glows through it
  * the way the prototypes render.
+ *
+ * Under the modern look the stripe goes behind instead: a raised chip
+ * inside an LCD (FULL, + KIT, RECORD, START YOURS, ORBIT) is a thing laid
+ * on the glass, and a button with lines through its face reads as dirty
+ * rather than as lit. The panel's own text is not struck through either,
+ * which at the modern look's 12 sp floor is a kindness too.
  */
 fun Modifier.lcdPanel(
     scheme: Scheme,
     radius: Dp = 6.dp,
-): Modifier = this
-    .background(scheme.lcd.tape, RoundedCornerShape(if (scheme.modern) MODERN_RADIUS else radius))
-    .drawWithContent {
-        drawContent()
-        val step = 3.dp.toPx()
-        val line = 1.dp.toPx()
-        // The modern stripe is the sun's: 18 % rather than 30 %, so small
-        // text under it loses a third of a stop less (DIRECTION §5).
-        val alpha = if (scheme.modern) 0.18f else 0.30f
-        var y = 0f
-        while (y < size.height) {
-            drawRect(
-                color = Color.Black.copy(alpha = alpha),
-                topLeft = Offset(0f, y),
-                size = Size(size.width, line),
-            )
-            y += step
+): Modifier {
+    val glass = this.background(scheme.lcd.tape, RoundedCornerShape(if (scheme.modern) MODERN_RADIUS else radius))
+    // The modern stripe is the sun's: 18 % rather than 30 %, so small
+    // text under it loses a third of a stop less (DIRECTION §5).
+    val alpha = if (scheme.modern) 0.18f else 0.30f
+    return if (scheme.modern) {
+        glass.drawBehind { drawScanlines(alpha) }
+    } else {
+        glass.drawWithContent {
+            drawContent()
+            drawScanlines(alpha)
         }
     }
+}
+
+private fun DrawScope.drawScanlines(alpha: Float) {
+    val step = 3.dp.toPx()
+    val line = 1.dp.toPx()
+    var y = 0f
+    while (y < size.height) {
+        drawRect(
+            color = Color.Black.copy(alpha = alpha),
+            topLeft = Offset(0f, y),
+            size = Size(size.width, line),
+        )
+        y += step
+    }
+}
 
 /**
  * OILSLICK's signature sweep (titlebar, window frame, primary-button
