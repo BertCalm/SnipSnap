@@ -1,4 +1,5 @@
 build/
+testkit/nacre-audition/
 testkit/overlap-audition/
 testkit/overlap-audition-r1/
 testkit/confluence-audition/
@@ -37,6 +38,7 @@ app/.cxx/
 # lives on the artifact, so it is never committed.
 design/*/*.html
 !design/confluence-audition/index.html
+!design/nacre-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition

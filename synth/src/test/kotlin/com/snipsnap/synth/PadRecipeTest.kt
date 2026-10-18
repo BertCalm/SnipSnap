@@ -73,6 +73,7 @@ class PadRecipeTest {
         // FLOCK also keeps its provisional recipes outside the factory preset roster.
         FlockPatch("Flock Test", FlockVoice.RIBBON, mapOf("FLOW" to 0.65f, "HOLD" to 0f), midi = 55, velocity = 0.6f, seed = 7),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
+        NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
     )
 
     @Test

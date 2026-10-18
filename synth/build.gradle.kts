@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** First finite Nacre listening proof: two harps, current, coral and seaweed. */
+tasks.register<JavaExec>("generateNacreAudition") {
+    group = "distribution"
+    description = "Render NACRE's finite duet, control and causal comparisons with recipes and a listening page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-audition")
+}
+
 /** Finite OVERLAP proof: twelve real Kotlin renders, replayable recipes and the listening bench. */
 tasks.register<JavaExec>("generateOverlapAudition") {
     group = "distribution"
