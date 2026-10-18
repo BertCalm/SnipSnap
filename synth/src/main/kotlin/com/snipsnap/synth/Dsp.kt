@@ -354,48 +354,31 @@ internal object Dsp {
     /**
      * Biquad section with coefficients from the RBJ Audio EQ Cookbook —
      * the community-standard shelf and bell formulas (public-domain math,
-     * indexed by every DSP resource list worth reading).
-     *
-     * Transposed direct form II with Double coefficients and state,
-     * not the Float direct form I this used to be. At low centre
-     * frequencies on oversampled renders (a 60–100 Hz shelf at
-     * 176.4 kHz) DF-I's stored outputs sit near the input's own
-     * magnitude with a1 ≈ −2, so the feedback sum cancels
-     * catastrophically in Float — and the coefficients themselves,
-     * computed in Float, carry the same cancellation before a single
-     * sample runs. Measured against a double-precision reference, the
-     * old form was off by up to 0.25 dB (60 Hz/+9 dB shelf probed at
-     * 20 Hz, BiquadTest); the Double DF-II-T form holds the promised
-     * gain to well under a tenth of a dB on the same probes. Nothing
-     * here is real-time (see the toolbox's own header), so the Double
-     * arithmetic costs nothing that matters. Same transfer function;
-     * every render through here shifts in its low-order bits and, at
-     * the extreme low end, audibly toward correct.
+     * indexed by every DSP resource list worth reading). Direct form I.
      */
     class Biquad {
-        private var b0 = 1.0; private var b1 = 0.0; private var b2 = 0.0
-        private var a1 = 0.0; private var a2 = 0.0
-        private var s1 = 0.0; private var s2 = 0.0
+        private var b0 = 1f; private var b1 = 0f; private var b2 = 0f
+        private var a1 = 0f; private var a2 = 0f
+        private var x1 = 0f; private var x2 = 0f; private var y1 = 0f; private var y2 = 0f
 
         fun process(x: Float): Float {
-            val xd = x.toDouble()
-            val y = b0 * xd + s1
-            s1 = b1 * xd - a1 * y + s2
-            s2 = b2 * xd - a2 * y
-            return y.toFloat()
+            val y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+            x2 = x1; x1 = x
+            y2 = y1; y1 = y
+            return y
         }
 
-        private fun set(b0: Double, b1: Double, b2: Double, a0: Double, a1: Double, a2: Double) {
+        private fun set(b0: Float, b1: Float, b2: Float, a0: Float, a1: Float, a2: Float) {
             this.b0 = b0 / a0; this.b1 = b1 / a0; this.b2 = b2 / a0
             this.a1 = a1 / a0; this.a2 = a2 / a0
         }
 
         fun lowShelf(f0: Float, gainDb: Float, rate: Int = RATE) {
-            val a = Math.pow(10.0, gainDb / 40.0)
+            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
             val w0 = (2.0 * PI * f0 / rate)
-            val cw = kotlin.math.cos(w0)
-            val sw = kotlin.math.sin(w0)
-            val alpha = sw / 2.0 * kotlin.math.sqrt(2.0) // shelf slope S = 1
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / 2f * kotlin.math.sqrt(2f) // shelf slope S = 1
             val sqA = kotlin.math.sqrt(a)
             set(
                 a * ((a + 1) - (a - 1) * cw + 2 * sqA * alpha),
@@ -408,11 +391,11 @@ internal object Dsp {
         }
 
         fun highShelf(f0: Float, gainDb: Float, rate: Int = RATE) {
-            val a = Math.pow(10.0, gainDb / 40.0)
+            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
             val w0 = (2.0 * PI * f0 / rate)
-            val cw = kotlin.math.cos(w0)
-            val sw = kotlin.math.sin(w0)
-            val alpha = sw / 2.0 * kotlin.math.sqrt(2.0)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / 2f * kotlin.math.sqrt(2f)
             val sqA = kotlin.math.sqrt(a)
             set(
                 a * ((a + 1) + (a - 1) * cw + 2 * sqA * alpha),
@@ -427,10 +410,10 @@ internal object Dsp {
         /** Constant-peak-gain bandpass — the RBJ cookbook's formant workhorse. */
         fun bandpass(f0: Float, q: Float, rate: Int = RATE) {
             val w0 = (2.0 * PI * f0 / rate)
-            val cw = kotlin.math.cos(w0)
-            val sw = kotlin.math.sin(w0)
-            val alpha = sw / (2.0 * q)
-            set(alpha, 0.0, -alpha, 1 + alpha, -2 * cw, 1 - alpha)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / (2f * q)
+            set(alpha, 0f, -alpha, 1 + alpha, -2 * cw, 1 - alpha)
         }
 
         /**
@@ -441,18 +424,18 @@ internal object Dsp {
          */
         fun allpass(f0: Float, q: Float, rate: Int = RATE) {
             val w0 = (2.0 * PI * f0 / rate)
-            val cw = kotlin.math.cos(w0)
-            val sw = kotlin.math.sin(w0)
-            val alpha = sw / (2.0 * q)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / (2f * q)
             set(1 - alpha, -2 * cw, 1 + alpha, 1 + alpha, -2 * cw, 1 - alpha)
         }
 
         fun peaking(f0: Float, gainDb: Float, q: Float, rate: Int = RATE) {
-            val a = Math.pow(10.0, gainDb / 40.0)
+            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
             val w0 = (2.0 * PI * f0 / rate)
-            val cw = kotlin.math.cos(w0)
-            val sw = kotlin.math.sin(w0)
-            val alpha = sw / (2.0 * q)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / (2f * q)
             set(
                 1 + alpha * a,
                 -2 * cw,

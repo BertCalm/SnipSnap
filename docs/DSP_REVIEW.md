@@ -90,14 +90,24 @@ place. Bit-identical — Loudness never mutated its input.
   seeded from it and goldens/classifications pin the exact sequence.
   A xorshift/PCG swap is a re-voicing of every noise-bearing preset:
   audition-gated, not a correctness fix.
-- **`Dsp.Biquad` was direct-form I in `Float`.** Fixed in the follow-up
-  pass: probed first (Float DF-I off by up to 0.25 dB at a 60 Hz/+9 dB
-  shelf at 176.4 kHz), then converted to transposed direct form II with
-  Double coefficients and state — the probe showed the Float coefficient
-  computation itself carried much of the error, so structure alone was
-  not enough. `BiquadTest` pins the promised gain to <0.05 dB there.
-  Also in the follow-up: `WavWriter` gained an opt-in `truePeakCeiling`
-  (null = the historical bytes), the export-level door for `TruePeak`.
+- **`Dsp.Biquad` is direct-form I in `Float` — probed, attempted, and
+  deliberately NOT landed.** The follow-up pass measured the expected
+  accuracy gain (Float DF-I off by up to 0.25 dB at a 60 Hz/+9 dB shelf
+  at 176.4 kHz; Double coefficients + DF-II transposed state holds
+  <0.05 dB), implemented it, and ran the synth suite: exactly four
+  assertions failed, all character goldens in resonant Biquad users —
+  and one is not bit drift. Gyre's BODY band movement, a threshold the
+  owner set by listening ("Body doesn't make an impact"), fell from
+  the measured 8.1–14.4 dB range to 4.25 dB: the correctly-rounded
+  coefficients re-voice the box bands the owner tuned. Terra's cavity
+  golden moved 1.1 dB and Valve's V1-equivalence RMS (tolerance 1e-5)
+  moved with them. Conclusion: this is an audition-gated re-baseline
+  of at least Gyre, Terra and Valve, not a correctness fix that can
+  land silently — the conversion patch is the easy part; it should
+  arrive with re-listened BODY/TOUCH thresholds and re-measured
+  goldens, in that order. Landed instead in the follow-up:
+  `WavWriter` gained an opt-in `truePeakCeiling` (null = the
+  historical bytes), the export-level door for `TruePeak`.
 - **`Pitch.detect` autocorrelation is O(n·lag).** Fine at its 250 ms
   window (~10⁷ ops); an FFT/NSDF rewrite only pays off if windows
   grow, and risks re-opening the octave-error behaviour its local-peak
