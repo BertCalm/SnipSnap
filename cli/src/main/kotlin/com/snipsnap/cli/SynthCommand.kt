@@ -29,6 +29,7 @@ import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.Patches
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -113,6 +114,10 @@ import kotlin.random.Random
  * OPENSKY also accepts a saved `--patch <json>`, `--gate S`, and `--dry` /
  * `--wet`. The complete source timbre survives those overrides; OPENSKY HALO
  * can become a held instrument with `--instrument [--release S]`.
+ * CONTOUR accepts a saved `--patch <json>` and `--macros BODY=.2,EDGE=.8`.
+ * Macro names are case-insensitive and values are finite 0..1. Complete saved
+ * table/envelope configurations survive macro, note and velocity overrides.
+ * TUNE in --macros cannot combine with --midi; choose one pitch control.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * VENT accepts `--seed N` for its initial trajectory. Its provisional
  * starting recipes are available here while remaining outside the factory roster.
@@ -123,9 +128,12 @@ import kotlin.random.Random
 object SynthCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
+        if (args.count { it.substringBefore('=') == "--macros" } > 1) {
+            throw CliError("--macros supplies one comma-separated list; supply it only once")
+        }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros"),
             boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -134,9 +142,12 @@ object SynthCommand {
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
 
-        val skyFlags = listOf("--patch", "--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
+        val skyFlags = listOf("--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
+        }
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY and CONTOUR, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -148,14 +159,15 @@ object SynthCommand {
             opts.has("--wet") -> true
             else -> null
         }
-        val savedSky = opts["--patch"]?.let { path ->
+        val savedPatch = opts["--patch"]?.let { path ->
             if (opts.has("--all") || opts["--preset"] != null) throw CliError("--patch supplies one sound - cannot combine with --preset or --all")
             val patch = try {
-                OpenSkyPatch.fromJsonText(File(path).readText())
+                Patches.fromJsonText(File(path).readText())
             } catch (e: Exception) {
-                throw CliError("could not read --patch '$path': ${e.message ?: "invalid OPENSKY patch"}")
+                throw CliError("could not read --patch '$path': ${e.message ?: "invalid $engine patch"}")
             }
-            if (patch.voiceName != voice) throw CliError("--patch records OPENSKY ${patch.voiceName}, requested $voice")
+            if (patch.engine != engine) throw CliError("--patch records ${patch.engine}, requested $engine")
+            if (patch.voiceName != voice) throw CliError("--patch records $engine ${patch.voiceName}, requested $voice")
             patch
         }
 
@@ -166,6 +178,25 @@ object SynthCommand {
             else -> Presets.forVoice(engine, voice)
         }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
+        val contourMacros = opts["--macros"]?.let { raw ->
+            if (engine != ContourPatch.ENGINE) throw CliError("--macros is only supported by CONTOUR, got $engine")
+            val names = ContourEngine.macrosFor(ContourVoice.valueOf(voice)).map { it.name }.toSet()
+            val overrides = linkedMapOf<String, Float>()
+            for (entry in raw.split(',')) {
+                val fields = entry.split('=')
+                if (fields.size != 2) throw CliError("--macros wants NAME=VALUE pairs separated by commas, got '$entry'")
+                val name = fields[0].trim().uppercase(Locale.ROOT)
+                if (name !in names) throw CliError("--macros unknown CONTOUR control '$name'; choose ${names.joinToString()}")
+                if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
+                val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
+                    ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
+                overrides[name] = value
+            }
+            if ("TUNE" in overrides && opts["--midi"] != null) {
+                throw CliError("--macros TUNE and --midi both set pitch; choose one")
+            }
+            overrides
+        } ?: emptyMap()
 
         val instrument = opts.has("--instrument")
         val drone = opts.has("--drone")
@@ -265,7 +296,7 @@ object SynthCommand {
         val dir = File(dirArg)
 
         val chosen: List<Patch> = (when {
-            savedSky != null -> listOf(savedSky)
+            savedPatch != null -> listOf(savedPatch)
             opts.has("--all") -> presets
             opts["--preset"] != null -> {
                 val n = opts["--preset"]!!.toIntOrNull()
@@ -334,6 +365,8 @@ object SynthCommand {
             }
             if (withNote is OpenSkyPatch) {
                 withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
+            } else if (withNote is ContourPatch && contourMacros.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + contourMacros)
             } else if (withNote is SkitterPatch) {
                 val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
                 if (scrambleRandom == null) withSeed else withSeed.copy(

@@ -17,21 +17,46 @@ object ContourAuditionGenerator {
     private val AUDITION_DEPTH = WavWriter.BitDepth.PCM_16
     private const val MATCHED_TARGET = .12f
     private const val MATCHED_CEILING = .90f
-    private const val VOICING_TARGET = "Target character: about 25% earlier edge (R02), 75% rounded tone (R03)."
-    private const val VOICING_METHODOLOGY = "Preset-voicing intent drawing on R02 edge and R03 roundness; the percentages do not describe a literal audio blend."
+    private const val VOICING_TARGET = "Expanded sound-design range: independent body, edge, articulation, motion speed and filter contour."
+    private const val VOICING_METHODOLOGY = "R05 expands the engine controls and reauthors the nine dry presets. Control range uses three reference patches per control: bass, key and lead. The bass filter-contour example uses Dark Table for its lower base cutoff; the other bass examples use Moving Corner. Each saved configuration, note and velocity stays fixed; all seven added controls start at 0.5, then only the selected control changes. Previous preserves published R04 audio byte for byte. Listening decides whether these changes are useful."
+    private data class ExpandedControl(
+        val name: String, val label: String, val description: String,
+        val low: String, val neutral: String, val high: String,
+    ) {
+        fun endpoint(value: Float) = when (value) { 0f -> low; .5f -> neutral; 1f -> high; else -> error("Unexpected control endpoint") }
+        fun metadata(): Map<String, Any> = linkedMapOf("name" to name, "label" to label,
+            "description" to description, "low" to low, "neutral" to neutral, "high" to high,
+            "values" to listOf(0f, .5f, 1f))
+    }
+    private val expandedControls = listOf(
+        ExpandedControl("BODY", "Body shape", "Change the body root and partial projection independently of the edge.",
+            "Root 1.5×, partials 0.5×", "Saved body balance", "Root 0.25×, saved partials"),
+        ExpandedControl("EDGE", "Edge level", "Change the related edge layer independently of body level.",
+            "No edge layer", "Saved edge level", "Edge level 0.8"),
+        ExpandedControl("ATTACK", "Attack", "Change the amplitude, edge and filter entrance times together.",
+            "Attack times 0.125×", "Saved attack times", "Attack times up to 8×"),
+        ExpandedControl("DECAY", "Decay and release", "Change amplitude decay and release together with edge and filter decay. Finite notes stay within eight seconds.",
+            "Decay and release times 0.25×", "Saved decay and release times", "Decay and release times up to 4×"),
+        ExpandedControl("RATE", "Motion rate", "Change scan movement speed independently of its depth. Zero MOTION stays frozen; held loops fit whole cycles.",
+            "Scan clock 0.125×", "Saved motion rate", "Scan clock 8×"),
+        ExpandedControl("RESO", "Resonance", "Change the shared filter's resonance independently of cutoff.",
+            "Soft damping 2.5", "Saved filter damping", "Resonant damping 0.4"),
+        ExpandedControl("ENV", "Filter contour", "Change the filter envelope amount independently of its base cutoff. The cutoff stays below 18 kHz.",
+            "No filter contour", "Saved filter contour", "Saved contour plus two octaves"),
+    )
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val timbral = listOf("SCAN", "OFFSET", "MOTION", "FILTER", "DRIVE")
     private val interactions = listOf("SCAN" to "OFFSET", "OFFSET" to "MOTION", "SCAN" to "FILTER", "FILTER" to "DRIVE")
     private val presetDescriptions = mapOf(
-        "Rounded Edge" to "Intended character: a rounded bass entrance.",
-        "Moving Corner" to "Intended character: a slow, pulsing bass contour.",
-        "Dark Table" to "Intended character: dark bass that opens gradually.",
-        "Copper Scan" to "Intended character: a mellow key with a delayed bloom.",
-        "Soft Digital" to "Intended character: a soft key with a rounded entrance.",
-        "Bright Margin" to "Intended character: a rounded plucked tone.",
-        "Twin Outline" to "Intended character: a sustained lead with slow movement.",
-        "Hollow Step" to "Intended character: a soft hollow tone with a gradual entrance.",
-        "Long Contour" to "Intended character: a slowly evolving held tone.",
+        "Rounded Edge" to "Intended character: a rounded pulse bass.",
+        "Moving Corner" to "Intended character: a woody, pulsing bass.",
+        "Dark Table" to "Intended character: a dark bass with octave color.",
+        "Copper Scan" to "Intended character: a mellow copper key with a delayed bloom.",
+        "Soft Digital" to "Intended character: a soft key with short bell detail.",
+        "Bright Margin" to "Intended character: a rounded wooden pluck.",
+        "Twin Outline" to "Intended character: a rounded copper lead with an octave edge.",
+        "Hollow Step" to "Intended character: a hollow, reed-like tone with a gradual entrance.",
+        "Long Contour" to "Intended character: a slowly moving formant sustain.",
     )
     private val macroNotes = mapOf(
         "SCAN" to "Hear the spectral path change while the root stays recognizable. Motion is frozen for this sweep.",
@@ -48,6 +73,8 @@ object ContourAuditionGenerator {
         val config: ContourConfig = ContourConfig.forVoice(voice),
         val diagnostic: ContourDiagnostic? = null, val includeNormalized: Boolean = false,
         val featured: Boolean = false,
+        val control: ExpandedControl? = null, val controlValue: Float? = null,
+        val controlBase: String? = null, val controlBaseLabel: String? = null,
     )
 
     private data class ComparisonBaseline(
@@ -82,11 +109,23 @@ object ContourAuditionGenerator {
         val sourceHashes = sourceFiles.mapValues { sha256(it.value) }
         val sourceHash = sha256(sourceHashes.entries.joinToString("\n") { "${it.key}:${it.value}" }.toByteArray())
         val recipeHash = sha256(cases.joinToString("\n") { "${it.id}|${it.voice}|${it.macros.toSortedMap()}|${it.velocity}|${it.config}|${it.diagnostic}" }.toByteArray())
-        val listeningRound = "contour-r04-${sourceHash.take(12)}-${recipeHash.take(12)}"
+        val listeningRound = "contour-r05-${sourceHash.take(12)}-${recipeHash.take(12)}"
         val started = System.nanoTime()
+        // Neutral positions sharing the same saved configuration reuse one exact render.
+        val controlCenters = mutableMapOf<String, LinkedHashMap<String, Any?>>()
         val clips = cases.mapIndexed { index, case ->
             check(sourceFiles.all { sha256(it.value) == sourceHashes.getValue(it.key) }) {
                 "CONTOUR source changed during generation; regenerate the complete pack"
+            }
+            val cachedCenter = if (case.controlValue == .5f) case.controlBase?.let(controlCenters::get) else null
+            if (cachedCenter != null) {
+                val evidence = LinkedHashMap(cachedCenter).apply {
+                    putAll(caseMetadata(case))
+                    put("renderMilliseconds", 0.0)
+                    put("assetReference", cachedCenter.getValue("id"))
+                }
+                if ((index + 1) % 20 == 0 || index == cases.lastIndex) println("CONTOUR audition: ${index + 1}/${cases.size} cases")
+                return@mapIndexed evidence
             }
             val before = System.nanoTime()
             val loop = case.macros.getValue("HOLD") >= ContourEngine.HOLD_LOOP
@@ -118,11 +157,6 @@ object ContourAuditionGenerator {
                 writeWav(root, path, Snip(repeated, 1, Dsp.RATE))
             } else null
             val evidence = linkedMapOf<String, Any?>(
-                "id" to case.id, "category" to case.category, "group" to case.group,
-                "title" to case.title, "description" to case.description, "voice" to case.voice.name,
-                "macros" to case.macros, "velocity" to case.velocity,
-                "note" to noteName(rootMidi(case.voice) + ((case.macros.getValue("TUNE") - .5f) * 48f).roundToInt()),
-                "diagnostic" to case.diagnostic?.name, "featured" to case.featured,
                 "loop" to loop, "frames" to raw.frameCount, "durationSeconds" to raw.durationSeconds,
                 "rawPath" to rawPath, "matchedPath" to matchedPath, "normalizedPath" to normalizedPath,
                 "repeatPath" to repeatPath, "rawExportGain" to rawExportGain,
@@ -134,14 +168,15 @@ object ContourAuditionGenerator {
                 "requestedHz" to loopEvidence?.noteHz, "actualHz" to loopEvidence?.actualHz,
                 "motionCycles" to loopEvidence?.motionCycles, "edgeRatio" to loopEvidence?.edgeRatio,
                 "renderMilliseconds" to renderMs, "audioSha256" to sha256(File(root, matchedPath)),
-                "rawSha256" to sha256(File(root, rawPath)), "config" to case.config.toString(),
-                "patch" to ContourPatch(case.title, case.voice, case.macros, case.config, case.velocity).toJsonValue(),
+                "rawSha256" to sha256(File(root, rawPath)),
                 "recipeStatus" to "provisional; owner listening pending",
                 "provenance" to linkedMapOf(
                     "listeningRound" to listeningRound, "sourceSha256" to sourceHash,
                     "sourceFiles" to sourceHashes, "recipeSha256" to recipeHash,
                 ),
             )
+            evidence.putAll(caseMetadata(case))
+            if (case.controlValue == .5f) controlCenters[checkNotNull(case.controlBase)] = evidence
             if ((index + 1) % 20 == 0 || index == cases.lastIndex) println("CONTOUR audition: ${index + 1}/${cases.size} cases")
             evidence
         }.toMutableList()
@@ -152,8 +187,9 @@ object ContourAuditionGenerator {
             "listeningRound" to listeningRound,
             "sourceSha256" to sourceHash, "sourceFiles" to sourceHashes, "recipeSha256" to recipeHash,
             "sampleRate" to Dsp.RATE, "bitDepth" to AUDITION_DEPTH.bits, "channels" to 1,
-            "clipCount" to clips.size, "sonicAcceptance" to "Pending owner listening. Nine dry presets are provisional; expansion awaits review.",
+            "clipCount" to clips.size, "sonicAcceptance" to "Pending owner listening. Nine dry presets and the expanded control ranges are provisional.",
             "voicingTarget" to VOICING_TARGET, "voicingMethodology" to VOICING_METHODOLOGY,
+            "controls" to expandedControls.map { it.metadata() },
             "levelPolicy" to linkedMapOf(
                 "matchedTarget" to MATCHED_TARGET, "matchedPeakCeiling" to MATCHED_CEILING,
                 "hostNormalizedTarget" to Dsp.MELODIC_LOUDNESS_TARGET, "hostNormalizedPeakCeiling" to .99f,
@@ -168,10 +204,11 @@ object ContourAuditionGenerator {
             "categories" to (if (comparisonBaseline != null) listOf(category("revision", "Revision A/B",
                 "Nine Previous and New pairs at the same note and velocity. Previous is the last published voicing, preserved byte for byte; both sides use the same matched-level policy.")) else emptyList()) + listOf(
                 category("presets", "Start here", "Nine saved dry recipes. Compare their characters first; every recipe remains provisional."),
+                category("controls", "Control range", "Seven added controls at 0, 0.5 and 1 on bass, key and lead references. Bass uses Dark Table for filter contour and Moving Corner for the other controls. Only the selected control changes; the other added controls stay at 0.5. Note, velocity and original controls stay fixed."),
                 category("voices", "Six voices", "Reference voices for checking register and velocity, using the existing engine defaults. Revision A/B compares the nine newly authored presets."),
-                category("sweeps", "Macro sweeps", "Five positions per control and voice. Companion controls are neutral; SCAN uses frozen motion."),
+                category("sweeps", "Original macro sweeps", "Five positions per original timbral control and voice. Companion controls are neutral; SCAN uses frozen motion."),
                 category("interactions", "Interactions", "Four required control pairs, each as a 3 × 3 grid for every voice. Compare adjacent settings at matched level."),
-                category("corners", "All high", "Every timbral control at maximum for each voice. Listen for root clarity and bounded roughness."),
+                category("corners", "Original controls high", "The original five timbral controls at maximum for each voice; the seven added controls stay neutral. Listen for root clarity and bounded roughness."),
                 category("diagnostics", "Body + edge", "Isolate the two related layers, then compare frozen scans, the open filter and clean drive. Every branch is level matched."),
                 category("hold", "Held loops", "Settled loops at normal and demanding settings. Listen across several wraps; four-cycle downloads preserve exact repetitions."),
             ),
@@ -182,7 +219,7 @@ object ContourAuditionGenerator {
         File(root, "README.md").writeText("""
             # CONTOUR audition
 
-            ${clips.size} dry cases, 44.1 kHz mono 16-bit audition WAV. ${if (quick) "Development smoke pack; it does not cover the complete acceptance matrix." else "Complete five-point macro, interaction, register, velocity, diagnostic and HOLD listening matrix."}
+            ${clips.size} dry cases, 44.1 kHz mono 16-bit audition WAV. ${if (quick) "Development smoke pack; it does not cover the complete acceptance matrix." else "Complete three-point expanded-control, five-point original macro, interaction, register, velocity, diagnostic and HOLD listening matrix."}
 
             Start an HTTP server in this directory and open index.html. The page loads manifest.json; it does not embed the full matrix. Custom playback uses sample-accurate decoded buffer loops. Native controls are also available. Feedback is stored only in the current browser; Export verdicts saves the listening round, clip and group answers as JSON.
 
@@ -300,6 +337,20 @@ object ContourAuditionGenerator {
         for (preset in ContourPresets.all()) add(Case("preset_${slug(preset.name)}", "presets", "Nine provisional recipes", preset.name,
             presetDescriptions.getValue(preset.name),
             preset.voice, preset.macros, preset.velocity, preset.config, includeNormalized = true, featured = true))
+        val controlReferences = listOf("Moving Corner", "Copper Scan", "Twin Outline")
+        for (referenceName in controlReferences) for (control in expandedControls) {
+            // Dark Table's lower base cutoff leaves room to hear the ENV sweep.
+            val name = if (referenceName == "Moving Corner" && control.name == "ENV") "Dark Table" else referenceName
+            val preset = ContourPresets.all().single { it.name == name }
+            val neutral = ContourEngine.defaults(preset.voice) + preset.macros + expandedControls.associate { it.name to .5f }
+            for (value in listOf(0f, .5f, 1f)) {
+                add(Case("control_${slug(name)}_${control.name.lowercase()}_${tag(value)}", "controls", "$name · ${control.name}",
+                    "$name · ${control.name} ${fmt(value)}",
+                    "${control.description} ${control.endpoint(value)}. The saved configuration, note and velocity stay fixed; all other added controls are neutral at 0.5.",
+                    preset.voice, neutral + (control.name to value), preset.velocity, preset.config,
+                    control = control, controlValue = value, controlBase = "preset_${slug(name)}", controlBaseLabel = name))
+            }
+        }
         for (voice in ContourVoice.entries) {
             for (tune in if (quick) listOf(.5f) else listOf(.25f, .5f, .75f)) for (velocity in if (quick) listOf(1f) else listOf(.3f, 1f)) {
                 val note = noteName(rootMidi(voice) + ((tune - .5f) * 48f).roundToInt())
@@ -321,8 +372,8 @@ object ContourAuditionGenerator {
                         "$a ${fmt(x)} · $b ${fmt(y)}", interactionNote(a, b), voice, neutral + mapOf(a to x, b to y)))
                 }
             }
-            add(Case("corner_${voice.name.lowercase()}_all_high", "corners", "Every voice at the corner", "${voice.name} · all controls high",
-                "Maximum SCAN, OFFSET, MOTION, FILTER and DRIVE. Listen for a recognizable root, finite output and useful roughness.", voice,
+            add(Case("corner_${voice.name.lowercase()}_all_high", "corners", "Every voice at the corner", "${voice.name} · original controls high",
+                "Maximum SCAN, OFFSET, MOTION, FILTER and DRIVE; the seven added controls stay neutral. Listen for a recognizable root, finite output and useful roughness.", voice,
                 neutral + timbral.associateWith { 1f }))
             for (diagnostic in ContourDiagnostic.entries) {
                 val macros = ContourEngine.defaults(voice) + mapOf("OFFSET" to .72f, "MOTION" to .68f, "FILTER" to .67f, "DRIVE" to .42f)
@@ -338,6 +389,23 @@ object ContourAuditionGenerator {
             for ((label, changes) in holdStates) add(Case("hold_${voice.name.lowercase()}_${slug(label)}", "hold", "${voice.name} · settled sustain",
                 "${voice.name} · $label HOLD", "Settled sustain without the initial attack. Listen across repeated wraps for clicks, level jumps or unstable motion.",
                 voice, ContourEngine.defaults(voice) + changes + ("HOLD" to 1f)))
+        }
+    }
+
+    private fun caseMetadata(case: Case): Map<String, Any?> = linkedMapOf<String, Any?>(
+        "id" to case.id, "category" to case.category, "group" to case.group,
+        "title" to case.title, "description" to case.description, "voice" to case.voice.name,
+        "macros" to case.macros, "velocity" to case.velocity,
+        "note" to noteName(rootMidi(case.voice) + ((case.macros.getValue("TUNE") - .5f) * 48f).roundToInt()),
+        "diagnostic" to case.diagnostic?.name, "featured" to case.featured,
+        "config" to case.config.toString(),
+        "patch" to ContourPatch(case.title, case.voice, case.macros, case.config, case.velocity).toJsonValue(),
+    ).apply {
+        case.control?.let { control ->
+            val value = checkNotNull(case.controlValue)
+            put("control", control.name); put("controlValue", value)
+            put("controlBase", case.controlBase); put("controlBaseLabel", case.controlBaseLabel)
+            put("controlLabel", control.label); put("controlEndpoint", control.endpoint(value))
         }
     }
 
