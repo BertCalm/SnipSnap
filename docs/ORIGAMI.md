@@ -189,10 +189,13 @@ SnipSnap render gain rather than the web player's matched comparison gain.
 
 SEND adds the sound to a pad or replaces its audio and saves the complete
 ORIGAMI recipe. Authored pitch supplies root metadata and keyed placement,
-avoiding spectral pitch-detector errors. Replacement clears stale source and
-tuning information. User presets, SEND TO BENCH, recipe replay, velocity layers
+avoiding spectral pitch-detector errors during SEND and later IN KEY actions.
+Only explicitly authored, valid roots bypass detection. Replacement clears stale
+source and tuning information. User presets, SEND TO BENCH, recipe replay, velocity layers
 and CLI export preserve the model, seed, note and velocity. Sparse older recipes
-retain the defaults of the model that originally rendered them.
+retain the defaults of the model that originally rendered them. Leaving and
+reopening SYNTH retains the full edited ORIGAMI recipe in its navigation state,
+even after the preset highlight clears.
 
 The ORIGAMI starter kit contains sixteen dry tonal one-shots: eight CRANE
 notes, the six factory presets and unfolded FAN/STILL references. The kit's

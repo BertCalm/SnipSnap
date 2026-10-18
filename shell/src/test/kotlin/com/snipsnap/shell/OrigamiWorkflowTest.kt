@@ -16,7 +16,9 @@ import com.snipsnap.synth.OrigamiVoice
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Velocity
 import java.io.File
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.sin
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -88,7 +90,7 @@ class OrigamiWorkflowTest {
         val render = recipe.render()
         val dir = File(temp, "kit")
         val model = KitBuilderModel.create("Warm Paper", dir)
-        val tags = mapOf("rootMidi" to "72", "rootNote" to Scales.nameOf(72))
+        val tags = mapOf("rootMidi" to "72", "rootNote" to Scales.nameOf(72), "rootOrigin" to "authored")
         model.assign(1, render, DrumClass.TONAL, patch.name, knownRootMidi = 72)
         model.update(1) { it.copy(recipe = recipe.toJsonValue()) }
         model.assign(2, render, DrumClass.TONAL, "Replay destination")
@@ -188,6 +190,7 @@ class OrigamiWorkflowTest {
         assertEquals(0, inKey.tuneFine, "the pad must not flatten an accurately generated C3")
         assertEquals("48", inKey.source["rootMidi"])
         assertEquals(Scales.nameOf(48), inKey.source["rootNote"])
+        assertEquals("authored", inKey.source["rootOrigin"])
         assertStoredWave(audio, File(dir, inKey.sampleFile))
 
         // An authored C-sharp still follows the normal in-key policy: a whole semitone to C.
@@ -213,5 +216,57 @@ class OrigamiWorkflowTest {
         assertEquals(0, reopened.pad(1)?.tuneFine)
         assertEquals(-1, reopened.pad(2)?.tuneCoarse)
         assertEquals(0, reopened.pad(2)?.tuneFine)
+
+        // A key change and explicit IN KEY must retain the authored roots after a restart,
+        // replacing stale offsets rather than detecting the folded spectra again.
+        reopened.setKey(KeySpec.parse("Eminpent"))
+        reopened.update(1) { it.copy(tuneCoarse = 7, tuneFine = 31) }
+        reopened.update(2) { it.copy(tuneCoarse = -3, tuneFine = -27) }
+        reopened.save()
+        val retuned = KitBuilderModel.open(dir)
+        assertEquals("authored", retuned.pad(1)?.source?.get("rootOrigin"))
+        assertEquals(listOf(1, 2), retuned.retuneTonalPads().sorted())
+        assertEquals(-1, retuned.pad(1)?.tuneCoarse, "C3 belongs on B2 in E minor pentatonic")
+        assertEquals(0, retuned.pad(1)?.tuneFine, "IN KEY re-detected the accurate authored C3")
+        assertEquals(1, retuned.pad(2)?.tuneCoarse, "C-sharp3 belongs on D3 in E minor pentatonic")
+        assertEquals(0, retuned.pad(2)?.tuneFine)
+        assertEquals("48", retuned.pad(1)?.source?.get("rootMidi"), "the WAV's root is still C3")
+        assertEquals("49", retuned.pad(2)?.source?.get("rootMidi"), "the WAV's root is still C-sharp3")
+        assertTrue(retuned.retuneTonalPads().isEmpty(), "a second exact IN KEY pass must be a no-op")
+        assertStoredWave(audio, File(dir, inKey.sampleFile))
+        assertStoredWave(sharpAudio, File(dir, placed.sampleFile))
+        retuned.save()
+        assertEquals(0, KitBuilderModel.open(dir).pad(1)?.tuneFine)
+    }
+
+    @Test
+    fun `unmarked malformed and out of range roots still use detected audio for in key tuning`() {
+        val dir = File(temp, "detected")
+        val model = KitBuilderModel.create("Captured Notes", dir)
+        model.setKey(KeySpec.parse("Cminpent"))
+        // A captured A4 about 16 cents sharp belongs on B-flat4: +1 semitone and -16 cents.
+        // The misleading root tags must not turn it into an authored, perfectly tuned C3.
+        val rate = 44100
+        val audio = Snip(FloatArray(rate / 2) { i -> (.2 * sin(2 * PI * 444.0 * i / rate)).toFloat() }, 1, rate)
+        val sources = listOf(
+            mapOf("rootMidi" to "48"),
+            mapOf("rootMidi" to "48", "rootOrigin" to "detected"),
+            mapOf("rootMidi" to "not a note", "rootOrigin" to "authored"),
+            mapOf("rootMidi" to "128", "rootOrigin" to "authored"),
+            mapOf("rootOrigin" to "authored"),
+        )
+        sources.forEachIndexed { index, source ->
+            val slot = index + 1
+            model.assign(slot, audio, DrumClass.TONAL, source = source)
+            model.update(slot) { it.copy(tuneCoarse = 0, tuneFine = 0) }
+        }
+        model.save()
+        val reopened = KitBuilderModel.open(dir)
+        assertEquals((1..sources.size).toList(), reopened.retuneTonalPads().sorted())
+        for (slot in 1..sources.size) {
+            val pad = assertNotNull(reopened.pad(slot))
+            assertEquals(1, pad.tuneCoarse, "slot$slot trusted an unvalidated authored root")
+            assertTrue(pad.tuneFine in -18..-14, "slot$slot skipped captured-audio tuning: ${pad.tuneFine} cents")
+        }
     }
 }

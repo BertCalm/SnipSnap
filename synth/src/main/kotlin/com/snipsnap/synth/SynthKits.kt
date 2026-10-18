@@ -760,7 +760,7 @@ object SynthKits {
             require(midi in Origami.MIDI_MIN..Origami.MIDI_MAX) { "ORIGAMI starter note out of range: $midi" }
             return pad(patch, DrumClass.TONAL).copy(
                 displayName = patch.name,
-                source = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi)),
+                source = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi), "rootOrigin" to "authored"),
                 oneShot = true,
             )
         }

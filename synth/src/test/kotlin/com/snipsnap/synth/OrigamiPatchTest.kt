@@ -53,7 +53,10 @@ class OrigamiPatchTest {
             midi = 72, velocity = .8f, seed = Long.MIN_VALUE + 23L)
         val expected = patch.copy(velocity = .35f).render()
         val adapted = Velocity.atVelocity(patch, .35f)
-        assertEquals(expected, adapted)
+        // Independent renders own different arrays; Snip equality intentionally uses array identity.
+        assertEquals(expected.channels, adapted.channels)
+        assertEquals(expected.sampleRate, adapted.sampleRate)
+        assertEquals(expected.frameCount, adapted.frameCount)
         assertContentEquals(expected.samples, adapted.samples,
             "velocity adaptation must retain the patch's explicit MIDI, seed, model and controls")
         val zero = Velocity.atVelocity(patch, 0f)

@@ -288,12 +288,29 @@ private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
 private const val SETTINGS_PRESET_PREFIX = "preset."
+private const val SETTINGS_ORIGAMI_PATCH_PREFIX = "patch.ORIGAMI."
 
 private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): String =
     "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}.$macro"
 
 private fun presetSettingsKey(engine: Engine, voice: Enum<*>): String =
     "$SETTINGS_PRESET_PREFIX${engine.name}.${voice.name}"
+
+/** ORIGAMI's source, pitch and frozen model survive editing away from a preset name. */
+private fun restoredOrigamiPatches(settings: Map<String, String>): Map<OrigamiVoice, OrigamiPatch> =
+    OrigamiVoice.entries.mapNotNull { voice ->
+        val saved = settings["$SETTINGS_ORIGAMI_PATCH_PREFIX${voice.name}"] ?: return@mapNotNull null
+        val patch = runCatching { OrigamiPatch.fromJsonText(saved) }.getOrNull()
+            ?.takeIf { it.voice == voice } ?: return@mapNotNull null
+        voice to patch
+    }.toMap()
+
+/** The displayed pitch is the absolute override, with each model's own sparse defaults. */
+private fun origamiEditingMacros(patch: OrigamiPatch): Map<String, Float> {
+    val resolved = patch.resolvedMacros()
+    val absoluteMidi = patch.midi ?: return resolved
+    return resolved + ("TUNE" to (absoluteMidi - Origami.MIDI_MIN).toFloat() / Origami.TUNE_SEMITONES)
+}
 
 /**
  * The highlighted-preset names the bag holds, by (engine, voice). A name the
@@ -351,11 +368,13 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    0..1) for every (engine, voice) the player has touched.
  *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
  *    last tapped on that voice and not edited since.
+ *  - `patch.ORIGAMI.<VOICE>` — ORIGAMI's complete edited recipe, including
+ *    its model, source seed, absolute note and velocity.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
- * Not kept: the loaded patch's non-macro recipe (a MURMUR root, a REVEL
- * phrase...) unless a preset carries it, the audition, and every sheet.
+ * Other engines' non-macro recipes (a MURMUR root, a REVEL phrase...) are
+ * kept only while a preset carries them. The audition and sheets are not kept.
  */
 @Composable
 fun SynthScreen(
@@ -411,15 +430,17 @@ fun SynthScreen(
     // idiom the THUMP-only screen used for its own eight voices — cheap
     // (one entry per engine and voice) and means no read site
     // ever has to defend against a missing key.
+    val restoredOrigami = remember { restoredOrigamiPatches(settings) }
     val macrosByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
             for (e in Engine.entries) {
                 for (v in e.voices()) {
-                    val defaults = e.defaults(v)
+                    val origami = if (e == Engine.ORIGAMI) restoredOrigami[v as OrigamiVoice] else null
+                    val defaults = origami?.let(::origamiEditingMacros) ?: e.defaults(v)
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
-                    put(e to v, if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
+                    put(e to v, if (origami != null || settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
                         settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
                             ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
                     })
@@ -458,12 +479,19 @@ fun SynthScreen(
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
+            for ((origamiVoice, patch) in restoredOrigami) put(Engine.ORIGAMI to origamiVoice, patch)
         }
     }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
         Patches.edited(it, name, macros)
     } ?: engine.buildPatch(name, voice, macros)
+    LaunchedEffect(engine, voice, macros, loadedPatch) {
+        if (engine == Engine.ORIGAMI) {
+            settings["$SETTINGS_ORIGAMI_PATCH_PREFIX${voice.name}"] =
+                buildCurrentPatch(engine.patchDisplayName(voice)).toJsonText()
+        }
+    }
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
     // "a starting point to wreck, not a locked sound", so this clears the
@@ -534,13 +562,7 @@ fun SynthScreen(
         // legacy recipe with the current model's values would change its sound.
         val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
             else engine.defaults(voice)
-        val resolved = if (editable is OrigamiPatch) editable.resolvedMacros() else editable.macros
-        val absoluteMidi = (editable as? OrigamiPatch)?.midi
-        val patchMacros = if (absoluteMidi != null) {
-            // The slider reports what will sound, even when a saved absolute
-            // note intentionally differs from the patch's dormant TUNE value.
-            resolved + ("TUNE" to (absoluteMidi - Origami.MIDI_MIN).toFloat() / Origami.TUNE_SEMITONES)
-        } else resolved
+        val patchMacros = if (editable is OrigamiPatch) origamiEditingMacros(editable) else editable.macros
         macrosByVoice[engine to voice] = defaults + patchMacros
         currentPresetByVoice[engine to voice] = patch.name
     }
@@ -789,7 +811,7 @@ fun SynthScreen(
                     it.midi ?: Origami.midiFor(it.voice, it.resolvedMacros().getValue("TUNE"))
                 }
                 val origamiSource = authoredMidi?.let {
-                    mapOf("from" to "SYNTH", "rootMidi" to it.toString(), "rootNote" to Scales.nameOf(it))
+                    mapOf("from" to "SYNTH", "rootMidi" to it.toString(), "rootNote" to Scales.nameOf(it), "rootOrigin" to "authored")
                 }
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {

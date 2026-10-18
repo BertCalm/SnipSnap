@@ -38,6 +38,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -54,6 +55,8 @@ class OrigamiSynthScreenTest {
     private val fixtures = mutableListOf<File>()
     private var entry by mutableStateOf<KitShelf.Entry?>(null)
     private var kitUpdates = 0
+    private val settings = mutableMapOf<String, String>()
+    private var showing by mutableStateOf(true)
 
     @After
     fun cleanUp() {
@@ -78,7 +81,7 @@ class OrigamiSynthScreenTest {
         saved?.let { UserPresets.save(shelf, it, System.currentTimeMillis()) }
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            TapeTheme(Schemes.DEFAULT) {
+            if (showing) TapeTheme(Schemes.DEFAULT) {
                 Box(Modifier.width(360.dp).fillMaxHeight()) {
                     SynthScreen(
                         entry = entry,
@@ -89,6 +92,7 @@ class OrigamiSynthScreenTest {
                         onDroneToLoop = { _, _, _ -> },
                         onOpenSurface = {},
                         appScope = appScope,
+                        settings = settings,
                     )
                 }
             }
@@ -143,7 +147,7 @@ class OrigamiSynthScreenTest {
         assertEquals(0, pad.tuneFine)
         val patch = PadRecipe.fromJsonValue(pad.recipe!!).patch as OrigamiPatch
         val root = patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
-        assertEquals(mapOf("from" to "SYNTH", "rootMidi" to root.toString(), "rootNote" to Scales.nameOf(root)), pad.source)
+        assertEquals(mapOf("from" to "SYNTH", "rootMidi" to root.toString(), "rootNote" to Scales.nameOf(root), "rootOrigin" to "authored"), pad.source)
         return patch
     }
 
@@ -168,6 +172,35 @@ class OrigamiSynthScreenTest {
     fun recalledFrozenModelSurvivesGeometryEditsAndDeliberatePitchChange() = editedPresetSurvives(2)
 
     @Test
+    fun editedRecipeSurvivesLeavingSynthWithoutAPresetHighlight() {
+        val saved = OrigamiPatch(
+            "TEST PAPER", OrigamiVoice.FAN, mapOf("TUNE" to 0f),
+            midi = 67, velocity = .42f, seed = 9_007_199_254_740_993L, model = 2,
+        )
+        show(saved, key = KeySpec.parse("Cmin"))
+        loadSavedPreset(saved)
+        dial("FOLD", .91f)
+        dial("TUNE", .5f)
+        assertFalse(settings.containsKey("preset.ORIGAMI.FAN"))
+
+        // Destroy the composable and all its remembered maps, as navigation does.
+        // Only the caller's settings bag and the on-disk preset shelf survive.
+        compose.runOnIdle { showing = false }
+        pump()
+        compose.runOnIdle { showing = true }
+        pump()
+        compose.onNodeWithContentDescription("ENGINE ORIGAMI · TAP FOR NEXT").assertExists()
+        assertEquals(.91f, macroValue("FOLD"), .0001f)
+        assertEquals(.5f, macroValue("TUNE"), .0001f)
+        val restored = send(1)
+        assertEquals(60, restored.midi)
+        assertEquals(saved.seed, restored.seed)
+        assertEquals(saved.velocity, restored.velocity)
+        assertEquals(saved.model, restored.model)
+        assertEquals(.91f, restored.macros.getValue("FOLD"))
+    }
+
+    @Test
     fun keyedKitUsesCraneAuthoredRootWithoutDetectorFineTune() {
         show(key = KeySpec.parse("Cmin"))
         dial("TUNE", 0f)
@@ -184,15 +217,7 @@ class OrigamiSynthScreenTest {
             midi = 67, velocity = .42f, seed = 9_007_199_254_740_993L, model = model,
         )
         show(saved, key = KeySpec.parse("Cmin"), withReplacement = true)
-        click(saved.voice.name)
-        val deadline = System.currentTimeMillis() + 10_000
-        while (compose.onNodeWithText(saved.name).runCatching { fetchSemanticsNode() }.isFailure) {
-            if (System.currentTimeMillis() > deadline) throw AssertionError("the saved ORIGAMI preset never appeared")
-            pump(16)
-        }
-        val preset = compose.onNodeWithText(saved.name).fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
-        compose.runOnIdle { assertTrue(preset.invoke()) }
-        pump()
+        loadSavedPreset(saved)
         assertEquals(19f / 24f, macroValue("TUNE"), .0001f)
         // Sparse older recipes must use their frozen defaults, not R4's
         // recalibrated FAN crease, before the first edit or render.
@@ -217,5 +242,17 @@ class OrigamiSynthScreenTest {
         val replaced = KitStore.load(entry!!.dir).pad(2)!!
         assertEquals(0, replaced.tuneCoarse)
         assertEquals(0, replaced.tuneFine)
+    }
+
+    private fun loadSavedPreset(saved: OrigamiPatch) {
+        click(saved.voice.name)
+        val deadline = System.currentTimeMillis() + 10_000
+        while (compose.onNodeWithText(saved.name).runCatching { fetchSemanticsNode() }.isFailure) {
+            if (System.currentTimeMillis() > deadline) throw AssertionError("the saved ORIGAMI preset never appeared")
+            pump(16)
+        }
+        val preset = compose.onNodeWithText(saved.name).fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        compose.runOnIdle { assertTrue(preset.invoke()) }
+        pump()
     }
 }

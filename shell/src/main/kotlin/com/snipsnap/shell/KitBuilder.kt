@@ -106,6 +106,7 @@ class KitBuilderModel private constructor(
             source = if (knownRootMidi == null) source else source + mapOf(
                 "rootMidi" to knownRootMidi.toString(),
                 "rootNote" to com.snipsnap.audio.Scales.nameOf(knownRootMidi),
+                "rootOrigin" to "authored",
             ),
         )
         kit = kit.copy(pads = kit.pads.filter { it.slot != slot } + pad)
@@ -227,21 +228,27 @@ class KitBuilderModel private constructor(
 
     /**
      * IN KEY: retune every TONAL pad onto the nearest note of the kit's
-     * key, via the tune fields the MPC pad already has — audio untouched,
-     * unpitched pads and non-tonal classes never "corrected". Returns the
-     * slots that moved. No key set, nothing happens.
+     * key, via the tune fields the MPC pad already has - audio untouched,
+     * unpitched pads and non-tonal classes never "corrected". A validated
+     * authored-root stamp retains exact synth tuning; other audio follows
+     * the pitch detector. Returns the slots that moved. No key set, nothing happens.
      */
     fun retuneTonalPads(): List<Int> {
         val key = kit.key ?: return emptyList()
         val moved = mutableListOf<Int>()
         for (pad in kit.pads) {
             if (pad.drumClass != DrumClass.TONAL) continue
-            val snip = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
-            val tune = com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale) ?: continue
-            if (tune.tuneCoarse == pad.tuneCoarse && tune.tuneFine == pad.tuneFine) continue
+            val authoredRoot = pad.source.takeIf { it["rootOrigin"] == "authored" }
+                ?.get("rootMidi")?.toIntOrNull()?.takeIf { it in 0..127 }
+            val tune = if (authoredRoot != null) tuningForKnownRoot(authoredRoot) else {
+                val snip = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+                val detected = com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale) ?: continue
+                detected.tuneCoarse to detected.tuneFine
+            }
+            if (tune.first == pad.tuneCoarse && tune.second == pad.tuneFine) continue
             kit = kit.copy(
                 pads = kit.pads.map {
-                    if (it.slot == pad.slot) it.copy(tuneCoarse = tune.tuneCoarse, tuneFine = tune.tuneFine) else it
+                    if (it.slot == pad.slot) it.copy(tuneCoarse = tune.first, tuneFine = tune.second) else it
                 },
             )
             moved += pad.slot
