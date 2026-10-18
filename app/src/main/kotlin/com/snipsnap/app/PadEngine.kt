@@ -469,14 +469,31 @@ class PadEngine(preferredSampleRate: Int) {
 
     /**
      * Stop and take the print as a stereo snip at the engine's rate; null
-     * when nothing was captured. Waits up to half a second for the
-     * callback's last write, so call it off the main thread.
+     * when nothing was captured, or when the callback has not finished it
+     * within half a second (the print is left alone then, not freed).
+     * Waits, so call it off the main thread.
+     *
+     * As [SurfaceEngine.stopPrint]: the stop is asked for and the print
+     * taken under the lock, re-checking [open] each time so a [close]
+     * during the wait is safe, but the wait in between polls [printState]
+     * outside it, so the main thread's per-frame calls ([drainEnded],
+     * [needsRestart], hits) go on while the take lands. A re-arm during
+     * the wait (GrooveScreen's discardBounce re-offers BOUNCE before its own
+     * stop returns) is safe: [armPrint] is refused while the print is still
+     * stopping, and once it is done a new print replaces the unwanted take,
+     * which this call then sees is no longer DONE and leaves alone.
      */
-    @Synchronized
     fun stopPrint(): Snip? {
-        if (!open) return null
-        val frames = NativePads.stopPrint(handle) ?: return null
-        return Snip(frames, 2, sampleRate())
+        synchronized(this) {
+            if (!open) return null
+            NativePads.requestStopPrint(handle)
+        }
+        awaitPrintStopped { printState() == PrintState.STOPPING }
+        return synchronized(this) {
+            if (!open || printState() != PrintState.DONE) return null
+            val frames = NativePads.stopPrint(handle) ?: return null
+            Snip(frames, 2, sampleRate())
+        }
     }
 
     /** The rate the device actually gave us; a printed take carries it. */

@@ -91,20 +91,30 @@ object Resampler {
             return Snip(out, channels, targetRate)
         }
 
+        // The kernel's weights depend on the output position, not the channel,
+        // so work them out once per output frame and reuse them for every
+        // channel: half the trig on stereo. Same weights, summed in the same
+        // order, so every sample comes out to the bit as before.
+        val weights = DoubleArray(2 * HALF_TAPS)
         for (o in 0 until dstFrames) {
             val srcPos = o / ratio
             val centre = floor(srcPos).toInt()
             val lo = centre - HALF_TAPS + 1
-            val hi = centre + HALF_TAPS
 
+            var norm = 0.0
+            for (k in weights.indices) {
+                val n = lo + k
+                if (n < 0 || n >= srcFrames) continue
+                val w = kernel(srcPos - n, cutoff)
+                weights[k] = w
+                norm += w
+            }
             for (c in 0 until channels) {
                 var acc = 0.0
-                var norm = 0.0
-                for (n in lo..hi) {
+                for (k in weights.indices) {
+                    val n = lo + k
                     if (n < 0 || n >= srcFrames) continue
-                    val w = kernel(srcPos - n, cutoff)
-                    acc += snip.samples[n * channels + c] * w
-                    norm += w
+                    acc += snip.samples[n * channels + c] * weights[k]
                 }
                 out[o * channels + c] = if (norm != 0.0) (acc / norm).toFloat() else 0f
             }
