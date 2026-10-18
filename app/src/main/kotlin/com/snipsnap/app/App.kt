@@ -2982,6 +2982,12 @@ fun App(shelf: KitShelf) {
                 project = created
                 open = kits.firstOrNull { it.dir == entry.dir } ?: entry
                 goToScreen(AppScreen.KIT)
+                // The first catch is the loop shown once: record, snip, land.
+                // The tape stops here, so the dock's line (the sentence that
+                // says where the sound went) has the dock to itself; while
+                // armed, the capture region holds that slot. The person who
+                // wants more arms it again from the chip, now knowing how.
+                MicSessionService.eject(context)
                 assignPendingSnip(
                     file, 1,
                     placedLine = Copy.FIRST_CATCH_LANDED,
