@@ -865,6 +865,9 @@ fun App(shelf: KitShelf) {
         val (attempt, message) = lastSnipError ?: return@LaunchedEffect
         if (attempt != lastSnipErrorSeen) {
             lastSnipErrorSeen = attempt
+            // The optimistic line offered CUT; a failed commit has nothing
+            // to cut, and a line keeps its door, so the door goes first.
+            dock.clear()
             dock.say(message)
         }
     }
@@ -3927,8 +3930,10 @@ fun App(shelf: KitShelf) {
                         MicSessionService.snip(context)
                         // Optimistic — the real commit hasn't started yet, let
                         // alone resolved. The `lastSnipError` collector above
-                        // corrects this line if that commit fails.
-                        dock.say(Copy.SNIPPED)
+                        // corrects this line if that commit fails. The door
+                        // is CUT, one tap from the new snip; it is not drawn
+                        // when CUT is where the user already is.
+                        offer(Copy.SNIPPED, Places.DOOR_CUT, AppScreen.CHOP)
                     },
                     onEject = { MicSessionService.eject(context) },
                     onTakeDoor = ::takeDockDoor,
