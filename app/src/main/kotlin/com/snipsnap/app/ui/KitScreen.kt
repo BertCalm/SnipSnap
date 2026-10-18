@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -64,6 +65,7 @@ import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -120,13 +122,14 @@ fun KitScreen(
     entry: KitShelf.Entry?,
     /**
      * The kit switcher's line, built by App through `Places.switcher`
-     * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). Drawn above
-     * the LCD header when there is a kit; with [entry] null the whole page
-     * is one empty panel and the switcher is not drawn
-     * (docs/SCREEN_PLAN_2026_10.md section 3.3).
+     * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). It is not
+     * drawn: the header's name chip says the kit, and this line is the
+     * chip's accessible name (`Places.switchKitName`), where the project's
+     * count lives. With [entry] null the whole page is one empty panel and
+     * there is no chip (docs/SCREEN_PLAN_2026_10.md section 3.3).
      */
     switcherLine: String,
-    /** The switcher chip: lists the project's kits. */
+    /** The name chip: lists the project's kits, or - with nothing to switch between - opens the shelf. */
     onSwitchKit: () -> Unit,
     /** + FROM SHELF: SHELF in pick mode, returning here. */
     onAddFromShelf: () -> Unit,
@@ -438,7 +441,7 @@ fun KitScreen(
     }
     val showing = bank.coerceAtMost(reachable - 1)
 
-    // ⟳ FULL: an in-app Popup + a runtime orientation flip, not a second
+    // FULL: an in-app Popup + a runtime orientation flip, not a second
     // Activity. the loop's old separate-Activity pattern existed because
     // LOOP owns a wholly disk-backed session and its own audio-thread
     // engine that has no reason to live inside App()'s composition; this
@@ -476,38 +479,82 @@ fun KitScreen(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // The kit switcher (section 3.3): one line above the LCD, so the
-        // kit is chosen before it is read.
-        KitSwitcherRow(switcherLine, onSwitchKit, onAddFromShelf)
-
-        Row(
+        // The header carries the kit (UX review S6): the name chip is the
+        // switcher - it used to be a row of its own above this one, saying
+        // the name a second and third time - then the pad count, the
+        // shelf's door, and the fullscreen grid. A floor of one hit target
+        // tall, not a height: the 40dp this was clamped every chip in it.
+        // The key, tempo and bank, when there are any, sit on a line of
+        // their own beneath, so a long kit name never has to share the row
+        // with them.
+        Column(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
-                val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-                val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
-                TapeText("$keyed$tempo$banks${Copy.countOf(kit.pads.size, "PAD", "PADS")}", TapeType.lcdSmall, scheme.amber.tape)
-                // PLAY's ⟳ FULL, moved to the header's right end (section
-                // 3.3): the fullscreen grid is the part of PLAY that was
-                // different from KIT, and this is its door.
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // The name and the count share what the two chips leave; the
+                // count is measured first, so a long name ellipsises rather
+                // than pushing it off.
+                Row(
+                    Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme)
+                            .tapeClick(label = Places.switchKitName(switcherLine), onClick = onSwitchKit)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, scheme.ink.tape, maxLines = 1)
+                    }
+                    TapeText(Copy.countOf(kit.pads.size, "PAD", "PADS"), TapeType.lcdSmall, scheme.amber.tape, maxLines = 1)
+                }
+                // The visible `+ KIT` is the room the header has; the
+                // accessible name is the door's full one.
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .widthIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .tapeClick(label = Places.ADD_FROM_SHELF, onClick = onAddFromShelf)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.amberOnChrome, maxLines = 1)
+                }
+                // PLAY's FULL, at the header's right end (section 3.3):
+                // the fullscreen grid is the part of PLAY that was
+                // different from KIT, and this is its door. A plain word:
+                // the circle arrow before it had no glyph in either face
+                // and drew as a circle.
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .widthIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
                         .tapeClick(label = "FULLSCREEN") { fullscreen = true }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("⟳ FULL", TapeType.pixel, scheme.ink2.tape)
+                    TapeText("FULL", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
                 }
+            }
+            val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
+            val keyed = kit.key?.let { KeyPicker.label(it) + "  " } ?: ""
+            val banks = if (bankCount > 1 || showing > 0) PadBanks.letter(showing) + "  " else ""
+            val facts = (keyed + tempo + banks).trim()
+            if (facts.isNotEmpty()) {
+                TapeText(facts, TapeType.lcdSmall, scheme.amber.tape, Modifier.padding(bottom = 6.dp), maxLines = 1)
             }
         }
 
@@ -961,37 +1008,6 @@ fun KitScreen(
     }
 }
 
-
-/**
- * The kit switcher (docs/SCREEN_PLAN_2026_10.md section 3.3): one line above
- * the LCD header. The line App built through `Places.switcher` is itself the
- * chip that lists the project's kits; `+ FROM SHELF` beside it is a door onto
- * SHELF in pick mode. Pixel type, both a full hit target tall.
- */
-@Composable
-private fun KitSwitcherRow(switcherLine: String, onSwitchKit: () -> Unit, onAddFromShelf: () -> Unit) {
-    val scheme = LocalScheme.current
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(
-            Modifier
-                .weight(1f)
-                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .raisedBevel(scheme)
-                .tapeClick(label = "SWITCH KIT", onClick = onSwitchKit)
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            // Two lines: the modern label face is wider than the pixel one and
-            // "N KITS IN THIS PROJECT" is the half a user needs to read.
-            TapeText(switcherLine, TapeType.pixel, scheme.ink.tape, maxLines = 2)
-        }
-        DoorChip(Places.ADD_FROM_SHELF, onAddFromShelf)
-    }
-}
 
 /**
  * The strip's resting line: what it reads before any pad has been tapped.

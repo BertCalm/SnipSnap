@@ -1878,9 +1878,9 @@ object Copy {
         "${countOf(sliceCount, "SLICE", "SLICES")} ON THE PADS." + if (chokeSet) " CHOKE GROUP SET." else ""
     /**
      * The kit switcher changed which kit the grid plays (F4): the one fact
-     * the header alone used to carry. "ON THE GRID" is the phrase the
-     * switcher's sheet already marks the active kit with; here it is said
-     * once, as a landing line, when the pick takes effect.
+     * the header alone used to carry. Said once, as a landing line, when
+     * the pick takes effect; the switcher's sheet marks the active kit
+     * with `Places.kitRow`'s "ACTIVE", not this phrase.
      */
     fun onTheGrid(kitName: String): String = "ON THE GRID: ${kitName.uppercase(java.util.Locale.ROOT)}."
     /**

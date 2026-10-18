@@ -3430,7 +3430,10 @@ fun App(shelf: KitShelf) {
                                     // The switcher (plan §3.3): the project's line,
                                     // its kit list, and the shelf in pick mode.
                                     switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
-                                    onSwitchKit = { kitSheetOpen = true },
+                                    // With fewer than two kits there is nothing to
+                                    // switch between: the chip is the shelf's door,
+                                    // not a one-row sheet naming the kit on screen.
+                                    onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
                                     onAddFromShelf = ::addFromShelf,
                                     // The grid's state, held by the navigation model.
                                     bank = nav.padsBank,
@@ -3941,14 +3944,14 @@ fun App(shelf: KitShelf) {
             }
             if (kitSheetOpen) {
                 // The switcher's list (plan §3.3): the project's kits by name,
-                // the active one marked, each a tap to put it on the grid.
+                // the active one marked, each a tap to put it on the grid,
+                // and the shelf's door as the last row.
                 val p = project
                 ChoiceSheet(
                     rows = p?.kits.orEmpty().map { folder ->
                         val name = kits.firstOrNull { it.dir.name == folder }?.kit?.name ?: folder
-                        val label = name.uppercase(java.util.Locale.ROOT) + if (folder == p?.activeKit) " · ON THE GRID" else ""
-                        SheetRow(label) { kitSheetOpen = false; activateKit(folder) }
-                    },
+                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) { kitSheetOpen = false; activateKit(folder) }
+                    } + SheetRow(Places.SHEET_ADD_FROM_SHELF) { kitSheetOpen = false; addFromShelf() },
                     onDismiss = { kitSheetOpen = false },
                 )
             }
