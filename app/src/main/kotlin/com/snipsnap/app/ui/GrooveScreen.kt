@@ -59,6 +59,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.PadEngine
+import com.snipsnap.app.PadHost
 import com.snipsnap.app.ShareOut
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
@@ -417,50 +418,31 @@ fun GrooveScreen(
         loading = false
     }
 
-    // The roll and the editor sound through the same `PadEngine` CLASS as
-    // PLAY, KIT and KEYS — the last screens to come off M0's interim
-    // SoundPool player, which is gone with it — NOT a shared instance or a
-    // transport that crosses screens: this line constructs GROOVE's own
-    // `PadEngine`, disposed with this composable below, exactly as
-    // `PlayScreen.kt`'s own instance is disposed with it. There is no
-    // real shared transport in this codebase (see the live-record plan's
-    // own scope note on why); "same class" is as far as the claim goes. A
-    // groove tick can cross several notes in one frame, so the allocator
-    // is what keeps a busy bar from outrunning the engine's voices, and
-    // what chokes a hat against its own mute group here exactly as it
-    // would under a finger.
+    // The roll and the editor sound through the kit's `PadHost`: the same
+    // engine and allocator KIT's grid is built on, held here for as long as
+    // this composable is, and closed with it. A groove tick can cross
+    // several notes in one frame, so the allocator is what keeps a busy bar
+    // from outrunning the engine's voices, and what chokes a hat against
+    // its own mute group here exactly as it would under a finger.
     val engineContext = LocalContext.current
-    val player = remember(kitDir) { PadEngine(deviceSampleRate(engineContext)) }
-    var engineUp by remember(kitDir) { mutableStateOf(false) }
-    DisposableEffect(kitDir) {
-        engineUp = player.start()
-        onDispose { player.close() }
+    val host = remember(kitDir) { PadHost(deviceSampleRate(engineContext)) }
+    DisposableEffect(host) {
+        host.open()
+        onDispose { host.close() }
     }
     // Keyed on the kit's identity, not the dir: an edit elsewhere (the pad
     // sheet, a texture) hands back a fresh `kit`, and the bank has to
-    // follow or the roll plays yesterday's audio.
-    // `bankReady` (finding D): false until `player.load` commits — before
-    // then `clickSampleIndex == -1` and `PadEngine.clickHit` is a no-op, so
-    // RECORD's own count-in would play four silent beats with no feedback
-    // at all while still arming the take underneath them. Reset to false
-    // whenever the effect restarts (a kit swap mid-load must not read as
-    // still-ready from the PREVIOUS kit).
-    var bankReady by remember(kitDir) { mutableStateOf(false) }
-    LaunchedEffect(entry.kit) {
-        bankReady = false
-        withContext(Dispatchers.IO) { player.load(entry) }
-        bankReady = true
-    }
-    val allocator = remember(kitDir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
+    // follow or the roll plays yesterday's audio. The host loads it, and
+    // owns `bankReady` (finding D): false until the first bank commits —
+    // before then `clickSampleIndex == -1` and `PadEngine.clickHit` is a
+    // no-op, so RECORD's own count-in would play four silent beats with no
+    // feedback at all while still arming the take underneath them.
+    LaunchedEffect(host, entry.kit) { host.request(entry) }
+    val player = host.engine
+    val allocator: VoiceAllocator = host.allocator
     // Endings drained at screen rate, always — not only while the roll is
     // running, since a tap in the editor makes a voice too.
-    LaunchedEffect(player) {
-        while (true) {
-            withFrameNanos { }
-            for (id in player.drainEnded()) allocator.voiceEnded(id)
-            if (player.needsRestart()) engineUp = player.start()
-        }
-    }
+    LaunchedEffect(host) { host.pumpLoop() }
 
     // AUDITION (spec decision 2): armed by PAD SHEET's own AUDITION ▸,
     // consumed below the moment this screen has read it. Deliberately
@@ -536,7 +518,7 @@ fun GrooveScreen(
     // they get the pad's plain sound, same as before this feature existed.
     fun hit(slot: Int, velocity: Float = 1f, auditionPos: Float? = null, auditionBarSteps: Int = GrooveEdit.STEPS_PER_BAR) {
         val pad = entry.kit.pad(slot) ?: return
-        if (!engineUp || !player.isUp()) return
+        if (!host.up || !player.isUp()) return
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
         // Resolved here, on the caller's side of `PadEngine.hit`'s own
@@ -1063,8 +1045,7 @@ fun GrooveScreen(
         // stopping the sound. A backgrounded phone should not keep
         // a choke group ringing, nor leave the allocator counting
         // voices whose endings no frame loop is draining.
-        allocator.allOff()
-        player.allOff()
+        host.allOff()
     }
     // A focus loss asks for the same silence (plus the same save-flush
     // safety net) as ON_STOP, so GROOVE's shared AudioFocus registration
@@ -1671,8 +1652,8 @@ fun GrooveScreen(
      */
     fun startRecording() {
         if (busy || recording || countingIn) return
-        if (!bankReady) {
-            // Finding D: `player.load` hasn't committed yet
+        if (!host.bankReady) {
+            // Finding D: the host's first bank hasn't committed yet
             // (`clickSampleIndex == -1`), so the count-in would be four
             // silent clicks with no feedback while still arming the take
             // underneath them. Telling the user beats gating the button
@@ -2369,7 +2350,7 @@ fun GrooveScreen(
                                 // toast-beats-gating treatment RECORD's own
                                 // `!bankReady` case gets (Finding #8) rather
                                 // than a dimmed button with no explanation.
-                                enabled = currentClip != null && bankReady &&
+                                enabled = currentClip != null && host.bankReady &&
                                     !recording && !countingIn &&
                                     !bounceArmed && !bouncing && !landingBounce,
                             ) {
