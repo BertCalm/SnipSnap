@@ -378,16 +378,22 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-OVERLAP is a second-listen six-delay resonator prototype: a finite strike rings
+OVERLAP is a finite six-delay resonator prototype: a strike rings
 through selectable self, three-cycle, reflected-pair or six-cycle routing.
 KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response; saved recipes
-retain MIDI root and velocity. Run `./gradlew :synth:generateOverlapAudition`
-for twelve dry raw/matched comparisons and their replayable recipes. Revision 2
-uses different cycle families, passive depth scattering and phase-gated excitation
-after the first listening verdict found the identities and breathing too similar. The
-[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site)
-awaits listening; [implementation notes](docs/OVERLAP.md) describe tuning limits
-and the prototype's scope before phone-picker or sustained-loop integration.
+retain a reference MIDI note and velocity. `OverlapMusicalBank` adds twelve
+provisional recipes: four plucks, four finite textures and four breaths. Run
+`./gradlew :synth:generateOverlapMusicalAudition` for fifteen dry clips, including
+three scheduled musical studies, under `testkit/overlap-musical-audition/`.
+Native presets preserve regular renderer leveling and velocity; native studies
+use a common `.25` mix gain. Matched clips use the `.03` audition target. The
+bank ZIP contains native WAVs, recipes and study scores with complete pad recipes
+and frame offsets. This is audition revision 3 on unchanged engine model 2;
+the earlier reference recipes and `generateOverlapAudition` comparisons remain
+available. The [private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site)
+awaits the owner's musical verdict. The bank remains outside the factory roster
+and phone picker; [implementation notes](docs/OVERLAP.md) describe pitch-reference
+limits, free-running breathing and finite HOLD, with no seamless-loop claim.
 
 FLOCK is a finite oscillator-flock listening proof: twenty-four oscillators
 scatter and respond through changing local neighborhoods around a played note.

@@ -1,10 +1,61 @@
-# OVERLAP — second listening prototype
+# OVERLAP — musical bank audition
 
 OVERLAP adapts the [XOmnibus guide](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/overlap_synthesis_guide.md)
 as a deterministic finite six-delay resonator in `:synth`. The
 [private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site) presents
-revision 2, with the [original audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/r1/index.html)
-retained for comparison. Musical acceptance remains with the owner.
+audition revision 3: twelve provisional musical recipes and three scheduled
+studies, all using unchanged engine model 2. The
+[second listen](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/r2/index.html)
+and [original audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site/r1/index.html)
+remain available. Musical acceptance remains with the owner.
+
+## Provisional musical bank
+
+`OverlapMusicalBank` contains twelve complete model-2 recipes, grouped by their
+intended role. The recipes save topology, all six macros, reference MIDI note
+and velocity. These are listening candidates outside the factory preset roster
+and phone picker; no listening acceptance is recorded.
+
+| Family | Recipes |
+| --- | --- |
+| Plucks | GLASS THREAD, HOLLOW PIN, CUP STRIKE, CHORD SEED |
+| Finite textures | OPEN WEAVE, FIFTH CLOUD, SILVER VEIL, LOW HALO |
+| Breaths | LOOSE TIDE, COMMON TIDE, PAIR PULSE, CIRCUIT RUN |
+
+Plucks use a finite strike without breathing or continuing excitation. Textures
+use extended finite excitation; LOW HALO also explores slow gathered swells.
+Breaths explore independent or gathered excitation/absorption phases at different
+rates. These descriptions state the recipes' intended use, rather than a passed
+listening verdict. MIDI labels identify the geometry reference: intermediate
+KNOT settings and multiple resonance families can produce a different strongest
+perceived pitch. The phases are not synchronized to a host tempo.
+
+```text
+./gradlew :synth:generateOverlapMusicalAudition
+```
+
+The task writes `testkit/overlap-musical-audition/`, using page source from
+`prototype/overlap-musical-audition/`. Its fifteen clips include the twelve
+individual recipes and three dry musical studies made from scheduled notes.
+Native preset WAVs use the regular patch renderer, shared house leveling and
+saved velocity. Native studies sum those rendered notes with one declared
+common mix gain of `.25`; their score JSON stores each complete `PadRecipe`
+and its frame offset. There are no added effects.
+
+To replay one downloaded study, run the same task with
+`-PoverlapScore=/absolute/path/study.json -PoverlapWav=/absolute/path/study.wav`.
+Each event retains its complete native tail; score replay refuses truncation.
+
+Matched WAVs use `AuditionLevel`'s loudest-200-ms target `.03` for comparison.
+The bank ZIP contains native WAVs, individual recipes and study scores; matched
+WAVs remain separate audition downloads. Native playback preserves the regular
+renderer levels, while matched playback changes their relative loudness for
+listening. Neither mode establishes pitch accuracy or musical acceptance.
+
+Audition revision 3 changes the listening material and presentation, not the
+engine model. The earlier `OverlapPresets` reference recipes and
+`generateOverlapAudition` control-comparison task are preserved. HOLD remains
+finite excitation; this bank provides no seamless or indefinite loop.
 
 ## Listening verdict and revision
 
@@ -19,8 +70,9 @@ mechanisms explained the failures:
 - Shallow output-only modulation averaged six phases together, while a shared
   initiating hammer and a short rubbing passage dominated the comparison.
 
-Revision 2 changes the model. It remains a listening candidate; passing numerical
-checks does not establish that the new identities or cadence work musically.
+Audition revision 2 introduced engine model 2. The model remains a listening
+candidate; passing numerical checks does not establish that its identities or
+cadence work musically. The musical bank retains this model without DSP changes.
 
 ## Routing and depth
 
@@ -70,7 +122,7 @@ brighter. The six deterministic excitation streams are shared between routing
 and control comparisons. Synthesis and nonlinearity run at 4× and use the shared
 antialias decimator. Output is mono 44.1 kHz.
 
-| Control | Revision 2 behavior |
+| Control | Engine model 2 behavior |
 | --- | --- |
 | KNOT | Identity → selected passive scattering, with overall geometry changing |
 | PULSE | Zero is off; otherwise sets the six slow phase rates |
@@ -89,22 +141,24 @@ factory kit integration remain outside this audition prototype.
 New patches use model 2. An old recipe with no model reads as model 1. The original
 renderer is preserved in `OverlapV1`; a golden WAV hash checks that its published
 sound remains byte-identical. Edits and velocity variants retain the saved model.
-Six provisional starting points live in `OverlapPresets`, outside the factory
-preset roster.
+Six provisional reference starting points live in `OverlapPresets`, outside the
+factory preset roster. They remain separate from the twelve-recipe
+`OverlapMusicalBank`.
 
 ```text
 ./gradlew :synth:test --tests com.snipsnap.synth.OverlapTest
 ./gradlew :synth:generateOverlapAudition
 ```
 
-The task writes the generated, ignored `testkit/overlap-audition/`. Page source is
-`prototype/overlap-audition/`. Twelve clips compare routing, depth, breathing, glow
+The reference task writes the generated, ignored `testkit/overlap-audition/`.
+Page source is `prototype/overlap-audition/`. Twelve clips compare routing, depth, breathing, glow
 and two musical candidates. Revision-prefixed WAV and recipe paths avoid serving
 stale first-listen audio. The manifest records hashes, reference/pitch observations,
 phase order and audio envelope measurements. Raw listening files retain one fixed
 engine gain and the regular end fade; matched files use `AuditionLevel`'s loudest
 200 ms target `.03`. Raw internal diagnostics precede the fade and leveling.
 
-The page starts silent and plays one clip at a time. Keep/revise/pass decisions
-and notes stay in browser storage and export as JSON. Revision 2 uses a separate
-note key; first-listen notes remain accessible on the retained original page.
+The listening pages start silent and play one clip at a time. Keep/revise/pass
+decisions and notes stay in browser storage and export as JSON. The musical bank
+uses its own note key, separate from both earlier auditions. Earlier notes remain
+accessible on the retained first- and second-listen pages.

@@ -2,6 +2,20 @@ plugins {
     kotlin("jvm")
 }
 
+/** Twelve provisional model-two patches plus three dry, frame-scheduled studies. */
+tasks.register<JavaExec>("generateOverlapMusicalAudition") {
+    group = "distribution"
+    description = "Render OVERLAP musical-bank native/matched WAVs, replayable recipes and study scores."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapMusicalAuditionGenerator")
+    workingDir = projectDir
+    val score = providers.gradleProperty("overlapScore").orNull
+    if (score != null) {
+        args("--score", score, providers.gradleProperty("overlapWav").get())
+    } else args("${rootDir}/testkit/overlap-musical-audition")
+}
+
 /** Finite OVERLAP proof: twelve real Kotlin renders, replayable recipes and the listening bench. */
 tasks.register<JavaExec>("generateOverlapAudition") {
     group = "distribution"
