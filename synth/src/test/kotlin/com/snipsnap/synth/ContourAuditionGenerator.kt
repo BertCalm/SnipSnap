@@ -152,14 +152,14 @@ object ContourAuditionGenerator {
                 if (normalized.samples.contentEquals(matched.samples)) matchedPath
                 else "normalized/${case.id}.wav".also { writeWav(root, it, normalized) }
             } else null
-            val repeatPath = if (loop) "repeated/${case.id}_four_cycles.wav".also { path ->
-                val repeated = FloatArray(matched.samples.size * 4) { matched.samples[it % matched.samples.size] }
+            val repeatPath = if (loop) "repeated/${case.id}_two_cycles.wav".also { path ->
+                val repeated = FloatArray(matched.samples.size * 2) { matched.samples[it % matched.samples.size] }
                 writeWav(root, path, Snip(repeated, 1, Dsp.RATE))
             } else null
             val evidence = linkedMapOf<String, Any?>(
                 "loop" to loop, "frames" to raw.frameCount, "durationSeconds" to raw.durationSeconds,
                 "rawPath" to rawPath, "matchedPath" to matchedPath, "normalizedPath" to normalizedPath,
-                "repeatPath" to repeatPath, "rawExportGain" to rawExportGain,
+                "repeatPath" to repeatPath, "repeatCycles" to if (loop) 2 else null, "rawExportGain" to rawExportGain,
                 "rawMetrics" to metrics(raw), "matchedMetrics" to metrics(matched),
                 "normalizedMetrics" to if (normalizedPath != null) metrics(normalized) else null,
                 "seamError" to loopEvidence?.let { Keys.seamError(it.samples, it.loopStart) },
@@ -199,7 +199,7 @@ object ContourAuditionGenerator {
                 "matched" to "Independent gain only, targeting 0.12 with a 0.90 peak ceiling; no rack effects or dynamic processing. A peak-limited clip may remain quieter than the target.",
             ),
             "architecture" to "Original generated band-limited table pairs, related body and edge scans, a generic low-pass filter, and oversampled bounded drive. No imported factory waves or circuit emulation claims.",
-            "holdPolicy" to "Loop-only exports contain settled sustain, without the initial attack. Custom playback repeats the decoded buffer sample accurately. The four-cycle WAV repeats its exact samples without seam fades.",
+            "holdPolicy" to "Loop-only exports contain settled sustain, without the initial attack. Custom playback repeats the decoded buffer sample accurately. The two-cycle WAV repeats its exact samples without seam fades.",
             "comparisonBaseline" to comparisonBaseline?.metadata,
             "categories" to (if (comparisonBaseline != null) listOf(category("revision", "Revision A/B",
                 "Nine Previous and New pairs at the same note and velocity. Previous is the last published voicing, preserved byte for byte; both sides use the same matched-level policy.")) else emptyList()) + listOf(
@@ -210,7 +210,7 @@ object ContourAuditionGenerator {
                 category("interactions", "Interactions", "Four required control pairs, each as a 3 × 3 grid for every voice. Compare adjacent settings at matched level."),
                 category("corners", "Original controls high", "The original five timbral controls at maximum for each voice; the seven added controls stay neutral. Listen for root clarity and bounded roughness."),
                 category("diagnostics", "Body + edge", "Isolate the two related layers, then compare frozen scans, the open filter and clean drive. Every branch is level matched."),
-                category("hold", "Held loops", "Settled loops at normal and demanding settings. Listen across several wraps; four-cycle downloads preserve exact repetitions."),
+                category("hold", "Held loops", "Settled loops at normal and demanding settings. Listen across several wraps; two-cycle downloads preserve exact repetitions."),
             ),
             "clips" to clips,
         )
@@ -221,7 +221,7 @@ object ContourAuditionGenerator {
 
             ${clips.size} dry cases, 44.1 kHz mono 16-bit audition WAV. ${if (quick) "Development smoke pack; it does not cover the complete acceptance matrix." else "Complete three-point expanded-control, five-point original macro, interaction, register, velocity, diagnostic and HOLD listening matrix."}
 
-            Start an HTTP server in this directory and open index.html. The page loads manifest.json; it does not embed the full matrix. Custom playback uses sample-accurate decoded buffer loops. Native controls are also available. Feedback is stored only in the current browser; Export verdicts saves the listening round, clip and group answers as JSON.
+            Start an HTTP server in this directory and open index.html. The page loads manifest.json; it does not embed the full matrix. Custom playback uses sample-accurate decoded buffer loops. Two-cycle WAV previews contain exact repetitions without seam fades. Native controls are also available. Feedback is stored only in the current browser; Export verdicts saves the listening round, clip and group answers as JSON.
 
             Default playback is independently level matched to SnipSnap loudness 0.12 with a 0.90 peak ceiling. Presets and center-note voice references also expose shared host normalization. Raw files preserve the synthesis level, except recorded attenuation when PCM headroom requires it. The manifest records original and exported measurements. No rack effects are used.
 
@@ -233,7 +233,7 @@ object ContourAuditionGenerator {
             Refresh page only: ./gradlew :synth:generateContourAudition -PcontourRefreshPage=true
             Smoke pack: ./gradlew :synth:generateContourAudition -PcontourQuick=true
 
-            ${if (comparisonBaseline != null) "Revision A/B includes nine byte-identical Previous references from the last published voicing and nine New preset references. Their patch JSON and source, recipe and audio hashes remain with each clip. Previous normalized and four-cycle paths are omitted because only the previous raw/matched WAVs were archived. Every comparison render requires an explicit --comparison-baseline=<archive-directory>, where baseline.json, source/, raw/ and matched/ contain the verified previous pack. Use -PcontourComparisonBaseline=<archive-directory> with the Gradle generator task. Never reconstruct the baseline with the current engine." else "To add a Previous-versus-New comparison, supply --comparison-baseline=<archive-directory> to this generator's Java entry point, or -PcontourComparisonBaseline=<archive-directory> to its Gradle task. The directory must contain baseline.json, source/ and its archived raw/matched WAVs with valid previous hashes."}
+            ${if (comparisonBaseline != null) "Revision A/B includes nine byte-identical Previous references from the last published voicing and nine New preset references. Their patch JSON and source, recipe and audio hashes remain with each clip. Previous normalized and repeated-preview paths are omitted because only the previous raw/matched WAVs were archived. Every comparison render requires an explicit --comparison-baseline=<archive-directory>, where baseline.json, source/, raw/ and matched/ contain the verified previous pack. Use -PcontourComparisonBaseline=<archive-directory> with the Gradle generator task. Never reconstruct the baseline with the current engine." else "To add a Previous-versus-New comparison, supply --comparison-baseline=<archive-directory> to this generator's Java entry point, or -PcontourComparisonBaseline=<archive-directory> to its Gradle task. The directory must contain baseline.json, source/ and its archived raw/matched WAVs with valid previous hashes."}
         """.trimIndent() + "\n")
         println("Wrote ${clips.size} CONTOUR cases under ${root.absolutePath} in %.1f s".format(Locale.ROOT, (System.nanoTime() - started) / 1e9))
     }
@@ -317,7 +317,7 @@ object ContourAuditionGenerator {
                 put("comparisonRevision", "previous"); put("baselineRound", baseline.metadata["listeningRound"])
                 put("rawPath", "comparison/${previous.getValue("rawPath")}")
                 put("matchedPath", "comparison/${previous.getValue("matchedPath")}")
-                put("normalizedPath", null); put("normalizedMetrics", null); put("repeatPath", null)
+                put("normalizedPath", null); put("normalizedMetrics", null); put("repeatPath", null); put("repeatCycles", null)
                 put("provenance", baseline.metadata)
             }
             val newReference = LinkedHashMap(current).apply {
