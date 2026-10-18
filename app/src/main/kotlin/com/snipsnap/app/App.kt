@@ -782,7 +782,7 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "landKit: project bookkeeping failed for ${entry.dir.name}", e)
-                dock.say(Copy.PROJECT_OPEN_FAILED)
+                dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
             }
             // Re-read after the await: only adopt the update if the user
@@ -1572,7 +1572,7 @@ fun App(shelf: KitShelf) {
                 if (e is CancellationException) throw e
                 busy = null
                 partial?.let { if (open?.dir == source.dir) open = it }
-                dock.say("DUST FAILED: ${e.message ?: e.javaClass.simpleName}")
+                openNote(LandingNote.dustFailed(e.message ?: e.javaClass.simpleName))
                 return@launch
             }
             busy = null
@@ -2876,7 +2876,7 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "addKitToProject: failed", e)
-                dock.say(Copy.PROJECT_OPEN_FAILED)
+                dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
             }
             project = updated
@@ -3997,7 +3997,26 @@ fun App(shelf: KitShelf) {
             }
             if (micPermissionDenied) {
                 val dismissDenied = { micPermissionDenied = false }
-                BlockedDialog(Copy.MIC_PERMISSION_DENIED, Copy.CAPTURE_BLOCKED_BUTTON, onDismiss = dismissDenied)
+                BlockedDialog(
+                    Copy.MIC_PERMISSION_DENIED,
+                    Copy.CAPTURE_BLOCKED_BUTTON,
+                    onDismiss = dismissDenied,
+                    // The words say where the switch is; the button takes
+                    // you there. A permission the system will not ask for
+                    // again can only be turned on in this app's own page.
+                    actionLabel = Places.OPEN_SETTINGS,
+                    onAction = {
+                        dismissDenied()
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "mic denied: the app's settings page would not open", e)
+                            dock.say(Copy.MIC_PERMISSION_DENIED)
+                        }
+                    },
+                )
                 BackHandler(onBack = dismissDenied)
             }
         }
@@ -4014,10 +4033,17 @@ fun App(shelf: KitShelf) {
  * scrim's dismiss doesn't fire through, rather than a Material
  * `AlertDialog` (TapeOS never uses Material's own chrome, see `Chrome.kt`'s
  * `TapeText` KDoc). [message] and [buttonLabel] are the only things that
- * differ between callers.
+ * differ between callers, and an optional [actionLabel] button above the
+ * dismiss when the refusal has somewhere to send the user.
  */
 @Composable
-private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () -> Unit) {
+private fun BlockedDialog(
+    message: String,
+    buttonLabel: String,
+    onDismiss: () -> Unit,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
+) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -4050,6 +4076,7 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
+            if (actionLabel != null) PrimaryAction(label = actionLabel, enabled = true, onClick = onAction)
             PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
         }
     }

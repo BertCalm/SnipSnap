@@ -578,7 +578,7 @@ private fun ExportContent(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e(TAG, "putOnCard: card copy failed", e)
-                onToast(Copy.DUB_FAILED)
+                onNote(LandingNote.dubFailed())
             } finally {
                 session.busy = false
                 revision++
@@ -618,7 +618,7 @@ private fun ExportContent(
                         // tap would replace - by name, so the decision is
                         // about that thing rather than an abstract "sure?".
                         session.overwriting = result.path
-                        onToast(Copy.dubWouldOverwrite(result.path.name))
+                        onNote(LandingNote.dubWouldOverwrite(result.path.name))
                     }
                     is ExportWizardModel.WriteResult.Done -> {
                         session.overwriting = null
@@ -682,7 +682,7 @@ private fun ExportContent(
                 // do about it, not a Java exception's `message` — that
                 // detail stays in logcat, where it's actually useful.
                 Log.e(TAG, "startWrite: dub failed", e)
-                onToast(Copy.DUB_FAILED)
+                onNote(LandingNote.dubFailed())
             } finally {
                 session.busy = false
                 revision++
@@ -984,7 +984,7 @@ private fun ProjectCard(
                 when (result) {
                     is ProjectSessionModel.WriteResult.WouldOverwrite -> {
                         overwriting = result.path
-                        onToast(Copy.dubWouldOverwrite(result.path.name))
+                        onNote(LandingNote.dubWouldOverwrite(result.path.name))
                     }
                     is ProjectSessionModel.WriteResult.Done -> {
                         overwriting = null
@@ -1007,7 +1007,7 @@ private fun ProjectCard(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e(TAG, "writeSession: session write failed", e)
-                onToast(Copy.DUB_FAILED)
+                onNote(LandingNote.dubFailed())
             } finally {
                 busy = false
                 stage = model.stage

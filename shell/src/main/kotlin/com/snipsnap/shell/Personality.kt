@@ -88,6 +88,13 @@ object Copy {
      */
     const val PROJECT_OPEN_FAILED = "COULDN'T OPEN THAT PROJECT."
     /**
+     * A kit would not join the open project: the bookkeeping that records
+     * it (`landKit` after a chop lands, `+ FROM SHELF`) failed on disk. The
+     * kit itself is on the shelf; the project is what did not take it, and
+     * [PROJECT_OPEN_FAILED] said the wrong thing about that.
+     */
+    const val KIT_ADD_FAILED = "COULDN'T ADD THAT KIT TO THE PROJECT."
+    /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
      * from [EMPTY_SHELF], which would otherwise flatly claim nothing exists
@@ -1979,6 +1986,8 @@ object Copy {
      * quoting Java at somebody.
      */
     const val DUB_FAILED = "DUB FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
+    /** DUST threw mid-run: the box's title, with the reason under it. Pads dusted before it threw are kept. */
+    const val DUST_FAILED = "DUST FAILED."
     /**
      * The first tap on DUB when something is already at the destination
      * (September UAT, finding 18). [what] is the exact thing in the way, as

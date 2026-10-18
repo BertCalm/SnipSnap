@@ -36,6 +36,9 @@ object Places {
     const val DOOR_OUT = "OUT ▸"
 
     const val LISTEN = "LISTEN · MIC"
+
+    /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. The arrow: it opens that page. */
+    const val OPEN_SETTINGS = "OPEN SETTINGS ▸"
     const val SNIPPED = "SNIPPED"
     const val STOPPED = "■"
 
