@@ -108,7 +108,7 @@ object Copy {
      * PADS." said the first and left a person to guess the second (the UX
      * review's minor list).
      */
-    const val EMPTY_KIT = "NO PADS YET. TAP A PAD TO HEAR NOTHING, OR HOLD ONE TO CATCH A SOUND."
+    const val EMPTY_KIT = "NO PADS YET. HOLD A PAD TO CATCH A SOUND INTO IT, OR SEND A CUT FROM TAPE."
 
     /**
      * The PADS strip before any pad is tapped: tapping is how the strip
