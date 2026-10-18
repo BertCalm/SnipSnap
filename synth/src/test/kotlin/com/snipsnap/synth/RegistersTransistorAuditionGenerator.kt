@@ -48,6 +48,8 @@ object RegistersTransistorAuditionGenerator {
         val manifest: JsonValue,
         val clips: List<Map<String, Any?>>,
         val recipeHashes: Map<String, String>,
+        val sourceSnapshots: List<Map<String, String>>,
+        val sourceEvidence: List<Map<String, String>>,
     )
 
     @JvmStatic
@@ -157,9 +159,13 @@ object RegistersTransistorAuditionGenerator {
             Held recurrence is measured across independently synthesized adjacent cycles
             before the settled region is copied three times for audition playback.
 
-            R1/R2 comparison pairs, archived source snapshots and all published R3 sounds
+            R1/R2 comparison pairs, their archived source snapshots and all published R3 sounds
             retain their exact paths and hashes. The complete R3 manifest is archived at
-            baseline/r3-manifest.json, with its source snapshots at baseline/source/r3/.
+            baseline/r3-manifest.json. R3's declared source fingerprints are retained as
+            published metadata; sourceSnapshotStatus records whether matching source files
+            actually accompanied the archive. The published prototype.patch and
+            implementation.md are preserved separately as hashed evidence when available;
+            neither is asserted to be a complete matching R3 source snapshot.
             Existing explicit review scopes remain intact; implicit R3 sound scopes become
             explicit. R4 notes save separately and can inherit matching R1/R2/R3 reviews.
 
@@ -322,16 +328,33 @@ object RegistersTransistorAuditionGenerator {
             (plain(entry) as Map<String, Any?>)
         }
         check(clips.size == 85 && audioHash(clips) == R3_AUDIO_HASH)
-        for (source in obj.getValue("sourceFingerprints").arr()) {
+        val sourceSnapshots = obj.getValue("sourceFingerprints").arr().mapNotNull { source ->
             val fingerprint = source.obj()
-            check(sha256(archiveAsset(root, "source/${fingerprint.getValue("path").str()}")) == fingerprint.getValue("sha256").str())
+            val path = fingerprint.getValue("path").str()
+            val file = File(root, "source/$path")
+            if (!file.exists()) null else {
+                val hash = sha256(archiveAsset(root, "source/$path"))
+                check(hash == fingerprint.getValue("sha256").str()) { "R3 source snapshot changed: $path" }
+                mapOf("path" to path, "sha256" to hash)
+            }
+        }
+        val sourceEvidence = listOf("prototype.patch", "implementation.md").mapNotNull { path ->
+            if (!File(root, path).exists()) null else mapOf("path" to path, "sha256" to sha256(archiveAsset(root, path)))
         }
         for (metadata in obj.getValue("baselines").arr()) {
             val baseline = metadata.obj()
-            check(sha256(archiveAsset(root, baseline.getValue("manifest").str())) == baseline.getValue("manifestSha256").str())
+            val archivedManifest = archiveAsset(root, baseline.getValue("manifest").str())
+            check(sha256(archivedManifest) == baseline.getValue("manifestSha256").str())
+            val sourceRoot = baseline.getValue("sourceRoot").str()
+            for (source in Json.parse(archivedManifest.readText()).obj().getValue("sourceFingerprints").arr()) {
+                val fingerprint = source.obj()
+                check(sha256(archiveAsset(root, "$sourceRoot/${fingerprint.getValue("path").str()}")) ==
+                    fingerprint.getValue("sha256").str())
+            }
         }
-        println("Verified published R3 manifest, 170 WAV hashes, 85 recipes and archived source fingerprints.")
-        return Baseline(root, manifest, clips, recipes)
+        println("Verified published R3 manifest, 170 WAV hashes, 85 recipes and R1/R2 archived source fingerprints; " +
+            "${sourceSnapshots.size} matching R3 source snapshots and ${sourceEvidence.size} published evidence artifacts available.")
+        return Baseline(root, manifest, clips, recipes, sourceSnapshots, sourceEvidence)
     }
 
     private fun preserveArchive(root: File, baseline: Baseline) {
@@ -348,13 +371,19 @@ object RegistersTransistorAuditionGenerator {
         }
         File(baseline.root, "manifest.json").copyTo(File(root, "baseline/r3-manifest.json"), overwrite = true)
         check(sha256(File(root, "baseline/r3-manifest.json")) == R3_MANIFEST_HASH)
-        for (source in baseline.manifest.obj().getValue("sourceFingerprints").arr()) {
-            val fingerprint = source.obj()
-            val path = fingerprint.getValue("path").str()
+        for (source in baseline.sourceSnapshots) {
+            val path = source.getValue("path")
             val target = File(root, "baseline/source/r3/$path")
             target.parentFile.mkdirs()
             archiveAsset(baseline.root, "source/$path").copyTo(target, overwrite = true)
-            check(sha256(target) == fingerprint.getValue("sha256").str())
+            check(sha256(target) == source.getValue("sha256"))
+        }
+        for (evidence in baseline.sourceEvidence) {
+            val path = evidence.getValue("path")
+            val target = File(root, "baseline/evidence/r3/$path")
+            target.parentFile.mkdirs()
+            archiveAsset(baseline.root, path).copyTo(target, overwrite = true)
+            check(sha256(target) == evidence.getValue("sha256"))
         }
     }
 
@@ -392,8 +421,20 @@ object RegistersTransistorAuditionGenerator {
     private fun r3Metadata(baseline: Baseline): Map<String, Any?> = mapOf(
         "revision" to R3_REVISION, "audioHash" to R3_AUDIO_HASH,
         "manifest" to "baseline/r3-manifest.json", "manifestSha256" to R3_MANIFEST_HASH,
-        "sourceRoot" to "baseline/source/r3",
+        "sourceRoot" to if (baseline.sourceSnapshots.isEmpty()) null else "baseline/source/r3",
         "sourceFingerprint" to baseline.manifest.obj().getValue("sourceFingerprint"),
+        "sourceFingerprintStatus" to "retained-published-metadata",
+        "sourceSnapshotStatus" to when (baseline.sourceSnapshots.size) {
+            0 -> "unavailable-in-published-archive"
+            baseline.manifest.obj().getValue("sourceFingerprints").arr().size -> "complete-and-verified"
+            else -> "partial-and-verified"
+        },
+        "sourceSnapshotFingerprints" to baseline.sourceSnapshots,
+        "sourceEvidence" to baseline.sourceEvidence.map { evidence -> mapOf(
+            "path" to "baseline/evidence/r3/${evidence.getValue("path")}",
+            "sha256" to evidence.getValue("sha256"), "kind" to "preserved-published-artifact",
+        ) },
+        "sourceNotes" to "Declared source fingerprints come from the exact published R3 manifest. Only existing matching source files are called snapshots. Published prototype.patch and implementation.md are retained as separate evidence artifacts and are not asserted to reconstruct the complete fingerprinted R3 source tree.",
         "verifiedWavCount" to 170, "verifiedRecipeCount" to 85, "copiedOriginalCases" to 85,
         "recipeFingerprints" to baseline.recipeHashes.map { (id, hash) -> mapOf("id" to id, "sha256" to hash) },
     )
