@@ -165,7 +165,12 @@ object Cleanup {
 
         val out = FloatArray(snip.samples.size)
         for (i in snip.samples.indices) {
-            out[i] = (snip.samples[i] * gain).coerceIn(-1f, 1f)
+            val v = snip.samples[i] * gain
+            // A non-finite sample stays non-finite through coerceIn (NaN
+            // fails both comparisons), so scrub it to silence here, the
+            // same rule WavWriter keeps on export: one poisoned sample
+            // must not ride through cleanup into every later stage.
+            out[i] = if (v.isFinite()) v.coerceIn(-1f, 1f) else 0f
         }
         return snip.copy(samples = out)
     }

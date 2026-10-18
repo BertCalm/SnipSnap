@@ -431,4 +431,33 @@ class DspTest {
             )
         }
     }
+
+    // ---------- non-finite hygiene in gain staging ----------
+
+    @Test
+    fun `normalize scrubs a non-finite sample instead of poisoning the buffer`() {
+        val buf = floatArrayOf(0.5f, Float.NaN, Float.POSITIVE_INFINITY, -0.25f)
+        Dsp.normalize(buf, target = 0.95f)
+        assertTrue(buf.all { it.isFinite() }, "buffer stayed non-finite: ${buf.toList()}")
+        assertEquals(0f, buf[1])
+        assertEquals(0f, buf[2])
+        assertEquals(0.95f, buf[0], 1e-6f)
+    }
+
+    @Test
+    fun `limitPeak ignores an infinite sample when judging the peak`() {
+        val buf = floatArrayOf(0.5f, Float.POSITIVE_INFINITY)
+        Dsp.limitPeak(buf, ceiling = 1f)
+        // The finite peak (0.5) is under the ceiling, so nothing rescales;
+        // the infinite sample is not the peak and must not zero the rest.
+        assertEquals(0.5f, buf[0])
+    }
+
+    @Test
+    fun `levelTo survives a buffer containing a NaN`() {
+        val buf = FloatArray(4_410) { if (it == 100) Float.NaN else (0.4 * kotlin.math.sin(2.0 * kotlin.math.PI * 440.0 * it / Dsp.RATE)).toFloat() }
+        Dsp.levelTo(buf, Dsp.RATE, target = 0.18f)
+        assertTrue(buf.all { it.isFinite() }, "levelTo spread a NaN across the render")
+    }
+
 }
