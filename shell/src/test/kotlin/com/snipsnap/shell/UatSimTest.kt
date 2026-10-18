@@ -177,8 +177,9 @@ class UatSimTest {
             check(make.settings(Bench.SYNTH)["engine"] == "RESIN")
         }
         val dock = DockModel()
-        dock.offer("THE PADS ARE LOADED. TAKE THE KIT OUT.", Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT)))
-        dock.say("DUSTED A02.")
+        val cut = Location(Place.TAPE, Stage.CUT)
+        dock.offer("THE PADS ARE LOADED. TAKE THE KIT OUT.", Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT)), cut)
+        dock.say("DUSTED A02.", cut)
         note("the dock's door survives a plain line: '${dock.now.text}' still offers ${dock.now.door?.label} — J10's timed offer retires")
     }
 

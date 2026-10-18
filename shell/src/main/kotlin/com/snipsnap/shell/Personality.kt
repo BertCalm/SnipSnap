@@ -187,6 +187,12 @@ object Copy {
      * a control the screen was not showing (September wiring review,
      * finding 14). [CHOP_AUTO_NONE] does not need the phrase: AUTO is in
      * the same box, so the box is open when that toast fires.
+     *
+     * No toast says it now: it fired on entering CUT and then sat in the
+     * dock on every other screen (the October UX review's S1), and CUT
+     * draws [CHOP_NO_HITS_FOUND] and TRY GRID ▸ itself. Kept for the law
+     * that pins its words (`PersonalityTest`), for a caller that has to
+     * say it from outside CUT.
      */
     const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CUT AND TRY GRID, OR TAPE SOMETHING ELSE."
     /**
