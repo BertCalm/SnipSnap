@@ -218,6 +218,12 @@ class PrismIntegrationTest {
     fun `pitched kit retains all six voices dry recipes and its declared pentatonic key`() {
         val kit = SynthKits.prism()
         assertEquals(16, kit.size)
+        val originals = PrismPresetsTest.originalPresets
+        val notes = listOf(0, 3, 5, 7, 10, 12, 15, 17).mapIndexed { i, semitone ->
+            originals.first().copy(name = "Prism ${i + 1}",
+                macros = originals.first().macros + ("TUNE" to semitone / 24f))
+        }
+        val expected = notes + originals.take(6) + listOf(originals[7], originals[6])
         val patches = kit.mapIndexed { i, nullable ->
             val pad = requireNotNull(nullable)
             val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
@@ -229,9 +235,15 @@ class PrismIntegrationTest {
             assertTrue(pad.snip.peak() > 0f, "A${i + 1} carries audio")
             assertTrue(Prism.midiFor(patch.voice, patch.macros.getValue("TUNE")) % 12 in setOf(0, 3, 5, 7, 10),
                 "A${i + 1} stays in C minor pentatonic")
-            if (i == 0 || i == kit.lastIndex) assertContentEquals(pad.snip.samples, recipe.render().samples)
+            assertEquals(expected[i], patch, "A${i + 1} retains its original complete recipe")
+            assertContentEquals(expected[i].render().samples, pad.snip.samples,
+                "A${i + 1} retains its original audio as the selectable bank expands")
             patch
         }
+        assertEquals((1..8).map { "Prism $it" } + listOf(
+            "Soft Facets", "Wooden Spectrum", "Partial Tines", "Hollow Register",
+            "Root Glass", "Slow Separation", "Small Prism", "Amber Veil",
+        ), patches.map { it.name })
         assertEquals(PrismVoice.entries.toSet(), patches.map { it.voice }.toSet())
         assertEquals(1, kit.count { it!!.drumClass == DrumClass.LOOP })
         assertEquals(DrumClass.LOOP, kit.last()!!.drumClass)

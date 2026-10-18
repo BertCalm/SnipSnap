@@ -31,9 +31,22 @@
 (() => {
 'use strict';
 const data=window.UNDERTOW_MANIFEST,player=document.querySelector('#player'),now=document.querySelector('#now'),repeat=document.querySelector('#repeat');
-let selected=null,request=0,cancelPending=null,notes={};
+let selected=null,request=0,cancelPending=null,notes={},archivedSealNotes={};
 const storageKey='snipsnap-undertow-listening-v'+(data.voiceRevision||1);
-try{notes=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch(_){}
+function readNotes(key){try{const value=JSON.parse(localStorage.getItem(key)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch(_){return {}}}
+notes=readNotes(storageKey);
+if(data.voiceRevision===3){
+ const previous=readNotes('snipsnap-undertow-listening-v2');
+ const unaffected=new Set(['KNOCK','BREATH','FLUTTER','HOLLOW','SURGE']);let migrated=false;
+ for(const [id,entry] of Object.entries(previous)){
+  if(!entry||typeof entry!=='object')continue;
+  const voice=entry.voice||(/^comparison_([A-Z]+)_/.exec(id)||[])[1]||((/^([a-z]+)_/.exec(id)||[])[1]||'').toUpperCase();
+  if(voice==='SEAL'){archivedSealNotes[id]=entry;continue}
+  if(unaffected.has(voice)&&!Object.prototype.hasOwnProperty.call(notes,id)){notes[id]={...entry,voice,voiceRevision:entry.voiceRevision||2};migrated=true}
+ }
+ if(migrated)try{localStorage.setItem(storageKey,JSON.stringify(notes))}catch(_){}
+}
+function noteRevision(voice){return (data.voiceRevisions||{})[voice]||(data.voiceRevision===3&&voice!=='SEAL'?2:data.voiceRevision||1)}
 function el(tag,text,cls){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify(notes))}catch(_){}}
 function num(v,d=4){return v===null||v===undefined?'unavailable':Number(v).toFixed(d)}
@@ -88,13 +101,13 @@ for(const section of data.sections){
   evidence.append(el('div',text,'readout'));if(c.traceCsv)evidence.append(link(c.traceCsv,'Download state CSV'));if(c.contactsCsv){evidence.append(el('br'),link(c.contactsCsv,'Download contact events CSV'))}card.append(evidence);
   const verdict=el('details');verdict.append(el('summary','Listening notes'));const rating=el('select');rating.setAttribute('aria-label',`Verdict for ${c.voice} ${c.label}`);
   for(const name of ['Unreviewed','Convincing / useful','Needs work']){const option=el('option',name);option.value=name;rating.append(option)}const note=el('textarea');note.placeholder='Catch, root, breath, competition, tail or seam…';note.setAttribute('aria-label',`Notes for ${c.voice} ${c.label}`);rating.value=(notes[c.id]||{}).verdict||'Unreviewed';note.value=(notes[c.id]||{}).note||'';
-  function save(){notes[c.id]={voice:c.voice,label:c.label,verdict:rating.value,note:note.value};persist()}rating.addEventListener('change',save);note.addEventListener('input',save);verdict.append(rating,note);card.append(verdict);groups.get(c.group).cards.append(card);allCards.push(card)
+  function save(){notes[c.id]={voice:c.voice,voiceRevision:noteRevision(c.voice),label:c.label,verdict:rating.value,note:note.value};persist()}rating.addEventListener('change',save);note.addEventListener('input',save);verdict.append(rating,note);card.append(verdict);groups.get(c.group).cards.append(card);allCards.push(card)
  }
  wrap.append(body);document.querySelector('#cases').append(wrap);allSections.push(wrap)
 }
 document.querySelector('#search').addEventListener('input',event=>{const query=event.target.value.trim().toLowerCase();for(const card of allCards)card.hidden=!card.dataset.search.includes(query);for(const group of allGroups)group.hidden=!Array.from(group.querySelectorAll('.card')).some(c=>!c.hidden);for(const section of allSections){section.hidden=!Array.from(section.querySelectorAll('.group')).some(g=>!g.hidden);if(query&&!section.hidden)section.open=true}});
 document.querySelector('#expand').addEventListener('click',event=>{const open=event.target.textContent==='Open all';allSections.forEach(s=>{s.open=open});event.target.textContent=open?'Close all':'Open all'});
-document.querySelector('#export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:'UNDERTOW',voiceRevision:data.voiceRevision||1,voiceRevisionDescription:data.voiceRevisionDescription||'Initial voice audition.',quick:data.quick,savedAt:new Date().toISOString(),notes},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),node=el('a');node.href=url;node.download='undertow-listening-notes.json';node.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+document.querySelector('#export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:'UNDERTOW',voiceRevision:data.voiceRevision||1,voiceRevisions:data.voiceRevisions,voiceRevisionDescription:data.voiceRevisionDescription||'Initial voice audition.',quick:data.quick,savedAt:new Date().toISOString(),notes,archivedSealNotes:data.voiceRevision===3?{voiceRevision:2,notes:archivedSealNotes}:undefined},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),node=el('a');node.href=url;node.download='undertow-listening-notes.json';node.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 })();
 </script>
 </body>
