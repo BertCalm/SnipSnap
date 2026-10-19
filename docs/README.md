@@ -31,6 +31,12 @@ recipe contracts, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
 
+**Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
+strand-routing prototype, saved recipes, branch allocation, dry listening
+comparisons and held-loop evidence. The supplied engineering specification
+is preserved as a proposal; the full voice roster and sonic acceptance
+await listening.
+
 **Oven.** [`OVEN.md`](OVEN.md) records the approved ten-preset sonic baseline,
 the phone synth integration and finite per-note resonance. Keyboard velocity
 layers, shared resonance and phone/MPC hardware acceptance remain later work.

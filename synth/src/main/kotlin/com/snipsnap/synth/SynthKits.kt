@@ -1029,6 +1029,18 @@ object SynthKits {
             ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
     }
 
+    /** Four THREAD scale notes followed by twelve dry, fully replayable first-listen recipes. */
+    fun filament(): List<ArrangedPad?> {
+        fun arranged(patch: FilamentPatch) = pad(patch, Filament.drumClassFor(patch.voice, patch.macros))
+        val notes = PENTATONIC.take(4).mapIndexed { index, semitone ->
+            FilamentPatch(
+                "Filament ${index + 1}", FilamentVoice.THREAD, Filament.defaults(FilamentVoice.THREAD),
+                midi = Filament.rootMidi(FilamentVoice.THREAD) + semitone,
+            ).let(::arranged)
+        }
+        return notes + FilamentPresets.all().map(::arranged)
+    }
+
     /**
      * Dry original recordings in C minor pentatonic. A01–A08 play the clear string family;
      * A09–A14 expose all six first-review voices, and A15–A16 repeat forward/return cycles
