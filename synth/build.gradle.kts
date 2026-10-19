@@ -283,6 +283,21 @@ tasks.register<JavaExec>("generateCircuitAudition") {
     if (project.hasProperty("quick")) args("--quick")
 }
 
+/** One continuous minute; a diagnostic performance rather than a new patch or HOLD format. */
+tasks.register<JavaExec>("generateCircuitCeremony") {
+    group = "distribution"
+    description = "Render one 60-second CIRCUIT ceremony with raw/matched PCM24 and event/path/source diagnostics."
+    dependsOn("testClasses")
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CircuitCeremonyGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("circuitCeremonyOut").orElse("${rootDir}/testkit/circuit-ceremony").get())
+    providers.gradleProperty("circuitCeremonyInputs").orNull?.let {
+        systemProperty("circuit.ceremony.inputs", it)
+    }
+}
+
 /** Render the THUMP acceptance kit into testkit/. See ThumpKitGenerator. */
 tasks.register<JavaExec>("generateThumpKit") {
     group = "distribution"
