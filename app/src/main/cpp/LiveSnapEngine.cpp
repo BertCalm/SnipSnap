@@ -1,5 +1,6 @@
 #include "LiveSnapEngine.h"
 
+#include "DspMath.h"
 #include "OboeOutput.h"
 
 #include <android/log.h>
@@ -18,18 +19,6 @@ namespace {
 // one-shot render.
 constexpr int32_t kTuneSemitones = 24;
 constexpr float kRootHz = 110.0f;
-
-/**
- * 0..1, and NaN-safe: written `!(v > 0)` rather than `v < 0` so a NaN
- * lands on 0 instead of sailing through - see SurfaceEngine.cpp's own
- * `clamp01` for why this matters more here than almost anywhere: the
- * smoothers and the filter carry state across callbacks, so one NaN
- * never leaves once it's in.
- */
-inline float clamp01(float v) { return !(v > 0.0f) ? 0.0f : (v > 1.0f ? 1.0f : v); }
-
-/** A macro arriving from outside (JNI). Non-finite reads as `fallback`. */
-inline float control01(float v, float fallback) { return std::isfinite(v) ? clamp01(v) : fallback; }
 
 /** The note TUNE lands on - Snap.frequencyFor, ported. */
 inline float frequencyForTune(float tune) {

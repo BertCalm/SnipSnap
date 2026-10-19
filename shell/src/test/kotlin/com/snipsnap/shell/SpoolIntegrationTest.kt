@@ -9,9 +9,11 @@ import com.snipsnap.kit.Severity
 import com.snipsnap.kit.blocked
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Spool
 import com.snipsnap.synth.SpoolMachine
 import com.snipsnap.synth.SpoolPatch
+import com.snipsnap.synth.SpoolPresets
 import com.snipsnap.synth.SpoolRoute
 import com.snipsnap.synth.SpoolSplice
 import com.snipsnap.synth.SpoolVoice
@@ -24,6 +26,44 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class SpoolIntegrationTest {
+    @Test
+    fun `the complete factory bank can be loaded edited and saved without losing recipes`() {
+        val shelf = kotlin.io.path.createTempDirectory("spool-factory-shelf").toFile()
+        try {
+            val factory = SpoolPresets.all()
+            assertEquals(36, factory.size)
+            assertEquals(factory, Presets.all().filterIsInstance<SpoolPatch>(), "all factory recipes reach the host registry")
+            for (voice in SpoolVoice.entries) {
+                assertEquals(factory.filter { it.voice == voice }, Presets.forVoice("SPOOL", voice.name),
+                    "$voice exposes its complete factory row")
+            }
+
+            val personal = factory.mapIndexed { index, patch ->
+                val nameCheck = UserPresets.check(patch.name, patch.engine, patch.voiceName, emptyList())
+                // Some approved factory labels exceed the personal shelf's fourteen-character limit.
+                assertTrue(nameCheck is UserPresets.Check.Factory || nameCheck is UserPresets.Check.TooLong,
+                    "${patch.name}: a personal save must not reuse a factory label")
+                val loaded = assertIs<SpoolPatch>(Patches.fromJsonText(patch.toJsonText()))
+                val head = if (loaded.macros.getValue("HEAD") < .5f) .83f else .17f
+                val macros = loaded.macros + ("HEAD" to head)
+                val edited = assertIs<SpoolPatch>(Patches.edited(loaded, "MY TAPE ${index + 1}", macros))
+                assertEquals(loaded.copy(name = edited.name, macros = macros), edited,
+                    "${patch.name}: host edits retain machine geometry, velocity and model")
+                UserPresets.save(shelf, edited, nowMillis = index.toLong())
+                edited
+            }
+
+            val restarted = UserPresets.read(shelf)
+            assertEquals(personal, restarted.map { it.patch }, "a new shelf read retains all thirty-six complete recipes")
+            for (voice in SpoolVoice.entries) {
+                assertEquals(factory.count { it.voice == voice }, UserPresets.forVoice(restarted, "SPOOL", voice.name).size,
+                    "$voice keeps every personal recipe after restart")
+            }
+        } finally {
+            shelf.deleteRecursively()
+        }
+    }
+
     @Test
     fun `edited preview survives preset restart pad replay and a sixteen pad export`() {
         val shelf = kotlin.io.path.createTempDirectory("spool-workflow").toFile()
@@ -62,7 +102,17 @@ class SpoolIntegrationTest {
             assertEquals(16, starter.pads.size)
             val starterPatches = starter.pads.map { assertIs<SpoolPatch>(Breed.recipeOf(it.recipe)!!.patch) }
             assertEquals(SpoolVoice.entries.toSet(), starterPatches.map { it.voice }.toSet())
-            assertTrue(starterPatches.any { Spool.isLoop(it.macros.getValue("HOLD")) }, "HOLD snapshots reach the kit")
+            assertEquals((1..8).map { "Frame $it" } + listOf(
+                "SOFT FRAME", "RETURNING CHOIR", "FLUTE MEMORY", "WORN BRASS", "GHOST COPY", "SHORT SPLICE",
+                "RETURNING CHOIR LOOP", "GHOST COPY LOOP",
+            ), starterPatches.map { it.name }, "expanding the shelf must preserve the accepted sixteen-pad map")
+            assertTrue(starterPatches.take(8).all { it.voice == SpoolVoice.STRING })
+            assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65),
+                starterPatches.take(8).map { Spool.midiFor(it.voice, it.macros.getValue("TUNE")) })
+            assertEquals(SpoolVoice.entries + listOf(SpoolVoice.CHOIR, SpoolVoice.PALIMPSEST),
+                starterPatches.drop(8).map { it.voice })
+            assertEquals(List(14) { false } + listOf(true, true),
+                starterPatches.map { Spool.isLoop(it.macros.getValue("HOLD")) }, "only the final two pads are frozen HOLD loops")
 
             val recipe = PadRecipe(patch = restarted)
             val model = KitBuilderModel.open(dir)
