@@ -262,19 +262,26 @@ class MurmurIntegrationTest {
     }
 
     @Test
-    fun `provisional dry recipes are discoverable for every voice and preserve pitched routing`() {
+    fun `the complete thirty six preset bank is discoverable through shared rosters and preserves pitched routing`() {
         val presets = MurmurPresets.all()
-        assertTrue(presets.isNotEmpty())
+        val registered = Presets.all().filter { it.engine == MurmurPatch.ENGINE }
+        assertEquals(36, registered.size, "the global roster must expose the complete Murmur bank")
+        assertEquals(presets, registered, "the shared roster must retain every authored recipe and its order")
         assertEquals(presets.size, presets.map { it.name }.distinct().size)
-        assertTrue(Presets.all().containsAll(presets))
-        for (voice in MurmurVoice.entries) {
-            val group = MurmurPresets.forVoice(voice)
-            assertTrue(group.isNotEmpty(), "$voice has no audition proposal")
-            assertEquals(group, Presets.forVoice(MurmurPatch.ENGINE, voice.name))
-            for (proposal in group) {
-                assertEquals(proposal, Patches.fromJsonText(proposal.toJsonText()))
-                val expected = if (Murmur.isLoop(proposal.macros.getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
-                assertEquals(expected, Murmur.drumClassFor(proposal.voice, proposal.macros))
+        val expectedSizes = linkedMapOf(
+            MurmurVoice.BASS to 8, MurmurVoice.KEY to 4, MurmurVoice.PLUCK to 4,
+            MurmurVoice.LEAD to 8, MurmurVoice.CHOIR to 6, MurmurVoice.METAL to 6,
+        )
+        assertEquals(MurmurVoice.entries.toSet(), expectedSizes.keys)
+        for ((voice, expectedSize) in expectedSizes) {
+            val group = Presets.forVoice(MurmurPatch.ENGINE, voice.name)
+            assertEquals(expectedSize, group.size, "$voice must expose its complete bank to the CLI and picker")
+            assertEquals(MurmurPresets.forVoice(voice), group)
+            for (entry in group) {
+                val preset = assertIs<MurmurPatch>(entry)
+                assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
+                val expected = if (Murmur.isLoop(preset.macros.getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
+                assertEquals(expected, Murmur.drumClassFor(preset.voice, preset.macros))
             }
         }
     }

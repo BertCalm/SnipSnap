@@ -388,8 +388,10 @@ velocity changes excitation energy and bite rather than changing a macro.
 Each saved recipe retains its routing, four operator ratios, complete
 formant targets, trajectory, direction, reference duration and envelope.
 Patch editing, velocity layers and rack replay preserve that state.
-Twelve original preset proposals cover the six roles; broader preset
-quotas wait for the owner's dry listening verdict. `SynthKits.murmur()`
+The six dry default voices have owner approval after reducing CHOIR's air.
+The 36-preset bank preserves the original twelve and adds twenty-four dry patches:
+eight BASS, four KEY, four PLUCK, eight LEAD, six CHOIR and six METAL in total.
+The accepted renderer remains unchanged. `SynthKits.murmur()`
 contains sixteen dry recipe pads: eight KEY notes in C minor pentatonic
 from C3, seven contrasts and a settled held choir. Finite notes route as
 TONAL and HOLD at or above 0.99 routes as LOOP, with no drum choke group.
@@ -402,7 +404,8 @@ the standalone listening page; `-PmurmurFull` adds the broad note,
 velocity, macro and interaction matrix. `generateMurmurKit` exports the
 sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
 initiating onset because the sample API has no attack-plus-loop region.
-Sonic identity, phone/MPC validation and release naming remain open.
+The expanded preset bank's listening review, phone/MPC validation and release
+naming remain open.
 
 ### REVEL — interlocking skins through moving microphones
 
