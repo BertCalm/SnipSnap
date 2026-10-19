@@ -69,6 +69,31 @@ matched velocity, shadow and recording-character examples, explicit chords,
 and repeated held loops. The page plays the engine's exported audio and
 offers local listening notes; browser playback does not resynthesize Stoop.
 
+For the preset-contrast review, supply the published reference pack:
+
+```sh
+./gradlew --no-daemon :synth:generateStoopAudition -PstoopBaselineDir=/path/to/original/stoop-audition
+```
+
+This adds the original 96 factory note/phrase WAVs to the current 300-clip
+pack without resynthesizing the reference. The factory shelf's **Compare
+original** action loads the published original and revised candidate into
+the A/B bench at the same MIDI root, velocity and phrase timing. Both use
+the shared audition-level target. Their source provenance remains separate.
+Listening feedback is associated with its bank and audio hash so a changed
+sound does not inherit a rating from the original.
+
+The contrast revision keeps all 48 names and family counts. Round Corner,
+Dust Tines, Soft Clav, Amber Organ, Nose Talk and Velvet Stack retain their
+original complete recipes as reference sounds. Other recipes use wider
+active waveform/registration, contact, duration and answering-voice choices.
+The starter kit keeps its bass and tine note rows, while its upper pads add
+the revised wire clav, hollow organ, whistle, bright chord and bell-answer
+roles. Every pad retains its complete regenerable recipe.
+The synthesis model and saved-patch format are unchanged. An unchanged bank
+rendered on this base matched all 300 published WAV hashes before the
+preset changes, separating recipe changes from engine changes in this review.
+
 Automated checks establish reproducibility, bounds, routing, serialization
 and loop continuity. They do not replace listening approval. Android UI
 and MPC hardware validation remain device checks when those devices are

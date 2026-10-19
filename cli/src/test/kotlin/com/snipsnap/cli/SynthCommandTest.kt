@@ -120,17 +120,47 @@ class SynthCommandTest {
         val dir = java.nio.file.Files.createTempDirectory("synthlacquer").toFile()
         try {
             val out = PrintStream(ByteArrayOutputStream())
-            val preset = LacquerPresets.forVoice(LacquerVoice.PLUCK).single()
-            assertEquals(0, SynthCommand.run(listOf("LACQUER", "PLUCK", "--out", dir.path), out))
+            val presets = LacquerPresets.forVoice(LacquerVoice.PLUCK)
+            val preset = presets.single { it.name == "Delayed Tine" }
+            val selection = listOf("--preset", (presets.indexOf(preset) + 1).toString())
+            assertEquals(0, SynthCommand.run(listOf("LACQUER", "PLUCK") + selection + listOf("--out", dir.path), out))
             val original = dir.listFiles { f -> f.extension == "wav" }!!.single()
             val factory = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }
             assertContentEquals(factory.toByteArray(), original.readBytes(), "CLI keeps the serialized layer model")
             original.delete()
             assertEquals(0, SynthCommand.run(
-                listOf("LACQUER", "PLUCK", "--midi", "57", "--velocity", "0.35", "--out", dir.path), out))
+                listOf("LACQUER", "PLUCK") + selection + listOf("--midi", "57", "--velocity", "0.35", "--out", dir.path), out))
             val expected = preset.copy(midi = 57, velocity = .35f)
             val edited = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }
             assertContentEquals(edited.toByteArray(), dir.listFiles { f -> f.extension == "wav" }!!.single().readBytes())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `lacquer all exports six plucks with their complete custom models and note edits`() {
+        val dir = kotlin.io.path.createTempDirectory("lacquer-bank-cli").toFile()
+        try {
+            val presets = LacquerPresets.forVoice(LacquerVoice.PLUCK)
+            assertEquals(6, presets.size)
+            assertTrue(presets.any { it.profile != Lacquer.profileFor(it.voice) }, "the expanded bank includes custom layer models")
+            val output = ByteArrayOutputStream()
+            assertEquals(0, SynthCommand.run(
+                listOf("LACQUER", "PLUCK", "--all", "--midi", "57", "--velocity", "0.35", "--out", dir.path),
+                PrintStream(output),
+            ))
+            val wavs = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
+            assertEquals(6, wavs.size, "--all includes every expanded PLUCK recipe")
+            for ((preset, wav) in presets.zip(wavs)) {
+                val safeName = preset.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_')
+                assertTrue(wav.name.endsWith("_${safeName}.wav"), "${preset.name}: the exported file names the selected recipe")
+                val expected = ByteArrayOutputStream().also {
+                    WavWriter.write(it, preset.copy(midi = 57, velocity = .35f).render())
+                }
+                assertContentEquals(expected.toByteArray(), wav.readBytes(), "${preset.name}: note overrides retain every layer, envelope, timing and processing field")
+            }
+            assertTrue("6 rendered" in output.toString())
         } finally {
             dir.deleteRecursively()
         }

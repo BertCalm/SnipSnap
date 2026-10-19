@@ -1,0 +1,791 @@
+[
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Glass Coat",
+    "voice": "GLASS",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.4000000059604645,
+      "SHEEN": 0.7400000095367432,
+      "BODY": 0.4300000071525574,
+      "CONTOUR": 0.47999998927116394,
+      "GLUE": 0.18000000715255737,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "HOLLOW",
+          "ratio": 1,
+          "gain": 0.38999998569488525,
+          "cutoffHz": 5500,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.008999999612569809,
+            "decaySeconds": 1.25,
+            "sustain": 0.18000000715255737,
+            "releaseSeconds": 0.699999988079071
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.014000000432133675,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.1599999964237213
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "GLASS",
+          "ratio": 1,
+          "gain": 0.25,
+          "cutoffHz": 12500,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.003000000026077032,
+            "decaySeconds": 0.6200000047683716,
+            "sustain": 0.029999999329447746,
+            "releaseSeconds": 0.30000001192092896
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "SILK",
+          "ratio": 1,
+          "gain": 0.14000000059604645,
+          "cutoffHz": 3300,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.03500000014901161,
+            "decaySeconds": 1.4500000476837158,
+            "sustain": 0.20000000298023224,
+            "releaseSeconds": 0.6499999761581421
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.09000000357627869,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.6499999761581421
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.2000000476837158,
+        "compression": 0.25,
+        "colorHz": 14000
+      },
+      "loop": {
+        "seconds": 2,
+        "articulationDepth": 0.20000000298023224,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  },
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Warm Underlay",
+    "voice": "KEY",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.23999999463558197,
+      "SHEEN": 0.30000001192092896,
+      "BODY": 0.7799999713897705,
+      "CONTOUR": 0.5400000214576721,
+      "GLUE": 0.3400000035762787,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "ROUNDED",
+          "ratio": 1,
+          "gain": 0.41999998688697815,
+          "cutoffHz": 4800,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.006000000052154064,
+            "decaySeconds": 1.0499999523162842,
+            "sustain": 0.20000000298023224,
+            "releaseSeconds": 0.550000011920929
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "GLASS",
+          "ratio": 1,
+          "gain": 0.20000000298023224,
+          "cutoffHz": 9500,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.003000000026077032,
+            "decaySeconds": 0.30000001192092896,
+            "sustain": 0.03500000014901161,
+            "releaseSeconds": 0.25
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.017999999225139618,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0.25
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "HOLLOW",
+          "ratio": 1,
+          "gain": 0.1599999964237213,
+          "cutoffHz": 2600,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.027000000700354576,
+            "decaySeconds": 1.350000023841858,
+            "sustain": 0.1599999964237213,
+            "releaseSeconds": 0.6000000238418579
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.07500000298023224,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.5799999833106995
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.2000000476837158,
+        "compression": 0.25,
+        "colorHz": 14000
+      },
+      "loop": {
+        "seconds": 2,
+        "articulationDepth": 0.20000000298023224,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  },
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Three Arrivals",
+    "voice": "KEY",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.9200000166893005,
+      "SHEEN": 0.5799999833106995,
+      "BODY": 0.5799999833106995,
+      "CONTOUR": 0.6399999856948853,
+      "GLUE": 0.18000000715255737,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "ROUNDED",
+          "ratio": 1,
+          "gain": 0.41999998688697815,
+          "cutoffHz": 4800,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.006000000052154064,
+            "decaySeconds": 1.0499999523162842,
+            "sustain": 0.20000000298023224,
+            "releaseSeconds": 0.550000011920929
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "GLASS",
+          "ratio": 1,
+          "gain": 0.20000000298023224,
+          "cutoffHz": 9500,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.003000000026077032,
+            "decaySeconds": 0.30000001192092896,
+            "sustain": 0.03500000014901161,
+            "releaseSeconds": 0.25
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.017999999225139618,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0.25
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "HOLLOW",
+          "ratio": 1,
+          "gain": 0.1599999964237213,
+          "cutoffHz": 2600,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.027000000700354576,
+            "decaySeconds": 1.350000023841858,
+            "sustain": 0.1599999964237213,
+            "releaseSeconds": 0.6000000238418579
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.07500000298023224,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.5799999833106995
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.2000000476837158,
+        "compression": 0.25,
+        "colorHz": 14000
+      },
+      "loop": {
+        "seconds": 2,
+        "articulationDepth": 0.20000000298023224,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  },
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Amber Brass",
+    "voice": "BRASS",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.4000000059604645,
+      "SHEEN": 0.5600000023841858,
+      "BODY": 0.7599999904632568,
+      "CONTOUR": 0.6499999761581421,
+      "GLUE": 0.3799999952316284,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "BRASS",
+          "ratio": 1,
+          "gain": 0.4300000071525574,
+          "cutoffHz": 4800,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.017000000923871994,
+            "decaySeconds": 1.350000023841858,
+            "sustain": 0.47999998927116394,
+            "releaseSeconds": 0.6499999761581421
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "PLUCK",
+          "ratio": 1,
+          "gain": 0.18000000715255737,
+          "cutoffHz": 8000,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.007000000216066837,
+            "decaySeconds": 0.41999998688697815,
+            "sustain": 0.10000000149011612,
+            "releaseSeconds": 0.2800000011920929
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.024000000208616257,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0.2800000011920929
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "ROUNDED",
+          "ratio": 1,
+          "gain": 0.1599999964237213,
+          "cutoffHz": 2900,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.052000001072883606,
+            "decaySeconds": 1.4500000476837158,
+            "sustain": 0.4000000059604645,
+            "releaseSeconds": 0.7200000286102295
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.08500000089406967,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.6200000047683716
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.600000023841858,
+        "compression": 0.25,
+        "colorHz": 14000
+      },
+      "loop": {
+        "seconds": 2,
+        "articulationDepth": 0.20000000298023224,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  },
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Soft Surface",
+    "voice": "BASS",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.20000000298023224,
+      "SHEEN": 0.23999999463558197,
+      "BODY": 0.8600000143051147,
+      "CONTOUR": 0.41999998688697815,
+      "GLUE": 0.30000001192092896,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "ROUNDED",
+          "ratio": 1,
+          "gain": 0.5,
+          "cutoffHz": 2200,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.006000000052154064,
+            "decaySeconds": 0.8500000238418579,
+            "sustain": 0.25,
+            "releaseSeconds": 0.41999998688697815
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "PLUCK",
+          "ratio": 1,
+          "gain": 0.1599999964237213,
+          "cutoffHz": 6000,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.003000000026077032,
+            "decaySeconds": 0.20000000298023224,
+            "sustain": 0.014999999664723873,
+            "releaseSeconds": 0.1599999964237213
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.012000000104308128,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0.30000001192092896
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "HOLLOW",
+          "ratio": 1,
+          "gain": 0.11999999731779099,
+          "cutoffHz": 1900,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.01899999938905239,
+            "decaySeconds": 1.100000023841858,
+            "sustain": 0.15000000596046448,
+            "releaseSeconds": 0.44999998807907104
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.05000000074505806,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.6000000238418579
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.600000023841858,
+        "compression": 0.25,
+        "colorHz": 8500
+      },
+      "loop": {
+        "seconds": 2,
+        "articulationDepth": 0.20000000298023224,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  },
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Delayed Tine",
+    "voice": "PLUCK",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.800000011920929,
+      "SHEEN": 0.6800000071525574,
+      "BODY": 0.4399999976158142,
+      "CONTOUR": 0.3799999952316284,
+      "GLUE": 0.1599999964237213,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "PLUCK",
+          "ratio": 1,
+          "gain": 0.4399999976158142,
+          "cutoffHz": 6200,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.003000000026077032,
+            "decaySeconds": 0.7599999904632568,
+            "sustain": 0.05000000074505806,
+            "releaseSeconds": 0.3499999940395355
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "GLASS",
+          "ratio": 2,
+          "gain": 0.20999999344348907,
+          "cutoffHz": 11000,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.0020000000949949026,
+            "decaySeconds": 0.2199999988079071,
+            "sustain": 0.009999999776482582,
+            "releaseSeconds": 0.14000000059604645
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.014000000432133675,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0.2800000011920929
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "HOLLOW",
+          "ratio": 1,
+          "gain": 0.12999999523162842,
+          "cutoffHz": 2800,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.014000000432133675,
+            "decaySeconds": 0.8999999761581421,
+            "sustain": 0.07999999821186066,
+            "releaseSeconds": 0.4000000059604645
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.05999999865889549,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.6200000047683716
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.2000000476837158,
+        "compression": 0.25,
+        "colorHz": 14000
+      },
+      "loop": {
+        "seconds": 2,
+        "articulationDepth": 0.2199999988079071,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  },
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Silk Block",
+    "voice": "SILK",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.7400000095367432,
+      "SHEEN": 0.41999998688697815,
+      "BODY": 0.6399999856948853,
+      "CONTOUR": 0.8500000238418579,
+      "GLUE": 0.3199999928474426,
+      "HOLD": 1
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "SILK",
+          "ratio": 1,
+          "gain": 0.38999998569488525,
+          "cutoffHz": 4700,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.04800000041723251,
+            "decaySeconds": 2.0999999046325684,
+            "sustain": 0.5799999833106995,
+            "releaseSeconds": 1.0499999523162842
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "GLASS",
+          "ratio": 1,
+          "gain": 0.1599999964237213,
+          "cutoffHz": 8500,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.01600000075995922,
+            "decaySeconds": 1.100000023841858,
+            "sustain": 0.18000000715255737,
+            "releaseSeconds": 0.6499999761581421
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.03999999910593033,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0.23999999463558197
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "HOLLOW",
+          "ratio": 1,
+          "gain": 0.20000000298023224,
+          "cutoffHz": 3000,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.10499999672174454,
+            "decaySeconds": 2.3499999046325684,
+            "sustain": 0.5199999809265137,
+            "releaseSeconds": 1.100000023841858
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.14499999582767487,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.6200000047683716
+          }
+        },
+        {
+          "role": "REINFORCEMENT",
+          "source": "ROUNDED",
+          "ratio": 2,
+          "gain": 0.05000000074505806,
+          "cutoffHz": 1700,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.02800000086426735,
+            "decaySeconds": 1.7999999523162842,
+            "sustain": 0.4000000059604645,
+            "releaseSeconds": 0.8500000238418579
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.07500000298023224,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.41999998688697815
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.2000000476837158,
+        "compression": 0.25,
+        "colorHz": 14000
+      },
+      "loop": {
+        "seconds": 2.700000047683716,
+        "articulationDepth": 0.20000000298023224,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  },
+  {
+    "engine": "LACQUER",
+    "version": 1,
+    "name": "Close Finish",
+    "voice": "BRASS",
+    "macros": {
+      "TUNE": 0.5,
+      "RELIEF": 0.07999999821186066,
+      "SHEEN": 0.47999998927116394,
+      "BODY": 0.6399999856948853,
+      "CONTOUR": 0.23999999463558197,
+      "GLUE": 0.6200000047683716,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "profile": {
+      "layers": [
+        {
+          "role": "BODY",
+          "source": "BRASS",
+          "ratio": 1,
+          "gain": 0.4300000071525574,
+          "cutoffHz": 4800,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.017000000923871994,
+            "decaySeconds": 1.350000023841858,
+            "sustain": 0.47999998927116394,
+            "releaseSeconds": 0.6499999761581421
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0
+          }
+        },
+        {
+          "role": "EDGE",
+          "source": "PLUCK",
+          "ratio": 1,
+          "gain": 0.18000000715255737,
+          "cutoffHz": 8000,
+          "filterEnvelope": 0.6499999761581421,
+          "envelope": {
+            "attackSeconds": 0.007000000216066837,
+            "decaySeconds": 0.41999998688697815,
+            "sustain": 0.10000000149011612,
+            "releaseSeconds": 0.2800000011920929
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.024000000208616257,
+            "attackRelief": 0.20000000298023224,
+            "decayRelief": 0.10000000149011612,
+            "holdPhase": 0.2800000011920929
+          }
+        },
+        {
+          "role": "TRAIL",
+          "source": "ROUNDED",
+          "ratio": 1,
+          "gain": 0.1599999964237213,
+          "cutoffHz": 2900,
+          "filterEnvelope": 0.2800000011920929,
+          "envelope": {
+            "attackSeconds": 0.052000001072883606,
+            "decaySeconds": 1.4500000476837158,
+            "sustain": 0.4000000059604645,
+            "releaseSeconds": 0.7200000286102295
+          },
+          "timing": {
+            "onsetSeconds": 0,
+            "reliefSeconds": 0.08500000089406967,
+            "attackRelief": 0.800000011920929,
+            "decayRelief": 0.3499999940395355,
+            "holdPhase": 0.6200000047683716
+          }
+        }
+      ],
+      "processing": {
+        "drive": 1.600000023841858,
+        "compression": 0.25,
+        "colorHz": 14000
+      },
+      "loop": {
+        "seconds": 2,
+        "articulationDepth": 0.20000000298023224,
+        "spectralDepth": 0.36000001430511475,
+        "prerollCycles": 3
+      }
+    }
+  }
+]
