@@ -116,6 +116,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
@@ -290,7 +291,8 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
 // §3.6, the MAKE checklist's last item). The bag is the navigation model's
 // MakeState for this lab: it outlives the composable, so the player's work
 // survives leaving to hear a pad and coming back. Everything is a string —
-// enum NAMES, floats via toString — so the model never learns an engine.
+// enum NAMES, floats via toString, recipes as JSON — so the navigation
+// model never learns an engine.
 private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
@@ -376,15 +378,19 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    0..1) for every (engine, voice) the player has touched.
  *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
  *    last tapped on that voice and not edited since.
+ *  - `recipe.<ENGINE>.<VOICE>` — the loaded patch's complete recipe, kept
+ *    after edits clear its preset highlight. The macro keys above retain
+ *    the current slider values independently of that loaded recipe.
  *  - `patch.ORPHICA.<MATERIAL>` — ORPHICA's complete editable recipe, keeping
  *    its mode, root and capture with its macro values across navigation.
  *  - `patch.OVEN.<VOICE>` — OVEN's complete current recipe, including the
  *    saved root, strike velocity and model after the preset has been edited.
+ *    Where a `patch.` entry and a `recipe.` entry both exist for a voice,
+ *    the `patch.` one is the fresher and is adopted.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
- * Other engines' non-macro recipes (a MURMUR root, a REVEL phrase...) need
- * a preset to retain them. The audition and every sheet are not kept.
+ * The audition and sheets are not kept.
  */
 @Composable
 fun SynthScreen(
@@ -492,14 +498,20 @@ fun SynthScreen(
     // velocity, gate, effect mode and model. ORPHICA retains its material, mode,
     // capture, seed and physical grain configuration. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
-    // The presets the bag names (§3.6). A factory preset is looked up by name
-    // and re-adopted whole, so an engine whose recipe lives outside its macros
-    // comes back sounding as it did; a YOURS preset is on the shelf, not yet
-    // read, and is adopted when that read lands (below).
+    // A working recipe survives independently of its preset highlight:
+    // editing a slider must not discard saved pitch, velocity or model on
+    // a trip to the grid. Older bags fall back to their named factory
+    // preset; a YOURS preset is adopted when its shelf read lands below.
     val seededPresets = remember { storedPresetNames(settings) }
     val loadedPatchesByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply {
+            for (patch in SynthDrafts.read(settings)) {
+                val e = Engine.entries.firstOrNull { it.name == patch.engine } ?: continue
+                val v = e.voices().firstOrNull { it.name == patch.voiceName } ?: continue
+                put(e to v, editablePreset(patch))
+            }
             for ((pair, name) in seededPresets) {
+                if (containsKey(pair)) continue
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
@@ -508,6 +520,10 @@ fun SynthScreen(
                 storedOrphicaPatch(settings, material)?.let { put(Engine.ORPHICA to material, it) }
             }
         }
+    }
+    val loadedRecipes = loadedPatchesByVoice.toMap()
+    LaunchedEffect(loadedRecipes) {
+        SynthDrafts.write(settings, loadedRecipes.values)
     }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -1246,10 +1262,8 @@ fun SynthScreen(
                     // Authored roots survive chords, octave layers and upper
                     // shimmer that can outweigh the fundamental in detection.
                     val midi = when (patch) {
-                        is StoopPatch -> patch.midi.toFloat()
-                        is OpenSkyPatch -> patch.midi.toFloat()
                         is OrphicaPatch -> Orphica.configWithMacros(patch.config, patch.macros).midi.toFloat()
-                        else -> Spread.detect(rendered)
+                        else -> Spread.detect(rendered, patch)
                     }
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
