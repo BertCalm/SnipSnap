@@ -60,8 +60,17 @@ simulated adjacent periods using `Keys.seamError`.
 
 `SynthKits.murmur()` supplies sixteen dry pads with regenerable recipes: a key
 scale and eight contrasting pads covering all voices and one held choir. The MPC
-drum program plays complete samples once, including the held buffer; the audition
-page repeats that buffer with Web Audio for seam listening.
+drum program plays complete samples once, including the held buffer. Its A16
+delivery recipe adds an 8 ms terminal fade to avoid a hard stop at the buffer's
+non-zero final sample. SEND TO PAD applies the same saved fade to held Murmur
+sources placed on one-shot pads. Gated pads and SURFACE retain the unfaded source.
+The approved preset and raw HOLD loop remain unchanged; the audition page repeats
+that seamless buffer with Web Audio for seam listening.
+
+The phone's NEW KIT starter chooser scrolls so the complete roster, including
+MURMUR, remains reachable at phone height. Automated Android checks cover this
+reachability and the menu's outside-tap dismissal. Physical phone and MPC listening
+remain a separate handoff check.
 
 ## Factory presets and voice comparisons
 

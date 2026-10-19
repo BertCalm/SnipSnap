@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -1193,7 +1195,7 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> Unit) {
+internal fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> Unit) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -1218,19 +1220,13 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                 // wrapping all of them. A bare gesture detector registers
                 // no semantics node at all (MessageBox.kt's pattern).
                 .pointerInput(Unit) { detectTapGestures { } }
-                .padding(10.dp),
+                .padding(10.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText("PICK A STARTER", TapeType.display, scheme.ink.tape)
-            // This Column does NOT scroll, so the roster has a ceiling
-            // rather than merely a length: a row past the bottom of the
-            // frame is a starter nobody can reach, with nothing on screen
-            // to say it is there. Measured when SKIN made it nine: a row
-            // is ~39dp with a one-line blurb and ~49dp with two, so nine
-            // rows plus the heading and padding come to ~554dp of
-            // Layout.FRAME_H's 844 at the worst case - about five rows of
-            // headroom left.
-            // Whoever spends them adds a verticalScroll here first.
+            // The viewport stays inside the screen; long rosters scroll so every
+            // starter remains reachable without moving the scrim or its dismiss area.
             for (starter in StarterKits.ALL) {
                 Column(
                     Modifier

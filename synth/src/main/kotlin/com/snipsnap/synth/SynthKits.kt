@@ -660,7 +660,8 @@ object SynthKits {
     /**
      * Sixteen dry FM/formant pads for the first audition. A01–A08 walk KEY up
      * C minor pentatonic from C3, with explicit roots rather than a tuning macro.
-     * The upper pads contrast all six roles and end with settled held choir.
+     * The upper pads contrast all six roles and end with settled held choir,
+     * delivered once with a saved 8 ms terminal fade rather than a hard stop.
      * Every pad carries operator, mouth and envelope state in its complete recipe.
      */
     fun murmur(): List<ArrangedPad?> {
@@ -675,7 +676,15 @@ object SynthKits {
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
             contrasts.map { name ->
                 MurmurPresets.all().first { it.name == name }
-                    .let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
+                    .let {
+                        if (name != "HELD HUM") pad(it, Murmur.drumClassFor(it.voice, it.macros))
+                        else {
+                            // HOLD supplies a seamless source; this starter pad plays it once.
+                            // Keep the source recipe intact and save only its delivery edge fade.
+                            val recipe = PadRecipe(it, terminalFadeMs = 8f)
+                            ArrangedPad(recipe.render(), Murmur.drumClassFor(it.voice, it.macros), recipe.toJsonValue())
+                        }
+                    }
             }
     }
 
