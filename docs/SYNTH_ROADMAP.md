@@ -6,6 +6,19 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
+**Chamber first-listen prototype (2026-10-18).** HYBRID and AQUARIUM place a
+simultaneously struck membrane, bar, cowbell and triangle in a rectangular room
+with ten independent material regions. Physical early paths, surface excitation,
+return coupling and a shared passive late field test whether instrument placement
+changes the answer. Complete model/seed/note/velocity/room recipes, six provisional
+presets, CLI replay and a sixteen-pad prototype kit are available outside the
+factory roster and phone picker. This stage is finite only: positive HOLD is
+rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
+for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the source
+proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+is published with 114 raw/matched clips and a starter download. The owner's listening
+verdict remains pending.
+
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
 renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry
 audition generator test the gesture of more performers joining. UNISON,
