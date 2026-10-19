@@ -1126,12 +1126,12 @@ object SynthKits {
         )
     }
 
-    /** Eight GLASS scale notes, six finite contrasts and two moving held loops, all dry. */
+    /** Eight wooden GLASS-motion scale notes, six material contrasts and two harmonic loops, all dry. */
     fun shoal(): List<ArrangedPad?> {
         fun arranged(patch: ShoalPatch) = pad(patch, Shoal.drumClassFor(patch.voice, patch.macros))
         val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
             ShoalPatch(
-                "Glass ${index + 1}", ShoalVoice.GLASS, Shoal.defaults(ShoalVoice.GLASS),
+                "Wood ${index + 1}", ShoalVoice.GLASS, Shoal.defaults(ShoalVoice.GLASS),
                 midi = Shoal.rootMidi(ShoalVoice.GLASS) + semitone,
             ).let(::arranged)
         }

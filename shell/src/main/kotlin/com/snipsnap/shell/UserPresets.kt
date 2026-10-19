@@ -386,7 +386,8 @@ object UserPresets {
      * its render-model version. LACQUER carries its entire layered recipe through
      * the JSON constructor. SPOOL writes its complete machine constructor, including
      * recording roster and HOLD memory mode. RELAY retains its complete source and
-     * phrase schedules. MURMUR keeps its root, velocity and complete
+     * phrase schedules. SHOAL keeps its root, velocity, material and synthesis model.
+     * MURMUR keeps its root, velocity and complete
      * operator/formant/envelope definition. FLOCK retains its note, velocity,
      * model and exact 64-bit seed. VENT retains note, touch, trajectory seed
      * and either saved renderer through the JSON constructor. OPENSKY retains its complete source
@@ -459,6 +460,13 @@ object UserPresets {
             return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
                 ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
         }
+        if (patch is ShoalPatch) {
+            // Construct the complete recipe at once: a harmonic held recipe cannot
+            // first pass through the finite WOOD default before a later copy.
+            return "ShoalPatch(\"$name\", ShoalVoice.${patch.voiceName}, mapOf($macros), " +
+                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, " +
+                "material = ShoalMaterial.${patch.material.name}),"
+        }
         if (patch is SpoolPatch) {
             val m = patch.machine
             val roster = m.roster.joinToString(", ") {
@@ -478,7 +486,6 @@ object UserPresets {
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is CreasePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
-            is ShoalPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")

@@ -73,6 +73,7 @@ import com.snipsnap.synth.SpoolVoice
 import com.snipsnap.synth.Revel
 import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Shoal
+import com.snipsnap.synth.ShoalMaterial
 import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
@@ -128,6 +129,8 @@ import kotlin.random.Random
  * OPENSKY also accepts a saved `--patch <json>`, `--gate S`, and `--dry` /
  * `--wet`. The complete source timbre survives those overrides; OPENSKY HALO
  * can become a held instrument with `--instrument [--release S]`.
+ * SHOAL accepts `--material HARMONIC|BOWL|WOOD|WIRE`. Material bodies are finite;
+ * a finite-material override on a held preset is refused before any files are written.
  * CONTOUR accepts a saved `--patch <json>` and `--macros BODY=.2,EDGE=.8`.
  * Macro names are case-insensitive and values are finite 0..1. Complete saved
  * table/envelope configurations survive macro, note and velocity overrides.
@@ -152,7 +155,7 @@ object SynthCommand {
         }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros"),
             boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -199,6 +202,11 @@ object SynthCommand {
             else -> Presets.forVoice(engine, voice)
         }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
+        val materialOverride = opts["--material"]?.let { raw ->
+            if (engine != ShoalPatch.ENGINE) throw CliError("--material is only supported by SHOAL, got $engine")
+            ShoalMaterial.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
+                ?: throw CliError("--material wants ${ShoalMaterial.entries.joinToString("|") { it.name }}, got '$raw'")
+        }
         val contourMacros = opts["--macros"]?.let { raw ->
             if (engine != ContourPatch.ENGINE) throw CliError("--macros is only supported by CONTOUR, got $engine")
             val names = ContourEngine.macrosFor(ContourVoice.valueOf(voice)).map { it.name }.toSet()
@@ -327,7 +335,6 @@ object SynthCommand {
         }
 
         val dirArg = opts["--out"] ?: throw CliError("--out wants a folder to write the wavs into")
-        val dir = File(dirArg)
 
         val chosen: List<Patch> = (when {
             savedPatch != null -> listOf(savedPatch)
@@ -410,6 +417,12 @@ object SynthCommand {
             }
             if (withNote is OpenSkyPatch) {
                 withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
+            } else if (withNote is ShoalPatch && materialOverride != null) {
+                if (!Shoal.supportsHold(Shoal.MODEL_VERSION, materialOverride) &&
+                    Shoal.isLoop(withNote.macros["HOLD"] ?: 0f)) {
+                    throw CliError("SHOAL $materialOverride renders finite notes; --material cannot override a HOLD preset")
+                }
+                withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
             } else if (withNote is ContourPatch && contourMacros.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + contourMacros)
             } else if (withNote is SkitterPatch) {
@@ -437,6 +450,8 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument / --midi: ${e.message ?: "invalid OPENSKY instrument"}")
         } else null
+        // Resolve every recipe and instrument specification before creating output files.
+        val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
         if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
@@ -450,7 +465,8 @@ object SynthCommand {
                 landing?.process(dry) ?: dry
             } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
-            val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
+            val family = if (patch is ShoalPatch) "${voice}_${patch.material.name}" else voice
+            val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, family, i + 1, safe))
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip) }
             if (patch is ObbligatoPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             val mode = when {

@@ -1305,7 +1305,7 @@ tasks.register<JavaExec>("generateCreaseAudition") {
     if (project.hasProperty("creaseFull")) args("--full")
 }
 
-/** Render Shoal's first two voices with causal comparisons and moving held loops. */
+/** Preserve model 2's voice comparison and original model 1 fixtures. */
 tasks.register<JavaExec>("generateShoalAudition") {
     group = "distribution"
     description = "Render SHOAL dry raw/matched24-bit WAVs, recipes, state traces, measurements and a listening page under testkit/shoal-audition/."
@@ -1326,6 +1326,17 @@ tasks.register<JavaExec>("generateOpenSkyAudition") {
     mainClass.set("com.snipsnap.synth.OpenSkyAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/opensky-audition")
+}
+
+/** Production model 3 materials at three native velocities, with matched comparisons. */
+tasks.register<JavaExec>("generateShoalMaterialAudition") {
+    group = "distribution"
+    description = "Render SHOAL material/motion/root/velocity comparisons with ordinary replayable recipes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ShoalMaterialAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("shoalMaterialOutput").orNull ?: "${rootDir}/testkit/shoal-playable-audition/playable")
 }
 
 /** Real VENT starter kit, explicit dry/effects pairs and two replayable MPC sampler grooves. */
