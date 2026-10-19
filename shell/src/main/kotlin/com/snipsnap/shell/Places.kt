@@ -63,6 +63,27 @@ object Places {
     const val STOP_BEAT = "STOP THE BEAT"
 
     /**
+     * The boot text's pace, in milliseconds: one [Copy.BOOT_LINES] line per
+     * step, READY a step after the last, and the glass lifting over
+     * [BOOT_FADE_MS]. The run is shorter than [BOOT_MAX_MS] (`PlacesTest`
+     * does the sum), and it is once per process start, never per screen.
+     */
+    const val BOOT_STEP_MS = 120L
+    const val BOOT_FADE_MS = 150L
+    const val BOOT_MAX_MS = 700L
+
+    /** The boot text is a tap away from gone: this is that button's accessible name, since the glass has no label of its own. */
+    const val BOOT_SKIP = "SKIP START-UP"
+
+    /**
+     * BEAT's SHARE chip, beside BOUNCE TO SNIPS: the pattern as two passes of
+     * audio, handed to the share sheet. The arrow: it opens the sheet. Spoken
+     * as [SHARE_BEAT_SPOKEN], because "share" alone does not say what.
+     */
+    const val SHARE_BEAT = "SHARE ▸"
+    const val SHARE_BEAT_SPOKEN = "SHARE THIS BEAT"
+
+    /**
      * The first row of the dock's capture choice: the room, through the mic.
      * The chip above already says LISTEN · MIC, so the row repeating it told
      * nobody what it was for; this says it, as [ARM_INSIDE] does for the other.

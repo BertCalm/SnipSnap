@@ -76,6 +76,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveProgram
@@ -95,6 +96,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PadHit
+import com.snipsnap.shell.Places
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
@@ -1426,6 +1428,48 @@ fun GrooveScreen(
         }
     }
 
+    // SHARE ▸ — the program on screen as audio, two passes of it, handed to
+    // the share sheet. Unlike BOUNCE this prints nothing live: it renders
+    // `currentClip` offline through the same `KitPreview` the previews and
+    // the SONG mixdown use, so it is silent, does not wait for a downbeat,
+    // and works with the beat stopped. It reads the same `currentClip` the
+    // roll plays and MIDI/CHART write - felt, swung and PROG E included - so
+    // what is shared is what this screen is playing. Two passes, not one, so
+    // the loop reads as a loop to whoever opens the file; the ring-out of the
+    // last hit is folded onto the first (`KitPreview.renderLoop`).
+    var shareBusy by remember(kitDir) { mutableStateOf(false) }
+    fun shareBeat() {
+        val clip = currentClip ?: return
+        if (shareBusy) return
+        clearJustLanded()
+        shareBusy = true
+        onToast(Copy.BEAT_SHARE_BUSY)
+        scope.launch {
+            try {
+                val stem = Names.sanitizeStem(kit.name)
+                val file = withContext(Dispatchers.IO) {
+                    val root = Exports.dir(context)
+                        ?: throw IOException("external storage unavailable")
+                    val rendered = KitPreview.renderLoop(kit, kitDir, clip, passes = 2)
+                    // 16-bit: a messenger takes it, and it is half the size of the 24 a kit's own pads are written in.
+                    WavWriter.write(File(File(File(root, stem), "beat"), "$stem · BEAT.wav"), rendered, WavWriter.BitDepth.PCM_16)
+                }
+                haptics.land()
+                if (ShareOut.send(context, file, ShareOut.WAV_MIME, kit.name)) {
+                    onToast(Copy.beatShared(file.name))
+                } else {
+                    onToast(Copy.beatKept("exports/$stem/beat/${file.name}"))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("GrooveScreen", "shareBeat: failed", e)
+                onToast(Copy.BEAT_SHARE_FAILED)
+            } finally {
+                shareBusy = false
+            }
+        }
+    }
+
     /**
      * One touch, two effects that can never diverge: [BeatPlayer.hit] makes the
      * sound (and lights the pad, PLAY's own glow shape), and — only while
@@ -2208,30 +2252,44 @@ fun GrooveScreen(
                             // in-flight bounce the instant playback stops,
                             // so a dedicated cancel would do the same thing
                             // through a second door.
-                            GrooveActionButton(
-                                label = when {
-                                    bounceArmed -> "WAITING…"
-                                    bouncing || landingBounce -> "BOUNCING…"
-                                    else -> Copy.GROOVE_BOUNCE_BUTTON
-                                },
-                                scheme = scheme,
-                                modifier = Modifier.fillMaxWidth(),
-                                // `playing` is deliberately not in this gate: a
-                                // stopped loop is a stable state a user can sit
-                                // in, not a transient one, so it gets the same
-                                // toast-beats-gating treatment RECORD's own
-                                // `!bankReady` case gets (Finding #8) rather
-                                // than a dimmed button with no explanation.
-                                enabled = currentClip != null && host.bankReady &&
-                                    !recording && !countingIn &&
-                                    !bounceArmed && !bouncing && !landingBounce,
-                            ) {
-                                if (!beat.playing) {
-                                    onToast(Copy.GROOVE_BOUNCE_NEEDS_PLAY)
-                                } else {
-                                    bounceSnapshot = currentClip
-                                    bounceArmed = true
+                            // SHARE ▸ sits beside it: BOUNCE prints the beat INTO the app, this
+                            // renders it offline and sends it OUT, so the two answer different
+                            // questions and neither waits on the other. Short enough to share the
+                            // row, and it says what it opens - the share sheet - with its arrow.
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                GrooveActionButton(
+                                    label = when {
+                                        bounceArmed -> "WAITING…"
+                                        bouncing || landingBounce -> "BOUNCING…"
+                                        else -> Copy.GROOVE_BOUNCE_BUTTON
+                                    },
+                                    scheme = scheme,
+                                    modifier = Modifier.weight(2f),
+                                    // `playing` is deliberately not in this gate: a
+                                    // stopped loop is a stable state a user can sit
+                                    // in, not a transient one, so it gets the same
+                                    // toast-beats-gating treatment RECORD's own
+                                    // `!bankReady` case gets (Finding #8) rather
+                                    // than a dimmed button with no explanation.
+                                    enabled = currentClip != null && host.bankReady &&
+                                        !recording && !countingIn &&
+                                        !bounceArmed && !bouncing && !landingBounce,
+                                ) {
+                                    if (!beat.playing) {
+                                        onToast(Copy.GROOVE_BOUNCE_NEEDS_PLAY)
+                                    } else {
+                                        bounceSnapshot = currentClip
+                                        bounceArmed = true
+                                    }
                                 }
+                                GrooveActionButton(
+                                    label = Places.SHARE_BEAT,
+                                    scheme = scheme,
+                                    modifier = Modifier.weight(1f),
+                                    enabled = currentClip != null && !shareBusy,
+                                    accent = true,
+                                    spoken = Places.SHARE_BEAT_SPOKEN,
+                                ) { shareBeat() }
                             }
 
                             TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
@@ -2571,6 +2629,7 @@ private fun GrooveActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     accent: Boolean = false,
+    spoken: String? = null,
     onClick: () -> Unit,
 ) {
     Box(
@@ -2582,7 +2641,7 @@ private fun GrooveActionButton(
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, spoken = spoken, onClick = onClick)
             .padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center,
     ) {

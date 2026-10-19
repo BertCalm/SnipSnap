@@ -150,6 +150,25 @@ class KitPreviewTest {
     }
 
     @Test
+    fun `a loop render is exactly two passes long, with the ring-out folded onto the start`() {
+        val dir = File(temp, "loopkit")
+        val kit = buildKit(dir)
+        // 120 BPM: a bar is two seconds, so two passes is exactly 4 s of frames.
+        val loop = KitPreview.renderLoop(kit, dir, oneBar, tempoBpm = 120f)
+        assertEquals(4 * KitPreview.RATE, loop.frameCount, "two bars of the clip, not the tail")
+        assertEquals(2, loop.channels)
+        assertTrue(loop.peak() > 0.05f && loop.peak() <= 0.95f + 1e-4f)
+        // A 1.5 s kick on beat four rings past the end of pass two; folded, it sounds at the head.
+        val late = Mpc3Clip("Late", 1, listOf(Mpc3Note(36, 3 * Mpc3Clip.PULSES_PER_BEAT, 1f)))
+        val folded = KitPreview.renderLoop(kit, dir, late, tempoBpm = 120f)
+        assertEquals(4 * KitPreview.RATE, folded.frameCount)
+        assertTrue(rms(folded, 0, 400) > 0.01f, "the tail wraps to the head")
+        assertTrue(rms(KitPreview.render(kit, dir, clip = late, tempoBpm = 120f), 0, 400) < 1e-6f, "while one straight pass is silent there")
+        // One pass is the clip itself.
+        assertEquals(2 * KitPreview.RATE, KitPreview.renderLoop(kit, dir, oneBar, passes = 1, tempoBpm = 120f).frameCount)
+    }
+
+    @Test
     fun `playedBpm is the one rule every clock reads a kit's tempo through`() {
         assertEquals(KitPreview.DEFAULT_BPM, KitPreview.playedBpm(null), "no tempo is the stand-in")
         assertEquals(120f, KitPreview.playedBpm(120f), "a sane tempo is itself")
