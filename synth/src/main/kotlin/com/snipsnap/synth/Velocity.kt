@@ -255,6 +255,7 @@ object Velocity {
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
+        is TrioPatch -> Trio.macrosFor(patch.voice)
     }
 
     /**
@@ -387,6 +388,7 @@ object Velocity {
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
+        is TrioPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()

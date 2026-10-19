@@ -31,6 +31,7 @@ import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.TrioPatch
 import java.io.File
 import java.util.Locale
 
@@ -370,7 +371,8 @@ object UserPresets {
      * operator/formant/envelope definition. FLOCK retains its note, velocity,
      * model and exact 64-bit seed. OPENSKY retains its complete source
      * timbre, pitch, velocity, gate, wet mode and render model through the JSON
-     * constructor. Names and embedded JSON are escaped Kotlin string literals.
+     * constructor. TRIO retains its note, velocity and complete seeded performance,
+     * including the synthesis model. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is OpenSkyPatch) {
@@ -378,10 +380,11 @@ object UserPresets {
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "OpenSkyPatch.fromJsonText(\"$recipe\"),"
         }
-        if (patch is LacquerPatch) {
+        if (patch is LacquerPatch || patch is TrioPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+            val constructor = if (patch is TrioPatch) "TrioPatch" else "LacquerPatch"
+            return "$constructor.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         if (patch is StoopPatch) {

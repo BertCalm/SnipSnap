@@ -2,6 +2,28 @@ plugins {
     kotlin("jvm")
 }
 
+/** The retained DRAMA development comparisons. */
+tasks.register<JavaExec>("generateTrioAudition") {
+    group = "distribution"
+    description = "Render TRIO solos, alliances, moving relationships and companion entrances with raw/matched audio and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
+}
+
+/** The playable TRIO bank, musical phrases and sixteen-pad MPC acceptance kit. */
+tasks.register<JavaExec>("generateTrioMusicalBank") {
+    group = "distribution"
+    description = "Render TRIO presets, musical demos and the regenerable MPC kit with its listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioMusicalBankGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioMusicalOutput").orNull ?: "${rootDir}/testkit/trio-musical-bank")
+}
+
 /** Finite OVERLAP proof: twelve real Kotlin renders, replayable recipes and the listening bench. */
 tasks.register<JavaExec>("generateOverlapAudition") {
     group = "distribution"

@@ -100,6 +100,11 @@ MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
 remains provisional. Saved audition recipes retain note, velocity and model.
 Instrument samples preserve the finite attack before a verified held loop and
 export through the existing MPC 2/MPC 3 and phone keygroup package.
+TRIO provides TRES, BERIMBAU, CHARANGO and ENSEMBLE in SYNTH, with six macros,
+root, velocity and bounded phrase tempo/beat controls. Its sixteen presets also
+form the TRIO starter kit. Performances stay finite and preserve their full
+seeded recipe through edits, saving and pad placement; see [TRIO](../docs/TRIO.md).
+
 MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
 and dry starter also await owner listening review.
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps

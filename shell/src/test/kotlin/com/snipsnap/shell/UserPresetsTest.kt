@@ -53,6 +53,7 @@ import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
 import com.snipsnap.synth.TinesVoice
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.TonewheelVoice
 import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.VoxVoice
@@ -235,6 +236,12 @@ class UserPresetsTest {
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is TrioPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("TrioPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = TrioPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete performance promotion")
             } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
                 assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
@@ -646,7 +653,8 @@ class UserPresetsTest {
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
                     assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
                 }
-            } else {
+            } else if (engine != TrioPatch.ENGINE) {
+                // TRIO promotion emits its complete JSON constructor directly.
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
             }

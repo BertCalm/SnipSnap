@@ -418,6 +418,14 @@ The revised controls await owner listening approval before preset expansion;
 [implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
 
+TRIO brings three plucked performers and changing alliances into a finite pad
+performance. TRES, BERIMBAU, CHARANGO and ENSEMBLE share TOUCH, DRAMA, SIDES,
+MOTION, SPACE and DAMP, with saved root, velocity, tempo and phrase length.
+The sixteen-preset bank is also the TRIO starter kit. Husbands make one strike
+per trigger and ring out while the wives retain their strum. Rebuild the
+musical audition and MPC 3/XPM kit with `./gradlew :synth:generateTrioMusicalBank`.
+[Implementation and listening notes](docs/TRIO.md)
+
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration

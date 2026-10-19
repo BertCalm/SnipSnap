@@ -12,6 +12,9 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /** The finite TRIO conversations, in the same order as its factory preset bank. */
+    fun trio(): List<ArrangedPad?> = TrioKits.classic()
+
     /**
      * PLACEHOLDER, not a tuned value — Phase 1's MOTION stage is the real
      * answer to "melodic pads hold dead still"; until it lands, [Tape]'s own
