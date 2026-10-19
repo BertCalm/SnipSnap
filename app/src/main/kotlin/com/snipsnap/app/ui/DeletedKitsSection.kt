@@ -29,6 +29,7 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -166,7 +167,7 @@ internal fun DeletedKitsSection(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // The shelf's section-header style; the bench's header row and Back
         // live in `BinScreen`, not here.
-        TapeText("DELETED KITS · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("DELETED KITS · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         if (binned.isEmpty()) {
             Box(
@@ -240,7 +241,7 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            TapeText(row.name, TapeType.marker, scheme.ink.tape, maxLines = 1)
+            TapeText(row.name, TapeType.marker, scheme.lcdInk.tape, maxLines = 1)
             // "3D AGO", not the brief's literal "3 DAYS AGO" — the brief's
             // own instruction to reuse SNIPS' relative-time helper wins over
             // its own prose example; `relativeTime` above is that helper,
@@ -248,7 +249,7 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
             TapeText(
                 "${row.padCount} ${if (row.padCount == 1) "PAD" else "PADS"}  ·  ${relativeTime(row.binnedAtMillis)}",
                 TapeType.pixelSmall,
-                scheme.ink2.tape,
+                scheme.lcdInk2,
             )
         }
         // "${daysLeft}D LEFT" matches TAKES + BIN's and ROOMS's own binned

@@ -18,6 +18,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.AndroidJCard
 import com.snipsnap.app.AndroidKitArt
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
@@ -61,6 +63,7 @@ import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.etchedBox
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -74,6 +77,7 @@ import com.snipsnap.kit.Names
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.SessionBuilder
 import com.snipsnap.kit.Severity
+import java.util.Locale
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
 import com.snipsnap.shell.Copy
@@ -231,8 +235,10 @@ fun ExportScreen(
      * scroll, with this screen's button pinned at the bottom.
      */
     onNote: (LandingNote.Note) -> Unit,
-    /** NO_KIT_FOR_EXPORT's own route. No default — a screen that forgets to wire this fails the compile, not the user. */
+    /** NO_PROJECT_OPEN's own route: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
+    /** NO_KIT_FOR_EXPORT's own route, offered when a [project] is open: the shelf in pick mode, returning with the kit added. */
+    onAddFromShelf: () -> Unit,
     /**
      * The open project, for OUT's second card (`docs/SCREEN_PLAN_2026_10.md`
      * §3.5). The card is drawn only when both this and [shelfRoot] are
@@ -250,7 +256,7 @@ fun ExportScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+        NoKitPanel(Copy.NO_KIT_FOR_EXPORT, project != null, onAddFromShelf, onNavigateKits)
         return
     }
 
@@ -294,7 +300,12 @@ fun ExportScreen(
                     ExportSession(
                         entry.dir,
                         kit,
-                        ExportWizardModel(kit, entry.dir, artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s) }),
+                        ExportWizardModel(
+                            kit,
+                            entry.dir,
+                            artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s) },
+                            jCardRenderer = { k, d, c -> AndroidJCard.png(k, d, catalog = c) },
+                        ),
                     )
                 }.getOrNull()
             }
@@ -529,6 +540,35 @@ private fun ExportContent(
         }
     }
 
+    // The box a dub that landed opens (LandingNote.dubbed): what is saved and
+    // where, with SHARE as its one way on. The toast stays as the dock's
+    // line; this is what is left to read once the line has moved on. The tile
+    // is the one the dub itself wrote for the formats that write one
+    // (EXPANSION, XPN), drawn again from the same renderer and the same
+    // inputs; any other format has no bitmap, so the box has no picture.
+    suspend fun landedNote(outcome: ExportOutcome, onCard: Boolean, where: String) {
+        val tile = withContext(Dispatchers.IO) {
+            val style = model.artStyle
+            if (style == null || (outcome.format != ExportFormat.EXPANSION && outcome.format != ExportFormat.XPN)) {
+                null
+            } else {
+                runCatching { LandingNote.Tile(AndroidKitArt.png(kit, session.dir, style)) }.getOrNull()
+            }
+        }
+        onNote(
+            LandingNote.dubbed(
+                kit = kit.name,
+                onCard = onCard,
+                files = model.fileCount,
+                where = where,
+                // SHARE KIT is the ALSO row's own door and is enabled on the
+                // same condition; the box offers it no more than the row does.
+                share = onShareKit.takeIf { kit.pads.isNotEmpty() },
+                tile = tile,
+            ),
+        )
+    }
+
     // The card leg itself, in one place because two callers reach it: the
     // dub that found the card clear, and the confirm for the dub that did
     // not. Suspends rather than launching its own coroutine so it inherits
@@ -557,6 +597,11 @@ private fun ExportContent(
                 else -> Copy.DUB_DONE_CARD
             },
         )
+        // A file the provider would not budge is trouble the line has said;
+        // a box titled "ON THE CARD" over it would say the opposite.
+        if (copied.contested == 0) {
+            landedNote(outcome, onCard = true, where = "${Copy.cardName(card.lastPathSegment)}/${outcome.primary.name}")
+        }
     }
 
     // The offer `dubCardWouldReplace` held back, taken. Reads the pending
@@ -574,7 +619,7 @@ private fun ExportContent(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e(TAG, "putOnCard: card copy failed", e)
-                onToast(Copy.DUB_FAILED)
+                onNote(LandingNote.dubFailed())
             } finally {
                 session.busy = false
                 revision++
@@ -628,6 +673,7 @@ private fun ExportContent(
                         stampDub(session.dir, card = null)
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
+                            landedNote(result.outcome, onCard = false, where = result.outcome.primary.absolutePath)
                         } else {
                             // What the card already holds, asked before a
                             // byte of it is written (persona review P2.3).
@@ -678,7 +724,7 @@ private fun ExportContent(
                 // do about it, not a Java exception's `message` — that
                 // detail stays in logcat, where it's actually useful.
                 Log.e(TAG, "startWrite: dub failed", e)
-                onToast(Copy.DUB_FAILED)
+                onNote(LandingNote.dubFailed())
             } finally {
                 session.busy = false
                 revision++
@@ -725,6 +771,12 @@ private fun ExportContent(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        // PREFLIGHT, once, above both cards: it used to sit under WRITE KIT
+        // and again under WRITE SESSION, reading the same kit twice. Gone
+        // once the kit is written, when READ BACK takes its place in the card.
+        if (model.stage != ExportWizardModel.Stage.COMPLETE) {
+            FindingsCard(model.preflight, scheme)
+        }
         OutCard("THIS KIT", scheme) {
             Box(
                 Modifier
@@ -800,7 +852,6 @@ private fun ExportContent(
                     Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    FindingsCard(model.preflight, scheme)
                     CardRow(
                         tree = cardTree,
                         enabled = !session.busy,
@@ -851,7 +902,7 @@ private fun ExportContent(
         }
 
         if (project != null && shelfRoot != null) {
-            ProjectCard(project, shelfRoot, context, appScope, scheme, onToast, onNote)
+            ProjectCard(project, shelfRoot, session.dir.name, context, appScope, scheme, onToast, onNote)
         }
 
         AlsoList(
@@ -887,7 +938,7 @@ private fun OutCard(heading: String, scheme: Scheme, content: @Composable Column
         Modifier.fillMaxWidth().etchedBox(scheme).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        TapeText(heading, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText(heading, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         content()
     }
 }
@@ -915,6 +966,8 @@ private class ProjectRead(
 private fun ProjectCard(
     project: Project,
     shelfRoot: File,
+    /** The open kit's folder: PREFLIGHT above the cards already reads it, so this card does not read it again. */
+    openKitFolder: String,
     context: Context,
     appScope: CoroutineScope,
     scheme: Scheme,
@@ -979,6 +1032,13 @@ private fun ProjectCard(
                         overwriting = null
                         landed = result.result
                         onToast(Copy.DUB_DONE)
+                        // The session's files: the .xpj and everything under
+                        // its data folder. No SHARE here - SHARE KIT packs the
+                        // open kit, which is not what this wrote.
+                        val files = withContext(Dispatchers.IO) {
+                            1 + (runCatching { result.result.dataDir.walkTopDown().count { it.isFile } }.getOrNull() ?: 0)
+                        }
+                        onNote(LandingNote.dubbed(project.name, onCard = false, files = files, where = result.result.xpj.absolutePath))
                     }
                     is ProjectSessionModel.WriteResult.Blocked -> {
                         overwriting = null
@@ -996,7 +1056,7 @@ private fun ProjectCard(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e(TAG, "writeSession: session write failed", e)
-                onToast(Copy.DUB_FAILED)
+                onNote(LandingNote.dubFailed())
             } finally {
                 busy = false
                 stage = model.stage
@@ -1025,10 +1085,17 @@ private fun ProjectCard(
             PrimaryAction(label = "WRITE ANOTHER ✓", enabled = !busy, onClick = ::writeAnother)
         } else {
             val shown = read
-            TapeText(shown?.subtitle ?: project.name, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
+            // One line of status, as the subtitle already is (`1 KIT · BEAT ON
+            // FMAJ7 2 · 94 BPM`), not a second checklist: the open kit's rows
+            // are the PREFLIGHT above both cards. A project's other kits speak
+            // here only when they have a WARN or a FAIL to say, so a blocked
+            // WRITE SESSION still shows why.
+            TapeText(shown?.subtitle ?: project.name, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 1)
             if (shown != null) {
                 for ((kitName, findings) in shown.preflight) {
-                    FindingsCard(findings, scheme, title = kitName)
+                    if (kitName == openKitFolder) continue
+                    val loud = findings.filter { it.severity == Severity.FAIL || it.severity == Severity.WARN }
+                    if (loud.isNotEmpty()) FindingsCard(loud, scheme, title = kitName.uppercase(Locale.ROOT))
                 }
                 if (shown.missing.isNotEmpty()) {
                     TapeText(
@@ -1053,7 +1120,7 @@ private fun ProjectCard(
 @Composable
 private fun AlsoList(scheme: Scheme, canShare: Boolean, onShareKit: () -> Unit, onBeatWriters: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        TapeText("ALSO", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("ALSO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         ActionButton(
             "SHARE KIT ▸ THIS KIT AS ONE FILE",
             scheme,
@@ -1090,7 +1157,7 @@ private fun DoneContent(
         // Where the write actually landed, in plain words — regardless of
         // whether SHARE is offered below, or ever tapped. No claim about
         // which file browser can reach it, just the fact of it.
-        TapeText(Copy.EXPORT_SAVED_TO, TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText(Copy.EXPORT_SAVED_TO, TapeType.pixelSmall, scheme.ink2.tape)
         TapeText(destinationPath, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         if (readBack.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
@@ -1100,7 +1167,7 @@ private fun DoneContent(
             // the honest limit: our reader agreeing is not the Live III
             // agreeing.
             FindingsCard(readBack, scheme, title = "READ BACK")
-            TapeText(Copy.READ_BACK_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 3)
+            TapeText(Copy.READ_BACK_CAVEAT, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
         }
     }
 }
@@ -1161,7 +1228,7 @@ private val BIN_RED_BORDER = Color(0xFF6A2020)
 @Composable
 private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier, title: String = "PREFLIGHT") {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText(title, TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText(title, TapeType.pixelSmall, scheme.ink2.tape)
         Column(
             Modifier.fillMaxWidth().sunkenField(scheme).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -1199,7 +1266,9 @@ private fun FindingRow(finding: Finding, scheme: Scheme) {
         ) {
             TapeText(tag, TapeType.pixelSmall, color)
         }
-        TapeText(finding.message, TapeType.pixelSmall, color, Modifier.weight(1f), maxLines = 2)
+        // Capitals, like every other line in the UI: a finding's message is
+        // written once in `:kit` in sentence case for the CLI and the report.
+        TapeText(finding.message.uppercase(Locale.ROOT), TapeType.pixelSmall, color, Modifier.weight(1f), maxLines = 2)
     }
 }
 
@@ -1223,13 +1292,16 @@ private fun CardRow(
     onPick: () -> Unit,
     onForget: () -> Unit,
 ) {
+    // The row is the door (CARD ▸, with the picked card's name after it);
+    // what no card means is a caption under it, not the row's own words, so
+    // the row keeps its arrow and the fact keeps the caption's weight.
     val label = if (tree == null) {
-        Copy.CARD_NONE
+        Copy.CARD_PICKED
     } else {
         "${Copy.CARD_PICKED} ${Copy.cardName(tree.lastPathSegment)}"
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("DESTINATION", TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText("DESTINATION", TapeType.pixelSmall, scheme.ink2.tape)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -1248,6 +1320,7 @@ private fun CardRow(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     enabled = enabled,
+                    onClickLabel = "PICK A CARD",
                     onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
                     onLongClick = if (tree != null) onForget else null,
                     onClick = onPick,
@@ -1263,6 +1336,11 @@ private fun CardRow(
                 maxLines = 2,
             )
         }
+        // No card is the ordinary case, a fact and not a fault: a plain ink2
+        // caption under the door, not a warn-weight row.
+        if (tree == null) {
+            TapeText(Copy.CARD_NONE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
+        }
         // September UAT, finding 21: holding this row is the only way to
         // forget a card anywhere in the app.
         //
@@ -1273,7 +1351,7 @@ private fun CardRow(
         // either and the legend advertises an action that cannot run - the
         // same "furniture describing nothing" this gate exists to prevent.
         if (tree != null && enabled) {
-            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         }
     }
 }
@@ -1302,7 +1380,7 @@ private fun FormatPickerRow(
     onPick: (ExportFormat) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("FORMAT", TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText("FORMAT", TapeType.pixelSmall, scheme.ink2.tape)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -1374,7 +1452,7 @@ private fun FormatPickerRow(
                             maxLines = 2,
                         )
                         // Finding 8: the reason, not just the name.
-                        TapeText(f.why, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                        TapeText(f.why, TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
                     }
                 }
             }
@@ -1386,7 +1464,10 @@ private fun FormatPickerRow(
 
 @Composable
 private fun DubProgressCard(model: ExportWizardModel, filesShown: Int, writing: Boolean, scheme: Scheme) {
-    val fraction = if (model.fileCount > 0) filesShown.toFloat() / model.fileCount else 0f
+    // Empty until the write is busy: READY TO DUB is a promise, not progress,
+    // so the track is drawn open (a hairline well, no fill) and only fills as
+    // files are written.
+    val fraction = if (writing && model.fileCount > 0) filesShown.toFloat() / model.fileCount else 0f
     Column(
         Modifier.fillMaxWidth().lcdPanel(scheme).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -1399,13 +1480,21 @@ private fun DubProgressCard(model: ExportWizardModel, filesShown: Int, writing: 
             DubReel(spinning = writing, scheme = scheme, modifier = Modifier.size(20.dp))
             TapeText(model.dubLabel, TapeType.pixelSmall, scheme.lcdInk.tape)
         }
-        Box(Modifier.fillMaxWidth().height(14.dp).sunkenField(scheme)) {
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                    .background(scheme.lcdInk.tape.copy(alpha = 0.7f)),
-            )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+                .background(scheme.lcdInk.tape.copy(alpha = 0.10f), RoundedCornerShape(3.dp))
+                .border(1.dp, scheme.lcdInk.tape.copy(alpha = 0.45f), RoundedCornerShape(3.dp)),
+        ) {
+            if (fraction > 0f) {
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                        .background(scheme.lcdInk.tape.copy(alpha = 0.7f), RoundedCornerShape(3.dp)),
+                )
+            }
         }
         TapeText(model.dubFilesLine(filesShown), TapeType.pixelSmall, scheme.lcdInk.tape.copy(alpha = 0.85f), maxLines = 2)
     }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -30,7 +29,7 @@ import com.snipsnap.shell.Layout
  * section 5, decision 4): its in-window grid, bank tabs, PANIC, MIDI line
  * and engine moved onto KitScreen, which owns the one PadEngine and
  * VoiceAllocator for the kit. What stays here is the part of PLAY that was
- * different from KIT - both banks at once, 8x2 each, in landscape -
+ * different from KIT - both banks at once, 4x4 each, in landscape -
  * because KitScreen opens it from its header's FULL chip inside an in-app
  * Popup and draws it from that same engine, allocator and glow map, so a
  * voice started in either keeps its choke group and its glow. The pad
@@ -63,7 +62,9 @@ internal fun FullscreenPlayGrid(
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.STATUS_BAR_H.dp)
+                // A floor, not a height: the 26dp this was (STATUS_BAR_H)
+                // clamped the 48dp EXIT FULL chip, the only way out.
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -70,6 +70,12 @@ no phase, heat or resin history. `Patches`, `PadRecipe`, preset saving and
 recipe replay retain the complete regenerable recipe. Editing its name or
 macros preserves the saved note, velocity and model.
 
+The SYNTH working recipe also survives a trip to the pad grid after a slider
+edit clears the preset highlight. MAKE stores the loaded recipe independently
+of the current macro values and preset name. SPREAD uses Pitchwheel's saved
+root plus TUNE directly, including effective notes outside the audio detector's
+range, so distributing an edited wheel does not guess its source pitch.
+
 Output is mono at 44.1 kHz. Nonlinear contacts and resonance run on the 4×
 internal path, followed by the established decimation and shared
 `MELODIC_LOUDNESS_TARGET` processing. Diagnostic probes expose raw audio

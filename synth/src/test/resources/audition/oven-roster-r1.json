@@ -1,0 +1,325 @@
+{
+  "engine": "OVEN",
+  "audioRevision": 1,
+  "model": 1,
+  "legacyMatchedHashes": {
+    "preset_open_lid": "6d98ec0e59b8bf84d104ecb651cdf3e2294a2ab862009016b96b5ca87bfd4cfc",
+    "preset_iron_parlour": "4fec5d9c3ba228d33cd1e375ed88573a8404295539588e9f3bd2fc7cf5eb1d92",
+    "preset_bright_ledger": "224ff7e3b1dee2b29a7bfc3d0b7ec4e68bd05185773e58917198336cf0e6a9f7",
+    "preset_felt_ledger": "faa1554da7d9bc181ae8240541345f84afe2722c0acd103205951c4bba629051",
+    "preset_quiet_room": "59203dbaca0969e397306762a89ef32da9d4b734440b1bb4fc6430bc19b2d02a",
+    "preset_soft_hearth": "53a2a160a157c1803edcb4e8da27237392083125c6914bc70b0b1c27ebae634f",
+    "preset_hammered_iron": "2987220051e2574bf785add39d4ff3fd2ffa2106419683faf9232a80518aa7f5",
+    "preset_cold_rivet": "805c7e827ec17628f1d401f65373bcc422e3a540c48177df417d7d173a7dfff2",
+    "preset_afterglow": "52d46540055e63648bd9d01c605907f36827307a7c70055d11b50380baa838b8",
+    "preset_hanging_frame": "02743b142461415cb23a8928e58d8530785d466d9cb81bfd5af717c6765fd5cb",
+    "grand_m36_soft": "57d41849f01885aa250eb01cb1ef5cedc03096781de8e311e2c72f2453448a2b",
+    "grand_m36_medium": "ad56da47fe4e4b6dfceefd08ad9895c75cd6ec0f769c2ddfd96417b0b2eecca7",
+    "grand_m36_hard": "4f5cac13225cbd1979670cd3aac120534478dc3b67aa84f91a74750b5e251e16",
+    "grand_m60_soft": "239abfe28eb929a890e865e16478a7ccce5c226a338bf08a7c00610d1726eda2",
+    "grand_m60_medium": "db4d666b4e311904f67db581c7b0a62344ef31188b2f1e1e243a508174047f21",
+    "grand_m60_hard": "7d1e4113d088742474739bf32cf969b56c589da19ea632a1411542d7c926ea52",
+    "grand_m84_soft": "6abdd0a3d4b852327a0772aac901d33becbc03977cec7d76dc2918a52be057ae",
+    "grand_m84_medium": "d5ec2997583709b32668ce925cd2aec7c644d844866f62fd1dfb708323ff15c9",
+    "grand_m84_hard": "ddc1c9f18f623bc99a6f120c8969be9a190fc42421455db0ce29bca1e5f9773f",
+    "control_hammer_0": "d383814bdc33dac9019544a188ac5a73a6cf543b2476332a809bf470586f1508",
+    "control_hammer_1": "c565f3965156e5d6d88d63e512ab5ddebfd85137a457d9aa362e2daa647e5740",
+    "control_hammer_2": "d414f25cbe7367e086708b8e32ac3b5d3b648e77280966b8c049079a90f88764",
+    "control_hammer_3": "c5e989a2daf17fa456f5dfaa75b2f1ca7414c7cdd672d75058b535c1d5dc0283",
+    "control_hammer_4": "b43159589fc528564115c482c2b8fd3b0a116fa0fe8e00605912db3a23d43d72",
+    "control_body_0": "cb4d36d6a78467d3c6ed6f07b40d2837595bf8ca42144609f2f4f6040382ccdf",
+    "control_body_1": "c5481c60e2cb43518e34fb891d66bd7d9b75bd464f1433e4d00b9ef007dfca60",
+    "control_body_2": "370ed0b583005aa998d6d7ecd1cdf0df21c0d6b29d1a6e1f1076f9c4c59639fb",
+    "control_body_3": "66cc775d406c2ef2aaa023b9bdec7445604b0a878d546b5ae35a49ad804a3ffe",
+    "control_body_4": "46c760482d9f70a86755ade8149c8d1bea3726aa917fa6141681648f04fbbe47",
+    "control_ring_0": "f6bfcd155e99381f463da28957c57d0af221829f0dcd9b46337d28f066960e02",
+    "control_ring_1": "8377a60c8bc4a83a53084b5662b5a124b254be883656ac2c59ee2424228eb1ab",
+    "control_ring_2": "be0bc335ad17bb6d92648a28e943e1d1dbe605fca76750c8272c6b34f9c30ffe",
+    "control_ring_3": "54a36ea311c3afb52ed49ea2a54b0735b1f5981c6b6f3a5310ba77f33254fee2",
+    "control_ring_4": "2f955b504a5e4e118bc063dc775a99516fde5fbde837736e9a221d01996bb5ae",
+    "control_bloom_0": "db4d666b4e311904f67db581c7b0a62344ef31188b2f1e1e243a508174047f21",
+    "control_bloom_1": "6cc39a15b0ecba37da0601993168661036978848984e9a304aab9fcac48756b1",
+    "control_bloom_2": "1ae53e1a4290114f5cf91359406933d2d73de4f91e52deaf1c4bf2272ee81eae",
+    "control_bloom_3": "f7f6bfbd5cdbaeece7b3ee4afc29b2b2a1c23d2549e97257ccec0c339a54c833",
+    "control_bloom_4": "284294afd41440a4caef14ebcc6d38cca009718d77d2079b136602b58aa130a4",
+    "control_halo_0": "1c77a71292a756ccb0a10ed4162e79295d286da8158275c3e8329a5b930bf09d",
+    "control_halo_1": "a56efaebf80fe8f75281e98c4302a03cd293a9e95d85e5782507aea277fff82f",
+    "control_halo_2": "53e5523531fab5a1a94c85205df80c1cbd437b4e7ea0043a950732cd5db8c2fd",
+    "control_halo_3": "b615868c4140449c6f3319027e3dc914c0d6eab3dc324de201d434bb688d9bb6",
+    "control_halo_4": "1da1539131300545e2909ba00f28c7a04b2587349e1ed07defc1cba9d657fcd1",
+    "causal_full": "793f896540921b694286cddd7995d5b1ddaddb829c842491d2e06c505fd451aa",
+    "causal_body_off": "eae8acd6f3773afb37fec658720f91dd98fe985f26190f26a396e993059faf21",
+    "causal_halo_off": "3eeea90842b4dc2add37675eac786ba102b4cd5e695dabebc8beab17cad17cc5",
+    "causal_strings": "5baf87ee74285334f8e123cc5941ccf294fc8145cc82691aefe45b6230a8842e",
+    "phrase_ascending": "3fcccb57d2c33762ca9d3744be25467fce0358b78e0764e251c6e5b18a5f28a1",
+    "phrase_bloom_chords": "eb2c3ab9ed598af03c5064f79131b0f42986177cd80e9f53e1f7eca957d8bebe",
+    "grand_m61_soft": "9eb19b0832e1b31654eab3930e03a4a6f6686758555159f3136a25a1b881cd5a",
+    "grand_m61_medium": "a71d532fdd8e61f3b79410790b41879125b64f65469b89d906dc3e1fb8098cf7",
+    "grand_m61_hard": "4262a0ff86cd745811cfb10072633a380d82d5ba2ff73eb2c6af4a9672cf420c",
+    "grand_m62_soft": "82dcc3c7f88816a96c756181a3154dedd66471c780dbdcbdb1f46fbd613565d4",
+    "grand_m62_medium": "4d2050e0442be9b315c0ed01ff793b359c48f449ec7d9acfa9e14f8ae96086ff",
+    "grand_m62_hard": "5cd2a63e32c7222f68758daf0265a23096873455fc25f60965368b835b7dba23",
+    "grand_m63_soft": "ecb10ff8ba6477290363cb58d973e1f16e67eb7d55e7b5c59e31a8edf66f1c8e",
+    "grand_m63_medium": "21e437941526b7806670e4978b0ad9780863f853cc3a7d7024ab3b778507a658",
+    "grand_m63_hard": "e82db7142bf64bc808a0d47bd715e59c1a12ae9ea73a0d2a5829f6636954e986",
+    "grand_m64_soft": "82d5feda96ec676a0dde029133aa602071919d8622d343576c9d3d9584213da0",
+    "grand_m64_medium": "7f1ef688bc75f03ba984e0e4651d4e796a0bbb8c59535b05201282eb88c19968",
+    "grand_m64_hard": "cd83fbda6d44294628432bf6a95e16af3e1d18c546adbef686608cb44191ffe5",
+    "grand_m65_soft": "17f06a219397e0753757929c56e563485115a51b9978fe98f8df67370659705f",
+    "grand_m65_medium": "3872dea53e3a7843db08c3229a8f14111892e8663502728404f1c4c44cabba21",
+    "grand_m65_hard": "771312a9a4708da44dcd061f824d9020edfb2b30ed91b55048b79256b5a03f31",
+    "grand_m66_soft": "2c0e809ab88f59cd9ae1b80c6954a62affaf6810ba26585f44525a980bc0815b",
+    "grand_m66_medium": "b0244c711f2bf0bbd63395c605199b5b9a8ff0c17cdbd4b69221e4e24a167c11",
+    "grand_m66_hard": "24b4a83ae2783b2a7adfde1e87be173e6729ef554d298055b0653d0c5142fa49",
+    "grand_m67_soft": "e61e95256a8e2eeef4854ec6bea47e0ed3ecf671798c4406979f809368a7bf8a",
+    "grand_m67_medium": "2d2068f806c33e7c0d7ff066233aeab11290c56f59601b99168cb9dc5ea991c8",
+    "grand_m67_hard": "be0f98df104c0351e37ae6386a58588481dcfada1c9a2c9d6265b6b354efeb85",
+    "grand_m68_soft": "35fb0dc7dfe0ec7d0c4cc25bd2df7ccc498fa88a5acd1079cdc83af1bbf03b42",
+    "grand_m68_medium": "f63800f67693a95993aa1c8ef439daf21e2aca142d45c18ebe280dd6f9c3c500",
+    "grand_m68_hard": "5f7ba191b0d2627b3d40996d2c3291379e9bcba23df807044be2c7dfd78f70f0",
+    "grand_m69_soft": "b4a97603d27e92fed62c3255645e798207cc5529dcd00e08c070291c27256894",
+    "grand_m69_medium": "07eb2f8d58476688a4a5ba2954140e8fd5f49ffd41551644ef8e4241ed8d0ce9",
+    "grand_m69_hard": "06609de5ec902c5fdd889e4ef54a4e2f85b462e7108257d708cf6314e941e35b",
+    "grand_m70_soft": "60b9e3caf5f41318c5a7d70be187f9a3add6b30f4b740ea9b7bae68b75f7cd92",
+    "grand_m70_medium": "142068c16a23c1bb44afc711e2e78a10e6c0d0313b53e093285fa67b9e624a77",
+    "grand_m70_hard": "e8164d59b21c43d7ded08398d71aa2dacd45093a30b3d7d4daf0c4f4db4cf7d4",
+    "grand_m71_soft": "164b49f23d1f96effd0e0d11cb78ba90e4370f644f6e2274c751903071d0951c",
+    "grand_m71_medium": "eff2c0df53547fd3d13637bb3ba912fa4bdcb6443cfb7062b18cc26b296599b5",
+    "grand_m71_hard": "c6dba970eff9b80027c15b911ccc73752105158c0d32c21c30524c0870f6fcd5",
+    "grand_m72_soft": "0a12577e122f69e30725c51cbae43c86c93851e583e4c65e3458ab78f5890a74",
+    "grand_m72_medium": "e7160c494001f1d2a49fa8553f77c52d7d842801d2037efa66ca6c9695665915",
+    "grand_m72_hard": "7e1ab972948c8236a11f2ec7fa824d550ca05df2dcf838ed6e82e2298a413ded"
+  },
+  "presets": [
+    {
+      "id": "preset_open_lid",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Open Lid",
+        "voice": "GRAND",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.550000011920929,
+          "BODY": 0.550000011920929,
+          "RING": 0.550000011920929,
+          "BLOOM": 0,
+          "HALO": 0.20000000298023224
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 0.800000011920929
+      },
+      "rawSha256": "74223d464be1b9932ad0b054d1154378e4f1d1206ab9d991a5a9f96dec24863e",
+      "matchedSha256": "6d98ec0e59b8bf84d104ecb651cdf3e2294a2ab862009016b96b5ca87bfd4cfc",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_iron_parlour",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Iron Parlour",
+        "voice": "GRAND",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.3499999940395355,
+          "BODY": 0.7599999904632568,
+          "RING": 0.44999998807907104,
+          "BLOOM": 0.11999999731779099,
+          "HALO": 0.11999999731779099
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 0.75
+      },
+      "rawSha256": "a6c58e1d5a9423e51cc5a39b053240f7d6188445dd9751c43e845ae58c6ecaab",
+      "matchedSha256": "4fec5d9c3ba228d33cd1e375ed88573a8404295539588e9f3bd2fc7cf5eb1d92",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_bright_ledger",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Bright Ledger",
+        "voice": "GRAND",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.8199999928474426,
+          "BODY": 0.41999998688697815,
+          "RING": 0.5600000023841858,
+          "BLOOM": 0.10000000149011612,
+          "HALO": 0.10000000149011612
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 0.8999999761581421
+      },
+      "rawSha256": "af0abc0d747d40e784afe76a28b7878cf2423772e4f44214ed8efa30c5605598",
+      "matchedSha256": "224ff7e3b1dee2b29a7bfc3d0b7ec4e68bd05185773e58917198336cf0e6a9f7",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_felt_ledger",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Felt Ledger",
+        "voice": "FELT",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.18000000715255737,
+          "BODY": 0.5799999833106995,
+          "RING": 0.41999998688697815,
+          "BLOOM": 0.11999999731779099,
+          "HALO": 0.10000000149011612
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 0.699999988079071
+      },
+      "rawSha256": "a1d0b7b90aa9a219febb0bd011fc859b74165a4e426b87548606cda07049b9aa",
+      "matchedSha256": "faa1554da7d9bc181ae8240541345f84afe2722c0acd103205951c4bba629051",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_quiet_room",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Quiet Room",
+        "voice": "FELT",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.07999999821186066,
+          "BODY": 0.3400000035762787,
+          "RING": 0.23999999463558197,
+          "BLOOM": 0,
+          "HALO": 0.07000000029802322
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 0.550000011920929
+      },
+      "rawSha256": "daaa0f5307cb453c3a2dcb272d014627fc57fc93c8c99a969ec8334ccaafff3c",
+      "matchedSha256": "59203dbaca0969e397306762a89ef32da9d4b734440b1bb4fc6430bc19b2d02a",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_soft_hearth",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Soft Hearth",
+        "voice": "FELT",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.2800000011920929,
+          "BODY": 0.7200000286102295,
+          "RING": 0.6800000071525574,
+          "BLOOM": 0.30000001192092896,
+          "HALO": 0.2199999988079071
+        },
+        "model": 1,
+        "midi": 57,
+        "velocity": 0.6499999761581421
+      },
+      "rawSha256": "4936fed83c8fc121b50a38de88a5281e0fcddbd3d2f6890f1e609998a92d7fc3",
+      "matchedSha256": "53a2a160a157c1803edcb4e8da27237392083125c6914bc70b0b1c27ebae634f",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_hammered_iron",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Hammered Iron",
+        "voice": "FORGED",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.8199999928474426,
+          "BODY": 0.6000000238418579,
+          "RING": 0.5600000023841858,
+          "BLOOM": 0.10000000149011612,
+          "HALO": 0.1599999964237213
+        },
+        "model": 1,
+        "midi": 55,
+        "velocity": 0.8500000238418579
+      },
+      "rawSha256": "a62b4b852522770b2b6ecda04bb2ea359bd1f7fe1aeb0744e82fee1769a5d95f",
+      "matchedSha256": "2987220051e2574bf785add39d4ff3fd2ffa2106419683faf9232a80518aa7f5",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_cold_rivet",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Cold Rivet",
+        "voice": "FORGED",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 1,
+          "BODY": 0.2800000011920929,
+          "RING": 0.23999999463558197,
+          "BLOOM": 0,
+          "HALO": 0.05000000074505806
+        },
+        "model": 1,
+        "midi": 67,
+        "velocity": 0.8999999761581421
+      },
+      "rawSha256": "e7e6ba42f5f7512a90d510cff9a976f9b87b3f73e179c8651ad2034ef4b5d0d9",
+      "matchedSha256": "805c7e827ec17628f1d401f65373bcc422e3a540c48177df417d7d173a7dfff2",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_afterglow",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Afterglow",
+        "voice": "BLOOM",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.41999998688697815,
+          "BODY": 0.550000011920929,
+          "RING": 0.800000011920929,
+          "BLOOM": 0.699999988079071,
+          "HALO": 0.41999998688697815
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 0.75
+      },
+      "rawSha256": "17e72e66890c7dea5b6b3eb8b7ab6037e98ba94fd64505094ba5b9d940703cf7",
+      "matchedSha256": "52d46540055e63648bd9d01c605907f36827307a7c70055d11b50380baa838b8",
+      "rawGain": 1
+    },
+    {
+      "id": "preset_hanging_frame",
+      "patch": {
+        "engine": "OVEN",
+        "version": 1,
+        "name": "Hanging Frame",
+        "voice": "BLOOM",
+        "macros": {
+          "TUNE": 0.5,
+          "HAMMER": 0.2199999988079071,
+          "BODY": 0.7200000286102295,
+          "RING": 0.9200000166893005,
+          "BLOOM": 0.8999999761581421,
+          "HALO": 0.6499999761581421
+        },
+        "model": 1,
+        "midi": 53,
+        "velocity": 0.699999988079071
+      },
+      "rawSha256": "2a102ba330117cf50794dddde75fcf5fd0a7656186ba41634b74a8d982b56257",
+      "matchedSha256": "02743b142461415cb23a8928e58d8530785d466d9cb81bfd5af717c6765fd5cb",
+      "rawGain": 1
+    }
+  ]
+}

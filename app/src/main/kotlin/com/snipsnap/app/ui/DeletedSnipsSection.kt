@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -169,7 +170,7 @@ internal fun DeletedSnipsSection(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // The shelf's section-header style; the bench's header row and Back
         // live in `BinScreen`, not here.
-        TapeText("DELETED SNIPS · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("DELETED SNIPS · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         if (binned.isEmpty()) {
             Box(
@@ -241,7 +242,7 @@ private fun DeletedSnipRow(row: SnipStore.BinnedSnip, busy: Boolean, onRestore: 
     // ≤2 days left renders in `scheme.warn`, the same threshold TAKES +
     // BIN, ROOMS, and DELETED KITS's own binned rows all use.
     val dayColor = if (row.daysLeft(System.currentTimeMillis()) <= 2) scheme.warn.tape else scheme.amber.tape
-    val nameColor = CLASS_BY_NAME[row.name]?.let { Schemes.classColor(it).tape } ?: scheme.ink.tape
+    val nameColor = CLASS_BY_NAME[row.name]?.let { Schemes.classColor(it).tape } ?: scheme.lcdInk.tape
     Row(
         Modifier
             .fillMaxWidth()
@@ -257,7 +258,7 @@ private fun DeletedSnipRow(row: SnipStore.BinnedSnip, busy: Boolean, onRestore: 
             TapeText(
                 "${humanSize(row.sizeBytes)}  ·  ${relativeTime(row.binnedAtMillis)}",
                 TapeType.pixelSmall,
-                scheme.ink2.tape,
+                scheme.lcdInk2,
             )
         }
         TapeText("${row.daysLeft(System.currentTimeMillis())}D LEFT", TapeType.lcdSmall, dayColor)
