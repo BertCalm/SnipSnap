@@ -70,27 +70,29 @@ class WickTest {
 
     @Test
     fun `transmitted excitations follow observed parent releases on a later update`() {
-        val probe = Wick.inspect(WickVoice.BUBBLE, active + mapOf("FEED" to .25f, "CASCADE" to 1f))
-        val events = probe.diagnostics.events
-        val releases = events.filter { it.kind == "RELEASE" }
-        val transmissions = events.filter { it.kind == "CASCADE" }
-        assertTrue(releases.isNotEmpty(), "no gate crossed its release threshold")
-        assertTrue(transmissions.isNotEmpty(), "no release reached a successor")
-        assertEquals(events.sortedBy { it.timeSeconds }, events, "event chronology")
-        assertTrue(transmissions.any { it.destination == 2 }, "cascade never reached the third stage")
-        for (event in transmissions) {
-            assertTrue(event.parentStage in 0..2 && event.destination in 0..2)
-            assertTrue(event.timeSeconds > event.releaseSeconds, "same-update recursive ignition")
-            assertTrue(event.timeSeconds - event.releaseSeconds in .005.. .5, "unbounded cascade delay")
-            assertTrue(releases.any { it.parentStage == event.parentStage && abs(it.timeSeconds - event.releaseSeconds) < 1.0 / (Dsp.RATE * Dsp.OVERSAMPLE) },
-                "delivery ${event.timeSeconds} has no observed parent release at ${event.releaseSeconds}")
-            assertTrue(releases.any { it.id == event.parentEventId }, "delivery lacks its actual release event identity")
-            assertTrue(event.admittedStrength <= event.requestedStrength + 1e-9)
-            assertTrue(event.availabilityAfter <= event.availabilityBefore + 1e-9, "an excitation replenished reserve")
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD)) {
+            val probe = Wick.inspect(voice, active + mapOf("FEED" to .25f, "CASCADE" to 1f))
+            val events = probe.diagnostics.events
+            val releases = events.filter { it.kind == "RELEASE" }
+            val transmissions = events.filter { it.kind == "CASCADE" }
+            assertTrue(releases.isNotEmpty(), "$voice no gate crossed its release threshold")
+            assertTrue(transmissions.isNotEmpty(), "$voice no release reached a successor")
+            assertEquals(events.sortedBy { it.timeSeconds }, events, "$voice event chronology")
+            assertTrue(transmissions.any { it.destination == 2 }, "$voice cascade never reached the third stage")
+            for (event in transmissions) {
+                assertTrue(event.parentStage in 0..2 && event.destination in 0..2)
+                assertTrue(event.timeSeconds > event.releaseSeconds, "same-update recursive ignition")
+                assertTrue(event.timeSeconds - event.releaseSeconds in .005.. .5, "unbounded cascade delay")
+                assertTrue(releases.any { it.parentStage == event.parentStage && abs(it.timeSeconds - event.releaseSeconds) < 1.0 / (Dsp.RATE * Dsp.OVERSAMPLE) },
+                    "delivery ${event.timeSeconds} has no observed parent release at ${event.releaseSeconds}")
+                assertTrue(releases.any { it.id == event.parentEventId }, "delivery lacks its actual release event identity")
+                assertTrue(event.admittedStrength <= event.requestedStrength + 1e-9)
+                assertTrue(event.availabilityAfter <= event.availabilityBefore + 1e-9, "an excitation replenished reserve")
+            }
+            val disconnected = Wick.inspect(voice, active + ("CASCADE" to 0f))
+            assertTrue(disconnected.diagnostics.events.none { it.kind == "CASCADE" }, "$voice CASCADE zero still transmits")
+            assertTrue(disconnected.diagnostics.rawRms > .0001, "$voice CASCADE zero also silenced the source gate")
         }
-        val disconnected = Wick.inspect(WickVoice.BUBBLE, active + ("CASCADE" to 0f))
-        assertTrue(disconnected.diagnostics.events.none { it.kind == "CASCADE" }, "CASCADE zero still transmits")
-        assertTrue(disconnected.diagnostics.rawRms > .0001, "CASCADE zero also silenced the source gate")
     }
 
     @Test
@@ -125,17 +127,17 @@ class WickTest {
 
     @Test
     fun `each timbral control moves a finite gesture and its held recurrent gesture`() {
-        for (hold in listOf(0f, 1f)) for (macro in timbral) {
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD)) for (hold in listOf(0f, 1f)) for (macro in timbral) {
             fun at(value: Float): FloatArray {
-                val probe = Wick.inspect(WickVoice.BUBBLE, active + mapOf("HOLD" to hold, macro to value))
+                val probe = Wick.inspect(voice, active + mapOf("HOLD" to hold, macro to value))
                 assertReplayProvenance(probe)
                 return probe.samples
             }
             val low = at(0f)
             val high = at(1f)
             val distance = TangleMeasure.distance(low, high)
-            println("WICK BUBBLE HOLD$hold $macro endpoint shape distance $distance")
-            assertTrue(distance > .01, "HOLD$hold $macro only changes gain or the discarded preroll: $distance")
+            println("WICK $voice HOLD$hold $macro endpoint shape distance $distance")
+            assertTrue(distance > .01, "$voice HOLD$hold $macro only changes gain or the discarded preroll: $distance")
         }
     }
 
@@ -184,6 +186,46 @@ class WickTest {
         val normal = Wick.inspect(WickVoice.PLUCK, midi = 60)
         val comparison = Wick.inspect(WickVoice.PLUCK, midi = 60, options = Wick.Options(legacyBubbleEnvelope = true))
         assertContentEquals(normal.raw, comparison.raw, "BUBBLE-only envelope changes reached PLUCK")
+    }
+
+    @Test
+    fun `wood has a drier body and different harmonic balance under the same controls`() {
+        val controls = Wick.defaults(WickVoice.WOOD) + mapOf("FEED" to 0f, "CASCADE" to 0f)
+        val wood = Wick.inspect(WickVoice.WOOD, controls, midi = 60)
+        fun bodyRatio(samples: FloatArray): Double {
+            fun rms(from: Double, to: Double) = TangleMeasure.rms(
+                samples.copyOfRange((from * Dsp.RATE).toInt(), (to * Dsp.RATE).toInt()))
+            return rms(.22, .40) / rms(.04, .12).coerceAtLeast(1e-12)
+        }
+        val woodBody = bodyRatio(wood.raw)
+        for (other in listOf(WickVoice.PLUCK, WickVoice.BUBBLE)) {
+            val reference = Wick.inspect(other, controls, midi = 60)
+            val otherBody = bodyRatio(reference.raw)
+            val spectrumChange = TangleMeasure.spectralDistance(wood.raw, reference.raw)
+            println("WICK WOOD vs $other matched controls: late/early RMS $woodBody / $otherBody, spectral distance $spectrumChange")
+            // Within-render amplitude ratios and normalized spectral power cannot be changed
+            // by output leveling or explained by the voices' different oscillator start phases.
+            assertTrue(woodBody < otherBody * .9, "WOOD did not close more compactly than $other: $woodBody / $otherBody")
+            assertTrue(spectrumChange > .005, "WOOD and $other have nearly the same harmonic balance: $spectrumChange")
+        }
+    }
+
+    @Test
+    fun `wood velocity changes the finite and recurrent articulation while retaining the requested note`() {
+        for (hold in listOf(0f, 1f)) {
+            val controls = Wick.defaults(WickVoice.WOOD) + ("HOLD" to hold)
+            val soft = Wick.inspect(WickVoice.WOOD, controls, midi = 60, velocity = .25f)
+            val hard = Wick.inspect(WickVoice.WOOD, controls, midi = 60, velocity = 1f)
+            val distance = TangleMeasure.distance(soft.samples, hard.samples)
+            assertTrue(distance > .02, "WOOD HOLD$hold velocity only changes gain: $distance")
+            for ((velocity, probe) in listOf(.25f to soft, 1f to hard)) {
+                assertTrue(probe.raw.all { it.isFinite() } && probe.samples.all { it.isFinite() })
+                val wanted = Keys.midiHz(60)
+                val measured = FineTuning.measuredHz(Snip(probe.samples, 1, Dsp.RATE), wanted, .08f, .25f)
+                val cents = FineTuning.cents(measured, wanted.toDouble())
+                assertTrue(abs(cents) < 25.0, "WOOD HOLD$hold velocity$velocity lost its requested root: $cents cents")
+            }
+        }
     }
 
     @Test
