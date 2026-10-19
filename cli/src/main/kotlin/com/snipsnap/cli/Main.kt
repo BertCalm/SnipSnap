@@ -70,18 +70,23 @@ object Cli {
         |                        needs --into <kit-dir> and becomes that
         |                        kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
+        |  bellows-keys         four model-2 BELLOWS keygroups + fixed C3 bed
+        |                        (--out DIR, --release .1..1.5, --overwrite)
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        render factory presets to wav, to hear them
         |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO: --midi N --velocity 0..1)
         |                        (OBBLIGATO AIR_REED: --seed N sets players;
         |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
-        |                        (WICK: provisional PLUCK/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
+        |                        (WICK: provisional PLUCK/WOOD/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (CONTOUR: --patch recipe.json replays a complete sound;
+        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
         |                        (REGISTERS: PIPE/MUSETTE; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
         |                        (OSPREY SWELL: --seed N --seconds .25..12 --model 1|2|3;
         |                        HOLD extends a finite sea gesture)
-        |                        (FLOCK prototype: GATHER/RIBBON/SPLIT; --all,
+        |                        (FLOCK: GATHER/RIBBON/SPLIT; --all,
         |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
         |                        HOLD extends a finite flock performance)
         |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N
@@ -367,6 +372,7 @@ object Cli {
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
+                "bellows-keys" -> BellowsKeysCommand.run(args.drop(1), out)
                 "pad" -> PadCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
                 "resample" -> ResampleCommand.run(args.drop(1), out)

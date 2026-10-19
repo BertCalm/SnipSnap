@@ -169,6 +169,27 @@ class InstrumentEngineTest {
     }
 
     /**
+     * Between frames the read is a four-point cubic, the phone's own (PadEngine.cpp). A parabola, frame i holding
+     * i * i / 10000, is read exactly between frames where a straight line is not; and across the seam the taps are the
+     * loop's own: two on from the last frame is the loop's second, and the frame before the loop's first is the file's.
+     * (The ramp above cannot tell these apart: it is symmetric about the seam.)
+     */
+    @Test
+    fun `between frames the read is a cubic through the loop's own neighbours`() {
+        val sample = FloatArray(10) { it * it / 10_000f }
+        val zone = InstrumentStore.Zone(0, 127, 57, "p.wav", 10L, 4L)
+        val loaded = InstrumentEngine.Loaded(InstrumentStore.Instrument("Parabola", 0.2f, listOf(zone)), rate, listOf(sample))
+        val engine = InstrumentEngine(loaded, rate)
+        assertTrue(engine.noteOn(57 - 12)) // half a file frame per output frame
+        val out = render(engine, 40f / rate)
+        val level = InstrumentEngine.VOICE_LEVEL
+        assertEquals(0.001225f * level, out.samples[7 * 2], 1e-7f, "3.5 is on the parabola (a straight line reads 0.00125)")
+        assertEquals(0.0049f * level, out.samples[19 * 2], 1e-7f, "9.5: frames 8 and 9, then the loop's 4 and 5")
+        assertEquals(0.0016f * level, out.samples[20 * 2], 1e-7f, "10 wraps to 4")
+        assertEquals(0.002025f * level, out.samples[21 * 2], 1e-7f, "4.5: frames 3, 4, 5, 6 - the parabola again")
+    }
+
+    /**
      * The point of the fix, as a listener hears it: 22 periods of 220 Hz is 4410 frames and the loop [4410, 22050) is
      * 88 periods exactly, so a held note is the unbroken sine for as long as it is held. With the loop one frame short
      * every wrap slipped the phase by a frame (0.03 rad), and the note walked out of the sine it was cut from.

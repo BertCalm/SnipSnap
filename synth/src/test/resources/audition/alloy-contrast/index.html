@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f0e8">
+  <meta name="description" content="Compare Alloy's released sounds with twelve new voice candidates, at the same pitch and listening level.">
+  <title>Alloy · voice contrast</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath fill=%27%23272b26%27 d=%27M2 5h8v14H2zM14 5h8v14h-8z%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css"><script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#bench">Skip to comparison</a>
+  <header class="wrap site-header"><a class="brand" href="../"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h8v14H2zM14 5h8v14h-8z"/></svg>SnipSnap <span>/ Audition room</span></a><a class="back" href="../">Released 36-preset library <span aria-hidden="true">↗</span></a></header>
+  <main>
+    <section class="hero wrap">
+      <div><div class="eyebrow"><i></i> ENGINE STUDY 023 <span>R2 / CONTRAST</span></div><h1>More character<span>.</span><br>Less overlap.</h1><p class="lede">Six voices. Two new roles each.</p><p class="intro">A focused response to the similarity in Alloy’s first roster. Compare each new voice recipe with its released version, then try two distinct roles across three registers.</p><a class="primary" href="#bench">Listen to the differences <span>↓</span></a></div>
+      <aside class="brief"><span class="eyebrow">NEW VOICE CANDIDATES</span><div class="brief-line"><strong>01</strong><p><b>Compare the recipe.</b><br>Old and new at the same note, velocity and controls.</p></div><div class="brief-line"><strong>02</strong><p><b>Find a useful role.</b><br>Two candidates per voice, each at C2, C3 and C4.</p></div><div class="brief-line"><strong>03</strong><p><b>Listen past the attack.</b><br>Compare the settled, repeating body on its own.</p></div><p class="pending"><span></span> Awaiting listening — the released sounds are preserved.</p></aside>
+    </section>
+    <section class="wrap bench" id="bench" aria-labelledby="bench-title">
+      <div class="section-heading"><div><div class="eyebrow">THE COMPARISON BENCH</div><h2 id="bench-title">Does each voice earn its place?</h2></div><button id="export" class="text-button" type="button">Export your notes ↗</button></div>
+      <p id="load-status" class="status" role="status">Opening 60 real Kotlin renders…</p>
+      <div id="workspace" hidden>
+        <div class="voice-row"><span class="eyebrow">CHOOSE A VOICE</span><div id="voices" class="voice-buttons" role="group" aria-label="Choose a voice"></div></div>
+        <div class="tabs" role="tablist" aria-label="Listening study"><button id="tab-voices" type="button" role="tab" aria-selected="true" aria-controls="study-panel" data-section="voices">01 <span>Voice A/B</span></button><button id="tab-roles" type="button" role="tab" aria-selected="false" aria-controls="study-panel" data-section="roles" tabindex="-1">02 <span>Two roles</span></button><button id="tab-held" type="button" role="tab" aria-selected="false" aria-controls="study-panel" data-section="held" tabindex="-1">03 <span>Held A/B</span></button></div>
+        <div id="study-panel" role="tabpanel" aria-labelledby="tab-voices">
+          <div class="study-copy"><div><h3 id="study-title">The voice, at equal settings.</h3><p id="study-description"></p></div><span id="study-meta" class="meta"></span></div>
+          <div id="comparison" class="comparison"><span>Same cue. Same note. Matched level.</span><div role="group" aria-label="Compare released and candidate configuration"><button id="old" type="button" aria-pressed="false">Old <small>Released</small></button><button id="new" type="button" aria-pressed="true">New <small>Candidate</small></button></div></div>
+          <div id="roles" class="roles" hidden><div id="role-buttons" role="group" aria-label="Choose candidate role"></div><div class="note-row"><span>Play this role at</span><div id="notes" role="group" aria-label="Choose note"><button type="button" data-midi="36" aria-pressed="false">C2 <small>36</small></button><button type="button" data-midi="48" aria-pressed="true">C3 <small>48</small></button><button type="button" data-midi="60" aria-pressed="false">C4 <small>60</small></button></div></div></div>
+          <div class="desk">
+            <section class="player" aria-label="Audio player"><div class="player-top"><span id="player-kind" class="eyebrow"></span><span>MONO / 44.1 kHz</span></div><h3 id="player-title"></h3><p id="player-detail"></p><div class="wave"><canvas id="wave" aria-hidden="true"></canvas><div id="playhead"></div><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Playback position"></div><div class="transport"><button id="play" class="play" type="button">▶ <span>Play</span></button><button id="stop" class="stop" type="button" aria-label="Stop and return to start">■</button><span class="time"><span id="elapsed">0:00.0</span><i>/</i><span id="duration">0:00.0</span></span><button id="repeat" type="button" aria-pressed="false">↻ Repeat</button></div><div class="player-bottom"><span id="player-tags"></span><a id="wav" download>WAV ↓</a><a id="raw" download hidden>Raw ↓</a><a id="patch" download hidden>Patch ↓</a></div><p id="audio-status" class="audio-status" role="status" aria-live="polite"></p></section>
+            <aside class="review"><div class="eyebrow">WHAT DO YOU HEAR?</div><p class="review-question">More distinct? Still too familiar?<br>Listen for the attack, body and tail.</p><div class="verdicts" role="group" aria-label="Listening verdict"><button type="button" data-verdict="distinct" aria-pressed="false">Distinct</button><button type="button" data-verdict="similar" aria-pressed="false">Too similar</button><button type="button" data-verdict="revise" aria-pressed="false">Revise</button></div><label for="note">Your listening notes <span>Saved on this device</span></label><textarea id="note" rows="4" placeholder="What gives this sound its own role?"></textarea><p id="saved" role="status">These notes belong to the new comparison only.</p><details><summary>Render measurements</summary><dl id="measurements"></dl></details></aside>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="wrap downloads"><div><div class="eyebrow">TAKE IT TO YOUR INSTRUMENT</div><h2>Try the candidates in context.</h2><p>The 16-pad MPC kit has the twelve finite roles and four settled held sounds. Enable whole-sample looping on pads A13–A16 for indefinite HOLD.</p></div><div id="downloads"></div></section>
+  </main>
+  <footer class="wrap"><span>Alloy / SnipSnap</span><p>Candidate voicing recipes. Original engine.<br>No change to released patches.</p><a href="../">Back to the full audition ↗</a></footer>
+  <noscript><p class="wrap">Enable JavaScript to compare the renders, or download <a href="manifest.json">the manifest</a>.</p></noscript>
+</body>
+</html>

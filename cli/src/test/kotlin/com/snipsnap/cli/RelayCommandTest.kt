@@ -28,19 +28,22 @@ class RelayCommandTest {
                     arrayOf("synth", "relay", voice.name.lowercase(), "--all", "--midi", "$midi", "--velocity", ".35", "--out", dir.path),
                     PrintStream(output), PrintStream(errors),
                 ), errors.toString())
-                val wav = dir.listFiles { f -> f.extension == "wav" }!!.single()
-                val source = RelayPresets.forVoice(voice).single()
-                val expectedPatch = source.copy(
-                    macros = source.macros + ("TUNE" to (midi - Relay.rootMidi(voice)) / Relay.TUNE_SEMITONES.toFloat()),
-                    velocity = .35f,
-                )
-                val expected = ByteArrayOutputStream().also { WavWriter.write(it, expectedPatch.render()) }
-                assertContentEquals(expected.toByteArray(), wav.readBytes(), "the saved schedule, pitch and velocity reach the renderer")
-                val rendered = WavReader.read(wav)
-                assertEquals(1, rendered.channels)
-                assertEquals(44_100, rendered.sampleRate)
-                assertTrue(rendered.peak() > 0f)
-                assertTrue("1 rendered into" in output.toString())
+                val wavs = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
+                val roster = RelayPresets.forVoice(voice)
+                assertEquals(roster.size, wavs.size, "--all exports the complete voice bank")
+                for ((source, wav) in roster.zip(wavs)) {
+                    val expectedPatch = source.copy(
+                        macros = source.macros + ("TUNE" to (midi - Relay.rootMidi(voice)) / Relay.TUNE_SEMITONES.toFloat()),
+                        velocity = .35f,
+                    )
+                    val expected = ByteArrayOutputStream().also { WavWriter.write(it, expectedPatch.render()) }
+                    assertContentEquals(expected.toByteArray(), wav.readBytes(), "${source.name}: saved score, pitch and velocity")
+                    val rendered = WavReader.read(wav)
+                    assertEquals(1, rendered.channels)
+                    assertEquals(44_100, rendered.sampleRate)
+                    assertTrue(rendered.peak() > 0f)
+                }
+                assertTrue("${roster.size} rendered into" in output.toString())
                 assertFalse("lands with" in output.toString(), "the identity audition stays dry")
             }
         } finally {
@@ -56,7 +59,7 @@ class RelayCommandTest {
                 listOf("RELAY", "CHIME", "--preset", "1", "--out", dir.path), PrintStream(ByteArrayOutputStream()),
             ))
             val expected = ByteArrayOutputStream().also {
-                WavWriter.write(it, RelayPresets.forVoice(RelayVoice.CHIME).single().render())
+                WavWriter.write(it, RelayPresets.forVoice(RelayVoice.CHIME).first().render())
             }
             assertContentEquals(expected.toByteArray(), dir.listFiles { f -> f.extension == "wav" }!!.single().readBytes())
         } finally {

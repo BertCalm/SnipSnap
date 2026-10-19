@@ -6,6 +6,16 @@ import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Scale
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
+import com.snipsnap.synth.OpenSky
+import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OpenSkyVoice
+import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.PluckPatch
+import com.snipsnap.synth.PluckVoice
+import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.StoopVoice
 import java.io.File
 import kotlin.math.PI
 import kotlin.math.exp
@@ -31,6 +41,50 @@ class SpreadTest {
     }
 
     private fun kit(name: String) = KitBuilderModel.create(name, File(temp, name))
+
+    @Test
+    fun `wheel spreads use the saved root and relative tune in every model`() {
+        // A3 contradicts every requested source note. These are recipe tests,
+        // so no render is needed to prove the harmonic detector is bypassed.
+        val snip = tone(220.0)
+        assertEquals(57f, Spread.detect(snip)!!, .2f)
+        for (model in 1..Pitchwheel.MODEL_VERSION) {
+            for (midi in listOf(24, 48, 96)) {
+                for ((tune, offset) in listOf(0f to -12, .5f to 0, 1f to 12)) {
+                    val patch = PitchwheelPatch("Wheel", PitchwheelVoice.RECOIL,
+                        mapOf("TUNE" to tune), midi = midi, model = model)
+                    assertEquals((midi + offset).toFloat(), Spread.detect(snip, patch),
+                        "model $model, root $midi, TUNE $tune")
+                }
+            }
+        }
+        // MIDI 12 and 108 lie beyond Pitch.detect's 40–1200 Hz range. Keep
+        // those effective notes; clamping them to the saved-root range is wrong.
+        val low = PitchwheelPatch("Low wheel", PitchwheelVoice.CLUNK, mapOf("TUNE" to 0f), midi = 24)
+        val high = low.copy(midi = 96, macros = mapOf("TUNE" to 1f))
+        assertEquals(12f, Spread.detect(snip, low))
+        assertEquals(108f, Spread.detect(snip, high))
+        assertEquals(48f, Spread.detect(snip, low.copy(midi = 48, macros = emptyMap())),
+            "an omitted TUNE stays centered on the saved root")
+    }
+
+    @Test
+    fun `authored spread roots retain existing stoop and opensky behavior`() {
+        val snip = tone(220.0)
+        val stoop = StoopPatch("Stoop", StoopVoice.CHORD, emptyMap(), midi = 36)
+        val sky = OpenSkyPatch("Sky", OpenSkyVoice.HALO, OpenSky.defaults(OpenSkyVoice.HALO), midi = 72)
+        assertEquals(36f, Spread.detect(snip, stoop))
+        assertEquals(72f, Spread.detect(snip, sky))
+    }
+
+    @Test
+    fun `other spread recipes retain audio detection and its unknown result`() {
+        val patch = PluckPatch("Pluck", PluckVoice.NYLON, emptyMap())
+        val snip = tone(220.0)
+        assertEquals(57f, Spread.detect(snip, patch)!!, .2f)
+        val silence = Snip(FloatArray(44100), channels = 1, sampleRate = 44100)
+        assertNull(Spread.detect(silence, patch))
+    }
 
     @Test
     fun `a major spread walks the scale up the bank with each pad's own tune`() {

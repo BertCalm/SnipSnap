@@ -190,6 +190,19 @@ class KitBuilderModel private constructor(
         return edited
     }
 
+    /** Adopt already-written board files while retaining every unrelated pad field. */
+    internal fun replaceBoardPad(slot: Int, expected: KitPad, replacement: KitPad): KitPad {
+        require(kit.pad(slot) == expected) { "the pad changed while WIDE was rendering; try again" }
+        require(replacement.slot == slot && replacement.copy(
+            sampleFile = expected.sampleFile,
+            velocityLayers = expected.velocityLayers,
+            recipe = expected.recipe,
+        ) == expected) { "a board can change only audio files, velocity layers and its recipe" }
+        kit = kit.copy(pads = kit.pads.map { if (it.slot == slot) replacement else it })
+        dirty = true
+        return replacement
+    }
+
     /**
      * Set or clear the kit's key. Choosing a key never retunes anything by
      * itself — that's [retuneTonalPads], an explicit action.
@@ -356,6 +369,7 @@ class KitBuilderModel private constructor(
     fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
         require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_SOFT_HITS }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         // Velocity.layerAt makes the same patch-vs-captured (and
@@ -420,6 +434,7 @@ class KitBuilderModel private constructor(
         require(softTakes.size in 1..StackTakes.MAX_SOFT) { "1..${StackTakes.MAX_SOFT} soft takes, got ${softTakes.size}" }
         require(softTakes.map { it.file }.toSet().size == softTakes.size) { "the same take can't fill two zones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_STACK }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered - `clearGhostLayers($slot)` before stacking" }
         requireNotChained(pad, "stacking")
         // The entries must be THIS kit's bin's: `originalName` alone is a
@@ -502,7 +517,10 @@ class KitBuilderModel private constructor(
         require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
         moveToBin(pad.sampleFile)
         WavWriter.write(File(kitDir, pad.sampleFile), processed)
-        return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
+        // An unlabelled audio replacement cannot retain a WIDE inventory:
+        // its hashes describe the old sound. Other legacy recipes keep the
+        // existing preserve-on-null behavior; an explicit new recipe wins.
+        return update(slot) { it.copy(recipe = recipe ?: it.recipe?.takeUnless { old -> "boardPad" in old.entries }) }
     }
 
     /**
@@ -812,6 +830,7 @@ class KitBuilderModel private constructor(
     /** Back to a single-sample pad; the soft renders are deleted. */
     fun clearGhostLayers(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_SOFT_HITS }
         val softFiles = pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
         val cleared = update(slot) { it.copy(velocityLayers = emptyList()) }
         softFiles.forEach { File(kitDir, it).delete() }

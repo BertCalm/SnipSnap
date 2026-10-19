@@ -108,12 +108,13 @@ class OpenSkyIntegrationTest {
 
             for (format in listOf(ExportFormat.PROGRAM_FOLDER, ExportFormat.MPC3_TRACK)) {
                 val outcome = Exporters.export(format, saved, sourceDirectory, File(root, "card-${format.id}"))
-                assertTrue(outcome.primary.isFile, "$format did not write a program")
+                val program = if (format == ExportFormat.PROGRAM_FOLDER) File(outcome.primary, "${saved.name}.xpm") else outcome.primary
+                assertTrue(program.isFile, "$format did not write a program")
                 val findings = ExportReadBack.verify(saved, outcome)
                 assertTrue(findings.none { it.severity == Severity.FAIL },
                     "$format: ${findings.filter { it.severity == Severity.FAIL }.joinToString { it.message }}")
                 assertEquals(5, findings.count { it.severity == Severity.OK }, "$format did not read back every pad")
-                val sampleDirectory = outcome.companion ?: outcome.primary.parentFile
+                val sampleDirectory = outcome.companion ?: outcome.primary
                 for ((index, pad) in saved.pads.withIndex()) {
                     val wav = File(sampleDirectory, pad.sampleFile)
                     assertTrue(wav.isFile, "$format missing sample ${pad.sampleFile}")
