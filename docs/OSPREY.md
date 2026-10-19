@@ -23,6 +23,12 @@ work.
 
 All six macros use 0–1. The musical note is a separate recipe field.
 
+The preset picker retains the original fifteen coast/weather references first,
+then adds the [sixteen curated musical recipes](OSPREY_CURATED_PRESETS.md).
+**OSPREY CURATED** is a separate starter; the original OSPREY starter and its
+published samples stay unchanged. The curated bank uses model 3 and awaits its
+own listening review.
+
 | Control | Behavior |
 | --- | --- |
 | SHORE | Atlantic → Nordic → Mediterranean → Pacific → Southern; continuously morphs adjacent resonator, creature and water profiles. |

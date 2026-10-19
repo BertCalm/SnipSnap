@@ -802,9 +802,18 @@ object SynthKits {
             ),
             seed = 731,
         )
-        return (OspreyPresets.all() + midpoint).map { patch ->
+        return (OspreyPresets.coastWeather() + midpoint).map { patch ->
             pad(patch, Osprey.drumClassFor(patch.voice, patch.macros))
         }
+    }
+
+    /**
+     * Sixteen named model-3 sea gestures in C minor pentatonic: low foundations,
+     * short notes, moving textures and long swells. Every pad plays its complete
+     * finite render and retains its own note, velocity, seed and duration.
+     */
+    fun ospreyCurated(): List<ArrangedPad?> = OspreyCuratedPresets.all().map { patch ->
+        pad(patch, Osprey.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
     }
 
     /**

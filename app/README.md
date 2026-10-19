@@ -69,8 +69,8 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (37 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY and VENT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (38 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OSPREY CURATED, OPENSKY and VENT,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
@@ -122,8 +122,11 @@ have owner approval; the expanded 36-preset bank and dry starter remain availabl
 for listening and device review.
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
-owner's positive feedback; final listening and phone/MPC handoff remain open for
-its fifteen presets and sixteen-pad starter.
+owner's positive feedback and confirmed in-app listening. The fifteen original
+coast/weather presets and sixteen-pad OSPREY starter remain unchanged. Sixteen
+named musical presets add a separate OSPREY CURATED starter in C minor pentatonic;
+the new bank awaits listening, and save/reopen, recipe replay and MPC playback
+checks remain open.
 PRISM adds six additive voices, thirty-six factory presets and a dry pitched
 starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
 includes the full bank and the original/revised GLASS comparisons.

@@ -313,5 +313,8 @@ testkit/relay-performance-audition/
 testkit/oven-audition/
 testkit/oven-kit/
 
+# Curated OSPREY preset samples, listening previews and MPC/source kit.
+testkit/osprey-curated-audition/
+
 # OSPREY's dry field-sketch WAV, MIDI, score and performance archive.
 testkit/osprey-field-sketch/
