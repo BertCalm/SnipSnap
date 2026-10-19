@@ -6,9 +6,12 @@ swell — share the requested root. Slots change the source balance, while a
 separate accent schedule changes emphasis. No external PCM or factory programs
 are used. The supplied [engineering specification](RELAY_SPEC.md) is retained.
 
-The first port is a listening candidate. Its six dry presets establish KEY,
-BASS, PLUCK, ORGAN, CHIME and FLOW. The proposed 36-preset expansion waits for
-the owner's sonic approval, as required by the specification.
+The performance bank has 36 authored dry recipes: eight KEY, six BASS, six
+PLUCK, six ORGAN, four CHIME and six FLOW presets. The six earlier seeds remain
+unchanged and first in their voice lists. New recipes use their own source
+balances, sparse accent figures and phrase clocks; each voice includes one held
+recipe. This is a listening and playability candidate, not a claim of device
+listening approval.
 
 The second audition gave the source roles different harmonic profiles and
 articulation, and each voice its own handoff and accent score. The third audition
@@ -29,8 +32,10 @@ single evolving voice. Listening remains the approval gate.
 | HOLD | The top setting exports a repeating phrase; other settings render a finite note. |
 
 TUNE is the existing host pitch control, additional to the five timbral macros
-and HOLD in the proposal. Velocity reaches the engine as excitation and initial
-brightness; it is stored separately from the macro settings.
+and HOLD in the proposal. The SYNTH panel shows the selected note and a native
+VELOCITY slider. Velocity reaches the engine as excitation and initial brightness;
+it is stored separately from the macro settings. Editing it preserves the complete
+loaded phrase through preview, save and SEND TO PAD.
 
 ## Phrase and host behavior
 
@@ -78,8 +83,10 @@ rendered frequency and the actual phrase duration.
 Finite Relay pads route as TONAL and held pads as LOOP. Neither receives a drum
 choke group. `Patches`, `Presets`, `Velocity`, recipe replay, `FxChain`, the phone
 picker, FRESH TAPE starter and generic CLI all use the same engine path.
-`SynthKits.relay()` supplies a sixteen-pad dry kit, including scale notes,
-voice contrasts and two held phrases. MPC export uses the
+`SynthKits.relay()` supplies a fixed sixteen-pad dry kit: eight C-minor-pentatonic
+KEY notes, six named voice contrasts and two held phrases. AFTERIMAGE KEY replaces
+the earlier duplicate of Handoff 6 / FIRST HANDOFF. Explicit selections keep the
+kit at sixteen pads as the library grows. MPC export uses the
 existing kit pipeline and its one-shot drum-program convention.
 
 ## Audition and checks
@@ -87,7 +94,17 @@ existing kit pipeline and its one-shot drum-program convention.
 The [published Relay audition](https://snipsnap-relay-audition.bertcalm.chatgpt.site)
 is private to the owner's account and includes raw and matched WAV downloads.
 
-Run `./gradlew --no-daemon :synth:generateRelayAudition` to regenerate
+Run `./gradlew --no-daemon :synth:generateRelayPerformanceAudition` to regenerate
+`testkit/relay-performance-audition/`. It includes the full bank, six short musical
+performances, three native velocities for every voice and all sixteen actual starter
+pads. Notes retain the chosen preset's full phrase; musical mixes include every
+tail and record their fixed headroom gain. HOLD clips contain three exact repeats.
+The manifest carries full patches, note events, levels and WAV hashes. Listening
+notes stay in the browser. Physical-device timing, touch and listening still need
+hands-on verification.
+
+The earlier engineering matrix remains reproducible. Run
+`./gradlew --no-daemon :synth:generateRelayAudition` to regenerate
 `testkit/relay-audition/`. The page and manifest travel with the raw and matched
 24-bit WAVs. The listening pack compares dry identities at a common root,
 register and velocity, five-point sweeps, required interaction corners,
@@ -95,8 +112,7 @@ all-high settings, tempo extremes and repeated HOLD material. Four isolated
 source probes expose the individual timbres. Supply
 `-PrelayBaseline=<previous audition directory>` to include the six unchanged
 previous identities with direct Previous/Refined playback buttons; the
-previous manifest and WAV hashes are checked before copying. The published
-third audition compares against the unchanged second-audition recordings.
+previous manifest and WAV hashes are checked before copying. The third-audition comparison pack uses the unchanged second-audition recordings.
 It is a review
 artifact; measured checks do not establish sonic approval.
 

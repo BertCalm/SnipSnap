@@ -417,4 +417,51 @@ class ConfluenceTest {
         assertFailsWith<IllegalArgumentException> { ConfluenceAssembly.render(recipe,
             sources + (foundation.region.assetHash to wrongSource)) }
     }
+
+    @Test
+    fun `curated airy call balances the answer with a complete recorded phrase and quiet natural end`() {
+        val fixtureDir = listOf(File("../reference/fixtures/confluence"), File("reference/fixtures/confluence"))
+            .firstOrNull { File(it, "manifest.json").isFile }
+            ?: error("Confluence source fixtures are required for the airy call regression")
+        val manifest = Json.parse(File(fixtureDir, "manifest.json").readText()).obj()
+        val sources = manifest.getValue("sources").arr().map { it.obj() }.associateBy { it.getValue("id").str() }
+        val airy = sources.getValue(manifest.getValue("primaryAiryId").str())
+        val answer = sources.getValue(manifest.getValue("primaryPhraseId").str())
+        fun selectedFrames(source: Map<String, JsonValue>) =
+            source.getValue("phraseEndFrame").int() - source.getValue("phraseStartFrame").int()
+        assertTrue(selectedFrames(airy) >= selectedFrames(answer) * .75,
+            "the curated upper call must have comparable duration to its answer; keep short gestures as separate references")
+
+        val canonical = WavReader.read(File(fixtureDir, airy.getValue("path").str()))
+        val original = WavReader.read(File(fixtureDir, airy.getValue("originalPath").str()))
+        assertEquals(1, canonical.channels)
+        assertEquals(Confluence.RATE, canonical.sampleRate)
+        assertEquals(canonical.channels, original.channels)
+        assertEquals(canonical.sampleRate, original.sampleRate)
+        val from = airy.getValue("originalCropStartFrame").int()
+        val end = airy.getValue("originalCropEndFrame").int()
+        assertEquals(end - from, canonical.frameCount,
+            "the long call must come from the recorded phrase, without lengthening a short vowel")
+        val gain = 10.0.pow(airy.getValue("gainDb").num() / 20)
+        var maximumDifference = 0.0
+        for (i in canonical.samples.indices) {
+            maximumDifference = maxOf(maximumDifference, abs(canonical.samples[i] - original.samples[from + i] * gain))
+        }
+        // The WAV reader and fixture builder use different integer-PCM divisors; allow their
+        // quantization difference while rejecting reordered, repeated or time-stretched material.
+        assertTrue(maximumDifference <= 3.0 / 32767,
+            "the airy phrase must retain the original sample chronology and documented constant gain: $maximumDifference")
+
+        val guard = airy.getValue("tailBoundaryGuard").obj()
+        val phraseEnd = airy.getValue("phraseEndFrame").int()
+        val tailFrames = guard.getValue("tailWindowFrames").int()
+        fun rms(start: Int, endFrame: Int): Double = sqrt(
+            (start until endFrame).sumOf { canonical.samples[it].toDouble() * canonical.samples[it] } / (endFrame - start))
+        val tailRms = rms(phraseEnd - tailFrames, phraseEnd)
+        val referenceRms = rms(guard.getValue("referenceStartFrame").int(), guard.getValue("referenceEndFrame").int())
+        assertTrue(referenceRms > 1e-5, "a silent call cannot qualify a quiet release")
+        assertTrue(tailRms <= guard.getValue("maxTailRms").num(), "the complete airy call must end quietly")
+        assertTrue(tailRms / referenceRms <= guard.getValue("maxTailToRegionRmsRatio").num(),
+            "the recorded airy release must decay relative to its phrase body")
+    }
 }

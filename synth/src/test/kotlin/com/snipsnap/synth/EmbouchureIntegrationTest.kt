@@ -116,7 +116,8 @@ class EmbouchureIntegrationTest {
             for (format in listOf(ExportFormat.PROGRAM_FOLDER, ExportFormat.MPC3_TRACK)) {
                 val destination = File(root, "export-${format.id}")
                 val exported = Exporters.export(format, loaded, work, destination, overwrite = true)
-                assertTrue(exported.primary.isFile, "$format has no program")
+                val program = if (format == ExportFormat.PROGRAM_FOLDER) File(exported.primary, "${loaded.name}.xpm") else exported.primary
+                assertTrue(program.isFile, "$format has no program")
                 val findings = ExportReadBack.verify(loaded, exported)
                 assertTrue(findings.none { it.severity == Severity.FAIL }, "$format: ${findings.joinToString { it.message }}")
                 assertEquals(17, findings.count { it.severity == Severity.OK }, "$format must read all sixteen pads")

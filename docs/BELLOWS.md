@@ -2,8 +2,9 @@
 
 BELLOWS adapts XOleg's Sacred Bellows into SnipSnap's dry, deterministic
 offline synth pipeline. Four oscillator-based instrument approximations
-share a saved pressure gesture. This is a first listening prototype; the
-owner's dry sonic verdict and phone/MPC checks remain open.
+share a saved pressure gesture. The owner has accepted the four voice
+identities and audible parameter differences in the dry audition. Playable phrasing and phone/MPC hardware
+checks are the next listening gate.
 
 The source reference is [XOleg's engine implementation](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Source/Engines/Oleg/OlegEngine.h).
 Chamber and buzz concepts carry their MIT attribution in `Bellows.kt`.
@@ -69,24 +70,85 @@ beat rates and drone pitches can differ slightly from finite counterparts.
 The render uses wrapped conditioning rather than a seam fade.
 
 Loop material in an ordinary drum pad plays once. The audition's Repeat
-control repeats it; a playable attack plus indefinite sustain requires a
-keygroup adapter. This prototype adds no new live pressure/aftertouch path
-or phone KEYS velocity-layer switching.
+control repeats it. The separate `BellowsKeys` adapter retains a real onset
+before a periodic sustain region, with a nonzero loop marker. A phone/MPC
+keygroup loops that region while held and applies its release after note-off.
+This adds no live pressure/aftertouch path.
+
+`BellowsPadMaker` creates nine pitch zones across C3–C5, each with soft,
+medium and hard source timbres. Its velocity windows are 1–42, 43–84 and
+85–127; the host supplies velocity gain once. Native-velocity standalone
+notes and host-velocity sample layers have separate renderer entry points.
+The phone's version-2 instrument sidecar records all layers; version-1
+sidecars remain readable. Model-1 BELLOWS recipes keep their frozen sound
+and are refused by the new keygroup adapter rather than silently migrated.
+
+In the phone's BELLOWS synth, MAKE INSTRUMENT renders the current model-2
+sound into the instrument shelf. It preserves the saved gesture, sets
+absolute keyboard pitches independently of TUNE, and substitutes attack plus
+sustain for finite HOLD. Rendering runs off the UI thread with progress and
+cancellation; RELEASE remains an instrument control.
 
 WHEEL's embedded drones track the rendered melody note. They transpose
 with its sample and retrigger on each hit. A fixed tonic under independent
-melody notes should be a separate drone bed; this prototype does not claim
-a global drone or bellows reservoir shared across keys.
+melody notes is a separate companion instrument. WHEEL melody keygroups
+therefore disable embedded DRONE. The downloadable companion maps a WHEEL
+tonic plus its octave/fifth bed to C3 only; play it on its own track beneath
+the melody. It does not share a global bellows reservoir across keys.
 
-## First listening session
+## Preset library
+
+The factory library has 24 dry recipes, six per family. The original eight
+remain first in the global roster, with their names, settings and per-family
+indices unchanged. All recipes explicitly use renderer model 2, a C4 audition
+note and a finite gesture; the playable instrument path can sustain their
+colors separately. Every preset stores its full macro map and player gesture.
+
+| Family | Preset | Playing role |
+|---|---|---|
+| CHAMBER | Amber Breath | Warm swell through shaded ranks |
+| CHAMBER | Silver Ranks | Bright steady ranks with beating |
+| CHAMBER | Bare Reed | Soft direct reeds without rank beating |
+| CHAMBER | Chest Tone | Deep enclosed steady note |
+| CHAMBER | Reed Tap | Bright concise accent |
+| CHAMBER | Slow Bloom | Long breathing swell with moving ranks |
+| COUNTER | Midnight Pull | Dark pull swell |
+| COUNTER | Forward Push | Bright push accent |
+| COUNTER | Paper Reed | Soft direct pull shade |
+| COUNTER | Round Push | Warm enclosed push color |
+| COUNTER | Reed Knock | Short accent with blended push/pull color |
+| COUNTER | Reed Tread | Long pulsed phrase with a fixed timbre blend |
+| FOLK | Village Stab | Sharp short accent |
+| FOLK | Dancing Reeds | Beating pulsed phrase |
+| FOLK | Soft Grain | Soft rounded steady reeds |
+| FOLK | Wooden Chest | Deep enclosed folk tone |
+| FOLK | Reed Reply | Light dry articulated answer |
+| FOLK | Harvest Air | Long gently moving swell |
+| WHEEL | Quiet Wheel | Quiet sustained tracking drone |
+| WHEEL | Wrist Sparks | Bright pulsing bridge chatter |
+| WHEEL | Solo Thread | Clear melody with drones and buzz disabled |
+| WHEEL | Hollow Bow | Deep enclosed note with a restrained drone |
+| WHEEL | Fifth Breath | Long swell over a tracking octave/fifth bed |
+| WHEEL | Bridge Tap | Short pressure-triggered buzz accent |
+
+The starter kit deliberately remains sixteen pads: eight CHAMBER notes in
+C minor pentatonic followed by the original eight contrast presets. Library
+expansion does not alter its accepted pad order or add extra pads.
+
+## Library and listening
 
 Run `./gradlew :synth:generateBellowsAudition` to generate the listening
 page, raw/matched WAVs, saved patches, first-listen ZIP and measured
 manifest under `testkit/bellows-audition/`.
 
-The eight starting sounds are Amber Breath, Silver Ranks, Midnight Pull,
-Forward Push, Village Stab, Dancing Reeds, Quiet Wheel and Wrist Sparks.
-The opening Body & breath view gives each voice immediate true 0/full endpoint
+The library contains 24 dry model-2 presets, six per family. The original
+eight remain Amber Breath, Silver Ranks, Midnight Pull, Forward Push,
+Village Stab, Dancing Reeds, Quiet Wheel and Wrist Sparks, with their saved
+recipes and ordering preserved. The sixteen-pad starter keeps its original
+layout. Library previews and phrase/chord demonstrations sit alongside the
+original listening collections.
+
+The Body & breath view gives each voice immediate true 0/full endpoint
 clips and a joined A-to-B comparison, with quarter-step sweeps available under
 More steps. Those comparisons fix the playing gesture and disable motion,
 beating, drones and buzz where present. Matched playback removes a simple level
@@ -95,6 +157,17 @@ isolate controls, gestures, pitch, velocity, threshold behavior and repeated
 held material. Playback starts only on request.
 
 The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
-is the listening gate. Numerical checks cover reproducibility, supported
-pitch, useful controls, velocity timbre, finite tails, loop wraps and
-recipe/export behavior; they do not establish sonic acceptance.
+contains the expanded listening session and the phone/MPC download.
+Numerical checks cover reproducibility, supported pitch, useful controls,
+velocity timbre, finite tails, loop wraps and recipe/export behavior. They
+support the owner's listening review; they do not establish hardware
+acceptance. See [the playtest guide](BELLOWS_PLAYTEST.md) for the remaining
+checks.
+
+Generate playable exports with `./gradlew :cli:generateBellowsInstruments`,
+or run `snipsnap bellows-keys --out <folder>`. The output contains four
+three-layer instruments and a separate one-key tonic companion, in the
+existing `.xty` / `.xpm` / WAV / phone-sidecar package layout. The ZIP is
+`Bellows-phone-mpc-m2.zip`; the adjacent `playable/` folder retains its
+recipes, manifest and checklist. The published page offers a smaller ZIP
+per instrument, each with its own source recipes, checksums and guide.

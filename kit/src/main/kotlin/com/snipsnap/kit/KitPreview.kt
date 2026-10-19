@@ -55,6 +55,49 @@ object KitPreview {
     ): Snip {
         require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
         val groove = clip ?: GrooveStore.load(kitDir).firstOrNull() ?: defaultPattern(kit)
+        return mix(kit, kitDir, groove.notes, groove.lengthPulses, tempoBpm)
+    }
+
+    /**
+     * The beat as a loop: [clip] played [passes] times through, as one file
+     * exactly [passes] lengths of the clip long, so whoever receives it can
+     * loop it.
+     *
+     * Rendered as one long pattern rather than one pass laid twice, so what
+     * crosses the seam is what the live engine does there - a mute group's
+     * choke, a chain pad's next slice. The ring-out past the end ([TAIL_SEC]
+     * and any longer sample) is not cut off: it is folded back onto the
+     * start, which is where a loop's last note rings into its first. A cut
+     * would click; a fold is what the loop itself would have played.
+     */
+    fun renderLoop(kit: Kit, kitDir: File, clip: Mpc3Clip, passes: Int = 2, tempoBpm: Float? = null): Snip {
+        require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
+        require(passes >= 1) { "a loop plays at least once" }
+        val one = clip.lengthPulses
+        val notes = (0 until passes).flatMap { r -> clip.notes.map { it.copy(timePulses = it.timePulses + r * one) } }
+        val rendered = mix(kit, kitDir, notes, one * passes, tempoBpm)
+        val framesPerPulse = 60.0 / playedBpm(tempoBpm ?: kit.tempoBpm) * RATE / 960.0
+        val loopFrames = ((one * passes) * framesPerPulse).roundToInt().coerceAtLeast(1)
+        if (rendered.frameCount <= loopFrames) return rendered
+        val out = FloatArray(loopFrames * 2)
+        for (f in 0 until rendered.frameCount) {
+            val at = f % loopFrames
+            out[at * 2] += rendered.samples[f * 2]
+            out[at * 2 + 1] += rendered.samples[f * 2 + 1]
+        }
+        var peak = 0f
+        for (s in out) {
+            val a = if (s < 0) -s else s
+            if (a > peak) peak = a
+        }
+        if (peak > 0.95f) {
+            val k = 0.95f / peak
+            for (i in out.indices) out[i] *= k
+        }
+        return Snip(out, 2, RATE)
+    }
+
+    private fun mix(kit: Kit, kitDir: File, clipNotes: List<Mpc3Note>, lengthPulses: Long, tempoBpm: Float?): Snip {
         // kit.tempoBpm is only validated >0 <1000, so a hostile or nonsense
         // 0.001 would blow framesPerPulse up until the frame math overflows to
         // a negative array size. A preview clamps to a musical range - it is
@@ -82,7 +125,7 @@ object KitPreview {
         // Chain pads step per hit, so the preview counts them - per zone
         // lane on a grid, so each zone cycles its own takes independently.
         val hitsByLane = HashMap<Int, Int>()
-        for (note in groove.notes.sortedBy { it.timePulses }) {
+        for (note in clipNotes.sortedBy { it.timePulses }) {
             // Mpc3Note.slotFor, not `note - 36 + 1`: the map wraps, so
             // notes 0..35 are pads 93..128. Subtracting alone gives those
             // a negative slot, and the pad - the whole ring - renders silent.
@@ -137,7 +180,7 @@ object KitPreview {
         }
         require(voices.isNotEmpty()) { "no clip note lands on a pad this kit has" }
 
-        val totalFrames = ((groove.lengthPulses * framesPerPulse).roundToInt() +
+        val totalFrames = ((lengthPulses * framesPerPulse).roundToInt() +
             (TAIL_SEC * RATE).toInt()).coerceAtLeast(voices.maxOf { min(it.end, it.start + it.samples.frameCount) })
         val out = FloatArray(totalFrames * 2)
 

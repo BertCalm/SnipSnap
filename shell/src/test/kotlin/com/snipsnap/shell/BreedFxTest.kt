@@ -2,8 +2,10 @@ package com.snipsnap.shell
 
 import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.BoardRecipe
 import java.util.Random
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BreedFxTest {
@@ -24,5 +26,13 @@ class BreedFxTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun `compound board recipes cannot be silently stripped by the rack crosser`() {
+        val board = PadRecipe(fx = FxChain(eq = mapOf("MID" to .6f)), board = BoardRecipe(amount = .7f))
+        val rack = PadRecipe(fx = FxChain(tape = mapOf("AGE" to .4f)))
+        assertFailsWith<IllegalArgumentException> { Breed.cross(board, rack, Random(0)) }
+        assertFailsWith<IllegalArgumentException> { Breed.cross(rack, board, Random(0)) }
     }
 }

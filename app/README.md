@@ -69,17 +69,17 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (33 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (36 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY and VENT,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 41 engines: THUMP, SKIN, TINES, VELVET,
-VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY.
-CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY also provide
+The SYNTH source picker has 45 engines: THUMP, SKIN, TINES, VELVET,
+VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, FLOCK and VENT.
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY and VENT also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
 six original recorded-material voices with 36 presets, a dry 16-pad starter and CLI note/velocity
@@ -95,6 +95,15 @@ complete source timbre. Its preview preserves stereo; HALO MAKE INSTRUMENT
 renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
 
+OVEN adds GRAND, FELT, FORGED and BLOOM with six macros and the ten approved
+factory recipes. ROOT and VELOCITY set a native rendered strike; the complete
+recipe survives macro edits, SCRAMBLE, SAVE PRESET, SEND TO PAD and returning
+to SYNTH. Its resonance is baked into each finite note. MAKE INSTRUMENT and
+reactive shared resonance are later work. On a phone, compare Felt Ledger with
+Quiet Room, change ROOT and VELOCITY, leave and reopen SYNTH, save/reload a
+preset, then SEND TO PAD and reopen its recipe; each step should retain the
+chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
+
 REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
 MAKE INSTRUMENT. PIPE/MUSETTE retain the working audition baseline; TRANSISTOR
 adds electronic keying, square-wave ranks, vibrato and drive and awaits listening
@@ -102,8 +111,15 @@ review. AIR controls TRANSISTOR's brief key-click. Saved audition recipes retain
 note, velocity and model; existing presets stay on model 3 and TRANSISTOR uses
 model 4. Instrument samples preserve the finite attack before a verified held
 loop and export through the existing MPC 2/MPC 3 and phone keygroup package.
-MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
-and dry starter also await owner listening review.
+
+FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.
+ROOT spans C2–C6; VELOCITY sets the initial disturbance. HOLD selects a finite
+2–6 second gesture. The saved 64-bit seed and model 1/2 survive control edits,
+renaming, preset storage and SEND TO PAD; SPREAD uses the saved root even when
+SPLIT emphasizes the fifth or octave. Phone playback remains a hardware check.
+MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
+have owner approval; the expanded 36-preset bank and dry starter remain available
+for listening and device review.
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
 owner's positive feedback; final listening and phone/MPC handoff remain open for
@@ -122,9 +138,22 @@ can be changed by semitone or octave without resetting that recipe. Its 48
 provisional presets and dry starter kit await listening.
 TANGLE's six voices, 36 recipes and dry starter kit likewise await the
 owner's listening verdict; saved recipes preserve explicit note and velocity.
-RELAY adds six
-dry phrase seeds and a dry sixteen-pad starter; its larger proposed roster
-waits for the same listening approval.
+RELAY exposes native VELOCITY and note names while preserving loaded phrase
+recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
+KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
+seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
+pads. `:synth:generateRelayPerformanceAudition` builds a 76-clip page covering the
+bank, musical performances, velocity response and starter pads. The expanded bank
+awaits listening review and hands-on device verification.
+ORPHICA adds a microsound harp whose finite sound received a positive owner
+listening verdict. Material, grain mode, explicit root and six macros preserve
+its saved physical recipe; stereo previews keep the grain image. HOLD adds
+captured sustain, and MAKE INSTRUMENT exports stereo attack-plus-loop keygroups
+with release control. `:app:assembleDebug` and
+`:app:compileDebugAndroidTestKotlin` passed on 2026-10-19; six UI tests cover
+presets, navigation, SPREAD roots and instrument export. Device execution is
+tracked on the integration PR. Those new held sounds and phone/MPC behavior need
+device validation; see [ORPHICA](../docs/ORPHICA.md).
 GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here

@@ -66,7 +66,7 @@ object AndroidKitArt {
      * opacity; without it every draw would be fully transparent (alpha 0)
      * and the tile would come out blank.
      */
-    private class AndroidCanvas(private val canvas: Canvas) : ArtCanvas {
+    internal class AndroidCanvas(private val canvas: Canvas) : ArtCanvas {
         private val fillPaint = Paint().apply { style = Paint.Style.FILL }
         private val strokePaint = Paint().apply {
             style = Paint.Style.STROKE

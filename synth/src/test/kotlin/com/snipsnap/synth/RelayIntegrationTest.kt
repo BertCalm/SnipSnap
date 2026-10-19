@@ -133,17 +133,21 @@ class RelayIntegrationTest {
     }
 
     @Test
-    fun `the six dry seed voices are reachable through the common preset roster`() {
+    fun `the curated dry bank is reachable through the common preset roster`() {
         val presets = RelayPresets.all()
         assertEquals(RelayVoice.entries.toSet(), presets.map { it.voice }.toSet())
         assertEquals(presets.size, presets.map { it.name }.toSet().size)
+        val expected = mapOf(RelayVoice.KEY to 8, RelayVoice.BASS to 6, RelayVoice.PLUCK to 6,
+            RelayVoice.ORGAN to 6, RelayVoice.CHIME to 4, RelayVoice.FLOW to 6)
+        assertEquals(36, presets.size)
         for (voice in RelayVoice.entries) {
             val roster = RelayPresets.forVoice(voice)
-            assertEquals(1, roster.size, "first-listen seed for $voice")
+            assertEquals(expected.getValue(voice), roster.size, "curated bank for $voice")
+            assertEquals(1, roster.count { Relay.isLoop(it.macros.getValue("HOLD")) }, "$voice has one held recipe")
             assertEquals(roster, Presets.forVoice(RelayPatch.ENGINE, voice.name))
             for (patch in roster) {
                 assertEquals(Relay.macrosFor(voice).map { it.name }.toSet(), patch.macros.keys)
-                assertEquals(0f, patch.macros.getValue("HOLD"))
+                assertTrue(patch.macros.getValue("HOLD") == 0f || patch.macros.getValue("HOLD") == 1f)
                 assertEquals(patch, Presets.byName(RelayPatch.ENGINE, voice.name, patch.name))
                 assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
             }
@@ -170,6 +174,12 @@ class RelayIntegrationTest {
         assertEquals(RelayVoice.entries.toSet(), patches.map { it.voice }.toSet())
         assertTrue(patches.take(8).all { it.voice == RelayVoice.KEY })
         assertEquals(listOf(0, 3, 5, 7, 10, 12, 15, 17), patches.take(8).map { (it.macros.getValue("TUNE") * Relay.TUNE_SEMITONES).toInt() })
+        assertEquals(listOf("AFTERIMAGE KEY", "POCKET RELAY", "MUTED PASSAGE", "ORGAN AFTERGLOW",
+            "BELL EXIT", "SOFT EXCHANGE"), patches.drop(8).take(6).map { it.name })
+        for (a in pads.indices) for (b in a + 1 until pads.size) {
+            assertFalse(pads[a]!!.snip.samples.contentEquals(pads[b]!!.snip.samples),
+                "pads ${a + 1} and ${b + 1} duplicate the same rendered audio")
+        }
         assertEquals(listOf(RelayVoice.ORGAN, RelayVoice.FLOW), patches.takeLast(2).map { it.voice })
         assertTrue(patches.takeLast(2).all { Relay.isLoop(it.macros.getValue("HOLD")) })
         for (index in listOf(0, 12, 15)) {
@@ -238,7 +248,7 @@ class RelayIntegrationTest {
             val outcome = Exporters.export(format, kit, source, File(temp, "card-${format.id}"), dualGeneration = true)
             val failures = ExportReadBack.verify(kit, outcome).filter { it.severity == Severity.FAIL }
             assertTrue(failures.isEmpty(), "$format: ${failures.joinToString { it.message }}")
-            val sampleDir = outcome.companion ?: outcome.primary.parentFile
+            val sampleDir = outcome.companion ?: outcome.primary
             for (pad in kit.pads) {
                 val filenames = pad.velocityLayers.map { it.sampleFile }.ifEmpty { listOf(pad.sampleFile) }
                 for (filename in filenames) {
@@ -250,7 +260,7 @@ class RelayIntegrationTest {
                     assertContentEquals(original.samples, exported.samples, "$format preserves the selected sample region")
                 }
             }
-            val xpm = if (format == ExportFormat.PROGRAM_FOLDER) outcome.primary else File(sampleDir, "${kit.name}.xpm")
+            val xpm = File(sampleDir, "${kit.name}.xpm")
             val document = SafeXml.newFactory().newDocumentBuilder().parse(xpm)
             val instruments = document.getElementsByTagName("Instrument")
             for (slot in 1..2) {
