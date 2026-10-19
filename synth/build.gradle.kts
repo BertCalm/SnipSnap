@@ -491,6 +491,17 @@ tasks.register<JavaExec>("generateEnsembleAudition") {
     args("${rootDir}/testkit/ensemble-audition")
 }
 
+/** First WIDE compound-board proof, rendered in its own explicit stage order. */
+tasks.register<JavaExec>("generateWideAudition") {
+    group = "distribution"
+    description = "Render WIDE original/strength/stereo/mono comparisons, recipes and measurements."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WideAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("wideOutput")?.toString() ?: "${rootDir}/testkit/wide-audition")
+}
+
 tasks.register<JavaExec>("generateStringMachineAudition") {
     group = "distribution"
     description = "Render the four string-machine presets' gate (as landed, bare voice, control), manifest and listening page under testkit/stringmachine-audition/."

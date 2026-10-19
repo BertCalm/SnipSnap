@@ -89,6 +89,7 @@ testkit/terra-audition/
 # The ENSEMBLE gate clips, manifest and page, rendered by :synth:generateEnsembleAudition
 # and published as the listening artifact; never committed.
 testkit/ensemble-audition/
+testkit/wide-audition/
 
 # The string-machine presets' gate clips, manifest and page, rendered by
 # :synth:generateStringMachineAudition and published as the listening artifact; never committed.

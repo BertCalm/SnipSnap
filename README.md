@@ -941,6 +941,12 @@ spike → eq → contour → squash → valve → crunch → ring → dub → vi
 tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
+
+**WIDE** is the first editable compound board: TAPE → EQ → ENSEMBLE → SPRING
+in its own order. On the pad sheet, AMT is staged until KEEP, original/result
+previews preserve stereo, and REMOVE/UNDO retain the original audio and recipe.
+See [`docs/WIDE.md`](docs/WIDE.md).
+
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 

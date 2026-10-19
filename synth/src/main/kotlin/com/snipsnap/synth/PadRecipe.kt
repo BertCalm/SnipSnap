@@ -53,20 +53,25 @@ data class PadRecipe(
      * pass it directly to override.
      */
     val alias: Boolean = impliesAlias(patch, fx),
+    /** An ordered compound board after the source's existing finishing rack. */
+    val board: BoardRecipe? = null,
 ) {
     init {
-        require(patch != null || fx != null) { "an empty recipe records nothing" }
+        require(patch != null || fx != null || board != null) { "an empty recipe records nothing" }
     }
 
     /** Regenerate a synth pad's audio from scratch. */
     fun render(): Snip {
         val p = requireNotNull(patch) { "recipe has no patch to render; use process() on the captured audio" }
         val dry = p.render()
-        return fx?.process(dry) ?: dry
+        return process(dry)
     }
 
     /** Re-treat captured audio with the stored chain. */
-    fun process(snip: Snip): Snip = fx?.process(snip) ?: snip
+    fun process(snip: Snip): Snip {
+        val finished = fx?.process(snip) ?: snip
+        return board?.process(finished) ?: finished
+    }
 
     fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap<String, JsonValue>()
@@ -76,6 +81,7 @@ data class PadRecipe(
         treatment?.let { obj["treatment"] = JsonValue.Str(it) }
         amount?.let { obj["amount"] = JsonValue.Num(it.toDouble()) }
         obj["alias"] = JsonValue.Bool(alias)
+        board?.let { obj["board"] = it.toJsonValue() }
         return JsonValue.Obj(obj)
     }
 
@@ -114,6 +120,7 @@ data class PadRecipe(
                 treatment = obj["treatment"]?.str(),
                 amount = obj["amount"]?.num()?.toFloat(),
                 alias = obj["alias"]?.bool() ?: impliesAlias(patch, fx),
+                board = obj["board"]?.let { BoardRecipe.fromJsonValue(it) },
             )
         }
 
