@@ -184,8 +184,8 @@ including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
-`--instrument` or `--drone` except OPENSKY HALO instrument roots and authoring
-velocity. The ranges are `SynthCommand`'s note-range
+`--instrument` or `--drone` except ORPHICA and OPENSKY HALO instrument roots
+and authoring velocity. The ranges are `SynthCommand`'s note-range
 table; a `--midi` outside the voice's range is refused with the range in
 the message.
 
@@ -199,6 +199,7 @@ the message.
 | REVEL | 48–72 |
 | PRISM | BASS 24–48; ORGAN 36–60; KEY, PLUCK, VEIL 48–72; GLASS 60–84 |
 | REGISTERS | 24–96 |
+| ORPHICA | 21–108 |
 | CONTOUR | BASS 12–60; HOLLOW, SWELL 24–72; KEY, PLUCK, LEAD 36–84 |
 | STOOP | 24–96 |
 | LACQUER | 24–96 |
@@ -216,7 +217,7 @@ the message.
 | WICK | 24–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
-the preset's saved TUNE offset (±12 semitones). EMBOUCHURE and BELLOWS
+the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
 reset TUNE to zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
 itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
@@ -224,8 +225,14 @@ repeatable macro variation around the chosen preset). OSPREY also takes
 `--seed N` (its sea gesture's variation), `--seconds .25..12` (the length
 of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
 `--seed N` for its starting trajectory and refuses `--scramble`. `--seed`
-is supported by SKITTER, OSPREY and VENT; `--scramble` by SKITTER only;
+is supported by SKITTER, OSPREY, VENT and ORPHICA; `--scramble` by SKITTER only;
 `--seconds` and `--model` by OSPREY only. Other engines refuse these options.
+
+ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
+accepts the full signed 64-bit range. `--instrument [--release S]` packages
+attack-preserving stereo captured-sustain zones; release is 0.1–1.5 seconds.
+It accepts `--midi` and `--velocity` for the sampled root and string excitation,
+and refuses `--all`, `--attack` and `--drone`. See [ORPHICA](ORPHICA.md).
 
 OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
 their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and
@@ -473,15 +480,22 @@ DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
 cabinet — run four times over inside so a hot tube folds back far less),
 `driven` (a drive pedal: the tube at the top of its gain law with the
 speaker barely in, the last stretch of the pad faded ahead of the amp so
-a quiet tail is not lifted into a click) and `compressed` (a compressor
+a quiet tail is not lifted into a click), `compressed` (a compressor
 pedal, for now: SQUASH at its strongest, the body leaned on so the tail
 stands up; `punched` is the same section plus CRUNCH, this has no
-crunch).
+crunch), `wahed` (a wah: a resonant band-pass swept between a heel and a
+toe a decade above it by a sine with a flat top, which never parks at the heel but rests
+at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
+`touchwahed` (the same wah driven by the pad's own envelope: it opens on
+the hit and closes as the note dies) and `rockwahed` (one heel-to-toe-to-heel
+gesture, then the wah waits at the heel).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
-phone the same characters, less `crushed` (CRUSH already draws that era)
-and `amped` (its chip is a later layout decision), sit on the PAD SHEET's
+phone the same characters, less `crushed` (CRUSH already draws that era),
+`amped` (its chip is a later layout decision) and the three wah
+characters (the WAH chip is not on the pad sheet yet; `touchwahed` and
+`rockwahed` are CLI and saved kits only), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
