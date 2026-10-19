@@ -258,8 +258,9 @@ object SynthKits {
      * A drum program plays every pad once through, LOOP or not (`Loop=False`, as SIREN's
      * LOOP pads do): the wrap is heard in the audition page's REPEAT, and held on a pad
      * once R2's held instrument exists. Every pad carries its recipe. The presets are
-     * provisional (nothing in BORE has been heard yet); this kit is what the audition
-     * page's first section plays.
+     * provisional ([BorePresets] says what of BORE has been heard: SAX one-shots and the
+     * SOLO LOOP's earlier periodic loop, not the current loop or FLUTE's); this kit is
+     * what the audition page's KIT section plays.
      */
     fun bore(): List<ArrangedPad?> {
         fun note(voice: BoreVoice, n: Int, semitone: Int) = BorePatch(
@@ -642,6 +643,24 @@ object SynthKits {
     }
 
     /**
+     * Sixteen dry bellows pads: eight CHAMBER notes in C minor pentatonic from
+     * C3 and the eight contrasting presets. Each recipe retains its MIDI base,
+     * excitation velocity, model and bellows gesture. Held presets route as LOOP.
+     */
+    fun bellows(): List<ArrangedPad?> {
+        fun landed(patch: BellowsPatch) = pad(patch, Bellows.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName = patch.name)
+        val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            landed(BellowsPatch(
+                "Bellows ${i + 1}", BellowsVoice.CHAMBER,
+                Bellows.defaults(BellowsVoice.CHAMBER) + ("TUNE" to 0f),
+                midi = Bellows.ROOT_MIDI + semitone,
+            ))
+        }
+        return scale + BellowsPresets.all().map(::landed)
+    }
+
+    /**
      * Sixteen dry FM/formant pads for the first audition. A01–A08 walk KEY up
      * C minor pentatonic from C3, with explicit roots rather than a tuning macro.
      * The upper pads contrast all six roles and end with settled held choir.
@@ -663,27 +682,59 @@ object SynthKits {
             }
     }
 
+    /** Eight native-note lead pads followed by the accepted Round 3 source recipes. */
+    fun openSky(): List<ArrangedPad?> {
+        val presets = OpenSkyPresets.all()
+        val lead = presets.first { it.name == "Solar Arc" }
+        val notes = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            pad(lead.copy(name = "OpenSky ${i + 1}", midi = 48 + semitone), DrumClass.TONAL)
+        }
+        return notes + presets.map { pad(it, DrumClass.TONAL) }
+    }
+
+    /**
+     * Fifteen dry shore/sea comparisons and one intermediate coast with extended
+     * excitation. All sixteen pads are finite SWELL gestures at C4, retaining
+     * their note, seed, duration and model in the regenerable recipe.
+     */
+    fun osprey(): List<ArrangedPad?> {
+        val midpoint = OspreyPatch(
+            "BETWEEN SHORES", OspreyVoice.SWELL,
+            Osprey.defaults(OspreyVoice.SWELL) + mapOf(
+                "SHORE" to .375f, "SEA" to .5f, "MOTION" to .45f,
+                "DEPTH" to .55f, "SPACE" to 0f, "HOLD" to 1f,
+            ),
+            seed = 731,
+        )
+        return (OspreyPresets.all() + midpoint).map { patch ->
+            pad(patch, Osprey.drumClassFor(patch.voice, patch.macros))
+        }
+    }
+
     /**
      * Eight dry harmonic keys in C minor pentatonic followed by the eight
      * curated spectral recipes. Each note rebuilds its own partial phases
      * and contours; finite notes are TONAL and the held veil is LOOP.
      */
     fun prism(): List<ArrangedPad?> {
+        // Keep the original sixteen-pad layout as the selectable factory bank grows.
+        val bank = PrismPresets.all()
+        val presets = listOf(
+            "Soft Facets", "Wooden Spectrum", "Partial Tines", "Hollow Register",
+            "Root Glass", "Slow Separation", "Small Prism", "Amber Veil",
+        ).map { name -> bank.first { it.name == name } }
         fun note(n: Int, semitone: Int) = PrismPatch(
             "Prism $n", PrismVoice.KEY,
-            PrismPresets.forVoice(PrismVoice.KEY).first().macros +
+            presets.first().macros +
                 ("TUNE" to semitone / Prism.TUNE_SEMITONES.toFloat()),
         ).let { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
-        val presets = PrismPresets.all()
-        val finite = presets.filterNot { Prism.isLoop(it.macros.getValue("HOLD")) }
-        val held = presets.filter { Prism.isLoop(it.macros.getValue("HOLD")) }
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
-            (finite + held).map { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
+            presets.map { pad(it, Prism.drumClassFor(it.voice, it.macros)) }
     }
 
     /**
      * Sixteen dry hybrid pads: eight KEY notes in C minor pentatonic, one finite
-     * candidate from each voice, and the two settled held STRING/SOFT candidates.
+     * preset from each voice, and the original settled held STRING/SOFT presets.
      * Every pad saves the generated attack, PM routing, envelopes, root and energy.
      */
     fun alloy(): List<ArrangedPad?> {
@@ -693,24 +744,28 @@ object SynthKits {
             landed(key.copy(name = "Alloy ${i + 1}", midi = Alloy.DEFAULT_MIDI + semitone))
         }
         val finite = AlloyVoice.entries.map { landed(AlloyPresets.forVoice(it).first()) }
-        val held = AlloyPresets.all().filter { Alloy.isLoop(it.macros.getValue("HOLD")) }.map { landed(it) }
+        // Keep the starter's two held pads stable as the factory roster grows.
+        val held = listOf("Held Filament", "Endless Ember").map { name ->
+            landed(AlloyPresets.all().single { it.name == name })
+        }
         return scale + finite + held
 
     }
 
     /**
-     * A dry groove kit: bass in the bottom row, tines above it, then clipped keys,
-     * organ, lead and explicit root/fifth/octave chords. The final two pads hold.
+     * A dry groove kit: anchored bass and tine rows, then a muted/bright clav pair,
+     * hollow organ, whistle, bright fifth chord and octave bell answer. The final two pads hold.
      * Exact note, source registration, answer and chord voicing stay in every recipe.
      */
     fun stoop(): List<ArrangedPad?> {
-        fun sound(voice: StoopVoice, name: String, midi: Int, held: Boolean = false, shadow: Float? = null): ArrangedPad {
-            val preset = StoopPresets.forVoice(voice).first()
+        fun sound(voice: StoopVoice, name: String, midi: Int, held: Boolean = false, shadow: Float? = null, presetName: String? = null): ArrangedPad {
+            val presets = StoopPresets.forVoice(voice)
+            val preset = if (presetName == null) presets.first() else presets.single { it.name == presetName }
             val macros = preset.macros + ("HOLD" to if (held) 1f else 0f) +
                 (shadow?.let { mapOf("SHADOW" to it) } ?: emptyMap())
             val patch = preset.copy(name = name, macros = macros, midi = midi,
                 chordIntervals = if (voice == StoopVoice.CHORD) listOf(0, 7, 12) else preset.chordIntervals)
-            val tags = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi)) +
+            val tags = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi), "factoryPreset" to preset.name) +
                 if (voice == StoopVoice.CHORD) mapOf("chordIntervals" to patch.chordIntervals.joinToString(",")) else emptyMap()
             return pad(patch, Stoop.drumClassFor(voice, macros)).copy(displayName = name, source = tags)
         }
@@ -719,9 +774,11 @@ object SynthKits {
             sound(StoopVoice.BASS, "Bass F2", 41), sound(StoopVoice.BASS, "Bass G2", 43),
             sound(StoopVoice.TINE, "Tine C4", 60), sound(StoopVoice.TINE, "Tine Eb4", 63),
             sound(StoopVoice.TINE, "Tine F4", 65), sound(StoopVoice.TINE, "Tine G4", 67),
-            sound(StoopVoice.CLAV, "Clav C3", 48), sound(StoopVoice.CLAV, "Clav G3", 55),
-            sound(StoopVoice.ORGAN, "Organ C3", 48), sound(StoopVoice.LEAD, "Lead C5", 72),
-            sound(StoopVoice.CHORD, "Fifth Chord C3", 48), sound(StoopVoice.TINE, "Answering Tine", 60, shadow = .6f),
+            sound(StoopVoice.CLAV, "Clav C3", 48), sound(StoopVoice.CLAV, "Wire Clav G3", 55, presetName = "Short Wire"),
+            sound(StoopVoice.ORGAN, "Hollow Organ C3", 48, presetName = "Small Pipes"),
+            sound(StoopVoice.LEAD, "Whistle C5", 72, presetName = "Pocket Whistle"),
+            sound(StoopVoice.CHORD, "Bright Fifth C3", 48, presetName = "Small Cinema"),
+            sound(StoopVoice.TINE, "Bell Answer C4", 60, shadow = .6f, presetName = "After Key"),
             sound(StoopVoice.ORGAN, "Held Organ C3", 48, held = true),
             sound(StoopVoice.CHORD, "Held Fifth C3", 48, held = true),
         )
@@ -730,7 +787,7 @@ object SynthKits {
 
     /**
      * A dry layered-tone audition kit. Eight KEY notes climb C minor pentatonic;
-     * the upper half contains the eight provisional recipes, including held SILK.
+     * the upper half keeps the original eight reference recipes, including held SILK.
      * Each pad keeps its root, velocity and complete layer profile for regeneration.
      */
     fun lacquer(): List<ArrangedPad?> {
@@ -739,7 +796,7 @@ object SynthKits {
             midi = Lacquer.DEFAULT_MIDI + semitone,
         ).let { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
-            LacquerPresets.all().map { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
+            LacquerPresets.references().map { pad(it, Lacquer.drumClassFor(it.voice, it.macros)) }
     }
 
     /**
@@ -780,6 +837,26 @@ object SynthKits {
             preset("Catch Wire"), preset("Hollow Pair"), preset("Crawling Teeth"), preset("Metal Recoil"),
             preset("Tight Knot"), preset("Quiet Trap"), preset("Long Escape"), preset("Held Struggle"),
         )
+    }
+
+    /**
+     * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
+     * Eight PLUCK roots walk C minor pentatonic; the remaining eight pads
+     * compare the calm BUBBLE default and seven other recipes, including two held buffers.
+     * Every pad retains its note, velocity and controls in its recipe.
+     */
+    fun wick(): List<ArrangedPad?> {
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            WickPatch(
+                "Wick ${index + 1}", WickVoice.PLUCK, Wick.defaults(WickVoice.PLUCK),
+                midi = 48 + semitone,
+            ).let { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+        }
+        // The first scale pad already contains PLUCK's Small Spark default. Use its former
+        // upper-bank duplicate for the calmer BUBBLE default and retain the busy reference.
+        val bubble = WickPatch("Calm Bubbles", WickVoice.BUBBLE, Wick.defaults(WickVoice.BUBBLE))
+        val recipes = listOf(bubble) + WickPresets.all().filter { it.name !in setOf("Small Spark", "Bubble Chain") }
+        return notes + recipes.map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
     }
 
     /**
@@ -865,6 +942,20 @@ object SynthKits {
             preset("WOODEN EYE"), preset("SLOW TAKE-UP"), preset("CLOSING SHELL"), preset("FINE SEAM"),
             preset("RESISTED STITCH"), preset("DEEP VESSEL"), preset("QUIET MURMUR"), preset("RETURNING GAP"),
         )
+    }
+
+    /** Eight GLASS scale notes, six finite contrasts and two moving held loops, all dry. */
+    fun shoal(): List<ArrangedPad?> {
+        fun arranged(patch: ShoalPatch) = pad(patch, Shoal.drumClassFor(patch.voice, patch.macros))
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            ShoalPatch(
+                "Glass ${index + 1}", ShoalVoice.GLASS, Shoal.defaults(ShoalVoice.GLASS),
+                midi = Shoal.rootMidi(ShoalVoice.GLASS) + semitone,
+            ).let(::arranged)
+        }
+        val recipes = ShoalPresets.all()
+        return notes + recipes.filterNot { Shoal.isLoop(it.macros.getValue("HOLD")) }.map(::arranged) +
+            recipes.filter { Shoal.isLoop(it.macros.getValue("HOLD")) }.map(::arranged)
     }
 
     /**

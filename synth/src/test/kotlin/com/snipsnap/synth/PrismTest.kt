@@ -14,6 +14,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** Raw bounds and gain-independent spectra verify the dry engine before shared leveling. */
@@ -21,6 +22,30 @@ class PrismTest {
     private val timbral = listOf("GRAIN", "DRIFT", "SHAPE", "STRIKE", "BODY")
     private val controls = listOf("TUNE") + timbral + "HOLD"
     private val internalRate = Dsp.RATE * Dsp.OVERSAMPLE
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        val voice = PrismVoice.KEY
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "finite" to { Prism.render(voice) },
+            "held" to { Prism.render(voice, Prism.defaults(voice) + ("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "PRISM $label render did not stop on the interrupt at its first look in the synthesis loop",
+                ) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "PRISM held render did not stop on the export cancel callback at its first look in the synthesis loop",
+        ) {
+            Prism.renderLoop(voice, cancelled = { true })
+        }
+        assertTrue(Prism.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 
     private fun rms(samples: FloatArray, from: Int = 0, until: Int = samples.size): Double {
         var energy = 0.0
@@ -157,7 +182,20 @@ class PrismTest {
         assertEquals(p.partialHz.size, p.groupIndices.size)
         assertTrue(p.partialHz.all { it.isFinite() && it > 0 && it < Dsp.RATE / 2.0 }, "$label out-of-band partial")
         assertTrue(p.partialWeights.all { it.isFinite() && it >= 0f }, "$label invalid spectral weights")
-        assertTrue(p.groupIndices.all { it in 0..5 }, "$label invalid spectral group")
+        // A group outside 0 until GROUPS cannot reach this check (synthesis indexes its five group
+        // envelopes with it and would fail first), so a range check here could never fail. Check the
+        // partition instead: Prism files partial indices 0-1, 2-4, 5-9, 10-17 and 18-31 under groups
+        // 0..4 and the bank keeps the partials in index order (the factory ratios rise with the index),
+        // dropping only those above its bandwidth. So the n partials kept are the first n, and each
+        // group holds exactly its share of them: [2, 3, 5, 8, 14] when all 32 are kept.
+        val bands = intArrayOf(2, 3, 5, 8, 14)
+        assertEquals(Prism.PARTIALS, bands.sum())
+        assertEquals(Prism.GROUPS, bands.size)
+        var first = 0
+        val expected = IntArray(Prism.GROUPS) { g -> (p.groupIndices.size - first).coerceIn(0, bands[g]).also { first += bands[g] } }
+        val counts = IntArray(Prism.GROUPS) { g -> p.groupIndices.count { it == g } }
+        assertContentEquals(expected, counts, "$label spectral groups ${counts.toList()} for ${p.groupIndices.size} partials, expected ${expected.toList()}")
+        assertEquals(p.groupIndices.sorted(), p.groupIndices.toList(), "$label spectral groups out of partial order")
         if (normalized) {
             assertTrue(peak(p.samples) <= .99001, "$label export clips")
             val loudness = Loudness.of(Snip(p.samples, channels = 1, sampleRate = Dsp.RATE))

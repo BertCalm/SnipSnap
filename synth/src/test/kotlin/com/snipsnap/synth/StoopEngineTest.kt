@@ -23,6 +23,33 @@ class StoopEngineTest {
         assertTrue(Stoop.render(StoopVoice.entries.first()).samples.any { it != 0f }, "an uninterrupted render still completes")
     }
 
+    @Test fun `an interrupted held render stops instead of finishing beside its replacement`() {
+        // The held path warms its loop before the passes; it must stop on the flag as the finite one does.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "STOOP held render did not stop on the interrupt at its first look in the gesture synthesis",
+            ) { Stoop.render(StoopVoice.entries.first(), mapOf("HOLD" to 1f)) }
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    @Test fun `the conditioning pass looks again after its band limit when the render is no longer wanted`() {
+        // The pass looks on entry, so a flag set before it is caught there and says nothing about the look
+        // between its band limit and its decimation; an interrupt that lands after that first look must still stop it.
+        // An uninterrupted pass looks exactly twice, on entry and after the band limit; removing the second changes that.
+        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+        assertEquals(4096, clear.run { Stoop.condition(FloatArray(Dsp.OVERSAMPLE * 4096)) }.size, "an uninterrupted pass still conditions")
+        assertEquals(2, clear.looks, "an uninterrupted pass looks on entry and after the band limit, before the decimation")
+        val late = LateInterrupt(clearLooks = 1)
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "STOOP's conditioning pass did not stop on the interrupt at its look after the band limit",
+        ) {
+            late.run { Stoop.condition(FloatArray(Dsp.OVERSAMPLE * 4096)) }
+        }
+    }
+
     @Test fun `source rejects invalid independent configurations`() {
         assertFailsWith<IllegalArgumentException> { StoopSource(fmRatio = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { StoopSource(sub = 1.01f) }
@@ -154,6 +181,34 @@ class StoopEngineTest {
                 assertTrue(Keys.seamError(r.previousMain + r.main, 256) < Keys.MAX_SEAM_ERROR)
                 assertTrue(Keys.seamError(r.previousShadow + r.shadow, 256) < Keys.MAX_SEAM_ERROR)
             }
+        }
+    }
+
+    @Test fun `every held loop is cut at whole cycles of its fitted oscillators`() {
+        // The held seam is genuine: generate() compares the 256 frames before the kept region with
+        // its last 256, both from one continuous render. But it check()s that seam below Keys' bar,
+        // so the bar assertions on it here and in StoopAcceptanceTest cannot fail before the engine
+        // throws, and assertEquals(r.seamError, measured) recomputes it. Nor can a test tell that
+        // history from a copy of the loop's tail: the render repeats to float precision, and the two
+        // windows are usually bit-identical. What the bar does not see is a cut one frame short,
+        // which moves the seam only to 1.9e-4..9.8e-4 at every voice's defaults. The planner fits
+        // every oscillator to whole cycles of the loop, so check the exported length against them.
+        val cases = StoopVoice.entries.map { StoopPatch("$it defaults", it, Stoop.defaults(it) + ("HOLD" to 1f)) } +
+            StoopPresets.all().filter { Stoop.isLoop(it.macros.getValue("HOLD")) }
+        for (p in cases) {
+            val r = Stoop.renderProbe(p)
+            // sourceFrequencies holds (frequency, FM modulator, detuned twin) for each tone. The
+            // modulator is fitted only where TINE uses it, so the frequency and twin are checked.
+            val fitted = r.sourceFrequencies.chunked(3).flatMap { listOf(it[0], it[2]) }
+            val worst = fitted.maxOf { f ->
+                val cycles = r.samples.size * f / Stoop.RATE
+                abs(cycles - round(cycles))
+            }
+            val tail = r.samples.copyOfRange(r.samples.size - 256, r.samples.size)
+            println("STOOP HOLD ${p.name}: ${r.samples.size} frames, worst fractional cycle $worst over ${fitted.size} oscillators; " +
+                "history bit-identical to the loop's tail ${r.previousCycle.contentEquals(tail)}")
+            assertTrue(worst < 1e-6, "${p.name} loop of ${r.samples.size} frames is not whole cycles of its fitted " +
+                "oscillators $fitted: off by $worst cycles")
         }
     }
 

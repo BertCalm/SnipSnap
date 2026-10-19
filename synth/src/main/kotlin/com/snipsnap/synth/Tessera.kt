@@ -188,6 +188,7 @@ object Tessera {
         val scale = m.getValue("SCALE").toDouble()
         val fold = m.getValue("FOLD").toDouble()
         val motion = if (options.wallMotionEnabled) m.getValue("MOTION").toDouble() else 0.0
+        val rootHz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val continuation = if (held) 1.0 else m.getValue("HOLD").toDouble()
         val finiteDriveEnd = .30 + 1.55 * continuation
         val x = DoubleArray(COUNT)
@@ -263,7 +264,7 @@ object Tessera {
 
         init {
             val random = Random(Dsp.seedFor("TESSERA", voice.name, midiFor(voice, m.getValue("TUNE")), options.seedContext))
-            val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
+            val hz = rootHz
             fun mode(i: Int, frequency: Double, t60: Double, gain: Double, projection: Double) {
                 val f = frequency.coerceAtMost(16_000.0)
                 val r = exp(-6.907755278982137 / (t60 * INTERNAL_RATE))
@@ -279,8 +280,10 @@ object Tessera {
                 val detune = if (j == 0) 1.0 else 1 + (random.nextDouble() - .5) * .003
                 mode(bar * 4 + j, hz * woodRatio[j] * detune,
                     (.88 + .55 * scale) * s.loss / (1 + j * .85 + .08 * bar),
-                    doubleArrayOf(.86, .23, .10, .045)[j] / sqrt(2.0),
-                    doubleArrayOf(1.0, .13 + .32 * hammer, .06 + .24 * hammer, .015 + .16 * hammer)[j] * (if (bar == 0) 1.0 else .81))
+                    // Redistribute the same pickup norm toward the brief 4x bar mode;
+                    // its faster material loss still leaves a rounded fundamental tail.
+                    doubleArrayOf(.82, .34, .12, .045)[j] / sqrt(2.0),
+                    doubleArrayOf(1.0, .30 + .36 * hammer, .08 + .25 * hammer, .02 + .15 * hammer)[j] * (if (bar == 0) 1.0 else .81))
             }
             for (course in 0..1) for (pair in 0..1) for (j in 0..5) {
                 val n = j + 1.0
@@ -295,8 +298,10 @@ object Tessera {
             val tubeRatio = doubleArrayOf(1.0, 2.70, 4.60, 6.90, 9.45, 12.1, 15.15, 18.50)
             for (j in 0..7) mode(COURSE_END + j, hz * tubeRatio[j] * (if (j == 0) 1.0 else 1 + (random.nextDouble() - .5) * .0015),
                 (2.65 + 1.05 * scale) * s.loss / (1 + .20 * j),
-                doubleArrayOf(1.16, .30, .24, .18, .13, .095, .065, .04)[j],
-                if (j == 0) 1.0 else (.20 + .64 * hammer) / (j + 1.0).pow(.48))
+                // Root stays strongest, while 2.7x/4.6x can carry an audible long
+                // inharmonic ring. This redistributes radiation rather than adding gain.
+                doubleArrayOf(1.08, .45, .30, .19, .13, .09, .06, .04)[j],
+                if (j == 0) 1.0 else (.42 + .64 * hammer) / (j + 1.0).pow(.48))
             for (j in 0..2) mode(TUBE_END + j, hz * doubleArrayOf(1.0, 1.49, 2.23)[j],
                 .38 + .20 * scale, .10 / (j + 1), 0.0)
             for (f in 0..2) {
@@ -325,7 +330,13 @@ object Tessera {
             }
         }
         private fun launch(projection: DoubleArray, energy: Double, returned: Boolean, softness: Double = hammer) {
-            val contactLength = ((.0038 * (1 - softness) + .00055) * INTERNAL_RATE).roundToInt().coerceAtLeast(16)
+            // Contact width follows the struck object's period. An absolute 2–3ms
+            // contact nearly nulled the C4 tube's 2.7x mode and the bar's 4x mode,
+            // leaving both materials dominated by the same fundamental. Keeping
+            // contact below .28 root periods preserves those modes across C3–C5;
+            // HAMMER still moves continuously from broad to hard contact.
+            val contactCycles = .06 + .22 * (1 - softness)
+            val contactLength = (contactCycles * INTERNAL_RATE / rootHz).roundToInt().coerceAtLeast(16)
             // A harder common hammer reserves at most 6.5% of its existing event
             // energy for rebound. Pressure-collector mechanisms use one contact.
             val reboundEnergy = if (returned) 0.0 else energy * .065 * softness * softness

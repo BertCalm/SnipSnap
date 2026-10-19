@@ -36,7 +36,7 @@ enum class SutureVoice { BLOOM, THREAD, CLOSE, MURMUR, STRAIN, SHELL }
  * without resetting them at the loop boundary.
  */
 object Suture {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
     const val MIDI_MIN = ROOT_MIDI
@@ -59,6 +59,7 @@ object Suture {
         val defaults: FloatArray, val decay: Double, val upper: Double,
         val mass: Double, val elasticity: Double, val roughness: Double,
         val body: Double, val ratios: DoubleArray,
+        val upperCordStretch: Double = .10, val surfaceGrain: Double = .56,
     )
 
     private fun shape(voice: SutureVoice): Shape = when (voice) {
@@ -71,7 +72,7 @@ object Suture {
         SutureVoice.MURMUR -> Shape(floatArrayOf(.35f, .50f, .45f, .70f, .65f), 1.14, .43, 1.00, .90, .95, 1.15,
             doubleArrayOf(1.0, 2.61, 4.53, 6.79))
         SutureVoice.STRAIN -> Shape(floatArrayOf(.70f, .75f, .85f, .50f, .50f), .97, .90, 1.25, 1.40, 1.60, .80,
-            doubleArrayOf(1.0, 2.63, 4.57, 6.86))
+            doubleArrayOf(1.0, 2.63, 4.57, 6.86), upperCordStretch = .045, surfaceGrain = .12)
         SutureVoice.SHELL -> Shape(floatArrayOf(.45f, .40f, .35f, .25f, .85f), 1.30, .40, 1.12, .75, .60, 1.35,
             doubleArrayOf(1.0, 2.56, 4.43, 6.67))
     }
@@ -427,7 +428,9 @@ object Suture {
             }
             for (c in 0 until CORDS) for (j in 0 until CORD_MODES) {
                 val k = PLATES * MODES + c * CORD_MODES + j
-                val movement = .10 * max(0.0, strain[c] - (.10 + .26 * cord))
+                // Acoustic stretch sensitivity is separate from the full elastic
+                // strain used by the linkage and contact normal force.
+                val movement = configuration.upperCordStretch * max(0.0, strain[c] - (.10 + .26 * cord))
                 // Keep the harmonic reference fixed: nearby root trajectories
                 // can cancel and shift their mixed spectral peak. Upper cord
                 // modes retain the full strain-dependent elastic movement.
@@ -527,7 +530,8 @@ object Suture {
                 // stopped; seeded grain modulates positive contact, never audio noise.
                 val closureEngagement = if (held) 1.0 else ((sample * dt - spreadSeconds) / .025).coerceIn(0.0, 1.0)
                 val openingTransfer = .05 + 3.45 * closureEngagement * closureEngagement * (3 - 2 * closureEngagement)
-                val surface = travel * (.13 + .35 * cord) * (if (held) 2.4 else openingTransfer) * (1 + .56 * cord * grain)
+                val surface = travel * (.13 + .35 * cord) * (if (held) 2.4 else openingTransfer) *
+                    (1 + configuration.surfaceGrain * cord * grain)
                 val slip = surface - contactVelocity
                 val normal = .30 + acousticStrain[c]
                 val stribeck = .35 + .65 * exp(-(slip / .035).pow(2))

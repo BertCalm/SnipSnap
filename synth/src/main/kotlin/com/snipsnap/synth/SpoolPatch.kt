@@ -98,9 +98,13 @@ data class SpoolMachine(
                 SpoolVoice.FLUTE -> listOf(SpoolSourceFamily.FLUTE, SpoolSourceFamily.CHOIR, SpoolSourceFamily.STRING)
                 SpoolVoice.BRASS -> listOf(SpoolSourceFamily.BRASS, SpoolSourceFamily.STRING, SpoolSourceFamily.CHOIR)
                 SpoolVoice.PALIMPSEST -> listOf(SpoolSourceFamily.STRING, SpoolSourceFamily.CHOIR, SpoolSourceFamily.FLUTE)
-                SpoolVoice.CUT -> listOf(SpoolSourceFamily.BRASS, SpoolSourceFamily.CHOIR, SpoolSourceFamily.STRING)
+                SpoolVoice.CUT -> listOf(SpoolSourceFamily.BRASS, SpoolSourceFamily.FLUTE, SpoolSourceFamily.STRING)
             }
-            val gains = if (voice == SpoolVoice.PALIMPSEST || voice == SpoolVoice.CUT) listOf(0.65f, 0.23f, 0.12f) else listOf(0.82f, 0.12f, 0.06f)
+            val gains = when (voice) {
+                SpoolVoice.PALIMPSEST -> listOf(.35f, .50f, .15f)
+                SpoolVoice.CUT -> listOf(.80f, .12f, .08f)
+                else -> listOf(.94f, .04f, .02f)
+            }
             return families.mapIndexed { i, family ->
                 SpoolStrip(family, gains[i], listOf(1f, 1.07f, 0.93f)[i], 0.06f + i * 0.025f)
             }

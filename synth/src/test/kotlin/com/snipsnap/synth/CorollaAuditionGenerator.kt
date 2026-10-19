@@ -32,6 +32,9 @@ object CorollaAuditionGenerator {
     private val NOTES = listOf(0f to "C3", 0.5f to "C4", 1f to "C5")
     private val VELOCITIES = listOf(0.3f, 0.65f, 1f)
     private const val OUTPUT_MOD_DEPTH = 0.65
+    private const val HELD_SECONDS = 4f
+    private const val VELOCITY_SECTION = "Pitch and velocity"
+    private val AUDIO_PATH_FIELDS = listOf("rawPath", "matchedPath", "releaseRawPath", "releaseMatchedPath")
 
     private data class Case(
         val id: String,
@@ -62,51 +65,89 @@ object CorollaAuditionGenerator {
     }
 
     private data class Rendered(val samples: FloatArray, val seamError: Double? = null)
+    private data class Prepared(val native: Snip, val metrics: Metrics, val renderMs: Double)
+    private data class GroupGain(val matched: Float, val rawExport: Float)
 
     @JvmStatic
     fun main(args: Array<String>) {
+        if ("--help" in args) {
+            println(HELP)
+            return
+        }
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/corolla-audition")
         val quick = "--quick" in args
         val onlyVoice = args.firstOrNull { it.startsWith("--voice=") }?.substringAfter('=')?.let(CorollaVoice::valueOf)
         val finiteOnly = "--finite-only" in args
-        val cases = (if (quick) quickCases() else acceptanceCases()).filter {
+        val heldOnly = "--held-only" in args
+        val velocityOnly = "--velocity-only" in args
+        val roster = if (quick) quickCases() + if (velocityOnly) velocityCases(middleOnly = true) else emptyList() else acceptanceCases()
+        val cases = roster.filter {
+            val held = Corolla.isLoop(Corolla.settled(it.macros, it.voice).getValue("HOLD"))
             (onlyVoice == null || it.voice == onlyVoice) &&
-                (!finiteOnly || !Corolla.isLoop(Corolla.settled(it.macros, it.voice).getValue("HOLD")))
+                (!finiteOnly || !held) &&
+                ((!heldOnly && !velocityOnly) || (heldOnly && held) || (velocityOnly && it.section == VELOCITY_SECTION))
         }
+        require(cases.isNotEmpty()) { "Filters selected no cases; see --help." }
         check(cases.map { it.id }.distinct().size == cases.size) { "duplicate Corolla audition IDs" }
         root.mkdirs()
         val clips = ArrayList<String>(cases.size)
         val start = System.nanoTime()
+        // Keep the physical velocity difference. One gain from the hard event is shared by all
+        // three velocities at a voice/register; a pair-wide peak guard cannot flatten their levels.
+        val preparedVelocities = mutableMapOf<String, Prepared>()
+        val velocityGains = cases.filter { it.section == VELOCITY_SECTION }.groupBy(::velocityGroup).mapValues { (_, group) ->
+            val prepared = group.associateWith { prepare(it).also { p -> preparedVelocities[it.id] = p } }
+            val hard = prepared.getValue(group.first { it.velocity == 1f })
+            val peak = prepared.values.maxOf { it.metrics.peak }
+            GroupGain(minOf(auditionGain(hard.native), matchedPeakGain(peak)), peakGain(peak))
+        }
+        if (preparedVelocities.isNotEmpty()) println("Prepared ${preparedVelocities.size} velocity cases in ${velocityGains.size} shared-gain groups")
+        var written = 0
         for ((index, case) in cases.withIndex()) {
             val macros = Corolla.defaults(case.voice) + case.macros
             val loop = Corolla.isLoop(macros.getValue("HOLD"))
-            val before = System.nanoTime()
-            val source = renderRaw(case.voice, macros, case.velocity, loop, case.probe)
-            val rendered = if (case.outputMod) {
-                check(!loop) { "output-only modulation is a finite diagnostic, not a held voice" }
-                val hz = Corolla.coreHz(macros.getValue("FIELD"), case.voice)
-                source.copy(samples = FloatArray(source.samples.size) { i ->
-                    (source.samples[i] * (1.0 + OUTPUT_MOD_DEPTH * sin(2.0 * PI * hz * i / Dsp.RATE))).toFloat()
-                })
-            } else source
-            val raw = case.comparisonSeconds?.let { seconds ->
-                check(!loop)
-                rendered.samples.copyOf((seconds * Dsp.RATE).roundToInt()).also { Dsp.fadeTail(it) }
-            } ?: rendered.samples
-            val renderMs = (System.nanoTime() - before) / 1_000_000.0
-            require(raw.isNotEmpty() && raw.all { it.isFinite() }) { "non-finite or empty clip: ${case.id}" }
-            val native = Snip(raw, channels = 1, sampleRate = Dsp.RATE)
-            val metrics = metrics(native, loop, rendered.seamError)
-            // Preserve native level unless it would clip PCM. Record this export-only safety gain;
-            // unscaled peak/RMS remain in the manifest so a source problem stays visible.
-            val exportGain = if (metrics.peak > 0.99) (0.99 / metrics.peak).toFloat() else 1f
-            val rawSnip = if (exportGain == 1f) native else
-                Snip(FloatArray(raw.size) { raw[it] * exportGain }, channels = 1, sampleRate = Dsp.RATE)
-            val matched = AuditionLevel.level(native)
+            val prepared = preparedVelocities.remove(case.id) ?: prepare(case)
+            val native = prepared.native
+            val metrics = prepared.metrics
+            val releaseBefore = System.nanoTime()
+            val release = if (loop) native(Corolla.renderHeldNote(case.voice, macros, case.velocity,
+                holdSeconds = HELD_SECONDS, normalize = false), "${case.id} release") else null
+            val releaseRenderMs = if (release != null) (System.nanoTime() - releaseBefore) / 1_000_000.0 else 0.0
+            val releaseMetrics = release?.let { metrics(it, loop = false, seamError = null) }
+            val peak = maxOf(metrics.peak, releaseMetrics?.peak ?: 0.0)
+            val velocityGroup = if (case.section == VELOCITY_SECTION) velocityGroup(case) else null
+            val groupGain = velocityGroup?.let(velocityGains::getValue)
+            // Original native loops stay bit-identical. A new release has its own raw PCM safety
+            // attenuation; matched playback shares one pair-wide gain across both source buffers.
+            val exportGain = groupGain?.rawExport ?: peakGain(metrics.peak)
+            val matchedGain = groupGain?.matched ?: minOf(auditionGain(native), matchedPeakGain(peak))
+            val rawSnip = gain(native, exportGain)
+            val matched = gain(native, matchedGain)
             val rawPath = "raw/${case.id}.wav"
             val matchedPath = "matched/${case.id}.wav"
             WavWriter.write(File(root, rawPath), rawSnip, WavWriter.BitDepth.PCM_24)
             WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_24)
+            written += 2
+            val releaseFields = if (release != null && releaseMetrics != null) {
+                val releaseRawPath = "raw/${case.id}_release.wav"
+                val releaseMatchedPath = "matched/${case.id}_release.wav"
+                val releaseRawExportGain = peakGain(releaseMetrics.peak)
+                val releaseMatched = gain(release, matchedGain)
+                WavWriter.write(File(root, releaseRawPath), gain(release, releaseRawExportGain), WavWriter.BitDepth.PCM_24)
+                WavWriter.write(File(root, releaseMatchedPath), releaseMatched, WavWriter.BitDepth.PCM_24)
+                written += 2
+                ",\"releaseRawPath\":${q(releaseRawPath)},\"releaseMatchedPath\":${q(releaseMatchedPath)}," +
+                    "\"releaseFrames\":${release.frameCount},\"releaseSeconds\":${release.frameCount.toDouble() / Dsp.RATE}," +
+                    "\"releaseRawMetrics\":${releaseMetrics.json()},\"releaseMatchedMetrics\":${metrics(releaseMatched, false, null).json()}," +
+                    "\"releaseRawExportGain\":$releaseRawExportGain,\"releaseMatchedGain\":$matchedGain," +
+                    "\"heldSeconds\":$HELD_SECONDS,\"releaseRenderMs\":$releaseRenderMs"
+            } else ""
+            val levelMode = when {
+                groupGain != null -> "velocity-common-gain"
+                loop -> "sustain-release-common-gain"
+                else -> "per-clip-loudness"
+            }
+            val velocityFields = if (velocityGroup != null) ",\"velocityGroup\":${q(velocityGroup)},\"velocityCommonGain\":$matchedGain" else ""
             clips += "{\"id\":${q(case.id)},\"section\":${q(case.section)},\"voice\":${q(case.voice.name)}," +
                 "\"label\":${q(case.label)},\"description\":${q(case.description)}," +
                 "\"macros\":${macroJson(macros)},\"velocity\":${case.velocity},\"loop\":$loop," +
@@ -114,35 +155,93 @@ object CorollaAuditionGenerator {
                 "\"requestedHz\":${Corolla.frequencyFor(case.voice, macros.getValue("TUNE"))},\"probe\":${probeJson(case.probe)}," +
                 "\"outputMod\":${case.outputMod},\"outputModDepth\":${if (case.outputMod) OUTPUT_MOD_DEPTH else 0.0}," +
                 "\"outputModHz\":${if (case.outputMod) Corolla.coreHz(macros.getValue("FIELD"), case.voice) else 0.0}," +
-                "\"frames\":${raw.size},\"seconds\":${raw.size.toDouble() / Dsp.RATE}," +
-                "\"renderMs\":$renderMs,\"renderMsPerAudioSecond\":${renderMs / (raw.size.toDouble() / Dsp.RATE)}," +
+                "\"frames\":${native.frameCount},\"seconds\":${native.frameCount.toDouble() / Dsp.RATE}," +
+                "\"renderMs\":${prepared.renderMs},\"renderMsPerAudioSecond\":${prepared.renderMs / (native.frameCount.toDouble() / Dsp.RATE)}," +
                 "\"rawPath\":${q(rawPath)},\"matchedPath\":${q(matchedPath)},\"rawExportGain\":$exportGain," +
-                "\"rawMetrics\":${metrics.json()},\"matchedMetrics\":${metrics(matched, loop, rendered.seamError).json()}}"
+                "\"matchedLevelMode\":${q(levelMode)},\"matchedGain\":$matchedGain," +
+                "\"rawMetrics\":${metrics.json()},\"matchedMetrics\":${metrics(matched, loop, metrics.seamError).json()}$velocityFields$releaseFields}"
             if ((index + 1) % 12 == 0 || index == cases.lastIndex) {
-                println("Corolla audition: ${index + 1}/${cases.size} cases (${(index + 1) * 2} WAVs)")
+                println("Corolla audition: ${index + 1}/${cases.size} cases ($written WAVs)")
             }
         }
+        val partial = onlyVoice != null || finiteOnly || heldOnly || velocityOnly
+        val merged = mergePreviousClips(root, clips, partial)
         val manifest = "{\"engine\":\"COROLLA\",\"sampleRate\":${Dsp.RATE},\"bitDepth\":24," +
             "\"pitchRange\":\"C3–C5\",\"sonicAcceptance\":\"pending owner listening\",\"quick\":$quick," +
-            "\"metricNotes\":${q(METRIC_NOTES)},\"clips\":[\n${clips.joinToString(",\n")}\n]}\n"
-        prunePreviousClips(root, cases)
+            "\"metricNotes\":${q(METRIC_NOTES)},\"clips\":[\n${merged.joinToString(",\n")}\n]}\n"
+        prunePreviousClips(root, merged)
         File(root, "manifest.json").writeText(manifest)
         // Embed the same manifest to avoid file:// fetch restrictions; do not maintain two clip lists.
         File(root, "index.html").writeText(PAGE.replace("__MANIFEST__", manifest.replace("</", "<\\/")))
-        File(root, "README.md").writeText(readme(cases.size, quick))
-        println("Wrote ${cases.size * 2} WAVs, manifest.json, index.html and README.md under ${root.absolutePath} " +
+        File(root, "README.md").writeText(readme(merged.size, merged.count { "\"releaseRawPath\"" in it }, quick))
+        println("Wrote $written WAVs for ${cases.size} cases; manifest has ${merged.size} cases under ${root.absolutePath} " +
             "in %.1f s".format(Locale.ROOT, (System.nanoTime() - start) / 1e9))
     }
 
+    private fun prepare(case: Case): Prepared {
+        val macros = Corolla.defaults(case.voice) + case.macros
+        val loop = Corolla.isLoop(macros.getValue("HOLD"))
+        val before = System.nanoTime()
+        val source = renderRaw(case.voice, macros, case.velocity, loop, case.probe)
+        val rendered = if (case.outputMod) {
+            check(!loop) { "output-only modulation is a finite diagnostic, not a held voice" }
+            val hz = Corolla.coreHz(macros.getValue("FIELD"), case.voice)
+            source.copy(samples = FloatArray(source.samples.size) { i ->
+                (source.samples[i] * (1.0 + OUTPUT_MOD_DEPTH * sin(2.0 * PI * hz * i / Dsp.RATE))).toFloat()
+            })
+        } else source
+        val raw = case.comparisonSeconds?.let { seconds ->
+            check(!loop)
+            rendered.samples.copyOf((seconds * Dsp.RATE).roundToInt()).also { Dsp.fadeTail(it) }
+        } ?: rendered.samples
+        val native = native(raw, case.id)
+        val renderMs = (System.nanoTime() - before) / 1_000_000.0
+        return Prepared(native, metrics(native, loop, rendered.seamError), renderMs)
+    }
+
+    private fun native(samples: FloatArray, label: String): Snip {
+        require(samples.isNotEmpty() && samples.all { it.isFinite() }) { "non-finite or empty clip: $label" }
+        return Snip(samples, channels = 1, sampleRate = Dsp.RATE)
+    }
+
+    private fun peakGain(peak: Double) = if (peak > .99) (.99 / peak).toFloat() else 1f
+
+    private fun matchedPeakGain(peak: Double) = if (peak > 0.0) (.99 / peak).toFloat() else Float.POSITIVE_INFINITY
+
+    private fun auditionGain(snip: Snip): Float {
+        val index = snip.samples.indices.maxByOrNull { abs(snip.samples[it]) } ?: return 1f
+        if (snip.samples[index] == 0f) return 1f
+        return AuditionLevel.level(snip).samples[index] / snip.samples[index]
+    }
+
+    private fun gain(snip: Snip, gain: Float) = if (gain == 1f) snip else
+        Snip(FloatArray(snip.samples.size) { snip.samples[it] * gain }, channels = 1, sampleRate = Dsp.RATE)
+
+    private fun velocityGroup(case: Case) = case.voice.name + "_" + NOTES.first { it.first == case.macros["TUNE"] }.second
+
+    private fun mergePreviousClips(root: File, clips: List<String>, partial: Boolean): List<String> {
+        val previous = File(root, "manifest.json")
+        if (!partial || !previous.isFile) return clips
+        val merged = linkedMapOf<String, String>()
+        for (clip in Json.parse(previous.readText()).obj().getValue("clips").arr()) {
+            merged[clip.obj().getValue("id").str()] = Json.write(clip)
+        }
+        for (clip in clips) merged[Json.parse(clip).obj().getValue("id").str()] = clip
+        return merged.values.toList()
+    }
+
     /** Quick/full switches remove only obsolete files recorded in this generator's old manifest. */
-    private fun prunePreviousClips(root: File, cases: List<Case>) {
+    private fun prunePreviousClips(root: File, current: List<String>) {
         val previous = File(root, "manifest.json")
         if (!previous.isFile) return
         val clips = runCatching { Json.parse(previous.readText()).obj().getValue("clips").arr() }
             .getOrDefault(emptyList())
-        val retained = cases.flatMap { listOf("raw/${it.id}.wav", "matched/${it.id}.wav") }.toSet()
+        val retained = current.flatMap { clip ->
+            val fields = Json.parse(clip).obj()
+            AUDIO_PATH_FIELDS.mapNotNull { fields[it]?.str() }
+        }.toSet()
         val allowed = Regex("(raw|matched)/[a-z0-9_]+\\.wav")
-        for (clip in clips) for (field in listOf("rawPath", "matchedPath")) {
+        for (clip in clips) for (field in AUDIO_PATH_FIELDS) {
             val path = runCatching { clip.obj()[field]?.str() }.getOrNull() ?: continue
             if (path in retained || !allowed.matches(path)) continue
             val old = File(root, path)
@@ -168,16 +267,24 @@ object CorollaAuditionGenerator {
         )
     }
 
+    private fun velocityCases(middleOnly: Boolean = false, voice: CorollaVoice? = null): List<Case> =
+        CorollaVoice.entries.filter { voice == null || it == voice }.flatMap { selected ->
+            (if (middleOnly) listOf(NOTES[1]) else NOTES).flatMap { (tune, note) ->
+                VELOCITIES.map { velocity ->
+                    case(VELOCITY_SECTION, selected, "${note.lowercase()}_v${tag(velocity)}",
+                        "${selected.name} $note · velocity ${fmt(velocity)}",
+                        "TUNE ${fmt(tune)}; all timbral macros at this voice's defaults. The three velocities share the hard event's comparison gain.",
+                        mapOf("TUNE" to tune), velocity)
+                }
+            }
+        }
+
     private fun acceptanceCases(): List<Case> = buildList {
         for (voice in CorollaVoice.entries) {
             add(case("Defaults", voice, "default", "${voice.name} default", "Every macro at its voice default."))
             add(comparisonCase(voice))
             // Both pitch and event strength vary: low/high registration can change collision thresholds.
-            for ((tune, note) in NOTES) for (velocity in VELOCITIES) {
-                add(case("Pitch and velocity", voice, "${note.lowercase()}_v${tag(velocity)}",
-                    "${voice.name} $note · velocity ${fmt(velocity)}",
-                    "TUNE ${fmt(tune)}; all timbral macros at this voice's defaults.", mapOf("TUNE" to tune), velocity))
-            }
+            addAll(velocityCases(voice = voice))
             for (macro in TIMBRE + "HOLD") for (value in STEPS) {
                 add(case("$macro sweep", voice, "${macro.lowercase()}_${tag(value)}",
                     "${voice.name} · $macro ${fmt(value)}", sweepDescription(macro, value), mapOf(macro to value)))
@@ -294,19 +401,35 @@ object CorollaAuditionGenerator {
     private fun q(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
         .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
 
-    private const val METRIC_NOTES = "Peak, RMS and DC use the complete floating-point buffer before WAV quantization. Loudness is the loudest 200 ms RMS window. rawExportGain is only a PCM safety attenuation when native peak exceeds .99. renderMs includes simulation and final-rate conditioning, excludes encoding; wall-clock cost depends on hardware/JIT. seamError is Keys.seamError measured on the engine's conditioned loopBuffer with its real preceding period, before extracting the settled loop. It is invariant under audition/export gain. wrapStep is the adjacent last-to-first sample difference and includes the waveform's normal slope; endpointStepRatio is this step squared over whole-loop RMS squared, a diagnostic without a seam acceptance threshold. wrapSlope compares the first and last one-sample slopes. Native clips use the engine's final-rate conditioning with loudness targeting disabled, for both finite notes and settled held loops."
+    private const val METRIC_NOTES = "Peak, RMS and DC use the complete floating-point buffer before WAV quantization. Loudness is the loudest 200 ms RMS window. rawExportGain and releaseRawExportGain are independent PCM safety attenuations when native peak exceeds .99, preserving existing native loop audio. Velocity comparisons use one gain from velocity 1 per voice/register, with a common peak guard across the three events; velocityCommonGain records this shared gain. Other finite clips are independently loudness matched. Held loop and full four-second held/release previews share matchedGain; the peak guard covers both buffers, so the release tail is never independently boosted. renderMs measures the original clip; releaseRenderMs measures the additional physical release render. Both include conditioning and exclude encoding; wall-clock cost depends on hardware/JIT. seamError is Keys.seamError measured on the engine's conditioned loopBuffer with its real preceding period, before extracting the settled loop, and is invariant under audition/export gain. wrapStep includes the waveform's normal slope; endpointStepRatio is this step squared over whole-loop RMS squared, a diagnostic without a seam acceptance threshold. Native clips bypass engine loudness targeting. Release previews begin with the real pull, hold for heldSeconds, reduce powered work through the engine's note-off transition, then let the object decay."
 
-    private fun readme(count: Int, quick: Boolean) = """
+    private val HELP = """
+        CorollaAuditionGenerator [output-directory] [options]
+          --held-only       Regenerate the 40 settled loops and full four-second hold/release previews.
+          --velocity-only   Regenerate the 54 voice/register/velocity cases using shared group gain.
+          --held-only --velocity-only selects their union: 94 cases and 268 WAVs.
+          --quick           Smaller defaults/comparison/held roster; with --velocity-only, add C4 velocities.
+          --voice=TONGUE    Restrict any selection to one voice.
+          --finite-only     Exclude held cases.
+          --help            Print this help without rendering.
+        Filtered reruns merge changed records into an existing manifest and preserve unrelated assets.
+        Example: ./gradlew :synth:generateCorollaAudition --args="/tmp/corolla-update --held-only --velocity-only"
+        Smoke:   ./gradlew :synth:generateCorollaAudition --args="/tmp/corolla-smoke --quick --voice=TONGUE --held-only --velocity-only"
+    """.trimIndent()
+
+    private fun readme(count: Int, heldCount: Int, quick: Boolean) = """
         # Corolla audition
 
         Generated by `./gradlew :synth:generateCorollaAudition` (${if (quick) "quick tooling smoke set" else "full acceptance matrix"}).
-        $count cases, ${count * 2} mono 24-bit WAVs at 44.1 kHz. Sonic acceptance awaits owner listening.
+        $count cases, ${(count + heldCount) * 2} mono 24-bit WAVs at 44.1 kHz. Sonic acceptance awaits owner listening.
 
         Open `index.html` directly in a browser, or serve this folder with `python3 -m http.server 8000`.
         The page embeds its manifest and has no external assets. Compare raw/native clips to hear event
-        level; compare matched clips to judge timbre at the shared audition level. Held clips contain
-        settled sustaining material and omit the original attack/blossom gesture. Enable repeat and
-        listen across several wraps. Stop playback before changing filters.
+        level; compare matched clips to judge timbre. Velocity comparisons share the hard event's
+        gain within each voice/register, preserving event dynamics. With repeat off, held cases play
+        the real attack, four seconds of holding and a physical note-off/decay. With repeat on, they
+        play the original settled loop across several wraps. These two matched versions share one
+        gain, including a shared peak guard; the release tail is never independently normalized.
 
         Start with defaults and factory presets, then pitch/velocity, each macro sweep, the five
         interaction grids, neighbor on/off pairs and the edges. The ORBIT/CHATTER field comparison
@@ -322,6 +445,9 @@ object CorollaAuditionGenerator {
 
         Generated files are build/listening artifacts and should not be committed. A fast smoke set
         can be generated with `./gradlew :synth:generateCorollaAudition -PcorollaQuick`.
+        Use `--args="/tmp/corolla-update --held-only --velocity-only"` on that Gradle task to regenerate
+        just the 40 held and 54 velocity cases. Add `--quick --voice=TONGUE` for a four-case smoke set.
+        Filtered reruns merge records into an existing manifest and keep unrelated audio.
     """.trimIndent() + "\n"
 
     private val PAGE = """
@@ -344,27 +470,27 @@ object CorollaAuditionGenerator {
         <main>
         <div class="badge">SNIPSNAP / ENGINE LISTENING</div><h1>COROLLA</h1>
         <p>One metal petal releases; its neighbors answer; the flower opens, changes its resonance, then folds. Compare native level for event energy and matched level for timbre.</p>
-        <p class="notice">Sonic acceptance is pending your listening. Held clips contain settled sustain; enable repeat and listen through several wraps. Notes save locally until you export them.</p>
+        <p class="notice">Held notes play the real attack, four seconds of holding and a natural release. Enable repeat to hear the original settled loop. Velocity comparisons share one gain per voice/register. Notes save locally until you export them.</p>
         <div class="controls"><select id="voice"><option value="">All voices</option></select><select id="section"><option value="">All sections</option></select><input id="search" type="search" placeholder="Find a macro, voice, note or edge" aria-label="Search clips"><button id="export">Export listening notes</button></div>
         <div id="count" class="count"></div><div id="clips"></div>
         <details><summary>How to read the measurements</summary><p id="metricNotes"></p></details>
         </main>
-        <div class="player"><div class="now" id="now">Choose a clip</div><audio id="audio" controls preload="none"></audio><label><input id="repeat" type="checkbox" checked> Repeat held loops</label><button id="stop">Stop</button></div>
+        <div class="player"><div class="now" id="now">Choose a clip</div><audio id="audio" controls preload="none"></audio><label><input id="repeat" type="checkbox"> Repeat held loops</label><button id="stop">Stop</button></div>
         <script id="manifest" type="application/json">__MANIFEST__</script>
         <script>
         'use strict';
         const manifest=JSON.parse(document.getElementById('manifest').textContent), clips=manifest.clips;
         const voice=document.getElementById('voice'), section=document.getElementById('section'), search=document.getElementById('search'), audio=document.getElementById('audio'), repeat=document.getElementById('repeat');
         const key='snipsnap-corolla-listening-v1';let verdicts={};try{verdicts=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}
-        let current=null;
+        let current=null,currentMode='matched';
         function save(){try{localStorage.setItem(key,JSON.stringify(verdicts))}catch(e){document.getElementById('count').textContent='Browser storage unavailable; export your notes before closing.'}}
         function el(tag,txt,cls){const n=document.createElement(tag);if(txt!==undefined)n.textContent=txt;if(cls)n.className=cls;return n}
         function options(select,values){for(const val of [...new Set(values)]){const o=el('option',val);o.value=val;select.append(o)}}
         options(voice,clips.map(c=>c.voice));options(section,clips.map(c=>c.section));document.getElementById('metricNotes').textContent=manifest.metricNotes;
-        function play(c,mode){current=c;audio.pause();audio.src=c[mode+'Path'];audio.loop=c.loop&&repeat.checked;document.getElementById('now').textContent=c.label+' · '+mode+(c.loop?' · held loop':'');for(const card of document.querySelectorAll('.card'))card.classList.toggle('playing',card.dataset.id===c.id);audio.play().catch(e=>{document.getElementById('now').textContent='Playback unavailable: '+e.message})}
+        function play(c,mode){current=c;currentMode=mode;const release=c.loop&&!repeat.checked&&c.releaseMatchedPath;audio.pause();audio.src=release?c[mode==='raw'?'releaseRawPath':'releaseMatchedPath']:c[mode+'Path'];audio.loop=Boolean(c.loop&&repeat.checked);document.getElementById('now').textContent=c.label+' · '+mode+(release?' · hold 4 s + release':c.loop?' · settled loop':'');for(const card of document.querySelectorAll('.card'))card.classList.toggle('playing',card.dataset.id===c.id);audio.play().catch(e=>{document.getElementById('now').textContent='Playback unavailable: '+e.message})}
         function display(){
           const query=search.value.toLowerCase(), selected=clips.filter(c=>(!voice.value||c.voice===voice.value)&&(!section.value||c.section===section.value)&&(!query||(c.label+' '+c.description+' '+c.section).toLowerCase().includes(query)));
-          document.getElementById('count').textContent=selected.length+' of '+clips.length+' cases · '+(clips.length*2)+' WAVs · '+(manifest.quick?'quick tooling set':'full acceptance matrix');
+          document.getElementById('count').textContent=selected.length+' of '+clips.length+' cases · '+(clips.length*2+clips.filter(c=>c.releaseMatchedPath).length*2)+' WAVs · '+(manifest.quick?'quick tooling set':'acceptance matrix');
           const host=document.getElementById('clips');host.replaceChildren();
           for(const name of [...new Set(selected.map(c=>c.section))]){
             const group=el('section',undefined,'section');group.append(el('h2',name));const grid=el('div',undefined,'grid');group.append(grid);host.append(group);
@@ -372,6 +498,8 @@ object CorollaAuditionGenerator {
               const card=el('article',undefined,'card');card.dataset.id=c.id;if(current&&current.id===c.id)card.classList.add('playing');grid.append(card);
               card.append(el('div',c.voice+' / '+(c.loop?'LOOP':'ONE SHOT'),'badge'),el('h3',c.label),el('p',c.description));
               const row=el('div',undefined,'row');for(const mode of ['raw','matched']){const b=el('button','Play '+mode);b.addEventListener('click',()=>play(c,mode));row.append(b)}card.append(row);
+              if(c.matchedLevelMode==='velocity-common-gain')card.append(el('p','Shared gain: '+c.velocityGroup+' · '+c.velocityCommonGain.toFixed(3)));
+              if(c.releaseMatchedPath)card.append(el('p','Hold '+c.heldSeconds+' s + release: '+c.releaseSeconds.toFixed(2)+' s total. Settled loop: '+c.seconds.toFixed(2)+' s.'));
               const d=el('details');d.append(el('summary',c.seconds.toFixed(2)+' s · native peak '+c.rawMetrics.peak.toFixed(3)+' · '+c.renderMs.toFixed(0)+' ms render'));
               d.append(el('pre',Object.entries(c.macros).map(([k,v])=>k+' '+v.toFixed(2)).join('  ')+'\nVelocity '+c.velocity+'\nNative RMS '+c.rawMetrics.rms.toExponential(3)+' / DC '+c.rawMetrics.dc.toExponential(3)+'\nMatched RMS '+c.matchedMetrics.rms.toExponential(3)+' / peak '+c.matchedMetrics.peak.toFixed(3)+'\nRaw WAV gain '+c.rawExportGain+(c.loop?'\nKeys seam '+c.rawMetrics.seamError.toExponential(3)+'\nWrap step '+c.rawMetrics.wrapStep.toExponential(3)+' / slope '+c.rawMetrics.wrapSlope.toExponential(3)+'\nEndpoint step ratio '+c.rawMetrics.endpointStepRatio.toExponential(3):'')));card.append(d);
               const votes=el('div',undefined,'row');for(const choice of ['Keep','Revise','Unsure']){const b=el('button',choice);b.classList.toggle('active',verdicts[c.id]?.verdict===choice);b.addEventListener('click',()=>{verdicts[c.id]={...(verdicts[c.id]||{}),verdict:choice};save();for(const v of votes.children)v.classList.toggle('active',v.textContent===choice)});votes.append(b)}card.append(votes);
@@ -380,7 +508,7 @@ object CorollaAuditionGenerator {
           }
         }
         for(const control of [voice,section,search])control.addEventListener('input',display);
-        repeat.addEventListener('change',()=>{audio.loop=Boolean(current?.loop&&repeat.checked)});
+        repeat.addEventListener('change',()=>{if(current?.loop)play(current,currentMode)});
         document.getElementById('stop').addEventListener('click',()=>{audio.pause();audio.currentTime=0});
         document.getElementById('export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({engine:manifest.engine,exportedAt:new Date().toISOString(),quick:manifest.quick,verdicts},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob), a=el('a');a.href=url;a.download='corolla-listening-notes.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
         display();

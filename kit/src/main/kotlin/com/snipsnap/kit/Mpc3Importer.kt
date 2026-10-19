@@ -204,11 +204,6 @@ object Mpc3Importer {
         if (File(destDir, KitStore.FILE_NAME).exists() && !overwrite) {
             throw IOException("kit already exists: $destDir (pass overwrite=true to replace it)")
         }
-        destDir.mkdirs()
-        for (file in referenced) {
-            SafePath.child(dataDir, file).copyTo(SafePath.child(destDir, file), overwrite = true)
-        }
-
         val pads = parsed.map { p ->
             val main = p.layers.last()
             KitPad(
@@ -236,10 +231,17 @@ object Mpc3Importer {
         }
 
         val kit = Kit(kitName, pads)
-        KitStore.save(kit, destDir)
-
         // Total recall: the clips the track carries come home too.
         val clips = parseClips(track)
+
+        // Only now, with the kit and its clips built, does the disk change:
+        // copying the samples first used to leave them behind in destDir
+        // when building a pad then failed.
+        destDir.mkdirs()
+        for (file in referenced) {
+            SafePath.child(dataDir, file).copyTo(SafePath.child(destDir, file), overwrite = true)
+        }
+        KitStore.save(kit, destDir)
         if (clips.isNotEmpty()) GrooveStore.save(destDir, clips)
 
         return ImportResult(kit, destDir, trackName, clips.size)

@@ -26,9 +26,24 @@ the original MVP cut. [`SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) measures a
 gap from before the preset library; its counts are that gap, not the
 current roster.
 
+**Wick.** [`WICK.md`](WICK.md) records the PLUCK/BUBBLE first-listen prototype,
+recipe contracts, held-loop strategy and private audition. The supplied
+[`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
+the remaining voices and full preset library await listening.
+
 **Tangle.** [`TANGLE.md`](TANGLE.md) records the implemented experimental
 engine, six controls, patch and kit contracts, and held-loop limits. The
 [private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
 awaits the owner's listening verdict. The supplied
 [`engineering specification`](superpowers/specs/2026-10-11-tangle-engine-engineering-spec.md)
 is preserved unchanged as the proposal rather than an acceptance record.
+
+**Flock.** [`FLOCK.md`](FLOCK.md) records the finite oscillator-flock proof,
+its six controls and reproducible comparison contracts. Its
+[private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) compares
+neighbor interaction with fixed detuning and independent motion. Sustained
+loops and the owner's sonic acceptance remain open.
+
+**Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
+recipe and audition contracts. HOLD extends the finite gesture; repeating
+sea cycles and the owner's sonic acceptance remain open.

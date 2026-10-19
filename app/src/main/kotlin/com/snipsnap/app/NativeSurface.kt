@@ -36,5 +36,6 @@ object NativeSurface {
     external fun setModulation(handle: Long, offsets: FloatArray)
     external fun armPrint(handle: Long, maxFrames: Int): Boolean
     external fun printState(handle: Long): Int
+    external fun requestStopPrint(handle: Long)
     external fun stopPrint(handle: Long): FloatArray?
 }

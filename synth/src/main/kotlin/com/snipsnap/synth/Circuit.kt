@@ -43,7 +43,7 @@ object Circuit {
 
     fun macrosFor(voice: CircuitVoice): List<MacroSpec> {
         val d = starting[voice.ordinal]
-        return listOf(MacroSpec("TUNE", .5f, neutral = .5f),
+        return listOf(MacroSpec("TUNE", 1f, neutral = .5f),
             MacroSpec("BREATH", d[0], neutral = .45f), MacroSpec("DIAMETER", d[1], neutral = .40f),
             MacroSpec("ORBIT", d[2], neutral = 0f), MacroSpec("PACE", d[3], neutral = .35f),
             MacroSpec("CANYON", d[4], neutral = .40f), MacroSpec("HOLD", 0f, neutral = 0f))
@@ -143,27 +143,26 @@ object Circuit {
         private val nx = doubleArrayOf(.94, -.40)
         private val ny = DoubleArray(2) { sqrt(1.0 - nx[it] * nx[it]) }
         private val offset = doubleArrayOf(.13, 1.64, 3.31, 4.92)
-        fun position(source: Int, time: Double): Pair<Double, Double> {
-            if (source < 3) return Pair((source - 1) * .16, if (source == 1) .13 else -.08)
+        // The position and its wall images reach [use] as plain coordinates. Both are inline, so
+        // paths() and facing(), asked at every control block of every source, build no Pair.
+        private inline fun <R> located(source: Int, time: Double, use: (x: Double, y: Double) -> R): R {
+            if (source < 3) return use((source - 1) * .16, if (source == 1) .13 else -.08)
             val angle = offset[source - 3] + 2.0 * PI * rates.orbitHz * time
-            return Pair(radius * cos(angle), radius * sin(angle))
+            return use(radius * cos(angle), radius * sin(angle))
         }
-        private fun reflected(source: Pair<Double, Double>, wall: Int): Pair<Double, Double> {
-            val distance = walls[wall] - (source.first * nx[wall] + source.second * ny[wall])
-            return Pair(source.first + 2 * distance * nx[wall], source.second + 2 * distance * ny[wall])
+        private inline fun <R> reflected(x: Double, y: Double, wall: Int, use: (x: Double, y: Double) -> R): R {
+            val distance = walls[wall] - (x * nx[wall] + y * ny[wall])
+            return use(x + 2 * distance * nx[wall], y + 2 * distance * ny[wall])
         }
-        fun paths(source: Int, time: Double): DoubleArray {
-            val p = position(source, time)
-            val out = DoubleArray(3)
-            out[0] = hypot(p.first - .43, p.second + .28)
-            for (wall in 0..1) {
-                val image = reflected(p, wall)
-                out[wall + 1] = hypot(image.first - .43, image.second + .28)
-            }
-            return out
+        fun position(source: Int, time: Double): Pair<Double, Double> = located(source, time) { x, y -> Pair(x, y) }
+        /** Direct and two reflected path lengths, written into [out]. */
+        fun paths(source: Int, time: Double, out: DoubleArray = DoubleArray(3)): DoubleArray = located(source, time) { x, y ->
+            out[0] = hypot(x - .43, y + .28)
+            for (wall in 0..1) out[wall + 1] = reflected(x, y, wall) { ix, iy -> hypot(ix - .43, iy + .28) }
+            out
         }
         fun cueArrival(source: Int, player: Int, emitted: Double, wall: Int): Double {
-            val image = reflected(position(source, emitted), wall)
+            val image = located(source, emitted) { x, y -> reflected(x, y, wall) { ix, iy -> Pair(ix, iy) } }
             var arrival = emitted
             repeat(3) {
                 val listener = position(player, arrival)
@@ -174,11 +173,12 @@ object Circuit {
         fun facing(source: Int, time: Double): Double {
             if (source < 3) return 1.0
             // Changes radiation BEFORE propagation, including its high-frequency loss.
-            val p = position(source, time)
-            val toward = atan2(-.28 - p.second, .43 - p.first)
-            val direction = atan2(p.second, p.first) + .7
-            val depth = (.18 + 5 * rates.requestedOrbitHz).coerceAtMost(1.0)
-            return .5 + .5 * depth * cos(toward - direction + 2 * PI * rates.orbitHz * time)
+            return located(source, time) { x, y ->
+                val toward = atan2(-.28 - y, .43 - x)
+                val direction = atan2(y, x) + .7
+                val depth = (.18 + 5 * rates.requestedOrbitHz).coerceAtMost(1.0)
+                .5 + .5 * depth * cos(toward - direction + 2 * PI * rates.orbitHz * time)
+            }
         }
     }
 
@@ -309,9 +309,16 @@ object Circuit {
         }
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the long loops stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("CIRCUIT render no longer wanted")
+    }
+
     private fun perform(voice: CircuitVoice, macros: Map<String, Float>, velocity: Float,
                         normalize: Boolean, probe: Probe): Report {
         require(velocity.isFinite() && velocity in 0f..1f) { "CIRCUIT velocity must be finite and in 0..1" }
+        stopIfUnwanted()
         val m = settled(voice, macros)
         val p = plan(m)
         val geometry = Geometry(m, voice, p.rates)
@@ -320,19 +327,86 @@ object Circuit {
             if (p.held) p.rates.paceHz else p.rates.requestedPaceHz, p.held, breath)
         val schedule = events(voice, m, p, geometry, phrase, velocity.toDouble(), probe)
         val n = p.frames * Dsp.OVERSAMPLE
-        val sources = Array(7) { FloatArray(n) }
         val canyon = m.getValue("CANYON").toDouble()
+        val cycles = if (p.held) 3 else 1
+        val observed = observe(voice, p, geometry, phrase, schedule, n, breath, canyon, cycles, velocity, probe)
+        val rawInternal = observed.raw
+        val pathFrames = observed.paths
+        val convergenceDifference = observed.convergenceDifference
+        val convergenceEnergy = observed.convergenceEnergy
+
+        val canyonField = Canyon(canyon)
+        val dcA = exp(-2 * PI * 18.0 / INTERNAL_RATE)
+        var previousInput = 0.0
+        var previousOutput = 0.0
+        var peak = 0.0
+        for (i in rawInternal.indices) {
+            if (i % 8192 == 0) stopIfUnwanted()
+            val x = rawInternal[i].toDouble()
+            val sound = x + canyonField.tick(x)
+            val filtered = sound - previousInput + dcA * previousOutput
+            previousInput = sound
+            previousOutput = filtered
+            rawInternal[i] = filtered.toFloat()
+            peak = max(peak, abs(filtered))
+        }
+        val recoveries = observed.tubeRecoveries + canyonField.recoveries
+        var evidence: LoopEvidence? = null
+        val raw: FloatArray
+        if (p.held) {
+            stopIfUnwanted()
+            // The two exported cycles are read straight out of the three, not copied out first.
+            val decimated = cyclicDecimate(rawInternal, n)
+            stopIfUnwanted()
+            val seam = Keys.seamError(decimated, p.frames)
+            var difference = 0.0
+            var energy = 0.0
+            for (i in 0 until p.frames) {
+                val a = decimated[i].toDouble()
+                val b = decimated[i + p.frames].toDouble()
+                difference += (a - b) * (a - b)
+                energy += b * b
+            }
+            val convergence = max(difference / max(energy, 1e-30), convergenceDifference / max(convergenceEnergy, 1e-30))
+            evidence = LoopEvidence(if (energy < 1e-20) 0.0 else seam, convergence, cycles)
+            check(evidence.seamError < 1e-3 && convergence < 1e-3) { "CIRCUIT held state did not converge: $evidence" }
+            raw = decimated.copyOfRange(p.frames, 2 * p.frames)
+        } else {
+            stopIfUnwanted()
+            raw = Dsp.decimate(rawInternal, Dsp.RATE)
+            Dsp.fadeTail(raw)
+        }
+        stopIfUnwanted()
+        val out = raw.copyOf()
+        if (normalize) Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET, ceiling = .99f)
+        return Report(Snip(out, channels = 1, sampleRate = Dsp.RATE), raw, schedule, pathFrames,
+            p.rates, peak, recoveries, evidence)
+    }
+
+    /** What [observe] hands back: the observer's 4x mix and what the report needs from the stages behind it. */
+    private class Observed(val raw: FloatArray, val paths: List<PathFrame>, val convergenceDifference: Double,
+                           val convergenceEnergy: Double, val tubeRecoveries: Int)
+
+    /**
+     * The breath sources, the players' gestures and their paths to the observer. Only the observed
+     * mix leaves: the seven 4x source buffers (about 75 MiB in a held render) are unreachable once this
+     * returns, before the canyon pass and the decimation allocate.
+     */
+    private fun observe(voice: CircuitVoice, p: Plan, geometry: Geometry, phrase: CircuitPhrase, schedule: List<Event>,
+                        n: Int, breath: Double, canyon: Double, cycles: Int, velocity: Float, probe: Probe): Observed {
+        val sources = Array(7) { FloatArray(n) }
         val tubes = Array(3) { Tube(p.frequency, it, breath, voice) }
         val radiation = DoubleArray(3)
         var convergenceDifference = 0.0
         var convergenceEnergy = 0.0
-        val cycles = if (p.held) 3 else 1
         val returnDelay = IntArray(3) { (geometry.cueArrival(it, it, 0.0, 0) * INTERNAL_RATE).roundToInt() }
         val accents = schedule.filter { it.source == 1 }
         val prior = DoubleArray(3)
         for (cycle in 0 until cycles) {
+            stopIfUnwanted()
             var accentIndex = 0
             for (i in 0 until n) {
+                if (i % 8192 == 0) stopIfUnwanted()
                 val t = i.toDouble() / INTERNAL_RATE
                 val release = min(p.phraseSeconds, probe.inputOffSeconds ?: Double.POSITIVE_INFINITY)
                 val envelope = if (p.held && probe.inputOffSeconds == null) 1.0 else {
@@ -384,8 +458,11 @@ object Circuit {
 
         // Stable player identity: pitch, tempo and geometry change the performance,
         // not the throat or material noise chosen afresh at every event timestamp.
+        // Each gesture is added in full before the next starts, so one set of buffers serves them all.
+        val gestureBuffers = CircuitInstruments.Buffers()
         for (event in schedule) {
             if (event.source < 3 || event.energy == 0.0) continue
+            stopIfUnwanted()
             val wave = CircuitInstruments.gesture(CircuitInstruments.Kind.valueOf(event.kind), p.frequency,
                 INTERNAL_RATE, event.energy, Dsp.seedFor("CIRCUIT-PLAYER", voice, event.source,
                     if (event.source == 6) "vocal" else event.kind,
@@ -393,7 +470,8 @@ object Circuit {
                 poweredSeconds = probe.inputOffSeconds?.let { max(0.0, it - event.timeSeconds) },
                 // Materials borrow the ongoing breath at the force input. Their
                 // passive modes and tract keep decaying after that force settles.
-                excitationAtSeconds = { age -> .65 + .35 * phrase.effort(event.timeSeconds + age) })
+                excitationAtSeconds = { age -> .65 + .35 * phrase.effort(event.timeSeconds + age) },
+                buffers = gestureBuffers)
             val start = (event.timeSeconds * INTERNAL_RATE).roundToInt()
             for (k in wave.indices) {
                 val at = start + k
@@ -423,25 +501,29 @@ object Circuit {
         val pathFrames = ArrayList<PathFrame>()
         for (source in 0..6) {
             if (probe.solo != null && probe.solo != source) continue
+            stopIfUnwanted()
             val low = DoubleArray(3)
-            var delays = geometry.paths(source, 0.0).map { it * INTERNAL_RATE / SPEED_OF_SOUND }.toDoubleArray()
-            var distances = geometry.paths(source, 0.0)
-            var delaySteps = DoubleArray(3)
-            var distanceSteps = DoubleArray(3)
+            val delays = geometry.paths(source, 0.0).map { it * INTERNAL_RATE / SPEED_OF_SOUND }.toDoubleArray()
+            val distances = geometry.paths(source, 0.0)
+            // Rewritten in full, path by path, at every control block before the samples read them.
+            val future = DoubleArray(3)
+            val delaySteps = DoubleArray(3)
+            val distanceSteps = DoubleArray(3)
             var facing = geometry.facing(source, 0.0)
             var facingStep = 0.0
-            var coefficients = DoubleArray(3)
+            val coefficients = DoubleArray(3)
             for (i in rawInternal.indices) {
+                if (i % 8192 == 0) stopIfUnwanted()
                 val at = i % n
                 val t = at.toDouble() / INTERNAL_RATE
                 if (i % CONTROL_BLOCK == 0) {
-                    val future = geometry.paths(source, t + CONTROL_BLOCK.toDouble() / INTERNAL_RATE)
-                    delaySteps = DoubleArray(3) { (future[it] * INTERNAL_RATE / SPEED_OF_SOUND - delays[it]) / CONTROL_BLOCK }
-                    distanceSteps = DoubleArray(3) { (future[it] - distances[it]) / CONTROL_BLOCK }
+                    geometry.paths(source, t + CONTROL_BLOCK.toDouble() / INTERNAL_RATE, future)
+                    for (path in 0..2) delaySteps[path] = (future[path] * INTERNAL_RATE / SPEED_OF_SOUND - delays[path]) / CONTROL_BLOCK
+                    for (path in 0..2) distanceSteps[path] = (future[path] - distances[path]) / CONTROL_BLOCK
                     facingStep = (geometry.facing(source, t + CONTROL_BLOCK.toDouble() / INTERNAL_RATE) - facing) / CONTROL_BLOCK
-                    coefficients = DoubleArray(3) { path ->
+                    for (path in 0..2) {
                         val cutoff = if (path == 0) 1700 + 4000 * facing else 3400 / (1 + distances[path] * .028)
-                        1 - exp(-2 * PI * cutoff / INTERNAL_RATE)
+                        coefficients[path] = 1 - exp(-2 * PI * cutoff / INTERNAL_RATE)
                     }
                     if (probe.recordPaths && i < n && at % (CONTROL_BLOCK * 32) == 0) {
                         val pos = geometry.position(source, t)
@@ -462,48 +544,7 @@ object Circuit {
                 facing += facingStep
             }
         }
-
-        val canyonField = Canyon(canyon)
-        val dcA = exp(-2 * PI * 18.0 / INTERNAL_RATE)
-        var previousInput = 0.0
-        var previousOutput = 0.0
-        var peak = 0.0
-        for (i in rawInternal.indices) {
-            val x = rawInternal[i].toDouble()
-            val sound = x + canyonField.tick(x)
-            val filtered = sound - previousInput + dcA * previousOutput
-            previousInput = sound
-            previousOutput = filtered
-            rawInternal[i] = filtered.toFloat()
-            peak = max(peak, abs(filtered))
-        }
-        val recoveries = tubes.sumOf { it.recoveries } + canyonField.recoveries
-        var evidence: LoopEvidence? = null
-        val raw: FloatArray
-        if (p.held) {
-            val two = rawInternal.copyOfRange(n, rawInternal.size)
-            val decimated = cyclicDecimate(two)
-            val seam = Keys.seamError(decimated, p.frames)
-            var difference = 0.0
-            var energy = 0.0
-            for (i in 0 until p.frames) {
-                val a = decimated[i].toDouble()
-                val b = decimated[i + p.frames].toDouble()
-                difference += (a - b) * (a - b)
-                energy += b * b
-            }
-            val convergence = max(difference / max(energy, 1e-30), convergenceDifference / max(convergenceEnergy, 1e-30))
-            evidence = LoopEvidence(if (energy < 1e-20) 0.0 else seam, convergence, cycles)
-            check(evidence.seamError < 1e-3 && convergence < 1e-3) { "CIRCUIT held state did not converge: $evidence" }
-            raw = decimated.copyOfRange(p.frames, 2 * p.frames)
-        } else {
-            raw = Dsp.decimate(rawInternal, Dsp.RATE)
-            Dsp.fadeTail(raw)
-        }
-        val out = raw.copyOf()
-        if (normalize) Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET, ceiling = .99f)
-        return Report(Snip(out, channels = 1, sampleRate = Dsp.RATE), raw, schedule, pathFrames,
-            p.rates, peak, recoveries, evidence)
+        return Observed(rawInternal, pathFrames, convergenceDifference, convergenceEnergy, tubes.sumOf { it.recoveries })
     }
 
     private fun read(source: FloatArray, position: Double, cyclic: Boolean): Double {
@@ -514,12 +555,14 @@ object Circuit {
         return sample(lower) * (1 - fraction) + sample(lower + 1) * fraction
     }
 
-    private fun cyclicDecimate(two: FloatArray): FloatArray {
+    /** Decimates the cycles of [raw] from [from] on as one loop, wrapping its own ends for context. */
+    private fun cyclicDecimate(raw: FloatArray, from: Int): FloatArray {
         // Feed real wrapped context to the FIR; zero padding would notch every loop boundary.
+        val size = raw.size - from
         val pad = 128 * Dsp.OVERSAMPLE
-        val padded = FloatArray(two.size + 2 * pad) { two[Math.floorMod(it - pad, two.size)] }
+        val padded = FloatArray(size + 2 * pad) { raw[from + Math.floorMod(it - pad, size)] }
         val down = Dsp.decimate(padded, Dsp.RATE)
-        return down.copyOfRange(pad / Dsp.OVERSAMPLE, pad / Dsp.OVERSAMPLE + two.size / Dsp.OVERSAMPLE)
+        return down.copyOfRange(pad / Dsp.OVERSAMPLE, pad / Dsp.OVERSAMPLE + size / Dsp.OVERSAMPLE)
     }
 
     /** Four damped branches with an orthogonal scattering matrix and gain strictly below one. */
