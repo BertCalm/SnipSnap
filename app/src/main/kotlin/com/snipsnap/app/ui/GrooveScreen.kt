@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -302,8 +303,14 @@ fun GrooveScreen(
     onTransport: (DockModel.Transport) -> Unit = {},
     /** After every save of the kit's grooves, so the project's beat can follow (`DIRECTION_2026_10.md` §2: the kit-side file still backs the per-kit exports). */
     onBeatWritten: () -> Unit = {},
-    /** READ_GROOVE_NEEDS_KIT's own route, for [EmptyGroove] below: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    /** NO_PROJECT_OPEN's own route, for [EmptyGroove] below: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
+    /** Whether a project is open: with one, the empty face offers + FROM SHELF; without, the shelf. */
+    hasProject: Boolean,
+    /** [EmptyGroove]'s + FROM SHELF: the shelf in pick mode, returning with the kit added to the project. */
+    onAddFromShelf: () -> Unit,
+    /** The pad-less kit's door: PADS, where a pad is filled. No default, for the same reason as [onNavigateKits]. */
+    onNavigatePads: () -> Unit,
     /**
      * Bug fix (tab-switch data loss): FEEL, SWING and the selected program
      * used to be `remember(kitDir)` locals only, so App.kt's bare
@@ -373,7 +380,7 @@ fun GrooveScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyGroove(onNavigateKits)
+        EmptyGroove(hasProject, onAddFromShelf, onNavigateKits)
         return
     }
 
@@ -571,9 +578,10 @@ fun GrooveScreen(
         return
     }
     if (kit.pads.isEmpty()) {
-        // Nothing to record with, groove or no groove — same shelf
-        // treatment as an empty kit list everywhere else in this app.
-        EmptyGroove(onNavigateKits)
+        // Nothing to record with, groove or no groove. The kit IS in the
+        // project, so ADD A KIT would be the wrong ask: it needs pads, and
+        // PADS is where they are filled.
+        EmptyStatePanel(Copy.BEAT_NEEDS_PADS, listOf(EmptyStateRoute("PADS ▸", onNavigatePads)))
         return
     }
 
@@ -858,7 +866,12 @@ fun GrooveScreen(
     LaunchedEffect(playRequest) {
         if (playRequest != lastPlayRequest) {
             lastPlayRequest = playRequest
-            if (!recording && !countingIn) playing = !playing
+            if (!recording && !countingIn) {
+                // A beat with no notes has nothing to start: say so, rather
+                // than let the chip do nothing and the dock stay silent. A
+                // running clock is always allowed to stop.
+                if (!playing && currentClip?.notes.isNullOrEmpty()) onToast(Copy.NOTHING_TO_PLAY) else playing = !playing
+            }
         }
     }
     // What the dock reads: the bar advances with the needle, RECORD shows
@@ -1972,7 +1985,10 @@ fun GrooveScreen(
                             // plays a whole take into a blank grid.
                             liveNotes = take?.notes().orEmpty(),
                         )
-                        else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        // Top-aligned, not centred: the sentence is the page's
+                        // heading, and the controls under it start where it ends
+                        // rather than a screen-height away from it (S4b).
+                        else -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopStart) {
                             TapeText(Copy.EMPTY_GROOVE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
                         }
                     }
@@ -2032,6 +2048,41 @@ fun GrooveScreen(
                             TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
                         }
                     } else {
+                        // RECORD is the one filled button: the way in that needs
+                        // nothing but the pads, and the one every other control
+                        // on this screen exists to feed (the loaded screen's own
+                        // RECORD, below its scroll, is the same button).
+                        PrimaryAction(
+                            label = "● RECORD",
+                            enabled = !busy,
+                            onClick = ::startRecording,
+                        )
+                        // The other ways in, one secondary row: tap it, ring it,
+                        // lay it into a song, or phase it against snips. ORBIT,
+                        // SONG and LOOP need no groove at all, so they belong
+                        // here as much as on the full screen's action rows.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // One name for one editor (J19). This, EDIT STEPS and EDIT
+                            // THIS TAKE were three doors into the same step
+                            // editor, named three different ways, none of them
+                            // naming the program they land on — and the toast
+                            // that follows all three says YOURS. They now say
+                            // where they go: this one starts it from nothing,
+                            // the other two fork into it.
+                            GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
+                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onOrbit()
+                            }
+                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onArrange(swingPercent, feel / 100f, feelTemplate)
+                            }
+                            GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+                                clearJustLanded()
+                                onLoop()
+                            }
+                        }
                         // BARS: how long a from-scratch take runs (J17).
                         //
                         // `recordBars` was a `var` nothing could reassign —
@@ -2064,24 +2115,6 @@ fun GrooveScreen(
                             )
                             GrooveActionButton("▶", scheme, Modifier.weight(1f), enabled = !busy) {
                                 recordBars = LiveRecord.barsAfter(recordBars, 1)
-                            }
-                        }
-                        // Three ways in, side by side: play it, tap it, or ring it.
-                        // ORBIT needs no groove at all, so it belongs here as much
-                        // as on the full screen's action row.
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            GrooveActionButton("● RECORD", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startRecording() }
-                            // One name for one editor (J19). This, EDIT STEPS and EDIT
-                            // THIS TAKE were three doors into the same step
-                            // editor, named three different ways, none of them
-                            // naming the program they land on — and the toast
-                            // that follows all three says YOURS. They now say
-                            // where they go: this one starts it from nothing,
-                            // the other two fork into it.
-                            GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
-                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
-                                clearJustLanded()
-                                onOrbit()
                             }
                         }
                     }
@@ -2548,8 +2581,8 @@ fun GrooveScreen(
 }
 
 @Composable
-private fun EmptyGroove(onNavigateKits: () -> Unit) {
-    EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+private fun EmptyGroove(hasProject: Boolean, onAddFromShelf: () -> Unit, onNavigateKits: () -> Unit) {
+    NoKitPanel(Copy.READ_GROOVE_NEEDS_KIT, hasProject, onAddFromShelf, onNavigateKits)
 }
 
 /**
@@ -2691,17 +2724,26 @@ private fun GrooveActionButton(
 ) {
     Box(
         modifier
-            .height(Layout.MIN_HIT_TARGET.dp)
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick),
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+        // Two lines, centred: four of these share the empty BEAT's one
+        // secondary row, and START YOURS is wider than a quarter of a
+        // phone — it wraps rather than ellipsising to START YOU….
+        TapeText(
+            label,
+            TapeType.pixel.copy(textAlign = TextAlign.Center),
+            if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape,
+            maxLines = 2,
+        )
     }
 }
 

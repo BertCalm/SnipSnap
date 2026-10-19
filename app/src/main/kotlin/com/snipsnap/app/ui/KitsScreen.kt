@@ -240,6 +240,19 @@ fun KitsScreen(
             dubStatuses[it.dir.path]
         }
 
+    // The footer's one filled button is the shelf's unit of work (SH1): once
+    // there are projects to open, that is NEW PROJECT ▸, and NEW KIT ▸
+    // STARTERS steps down to an outline row above the doors. At zero projects
+    // — the first run — STARTERS stays the filled button, as it always was:
+    // it is the only thing that makes the first project. Not mid-pick either:
+    // a SNIPS → PAD, BREED or + FROM SHELF pick is choosing a kit, the
+    // projects section is not drawn, and EMPTY_SHELF_FOR_ASSIGN sends the
+    // user to NEW KIT below. And not on a shelf with no kits, where the
+    // project list is not drawn (the empty panel is) and a kit is what is
+    // missing.
+    val projectFirst = projects.isNotEmpty() && kits.isNotEmpty() &&
+        !assigningSnip && breedingFrom == null && addingTo == null
+
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
     // up regardless of how many rows are armed at once.
@@ -434,7 +447,7 @@ fun KitsScreen(
                                 Copy.FIRST_RUN_PLACES_NOTE,
                                 TapeType.pixelSmall,
                                 scheme.lcdInk.tape,
-                                maxLines = 2,
+                                maxLines = 3,
                             )
                         }
                     }
@@ -461,14 +474,18 @@ fun KitsScreen(
                         items(projects, key = { "project:" + it.dir.name }) { row ->
                             ProjectRow(row, busy, onOpenProject)
                         }
-                        item(key = "projects-new") {
-                            ActionButton(
-                                "NEW PROJECT ▸",
-                                scheme,
-                                enabled = !busy,
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = onNewProject,
-                            )
+                        // The shelf never shows two: with projects to open the
+                        // button is the pinned primary below the list.
+                        if (!projectFirst) {
+                            item(key = "projects-new") {
+                                ActionButton(
+                                    "NEW PROJECT ▸",
+                                    scheme,
+                                    enabled = !busy,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = onNewProject,
+                                )
+                            }
                         }
                         item(key = "kits-header") {
                             TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
@@ -554,39 +571,46 @@ fun KitsScreen(
                 }
             }
 
-            // Renamed from "FRESH TAPE": on a cold open this reads as
-            // "start recording" (the persona walkthroughs' single most
-            // costly misread), when what it actually opens is a menu of
-            // starter kits — most of them pre-composed, only BLANK/START
-            // EMPTY genuinely empty. The label now predicts that.
-            PrimaryAction(
-                // 18 chars, deliberately: this sits in a single-line
-                // PrimaryAction whose longest proven-safe label is 22
-                // ("WRITING — DO NOT EJECT"), and at 200% font scale a
-                // longer one ellipsizes. "PICK A STARTER" was the honest
-                // subtitle but pushed it to 24 and would have truncated
-                // mid-word; the menu it opens says PICK A STARTER as its
-                // own heading, so the word isn't lost, just moved to where
-                // it always fits.
-                label = if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
-                enabled = !busy,
-                onClick = { menuOpen = true },
-            )
+            if (projectFirst) {
+                PrimaryAction(
+                    label = "NEW PROJECT ▸",
+                    enabled = !busy,
+                    onClick = onNewProject,
+                )
+                // Outline, one step down: a kit is made inside a project more
+                // often than the other way round, and the menu it opens still
+                // says PICK A STARTER as its own heading.
+                ActionButton(
+                    if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
+                    scheme,
+                    enabled = !busy,
+                    accessibilityLabel = "NEW KIT ▸ STARTERS",
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { menuOpen = true },
+                )
+            } else {
+                // Renamed from "FRESH TAPE": on a cold open this reads as
+                // "start recording" (the persona walkthroughs' single most
+                // costly misread), when what it actually opens is a menu of
+                // starter kits — most of them pre-composed, only BLANK/START
+                // EMPTY genuinely empty. The label now predicts that.
+                PrimaryAction(
+                    // 18 chars, deliberately: this sits in a single-line
+                    // PrimaryAction whose longest proven-safe label is 22
+                    // ("WRITING — DO NOT EJECT"), and at 200% font scale a
+                    // longer one ellipsizes. "PICK A STARTER" was the honest
+                    // subtitle but pushed it to 24 and would have truncated
+                    // mid-word; the menu it opens says PICK A STARTER as its
+                    // own heading, so the word isn't lost, just moved to where
+                    // it always fits.
+                    label = if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
+                    enabled = !busy,
+                    onClick = { menuOpen = true },
+                )
+            }
             // The capture pair (LISTEN / APP AUDIO, then SNIP / STOP) sat here
             // under NEW KIT until the dock took it (plan §1): capture state is
             // on every screen now, not only the shelf.
-            // SNIPS: always openable, even with zero snips yet (its own
-            // empty state says so) — unlike BACKUP (now behind TOOLS
-            // below), this isn't gated on the shelf holding anything. A
-            // sibling library reached for often, not a tool, so it stays
-            // top-level rather than moving behind the new door.
-            ActionButton(
-                "SNIPS ▸ EVERY CATCH, ONE LIST",
-                scheme,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onSnips,
-            )
             // LOOP: the six-track phasing grid, filled from SNIPS' own
             // → LOOP. Gated on a track actually holding something, the way
             // DELETED KITS below is gated on the bin — never a door onto an
@@ -603,7 +627,7 @@ fun KitsScreen(
             }
             // BIN: deleted kits and deleted snips, two lists on one bench (plan
             // §3.1). Gated on a bin actually holding something — unlike
-            // SNIPS/BACKUP above, this is never shown merely dimmed; a user who
+            // SNIPS/BACKUP below, this is never shown merely dimmed; a user who
             // has never deleted anything sees no door to an empty room at all
             // (locked behavior, Task 2 of the bin-restore plan).
             if (binnedCount > 0) {
@@ -615,19 +639,40 @@ fun KitsScreen(
                     onClick = onBin,
                 )
             }
-            // TOOLS (oilslick followups): BACKUP, CHOP ALL, X-RAY and
-            // DOUBLES nested behind one door — see [ToolsMenu]'s own KDoc.
-            // These four are the shelf's utility rows, not "make
-            // something"/library actions, so they're the ones that moved;
-            // NEW KIT/LISTEN/INSIDE/SNIPS and the conditional rows above
-            // all stay top-level per the owner's ruling.
-            ActionButton(
-                "TOOLS ▸ BACKUP, CHOP ALL, X-RAY, DOUBLES",
-                scheme,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { toolsMenuOpen = true },
-            )
+            // SNIPS and TOOLS, two chips in one row (SH1): two full-width rows
+            // for two doors that are each a word was 56 dp of the shelf for
+            // their descriptions. The row shows the word and its arrow; the
+            // accessible names keep the full descriptions, exactly as they
+            // were, because tests and uiautomator walks read those.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // SNIPS: always openable, even with zero snips yet (its own
+                // empty state says so) — unlike BACKUP (now behind TOOLS),
+                // this isn't gated on the shelf holding anything. A sibling
+                // library reached for often, not a tool, so it stays
+                // top-level rather than moving behind the other door.
+                ActionButton(
+                    "SNIPS ▸",
+                    scheme,
+                    enabled = !busy,
+                    accessibilityLabel = "SNIPS ▸ EVERY CATCH, ONE LIST",
+                    modifier = Modifier.weight(1f),
+                    onClick = onSnips,
+                )
+                // TOOLS (oilslick followups): BACKUP, CHOP ALL, X-RAY and
+                // DOUBLES nested behind one door — see [ToolsMenu]'s own KDoc.
+                // These four are the shelf's utility rows, not "make
+                // something"/library actions, so they're the ones that moved;
+                // NEW KIT/LISTEN/INSIDE/SNIPS and the conditional rows above
+                // all stay top-level per the owner's ruling.
+                ActionButton(
+                    "TOOLS ▸",
+                    scheme,
+                    enabled = !busy,
+                    accessibilityLabel = "TOOLS ▸ BACKUP, CHOP ALL, X-RAY, DOUBLES",
+                    modifier = Modifier.weight(1f),
+                    onClick = { toolsMenuOpen = true },
+                )
+            }
         }
 
         if (menuOpen) {
@@ -1161,7 +1206,12 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
     }
 }
 
-/** The primary action per the handoff: 52dp, rimmed, dark fill. */
+/**
+ * The primary action per the handoff: 52dp, rimmed, dark fill. Disabled it
+ * is not the same button dimmed: the accent rim and the dark fill are what
+ * say "tap me", so both go, and it draws as a disabled [ActionButton] does
+ * (the raised bevel, `ink3` text) at the primary's height.
+ */
 @Composable
 fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
     val scheme = LocalScheme.current
@@ -1175,8 +1225,13 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(Layout.PRIMARY_ACTION_H.dp)
-            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-            .then(rim)
+            .then(
+                if (enabled) {
+                    Modifier.background(scheme.lcd.tape, RoundedCornerShape(6.dp)).then(rim)
+                } else {
+                    Modifier.raisedBevel(scheme)
+                },
+            )
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -1187,7 +1242,7 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
         TapeText(
             label,
             TapeType.displayBig,
-            if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.5f),
+            if (enabled) scheme.lcdInk.tape else scheme.ink3.tape,
         )
     }
 }

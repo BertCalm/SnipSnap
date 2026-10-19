@@ -117,6 +117,8 @@ class PersonalityTest {
         // SEND TO PADS reports the real slice count.
         assertEquals("7 SLICES ON THE PADS. CHOKE GROUP SET.", Copy.sentToPads(7, chokeSet = true))
         assertEquals("3 SLICES ON THE PADS.", Copy.sentToPads(3, chokeSet = false))
+        // The kit switcher names the kit it put on the grid, in capitals.
+        assertEquals("ON THE GRID: FUNK ROOM.", Copy.onTheGrid("Funk Room"))
         // A single slice sent to the pads is singular too — sentToPads used
         // to say "1 SLICES" (and so did instantKit, which routes through it).
         assertEquals("1 SLICE ON THE PADS.", Copy.sentToPads(1, chokeSet = false))
@@ -490,13 +492,18 @@ class PersonalityTest {
         )
         assertTrue(note.endsWith("."), "still a sentence the screen says: $note")
 
-        // It names no door, which is the rule its own KDoc sets: NEW KIT ▸
-        // STARTERS is already the primary action directly under this
-        // panel, and naming it here would be a third copy of a control
-        // twice on screen.
+        // It names no door of this screen, which is the rule its own KDoc
+        // sets: NEW KIT ▸ STARTERS is already the primary action directly
+        // under this panel, and naming it here would be a third copy of a
+        // control twice on screen. The one door it does name, LISTEN · MIC,
+        // is the dock's, and is checked below against the dock's own word.
         for (door in listOf("STARTERS", "NEW KIT", "INSTANT KIT", "CATCH")) {
             assertFalse(note.contains(door), "the note names a door it does not have to name: $note")
         }
+        // ...and the door it does name is the dock's, in the dock's own word:
+        // a note pointing at a LISTEN · MIC the dock had renamed would send
+        // a new user looking for a control that is not there.
+        assertTrue(Places.LISTEN in note, "the note does not name the dock's ${Places.LISTEN}: $note")
 
         // The doors it declines to name are named where the inventory
         // lives instead. CATCH has had a line since HELP was written;
@@ -574,7 +581,7 @@ class PersonalityTest {
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
-        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
+        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
         // BREED's button label (glyph sweep): now a constant destination
         // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
@@ -638,7 +645,7 @@ class PersonalityTest {
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
         // The status bar's third cell resting label with no kit open - a
-        // standing chip value like CARD_NONE above, not a toast said once.
+        // standing chip value like CARD_PICKED above, not a toast said once.
         "NO_KIT_STATUS",
     )
 

@@ -41,6 +41,7 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Look
 import com.snipsnap.shell.Places
@@ -323,5 +324,27 @@ fun EmptyStatePanel(
                 ActionButton(route.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = route.onClick)
             }
         }
+    }
+}
+
+/**
+ * The empty face of a place that needs a kit (BEAT, OUT, ORBIT): [need] is
+ * the place's own sentence, in project words, when a project is open, with
+ * `+ FROM SHELF` (the switcher's own pick mode) as its door; with no
+ * project at all the page says that once instead ([Copy.NO_PROJECT_OPEN])
+ * and the door is `SHELF ▸`, where a project is opened or started.
+ */
+@Composable
+fun NoKitPanel(
+    need: String,
+    hasProject: Boolean,
+    onAddFromShelf: () -> Unit,
+    onNavigateKits: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (hasProject) {
+        EmptyStatePanel(need, listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf)), modifier)
+    } else {
+        EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)), modifier)
     }
 }
