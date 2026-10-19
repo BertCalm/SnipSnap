@@ -609,15 +609,80 @@ object SynthKits {
      * Every pad carries the model, player gesture and native velocity in its recipe.
      * Finite notes are TONAL; Held Effort is a settled LOOP for repeated playback.
      */
-    fun embouchure(): List<ArrangedPad?> {
-        val lead = EmbouchurePresets.all().first { it.name == "Leaning Reed" }
+    fun embouchure(): List<ArrangedPad?> = embouchureStarterPatches().map(::embouchurePad)
+
+    /** The original starter layout remains fixed when the selectable factory roster grows. */
+    fun embouchureStarterPatches(): List<EmbouchurePatch> {
+        val initial = EmbouchurePresets.initial()
+        val lead = initial.single { it.name == "Leaning Reed" }
         val notes = PENTATONIC.take(8).mapIndexed { i, semitone ->
             lead.copy(name = "Reed ${i + 1}", midi = Embouchure.rootMidi(lead.voice) + semitone,
                 macros = lead.macros + ("TUNE" to 0f))
         }
-        return (notes + EmbouchurePresets.all()).map {
-            pad(it, Embouchure.drumClassFor(it.voice, it.macros)).copy(displayName = it.name)
+        return notes + initial
+    }
+
+    private fun embouchurePad(patch: EmbouchurePatch): ArrangedPad =
+        pad(patch, Embouchure.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
+
+    /** Twelve authored presets followed by four complementary notes; every render stays dry. */
+    data class EmbouchureFactoryBank(
+        val id: String,
+        val name: String,
+        val presetPatches: List<EmbouchurePatch>,
+        val notePatches: List<EmbouchurePatch>,
+    ) {
+        init {
+            require(presetPatches.size == 12 && notePatches.size == 4) {
+                "EMBOUCHURE factory banks contain twelve presets and four keyed notes"
+            }
+            require((presetPatches + notePatches).all { it.model == Embouchure.MODEL_VERSION }) {
+                "EMBOUCHURE factory banks use the current renderer model"
+            }
         }
+
+        val patches: List<EmbouchurePatch> get() = presetPatches + notePatches
+        val noteSlots: List<Int> get() = (13..16).toList()
+        fun render(): List<ArrangedPad?> = patches.map { SynthKits.embouchurePad(it) }
+    }
+
+    /**
+     * Three authored factory banks cover each of the thirty-six presets exactly once.
+     * Paired voices keep their own gesture, note and velocity; pads 13–16 add root/fifth
+     * and minor-third/seventh answers in C minor pentatonic, with explicit finite notes.
+     * These additional exports leave the original FRESH TAPE starter unchanged.
+     */
+    fun embouchureFactoryBanks(): List<EmbouchureFactoryBank> {
+        val presets = EmbouchurePresets.all()
+        require(presets.size == 36 && presets.map { it.name }.distinct().size == 36) {
+            "EMBOUCHURE factory banks require thirty-six distinct authored presets"
+        }
+        val initial = EmbouchurePresets.initial().associateBy { it.name }
+        fun note(preset: String, name: String, semitone: Int): EmbouchurePatch {
+            val source = initial.getValue(preset)
+            return source.copy(name = name, midi = Embouchure.rootMidi(source.voice) + semitone,
+                macros = source.macros + mapOf("TUNE" to 0f, "HOLD" to 0f))
+        }
+        fun bank(id: String, name: String, voices: List<EmbouchureVoice>, notes: List<EmbouchurePatch>) =
+            EmbouchureFactoryBank(id, name,
+                voices.flatMap { voice -> presets.filter { it.voice == voice } }, notes)
+        return listOf(
+            bank("embouchure-reeds-air", "Embouchure Reeds and Air",
+                listOf(EmbouchureVoice.REED, EmbouchureVoice.WHISTLE), listOf(
+                    note("Leaning Reed", "Reed Root C3", 0), note("Leaning Reed", "Reed Fifth G3", 7),
+                    note("Narrow Air", "Air Third Eb4", 3), note("Narrow Air", "Air Seventh Bb4", 10),
+                )),
+            bank("embouchure-brass-bass", "Embouchure Brass and Bass",
+                listOf(EmbouchureVoice.BRASS, EmbouchureVoice.BASS), listOf(
+                    note("Breath Pocket", "Bass Root C2", 0), note("Breath Pocket", "Bass Fifth G2", 7),
+                    note("Muted Bell", "Brass Third Eb3", 3), note("Muted Bell", "Brass Seventh Bb3", 10),
+                )),
+            bank("embouchure-bow-soft", "Embouchure Bow and Soft",
+                listOf(EmbouchureVoice.BOW, EmbouchureVoice.SOFT), listOf(
+                    note("Relaxed Bow", "Bow Root C3", 0), note("Relaxed Bow", "Bow Fifth G3", 7),
+                    note("Soft Entry", "Soft Third Eb3", 3), note("Soft Entry", "Soft Seventh Bb3", 10),
+                )),
+        )
     }
 
     /**

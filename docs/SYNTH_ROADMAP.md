@@ -362,8 +362,12 @@ sample-for-sample. Model 1 is frozen for existing recipes, including JSON that
 omits its model field. The audition includes original/revised comparisons at
 identical settings and separate listening notes for each model.
 
-`SynthKits.embouchure()` carries eight REED pentatonic notes and the eight dry
-presets, all with recipes. The `embouchure` FRESH TAPE starter, normal SYNTH
+The factory catalog has 36 presets: 8 REED, 6 BRASS, 6 BASS, 4 WHISTLE, 6 BOW and 6 SOFT.
+The accepted initial eight retain their recipes, names, order and Model 2 sound.
+`SynthKits.embouchure()` keeps eight REED pentatonic notes and those original
+eight dry presets, all with recipes. Three additional sixteen-pad factory banks
+pair REED/WHISTLE, BRASS/BASS and BOW/SOFT, each with twelve presets and four
+complementary keyed notes. The `embouchure` FRESH TAPE starter, normal SYNTH
 picker, user presets, native velocity variants, CLI rendering and host MPC
 export use the same source. Finite notes are TONAL, HOLD is LOOP.
 `./gradlew :synth:generateEmbouchureAudition` writes the listening pack under
@@ -371,9 +375,11 @@ export use the same source. Finite notes are TONAL, HOLD is LOOP.
 routing and audition conventions; the attached brief is preserved under
 [engineering/embouchure-engine-spec.md](engineering/embouchure-engine-spec.md).
 The separate edited Gyre contract mentioned by that brief was not provided;
-current sibling APIs govern this port. **Owner sonic approval is outstanding**;
-expansion toward 36 presets, device checks and release naming wait for their
-respective acceptance decisions.
+current sibling APIs govern this port. The owner accepted Model 2's voices and
+controls and authorized the 36-preset expansion. The new presets still need their
+listening verdict. Android/MPC hardware playback and release naming remain
+separate checks; the drum exporter requires manually enabling repeat for HOLD
+samples.
 
 ### MURMUR — FM articulation through a moving mouth
 
