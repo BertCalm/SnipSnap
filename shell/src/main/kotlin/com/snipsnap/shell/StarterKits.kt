@@ -215,6 +215,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.murmur() },
         Starter(
+            "scanned-chain", "SCANNED CHAIN",
+            "Moving shapes become plucks, metal and growing tones in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.scannedChain() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

@@ -14,6 +14,10 @@ package com.snipsnap.synth
 object Presets {
 
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
+        ScannedChainPatch.ENGINE -> {
+            val v = ScannedChainVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ScannedChainPresets.forVoice(v)
+        }
         ThumpPatch.ENGINE -> {
             val v = ThumpVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThumpPresets.forVoice(v)
@@ -210,5 +214,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + MurmurPresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + MurmurPresets.all() + ScannedChainPresets.all()
 }

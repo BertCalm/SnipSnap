@@ -23,6 +23,7 @@ import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.ScannedChainPatch
 import java.io.File
 import java.util.Locale
 
@@ -334,10 +335,12 @@ object UserPresets {
     // ---- the desk: promotion into the roster ----
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
-    fun voiceEnum(engine: String): String = engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
+    fun voiceEnum(engine: String): String = if (engine.equals(ScannedChainPatch.ENGINE, ignoreCase = true)) "ScannedChainVoice"
+        else engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
 
     /** The table a roster line pastes into, under [ROSTER_DIR]: `ThumpPresets.kt`. */
-    fun rosterFile(engine: String): String = engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
+    fun rosterFile(engine: String): String = if (engine.equals(ScannedChainPatch.ENGINE, ignoreCase = true)) "ScannedChainPresets.kt"
+        else engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
 
     /**
      * [patch] as the line its engine's table is written in, using its
@@ -357,9 +360,16 @@ object UserPresets {
      * the JSON constructor. SPOOL writes its complete machine constructor, including
      * recording roster and HOLD memory mode. RELAY retains its complete source and
      * phrase schedules. MURMUR keeps its root, velocity and complete
-     * operator/formant/envelope definition. Names and embedded JSON are escaped Kotlin string literals.
+     * operator/formant/envelope definition. SCANNED CHAIN keeps its saved 128-point shape,
+     * complete physical configuration, note, velocity and render-model version through JSON.
+     * Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is ScannedChainPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "ScannedChainPatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is LacquerPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
