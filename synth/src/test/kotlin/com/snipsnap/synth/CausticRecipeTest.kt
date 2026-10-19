@@ -35,7 +35,7 @@ class CausticRecipeTest {
         assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(changed("version", JsonValue.Num(2.0))) }
         assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(changed("version", JsonValue.Num(1.5))) }
         assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(changed("variant", JsonValue.Str("ORBIT"))) }
-        assertFailsWith<IllegalArgumentException> { CausticRecipe.fromJsonValue(changed("model", JsonValue.Num(2.0))) }
+        assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(changed("model", JsonValue.Num(2.0))) }
         val config = original.entries.getValue("configuration").obj()
         for (key in listOf("midi", "rayCount")) {
             val fractional = JsonValue.Obj(LinkedHashMap(config).also { it[key] = JsonValue.Num(60.5) })
@@ -43,6 +43,36 @@ class CausticRecipeTest {
         }
         assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(JsonValue.Obj(original.entries - "variant")) }
         assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(changed("futureControl", JsonValue.Num(.5))) }
+    }
+
+    @Test fun `model two characters are explicit and replay every saved field`() {
+        for (character in Caustic.Character.entries) {
+            val recipe = CausticRecipe(Caustic.Config(model = 2, character = character,
+                source = .5, focus = .19, seconds = .12, midi = 57, velocity = .6))
+            val text = recipe.toJsonText()
+            val restored = CausticRecipe.fromJsonText(text)
+            assertEquals(recipe, restored)
+            assertEquals(text, restored.toJsonText())
+            assertEquals(character.name, restored.toJsonValue().entries.getValue("configuration").obj().getValue("character").str())
+            assertContentEquals(recipe.inspect().raw, restored.inspect().raw)
+        }
+    }
+
+    @Test fun `model one JSON shape remains backward compatible and version fields stay explicit`() {
+        val recipe = CausticRecipe(Caustic.Config(model = 1))
+        val value = recipe.toJsonValue()
+        assertEquals(false, "character" in value.entries.getValue("configuration").obj())
+        assertEquals(recipe, CausticRecipe.fromJsonValue(value))
+        assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(JsonValue.Obj(value.entries - "model")) }
+        assertFailsWith<IllegalArgumentException> {
+            CausticRecipe(Caustic.Config(model = 1, character = Caustic.Character.REED))
+        }
+        val rich = CausticRecipe(Caustic.Config(model = 2)).toJsonValue()
+        val controls = rich.entries.getValue("configuration").obj()
+        val malformed = JsonValue.Obj(LinkedHashMap(rich.entries).also {
+            it["configuration"] = JsonValue.Obj(LinkedHashMap(controls).also { c -> c["character"] = JsonValue.Str("UNKNOWN") })
+        })
+        assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(malformed) }
     }
 
     @Test fun `invalid render parameters are refused before a recipe can be saved`() {

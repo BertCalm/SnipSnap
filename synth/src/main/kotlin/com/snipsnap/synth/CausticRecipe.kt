@@ -16,15 +16,21 @@ data class CausticRecipe(
     val config: Caustic.Config = Caustic.Config(),
     val variant: Caustic.Mode = Caustic.Mode.FULL,
 ) {
+    init {
+        require(config.model != 1 || config.character == Caustic.Character.BODY) {
+            "CAUSTIC model 1 has no selectable character"
+        }
+    }
+
     fun inspect(cancelled: () -> Boolean = { false }): Caustic.Rendered =
         Caustic.inspect(config, variant, cancelled)
 
     fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
         "format" to JsonValue.Str(FORMAT),
-        "version" to JsonValue.Num(VERSION.toDouble()),
+        "version" to JsonValue.Num(if (config.model == 1) 1.0 else VERSION.toDouble()),
         "model" to JsonValue.Num(config.model.toDouble()),
         "variant" to JsonValue.Str(variant.name),
-        "configuration" to JsonValue.Obj(linkedMapOf(
+        "configuration" to JsonValue.Obj(linkedMapOf<String, JsonValue>(
             "source" to JsonValue.Num(config.source),
             "focus" to JsonValue.Num(config.focus),
             "midi" to JsonValue.Num(config.midi.toDouble()),
@@ -33,14 +39,14 @@ data class CausticRecipe(
             "aperture" to JsonValue.Num(config.aperture),
             "delayCycles" to JsonValue.Num(config.delayCycles),
             "rayCount" to JsonValue.Num(config.rayCount.toDouble()),
-        )),
+        ).also { if (config.model >= 2) it["character"] = JsonValue.Str(config.character.name) }),
     ))
 
     fun toJsonText(): String = Json.write(toJsonValue())
 
     companion object {
         const val FORMAT = "snipsnap.caustic.static-prototype"
-        const val VERSION = 1
+        const val VERSION = 2
 
         fun fromJsonText(text: String): CausticRecipe = fromJsonValue(Json.parse(text))
 
@@ -48,13 +54,20 @@ data class CausticRecipe(
             val root = value.obj()
             requireKeys(root, setOf("format", "version", "model", "variant", "configuration"), "recipe")
             if (root.getValue("format").str() != FORMAT) throw JsonException("not a CAUSTIC static prototype recipe")
-            if (root.getValue("version").int() != VERSION) throw JsonException("unsupported CAUSTIC recipe version")
+            val version = root.getValue("version").int()
             val model = root.getValue("model").int()
+            if (version !in 1..VERSION || version != model) throw JsonException("unsupported CAUSTIC recipe version/model $version/$model")
             val variantName = root.getValue("variant").str()
             val variant = Caustic.Mode.entries.firstOrNull { it.name == variantName }
                 ?: throw JsonException("unknown CAUSTIC diagnostic variant $variantName")
             val c = root.getValue("configuration").obj()
-            requireKeys(c, setOf("source", "focus", "midi", "velocity", "seconds", "aperture", "delayCycles", "rayCount"), "configuration")
+            requireKeys(c, setOf("source", "focus", "midi", "velocity", "seconds", "aperture", "delayCycles", "rayCount") +
+                if (model >= 2) setOf("character") else emptySet(), "configuration")
+            val character = if (model >= 2) {
+                val name = c.getValue("character").str()
+                Caustic.Character.entries.firstOrNull { it.name == name }
+                    ?: throw JsonException("unknown CAUSTIC character $name")
+            } else Caustic.Character.BODY
             return CausticRecipe(Caustic.Config(
                 source = c.getValue("source").num(),
                 focus = c.getValue("focus").num(),
@@ -65,6 +78,7 @@ data class CausticRecipe(
                 delayCycles = c.getValue("delayCycles").num(),
                 rayCount = c.getValue("rayCount").int(),
                 model = model,
+                character = character,
             ), variant)
         }
 

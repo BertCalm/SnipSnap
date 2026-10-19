@@ -4,12 +4,19 @@
   const $ = (id) => document.getElementById(id);
   const localFiles = location.protocol === 'file:';
   const sectionDefinitions = {
+    depth: { number: '02', title: 'Depth & character', description: 'One geometry, three new directions. Compare the original with a fuller body, a hollow reed character, and a brighter alloy voice.' },
     first: { number: '01', title: 'Start at the source', description: 'The dry source is the reference. Listen for what the reflected paths and resonant body add as you move through the study.' },
     positions: { number: '02', title: 'Source × focus', description: 'Each group holds the source still and moves the pickup. Compare the same focus across source groups, then listen along a group for the bloom.' },
     mechanism: { number: '03', title: 'What makes it sing?', description: 'Compare the full model with the controls at the same source and focus. Use level matching to judge the change in tone, then shared gain to hear its strength.' },
     range: { number: '04', title: 'Register & touch', description: 'Does the character survive a change in note or velocity? Listen for pitch, attack, and body across these fixed-position renders.' }
   };
-  const state = { manifest: null, clips: [], mode: 'matched', active: null, context: null, gain: null, source: null, media: null, buffer: null, duration: 0, offset: 0, startedAt: 0, playing: false, loading: false, seeking: false, request: 0, repeat: false, volume: .65, cache: new Map(), notes: {}, storageKey: '', cards: new Map() };
+  const state = { manifest: null, clips: [], mode: 'matched', active: null, context: null, gain: null, source: null, media: null, buffer: null, duration: 0, offset: 0, startedAt: 0, playing: false, loading: false, seeking: false, request: 0, repeat: false, volume: .65, cache: new Map(), notes: {}, storageModels: [], cards: new Map(), depthMidi: 60, depthButtons: [] };
+  const characters = [
+    { name: 'Original', letter: 'A', cue: 'The first reflected vessel.', detail: 'The reference. Keep its attack and body in mind.' },
+    { name: 'Body', letter: 'B', cue: 'Low mids. Slower bloom.', detail: 'Listen for fullness and close sympathetic pairs.' },
+    { name: 'Reed', letter: 'C', cue: 'Hollow tone. Breathing attack.', detail: 'Listen for odd harmonics and vocal beating.' },
+    { name: 'Alloy', letter: 'D', cue: 'Bright rings. Longer decay.', detail: 'Listen for the slightly inharmonic upper body.' }
+  ];
   let toastTimer;
 
   function node(tag, className, text) {
@@ -20,6 +27,7 @@
   }
   function canonicalSection(section) {
     const key = String(section || '').toLowerCase().replaceAll('_', '-');
+    if (/depth|character/.test(key)) return 'depth';
     if (/first|^source$|anchor|baseline|comparison/.test(key)) return 'first';
     if (/mechanism|control|ablation/.test(key)) return 'mechanism';
     if (/range|register|velocity|touch|note/.test(key)) return 'range';
@@ -39,6 +47,9 @@
   }
   function fileName(path) { try { return decodeURIComponent(new URL(path, document.baseURI).pathname.split('/').pop()); } catch { return String(path); } }
   function activePath(clip = state.active) { return clip ? (state.mode === 'matched' ? clip.matched || clip.raw : clip.raw || clip.matched) : ''; }
+  function clipModel(clip) { return String(clip.model ?? state.manifest?.model ?? 1); }
+  function noteKey(clip) { return `${clipModel(clip)}:${clip.id}`; }
+  function rawModeLabel() { return state.storageModels.length > 1 ? 'Revision gain' : 'Shared gain'; }
   function announce(message) {
     $('toast').textContent = message;
     $('toast').hidden = false;
@@ -46,11 +57,23 @@
     toastTimer = setTimeout(() => { $('toast').hidden = true; }, 3500);
   }
   function storageRead() {
-    try { state.notes = JSON.parse(localStorage.getItem(state.storageKey) || '{}') || {}; }
-    catch { state.notes = {}; }
+    state.notes = {};
+    state.storageModels = [...new Set(state.clips.map(clipModel))];
+    state.storageModels.forEach(model => {
+      try {
+        const notes = JSON.parse(localStorage.getItem(`snipsnap:caustic-notes:${model}`) || '{}') || {};
+        Object.entries(notes).forEach(([id, note]) => { state.notes[`${model}:${id}`] = note; });
+      } catch { /* An unavailable or malformed model store must not block listening. */ }
+    });
   }
   function storageWrite() {
-    try { localStorage.setItem(state.storageKey, JSON.stringify(state.notes)); }
+    try {
+      state.storageModels.forEach(model => {
+        const prefix = `${model}:`;
+        const notes = Object.fromEntries(Object.entries(state.notes).filter(([key]) => key.startsWith(prefix)).map(([key, note]) => [key.slice(prefix.length), note]));
+        localStorage.setItem(`snipsnap:caustic-notes:${model}`, JSON.stringify(notes));
+      });
+    }
     catch { announce('Browser storage is unavailable. Export your notes before leaving.'); }
     updateNotesCount();
   }
@@ -61,7 +84,7 @@
   function addMetadata(parent, text) { if (text) parent.append(node('span', '', text)); }
 
   function createNotes(clip) {
-    const saved = state.notes[clip.id] || {};
+    const saved = state.notes[noteKey(clip)] || {};
     const details = node('details', `clip-notes${saved.verdict || saved.text ? ' has-notes' : ''}`);
     const summary = node('summary', '', saved.verdict ? `Your note · ${saved.verdict}` : saved.text ? 'Your note · saved' : 'Add a listening note');
     details.append(summary);
@@ -83,8 +106,8 @@
     const save = () => {
       const verdict = select.value;
       const content = text.value;
-      if (verdict || content) state.notes[clip.id] = { verdict, text: content, updatedAt: new Date().toISOString(), gainMode: state.mode };
-      else delete state.notes[clip.id];
+      if (verdict || content) state.notes[noteKey(clip)] = { verdict, text: content, updatedAt: new Date().toISOString(), gainMode: state.mode };
+      else delete state.notes[noteKey(clip)];
       details.classList.toggle('has-notes', Boolean(verdict || content));
       summary.textContent = verdict ? `Your note · ${verdict}` : content ? 'Your note · saved' : 'Add a listening note';
       storageWrite();
@@ -118,6 +141,7 @@
     if (clip.focus !== undefined) addMetadata(metadata, `FOCUS ${numeric(clip.focus, 3)}`);
     if (clip.midi !== undefined) addMetadata(metadata, midiName(clip.midi));
     if (clip.velocity !== undefined) addMetadata(metadata, `VEL ${numeric(clip.velocity)}`);
+    if (canonicalSection(clip.section) === 'depth') addMetadata(metadata, `${pretty(clip.profile || '')} · M${clipModel(clip)}`);
     const bottom = node('div', 'card-bottom');
     const links = node('div', 'card-links');
     const wav = node('a', 'card-wav', 'WAV →');
@@ -135,6 +159,90 @@
     return card;
   }
 
+  function comparisonClip(profile, midi) {
+    if (profile === 'Original') {
+      const reference = { 36: 'register-low', 60: 'mechanism-full', 84: 'register-high' }[midi];
+      return state.clips.find(clip => clip.id === reference) || state.clips.find(clip => Number(clip.midi) === midi && clipModel(clip) === '1' && clip.variant === 'FULL');
+    }
+    return state.clips.find(clip => Number(clip.midi) === midi && String(clip.profile || '').toLowerCase() === profile.toLowerCase() && canonicalSection(clip.section) === 'depth' && Math.abs(Number(clip.focus) - .19) < .00001);
+  }
+  function updateDepthComparator() {
+    state.depthButtons.forEach(({ button, character, name, caption, clipLink }) => {
+      const clip = comparisonClip(character.name, state.depthMidi);
+      const selected = Boolean(clip && state.active?.id === clip.id);
+      button.dataset.clip = clip?.id || '';
+      button.disabled = !clip;
+      button.classList.toggle('is-selected', selected);
+      button.classList.toggle('is-playing', selected && state.playing);
+      button.classList.toggle('is-loading', selected && state.loading);
+      button.setAttribute('aria-pressed', String(selected && state.playing));
+      button.setAttribute('aria-label', `${selected && state.playing ? 'Pause' : 'Play'} ${character.name} at ${midiName(state.depthMidi)}`);
+      name.textContent = character.name;
+      caption.textContent = !clip ? 'Not in this pack' : selected && state.loading ? 'Loading…' : selected && state.playing ? 'Playing · click to pause' : `Play ${midiName(state.depthMidi)} →`;
+      clipLink.href = clip ? `#clip-${clip.id}` : '#';
+      clipLink.hidden = !clip;
+    });
+    document.querySelectorAll('.register-tabs button').forEach(button => {
+      button.setAttribute('aria-pressed', String(Number(button.dataset.midi) === state.depthMidi));
+    });
+    const mode = $('depth-mode');
+    if (mode) mode.textContent = `${state.mode === 'matched' ? 'Level matched' : rawModeLabel()} · ${midiName(state.depthMidi)} · SOURCE .50 / FOCUS .19`;
+  }
+  function createDepthComparator() {
+    const panel = node('div', 'depth-comparator');
+    panel.id = 'depth-comparison';
+    const top = node('div', 'depth-controls');
+    const copy = node('div');
+    copy.append(node('p', 'depth-eyebrow', 'SAME NOTE. SAME POSITION. SWITCH THE BODY.'));
+    const mode = node('p', 'depth-mode'); mode.id = 'depth-mode'; copy.append(mode);
+    const registers = node('div', 'register-tabs'); registers.setAttribute('role', 'group'); registers.setAttribute('aria-label', 'Comparison register');
+    [36, 60, 84].forEach(midi => {
+      const button = node('button', '', midiName(midi)); button.type = 'button'; button.dataset.midi = String(midi);
+      button.addEventListener('click', () => {
+        const activeCharacter = characters.find(character => comparisonClip(character.name, state.depthMidi)?.id === state.active?.id);
+        state.depthMidi = midi;
+        updateDepthComparator();
+        if (activeCharacter && state.playing) { const clip = comparisonClip(activeCharacter.name, midi); if (clip) playClip(clip, 0); }
+        else if (activeCharacter) { halt(true); updatePlayer(); }
+      });
+      registers.append(button);
+    });
+    top.append(copy, registers);
+    const grid = node('div', 'depth-profile-grid');
+    state.depthButtons = [];
+    characters.forEach(character => {
+      const wrapper = node('div', `depth-profile-wrap profile-${character.name.toLowerCase()}`);
+      const button = node('button', 'depth-profile'); button.type = 'button';
+      const upper = node('span', 'profile-upper');
+      upper.append(node('span', 'profile-letter', character.letter), node('span', 'profile-signal'));
+      const name = node('strong', 'profile-name', character.name);
+      const cue = node('span', 'profile-cue', character.cue);
+      const detail = node('span', 'profile-detail', character.detail);
+      const caption = node('span', 'profile-action');
+      button.append(upper, name, cue, detail, caption);
+      button.addEventListener('click', () => {
+        const clip = comparisonClip(character.name, state.depthMidi);
+        if (!clip) return;
+        if (state.active?.id === clip.id && state.playing) pause(); else playClip(clip);
+      });
+      const clipLink = node('a', 'profile-clip-link', 'Clip, recipe & notes ↓');
+      clipLink.addEventListener('click', () => {
+        const target = $(clipLink.hash.slice(1));
+        const archive = target?.closest('details.archive-study');
+        if (archive?.hidden || target?.closest('.study-section')?.hidden) {
+          $('section-filter').value = 'all';
+          $('section-filter').dispatchEvent(new Event('change'));
+        }
+        if (archive) archive.open = true;
+      });
+      wrapper.append(button, clipLink); grid.append(wrapper);
+      state.depthButtons.push({ button, character, name, caption, clipLink });
+    });
+    const hint = node('p', 'depth-hint', 'Click another character to compare at the current playhead. Turn off “Keep playhead” to hear each attack from the beginning. Changing register starts a new note.');
+    panel.append(top, grid, hint);
+    return panel;
+  }
+
   function renderStudies() {
     const groups = new Map();
     state.clips.forEach(clip => {
@@ -145,6 +253,19 @@
     const order = [...Object.keys(sectionDefinitions).filter(key => groups.has(key)), ...[...groups.keys()].filter(key => !sectionDefinitions[key])];
     const fragment = document.createDocumentFragment();
     state.cards.clear();
+    const hasDepth = groups.has('depth');
+    let archive;
+    if (hasDepth) {
+      archive = node('details', 'archive-study'); archive.id = 'original-study';
+      const summary = node('summary');
+      const originalCount = state.clips.filter(clip => canonicalSection(clip.section) !== 'depth').length;
+      summary.append(node('span', '', state.manifest.summary?.originalClipsOmitted ? 'Original references' : 'The original listening study'), node('span', 'archive-count', `${originalCount} preserved renders`), node('span', 'archive-plus', '+'));
+      archive.append(summary);
+      const intro = node('div', 'archive-intro');
+      intro.append(node('p', '', 'The original recordings, recipes, and listening notes are preserved. Open the source/focus study and mechanism controls to trace where the character began.'));
+      if (state.manifest.downloads?.original) { const link = node('a', 'text-link', 'Download the original study →'); link.href = state.manifest.downloads.original; link.download = ''; intro.append(link); }
+      archive.append(intro);
+    }
     $('section-filter').replaceChildren(new Option('All studies', 'all'));
     order.forEach((key, sectionIndex) => {
       const clips = groups.get(key);
@@ -161,7 +282,8 @@
       copy.append(h, node('p', '', definition.description));
       heading.append(copy, node('span', 'section-quantity', `${clips.length} ${clips.length === 1 ? 'render' : 'renders'}`));
       section.append(heading);
-      if (key === 'first') {
+      if (key === 'depth') section.append(createDepthComparator());
+      if (key === (hasDepth ? 'depth' : 'first')) {
         const recommended = state.clips.filter(clip => Number.isFinite(clip.recommendedOrder)).sort((a, b) => a.recommendedOrder - b.recommendedOrder);
         if (recommended.length) {
           const route = node('div', 'listening-route');
@@ -191,9 +313,11 @@
         members.forEach(clip => grid.append(createCard(clip, state.clips.indexOf(clip))));
         group.append(grid); section.append(group);
       });
-      fragment.append(section);
+      if (hasDepth && key !== 'depth') archive.append(section); else fragment.append(section);
     });
+    if (archive) fragment.append(archive);
     $('studies').replaceChildren(fragment);
+    updateDepthComparator();
   }
 
   async function loadManifest() {
@@ -215,11 +339,15 @@
       });
       state.manifest = manifest;
       state.clips = manifest.clips;
-      state.storageKey = `snipsnap:caustic-notes:${manifest.model || 'prototype'}`;
       storageRead();
+      $('raw-mode-label').textContent = rawModeLabel();
       renderStudies();
       updateNotesCount();
       $('clip-count').textContent = `${manifest.clips.length} Kotlin-rendered WAVs`;
+      const downloads = manifest.downloads;
+      const packLink = document.querySelector('.pack-link');
+      if (downloads && !downloads.full) packLink.hidden = true;
+      else { packLink.hidden = false; packLink.href = downloads?.full || 'audition.zip'; }
       const summary = manifest.summary || {};
       const sampleRate = Number(summary.sampleRate || 44100);
       $('format-label').textContent = `Mono · ${numeric(sampleRate / 1000, 1)} kHz`;
@@ -370,6 +498,7 @@
 
   function updatePlayer() {
     $('player').dataset.state = state.loading ? 'loading' : state.playing ? 'playing' : 'paused';
+    updateDepthComparator();
     state.cards.forEach(({ card, play }, id) => {
       const selected = state.active?.id === id;
       card.classList.toggle('is-selected', selected);
@@ -382,7 +511,7 @@
     });
     if (!state.active) return;
     $('player-title').textContent = state.active.title;
-    $('player-mode').textContent = state.loading ? 'LOADING AUDIO…' : state.mode === 'matched' ? 'LEVEL MATCHED' : 'SHARED GAIN';
+    $('player-mode').textContent = state.loading ? 'LOADING AUDIO…' : state.mode === 'matched' ? 'LEVEL MATCHED' : rawModeLabel().toUpperCase();
     $('player-toggle').firstElementChild.textContent = state.loading ? '···' : state.playing ? 'Ⅱ' : '▶';
     $('player-toggle').setAttribute('aria-label', state.playing ? 'Pause selected clip' : 'Play selected clip');
     $('player-download').href = activePath();
@@ -413,7 +542,7 @@
     state.request++;
     state.loading = false;
     state.mode = input.value;
-    $('gain-explanation').textContent = state.mode === 'matched' ? 'Level matched reduces loudness differences so changes in tone are easier to hear.' : 'Shared gain applies the same export gain to every clip, preserving differences in bloom strength.';
+    $('gain-explanation').textContent = state.mode === 'matched' ? 'Level matched reduces loudness differences so changes in tone are easier to hear.' : state.storageModels.length > 1 ? 'Raw WAVs share one gain within each revision. Original and depth export gains can differ; use Level matched for cross-revision tone comparisons.' : 'Shared gain applies the same export gain to every clip, preserving differences in bloom strength.';
     if (localFiles) $('gain-explanation').textContent += ' Local playback uses the browser’s media player; serve over HTTP for decoded, gapless replay.';
     state.cards.forEach(({ wav }, id) => {
       const clip = state.clips.find(item => item.id === id);
@@ -424,12 +553,19 @@
   }));
   $('section-filter').addEventListener('change', event => {
     document.querySelectorAll('.study-section').forEach(section => { section.hidden = event.target.value !== 'all' && section.dataset.section !== event.target.value; });
+    const archive = $('original-study');
+    if (archive) {
+      archive.hidden = event.target.value === 'depth';
+      if (event.target.value !== 'all' && event.target.value !== 'depth') archive.open = true;
+    }
   });
   $('player-toggle').addEventListener('click', () => { if (!state.active) return; if (state.playing || state.loading) pause(); else playClip(state.active); });
   $('player-stop').addEventListener('click', () => { state.request++; state.loading = false; halt(true); updatePlayer(); });
   $('close-player').addEventListener('click', () => {
     state.request++; state.loading = false; halt(true); const active = state.active; state.active = null; updatePlayer();
-    $('player').hidden = true; document.body.classList.remove('has-player'); state.cards.get(active?.id)?.play.focus({ preventScroll: true });
+    $('player').hidden = true; document.body.classList.remove('has-player');
+    const returnButton = state.depthButtons.find(item => item.button.dataset.clip === active?.id)?.button || state.cards.get(active?.id)?.play;
+    returnButton?.focus({ preventScroll: true });
   });
   $('seek').addEventListener('input', event => { state.seeking = true; $('player-time').textContent = `${clock(event.target.value)} / ${clock(state.duration)}`; });
   $('seek').addEventListener('change', event => {
@@ -446,13 +582,13 @@
   });
   $('export-notes').addEventListener('click', () => {
     if (!state.manifest) return;
-    const notes = state.clips.filter(clip => state.notes[clip.id]).map(clip => ({ clipId: clip.id, title: clip.title, source: clip.source, focus: clip.focus, midi: clip.midi, velocity: clip.velocity, variant: clip.variant, ...state.notes[clip.id] }));
+    const notes = state.clips.filter(clip => state.notes[noteKey(clip)]).map(clip => ({ clipId: clip.id, model: clipModel(clip), profile: clip.profile, title: clip.title, source: clip.source, focus: clip.focus, midi: clip.midi, velocity: clip.velocity, variant: clip.variant, ...state.notes[noteKey(clip)] }));
     downloadJSON({ study: state.manifest.title || 'Caustic listening study', model: state.manifest.model, sourceRevision: state.manifest.sourceRevision, exportedAt: new Date().toISOString(), notes }, `caustic-listening-notes-${new Date().toISOString().slice(0, 10)}.json`);
     announce('Listening notes exported.');
   });
   $('clear-notes').addEventListener('click', () => {
     if (!Object.keys(state.notes).length) { announce('There are no saved notes to clear.'); return; }
-    if (!window.confirm('Clear all saved notes for this Caustic model in this browser? Export them first if you want to keep a copy.')) return;
+    if (!window.confirm('Clear all saved notes for the Caustic models in this study, in this browser? Export them first if you want to keep a copy.')) return;
     state.notes = {}; storageWrite();
     const selected = $('section-filter').value;
     renderStudies(); $('section-filter').value = selected; $('section-filter').dispatchEvent(new Event('change')); updatePlayer();

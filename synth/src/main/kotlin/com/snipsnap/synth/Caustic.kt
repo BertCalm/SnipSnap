@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.abs
@@ -16,14 +17,14 @@ import kotlin.math.sqrt
  * Geometry changes the signed, coherent excitation of shared modes. No motion,
  * diffuse rays, nonlinear processing, effects or held-loop implementation is implied.
  *
- * The source envelope is a difference of exponentials. Each delayed ray therefore
- * has an exact two-coefficient representation after its causal arrival; both its
+ * Source envelopes are differences of exponentials (one in model1, two in model2).
+ * Each delayed envelope has an exact two-coefficient representation after causal arrival; both its
  * carrier phase and its envelope delay survive compression. Rendering sums these
  * coefficients, rather than tracing paths or approximating their envelope at audio rate.
  */
 object Caustic {
-    const val MODEL_VERSION = 1
-    const val RATE = 44_100
+    const val MODEL_VERSION = 2
+    const val RATE = WavWriter.MPC_SAMPLE_RATE
     private const val INTERNAL_RATE = RATE * 4
     private const val SOURCE_DECAY = 1.10
     private const val SOURCE_ATTACK = .012
@@ -35,6 +36,8 @@ object Caustic {
     private const val MODES = 16
     private val harmonic = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 3, 5, 7, 9)
 
+    enum class Character { BODY, REED, ALLOY }
+
     data class Config(
         val source: Double = .4,
         val focus: Double = .2,
@@ -44,7 +47,8 @@ object Caustic {
         val aperture: Double = .05,
         val delayCycles: Double = .65,
         val rayCount: Int = 256,
-        val model: Int = MODEL_VERSION,
+        val model: Int = 1,
+        val character: Character = Character.BODY,
     ) {
         init {
             require(source.isFinite() && source in 0.0..1.0) { "CAUSTIC source must be in 0..1" }
@@ -55,7 +59,8 @@ object Caustic {
             require(aperture.isFinite() && aperture in .015.. .15) { "CAUSTIC aperture must be in .015...15 R" }
             require(delayCycles.isFinite() && delayCycles in .01..2.0) { "CAUSTIC delayCycles must be in .01..2" }
             require(rayCount in 64..4096) { "CAUSTIC rayCount must be in 64..4096" }
-            require(model == MODEL_VERSION) { "unsupported CAUSTIC model $model" }
+            require(model in 1..MODEL_VERSION) { "unsupported CAUSTIC model $model" }
+            require(model != 1 || character == Character.BODY) { "CAUSTIC model1 has no selectable character" }
         }
     }
 
@@ -171,6 +176,7 @@ object Caustic {
         Snip(inspect(config, mode, cancelled).samples, channels = 1, sampleRate = RATE)
 
     fun inspect(config: Config = Config(), mode: Mode = Mode.FULL, cancelled: () -> Boolean = { false }): Rendered {
+        if (config.model == 2) return inspectRich(config, mode, cancelled)
         stopIfUnwanted(cancelled)
         val started = System.nanoTime()
         val hz = noteHz(config)
@@ -284,10 +290,270 @@ object Caustic {
             prepareMillis, (System.nanoTime() - renderStarted) / 1e6, diagnostics)
     }
 
+    /** Model2 changes the resonant instrument, while preserving the model1 reference above. */
+    private data class RichProfile(
+        val character: Character,
+        val decay: Double,
+        val attack: Double,
+        val edgeDecay: Double,
+        val edgeAttack: Double,
+        val force: Double,
+        val edgeForce: Double,
+        val output: Double,
+    ) {
+        val slow = 1.0 / decay
+        val fast = slow + 1.0 / attack
+        val edgeSlow = 1.0 / edgeDecay
+        val edgeFast = edgeSlow + 1.0 / edgeAttack
+        fun frequency(m: Int): Double {
+            val h = m % 12 + 1
+            val companion = m >= 12
+            return when (character) {
+                Character.BODY -> h * if (!companion) 1.0 else 1.0 + .0025 * sin(h * 1.71)
+                Character.REED -> h * if (!companion) 1.0 else 1.0 + .0043 * cos(h * 1.37)
+                Character.ALLOY -> if (h == 1) (if (companion) 1.0018 else 1.0) else
+                    h * (1.0 + (if (companion) .009 + .004 * sin(h * 1.7) else .0027 * (h - 1.0).pow(1.20)))
+            }
+        }
+        fun t60(m: Int): Double {
+            val h = m % 12 + 1
+            return when (character) {
+                Character.BODY -> (if (m < 12) 4.8 else 4.2) / (1.0 + .095 * (h - 1))
+                Character.REED -> (if (h % 2 == 1) 3.7 else 1.3) / (1.0 + .030 * (h - 1))
+                Character.ALLOY -> (if (h == 1) 2.7 else 5.0) / (1.0 + .025 * (h - 1))
+            }
+        }
+        fun gain(m: Int): Double {
+            val h = m % 12 + 1
+            val base = when (character) {
+                Character.BODY -> when (h) { 1 -> .68; 2 -> 2.8; 3 -> 3.2; else -> 1.8 / (1 + .10 * (h - 3)) }
+                Character.REED -> if (h == 1) .90 else if (h % 2 == 1) 3.7 else .45
+                Character.ALLOY -> if (h == 1) .95 else if (h == 2) 1.6 else 3.2
+            }
+            return base * if (m < 12) 1.0 else when (character) {
+                Character.BODY -> if (h == 1) .12 else .33
+                Character.REED -> if (h == 1) .18 else .48
+                Character.ALLOY -> if (h == 1) .10 else .45
+            }
+        }
+        fun participation(m: Int, pickup: Int): Double {
+            val h = m % 12 + 1
+            val y = (pickup - 4) / 4.0
+            if (h == 1) return .86 + .14 * cos(PI * y)
+            val spatial = when (character) {
+                Character.BODY -> .24 + .76 * cos(PI * (.30 + .15 * (h % 5)) * (y + .12 * sin(h.toDouble())))
+                Character.REED -> .18 + .82 * cos(PI * (.42 + .23 * (h % 4)) * (y + .24 * sin(h * .7)))
+                Character.ALLOY -> .12 + .88 * cos(PI * (.55 + .19 * (h % 5)) * (y + .18 * cos(h.toDouble())))
+            }
+            return if (m < 12) spatial else spatial * (.86 + .14 * sin(PI * y * (h % 3 + 1)))
+        }
+        fun band(pickup: Int, h: Int): Double {
+            val p = pickup / 8.0
+            val loss = when (character) {
+                Character.BODY -> .045 + .12 * p
+                Character.REED -> .025 + .075 * p
+                Character.ALLOY -> .018 + .055 * p
+            }
+            return 1.0 / (1.0 + (h * loss).pow(1.5))
+        }
+        fun source(h: Int, hz: Double, velocity: Double, edge: Boolean): Double {
+            val rolloff = if (h * hz >= 20_000) 0.0 else if (h * hz < 16_000) 1.0 else
+                .5 + .5 * cos(PI * (h * hz - 16_000) / 4_000)
+            if (edge) {
+                val effort = velocity.pow(1.25)
+                return when (character) {
+                    Character.BODY -> .028 * effort * h.toDouble().pow(-1.10)
+                    Character.REED -> .075 * effort * h.toDouble().pow(-.80) * (if (h % 2 == 1) 1.0 else .25)
+                    Character.ALLOY -> .20 * effort * h.toDouble().pow(-.60)
+                } * rolloff
+            }
+            val a = when (character) {
+                Character.BODY -> .25 * velocity * h.toDouble().pow(-(1.40 - .30 * velocity)) *
+                    (if (h == 2) 1.5 else if (h == 3) 1.3 else 1.0)
+                Character.REED -> .25 * velocity * h.toDouble().pow(-(1.05 - .30 * velocity)) *
+                    (if (h % 2 == 1) 1.0 else .16)
+                Character.ALLOY -> .24 * velocity * h.toDouble().pow(-(1.30 - .35 * velocity))
+            }
+            return a * rolloff
+        }
+    }
+
+    private fun profile(c: Config): RichProfile = when (c.character) {
+        Character.BODY -> RichProfile(c.character, 1.55, .045, .11, .008, 65.0, 45.0, .72)
+        Character.REED -> RichProfile(c.character, 1.25, .016, .080, .004, 78.0, 125.0, .78)
+        Character.ALLOY -> RichProfile(c.character, .64, .006, .018, .0015, 70.0, 480.0, .68)
+    }
+
+    /** Two independently delayed source envelopes, each represented exactly by two exponentials. */
+    private class RichTransfer(val hz: Double, val velocity: Double, val profile: RichProfile) {
+        val re = Array(4) { DoubleArray(24) }
+        val im = Array(4) { DoubleArray(24) }
+        fun add(e: Event, phaseDisabled: Boolean) {
+            val rates = doubleArrayOf(profile.slow, profile.fast, profile.edgeSlow, profile.edgeFast)
+            for (m in 0 until 24) {
+                val h = m % 12 + 1
+                val angle = if (phaseDisabled) 0.0 else -2 * PI * h * hz * e.delay
+                val spatial = e.weight * profile.band(e.pickup, h) * profile.participation(m, e.pickup)
+                for (j in 0..3) {
+                    val w = spatial * profile.source(h, hz, velocity, j >= 2) * exp(e.delay * rates[j])
+                    re[j][m] += w * cos(angle)
+                    im[j][m] += w * sin(angle)
+                }
+            }
+        }
+        fun at(m: Int, s: Double, c: Double, env: DoubleArray, edge: Boolean): Double {
+            val j = if (edge) 2 else 0
+            return (re[j][m] * s + im[j][m] * c) * env[j] -
+                (re[j + 1][m] * s + im[j + 1][m] * c) * env[j + 1]
+        }
+    }
+
+    private fun inspectRich(config: Config, mode: Mode, cancelled: () -> Boolean): Rendered {
+        stopIfUnwanted(cancelled)
+        val started = System.nanoTime()
+        val hz = noteHz(config)
+        val p = profile(config)
+        val geometry = CausticGeometry.prepare(config.source, config.focus, config.rayCount, config.aperture)
+        val used = if (mode == Mode.GAIN_ONLY) CausticGeometry.prepare(.4, .2, config.rayCount, config.aperture) else geometry
+        val scalar = if (mode == Mode.GAIN_ONLY) geometry.densities.sum() / used.densities.sum().coerceAtLeast(1e-30) else 1.0
+        val events = used.paths.map {
+            val delay = it.delayR * config.delayCycles / hz
+            Event(ceil(delay * INTERNAL_RATE).toInt(), delay, it.pickup, it.weight)
+        }.sortedBy { it.arrival }
+        val frequencies = DoubleArray(24) { hz * p.frequency(it) }
+        val bank = Modes.Bank(24, INTERNAL_RATE)
+        for (m in 0 until 24) bank.tune(m, frequencies[m], p.t60(m))
+        val transfer = RichTransfer(hz, config.velocity, p)
+        val gains = DoubleArray(24) { p.gain(it) }
+        val amplitudes = Array(2) { edge -> DoubleArray(12) { p.source(it + 1, hz, config.velocity, edge == 1) } }
+        val rates = doubleArrayOf(p.slow, p.fast, p.edgeSlow, p.edgeFast)
+        val envelope = DoubleArray(4) { 1.0 }
+        val steps = DoubleArray(4) { exp(-rates[it] / INTERNAL_RATE) }
+        val ss = DoubleArray(12)
+        val cc = DoubleArray(12) { 1.0 }
+        val rs = DoubleArray(12) { sin(2 * PI * hz * (it + 1) / INTERNAL_RATE) }
+        val rc = DoubleArray(12) { cos(2 * PI * hz * (it + 1) / INTERNAL_RATE) }
+        val force = DoubleArray(24)
+        val energy = DoubleArray(24)
+        val prepareMillis = (System.nanoTime() - started) / 1e6
+        val renderStarted = System.nanoTime()
+        val internal = FloatArray((config.seconds * RATE).toInt() * 4)
+        var next = 0
+        var modalPeak = 0.0
+        for (n in internal.indices) {
+            if ((n and 8191) == 0) stopIfUnwanted(cancelled)
+            while (next < events.size && events[next].arrival <= n) transfer.add(events[next++], mode == Mode.PHASE_DISABLED)
+            val direct = .035 * config.velocity * ss[0] * (envelope[0] - envelope[1])
+            val value = when (mode) {
+                Mode.SOURCE_ONLY -> {
+                    var sum = 0.0
+                    for (h in 0..11) sum += ss[h] * (amplitudes[0][h] * (envelope[0] - envelope[1]) +
+                        amplitudes[1][h] * (envelope[2] - envelope[3]))
+                    sum
+                }
+                Mode.MODES_BYPASSED -> {
+                    var sum = 0.0
+                    for (m in 0 until 24) {
+                        val h = m % 12
+                        sum += gains[m] * (transfer.at(m, ss[h], cc[h], envelope, false) +
+                            p.edgeForce / p.force * transfer.at(m, ss[h], cc[h], envelope, true))
+                    }
+                    sum * 9.0 + direct
+                }
+                else -> {
+                    for (m in 0 until 24) {
+                        val h = m % 12
+                        force[m] = p.force * transfer.at(m, ss[h], cc[h], envelope, false) +
+                            p.edgeForce * transfer.at(m, ss[h], cc[h], envelope, true)
+                    }
+                    bank.step()
+                    bank.drive(force, 1.0)
+                    var sum = 0.0
+                    for (m in 0 until 24) {
+                        val v = bank.velocity(m)
+                        sum += v * gains[m]
+                        if ((n and 3) == 0) {
+                            val q = bank.displacement(m) * 2 * PI * frequencies[m]
+                            val a = sqrt(v * v + q * q)
+                            check(a.isFinite() && a < 8) { "CAUSTIC model2 unstable mode $m at $n: $a" }
+                            modalPeak = maxOf(modalPeak, a * p.output * scalar)
+                            energy[m] += .5 * a * a / RATE
+                        }
+                    }
+                    modalPeak = maxOf(modalPeak, abs(sum * p.output * scalar))
+                    sum + direct
+                }
+            } * p.output * scalar
+            check(value.isFinite() && abs(value) < 8) { "CAUSTIC model2 unstable output at $n: $value" }
+            internal[n] = value.toFloat()
+            for (j in 0..3) envelope[j] *= steps[j]
+            for (h in 0..11) {
+                val s = ss[h]
+                ss[h] = s * rc[h] + cc[h] * rs[h]
+                cc[h] = cc[h] * rc[h] - s * rs[h]
+            }
+        }
+        stopIfUnwanted(cancelled)
+        Tide.bandLimit(internal, INTERNAL_RATE)
+        stopIfUnwanted(cancelled)
+        val raw = Dsp.decimate(internal, RATE)
+        val dc = Dsp.OnePole(RATE)
+        for (n in raw.indices) {
+            if ((n and 16383) == 0) stopIfUnwanted(cancelled)
+            raw[n] -= dc.lp(raw[n], 8f)
+        }
+        Dsp.fadeTail(raw, ms = 8f, rate = RATE)
+        stopIfUnwanted(cancelled)
+        var peak = 0.0
+        var sum = 0.0
+        for (x in raw) { check(x.isFinite()); peak = maxOf(peak, abs(x.toDouble())); sum += x.toDouble() * x }
+        for (m in energy.indices) energy[m] *= scalar * scalar
+        val d = Diagnostics(hz, peak, sqrt(sum / raw.size.coerceAtLeast(1)), geometry.densities.sum(), geometry.paths.size,
+            geometry.paths.maxOfOrNull { it.delayR * config.delayCycles / hz } ?: 0.0, frequencies,
+            "model2 ${config.character.name}; exact delayed tonal and transient envelopes; 24 sympathetic modes")
+        return Rendered(raw, raw.copyOf(), geometry.densities.copyOf(), modalPeak, energy, prepareMillis,
+            (System.nanoTime() - renderStarted) / 1e6, d)
+    }
+
+    private fun richTransferProbe(config: Config, times: DoubleArray, mode: Mode): TransferProbe {
+        val hz = noteHz(config)
+        val p = profile(config)
+        val geometry = CausticGeometry.prepare(config.source, config.focus, config.rayCount, config.aperture)
+        val events = geometry.paths.map { Event(0, it.delayR * config.delayCycles / hz, it.pickup, it.weight) }
+        val exact = DoubleArray(times.size * 24)
+        val compressed = DoubleArray(exact.size)
+        val rates = doubleArrayOf(p.slow, p.fast, p.edgeSlow, p.edgeFast)
+        for (i in times.indices) {
+            val t = times[i]
+            val transfer = RichTransfer(hz, config.velocity, p)
+            for (e in events) {
+                if (t < e.delay) continue
+                transfer.add(e, mode == Mode.PHASE_DISABLED)
+                val dt = t - e.delay
+                for (m in 0 until 24) {
+                    val h = m % 12 + 1
+                    val carrier = if (mode == Mode.PHASE_DISABLED) t else dt
+                    val tone = p.source(h, hz, config.velocity, false) * (exp(-dt * p.slow) - exp(-dt * p.fast))
+                    val edge = p.source(h, hz, config.velocity, true) * (exp(-dt * p.edgeSlow) - exp(-dt * p.edgeFast))
+                    exact[i * 24 + m] += e.weight * p.band(e.pickup, h) * p.participation(m, e.pickup) *
+                        (p.force * tone + p.edgeForce * edge) * sin(2 * PI * h * hz * carrier)
+                }
+            }
+            val env = DoubleArray(4) { exp(-t * rates[it]) }
+            for (m in 0 until 24) {
+                val a = 2 * PI * (m % 12 + 1) * hz * t
+                compressed[i * 24 + m] = p.force * transfer.at(m, sin(a), cos(a), env, false) +
+                    p.edgeForce * transfer.at(m, sin(a), cos(a), env, true)
+            }
+        }
+        return TransferProbe(exact, compressed)
+    }
+
     /** Independent direct delayed-path reference against the compressed transfer, before body dynamics. */
     internal data class TransferProbe(val exact: DoubleArray, val compressed: DoubleArray)
     internal fun transferProbe(config: Config, times: DoubleArray, mode: Mode = Mode.FULL): TransferProbe {
         require(mode == Mode.FULL || mode == Mode.PHASE_DISABLED)
+        if (config.model == 2) return richTransferProbe(config, times, mode)
         val hz = noteHz(config)
         val geometry = CausticGeometry.prepare(config.source, config.focus, config.rayCount, config.aperture)
         val events = geometry.paths.map {

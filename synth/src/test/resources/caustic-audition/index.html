@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111513">
-  <meta name="description" content="Listen to the first Caustic prototype for SnipSnap. Compare source, pickup position, and phase-preserving geometry in rendered audio.">
+  <meta name="description" content="Compare three deeper Caustic characters for SnipSnap: Body, Reed, and Alloy, alongside the original sound at the same note.">
   <title>Caustic — SnipSnap listening study</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23111513%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2710%27 fill=%27none%27 stroke=%27%23d0ef97%27/%3E%3Ccircle cx=%2721%27 cy=%2716%27 r=%273%27 fill=%27%23d0ef97%27/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
@@ -22,11 +22,11 @@
     <main>
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="status-light" aria-hidden="true"></span> ENGINE STUDY / 01</p>
+          <p class="eyebrow"><span class="status-light" aria-hidden="true"></span> ENGINE STUDY / 02 — DEPTH & CHARACTER</p>
           <h1 id="hero-title">Caustic<span class="title-dot">.</span></h1>
-          <p class="hero-deck">Move the pickup.<br>Hear the body change.</p>
-          <p class="hero-description">A first listening study for SnipSnap: reflected paths meet a bank of resonances. Source and pickup position decide which harmonics sing.</p>
-          <a class="primary-link" href="#listening">Listen to the study <span aria-hidden="true">↓</span></a>
+          <p class="hero-deck">A deeper body.<br>Three directions.</p>
+          <p class="hero-description">Body, Reed, and Alloy explore more character in the caustic vessel. Compare each with the original at the same note, then follow the source and focus.</p>
+          <a class="primary-link" href="#listening">Compare the characters <span aria-hidden="true">↓</span></a>
         </div>
         <div class="vessel-art" aria-hidden="true">
           <svg class="vessel-svg" viewBox="0 0 600 600" fill="none">
@@ -76,18 +76,18 @@
       </section>
 
       <div class="study-strip" aria-label="Study details">
-        <div><span class="strip-label">Status</span><span>Dry listening prototype</span></div>
+        <div><span class="strip-label">Status</span><span>Depth & character revision</span></div>
         <div><span class="strip-label">Material</span><span id="clip-count">Kotlin-rendered WAVs</span></div>
         <div><span class="strip-label">Format</span><span id="format-label">Mono · 44.1 kHz</span></div>
-        <a href="audition.zip" download class="pack-link">Download the full study <span aria-hidden="true">→</span></a>
+        <a href="depth-audition.zip" download class="pack-link">Download the depth study <span aria-hidden="true">→</span></a>
       </div>
 
       <section id="listening" class="listening-intro" aria-labelledby="listening-title">
         <div class="section-heading">
           <p class="eyebrow">THE LISTENING ROOM</p>
-          <h2 id="listening-title">Follow the focus.</h2>
+          <h2 id="listening-title">Choose a character.</h2>
         </div>
-        <div class="listening-guide"><span class="guide-number">01—04</span><p>Start with the dry source, then focus. Use <strong>Level matched</strong> for tone and <strong>Shared gain</strong> for bloom strength. Headphones help; begin at a comfortable level.</p></div>
+        <div class="listening-guide"><span class="guide-number">A / B / C / D</span><p>Start at C4 and switch between the original and three new characters. Use <strong>Level matched</strong> for tone. Then try C2 and C6. Begin at a comfortable level.</p></div>
       </section>
 
       <div class="listening-toolbar">
@@ -95,7 +95,7 @@
           <legend>Comparison level</legend>
           <div class="segmented-control">
             <label><input type="radio" name="gain-mode" value="matched" checked><span>Level matched</span></label>
-            <label><input type="radio" name="gain-mode" value="raw"><span>Shared gain</span></label>
+            <label><input type="radio" name="gain-mode" value="raw"><span id="raw-mode-label">Revision gain</span></label>
           </div>
         </fieldset>
         <label class="position-option"><input id="keep-position" type="checkbox" checked><span>Keep playhead when comparing</span></label>
@@ -118,7 +118,7 @@
       </section>
 
       <section class="notebook-section" aria-labelledby="notebook-title">
-        <div><p class="eyebrow">YOUR LISTENING NOTES</p><h2 id="notebook-title">Keep what you hear.</h2><p>Notes stay in this browser, tied to this model and clip. Export them to keep or share your listening record.</p></div>
+        <div><p class="eyebrow">YOUR LISTENING NOTES</p><h2 id="notebook-title">Keep what you hear.</h2><p>Notes stay in this browser, tied to each model and clip. Your original-study notes stay with the original recordings. Export them to keep your listening record.</p></div>
         <div class="notebook-actions"><span id="notes-count">0 clips annotated</span><button id="export-notes" type="button" class="button-secondary">Export notes <span aria-hidden="true">→</span></button><button id="clear-notes" type="button" class="text-button">Clear notes</button></div>
       </section>
 
@@ -127,7 +127,7 @@
           <summary><span>How this was rendered</span><span class="details-plus" aria-hidden="true">+</span></summary>
           <div class="about-grid">
             <div><p class="eyebrow">THE SIGNAL</p><p>These are audio files rendered by the Kotlin prototype, played directly in your browser. Mono, 44.1 kHz, with 4× internal oversampling. No external effects or sampled instruments. The browser adds only the listening volume.</p></div>
-            <div><p class="eyebrow">THE QUESTION</p><p>Does phase-preserving geometry make a musically useful change in the body? Compare the full model with the mechanism controls. The controls isolate the contribution of routing and phase; each clip’s recipe records its actual variant.</p></div>
+            <div><p class="eyebrow">THE REVISION</p><p>Body, Reed, and Alloy change the excitation and the resonances: their frequencies, lifetimes, and sympathetic pairs. They share the original circular geometry and path phase. Compare at the same note and level; these are new dry voices, with no added reverb.</p></div>
             <div><p class="eyebrow">THE BOUNDARY</p><p>This first prototype covers circular geometry, source position, and pickup focus. CURVE, SCATTER, ORBIT, seamless HOLD, and phone integration are later work. Replaying a rendered clip is not HOLD. This page is an audition, not an accepted production engine.</p></div>
           </div>
           <div class="provenance"><span id="provenance">Reading render provenance…</span><a href="manifest.json" target="_blank" rel="noreferrer">Render manifest →</a><a href="diagnostics.json" target="_blank" rel="noreferrer">Diagnostics →</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noreferrer">Source repository →</a></div>

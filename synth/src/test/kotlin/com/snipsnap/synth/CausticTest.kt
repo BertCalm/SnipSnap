@@ -123,6 +123,67 @@ class CausticTest {
         assertEquals(3, asks)
     }
 
+    @Test
+    fun `model2 dual-envelope compression matches independent delayed source at extreme delay`() {
+        for (character in Caustic.Character.entries) for (mode in listOf(Caustic.Mode.FULL, Caustic.Mode.PHASE_DISABLED)) {
+            val c = Caustic.Config(model = 2, character = character, midi = 24, delayCycles = 2.0)
+            val times = DoubleArray(100) { it * .0031 } + doubleArrayOf(.5, 1.0, 2.0)
+            val probe = Caustic.transferProbe(c, times, mode)
+            val peak = probe.exact.maxOf { abs(it) }.coerceAtLeast(1e-20)
+            val error = probe.exact.indices.maxOf { abs(probe.exact[it] - probe.compressed[it]) } / peak
+            assertTrue(error < 2e-10, "$character $mode exact compression relative error $error")
+        }
+    }
+
+    @Test
+    fun `model2 characters change resonance spectrum and temporal depth while retaining geometry`() {
+        val c = Caustic.Config(model = 2, source = .5, focus = .19, seconds = 3.8)
+        val renders = Caustic.Character.entries.associateWith { Caustic.inspect(c.copy(character = it)) }
+        val bands = renders.mapValues { harmonics(it.value.raw, it.value.diagnostics.noteHz) }
+        for ((a, b) in listOf(Caustic.Character.BODY to Caustic.Character.REED,
+            Caustic.Character.BODY to Caustic.Character.ALLOY, Caustic.Character.REED to Caustic.Character.ALLOY)) {
+            val d = bands.getValue(a).indices.sumOf { abs(bands.getValue(a)[it] - bands.getValue(b)[it]) }
+            assertTrue(d > .08, "$a/$b normalized harmonic difference $d")
+        }
+        val original = Caustic.inspect(c.copy(model = 1))
+        val body = renders.getValue(Caustic.Character.BODY)
+        fun lateRatio(x: FloatArray): Double {
+            fun rms(a: Double, b: Double): Double {
+                val from = (a * Caustic.RATE).toInt(); val to = (b * Caustic.RATE).toInt()
+                return sqrt((from until to).sumOf { x[it].toDouble() * x[it] } / (to - from))
+            }
+            return rms(2.7, 3.3) / rms(.3, .9)
+        }
+        assertTrue(lateRatio(body.raw) > lateRatio(original.raw) * 1.3, "Body must deepen the actual release")
+        for ((character, r) in renders) {
+            assertTrue(r.diagnostics.rawPeak in .001.. .99, "$character raw peak ${r.diagnostics.rawPeak}")
+            assertEquals(r.diagnostics.noteHz, r.diagnostics.modeFrequencies[0])
+            assertEquals(24, r.modalEnergy.size)
+            val moved = Caustic.inspect(c.copy(character = character, focus = .31))
+            val a = harmonics(r.raw, r.diagnostics.noteHz)
+            val b = harmonics(moved.raw, r.diagnostics.noteHz)
+            assertTrue(a.indices.sumOf { abs(a[it] - b[it]) } > .025, "$character lost focus coloration")
+            assertContentEquals(r.raw, Caustic.inspect(c.copy(character = character)).raw)
+        }
+    }
+
+    @Test
+    fun `model2 profiles stay bounded at bass and treble with silence and phase controls`() {
+        for (character in Caustic.Character.entries) {
+            for (midi in listOf(36, 84)) {
+                val r = Caustic.inspect(Caustic.Config(model = 2, character = character, midi = midi,
+                    velocity = 1.0, source = 0.0, focus = .12, seconds = 1.1))
+                assertTrue(r.raw.all { it.isFinite() })
+                assertTrue(r.diagnostics.rawPeak in .001.. .99, "$character MIDI$midi raw peak ${r.diagnostics.rawPeak}")
+            }
+            val c = Caustic.Config(model = 2, character = character, seconds = .7)
+            val p = Caustic.inspect(c, Caustic.Mode.PHASE_DISABLED)
+            assertTrue(p.diagnostics.rawPeak in .001.. .99)
+            assertTrue(Caustic.inspect(c.copy(velocity = 0.0)).raw.all { it == 0f })
+        }
+        assertEquals(1, Caustic.Config().model, "old implicit configuration remains model1")
+    }
+
     private fun relativeDifference(a: DoubleArray, b: DoubleArray): Double =
         sqrt(a.indices.sumOf { val d = a[it] - b[it]; d * d } / a.sumOf { it * it }.coerceAtLeast(1e-30))
 
