@@ -284,23 +284,25 @@ Android device, MPC hardware and naming checks remain separate acceptance work.
 
 ### WICK — ignite, cascade, recover
 
-The [supplied specification](WICK_SPEC.md) is being tested as a two-voice
-PLUCK/BUBBLE listening prototype. One pitched complex source feeds three
+The [supplied specification](WICK_SPEC.md) is being tested as a three-voice
+PLUCK/WOOD/BUBBLE listening prototype. One pitched complex source feeds three
 parallel low-pass gates. Each has bounded charge and recoverable availability;
 real releases schedule later pulses into the next gate. SPARK, FEED, CASCADE,
 TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
 and velocity. The oscillator/filter techniques draw on TIDE; the gate network
 and release scheduler are new.
 
-Nine provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+Thirteen provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
 kit support the first audition. WICK stays outside the factory preset roster,
 phone picker and starter menu pending listening. Run
 `./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point
-controls, register/velocity probes, mechanism ablations and held examples.
+controls, register/velocity probes, mechanism ablations, held examples and four
+musical phrases using one shared score across the three voices.
 The [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](WICK.md) retain the scope and current limits.
-WOOD, BREATH, FLICKER, RATTLE and the proposed 36-preset library follow the
-owner's verdict on the finite chain and repeating BUBBLE proof.
+BREATH, FLICKER, RATTLE and the proposed 36-preset library follow listening.
+The longer pitched BUBBLE response is the owner's preferred working baseline;
+WOOD now tests a dry pitched body with smaller answering rebounds.
 
 ### TANGLE — oscillators that catch and release
 

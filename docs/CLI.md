@@ -178,7 +178,7 @@ both the roster and the picker, renders six provisional recipes
 (`VentPresets`, one per voice):
 ROUND, WIRE and TEAR use model 1; the clean PULSE, COIL and PLUME voices use
 model 2. The voice selects its saved model; see [VENT](VENT.md).
-WICK follows the same provisional path with four PLUCK and four BUBBLE recipes,
+WICK follows the same provisional path with four PLUCK, four WOOD and five BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike

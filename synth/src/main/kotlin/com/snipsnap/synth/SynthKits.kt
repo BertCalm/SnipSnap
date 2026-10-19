@@ -828,22 +828,25 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * Eight PLUCK roots walk C minor pentatonic; the remaining eight pads
-     * compare the calm BUBBLE default and seven other recipes, including two held buffers.
+     * PLUCK, WOOD and BUBBLE each speak at C3 and C4. The remaining ten pads
+     * compare every nondefault recipe, including three held buffers. Each
+     * voice's native-root default is its exact library patch, so all thirteen
+     * provisional recipes are represented within the sixteen pads.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
-            WickPatch(
-                "Wick ${index + 1}", WickVoice.PLUCK, Wick.defaults(WickVoice.PLUCK),
-                midi = 48 + semitone,
-            ).let { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE)
+        val defaults = voices.map { WickPresets.forVoice(it).first() }
+        val notes = defaults.flatMap { patch ->
+            listOf(48, 60).map { midi ->
+                if (midi == patch.midi) patch else patch.copy(
+                    name = "${patch.voice.name.lowercase().replaceFirstChar { it.uppercase() }} C${midi / 12 - 1}",
+                    midi = midi,
+                )
+            }
         }
-        // The first scale pad already contains PLUCK's Small Spark default. Use its former
-        // upper-bank duplicate for the calmer BUBBLE default and retain the busy reference.
-        val bubble = WickPatch("Calm Bubbles", WickVoice.BUBBLE, Wick.defaults(WickVoice.BUBBLE))
-        val recipes = listOf(bubble) + WickPresets.all().filter { it.name !in setOf("Small Spark", "Bubble Chain") }
-        return notes + recipes.map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
+        val recipes = WickPresets.all().filterNot { it in defaults }
+        return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
     }
 
     /**

@@ -36,10 +36,10 @@ tasks.register<JavaExec>("generateFlockFlowAudition") {
     args(providers.gradleProperty("flockBaseline").orNull ?: "${rootDir}/testkit/flock-audition")
 }
 
-/** Two-voice WICK milestone: dry audio, causal comparisons and real held-loop evidence. */
+/** Three-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
 tasks.register<JavaExec>("generateWickAudition") {
     group = "distribution"
-    description = "Render WICK native/raw/matched WAVs, exact recipes, causal traces and the prototype audition page under testkit/wick-audition/."
+    description = "Render WICK native/raw/matched WAVs, exact phrase scores and patches, causal traces and the audition page under testkit/wick-audition/."
     maxHeapSize = "768m"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.WickAuditionGenerator")
