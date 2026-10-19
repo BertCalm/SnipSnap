@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111613">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 40%27%3E%3Cpath d=%27M4 20h10c9 0 7-11 16-11s6 22 15 22h15%27 fill=%27none%27 stroke=%27%23d0efb8%27 stroke-width=%274%27/%3E%3C/svg%3E">
   <meta name="description" content="Listen to Filament, an experimental pitched engine for SnipSnap. Follow a note through a strand, around a bend, and into its escaping halo.">
   <title>FILAMENT — SnipSnap listening bench</title>
   <link rel="stylesheet" href="./styles.css">
@@ -23,7 +24,7 @@
         <h1 id="hero-title">FILAMENT<span class="title-dot">.</span></h1>
         <p class="hero-line">Contain <span>→</span> bend <span>→</span> spill.</p>
         <p class="hero-description">A note travels through a strand. Every bend lets a little escape. Listen to where it goes.</p>
-        <a class="jump-link" href="#bench">Open the listening bench <span aria-hidden="true">↘</span></a>
+        <a class="jump-link" href="#bench">Open the listening bench <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="m3 3 10 10M4 13h9V4"/></svg></span></a>
       </div>
       <div class="filament-art" aria-hidden="true">
         <svg viewBox="0 0 680 380" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -91,7 +92,7 @@
 
             <div class="detail-disclosures"><details id="diagnostics-details"><summary>Render diagnostics <span aria-hidden="true">+</span></summary><div class="disclosure-body"><a id="diagnostics-download" href="#" download>Download diagnostics JSON ↓</a><pre id="diagnostics-content">Open to load diagnostics.</pre></div></details><details id="recipe-details"><summary>Patch recipe <span aria-hidden="true">+</span></summary><div class="disclosure-body"><a id="recipe-download" href="#" download>Download patch recipe ↓</a><pre id="recipe-content">Open to load recipe.</pre></div></details></div>
 
-            <div class="notes-heading"><label for="notes" class="eyebrow">YOUR LISTENING NOTES</label><span id="notes-status" class="muted">Saved in this browser</span></div><textarea id="notes" rows="3" placeholder="What changes as the note bends? What should we try next?"></textarea><div class="notes-footer"><span>Private to this browser. No account or upload.</span><button type="button" id="export-notes">Export notes <span aria-hidden="true">↗</span></button></div>
+            <div class="notes-heading"><label for="notes" class="eyebrow">YOUR LISTENING NOTES</label><span id="notes-status" class="muted">Saved in this browser</span></div><textarea id="notes" rows="3" placeholder="What changes as the note bends? What should we try next?"></textarea><div class="notes-footer"><span>Private to this browser. No account or upload.</span><button type="button" id="export-notes">Export notes <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 13 13 3M4 3h9v9"/></svg></span></button></div>
           </div>
         </article>
       </div>
@@ -102,6 +103,6 @@
       <div class="method-body"><div class="method-row"><span class="method-number">01</span><div><h3>Compare the same excitation</h3><p>Start with the bend and routing collections. Switch between the collected mix and available stems to hear what leaves the strand, and when.</p></div></div><div class="method-row"><span class="method-number">02</span><div><h3>Choose your loudness reference</h3><p><strong>Native</strong> uses the engine’s output calibration. <strong>Raw</strong> keeps a fixed export gain for energy comparisons. <strong>Matched</strong> adjusts listening level so you can compare tone. Stem exports keep their supplied gain.</p></div></div><div class="method-row"><span class="method-number">03</span><div><h3>Inspect the evidence</h3><p>Every clip has a saved recipe and render diagnostics. Held clips can repeat with the loop switch; seam context is available when the collection includes it.</p></div></div><div class="prototype-note"><span class="eyebrow">PROTOTYPE SCOPE</span><p>THREAD, PULSE, and CURL · up to four strands · four path classes · four bend sites · eight halo modes. Audio is rendered by SnipSnap’s Kotlin engine. This page plays those files; its macro displays describe each saved render.</p><p id="pack-description">The listening pack contains selected audio and the saved render evidence. Individual files are available throughout the bench.</p></div></div>
     </section>
   </main>
-  <footer class="footer wrap"><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true">↗</span></a><span>FILAMENT / AN ENGINE IN PROGRESS</span><div><a href="./manifest.json" download>Render manifest ↓</a><a data-pack-download href="./filament-listening-pack.zip" download>Listening pack ↓</a></div></footer>
+  <footer class="footer wrap"><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 13 13 3M4 3h9v9"/></svg></span></a><span>FILAMENT / AN ENGINE IN PROGRESS</span><div><a href="./manifest.json" download>Render manifest ↓</a><a data-pack-download href="./filament-listening-pack.zip" download>Listening pack ↓</a></div></footer>
 </body>
 </html>

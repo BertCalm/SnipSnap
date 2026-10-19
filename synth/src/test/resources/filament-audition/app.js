@@ -25,7 +25,14 @@
   const currentPath = () => filePath(files()[state.track === 'mix' ? state.mode : state.track]);
   const visibleClips = () => state.clips.filter((clip) => (state.group === 'all' || clip.group === state.group) && (!state.voice || String(clip.voice) === state.voice) && (!state.query || [clip.title, clip.description, clip.voice, clip.kind, clip.id].join(' ').toLowerCase().includes(state.query)));
   const noteName = (midi) => Number.isFinite(Number(midi)) ? ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'][((Math.round(Number(midi)) % 12) + 12) % 12] + (Math.floor(Number(midi) / 12) - 1) : '—';
-  const time = (seconds) => Number.isFinite(seconds) ? `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}` : '0:00';
+  const time = (seconds, fine = false) => {
+    if (!Number.isFinite(seconds)) return fine ? '0:00.0' : '0:00';
+    if (fine) {
+      const tenths = Math.max(0, Math.round(seconds * 10));
+      return `${Math.floor(tenths / 600)}:${String(Math.floor(tenths / 10) % 60).padStart(2, '0')}.${tenths % 10}`;
+    }
+    return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  };
   const number = (value, digits = 3) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits).replace(/\.?0+$/, '') : String(value ?? '—');
   function status(message) { $('audio-status').textContent = message; }
   function loadNotes() { try { const saved = JSON.parse(localStorage.getItem('filament-listening-notes-v1') || '{}'); state.notes = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {}; } catch { state.notes = {}; } }
@@ -134,8 +141,9 @@
     const progress = duration > 0 ? Math.min(1000, current / duration * 1000) : 0;
     $('seek').value = String(progress);
     $('seek').style.setProperty('--progress', `${progress / 10}%`);
-    $('seek').setAttribute('aria-valuetext', `${time(current)} of ${time(duration)}`);
-    $('audio-time').textContent = `${time(current)} / ${time(duration)}`;
+    const fine = duration > 0 && duration < 10;
+    $('seek').setAttribute('aria-valuetext', `${time(current, fine)} of ${time(duration, fine)}`);
+    $('audio-time').textContent = `${time(current, fine)} / ${time(duration, fine)}`;
   }
   function loadAudio({play = false, keepTime = false} = {}) {
     const path = currentPath();
