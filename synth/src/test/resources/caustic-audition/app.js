@@ -120,10 +120,10 @@
     if (clip.velocity !== undefined) addMetadata(metadata, `VEL ${numeric(clip.velocity)}`);
     const bottom = node('div', 'card-bottom');
     const links = node('div', 'card-links');
-    const wav = node('a', 'card-wav', 'WAV ↗');
+    const wav = node('a', 'card-wav', 'WAV →');
     wav.href = activePath(clip); wav.download = fileName(activePath(clip));
     wav.setAttribute('aria-label', `Download ${clip.title} WAV`);
-    const recipe = node('a', '', 'Recipe ↗');
+    const recipe = node('a', '', 'Recipe →');
     recipe.href = clip.recipe; recipe.download = fileName(clip.recipe);
     recipe.setAttribute('aria-label', `Download ${clip.title} recipe`);
     links.append(wav, recipe);
