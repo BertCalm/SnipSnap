@@ -375,7 +375,7 @@ object SynthCommand {
             } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
-            FileOutputStream(file).use { WavWriter.write(it, snip) }
+            FileOutputStream(file).buffered().use { WavWriter.write(it, snip) }
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
                 landing != null -> "  (lands with ENSEMBLE, stereo)"
@@ -488,7 +488,7 @@ object SynthCommand {
         val all = FloatArray(once.size * loops) { once[it % once.size] }
         val name = Names.sanitizeStem("${patch.name}_DRONE_${Scales.nameOf(root)}")
         val file = File(dir, "$name.wav")
-        FileOutputStream(file).use { WavWriter.write(it, Snip(all, channels = 1, sampleRate = session.sampleRate)) }
+        FileOutputStream(file).buffered().use { WavWriter.write(it, Snip(all, channels = 1, sampleRate = session.sampleRate)) }
         // ASCII, like every other line this CLI prints: a terminal that
         // isn't UTF-8 shows the app's middle dots and cent signs as '?'.
         val span = DroneMaker.span(root, session)

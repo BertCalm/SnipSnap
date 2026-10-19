@@ -45,12 +45,13 @@ object NativePads {
     external fun drainEnded(handle: Long): IntArray
 
     /**
-     * The resample tap, the same three calls `NativeSurface` has. [armPrint]
+     * The resample tap, the same four calls `NativeSurface` has. [armPrint]
      * reserves `maxFrames` before the callback is told to record and refuses
      * (false) while a print is live; [printState] is `PrintBuffer.State` as an
-     * ordinal - 0 idle, 1 recording, 2 stopping, 3 done; [stopPrint] waits for
-     * the callback's last write and hands back what was captured, or null when
-     * nothing was.
+     * ordinal - 0 idle, 1 recording, 2 stopping, 3 done; [requestStopPrint]
+     * asks the callback to finish and returns at once, so [PadEngine.stopPrint]
+     * can wait for it outside its lock; [stopPrint] waits for the callback's
+     * last write and hands back what was captured, or null when nothing was.
      *
      * Unlike the surface's, this print is **interleaved stereo**: the pads mix
      * every voice under its own left and right gain, so the array is
@@ -59,5 +60,6 @@ object NativePads {
      */
     external fun armPrint(handle: Long, maxFrames: Int): Boolean
     external fun printState(handle: Long): Int
+    external fun requestStopPrint(handle: Long)
     external fun stopPrint(handle: Long): FloatArray?
 }
