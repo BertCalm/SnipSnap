@@ -205,6 +205,7 @@ the message.
 | SPOOL | 48–72 |
 | SKITTER | 24–84 |
 | TANGLE | 24–84 |
+| CREASE | 24–84 |
 | SHOAL | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
@@ -225,7 +226,11 @@ repeatable macro variation around the chosen preset). OSPREY also takes
 of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
 `--seed N` for its starting trajectory and refuses `--scramble`. `--seed`
 is supported by SKITTER, OSPREY and VENT; `--scramble` by SKITTER only;
-`--seconds` and `--model` by OSPREY only. Other engines refuse these options.
+`--seconds` by OSPREY only; `--model 1|2|3` by OSPREY and CREASE.
+Other engines refuse these options. CREASE stores the selected model, MIDI
+note and velocity in its native Patch JSON; `--patch recipe.json` replays
+a saved patch, with explicit note, velocity or model flags overriding only
+those fields. See [CREASE](CREASE.md) for examples.
 
 OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
 their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and
