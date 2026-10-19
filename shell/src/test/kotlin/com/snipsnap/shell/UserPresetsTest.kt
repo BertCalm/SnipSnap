@@ -241,6 +241,12 @@ class UserPresetsTest {
             val line = UserPresets.rosterLine(preset)
             if (preset is ObbligatoPatch) {
                 assertEquals(preset, obbligatoFromRosterLine(line), "${preset.name}: complete duet recipe promotion")
+            } else if (preset is com.snipsnap.synth.OverlapPatch) {
+                val literal = line.removePrefix("OverlapPatch.fromJsonText(").removeSuffix("),")
+                val promoted = com.snipsnap.synth.OverlapPatch.fromJsonText(com.snipsnap.json.Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: complete model, note and velocity promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is OpenSkyPatch) {
                 val promoted = openSkyFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete source, articulation and render-state promotion")
@@ -723,6 +729,9 @@ class UserPresetsTest {
             if (engine == ObbligatoPatch.ENGINE) {
                 val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.OverlapPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.OverlapPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.OverlapPatch::class.java, decoder.returnType, "OVERLAP promotion retains the complete versioned recipe")
             } else if (engine == RelayPatch.ENGINE) {
                 val decoder = RelayPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(RelayPatch::class.java, decoder.returnType, "RELAY promotion retains its complete phrase JSON")

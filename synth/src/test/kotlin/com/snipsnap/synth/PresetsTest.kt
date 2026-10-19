@@ -50,6 +50,7 @@ class PresetsTest {
         for (voice in LacquerVoice.entries) assertEquals(LacquerPresets.forVoice(voice), Presets.forVoice("LACQUER", voice.name))
         for (voice in TangleVoice.entries) assertEquals(TanglePresets.forVoice(voice), Presets.forVoice("TANGLE", voice.name))
         for (voice in FlockVoice.entries) assertEquals(FlockPresets.forVoice(voice), Presets.forVoice("FLOCK", voice.name))
+        for (voice in OverlapTopology.entries) assertEquals(OverlapFactoryPresets.forVoice(voice), Presets.forVoice("OVERLAP", voice.name))
         for (voice in EmbouchureVoice.entries) assertEquals(EmbouchurePresets.forVoice(voice), Presets.forVoice("EMBOUCHURE", voice.name))
         for (voice in BellowsVoice.entries) assertEquals(BellowsPresets.forVoice(voice), Presets.forVoice("BELLOWS", voice.name))
         for (voice in MurmurVoice.entries) assertEquals(MurmurPresets.forVoice(voice), Presets.forVoice("MURMUR", voice.name))
@@ -123,6 +124,7 @@ class PresetsTest {
     fun `forVoice returns empty for an unknown voice on a real engine`() {
         assertTrue(Presets.forVoice("THUMP", "NOT A VOICE").isEmpty())
         assertTrue(Presets.forVoice("OBBLIGATO", "NOT A VOICE").isEmpty())
+        assertTrue(Presets.forVoice("OVERLAP", "NOT A VOICE").isEmpty())
     }
 
     @Test
@@ -148,9 +150,34 @@ class PresetsTest {
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
-            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all()
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
+    }
+
+    @Test
+    fun `OVERLAP factory lookup preserves the approved musical notes velocities and model`() {
+        data class Identity(val name: String, val topology: OverlapTopology, val midi: Int, val velocity: Float, val model: Int = 2)
+        val expected = listOf(
+            Identity("GLASS THREAD", OverlapTopology.TREFOIL, 60, .85f),
+            Identity("HOLLOW PIN", OverlapTopology.TORUS, 60, .75f),
+            Identity("CUP STRIKE", OverlapTopology.MIRROR, 48, .90f),
+            Identity("CHORD SEED", OverlapTopology.SELF, 48, .80f),
+            Identity("OPEN WEAVE", OverlapTopology.SELF, 48, .70f),
+            Identity("FIFTH CLOUD", OverlapTopology.TREFOIL, 48, .75f),
+            Identity("SILVER VEIL", OverlapTopology.MIRROR, 60, .70f),
+            Identity("LOW HALO", OverlapTopology.TORUS, 48, .80f),
+            Identity("LOOSE TIDE", OverlapTopology.SELF, 48, .75f),
+            Identity("COMMON TIDE", OverlapTopology.TREFOIL, 48, .80f),
+            Identity("PAIR PULSE", OverlapTopology.MIRROR, 60, .75f),
+            Identity("CIRCUIT RUN", OverlapTopology.TORUS, 48, .85f),
+        )
+        val factory = Presets.all().filterIsInstance<OverlapPatch>()
+        assertEquals(OverlapMusicalBank.all().map { it.patch }, factory)
+        assertEquals(expected, factory.map { Identity(it.name, it.topology, it.midi, it.velocity, it.model) })
+        for (patch in factory) {
+            assertEquals(patch, Presets.byName(OverlapPatch.ENGINE, patch.voiceName, patch.name))
+        }
     }
 
     @Test
