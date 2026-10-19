@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#172a26">
+  <meta name="description" content="Listen to ORPHICA for SnipSnap: an experimental microsound harp, from a clear string attack to a cloud made from its own sound.">
+  <title>ORPHICA / SnipSnap — Microsound harp audition</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listen">Skip to the recordings</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#top" aria-label="ORPHICA / SnipSnap home"><span class="brand-symbol" aria-hidden="true">✳</span><span>SNIPSNAP <span class="brand-slash">/</span> ORPHICA</span></a>
+      <div class="header-actions"><span class="edition">AUDITION 001</span><button id="stop-all" class="stop-all" type="button"><span aria-hidden="true">■</span> Stop all <kbd>esc</kbd></button></div>
+    </div>
+  </header>
+  <main id="top">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> A MICROSOUND HARP FOR SNIPSNAP</p>
+        <h1 id="hero-title">A pluck.<br>Then, <em>a cloud.</em></h1>
+        <p class="hero-description">A clear string attack, breaking into little pieces of its own sound. Hear the idea take shape.</p>
+        <div class="hero-actions"><button id="first-play" class="button button-dark" type="button" disabled><span aria-hidden="true">▶</span> Hear the clean harp</button><a class="text-link" href="#listen">Explore the recordings <span aria-hidden="true">↓</span></a></div>
+        <p class="hero-caption">Rendered prototype · headphones welcome · no autoplay</p>
+      </div>
+      <figure class="instrument-figure">
+        <div class="figure-label"><span>STRING → FRAGMENT</span><span>01 / 02</span></div>
+        <svg viewBox="0 0 540 440" role="img" aria-labelledby="illustration-title illustration-description">
+          <title id="illustration-title">A string becomes a cloud</title>
+          <desc id="illustration-description">A conceptual harp diagram with straight strings on the left dispersing into short floating fragments on the right.</desc>
+          <defs><pattern id="dot-grid" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#7aa597" opacity=".22"/></pattern><linearGradient id="string-fade"><stop stop-color="#e7e5cd"/><stop offset="1" stop-color="#e7e5cd" stop-opacity=".18"/></linearGradient></defs>
+          <rect width="540" height="440" fill="url(#dot-grid)"/>
+          <g stroke="#69978a" stroke-width="1" fill="none" opacity=".35"><circle cx="267" cy="222" r="132"/><circle cx="267" cy="222" r="177"/><path d="M38 222H501M267 29V414"/></g>
+          <path d="M76 335L144 83Q155 42 193 60L336 119" fill="none" stroke="#c6d3b4" stroke-width="13" stroke-linecap="round"/>
+          <path d="M76 335L282 352" fill="none" stroke="#c6d3b4" stroke-width="13" stroke-linecap="round"/>
+          <g stroke="url(#string-fade)" stroke-width="1.5"><path d="M163 64L106 337M189 76L134 339M215 87L162 342M241 98L190 344M267 109L218 347M293 120L246 349"/></g>
+          <g stroke="#a3d2bf" stroke-linecap="round" stroke-width="2.5"><path d="M287 184l9-19M303 220l10-25M272 284l8-14M322 146l5-13M350 195l8-15M332 271l8-22M311 318l9-14M379 237l4-16M380 153l7-10M406 193l5-18M399 296l6-12M361 333l5-13M430 248l5-9M438 159l3-8M456 209l4-6M462 291l4-8M466 336l3-6"/></g>
+          <g fill="#dcc27a"><circle cx="264" cy="224" r="4"/><circle cx="327" cy="193" r="3"/><circle cx="374" cy="287" r="2.5"/><circle cx="441" cy="312" r="2"/><circle cx="414" cy="130" r="2"/></g>
+          <g fill="#b7c9b9" font-family="monospace" font-size="10" letter-spacing="2"><text x="63" y="402">THE ATTACK</text><text x="350" y="402">THE AFTERIMAGE</text></g>
+        </svg>
+        <figcaption><span><i aria-hidden="true"></i> THE NOTE IS THE SOURCE</span><span>CONCEPT STUDY / 0.1</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="listening-guide wrap" aria-label="Listening guide">
+      <p class="guide-title">Listen for the handoff.</p>
+      <p><span>01</span> Does the attack stay clear?</p><p><span>02</span> Does the cloud belong to the string?</p><p><span>03</span> Which textures would you keep?</p>
+    </section>
+
+    <section class="recordings wrap" id="listen" aria-labelledby="recordings-title">
+      <div class="section-heading"><div><p class="eyebrow">THE LISTENING COLLECTION</p><h2 id="recordings-title">From string to scatter.</h2><p>Start with the core profiles. Then compare the fractures, materials, registers, and musical phrases.</p></div><div class="level-setting"><span class="small-label">LISTENING LEVEL</span><div class="level-toggle" role="group" aria-label="Listening level"><button type="button" data-level="matched" aria-pressed="true">Matched</button><button type="button" data-level="raw" aria-pressed="false">Raw</button></div><p id="level-description">Matched brings clips to a comparable level.</p></div></div>
+      <div id="group-filters" class="group-filters" role="group" aria-label="Filter recordings" hidden></div>
+      <div class="collection-meta"><p id="collection-count">Loading the collection…</p><p id="audio-format"></p></div>
+      <p id="load-status" class="load-status" role="status">Preparing the recordings…</p>
+      <button id="retry-load" class="button button-outline" type="button" hidden>Try loading again</button>
+      <div id="clip-groups"></div>
+      <noscript><p class="load-status">This listening page needs JavaScript to load its recordings and player.</p></noscript>
+    </section>
+
+    <section class="review-section wrap" aria-labelledby="review-title">
+      <div><p class="eyebrow">A SOUND WORTH KEEPING?</p><h2 id="review-title">Trust your ears.</h2><p>Mark a recording Keep, Revise, or Drop, and leave a note beside it. Your review is saved only in this browser. Export it when you’re ready to share.</p><p id="review-summary" class="review-summary" role="status">No recordings reviewed yet.</p></div><button id="export-review" class="button button-dark" type="button" disabled><span aria-hidden="true">↓</span> Export review JSON</button>
+    </section>
+    <footer class="footer wrap"><div class="footer-brand">ORPHICA <span>/ SNIPSNAP</span></div><p>This is a rendered prototype. Captured sustain is a frozen snapshot; there is no live chord latch and no added reverb.</p><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap on GitHub <span aria-hidden="true">↗</span></a></footer>
+  </main>
+
+  <aside id="player-panel" class="player-panel" aria-label="Selected recording player" hidden>
+    <div class="player-inner"><div class="player-identification"><span id="player-level" class="small-label">MATCHED</span><h2 id="player-title">Selected recording</h2><p id="player-description"></p></div><div class="player-controls"><audio id="audio" controls preload="none" aria-label="Recording playback"></audio><p id="player-status" class="player-status" role="status"></p></div><button id="close-player" class="close-player" type="button" aria-label="Stop and close player">×</button></div>
+  </aside>
+</body>
+</html>

@@ -74,7 +74,9 @@ object Cli {
         |                        render factory presets to wav, to hear them
         |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY: --midi N --velocity 0..1)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
-        |                        (WICK: provisional PLUCK/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (WICK: provisional PLUCK/WOOD/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (CONTOUR: --patch recipe.json replays a complete sound;
+        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
         |                        (REGISTERS: PIPE/MUSETTE; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
