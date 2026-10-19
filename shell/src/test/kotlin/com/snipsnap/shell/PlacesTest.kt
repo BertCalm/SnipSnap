@@ -66,4 +66,16 @@ class PlacesTest {
         assertEquals("KEY Am · BANK B EMPTY · 3 VERSIONS", Places.thisKit("Am", bankBEmpty = true, versions = 3))
         assertEquals("NO KEY · BANK B IN USE · 1 VERSION", Places.thisKit(null, bankBEmpty = false, versions = 1))
     }
+
+    @Test
+    fun `the kit chip keeps the project count in its name, and the sheet marks the active kit in words`() {
+        val line = Places.switcher(Project("P", listOf("Kitchen", "Funk Room"), activeKit = "Funk Room"))
+        assertEquals("SWITCH KIT · FUNK ROOM · 2 KITS IN THIS PROJECT", Places.switchKitName(line))
+        assertEquals("● FUNK ROOM · ACTIVE", Places.kitRow("Funk Room", active = true))
+        assertEquals("KITCHEN", Places.kitRow("Kitchen", active = false))
+        assertFalse("ON THE GRID" in Places.kitRow("Funk Room", active = true), "ON THE GRID is the quantize phrase")
+        for (drawn in listOf(Places.ADD_KIT, Places.SHEET_ADD_FROM_SHELF)) {
+            assertFalse("▾" in drawn, "▾ has no glyph in either face and draws as a dot: " + drawn)
+        }
+    }
 }

@@ -490,14 +490,23 @@ object Layout {
      * the standing line with its door. Taller than [MIN_HIT_TARGET] so a
      * two-line sentence fits beside a door chip without either shrinking.
      * It replaces the status bar at the frame's foot, whose three cells it
-     * absorbs; [STATUS_BAR_H] stays for the one row still cut to it, the
-     * fullscreen grid's own header.
+     * absorbs; [STATUS_BAR_H] is no longer cut to by any row (the fullscreen
+     * grid's header is a hit target tall).
      */
     const val DOCK_H = 56
     const val STATUS_BAR_H = 26
     const val LCD_HEADER_H = 40
     const val PAD_GAP = 8
     const val PAD_H = 76
+
+    /**
+     * PADS' own pad height. PAD_H is KEYS', SYNTH's slot chooser's and the
+     * spread preview's too, and KEYS cannot scroll; the PADS grid is the
+     * one that got 56dp back when the switcher row went into the header
+     * (UX review S6/P1), and the first look is a row of pads that should
+     * read as pads.
+     */
+    const val KIT_PAD_H = 88
     const val PAD_RADIUS = 6
     const val PRIMARY_ACTION_H = 52
 

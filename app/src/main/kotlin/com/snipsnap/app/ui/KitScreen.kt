@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -64,6 +65,7 @@ import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -120,13 +122,14 @@ fun KitScreen(
     entry: KitShelf.Entry?,
     /**
      * The kit switcher's line, built by App through `Places.switcher`
-     * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). Drawn above
-     * the LCD header when there is a kit; with [entry] null the whole page
-     * is one empty panel and the switcher is not drawn
-     * (docs/SCREEN_PLAN_2026_10.md section 3.3).
+     * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). It is not
+     * drawn: the header's name chip says the kit, and this line is the
+     * chip's accessible name (`Places.switchKitName`), where the project's
+     * count lives. With [entry] null the whole page is one empty panel and
+     * there is no chip (docs/SCREEN_PLAN_2026_10.md section 3.3).
      */
     switcherLine: String,
-    /** The switcher chip: lists the project's kits. */
+    /** The name chip: lists the project's kits, or - with nothing to switch between - opens the shelf. */
     onSwitchKit: () -> Unit,
     /** + FROM SHELF: SHELF in pick mode, returning here. */
     onAddFromShelf: () -> Unit,
@@ -438,7 +441,7 @@ fun KitScreen(
     }
     val showing = bank.coerceAtMost(reachable - 1)
 
-    // ⟳ FULL: an in-app Popup + a runtime orientation flip, not a second
+    // FULL: an in-app Popup + a runtime orientation flip, not a second
     // Activity. the loop's old separate-Activity pattern existed because
     // LOOP owns a wholly disk-backed session and its own audio-thread
     // engine that has no reason to live inside App()'s composition; this
@@ -476,38 +479,82 @@ fun KitScreen(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // The kit switcher (section 3.3): one line above the LCD, so the
-        // kit is chosen before it is read.
-        KitSwitcherRow(switcherLine, onSwitchKit, onAddFromShelf)
-
-        Row(
+        // The header carries the kit (UX review S6): the name chip is the
+        // switcher - it used to be a row of its own above this one, saying
+        // the name a second and third time - then the pad count, the
+        // shelf's door, and the fullscreen grid. A floor of one hit target
+        // tall, not a height: the 40dp this was clamped every chip in it.
+        // The key, tempo and bank, when there are any, sit on a line of
+        // their own beneath, so a long kit name never has to share the row
+        // with them.
+        Column(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
-                val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-                val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
-                TapeText("$keyed$tempo$banks${Copy.countOf(kit.pads.size, "PAD", "PADS")}", TapeType.lcdSmall, scheme.amber.tape)
-                // PLAY's ⟳ FULL, moved to the header's right end (section
-                // 3.3): the fullscreen grid is the part of PLAY that was
-                // different from KIT, and this is its door.
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // The name and the count share what the two chips leave; the
+                // count is measured first, so a long name ellipsises rather
+                // than pushing it off.
+                Row(
+                    Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme)
+                            .tapeClick(label = Places.switchKitName(switcherLine), onClick = onSwitchKit)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, scheme.ink.tape, maxLines = 1)
+                    }
+                    TapeText(Copy.countOf(kit.pads.size, "PAD", "PADS"), TapeType.lcdSmall, scheme.amber.tape, maxLines = 1)
+                }
+                // The visible `+ KIT` is the room the header has; the
+                // accessible name is the door's full one.
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .widthIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .tapeClick(label = Places.ADD_FROM_SHELF, onClick = onAddFromShelf)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.amberOnChrome, maxLines = 1)
+                }
+                // PLAY's FULL, at the header's right end (section 3.3):
+                // the fullscreen grid is the part of PLAY that was
+                // different from KIT, and this is its door. A plain word:
+                // the circle arrow before it had no glyph in either face
+                // and drew as a circle.
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .widthIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
                         .tapeClick(label = "FULLSCREEN") { fullscreen = true }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("⟳ FULL", TapeType.pixel, scheme.ink2.tape)
+                    TapeText("FULL", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
                 }
+            }
+            val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
+            val keyed = kit.key?.let { KeyPicker.label(it) + "  " } ?: ""
+            val banks = if (bankCount > 1 || showing > 0) PadBanks.letter(showing) + "  " else ""
+            val facts = (keyed + tempo + banks).trim()
+            if (facts.isNotEmpty()) {
+                TapeText(facts, TapeType.lcdSmall, scheme.amber.tape, Modifier.padding(bottom = 6.dp), maxLines = 1)
             }
         }
 
@@ -679,8 +726,17 @@ fun KitScreen(
         // share one row (3:2:1), SPLIT, DUST ALL and BREED each take a full
         // row, then the two texture doors; the panel below them scrolls, so
         // a short screen never pushes the grid.
+        //
+        // The padding below the scroll is inside it: a dock's height of
+        // slack after the last row, so the group's closed line can always
+        // be scrolled clear of the screen's foot (UX review P2) instead of
+        // sitting on the edge with no cue that anything lies past it.
         Column(
-            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
+            Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = Layout.DOCK_H.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             GroupBox(
@@ -963,46 +1019,6 @@ fun KitScreen(
 
 
 /**
- * The kit switcher (docs/SCREEN_PLAN_2026_10.md section 3.3): one line above
- * the LCD header. The line App built through `Places.switcher` is itself the
- * chip that lists the project's kits; `+ FROM SHELF` beside it is a door onto
- * SHELF in pick mode. Pixel type, both a full hit target tall.
- */
-@Composable
-private fun KitSwitcherRow(switcherLine: String, onSwitchKit: () -> Unit, onAddFromShelf: () -> Unit) {
-    val scheme = LocalScheme.current
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(
-            Modifier
-                .weight(1f)
-                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .raisedBevel(scheme)
-                .tapeClick(label = "SWITCH KIT", onClick = onSwitchKit)
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            // Two lines: the modern label face is wider than the pixel one and
-            // "N KITS IN THIS PROJECT" is the half a user needs to read.
-            TapeText(switcherLine, TapeType.pixel, scheme.ink.tape, maxLines = 2)
-        }
-        DoorChip(Places.ADD_FROM_SHELF, onAddFromShelf)
-    }
-}
-
-/**
- * The strip's resting line: what it reads before any pad has been tapped.
- * It replaces the HOLD-A-PAD legend this slot used to carry (section 3.3,
- * "the two legend lines become one") - the strip says what a hold does by
- * offering OPEN ▸, so the resting line only has to say that tapping is how
- * the strip gets its pad.
- */
-private const val STRIP_RESTING_LINE = "TAP A PAD · IT PLAYS, AND THIS LINE READS IT"
-
-/**
  * The pad strip: one line for the selected pad from [PadStrip.line], then
  * one door chip per entry in its doors - OPEN ▸ for a filled pad, CAPTURE ▸
  * and FROM SNIPS ▸ for an empty one. Dispatches on the door's own label,
@@ -1024,7 +1040,10 @@ private fun PadStripLine(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (slot == null) {
-            TapeText(STRIP_RESTING_LINE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            // `Copy.PADS_RESTING_LINE`: what the strip reads before any pad
+            // has been tapped. ink2, not ink3 (3.85:1 on paper), and two
+            // lines, because the hold hint is the half nobody can guess.
+            TapeText(Copy.PADS_RESTING_LINE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             return@Row
         }
         val strip = PadStrip.line(pad, slot)
@@ -1207,15 +1226,6 @@ private fun TexturePanel(
     }
 }
 
-/** HANDOFF: tint for text on dark = the class colour mixed 55% to white. */
-private fun classTint(rgb: Int): Color {
-    val r = (rgb shr 16) and 0xFF
-    val g = (rgb shr 8) and 0xFF
-    val b = rgb and 0xFF
-    fun up(c: Int) = c + ((255 - c) * 0.55f).toInt()
-    return Color(0xFF shl 24 or (up(r) shl 16) or (up(g) shl 8) or up(b))
-}
-
 /** A long press that opens PAD SHEET, timed from the design's own 480ms. */
 private const val LONG_PRESS_MS = 480L
 
@@ -1258,9 +1268,9 @@ private fun PadCell(
     if (pad == null) {
         Box(
             modifier
-                .height(Layout.PAD_H.dp)
+                .height(Layout.KIT_PAD_H.dp)
                 .then(if (selected) Modifier.border(2.dp, (if (scheme.look == Look.MODERN) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-                .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
                 // The raw pointerInput below fires onTap on release
                 // (a hint, not an action) and starts a hand-rolled
                 // long-press timer on down — neither registers a
@@ -1350,33 +1360,23 @@ private fun PadCell(
     val modern = scheme.look == Look.MODERN
     Box(
         modifier
-            .height(Layout.PAD_H.dp)
+            .height(Layout.KIT_PAD_H.dp)
             // The selection ring, OUTSIDE the class rim with the rim inset
             // under it: the rim's width is the held state and its hue the
             // drum class, so the ring takes the one thing neither already
             // says. It used to be a 1dp line drawn over the rim's outer
             // pixel, which the first run on a phone could not see at all.
             .then(if (selected) Modifier.border(2.dp, (if (modern) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-            .then(
-                if (modern) {
-                    // `docs/MODERN_LOOK.md` §3: the raised fill, a hairline,
-                    // and the class colour as a 4dp bottom edge — no rim,
-                    // no glow. The hit's flash below stays: it is feedback,
-                    // not decoration.
-                    Modifier
-                        .background(scheme.raised.tape, shape)
-                        .border(1.dp, scheme.grayEdge.tape, shape)
-                        .drawBehind {
-                            val edge = 4.dp.toPx()
-                            drawRect(cls.tape, topLeft = Offset(0f, size.height - edge), size = Size(size.width, edge))
-                        }
-                } else {
-                    Modifier
-                        .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                        .border(if (held) 3.dp else 2.dp, cls.tape, shape)
-                },
+            // The face is PadGrid's `padSkin`, shared with PlayPad. Classic
+            // is this cell's own chain: the held rim is 3dp, and the hit's
+            // flash is drawn over the border.
+            .padSkin(
+                scheme, cls, shape, lit,
+                classic = Modifier
+                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
+                    .border(if (held) 3.dp else 2.dp, cls.tape, shape)
+                    .background(cls.tape.copy(alpha = lit), shape),
             )
-            .background(cls.tape.copy(alpha = lit), shape)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
             // double-tap did nothing — a false affordance, arguably
@@ -1451,7 +1451,13 @@ private fun PadCell(
         // a kick reads as a kick before it's hit. Drawn first so the tag
         // and name sit over it.
         if (peaks != null && peaks.isNotEmpty()) {
-            PadWaveform(peaks, cls.tape.copy(alpha = 0.30f), Modifier.matchParentSize())
+            // On paper the colour is the name's own darkened ink and the
+            // alpha stronger: lime, mint and cyan at 0.30 vanished on cream.
+            PadWaveform(
+                peaks,
+                if (scheme.isPaper()) Schemes.classInkOn(cls, scheme.raised).tape.copy(alpha = 0.55f) else cls.tape.copy(alpha = 0.30f),
+                Modifier.matchParentSize(),
+            )
         }
         // Full-opacity ink2 on its own solid backing chip, not a dimmed
         // copy drawn straight over the cell (audit finding 5, 2.30-3.59:1
@@ -1461,25 +1467,20 @@ private fun PadCell(
         // data-dependent (whatever the waveform happens to render at this
         // corner) and can still fall to ~2.4:1 for a bright class colour
         // like HAT_OPEN even with ink2 fixed — see ContrastTest.
-        // On paper the chip is the card itself (ink2 clears AA on it —
-        // ContrastTest's backdrop law reads `raised` under the modern
-        // look); darkening paper gives a grey block nothing needs.
-        val paper = Scheme.luma(scheme.gray) >= 90
+        // On paper the chip is the card itself (`padTagBacking`).
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .background((if (paper) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape, RoundedCornerShape(3.dp))
+                .background(padTagBacking(scheme), RoundedCornerShape(3.dp))
                 .padding(horizontal = 3.dp, vertical = 1.dp),
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        // The name: tinted toward white on a dark pad (the handoff's rule),
-        // darkened just until it reads on a paper one, so lime stays lime
-        // either way (`Schemes.classInkOn`).
+        // The name's ink is `padNameInk`: tinted on a dark pad, darkened on paper.
         TapeText(
             pad.displayName,
             TapeType.marker,
-            if (paper) Schemes.classInkOn(cls, scheme.raised).tape else classTint(cls),
+            padNameInk(scheme, cls),
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )

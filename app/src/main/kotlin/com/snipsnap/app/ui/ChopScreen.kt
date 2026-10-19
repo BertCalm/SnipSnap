@@ -1804,6 +1804,10 @@ internal fun SegmentButton(
             .semantics { this.selected = active }
             .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(vertical = 4.dp),
+        // The two-line block is centred in the chip, not hung from its top:
+        // an unselected chip's second line is blank, and top-aligned that
+        // left a lone word riding high in a 48dp box (UX review ruling a).
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         TapeText(
@@ -1817,8 +1821,9 @@ internal fun SegmentButton(
         )
         // Same reason, and `pressedBevel` above is keyed on `active` alone:
         // blanking this while busy left the bevel saying selected and the
-        // caption saying nothing.
-        TapeText(if (active) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
+        // caption saying nothing. ink3: the border says it first, this
+        // only names it.
+        TapeText(if (active) "SELECTED" else "", TapeType.pixelSmall, scheme.ink3.tape)
     }
 }
 

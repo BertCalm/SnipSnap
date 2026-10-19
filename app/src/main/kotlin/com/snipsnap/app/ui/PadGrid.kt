@@ -6,7 +6,6 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,14 +16,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
@@ -37,8 +38,10 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Look
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadHit
+import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 
 /**
@@ -67,9 +70,10 @@ import com.snipsnap.shell.Schemes
  * One bank as the 4×4 window every portrait screen draws — KIT's grid,
  * PLAY's in-window view, GROOVE's record grid, and CATCH on TAPE — top
  * row first, bottom-up numbering, so B is laid out exactly as A.
- * [BankRow] is the landscape shape: two banks of eight abreast, whose
- * floor (888 dp for both) a portrait phone never meets; the app is
- * portrait-locked at the manifest everywhere but PLAY's fullscreen route.
+ * [BankRow] is the landscape shape: both banks abreast, each this same
+ * 4×4 (440 dp for the pair, which a portrait phone's 360 does not meet);
+ * the app is portrait-locked at the manifest everywhere but PLAY's
+ * fullscreen route.
  */
 internal fun windowRows(bank: Int): List<IntRange> {
     val base = bank * PadBanks.SIZE
@@ -77,8 +81,6 @@ internal fun windowRows(bank: Int): List<IntRange> {
 }
 
 internal val WINDOW_GRID_ROWS = windowRows(0)
-internal val BANK_A_ROWS = listOf(9..16, 1..8)
-internal val BANK_B_ROWS = listOf(25..32, 17..24)
 
 /**
  * Touch-Y velocity: top of the pad is softest, bottom is full velocity.
@@ -112,7 +114,7 @@ private val CENTER_VELOCITY = PadHit.CENTER
 private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /** HANDOFF: tint for text on dark = the class colour mixed 55% to white. */
-private fun classTint(rgb: Int): Color {
+internal fun classTint(rgb: Int): Color {
     val r = (rgb shr 16) and 0xFF
     val g = (rgb shr 8) and 0xFF
     val b = rgb and 0xFF
@@ -121,13 +123,74 @@ private fun classTint(rgb: Int): Color {
 }
 
 /**
- * Both banks, side by side. `Layout.MIN_HIT_TARGET` is non-negotiable
- * (Lessons), so this measures the available width first: wide enough for
- * both banks at the floor width, share it with `weight` so pads grow to
- * fill a roomy landscape screen; too narrow (a compact phone's landscape
- * width, minus insets, can land under 8 pads' worth of 44dp), fall back to
- * fixed floor-width banks inside a horizontal scroll — `weight` and
- * `horizontalScroll` can't be combined in the same axis, hence the split.
+ * A pad's face - the one skin KIT's `PadCell` and the pads here
+ * (`PlayPad`: fullscreen, GROOVE's record grid, CATCH) both wear, so the
+ * look cannot be decided in one place and forgotten in the other (UX
+ * review S3). Only the skin lives here; each site keeps its own gesture,
+ * semantics and scale where they were, because the laws that pin the
+ * literal tap code read those files.
+ *
+ * Under `Look.MODERN` (`docs/MODERN_LOOK.md` §3): the raised fill, a 1dp
+ * hairline, the class colour as a 4dp bottom edge - no rim, no glow - and
+ * the hit's flash [lit] over the top, because the flash is feedback and
+ * not decoration. A blank slot ([cls] null) is the raised card with no
+ * edge, the same bevel everything else blank wears.
+ *
+ * Under the classic look each site's own chain stands in [classic],
+ * untouched: KIT's has a held rim (3dp, then 2dp) and lit drawn after the
+ * border, PLAY's a resting wash and lit drawn before it, and merging the
+ * two would reorder layers one of them has shipped.
+ */
+internal fun Modifier.padSkin(
+    scheme: Scheme,
+    cls: Int?,
+    shape: Shape,
+    lit: Float,
+    classic: Modifier,
+): Modifier {
+    if (scheme.look != Look.MODERN) return this.then(classic)
+    if (cls == null) return this.raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+    return this
+        .background(scheme.raised.tape, shape)
+        .border(1.dp, scheme.grayEdge.tape, shape)
+        .drawBehind {
+            val edge = 4.dp.toPx()
+            drawRect(cls.tape, topLeft = Offset(0f, size.height - edge), size = Size(size.width, edge))
+        }
+        .background(cls.tape.copy(alpha = lit), shape)
+}
+
+/** Whether the scheme's chrome is paper: a pad's ink and tag chip go dark-on-light there, light-on-dark elsewhere. */
+internal fun Scheme.isPaper(): Boolean = Scheme.luma(gray) >= 90
+
+/**
+ * The name's ink: tinted toward white on a dark pad (the handoff's rule),
+ * darkened just until it reads on a paper one, so lime stays lime either
+ * way (`Schemes.classInkOn`).
+ */
+internal fun padNameInk(scheme: Scheme, cls: Int): Color =
+    if (scheme.isPaper()) Schemes.classInkOn(cls, scheme.raised).tape else classTint(cls)
+
+/**
+ * The slot tag's opaque backing chip. On paper it is the card itself (ink2
+ * clears AA on it - ContrastTest's backdrop law reads `raised` under the
+ * modern look); darkening paper gives a grey block nothing needs.
+ */
+internal fun padTagBacking(scheme: Scheme): Color =
+    (if (scheme.isPaper()) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape
+
+/**
+ * Both banks at once, each the same 4×4 [windowRows] draws on every
+ * portrait screen - A on the left, B on the right, MPC order in both
+ * (bottom-left is 01, 17). Two blocks of four rather than two banks of
+ * eight by two: a landscape phone gives ~780-860 dp after insets, which
+ * seats two 216 dp banks with room to grow, where eight columns a bank
+ * needed 888 dp, fell to a scroll with 48 × 125 dp slivers and left B08
+ * off-screen with no hint.
+ * `Layout.MIN_HIT_TARGET` is non-negotiable (Lessons), so the width is
+ * measured first: wide enough for two banks at the floor, they share it
+ * with `weight` so pads grow to fill a roomy screen; too narrow, B stacks
+ * under A - still 4×4 each, never a scroll.
  */
 @Composable
 internal fun BankRow(
@@ -138,26 +201,23 @@ internal fun BankRow(
     modifier: Modifier = Modifier,
     emptyHits: Boolean = false,
 ) {
-    val bankFloor = (Layout.MIN_HIT_TARGET * 8 + Layout.PAD_GAP * 7).dp
+    val bankFloor = (Layout.MIN_HIT_TARGET * 4 + Layout.PAD_GAP * 3).dp
     BoxWithConstraints(modifier) {
         if (maxWidth >= bankFloor * 2 + Layout.PAD_GAP.dp) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
-                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
-                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
+                PlayBank(kit, windowRows(0), glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
+                PlayBank(kit, windowRows(1), glow, onHit, onRelease, Modifier.weight(1f).fillMaxHeight(), emptyHits)
             }
         } else {
-            Row(
-                Modifier.fillMaxHeight().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
-            ) {
-                PlayBank(kit, BANK_A_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight(), emptyHits)
-                PlayBank(kit, BANK_B_ROWS, glow, onHit, onRelease, Modifier.width(bankFloor).fillMaxHeight(), emptyHits)
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
+                PlayBank(kit, windowRows(0), glow, onHit, onRelease, Modifier.weight(1f).fillMaxWidth(), emptyHits)
+                PlayBank(kit, windowRows(1), glow, onHit, onRelease, Modifier.weight(1f).fillMaxWidth(), emptyHits)
             }
         }
     }
 }
 
-/** One bank's 8×2 block — [rows] is top-row-first, matching KIT's own bottom-up numbering. */
+/** One bank's block - [rows] is top-row-first, matching KIT's own bottom-up numbering ([windowRows]). */
 @Composable
 internal fun PlayBank(
     kit: Kit,
@@ -276,7 +336,7 @@ internal fun PlayPad(
         Box(
             modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
                 .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", onHit, onRelease) else Modifier),
             contentAlignment = Alignment.TopEnd,
         ) {
@@ -297,12 +357,16 @@ internal fun PlayPad(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .scale(1f - 0.03f * g)
-            .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-            // assigned: resting outer wash (~class@60%, flattened — see KDoc above)
-            .background(cls.tape.copy(alpha = 0.12f), shape)
-            // lit: inset wash at class@40%, driven by the trigger/choke glow
-            .background(cls.tape.copy(alpha = 0.40f * g), shape)
-            .border(2.dp, cls.tape, shape)
+            .padSkin(
+                scheme, cls, shape, 0.40f * g,
+                classic = Modifier
+                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
+                    // assigned: resting outer wash (~class@60%, flattened — see KDoc above)
+                    .background(cls.tape.copy(alpha = 0.12f), shape)
+                    // lit: inset wash at class@40%, driven by the trigger/choke glow
+                    .background(cls.tape.copy(alpha = 0.40f * g), shape)
+                    .border(2.dp, cls.tape, shape),
+            )
             // No long-press here (see this composable's own KDoc — PLAY
             // is for playing): the press-and-release gesture and its
             // accessibility floor live in `padGesture`, shared with the
@@ -321,7 +385,7 @@ internal fun PlayPad(
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .background(Schemes.darken(scheme.gray, 0.30f).tape, RoundedCornerShape(3.dp))
+                .background(padTagBacking(scheme), RoundedCornerShape(3.dp))
                 .padding(horizontal = 3.dp, vertical = 1.dp),
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
@@ -329,7 +393,7 @@ internal fun PlayPad(
         TapeText(
             pad.displayName,
             TapeType.marker,
-            classTint(cls),
+            padNameInk(scheme, cls),
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )

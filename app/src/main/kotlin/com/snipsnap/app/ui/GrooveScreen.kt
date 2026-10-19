@@ -2024,13 +2024,12 @@ fun GrooveScreen(
                         // an exploratory tap on an earlier count-in beat
                         // still sounds here but isn't captured.
                         // WINDOW_GRID_ROWS (bank A as a 4x4), not BankRow. BankRow is
-                        // PLAY's FULLSCREEN layout — two banks of eight abreast,
-                        // whose own `bankFloor` is 8*MIN_HIT_TARGET + 7*PAD_GAP =
-                        // 440dp for ONE bank. This app is portrait-locked at the
-                        // manifest, so on a ~390dp phone that floor is never met:
-                        // BankRow would always fall to its horizontalScroll branch
-                        // and you cannot scroll a pad strip while both hands are
-                        // playing it. 4x4 is also what KIT's own GRID_ROWS and
+                        // PLAY's FULLSCREEN layout — both banks as 4x4 abreast,
+                        // whose floor is 2*(4*MIN_HIT_TARGET + 3*PAD_GAP) + PAD_GAP
+                        // = 440dp. This app is portrait-locked at the manifest, so
+                        // on a ~390dp phone that floor is never met: BankRow would
+                        // always stack both banks, and halve every pad you are
+                        // playing with both hands. 4x4 is also what KIT's own GRID_ROWS and
                         // PLAY's windowed view both render, so the grid you record
                         // on is the grid you already know.
                         PlayBank(kit, WINDOW_GRID_ROWS, glow, ::recordHit, { _, _ -> }, Modifier.weight(2f).fillMaxWidth())

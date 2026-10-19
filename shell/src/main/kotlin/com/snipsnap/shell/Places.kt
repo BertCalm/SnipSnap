@@ -78,8 +78,32 @@ object Places {
         return "${active.uppercase(Locale.ROOT)} ▾ · $n ${if (n == 1) "KIT" else "KITS"} IN THIS PROJECT"
     }
 
+    /**
+     * The name chip's accessible name: what a tap does, then the fact the
+     * drawn chip has no room for. The line is [switcher]'s, and its `▾`
+     * is dropped on the way - neither face has the glyph, it drew as a
+     * dot, and a screen reader would read it out as a shape.
+     */
+    fun switchKitName(line: String): String = "SWITCH KIT · " + line.replace(" ▾", "")
+
     const val NO_KITS = "NO KITS YET"
     const val ADD_FROM_SHELF = "+ FROM SHELF"
+
+    /** The header chip that opens [ADD_FROM_SHELF]: the same door, in the room the header has. */
+    const val ADD_KIT = "+ KIT"
+
+    /** The kit sheet's last row. The arrow: it opens the shelf in pick mode. */
+    const val SHEET_ADD_FROM_SHELF = "+ FROM SHELF ▸"
+
+    /**
+     * One row of the kit sheet. The active kit is marked in words and a
+     * dot, never colour alone, and not "ON THE GRID" - that is the
+     * quantize language (CUT's ON THE GRID, GROOVE's), a different fact.
+     */
+    fun kitRow(name: String, active: Boolean): String {
+        val upper = name.uppercase(Locale.ROOT)
+        return if (active) "● $upper · ACTIVE" else upper
+    }
 
     /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
     fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
