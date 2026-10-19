@@ -18,9 +18,16 @@ clips = manifest['clips']
 assert clips, 'Run :synth:generateConfluenceAudition first'
 assert output != source and source not in output.parents, 'Keep site output separate from renderer output'
 output.mkdir(parents=True, exist_ok=True)
-# Copy only generated evidence. Never remove unrelated files in a supplied output directory.
+# Playback kits are downloadable ZIP/XPN assets. Their loose working folders
+# duplicate the same WAVs and exceed the host's total expanded archive budget.
+export_directories = {'rendered-kit', 'wordless-rendered-kit'}
+for name in export_directories:
+    target = output / name
+    if target.is_dir():
+        shutil.rmtree(target)
+# Copy generated listening evidence; preserve unrelated output files.
 for item in source.iterdir():
-    if item.name.startswith('.'):
+    if item.name.startswith('.') or item.name in export_directories:
         continue
     target = output / item.name
     if item.is_dir():
@@ -73,9 +80,13 @@ publication = {
     'title': 'Confluence — SnipSnap audition', 'finitePrototype': True, 'maxPerformers': 8,
     'manifestSha256': hashlib.sha256((source / 'manifest.json').read_bytes()).hexdigest(),
     'threeRoleArrangement': bool(role_family),
+    'exportWorkingDirectoriesOmitted': sorted(export_directories),
+    'exportDownloadsRetained': True,
 }
 (output / 'site-build.json').write_text(json.dumps(publication, indent=2) + '\n')
 for item in output.rglob('*'):
     if item.is_file():
         assert item.stat().st_size <= 25 * 1024 * 1024, f'Hosting asset exceeds 25 MiB: {item}'
+expanded_bytes = sum(item.stat().st_size for item in output.rglob('*') if item.is_file())
+assert expanded_bytes < 256 * 1024 * 1024, 'Static output exceeds the hosting expanded archive limit (256 MiB)'
 print(json.dumps({'output': str(output), 'clips': len(clips), 'files': sum(p.is_file() for p in output.rglob('*'))}))
