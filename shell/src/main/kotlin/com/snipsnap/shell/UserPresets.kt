@@ -8,6 +8,7 @@ import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
@@ -372,9 +373,10 @@ object UserPresets {
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE and WICK also copy the saved
+     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE,
+     * WICK, SHOAL and CREASE also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
+     * PITCHWHEEL, SHOAL and CREASE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
      * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
@@ -482,6 +484,7 @@ object UserPresets {
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is CreasePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")

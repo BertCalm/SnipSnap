@@ -9,6 +9,7 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OpenSkyPatch
@@ -99,6 +100,7 @@ object Spread {
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
+        is CreasePatch -> patch.midi.toFloat()
         else -> detect(snip)
     }
 
