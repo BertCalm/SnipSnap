@@ -1617,6 +1617,10 @@ object Copy {
     const val REPLAY_NO_DOOR = "THIS RECIPE HAS NO DOOR HERE."
     fun copied(word: String, from: String): String = "$word COPIED FROM $from. PASTE IT ON ANY PAD."
     fun replayed(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    fun replayedBoard(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL KEPT."
+    const val WIDE_REMOVE_BEFORE_SOFT_HITS = "REMOVE WIDE BEFORE CHANGING SOFT HITS."
+    const val WIDE_REMOVE_BEFORE_STACK = "REMOVE WIDE BEFORE STACK THE TAKES."
+    const val WIDE_REMOVE_BEFORE_SPREAD = "REMOVE WIDE BEFORE SPREAD."
     /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
     fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
         "$word DONE AGAIN ON $pad, IN $key" +
