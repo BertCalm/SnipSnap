@@ -240,14 +240,17 @@ object Mpc3Importer {
         // Validate before writing the destination. The unchanged WAV copies
         // below are the same files checked against any saved source hashes.
         val kit = ImportSidecar.restore(Kit(kitName, pads), sidecarText, dataDir, sidecarFile.path)
+        // Total recall: the clips the track carries come home too.
+        val clips = parseClips(track)
+
+        // Only now, with the kit and its clips built, does the disk change:
+        // copying the samples first used to leave them behind in destDir
+        // when building a pad then failed.
         destDir.mkdirs()
         for (file in referenced) {
             SafePath.child(dataDir, file).copyTo(SafePath.child(destDir, file), overwrite = true)
         }
         KitStore.save(kit, destDir)
-
-        // Total recall: the clips the track carries come home too.
-        val clips = parseClips(track)
         if (clips.isNotEmpty()) GrooveStore.save(destDir, clips)
 
         return ImportResult(kit, destDir, trackName, clips.size)

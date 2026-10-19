@@ -561,7 +561,11 @@ object Tangle {
         val n = plan.frames * oversample
         val meter = Meter()
         val pilot = Machine(v, m, plan.hz, rate, velocity.toDouble(), seed(TangleVoice.entries.first { voice(it) == v }, midi), meter)
-        // No onset in a held loop. Preroll preserves the interaction before recording a schedule.
+        // A held loop steps at envelope 1.0 from its first sample, with no attack envelope.
+        // Preroll preserves the interaction before recording a schedule. The clock is reset
+        // after it, and periodicBoundary resets it at the start of every period, so the
+        // control clock is period-local: `step`'s velocity-scaled `effort`, which scales
+        // both FM depths and decays with the clock, restarts at each period's start.
         repeat((.55 * rate).roundToInt()) { if (it % 8192 == 0) stopIfUnwanted(); pilot.step(1.0) }
         pilot.capture = CaptureState.FREE; pilot.captureAge = 0; pilot.refractory = 0
         pilot.clock = 0; meter.held.clear(); meter.capture.clear()

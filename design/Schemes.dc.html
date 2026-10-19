@@ -19,6 +19,7 @@
     .t-sodium{ --gray:#221a0c; --g-hi:#5c4c28; --g-e:#2c2410; --g-mid:#120e06; --g-dk:#080502; --ink:#f0d8a8; --ink2:#a08a58; --t1:#c85a10; --t2:#ffb000; --title-ink:#ffffff; --desk1:#160e02; --desk2:#201606; --lcd:#120c04; --lcd-ink:#ffd25e; --amber:#ff6a2a; --field:#1a140a; }
     .t-ice{ --gray:#10202e; --g-hi:#305468; --g-e:#16283a; --g-mid:#081420; --g-dk:#030a12; --ink:#b8e2f8; --ink2:#6a92a8; --t1:#1a5ac8; --t2:#58c8ff; --title-ink:#ffffff; --desk1:#04101c; --desk2:#081826; --lcd:#060e16; --lcd-ink:#b8e2f8; --amber:#58c8ff; --field:#0c1a26; }
     .t-vapor{ --gray:#10201c; --g-hi:#2e5c4a; --g-e:#1a2c26; --g-mid:#081410; --g-dk:#040c08; --ink:#a8f0d8; --ink2:#62a08a; --t1:#10b088; --t2:#40e8c0; --title-ink:#ffffff; --desk1:#061410; --desk2:#0a1c16; --lcd:#06120e; --lcd-ink:#a8f0d8; --amber:#b27af8; --field:#0c1a16; }
+    .t-vent{ --gray:#1d1e1b; --g-hi:#393b33; --g-e:#2d2f28; --g-mid:#181916; --g-dk:#0e0f0d; --ink:#eeeadd; --ink2:#b3b4a6; --t1:#0f100e; --t2:#232420; --title-ink:#eeeadd; --desk1:#151614; --desk2:#151614; --lcd:#0f100e; --lcd-ink:#eeeadd; --amber:#e08a68; --field:#232420; }
     .raised{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-hi),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-e),inset -2px -2px 0 var(--g-mid);}
     .sunken{background:var(--field);box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-e),inset 2px 2px 0 var(--g-dk),inset -2px -2px 0 var(--g-hi);}
     .win{background:var(--gray);box-shadow:inset 1px 1px 0 var(--g-e),inset -1px -1px 0 var(--g-dk),inset 2px 2px 0 var(--g-hi),inset -2px -2px 0 var(--g-mid);}
@@ -213,6 +214,28 @@
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">OILSLICK · VAPOR</span>
         <span class="px" style="color:#5c6167;">MINT / LILAC. THE MALL IS CLOSED.</span>
+      </div>
+    </div>
+
+    <div class="t-vent deskbg" style="position:relative;padding:12px;display:flex;flex-direction:column;gap:8px;">
+      <div class="win" style="flex:1;display:flex;flex-direction:column;padding:3px;">
+        <div style="height:22px;background:linear-gradient(90deg,var(--t1),var(--t2));display:flex;align-items:center;padding:0 8px;"><span class="ui" style="color:var(--title-ink);font-weight:bold;font-size:10px;flex:1;">SNIPSNAP.EXE</span><div class="raised" style="width:16px;height:14px;"></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:7px;">
+          <div class="sunken" style="background:var(--lcd);height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;"><span class="lcdf" style="color:var(--lcd-ink);font-size:15px;">KIT 01</span><span class="lcdf" style="color:var(--amber);font-size:14px;">BANK A</span></div>
+          <div class="padgrid">
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#e8542e;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#ffc41f;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#1fc6cf;"></div></div>
+            <div class="raised minipad"><div class="miniinlay sunken" style="background:#7adfe4;"></div></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="raised" style="height:22px;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#e83a2e"/></svg><span class="px" style="color:var(--ink);">START SESSION</span></div>
+        </div>
+        <div style="height:16px;display:flex;gap:2px;padding:2px 3px 3px;"><div style="flex:1;box-shadow:inset 1px 1px 0 var(--g-mid),inset -1px -1px 0 var(--g-hi);display:flex;align-items:center;padding:0 6px;"><span class="px" style="color:var(--ink);font-size:7px;">TAPE 60s</span></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="px" style="color:#e8ebee;background:#000;padding:3px 8px;">VENT</span>
+        <span class="px" style="color:#5c6167;">EMBER ON SLATE. THE MODERN LOOK, FIRST LIGHT.</span>
       </div>
     </div>
 

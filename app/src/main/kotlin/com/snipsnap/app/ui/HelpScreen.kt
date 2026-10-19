@@ -16,6 +16,7 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Places
 
 /**
  * HELP: what the app is, for whoever went looking for it.
@@ -27,14 +28,12 @@ import com.snipsnap.shell.Copy
  * they were holding did not exist yet.
  *
  * It rotted because it lived here, where nothing could test it. The words
- * are in [Copy] now, held to the app as built by `PersonalityTest`; this
- * composable only draws them. It scrolls because the true version is
- * longer than the lie was and a phone in one hand is short.
- *
- * Moved out of `StubScreen.kt` when that file's own stub (its other
- * occupant) was deleted — every `AppScreen` had shipped a real screen for
- * a long time, so `StubScreen` itself was unreachable, but `HelpScreen`
- * was real and stayed.
+ * are in [Places.HELP] now — one short section per place and one for the
+ * dock (`docs/SCREEN_PLAN_2026_10.md` §3.7), held to the app as built by
+ * `PlacesTest` and the HELP line-length law; the first section's first
+ * line names the MPC, so the front door says who the app is for. This
+ * composable only draws them. It scrolls because a phone in one hand is
+ * short, and it is one tap from every screen now, behind the gear.
  */
 @Composable
 fun HelpScreen() {
@@ -52,15 +51,12 @@ fun HelpScreen() {
         for (line in Copy.BOOT_LINES) {
             TapeText(line, TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.8f))
         }
-        Spacer(Modifier.height(10.dp))
-        TapeText(Copy.HELP_LOOP_HEADER, TapeType.lcdSmall, scheme.amber.tape)
-        for (line in Copy.HELP_LOOP) {
-            TapeText(line, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
-        }
-        Spacer(Modifier.height(10.dp))
-        TapeText(Copy.HELP_MORE_HEADER, TapeType.lcdSmall, scheme.amber.tape)
-        for (line in Copy.HELP_MORE) {
-            TapeText(line, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
+        for ((section, lines) in Places.HELP) {
+            Spacer(Modifier.height(10.dp))
+            TapeText(section, TapeType.lcdSmall, scheme.amber.tape)
+            for (line in lines) {
+                TapeText(line, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
+            }
         }
     }
 }

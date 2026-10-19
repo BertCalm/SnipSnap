@@ -11,12 +11,39 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** Acceptance probes observe the dry mechanism before loudness targeting or a final fade. */
 class PitchwheelTest {
     private val timbral = listOf("PUSH", "TOOTH", "ADHESION", "HEAT", "BODY")
     private val names = listOf("TUNE") + timbral + "HOLD"
+
+    @Test
+    fun `an interrupted finite or held render of any model stops instead of finishing beside its replacement`() {
+        val voice = PitchwheelVoice.CLUNK
+        val held = Pitchwheel.defaults(voice) + ("HOLD" to 1f)
+        // A loaded legacy patch renders through the frozen model 1 and 2 renderers.
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "model 3 finite" to { Pitchwheel.render(voice) },
+            "model 3 held" to { Pitchwheel.render(voice, held) },
+            "model 2 finite" to { PitchwheelV2.render(voice) },
+            "model 2 held" to { PitchwheelV2.render(voice, held) },
+            "model 1 finite" to { PitchwheelV1.render(voice) },
+            "model 1 held" to { PitchwheelV1.render(voice, held) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                val look = if (label.endsWith("held")) "its look before the first settling cycle" else "its first look in the sample loop"
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "PITCHWHEEL $label render did not stop on the interrupt at $look",
+                ) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertTrue(Pitchwheel.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 
     private fun rms(samples: FloatArray, from: Int = 0, until: Int = samples.size): Double {
         var energy = 0.0

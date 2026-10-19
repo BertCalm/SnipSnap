@@ -2,8 +2,10 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -12,17 +14,18 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-/** Saved full profiles and the deliberately small, dry first-listen bank. */
+/** Complete saved profiles, the approved factory bank, and the preserved first-listen kit. */
 class LacquerPresetsTest {
     @Test
-    fun `eight audition recipes cover six voices and preserve every complete profile`() {
-        val names = setOf("Glass Coat", "Warm Underlay", "Three Arrivals", "Amber Brass", "Soft Surface", "Delayed Tine", "Silk Block", "Close Finish")
+    fun `thirty six factory recipes supply six distinct names per voice and complete saved profiles`() {
         val presets = LacquerPresets.all()
-        assertEquals(names, presets.map { it.name }.toSet())
-        assertEquals(8, presets.size, "preset expansion follows the owner's dry sonic approval")
+        assertEquals(36, presets.size)
+        assertEquals(36, presets.map { it.name.trim().uppercase(Locale.ROOT) }.toSet().size,
+            "factory names must remain unambiguous after saved-preset normalization")
         assertEquals(LacquerVoice.entries.toSet(), presets.map { it.voice }.toSet())
         assertTrue(Presets.all().containsAll(presets))
         for (voice in LacquerVoice.entries) {
+            assertEquals(6, LacquerPresets.forVoice(voice).size, "$voice factory coverage")
             assertEquals(LacquerPresets.forVoice(voice), Presets.forVoice("LACQUER", voice.name))
         }
         assertTrue(Presets.forVoice("LACQUER", "NOT_A_VOICE").isEmpty())
@@ -33,6 +36,8 @@ class LacquerPresetsTest {
             assertEquals(patch, Presets.byName("LACQUER", patch.voiceName, patch.name))
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
             assertEquals(patch.toJsonText(), LacquerPatch.fromJsonText(patch.toJsonText()).toJsonText())
+            assertTrue(patch.profile.layers.map { it.role }.containsAll(listOf(LacquerRole.BODY, LacquerRole.EDGE, LacquerRole.TRAIL)),
+                "${patch.name}: a normal factory recipe needs all three independent roles")
             val encoded = patch.toJsonValue().entries
             assertEquals(1, encoded.getValue("model").int())
             assertEquals(setOf("layers", "processing", "loop"), encoded.getValue("profile").obj().keys)
@@ -41,6 +46,26 @@ class LacquerPresetsTest {
                 assertEquals(setOf("attackSeconds", "decaySeconds", "sustain", "releaseSeconds"), layer.obj().getValue("envelope").obj().keys)
                 assertEquals(setOf("onsetSeconds", "reliefSeconds", "attackRelief", "decayRelief", "holdPhase"), layer.obj().getValue("timing").obj().keys)
             }
+        }
+    }
+
+    @Test
+    fun `the original eight complete recipes and default selections remain frozen`() {
+        val text = requireNotNull(javaClass.getResource("/lacquer-reference-recipes.json")) {
+            "missing independently captured pre-expansion reference recipes"
+        }.readText()
+        val snapshots = Json.parse(text).arr()
+        assertEquals(8, snapshots.size)
+        val references = snapshots.map { LacquerPatch.fromJsonValue(it) }
+        assertEquals(references, LacquerPresets.references(), "first-listen reference order and every saved model field")
+        for ((snapshot, reference) in snapshots.zip(references)) {
+            val current = assertIs<LacquerPatch>(Presets.byName("LACQUER", reference.voiceName, reference.name))
+            assertEquals(reference, current, "${reference.name}: voice, macros, note, velocity, model or layer profile drifted")
+            assertEquals(Json.write(snapshot), current.toJsonText(), "${reference.name}: canonical complete recipe changed")
+        }
+        for (voice in LacquerVoice.entries) {
+            assertEquals(references.first { it.voice == voice }, LacquerPresets.forVoice(voice).first(),
+                "$voice existing default selection changed")
         }
     }
 
@@ -147,6 +172,7 @@ class LacquerPresetsTest {
         assertEquals(LacquerVoice.entries.toSet(), patches.map { it.voice }.toSet())
         assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
         assertTrue(patches.take(8).all { it.voice == LacquerVoice.KEY })
+        assertEquals(LacquerPresets.references(), patches.drop(8), "the original curated sixteen-pad kit remains stable")
         assertEquals(1, kit.count { it!!.drumClass == DrumClass.LOOP })
         assertEquals(DrumClass.LOOP, kit[14]!!.drumClass)
     }

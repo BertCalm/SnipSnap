@@ -23,9 +23,9 @@ class TerraTest {
     fun `render is bit-for-bit deterministic`() {
         val a = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
         val b = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
-        // Snip.equals deliberately compares format and length only, not
-        // sample contents (Cleanup.kt's own KDoc on it) - contentEquals is
-        // what actually proves bit-for-bit here.
+        // Snip.equals compares the sample array by identity, not contents
+        // (Cleanup.kt's own comment on it) - contentEquals is what actually
+        // proves bit-for-bit here.
         assertTrue(a.samples.contentEquals(b.samples))
     }
 
