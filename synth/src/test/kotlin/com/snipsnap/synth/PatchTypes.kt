@@ -46,13 +46,12 @@ internal object PatchTypes {
      * The engines with a [Patch] type and provisional recipes of their own that are
      * deliberately kept out of [Presets] until the owner's listening verdict.
      * OVERLAP's first finite comparisons likewise stay in its audition generator.
-     * FLOCK's finite recipes have a dedicated audition generator and CLI access.
      * WICK keeps its provisional starting points in its own preset object and
      * renders through the CLI while awaiting that verdict.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(OverlapPatch.ENGINE, FlockPatch.ENGINE, WickPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(OverlapPatch.ENGINE, WickPatch.ENGINE)
 
     /** Only these voices of an otherwise rostered engine remain CLI-only comparisons. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

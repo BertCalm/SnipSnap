@@ -47,7 +47,6 @@ class PatchesTest {
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),
-        FlockPresets.all().first(),
         WickPresets.all().first(),
     )
 

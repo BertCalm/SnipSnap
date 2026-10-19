@@ -6,6 +6,73 @@ multimode filter. History and flutter are new proposals, not a reconstruction of
 the historical circuit. The [supplied specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
 is retained alongside this implementation.
 
+## Voice character revision (R4)
+
+The six voices previously shared their oscillator morph, source balance and
+nonlinear transfer. Defaults and cutoff/recovery settings did much of the
+distinguishing work. R4 gives each voice its own excitation and circuit response
+while retaining the quicker flutter and primary/reply/breath phrasing.
+
+| Voice | Character direction |
+| --- | --- |
+| BASS | Rounded low-register weight, a quieter second oscillator and a firmer settling response. |
+| LEAD | Saw and narrow-pulse bite with stronger history-dependent edge. |
+| HOLLOW | An open octave pair, odd harmonics and cleaner nasal resonance. |
+| FLUTTER | Contrasting pulse shapes and a more lively response to recovery gestures. |
+| CHIRP | A smoother pitched carrier that provokes brief resonant filter bursts. |
+| FRAY | Dense edges and a rougher nonlinear response to signal history and noise forcing. |
+
+The ordinary root-support path is quieter so the voiced filter determines the
+body. Its former full-high-pass budget and upper-register boost are retained.
+CHIRP adds a focused third harmonic within its oscillator source; HOLLOW keeps
+the 2:1 octave relationship. Audible noise gain/color, pitch-recovery time
+constants, flutter frequencies and the seeded phrase scheduler remain intact.
+Traces include the final frame as well as the 5 ms grid, exposing late gestures
+that previously fell after the last diagnostic sample.
+
+The first audition bench renders all six voices at MIDI 48, velocity 1 and seed
+0 with identical BUZZ .55, SKITTER .50, AGITATE .60, VENT .35, STATIC .15 and
+HOLD 0. It separates voice identity from preset settings. Matched R3/R4 pairs
+follow, with both earlier comparison benches retained. R3 recordings are frozen
+with source and SHA-256 provenance, just like the earlier snapshots.
+
+Character checks use five 8192-sample Hann windows across the attack and pitched
+body, before the shortest voice releases. Each window's power is normalized
+before comparing root-relative spectral bands. At the common active settings,
+all 15 voice pairs redistribute at least 9.80% of normalized spectral energy,
+and each contrast exceeds twice the measured same-voice seed radius across
+seeds 0, 17 and 91. Joint time/power signatures are reported separately because
+they also include phrase loudness. Quiet-core and audio-reaction checks cover
+identity with motion/noise off and the contrasting FLUTTER/CHIRP responses.
+
+All 33 focused tests pass: the previous 30 engine/patch/agitation/phrasing and
+decimator checks plus three character tests. The existing admission thresholds
+are retained. All 24 causal mechanism probes move cutoff by more than 50 Hz.
+The 144-case pitch study's 72 moderate cases stay within 2.791 cents, with
+confidence at least .959, pre-release sustain ratio at least .837 and onset/body
+flatness at most .0606/.0407. Measured replies remain 125 ms apart, with mean
+breaths of 243–281 ms and softer real circuit responses in held phrases.
+
+An independent comparison of the identical neutral sweep bank shows the ten
+previously crowded pairs moving from 0.78–2.34% joint spectral contrast in R3
+to 5.65–28.99% in R4. Every one of those ten pairs improves; HOLLOW's previous
+outlier distances become smaller as the other voices gain individual character.
+This comparison uses the same windows, controls, root and normalization in both
+revisions.
+
+The full pack contains 325 current variants, 993 current PCM24 WAVs and 33
+frozen comparison WAVs. All 18 current held clips converge within three periods,
+with state error at most `3.01e-9` and zero exported PCM24 seam error. There are
+no emergency bound hits. Finite 4× render time has a 242 ms 95th percentile;
+the slowest held render is 514 ms on the Linux environment described below.
+Independent hosted decoding restores all 1,026 WAVs byte-for-byte and validates
+1,845 references, sampler metadata, repeated loops and all three provenance
+chains.
+Chromium passes all 18 shared-voice playback modes, 54 revision-comparison
+sides and 12 held-seam demonstrations. Exact WAV downloads across R1–R4,
+shared-snapshot cache reuse, level controls, historical labels, keyboard/filter
+controls and layouts at 1440, 390 and 320 pixels are checked.
+
 ## Phrase listening revision (R3)
 
 R2 is the accepted baseline for this pass. R3 organizes its gestures into a
@@ -119,10 +186,11 @@ stays below the held-loop step.
 
 ## Coupled circuit
 
-BUZZ morphs a four-partial rounded triangle, PolyBLEP saw and PolyBLEP pulse.
-Their fundamental polarities agree, avoiding cancellation during the morph;
-pulse width stays between .16 and .50. A quiet direct fundamental supports the
-filtered signal. Unequal exponential recovery follows bounded departures in
+BUZZ increases edge content within each voice's mixture of a four-partial
+rounded triangle/sine, PolyBLEP saw and PolyBLEP pulse. Waveform weights, pulse
+width and oscillator balance belong to the voice profile. Fundamental polarities
+agree through the morph; pulse width stays between .12 and .50. A quiet direct
+fundamental supports the filtered signal. Unequal exponential recovery follows bounded departures in
 cents; seeded episodes vary direction, strength and timing, with hysteresis and
 an explicit 8 Hz event ceiling. SKITTER zero removes the departures.
 
@@ -131,6 +199,11 @@ and high-pass outputs. Nonlinear excitation, small signed bias and delayed
 band feedback belong inside the filter. Coefficients read the preceding
 history/agitation update; no instantaneous unsolved feedback is used. VENT
 crossfades those outputs continuously with measured gain budgets.
+
+Voice profiles set positive drive/damping budgets, zero-centered nonlinear bias,
+and the relative response to rising energy, recovery gestures and noise. The
+second-order control keeps R2's natural frequencies, with distinct bounded
+damping for each voice. These are changes inside the shared circuit.
 
 Energy history uses internal input and band power, normalized against .22;
 signed history has a tightly bounded .055 target. An exact discrete damped

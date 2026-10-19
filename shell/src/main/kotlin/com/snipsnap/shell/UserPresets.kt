@@ -13,8 +13,10 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -344,7 +346,9 @@ object UserPresets {
     // ---- the desk: promotion into the roster ----
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
-    fun voiceEnum(engine: String): String = if (engine == OpenSkyPatch.ENGINE) "OpenSkyVoice"
+    fun voiceEnum(engine: String): String =
+        if (engine == OrphicaPatch.ENGINE) "OrphicaMaterial"
+        else if (engine == OpenSkyPatch.ENGINE) "OpenSkyVoice"
         else engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
 
     /** The table a roster line pastes into, under [ROSTER_DIR]: `ThumpPresets.kt`. */
@@ -380,7 +384,10 @@ object UserPresets {
      * model and exact 64-bit seed. VENT retains note, touch, trajectory seed
      * and either saved renderer through the JSON constructor. OPENSKY retains its complete source
      * timbre, pitch, velocity, gate, wet mode and render model through the JSON
-     * constructor. Names and embedded JSON are escaped Kotlin string literals.
+     * constructor. ORPHICA retains complete string, grain and captured-history state,
+     * including its exact 64-bit seed and HOLD. OVEN writes an explicit constructor
+     * with its root, velocity and model, because its table helper takes note
+     * arguments before the macros. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is VentPatch) {
@@ -392,6 +399,11 @@ object UserPresets {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "OpenSkyPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is OrphicaPatch) {
+            // Encode as a Kotlin string literal; the full config and 64-bit seed belong to this recipe.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OrphicaPatch.fromJsonText($recipe),"
         }
         if (patch is LacquerPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
@@ -419,6 +431,9 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is OvenPatch) {
+            return "OvenPatch(\"$name\", OvenVoice.${patch.voice}, mapOf($macros), midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
         if (patch is FlockPatch) {
             val seed = if (patch.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${patch.seed}L"
             return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
@@ -516,7 +531,7 @@ object UserPresets {
         return "MurmurConfig(routing = MurmurRouting.${config.routing.name}, ratios = ${values(config.ratios)}, " +
             "trajectory = MurmurTrajectory.${config.trajectory.name}, direction = ${config.direction}, " +
             "referenceSeconds = ${config.referenceSeconds}, attack = ${config.attack}, decay = ${config.decay}, " +
-            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets)"
+            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets, model = ${config.model})"
     }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */

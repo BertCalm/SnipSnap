@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -36,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -58,12 +58,16 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
+import com.snipsnap.app.BeatPlayer
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.PadEngine
-import com.snipsnap.app.deviceSampleRate
+import com.snipsnap.app.PadHosts
+import com.snipsnap.app.rememberPadHost
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -120,12 +124,14 @@ fun KitScreen(
     entry: KitShelf.Entry?,
     /**
      * The kit switcher's line, built by App through `Places.switcher`
-     * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). Drawn above
-     * the LCD header even when [entry] is null, so an empty project still
-     * offers + FROM SHELF (docs/SCREEN_PLAN_2026_10.md section 3.3).
+     * (`KITCHEN ▾ · 2 KITS IN THIS PROJECT`, or `NO KITS YET`). It is not
+     * drawn: the header's name chip says the kit, and this line is the
+     * chip's accessible name (`Places.switchKitName`), where the project's
+     * count lives. With [entry] null the whole page is one empty panel and
+     * there is no chip (docs/SCREEN_PLAN_2026_10.md section 3.3).
      */
     switcherLine: String,
-    /** The switcher chip: lists the project's kits. */
+    /** The name chip: lists the project's kits, or - with nothing to switch between - opens the shelf. */
     onSwitchKit: () -> Unit,
     /** + FROM SHELF: SHELF in pick mode, returning here. */
     onAddFromShelf: () -> Unit,
@@ -165,6 +171,14 @@ fun KitScreen(
     bankRequest: Int? = null,
     onBankRequestConsumed: () -> Unit = {},
     /**
+     * A pad to light once, asked for by a landing that just put a sound there
+     * (the first catch). Held until the pad is on the grid - the kit it lands
+     * on arrives a beat after the screen does - and consumed through
+     * [onLightConsumed] once it has flashed.
+     */
+    lightRequest: Int? = null,
+    onLightConsumed: () -> Unit = {},
+    /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
      * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
      * `:shell`'s tested `Breed.breed` crosses this kit's own recipes with
@@ -180,17 +194,43 @@ fun KitScreen(
     onDustAll: () -> Unit = {},
     onEmptyLongPress: (Int) -> Unit = {},
     onEmptyTapHint: (Int) -> Unit = {},
-    /** NO_TAPE_IN_DECK's own route: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    /** NO_PROJECT_OPEN's own route: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
+    /** Whether a project is open: the cold page says one of two things, and this picks which. */
+    hasProject: Boolean,
+    /** PROJECT_HAS_NO_KIT's second route: TAPE, where a kit's first sound is recorded. */
+    onNavigateTape: () -> Unit,
+    /**
+     * Where the kit's engine comes from: the grid holds the kit's host for as
+     * long as it is up, and it is the beat's host too whenever the beat is
+     * playing, so a hit here and the beat's own voices are one engine's. No
+     * default, so a screen built without one fails the compile and not the
+     * ear.
+     */
+    hosts: PadHosts,
+    /**
+     * The project's beat. The grid does not play it; it lights from it: every
+     * pad the clock sounds flashes here the way a finger's hit does. No
+     * default, so a screen built without one fails the compile and not the
+     * player's eye.
+     */
+    beat: BeatPlayer,
 ) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        // The switcher is drawn here too: an empty project is exactly where
-        // + FROM SHELF is the first thing a user needs.
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            KitSwitcherRow(switcherLine, onSwitchKit, onAddFromShelf)
-            EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)), Modifier.weight(1f))
+        // One panel, one story, and no switcher: with no kit there is
+        // nothing to switch between, and the switcher's own NO KITS YET
+        // would be a second empty saying the same thing. A project with no
+        // kit gets + FROM SHELF (the same pick mode the switcher's chip
+        // opens) and TAPE; no project at all gets the shelf.
+        if (hasProject) {
+            EmptyStatePanel(
+                Copy.PROJECT_HAS_NO_KIT,
+                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("TAPE ▸", onNavigateTape)),
+            )
+        } else {
+            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
         }
         return
     }
@@ -203,52 +243,34 @@ fun KitScreen(
     // out fully too; the allocator still exists so a mute group still
     // chokes on this screen, and so a stolen or choked voice is stopped
     // rather than left ringing.
+    //
+    // The engine and the allocator are the kit's `PadHost`, held here while
+    // the grid is composed and shared with whatever else is sounding the
+    // kit: while the beat plays it is the same engine, so a hit on the grid
+    // chokes and steals against the beat's own voices, and there is one
+    // stream, not two. The host closes with its last holder.
     val engineContext = LocalContext.current
-    val player = remember(entry.dir) { PadEngine(deviceSampleRate(engineContext)) }
-    var engineUp by remember(entry.dir) { mutableStateOf(false) }
-    DisposableEffect(entry.dir) {
-        engineUp = player.start()
-        onDispose { player.close() }
-    }
+    val haptics = LocalHaptics.current
+    val host = rememberPadHost(hosts, entry.dir)
+    val player = host.engine
     // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
     // showing it; the engine's bank doesn't know that on its own, so a
     // fresh `kit` reference (its identity changes on every real edit —
-    // see PadSheetScreen's `onKitUpdated`) reloads it. Keyed separately
-    // from the dir-scoped effect above so this also covers the very first
-    // composition, without a redundant load from that one.
-    LaunchedEffect(entry.kit) { withContext(Dispatchers.IO) { player.load(entry) } }
+    // see PadSheetScreen's `onKitUpdated`) asks the host to reload it. The
+    // host waits out a burst of edits before it rebuilds, and loads the
+    // first at once, so this also covers the very first composition.
+    LaunchedEffect(host, entry.kit) { host.request(entry) }
     // Built at the engine's own polyphony so the status line and the
     // engine cannot drift: at the cap the engine steals exactly the voice
     // the allocator said it would.
-    val allocator = remember(entry.dir) { VoiceAllocator(maxVoices = PadEngine.MAX_VOICES) }
-    // Only the fullscreen grid's status line reads these two (inside its
-    // Popup, so this body never recomposes on a voice coming or going):
-    // what the allocator counts, and what the device says a round trip
-    // costs. The latency is polled about once a second - it reads a
-    // timestamp, so it is cheap but not free, and it does not move fast
-    // enough to want a frame.
-    var voiceCount by remember(entry.dir) { mutableIntStateOf(0) }
-    var latency by remember(entry.dir) { mutableStateOf(StreamFacts.latency(null)) }
+    val allocator: VoiceAllocator = host.allocator
     // The endings ring, drained at screen rate - the allocator's
     // bookkeeping (who's oldest, who's still sounding) never drifts from
     // what the engine actually did, and a route change reopens the stream
-    // from here too.
-    LaunchedEffect(player) {
-        var lastLatencyAt = 0L
-        while (true) {
-            val now = withFrameNanos { it }
-            val ended = player.drainEnded()
-            if (ended.isNotEmpty()) {
-                for (id in ended) allocator.voiceEnded(id)
-                voiceCount = allocator.activeCount
-            }
-            if (player.needsRestart()) engineUp = player.start()
-            if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
-                lastLatencyAt = now
-                latency = StreamFacts.latency(player.latencyMillis(), player.isShared())
-            }
-        }
-    }
+    // from here too. The fullscreen grid's status line reads the voice
+    // count and the latency the host keeps, inside its Popup, so this body
+    // never recomposes on a voice coming or going.
+    LaunchedEffect(host) { host.pumpLoop() }
     // W12: every pad's mini-waveform, read off the main thread once per
     // kit edit (the same `kit` identity the engine reload keys on) and
     // kept as columns only. Cleared first, so neither a fresh kit nor an
@@ -284,7 +306,7 @@ fun KitScreen(
 
     fun hit(slot: Int, velocity: Float = 1f) {
         val pad = kit.pad(slot) ?: return
-        if (!engineUp || !player.isUp()) return
+        if (!host.up || !player.isUp()) return
         // oneShot forced true, not read off the pad: this screen has no
         // release gesture to call noteOff with, so a gate pad's own
         // metadata would otherwise sit unused - forcing it here says so,
@@ -296,7 +318,6 @@ fun KitScreen(
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
         if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
-        voiceCount = allocator.activeCount
     }
 
     // The two paths below are PLAY's, folded in (section 5, decision 4): a
@@ -309,7 +330,7 @@ fun KitScreen(
         // report an ending, and the voice count would climb and stick.
         // `isUp` reads the native dead-stream flag, so the window between
         // a route change and the frame loop's restart is covered too.
-        if (!engineUp || !player.isUp()) return
+        if (!host.up || !player.isUp()) return
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, pad.oneShot)
         for (voice in allocation.choked + allocation.stolen) {
             player.stop(voice.id)
@@ -325,7 +346,6 @@ fun KitScreen(
             // must not count a voice that never sounded.
             allocator.voiceEnded(allocation.started.id)
         }
-        voiceCount = allocator.activeCount
         flash(slot)
     }
 
@@ -333,14 +353,11 @@ fun KitScreen(
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
         for (voice in stopped) player.stop(voice.id)
-        voiceCount = allocator.activeCount
         extinguish(slot)
     }
 
     fun panic() {
-        allocator.allOff()
-        player.allOff()
-        voiceCount = allocator.activeCount
+        host.allOff()
         for (slot in glow.keys) extinguish(slot)
     }
     // Read through rememberUpdatedState wherever something outlives one
@@ -426,7 +443,7 @@ fun KitScreen(
     }
     val showing = bank.coerceAtMost(reachable - 1)
 
-    // ⟳ FULL: an in-app Popup + a runtime orientation flip, not a second
+    // FULL: an in-app Popup + a runtime orientation flip, not a second
     // Activity. the loop's old separate-Activity pattern existed because
     // LOOP owns a wholly disk-backed session and its own audio-thread
     // engine that has no reason to live inside App()'s composition; this
@@ -443,6 +460,30 @@ fun KitScreen(
     // window instead of recreating the Activity.
     var fullscreen by remember { mutableStateOf(false) }
     val exitFullscreen = { fullscreen = false }
+
+    // The beat lights the pads it plays. The clock's notes are not fingers
+    // and not MIDI, so they have no cell gesture to light them: they come
+    // through the same echo the fullscreen grid and a MIDI note use, and
+    // only `flash` is called - never `playHeld` or `hit`, which would sound
+    // the pad a second time. A slot off the bank on screen is let go (the
+    // other bank's cells are not composed), and fullscreen shows both. The
+    // bank and the fullscreen flag are read live: this effect outlives the
+    // composition that started it. Flash state is the cell's own Animatable,
+    // so a note recomposes that one cell and never the grid.
+    LaunchedEffect(lightRequest, glow) {
+        val slot = lightRequest ?: return@LaunchedEffect
+        // Not on the grid yet: keyed on `glow`, so this runs again with the kit that has it.
+        if (glow[slot] == null) return@LaunchedEffect
+        flash(slot)
+        onLightConsumed()
+    }
+    val bankShown by rememberUpdatedState(showing)
+    val fullShown by rememberUpdatedState(fullscreen)
+    LaunchedEffect(beat, glow) {
+        beat.triggered.collect { slot ->
+            if (fullShown || PadBanks.bankOf(slot) == bankShown) flash(slot)
+        }
+    }
     val activity = remember(engineContext) { engineContext.findActivity() }
     // Fix round 1 (F1, CRITICAL, from PLAY): the restore must not read
     // `fullscreen` live inside onDispose - that effect runs precisely
@@ -464,38 +505,84 @@ fun KitScreen(
     }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // The kit switcher (section 3.3): one line above the LCD, so the
-        // kit is chosen before it is read.
-        KitSwitcherRow(switcherLine, onSwitchKit, onAddFromShelf)
-
-        Row(
+        // The header carries the kit (UX review S6): the name chip is the
+        // switcher - it used to be a row of its own above this one, saying
+        // the name a second and third time - then the pad count, the
+        // shelf's door, and the fullscreen grid. A floor of one hit target
+        // tall, not a height: the 40dp this was clamped every chip in it.
+        // The key and tempo, when there are any, sit on a line of their
+        // own beneath, so a long kit name never has to share the row with
+        // them; the bank has its own row below.
+        Column(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
-                val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-                val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
-                TapeText("$keyed$tempo$banks${Copy.countOf(kit.pads.size, "PAD", "PADS")}", TapeType.lcdSmall, scheme.amber.tape)
-                // PLAY's ⟳ FULL, moved to the header's right end (section
-                // 3.3): the fullscreen grid is the part of PLAY that was
-                // different from KIT, and this is its door.
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // The name and the count share what the two chips leave; the
+                // count is measured first, so a long name ellipsises rather
+                // than pushing it off.
+                Row(
+                    Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme)
+                            .tapeClick(label = Places.switchKitName(switcherLine), onClick = onSwitchKit)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, scheme.ink.tape, maxLines = 1)
+                    }
+                    TapeText(Copy.countOf(kit.pads.size, "PAD", "PADS"), TapeType.lcdSmall, scheme.amber.tape, maxLines = 1)
+                }
+                // The visible `+ KIT` is the room the header has; the
+                // accessible name is the door's full one.
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .widthIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .raisedBevel(scheme)
+                        .tapeClick(label = Places.ADD_FROM_SHELF, onClick = onAddFromShelf)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.amberOnChrome, maxLines = 1)
+                }
+                // PLAY's FULL, at the header's right end (section 3.3):
+                // the fullscreen grid is the part of PLAY that was
+                // different from KIT, and this is its door. A plain word:
+                // the circle arrow before it had no glyph in either face
+                // and drew as a circle.
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .widthIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
                         .tapeClick(label = "FULLSCREEN") { fullscreen = true }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("⟳ FULL", TapeType.pixel, scheme.ink2.tape)
+                    TapeText("FULL", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
                 }
+            }
+            val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
+            val keyed = kit.key?.let { KeyPicker.label(it) + "  " } ?: ""
+            // The bank is not a fact for this line: the bank row under it
+            // names both banks and marks the one showing, so a bare "A"
+            // here read as a stray letter on the walk.
+            val facts = (keyed + tempo).trim()
+            if (facts.isNotEmpty()) {
+                TapeText(facts, TapeType.lcdSmall, scheme.amber.tape, Modifier.padding(bottom = 6.dp), maxLines = 1)
             }
         }
 
@@ -507,7 +594,7 @@ fun KitScreen(
                     .padding(10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Copy.EMPTY_KIT, TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.EMPTY_KIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
             }
         }
 
@@ -548,7 +635,8 @@ fun KitScreen(
                         TapeType.pixel,
                         when {
                             here -> scheme.titleInk.tape
-                            empty -> scheme.ink3.tape
+                            // ink2 either way: the chip is live (it jumps to
+                            // the bank), and the word EMPTY says the rest.
                             else -> scheme.ink2.tape
                         },
                         maxLines = 1,
@@ -575,7 +663,7 @@ fun KitScreen(
                             echo = glow[slot],
                             // A tap on a filled pad plays it AND selects it,
                             // so the strip below names what was just heard.
-                            onTap = { s, v -> hit(s, v); onSelectSlot(s) },
+                            onTap = { s, v -> hit(s, v); haptics.pad(v); onSelectSlot(s) },
                             onLongPress = onLongPress,
                             onEmptyLongPress = onEmptyLongPress,
                             // An empty pad is selectable too: its strip is
@@ -667,8 +755,17 @@ fun KitScreen(
         // share one row (3:2:1), SPLIT, DUST ALL and BREED each take a full
         // row, then the two texture doors; the panel below them scrolls, so
         // a short screen never pushes the grid.
+        //
+        // The padding below the scroll is inside it: a dock's height of
+        // slack after the last row, so the group's closed line can always
+        // be scrolled clear of the screen's foot (UX review P2) instead of
+        // sitting on the edge with no cue that anything lies past it.
         Column(
-            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
+            Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = Layout.DOCK_H.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             GroupBox(
@@ -777,7 +874,7 @@ fun KitScreen(
                     TapeText(
                         Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
                         TapeType.pixelSmall,
-                        scheme.ink3.tape,
+                        scheme.ink2.tape,
                         Modifier.fillMaxWidth(),
                         maxLines = 1,
                     )
@@ -869,7 +966,7 @@ fun KitScreen(
             // to where it is tapped is not discoverable by looking, and a hint
             // that can be dismissed is a feature that can be lost. The one
             // legend left: the strip carries the other.
-            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             // Where the kit came from (persona review, P4.4). The same move as
             // the two lines above: always there, cannot be dismissed. The
             // finding was that provenance is good and reachable only by
@@ -881,7 +978,7 @@ fun KitScreen(
             // line for "nowhere".
             val cameFrom = Provenance.ofKit(kit.pads)
             if (cameFrom != null) {
-                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
     
             // PLAY's footer, folded in (section 3.3): PANIC always, and the MIDI
@@ -910,7 +1007,7 @@ fun KitScreen(
                 if (midiDevices.isEmpty()) {
                     Box(Modifier.weight(1f))
                 } else {
-                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
                     Box(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -926,8 +1023,8 @@ fun KitScreen(
         }
     }
 
-    // The fullscreen grid, drawn from this screen's own engine, allocator
-    // and glow (see the orientation note above). It plays through
+    // The fullscreen grid, drawn from the kit's host and this screen's
+    // glow (see the orientation note above). It plays through
     // `playHeld`/`release`, not the window's one-shot-forced `hit`: the
     // fullscreen pads have a release, so a gate pad holds while a finger
     // does. The status line is read here, inside the Popup, so only the
@@ -940,7 +1037,7 @@ fun KitScreen(
             FullscreenPlayGrid(
                 kit = kit,
                 glow = glow,
-                status = StreamFacts.playStatus(engineUp, voiceCount, PadEngine.MAX_VOICES, latency),
+                status = StreamFacts.playStatus(host.up, host.voiceCount, PadEngine.MAX_VOICES, host.latency),
                 onHit = { s, v, _ -> playHeld(s, v) },
                 onRelease = { s, _ -> release(s) },
                 onExit = exitFullscreen,
@@ -949,46 +1046,6 @@ fun KitScreen(
     }
 }
 
-
-/**
- * The kit switcher (docs/SCREEN_PLAN_2026_10.md section 3.3): one line above
- * the LCD header. The line App built through `Places.switcher` is itself the
- * chip that lists the project's kits; `+ FROM SHELF` beside it is a door onto
- * SHELF in pick mode. Pixel type, both a full hit target tall.
- */
-@Composable
-private fun KitSwitcherRow(switcherLine: String, onSwitchKit: () -> Unit, onAddFromShelf: () -> Unit) {
-    val scheme = LocalScheme.current
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(
-            Modifier
-                .weight(1f)
-                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .raisedBevel(scheme)
-                .tapeClick(label = "SWITCH KIT", onClick = onSwitchKit)
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            // Two lines: the modern label face is wider than the pixel one and
-            // "N KITS IN THIS PROJECT" is the half a user needs to read.
-            TapeText(switcherLine, TapeType.pixel, scheme.ink.tape, maxLines = 2)
-        }
-        DoorChip(Places.ADD_FROM_SHELF, onAddFromShelf)
-    }
-}
-
-/**
- * The strip's resting line: what it reads before any pad has been tapped.
- * It replaces the HOLD-A-PAD legend this slot used to carry (section 3.3,
- * "the two legend lines become one") - the strip says what a hold does by
- * offering OPEN ▸, so the resting line only has to say that tapping is how
- * the strip gets its pad.
- */
-private const val STRIP_RESTING_LINE = "TAP A PAD · IT PLAYS, AND THIS LINE READS IT"
 
 /**
  * The pad strip: one line for the selected pad from [PadStrip.line], then
@@ -1012,7 +1069,10 @@ private fun PadStripLine(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (slot == null) {
-            TapeText(STRIP_RESTING_LINE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            // `Copy.PADS_RESTING_LINE`: what the strip reads before any pad
+            // has been tapped. ink2, not ink3 (3.85:1 on paper), and two
+            // lines, because the hold hint is the half nobody can guess.
+            TapeText(Copy.PADS_RESTING_LINE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             return@Row
         }
         val strip = PadStrip.line(pad, slot)
@@ -1061,7 +1121,7 @@ private fun KeyPanel(
     val root = key?.rootSemitone ?: KeyPicker.DEFAULT_ROOT
     val scaleLabel = key?.let { KeyPicker.scaleLabel(it.scale) } ?: KeyPicker.DEFAULT_SCALE
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         for (row in KeyPicker.ROOTS.indices.chunked(6)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1147,7 +1207,7 @@ private fun TexturePanel(
 ) {
     val scheme = LocalScheme.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })
@@ -1195,15 +1255,6 @@ private fun TexturePanel(
     }
 }
 
-/** HANDOFF: tint for text on dark = the class colour mixed 55% to white. */
-private fun classTint(rgb: Int): Color {
-    val r = (rgb shr 16) and 0xFF
-    val g = (rgb shr 8) and 0xFF
-    val b = rgb and 0xFF
-    fun up(c: Int) = c + ((255 - c) * 0.55f).toInt()
-    return Color(0xFF shl 24 or (up(r) shl 16) or (up(g) shl 8) or up(b))
-}
-
 /** A long press that opens PAD SHEET, timed from the design's own 480ms. */
 private const val LONG_PRESS_MS = 480L
 
@@ -1246,9 +1297,9 @@ private fun PadCell(
     if (pad == null) {
         Box(
             modifier
-                .height(Layout.PAD_H.dp)
+                .height(Layout.KIT_PAD_H.dp)
                 .then(if (selected) Modifier.border(2.dp, (if (scheme.look == Look.MODERN) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-                .raisedBevel(scheme, Layout.PAD_RADIUS.dp)
+                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
                 // The raw pointerInput below fires onTap on release
                 // (a hint, not an action) and starts a hand-rolled
                 // long-press timer on down — neither registers a
@@ -1338,33 +1389,23 @@ private fun PadCell(
     val modern = scheme.look == Look.MODERN
     Box(
         modifier
-            .height(Layout.PAD_H.dp)
+            .height(Layout.KIT_PAD_H.dp)
             // The selection ring, OUTSIDE the class rim with the rim inset
             // under it: the rim's width is the held state and its hue the
             // drum class, so the ring takes the one thing neither already
             // says. It used to be a 1dp line drawn over the rim's outer
             // pixel, which the first run on a phone could not see at all.
             .then(if (selected) Modifier.border(2.dp, (if (modern) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-            .then(
-                if (modern) {
-                    // `docs/MODERN_LOOK.md` §3: the raised fill, a hairline,
-                    // and the class colour as a 4dp bottom edge — no rim,
-                    // no glow. The hit's flash below stays: it is feedback,
-                    // not decoration.
-                    Modifier
-                        .background(scheme.raised.tape, shape)
-                        .border(1.dp, scheme.grayEdge.tape, shape)
-                        .drawBehind {
-                            val edge = 4.dp.toPx()
-                            drawRect(cls.tape, topLeft = Offset(0f, size.height - edge), size = Size(size.width, edge))
-                        }
-                } else {
-                    Modifier
-                        .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                        .border(if (held) 3.dp else 2.dp, cls.tape, shape)
-                },
+            // The face is PadGrid's `padSkin`, shared with PlayPad. Classic
+            // is this cell's own chain: the held rim is 3dp, and the hit's
+            // flash is drawn over the border.
+            .padSkin(
+                scheme, cls, shape, lit,
+                classic = Modifier
+                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
+                    .border(if (held) 3.dp else 2.dp, cls.tape, shape)
+                    .background(cls.tape.copy(alpha = lit), shape),
             )
-            .background(cls.tape.copy(alpha = lit), shape)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
             // double-tap did nothing — a false affordance, arguably
@@ -1439,7 +1480,13 @@ private fun PadCell(
         // a kick reads as a kick before it's hit. Drawn first so the tag
         // and name sit over it.
         if (peaks != null && peaks.isNotEmpty()) {
-            PadWaveform(peaks, cls.tape.copy(alpha = 0.30f), Modifier.matchParentSize())
+            // On paper the colour is the name's own darkened ink and the
+            // alpha stronger: lime, mint and cyan at 0.30 vanished on cream.
+            PadWaveform(
+                peaks,
+                if (scheme.isPaper()) Schemes.classInkOn(cls, scheme.raised).tape.copy(alpha = 0.55f) else cls.tape.copy(alpha = 0.30f),
+                Modifier.matchParentSize(),
+            )
         }
         // Full-opacity ink2 on its own solid backing chip, not a dimmed
         // copy drawn straight over the cell (audit finding 5, 2.30-3.59:1
@@ -1449,25 +1496,20 @@ private fun PadCell(
         // data-dependent (whatever the waveform happens to render at this
         // corner) and can still fall to ~2.4:1 for a bright class colour
         // like HAT_OPEN even with ink2 fixed — see ContrastTest.
-        // On paper the chip is the card itself (ink2 clears AA on it —
-        // ContrastTest's backdrop law reads `raised` under the modern
-        // look); darkening paper gives a grey block nothing needs.
-        val paper = Scheme.luma(scheme.gray) >= 90
+        // On paper the chip is the card itself (`padTagBacking`).
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .background((if (paper) scheme.raised else Schemes.darken(scheme.gray, 0.30f)).tape, RoundedCornerShape(3.dp))
+                .background(padTagBacking(scheme), RoundedCornerShape(3.dp))
                 .padding(horizontal = 3.dp, vertical = 1.dp),
         ) {
             TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        // The name: tinted toward white on a dark pad (the handoff's rule),
-        // darkened just until it reads on a paper one, so lime stays lime
-        // either way (`Schemes.classInkOn`).
+        // The name's ink is `padNameInk`: tinted on a dark pad, darkened on paper.
         TapeText(
             pad.displayName,
             TapeType.marker,
-            if (paper) Schemes.classInkOn(cls, scheme.raised).tape else classTint(cls),
+            padNameInk(scheme, cls),
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )

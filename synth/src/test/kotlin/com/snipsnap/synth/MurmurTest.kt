@@ -78,6 +78,7 @@ class MurmurTest {
 
     @Test
     fun `BODY retains audible harmonic support and useful quarter steps after shared leveling`() {
+        val failures = mutableListOf<String>()
         for (voice in MurmurVoice.entries) {
             val sounds = listOf(0f, .25f, .5f, .75f, 1f).map { body ->
                 Murmur.render(voice, mapOf("BODY" to body, "MOTION" to 0f)).samples
@@ -88,19 +89,23 @@ class MurmurTest {
             println("MURMUR BODY SUPPORT $voice: full H1 $fullRoot, H2+H3 $fullChest")
             // A gain-normalized spectrum can differ numerically while both ends remain nearly
             // pure sine waves. Require useful harmonic energy in the full/chesty endpoint.
-            assertTrue(fullRoot < .94, "$voice full BODY is still an almost pure root: $fullRoot")
-            assertTrue(fullChest > .05, "$voice full BODY has no useful pitched low/mid support: $fullChest")
-            assertTrue(distance(profiles.first(), profiles.last()) > .10, "$voice BODY remains a subtle endpoint change")
+            if (!(fullRoot < .94)) failures += "$voice full BODY is still an almost pure root: $fullRoot"
+            if (!(fullChest > .05)) failures += "$voice full BODY has no useful pitched low/mid support: $fullChest"
+            val endpoint = distance(profiles.first(), profiles.last())
+            println("MURMUR BODY ENDPOINT $voice: normalized harmonic distance $endpoint")
+            if (!(endpoint > .10)) failures += "$voice BODY remains a subtle endpoint change: $endpoint"
             for (step in 1 until profiles.size) {
                 val change = distance(profiles[step - 1], profiles[step])
                 println("MURMUR BODY QUARTER $voice step $step: normalized harmonic distance $change")
-                assertTrue(change > .025, "$voice BODY quarter $step has little timbral activity after leveling: $change")
+                if (!(change > .025)) failures += "$voice BODY quarter $step has little timbral activity after leveling: $change"
             }
         }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
     }
 
     @Test
     fun `MOTION travels after the onset rather than becoming a different static mouth`() {
+        val failures = mutableListOf<String>()
         for (voice in MurmurVoice.entries) {
             val still = Murmur.render(voice, mapOf("MOTION" to 0f)).samples
             val moving = Murmur.render(voice, mapOf("MOTION" to 1f)).samples
@@ -117,8 +122,9 @@ class MurmurTest {
             println("MURMUR LATE TRAVEL $voice: broad spectral contour beyond 220 ms $travel")
             // Each frame is normalized separately, so louder/quieter frames or final-output
             // tremolo cannot satisfy this guard. Static FM articulation is subtracted too.
-            assertTrue(travel > .06, "$voice MOTION stops developing before useful note frames: $travel")
+            if (!(travel > .06)) failures += "$voice MOTION stops developing before useful note frames: $travel"
         }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
     }
 
     @Test
@@ -342,11 +348,11 @@ class MurmurTest {
     fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
         // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
         // sample loop, the decimation, the seam and the level must stop on that flag instead of finishing.
-        for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+        for (model in 1..2) for ((missing, render) in listOf<Pair<String, () -> Unit>>(
             "MURMUR finite render did not stop on the interrupt at its first look in the sample loop" to
-                { Murmur.render(MurmurVoice.KEY) },
+                { Murmur.render(MurmurVoice.KEY, config = Murmur.configurationFor(MurmurVoice.KEY, model)) },
             "MURMUR held render did not stop on the interrupt at its first look in the sample loop" to
-                { Murmur.render(MurmurVoice.KEY, mapOf("HOLD" to 1f)) },
+                { Murmur.render(MurmurVoice.KEY, mapOf("HOLD" to 1f), config = Murmur.configurationFor(MurmurVoice.KEY, model)) },
         )) {
             Thread.currentThread().interrupt()
             try {
@@ -365,15 +371,18 @@ class MurmurTest {
         // looks must still stop the seam measurement and the level instead of letting them finish unwanted.
         // After the loop an uninterrupted render looks exactly three more times: before the decimation, before the
         // seam and before the level. Removing any one of those changes the count.
-        val held = mapOf("HOLD" to 1f)
-        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
-        val frames = clear.run { Murmur.render(MurmurVoice.KEY, held) }.samples.size
-        val loopLooks = ((5 * frames + 512) * Dsp.OVERSAMPLE + 8191) / 8192
-        assertEquals(loopLooks + 3, clear.looks,
-            "an uninterrupted held render looks $loopLooks times in its sample loop, then before the decimation, the seam and the level")
-        val late = LateInterrupt(clearLooks = loopLooks + 1)
-        assertFailsWith<java.util.concurrent.CancellationException>(
-            "MURMUR held render did not stop on the interrupt at its look after the decimation, before the seam",
-        ) { late.run { Murmur.render(MurmurVoice.KEY, held) } }
+        for (model in 1..2) {
+            val config = Murmur.configurationFor(MurmurVoice.KEY, model)
+            val held = mapOf("HOLD" to 1f)
+            val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+            val frames = clear.run { Murmur.render(MurmurVoice.KEY, held, config = config) }.samples.size
+            val loopLooks = ((5 * frames + 512) * Dsp.OVERSAMPLE + 8191) / 8192
+            assertEquals(loopLooks + 3, clear.looks,
+                "an uninterrupted held render looks $loopLooks times in its sample loop, then before the decimation, the seam and the level")
+            val late = LateInterrupt(clearLooks = loopLooks + 1)
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "MURMUR held render did not stop on the interrupt at its look after the decimation, before the seam",
+            ) { late.run { Murmur.render(MurmurVoice.KEY, held, config = config) } }
+        }
     }
 }

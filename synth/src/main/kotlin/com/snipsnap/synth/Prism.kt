@@ -623,7 +623,10 @@ object Prism {
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val loop = if (isLoop(m.getValue("HOLD"))) planLoop(hz, template) else null
-        val originalBank = bank(template, loop?.baseHz ?: hz, m, v, loop)
+        // An authored A changes only spectral weights. Keep the original template for
+        // contours and phase seeding so opening comparisons share the same realization.
+        val startingTemplate = motion?.amplitudesA?.let { template.copy(amplitudeOverrides = it) } ?: template
+        val originalBank = bank(startingTemplate, loop?.baseHz ?: hz, m, v, loop)
         val moving = motion?.let { motionBank(originalBank, template, hz, m, v, it) }
         val bank = moving?.a ?: originalBank
         val contours = contours(template, m)
