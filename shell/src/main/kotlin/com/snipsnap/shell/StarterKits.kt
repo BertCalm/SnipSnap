@@ -264,6 +264,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.openSky() },
         Starter(
+            "vent", "VENT",
+            "Twelve dry orbit sounds: bass, notes, hits and textures. Four pads left for your captures.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.vent() },
+        Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
             seeded = false,

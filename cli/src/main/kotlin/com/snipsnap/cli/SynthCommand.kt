@@ -127,8 +127,8 @@ import kotlin.random.Random
  * table/envelope configurations survive macro, note and velocity overrides.
  * TUNE in --macros cannot combine with --midi; choose one pitch control.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
- * VENT accepts `--seed N` for its initial trajectory. Its provisional
- * starting recipes are available here while remaining outside the factory roster.
+ * VENT accepts `--seed N` for its initial trajectory. PULSE, COIL and PLUME
+ * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
  * for their finite performances.
  * WICK offers thirteen provisional PLUCK/WOOD/BUBBLE recipes without adding a phone engine.
@@ -184,7 +184,9 @@ object SynthCommand {
         }
 
         val presets = when (engine) {
-            VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
+            VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let {
+                if (Vent.defaultModelFor(it) == Vent.MODEL) VentPresets.forVoice(it) else Presets.forVoice(engine, voice)
+            } ?: emptyList()
             WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
             NacrePatch.ENGINE -> NacreVoice.entries.firstOrNull { it.name == voice }?.let { NacrePresets.forVoice(it) } ?: emptyList()
             else -> Presets.forVoice(engine, voice)

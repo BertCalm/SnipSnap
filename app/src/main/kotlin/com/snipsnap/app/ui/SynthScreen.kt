@@ -257,6 +257,9 @@ import com.snipsnap.synth.AlloyVoice
 import com.snipsnap.synth.Registers
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.RegistersVoice
+import com.snipsnap.synth.Vent
+import com.snipsnap.synth.VentPatch
+import com.snipsnap.synth.VentVoice
 import java.io.File
 import java.util.Locale
 import kotlin.math.max
@@ -498,7 +501,8 @@ fun SynthScreen(
     // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
     // schedules, EMBOUCHURE and BELLOWS their player gestures, and MURMUR its operator routing, formant
     // targets and envelope definitions. OSPREY retains its variation seed, finite duration
-    // and model version. FLOCK retains its explicit note, velocity, full-width
+    // and model version. VENT keeps its note, velocity, trajectory seed and saved model.
+    // FLOCK retains its explicit note, velocity, full-width
     // variation seed and finite renderer model. OPENSKY retains its authored timbre, note,
     // velocity, gate, effect mode and model. ORPHICA retains its material, mode,
     // capture, seed and physical grain configuration. Keep that state through preview, editing, saving and placing by
@@ -1642,6 +1646,40 @@ fun SynthScreen(
                     )
                 }
 
+                // VENT's root and excitation strength live beside its six macros.
+                // Edit the whole recipe so changing a control preserves the trajectory.
+                if (engine == Engine.VENT) {
+                    val ventPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as VentPatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (ventPatch.midi - Vent.MIDI_MIN).toFloat() / (Vent.MIDI_MAX - Vent.MIDI_MIN),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(ventPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val midi = (Vent.MIDI_MIN + value * (Vent.MIDI_MAX - Vent.MIDI_MIN)).roundToInt()
+                                .coerceIn(Vent.MIDI_MIN, Vent.MIDI_MAX)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as VentPatch).copy(midi = midi)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = ventPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as VentPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                }
+
                 // SWELL is a finite sea gesture. ROOT and VELOCITY are recipe
                 // fields beside its six macros; SECONDS bounds the complete render.
                 if (engine == Engine.OSPREY) {
@@ -2753,7 +2791,7 @@ internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, FLOCK;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, FLOCK, VENT;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2791,6 +2829,7 @@ private enum class Engine {
         OSPREY -> OspreyVoice.entries
         FLOCK -> FlockVoice.entries
         OPENSKY -> OpenSkyVoice.entries
+        VENT -> listOf(VentVoice.PULSE, VentVoice.COIL, VentVoice.PLUME)
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
@@ -2838,6 +2877,7 @@ private enum class Engine {
         OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
         FLOCK -> Flock.macrosFor(voice as FlockVoice)
         OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
+        VENT -> Vent.macrosFor(voice as VentVoice)
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
@@ -2885,6 +2925,7 @@ private enum class Engine {
         OSPREY -> Osprey.defaults(voice as OspreyVoice)
         FLOCK -> Flock.defaults(voice as FlockVoice)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
+        VENT -> Vent.defaultsFor(voice as VentVoice)
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
@@ -2934,6 +2975,7 @@ private enum class Engine {
         OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
         FLOCK -> Flock.scramble(voice as FlockVoice, random)
         OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
+        VENT -> Vent.scramble(voice as VentVoice, random)
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
@@ -2986,6 +3028,7 @@ private enum class Engine {
         OSPREY -> Osprey.render(voice as OspreyVoice, macros)
         FLOCK -> Flock.render(voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
+        VENT -> Vent.render(voice as VentVoice, macros)
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
@@ -3039,6 +3082,7 @@ private enum class Engine {
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         FLOCK -> Flock.drumClassFor(voice as FlockVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
+        VENT -> Vent.drumClassFor(voice as VentVoice, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
@@ -3086,6 +3130,7 @@ private enum class Engine {
         OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
         FLOCK -> FlockPatch(name, voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)
+        VENT -> VentPatch(name, voice as VentVoice, macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)

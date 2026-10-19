@@ -160,10 +160,11 @@ class StarterKitsTest {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 // Most starters fill bank A. The wordless source bank has eight pads;
-                // the A/B dip fills bank B with a twin of each.
+                // VENT leaves four capture slots free; the A/B dip fills bank B with a twin of each.
                 val slots = when (starter.id) {
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID -> 8
+                    "vent" -> 12
                     else -> 16
                 }
                 assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
@@ -470,7 +471,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "vent", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
