@@ -217,6 +217,7 @@ object Velocity {
         is TerraPatch -> Terra.macrosFor(patch.voice)
         is SilkPatch -> Silk.macrosFor(patch.voice)
         is BorePatch -> Bore.macrosFor(patch.voice)
+        is ObbligatoPatch -> Obbligato.macrosFor()
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
@@ -326,6 +327,7 @@ object Velocity {
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
      * REVEL scales each phrase event's energy while keeping its saved [RevelConfig].
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
+     * OBBLIGATO scales player excitation while preserving the saved duet, note, seed and model.
      * BELLOWS scales reed pressure, harmonic response and level while keeping the saved gesture.
      * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
@@ -373,6 +375,7 @@ object Velocity {
         is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
         is PitchwheelPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
+        is ObbligatoPatch -> patch.copy(velocity = v).render()
         is BellowsPatch -> patch.copy(velocity = v).render()
         is MurmurPatch -> patch.copy(velocity = v).render()
         is OspreyPatch -> patch.copy(velocity = v).render()

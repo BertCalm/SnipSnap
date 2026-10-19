@@ -42,6 +42,8 @@ import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.Obbligato
+import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.Nacre
 import com.snipsnap.synth.NacrePatch
 import com.snipsnap.synth.NacrePresets
@@ -114,11 +116,13 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, ORPHICA and the VENT/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
+ * OBBLIGATO accepts `--seed N` for its players and writes each WAV's complete
+ * recipe beside it as a `.patch`, including its renderer model.
  * OPENSKY also accepts a saved `--patch <json>`, `--gate S`, and `--dry` /
  * `--wet`. The complete source timbre survives those overrides; OPENSKY HALO
  * can become a held instrument with `--instrument [--release S]`.
@@ -233,6 +237,7 @@ object SynthCommand {
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                ObbligatoPatch.ENGINE -> Obbligato.MIDI_MIN..Obbligato.MIDI_MAX
                 OrphicaPatch.ENGINE -> Orphica.MIDI_MIN..Orphica.MIDI_MAX
                 OspreyPatch.ENGINE -> Osprey.MIDI_MIN..Osprey.MIDI_MAX
                 OpenSkyPatch.ENGINE -> OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX
@@ -251,7 +256,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK, WICK, ORPHICA and NACRE, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA and NACRE, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -263,7 +268,7 @@ object SynthCommand {
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, OrphicaPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
@@ -360,6 +365,7 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ObbligatoPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OrphicaPatch -> patch.copy(
                     config = patch.config.copy(
                         midi = midiOverride ?: patch.config.midi,
@@ -411,6 +417,7 @@ object SynthCommand {
                 modelVersion = modelOverride ?: withNote.modelVersion,
             ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is FlockPatch && flockSeedOverride != null) withNote.copy(seed = flockSeedOverride)
+            else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else withNote
         }
 
@@ -434,6 +441,7 @@ object SynthCommand {
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip) }
+            if (patch is ObbligatoPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
                 landing != null -> "  (lands with ENSEMBLE, stereo)"

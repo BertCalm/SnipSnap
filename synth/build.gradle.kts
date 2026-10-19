@@ -73,6 +73,28 @@ tasks.register<JavaExec>("generateOrphicaAudition") {
     args("${rootDir}/testkit/orphica-audition")
 }
 
+/** First-listen OBBLIGATO duets and additive source taps, without rack effects. */
+tasks.register<JavaExec>("generateObbligatoAudition") {
+    group = "distribution"
+    description = "Render four dry OBBLIGATO relationships, same-gain stems, response-disabled comparisons, portable listening page and ZIP under testkit/obbligato-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args("${rootDir}/testkit/obbligato-audition")
+}
+
+/** Render the accepted model-five duet as sixteen velocity-layered pads for the app and MPC. */
+tasks.register<JavaExec>("generateObbligatoKit") {
+    group = "distribution"
+    description = "Export sixteen model-five OBBLIGATO pads with native velocity layers, MPC 3, an MPC 2 twin, recipes and ZIP."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args(providers.gradleProperty("obbligatoKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** Finite OVERLAP proof: twelve real Kotlin renders, replayable recipes and the listening bench. */
 tasks.register<JavaExec>("generateOverlapAudition") {
     group = "distribution"

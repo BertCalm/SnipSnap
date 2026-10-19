@@ -74,7 +74,9 @@ object Cli {
         |                        (--out DIR, --release .1..1.5, --overwrite)
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        render factory presets to wav, to hear them
-        |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY: --midi N --velocity 0..1)
+        |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO: --midi N --velocity 0..1)
+        |                        (OBBLIGATO AIR_REED: --seed N sets players;
+        |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (WICK: provisional PLUCK/WOOD/BUBBLE; --midi 24..84 --velocity 0..1)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;

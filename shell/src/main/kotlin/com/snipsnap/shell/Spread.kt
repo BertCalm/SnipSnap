@@ -10,6 +10,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
@@ -97,6 +98,7 @@ object Spread {
         is StoopPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
+        is ObbligatoPatch -> patch.midi.toFloat()
         else -> detect(snip)
     }
 

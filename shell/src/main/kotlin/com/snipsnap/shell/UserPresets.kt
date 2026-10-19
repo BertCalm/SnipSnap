@@ -15,6 +15,7 @@ import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
@@ -393,13 +394,19 @@ object UserPresets {
      * with its root, velocity and model, because its table helper takes note
      * arguments before the macros. OVERLAP likewise keeps its explicit model, geometry reference
      * note and velocity through the complete JSON constructor in its factory
-     * promotion table. Names and embedded JSON are escaped Kotlin string literals.
+     * promotion table. OBBLIGATO retains its note, strike, seed and renderer model
+     * through the complete JSON constructor. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is OverlapPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "OverlapPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is ObbligatoPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "ObbligatoPatch.fromJsonText(\"$recipe\"),"
         }
         if (patch is VentPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")

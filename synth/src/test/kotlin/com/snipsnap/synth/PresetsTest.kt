@@ -30,6 +30,7 @@ class PresetsTest {
         assertEquals(ForkPresets.forVoice(ForkVoice.TINE), Presets.forVoice("FORK", "TINE"))
         assertEquals(BorePresets.forVoice(BoreVoice.FLUTE), Presets.forVoice("BORE", "FLUTE"))
         assertEquals(BorePresets.forVoice(BoreVoice.SAX), Presets.forVoice("BORE", "SAX"))
+        assertEquals(ObbligatoPresets.all(), Presets.forVoice("OBBLIGATO", "AIR_REED"))
         assertEquals(ArcoPresets.forVoice(ArcoVoice.CELLO), Presets.forVoice("ARCO", "CELLO"))
         assertEquals(ArcoPresets.forVoice(ArcoVoice.ERHU), Presets.forVoice("ARCO", "ERHU"))
         for (voice in MercuryVoice.entries) assertEquals(MercuryPresets.forVoice(voice), Presets.forVoice("MERCURY", voice.name))
@@ -122,6 +123,7 @@ class PresetsTest {
     @Test
     fun `forVoice returns empty for an unknown voice on a real engine`() {
         assertTrue(Presets.forVoice("THUMP", "NOT A VOICE").isEmpty())
+        assertTrue(Presets.forVoice("OBBLIGATO", "NOT A VOICE").isEmpty())
         assertTrue(Presets.forVoice("OVERLAP", "NOT A VOICE").isEmpty())
     }
 
@@ -144,7 +146,7 @@ class PresetsTest {
         val expected = ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
+            BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() +
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
