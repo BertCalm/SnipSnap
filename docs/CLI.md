@@ -486,9 +486,8 @@ gesture, then the wah waits at the heel).
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
-`amped` (its chip is a later layout decision) and the three wah
-characters (the WAH chip is not on the pad sheet yet; `touchwahed` and
-`rockwahed` are CLI and saved kits only), sit on the PAD SHEET's
+`amped` (its chip is a later layout decision), `touchwahed` and
+`rockwahed` (the wah's other two moves, CLI and saved kits only), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
@@ -499,7 +498,7 @@ GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
-the pedals (DRIVE · COMP — `driven` and `compressed`),
+the pedals (DRIVE · COMP · WAH — `driven`, `compressed` and `wahed`),
 grouped by what an effect *is*, because a guitarist looks for a pedal by
 its name; tapping any
 of them changes every file the pad references, velocity layers included.
