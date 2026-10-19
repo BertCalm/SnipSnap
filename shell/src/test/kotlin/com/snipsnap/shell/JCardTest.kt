@@ -91,4 +91,49 @@ class JCardTest {
         assertEquals(0.6f, steps[4])
         assertEquals(0f, steps[1])
     }
+    /** A canvas of plain ints — no AWT anywhere, the way the phone's canvas is. */
+    private class IntCanvas(val w: Int, val h: Int) : ArtCanvas {
+        val px = IntArray(w * h)
+
+        override fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int) {
+            for (yy in maxOf(0, y) until minOf(this.h, y + h)) {
+                for (xx in maxOf(0, x) until minOf(this.w, x + w)) px[yy * this.w + xx] = colorRgb
+            }
+        }
+
+        override fun drawArc(cx: Float, cy: Float, r: Float, startDeg: Float, sweepDeg: Float, strokeWidth: Float, colorRgb: Int) =
+            error("the J-card draws no arcs")
+    }
+
+    @Test
+    fun `drawing through ArtCanvas lands the same pixels as the AWT card`() {
+        // The phone paints JCard.draw with its own canvas; the desktop card is
+        // JCard.draw through AwtCanvas. Same layout code, so same pixels.
+        val m = model("Parity")
+        val width = 600
+        val canvas = IntCanvas(width, JCard.heightFor(width))
+        JCard.draw(canvas, m.kit, m.kitDir, width = width, catalog = "SHT-001")
+        val awt = JCard.render(m.kit, m.kitDir, width = width, catalog = "SHT-001")
+        assertEquals(canvas.h, awt.height)
+        for (y in 0 until awt.height) {
+            for (x in 0 until awt.width) {
+                assertEquals(awt.getRGB(x, y) and 0xFFFFFF, canvas.px[y * width + x], "pixel $x,$y")
+            }
+        }
+    }
+
+    @Test
+    fun `Inserts write paints the J-card with the renderer it is handed`() {
+        val m = model("Handed")
+        val into = File(temp, "expansion")
+        val seen = mutableListOf<String?>()
+        val written = Inserts.write(m.kit, m.kitDir, into) { _, _, catalog ->
+            seen += catalog
+            byteArrayOf(1, 2, 3)
+        }
+        assertEquals(listOf<String?>(null), seen, "a kit outside a crate has no catalog number")
+        assertTrue(File(into, Inserts.J_CARD_NAME).readBytes().contentEquals(byteArrayOf(1, 2, 3)))
+        assertEquals(2, written.size)
+    }
+
 }

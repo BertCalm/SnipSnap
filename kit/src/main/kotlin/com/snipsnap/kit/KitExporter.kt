@@ -189,6 +189,7 @@ object KitExporter {
                 chain = p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
             )
         }
+        SourceAttribution.writeTo(kit, samplesDir)
         return slots.toList() to written
     }
 

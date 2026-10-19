@@ -1,10 +1,10 @@
 package com.snipsnap.synth
 
-/** Published default, restrained and expressive settings at C4: accepted PIPE, provisional MUSETTE. */
+/** PIPE/MUSETTE working audition settings and three new TRANSISTOR starting points at C4. */
 object RegistersPresets {
     private fun p(voice: RegistersVoice, name: String, vararg macros: Pair<String, Float>) =
         RegistersPatch(name, voice, Registers.defaults(voice) + macros.toMap(),
-            midi = 60, velocity = 1f, model = 3)
+            midi = 60, velocity = 1f, model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3)
 
     private val presets = listOf(
         p(RegistersVoice.PIPE, "Pipe Air"),
@@ -17,6 +17,11 @@ object RegistersPresets {
             "EDGE" to .12f, "SPREAD" to .20f, "MOTION" to .08f, "HOLD" to .35f),
         p(RegistersVoice.MUSETTE, "Open Bellows", "COLOR" to .64f, "AIR" to .78f,
             "EDGE" to .52f, "SPREAD" to .78f, "MOTION" to .50f, "HOLD" to .35f),
+        p(RegistersVoice.TRANSISTOR, "Compact Keys"),
+        p(RegistersVoice.TRANSISTOR, "Clean Combo", "COLOR" to .25f, "AIR" to .10f,
+            "EDGE" to .05f, "SPREAD" to 0f, "MOTION" to .08f, "HOLD" to .35f),
+        p(RegistersVoice.TRANSISTOR, "Garage Buzz", "COLOR" to .78f, "AIR" to .45f,
+            "EDGE" to .78f, "SPREAD" to .18f, "MOTION" to .55f, "HOLD" to .35f),
     )
 
     fun forVoice(voice: RegistersVoice): List<RegistersPatch> = presets.filter { it.voice == voice }

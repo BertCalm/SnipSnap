@@ -34,5 +34,19 @@
     "original_file": "originals/f1_arpeggios_breathy_a.wav",
     "bytes": 656408,
     "sha256": "18306bdc3d68f0fbd55828ed6d0ec225b9df84fbbacd6d15a4d551e27f4ef7f7"
+  },
+  {
+    "archive_member": "FULL/male3/arpeggios/straight/m3_arpeggios_straight_a.wav",
+    "original_file": "originals/m3_arpeggios_straight_a.wav",
+    "bytes": 752642,
+    "sha256": "03b983d87b9b1da0bd86ffc9d9b3d5cf6012dba29d0f9ddef241362ac8542d74",
+    "retrievedDate": "2026-10-18"
+  },
+  {
+    "archive_member": "FULL/male3/long_tones/straight/m3_long_straight_u.wav",
+    "original_file": "originals/m3_long_straight_u.wav",
+    "bytes": 1128442,
+    "sha256": "46ea405124a2763cc1acfa92a00878fc5ee8f1bb9b00f592b1ca2c2e4d053f7f",
+    "retrievedDate": "2026-10-18"
   }
 ]
