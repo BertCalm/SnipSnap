@@ -48,13 +48,21 @@ Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
 Contour. Their table pairs and contours differ; the proposed 36-preset expansion
 waits for the owner's sonic verdict.
 
-R03 reauthors those nine recipes around rounded bass entrances, mellow key blooms,
+R03 reauthored those nine recipes around rounded bass entrances, mellow key blooms,
 a softer pluck, slower lead and hollow gestures, and an evolving held tone.
 Different table pairings and bounded scan paths replace the preceding recipes'
 broad overtone boost. Finite attacks span 18–110 ms, with new decay, sustain and
 edge contours; the held recipe has a loop of about 3.6 seconds. Filter openings and
 drive are restrained in these authored recipes. Their complete configurations
 are saved as usual, so earlier saved recipes keep their previous sound.
+
+R04 targets about 25% of R02's earlier edge and 75% of R03's rounded character.
+Each compatible numeric macro and structural setting moves one quarter of the
+way from the archived R03 recipe toward its matching R02 recipe. R03's table
+pairs, layer relationship, motion shape and filter type stay with the patch.
+The percentages describe parameter weights; listening judges the resulting character.
+Finite attacks span 14.25–88 ms and the held recipe's nominal loop is 3.3 seconds.
+Earlier saved recipes continue to render from their complete saved settings.
 
 `SynthKits.contour()` supplies sixteen pads: seven C-minor-pentatonic KEY notes
 and the nine recipes. CONTOUR appears in the Android SYNTH picker and FRESH TAPE
@@ -98,8 +106,8 @@ The generator writes a listening page, manifest and dry WAVs under
 9 presets, 36 note/velocity voice checks, 150 macro-sweep points, 216 interaction
 points, 6 all-high corners, 36 diagnostic comparisons and 24 held loops.
 Supplying an archived previous round adds nine Previous/New pairs, bringing
-the current comparison pack to 495 cases. The R03 comparison uses the previously
-published R02 voicing. Previous WAVs remain byte-identical;
+the current comparison pack to 495 cases. The R04 comparison uses the previously
+published rounded R03 voicing. Previous WAVs remain byte-identical;
 current references reuse the new preset WAVs. The comparison records each
 version's complete patch, source fingerprints and audio hashes. The baseline
 directory must contain `baseline.json`, its original `source/` files, and the

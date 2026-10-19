@@ -11,13 +11,14 @@ data class VentPatch(
     val midi: Int = Vent.DEFAULT_MIDI,
     val velocity: Float = 1f,
     val seed: Int = 0,
-    val model: Int = Vent.MODEL,
+    val model: Int = Vent.defaultModelFor(voice),
 ) : Patch {
     init {
         Patches.validateMacros(this, Vent.macrosFor(voice))
         require(midi in Vent.MIDI_MIN..Vent.MIDI_MAX) { "VENT MIDI must be ${Vent.MIDI_MIN}..${Vent.MIDI_MAX}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "VENT velocity must be 0..1" }
         require(Vent.supportsModel(model)) { "unsupported VENT model $model" }
+        require(Vent.supportsVoiceModel(voice, model)) { "VENT $voice does not support model $model" }
     }
 
     override val engine get() = ENGINE
@@ -43,9 +44,9 @@ data class VentPatch(
             val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Vent.DEFAULT_MIDI
             val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
             val seed = obj["seed"]?.takeUnless { it is JsonValue.Null }?.int() ?: 0
-            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: Vent.MODEL
+            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int()
             return Patches.decode(value, ENGINE, { name -> VentVoice.entries.firstOrNull { it.name == name } }) { name, voice, macros ->
-                VentPatch(name, voice, macros, midi, velocity, seed, model)
+                VentPatch(name, voice, macros, midi, velocity, seed, model ?: Vent.defaultModelFor(voice))
             }
         }
 
