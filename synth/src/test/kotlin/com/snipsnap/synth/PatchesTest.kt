@@ -48,7 +48,6 @@ class PatchesTest {
         OverlapPresets.all().first(),
         FlockPresets.all().first(),
         WickPresets.all().first(),
-        OhmPresets.all().first(),
     )
 
     @Test

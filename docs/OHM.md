@@ -1,9 +1,10 @@
 # OHM — family strings
 
-OHM is a dry listening prototype inspired by the [OHM synthesis guide](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/ohm_synthesis_guide.md).
+OHM is a dry family-string instrument inspired by the [OHM synthesis guide](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/ohm_synthesis_guide.md).
 One warm plucked string shares a body with two companions: a wavering,
 sine-excited octave resonator and a struck third-harmonic resonator with
-quiet inharmonic glass coloration. The listening verdict remains open.
+quiet inharmonic glass coloration. Model 2 is the working sound after the
+owner heard the revised control variation and asked to continue integration.
 
 The source is an original SnipSnap implementation using its existing
 `Strings.Loop`, `Strings.Membrane` and `Strings.Bridge` primitives. It does
@@ -63,7 +64,17 @@ integer seed, gesture and renderer model. The patch dispatcher, edits,
 `PadRecipe` replay, native velocity rendering and CLI preserve those fields.
 New patches use model 2. JSON without a model, or with a null model, retains
 model 1; explicit model-1 recipes remain byte-identical at PCM16 export.
-Five provisional recipes remain outside the factory roster and phone picker.
+The factory roster and phone synth picker expose five complete model-2 recipes:
+Solo, Argument, Communion, Quiet Company and Gather. They use the published
+audition's TOUCH .5, BODY .5, LENGTH .65, C4, velocity .8 and seed 731. Only the
+relationship and gesture differ. Quiet Company is the audition's Quiet influence.
+
+On SYNTH, choose OHM / STRING and a preset. NOTE moves through MIDI 48–72;
+VELOCITY sets playing strength; STEADY/GATHER selects the finite performance.
+The five macros, native note, velocity, seed, gesture and renderer model survive
+preview, editing, SAVE PRESET, SEND TO PAD and a return to the bench. SPREAD uses
+the saved native note as its reference. Legacy model-1 recipes retain their
+renderer when opened or edited.
 
 Every note starts fresh. Sources and resonance run at 4×, followed by the
 shared antialias decimator, DC removal and finite endpoint treatment.
@@ -111,10 +122,10 @@ Standard pad replay yields engine-leveled audio, while replaying the
 audition adds the documented raw/matched export processing.
 
 The [private audition](https://ohm-snipsnap-audition.bertcalm.chatgpt.site)
-is the listening test: does Communion sound like one transformed instrument?
+preserves the listening evidence and original/revised comparisons.
 Automated reproducibility, causal coupling, pitch, headroom, finite-tail
-and recipe checks support that test; they do not establish sonic approval.
-Phone and MPC acceptance remain device checks.
+and recipe checks support the owner's listening decision. Phone and MPC
+playability and handoff remain device checks.
 
 The original pack is preserved as a reference, including its octave-dominant
 shortest LENGTH example. Full-mix pitch estimates describe the mixture;

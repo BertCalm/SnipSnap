@@ -15,6 +15,7 @@ import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -357,7 +358,8 @@ object UserPresets {
      * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE and WICK also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
-     * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
+     * retain their MIDI base, velocity, model and selected player gesture; OHM also
+     * retains its exact excitation seed. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
@@ -435,6 +437,7 @@ object UserPresets {
             }
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
             is BellowsPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = BellowsGesture.${patch.gesture.name})"
+            is OhmPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, gesture = OhmGesture.${patch.gesture.name}, model = ${patch.model})"
             is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is OspreyPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, durationSeconds = ${patch.durationSeconds}f, modelVersion = ${patch.modelVersion})"
             is RevelPatch -> {

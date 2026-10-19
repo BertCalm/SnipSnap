@@ -76,7 +76,6 @@ import com.snipsnap.synth.VentVoice
 import com.snipsnap.synth.Wick
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.OhmPatch
-import com.snipsnap.synth.OhmPresets
 import com.snipsnap.synth.WickPresets
 import com.snipsnap.synth.WickVoice
 import java.io.File
@@ -166,7 +165,6 @@ object SynthCommand {
             VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
             FlockPatch.ENGINE -> FlockVoice.entries.firstOrNull { it.name == voice }?.let { FlockPresets.forVoice(it) } ?: emptyList()
             WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
-            OhmPatch.ENGINE -> if (voice == "STRING") OhmPresets.all() else emptyList()
             else -> Presets.forVoice(engine, voice)
         }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")

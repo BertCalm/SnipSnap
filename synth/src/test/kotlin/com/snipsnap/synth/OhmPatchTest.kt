@@ -34,7 +34,6 @@ class OhmPatchTest {
         }
         assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("MEADOW" to .5f)) }
         assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("COMMUNE" to Float.NaN)) }
-        assertTrue(Presets.forVoice("OHM", "STRING").isEmpty())
         assertTrue(OhmPresets.all().all { Patches.fromJsonText(it.toJsonText()) == it })
     }
 

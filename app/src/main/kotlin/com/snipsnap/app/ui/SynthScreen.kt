@@ -185,6 +185,10 @@ import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OspreyVoice
+import com.snipsnap.synth.Ohm
+import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmPatch
+import com.snipsnap.synth.OhmVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -285,6 +289,11 @@ private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
 private const val SETTINGS_PRESET_PREFIX = "preset."
+private const val SETTINGS_OHM_PATCH = "patch.OHM.STRING"
+
+/** Invalid or foreign settings never become an OHM recipe. Saved model 1 remains model 1. */
+private fun restoredOhmPatch(settings: Map<String, String>): OhmPatch? =
+    settings[SETTINGS_OHM_PATCH]?.let { text -> runCatching { OhmPatch.fromJsonText(text) }.getOrNull() }
 
 private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): String =
     "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}.$macro"
@@ -348,11 +357,13 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    0..1) for every (engine, voice) the player has touched.
  *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
  *    last tapped on that voice and not edited since.
+ *  - `patch.OHM.STRING` — OHM's complete edited recipe, including model,
+ *    native note, velocity, seed and finite performance gesture.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
- * Not kept: the loaded patch's non-macro recipe (a MURMUR root, a REVEL
- * phrase...) unless a preset carries it, the audition, and every sheet.
+ * Other engines' loaded non-macro recipes (a MURMUR root, a REVEL phrase...)
+ * require a preset to restore them. The audition and every sheet are transient.
  */
 @Composable
 fun SynthScreen(
@@ -400,6 +411,7 @@ fun SynthScreen(
     }
     LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
     LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
+    val restoredOhm = remember { restoredOhmPatch(settings) }
     // Per-(engine, voice) macro state, seeded with factory defaults and kept
     // for the life of the screen: switching engine or voice (or coming back
     // to one) restores whatever was last touched on it, same as the
@@ -416,7 +428,8 @@ fun SynthScreen(
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
-                    put(e to v, if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
+                    put(e to v, if (e == Engine.OHM && restoredOhm != null) defaults + restoredOhm.macros
+                    else if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
                         settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
                             ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
                     })
@@ -441,7 +454,9 @@ fun SynthScreen(
     // schedules, EMBOUCHURE and BELLOWS their player gestures, and MURMUR its operator routing, formant
     // targets and envelope definitions. OSPREY retains its variation seed, finite duration
     // and model version. OPENSKY retains its authored timbre, note,
-    // velocity, gate, effect mode and model. Keep that state through preview, editing, saving and placing by
+    // velocity, gate, effect mode and model. OHM retains note, velocity, seed,
+    // gesture and renderer model, including when the MAKE bench is left.
+    // Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
     // The presets the bag names (§3.6). A factory preset is looked up by name
     // and re-adopted whole, so an engine whose recipe lives outside its macros
@@ -454,12 +469,25 @@ fun SynthScreen(
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
+            if (restoredOhm != null) put(Engine.OHM to OhmVoice.STRING, restoredOhm)
         }
     }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
         Patches.edited(it, name, macros)
     } ?: engine.buildPatch(name, voice, macros)
+    fun keepOhmPatch(patch: OhmPatch) {
+        loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] = patch
+        // Write with the edit, before navigation can dispose remember-state.
+        settings[SETTINGS_OHM_PATCH] = patch.toJsonText()
+    }
+    fun keepOhmMacros(values: Map<String, Float>) {
+        if (engine != Engine.OHM) return
+        settings.remove(presetSettingsKey(Engine.OHM, OhmVoice.STRING))
+        val source = loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] as? OhmPatch
+            ?: OhmPatch(engine.patchDisplayName(voice), Ohm.defaults())
+        keepOhmPatch(Patches.edited(source, source.name, values) as OhmPatch)
+    }
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
     // "a starting point to wreck, not a locked sound", so this clears the
@@ -496,7 +524,18 @@ fun SynthScreen(
     fun updateMacro(name: String, value: Float) {
         touched = true
         currentPresetByVoice.remove(engine to voice)
-        macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value.coerceIn(macroRange(name)))
+        val values = macrosByVoice.getValue(engine to voice) + (name to value.coerceIn(macroRange(name)))
+        macrosByVoice[engine to voice] = values
+        keepOhmMacros(values)
+    }
+    fun updateOhmPerformance(edit: (OhmPatch) -> OhmPatch) {
+        if (engine != Engine.OHM) return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(Engine.OHM, OhmVoice.STRING))
+        val source = loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] as? OhmPatch
+            ?: OhmPatch(engine.patchDisplayName(voice), Ohm.defaults())
+        keepOhmPatch(edit(Patches.edited(source, source.name, macrosByVoice.getValue(engine to voice)) as OhmPatch))
     }
     fun updateStoopRoot(midi: Int) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
@@ -524,6 +563,10 @@ fun SynthScreen(
         val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
             else engine.defaults(voice)
         macrosByVoice[engine to voice] = defaults + editable.macros
+        if (editable is OhmPatch) {
+            keepOhmPatch(editable.copy(macros = defaults + editable.macros))
+            settings[presetSettingsKey(Engine.OHM, OhmVoice.STRING)] = patch.name
+        }
         currentPresetByVoice[engine to voice] = patch.name
     }
 
@@ -1147,6 +1190,7 @@ fun SynthScreen(
                     val midi = when (patch) {
                         is StoopPatch -> patch.midi.toFloat()
                         is OpenSkyPatch -> patch.midi.toFloat()
+                        is OhmPatch -> patch.midi.toFloat()
                         else -> Spread.detect(rendered)
                     }
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
@@ -1356,6 +1400,57 @@ fun SynthScreen(
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
                                     .copy(velocity = value.coerceIn(0f, 1f))
                         },
+                    )
+                }
+
+                // OHM's performance lives beside its five timbre/relationship controls.
+                // Copy the whole recipe so a loaded seed or legacy model never changes.
+                if (engine == Engine.OHM) {
+                    val ohmPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch
+                    val midiSpan = (Ohm.MIDI_MAX - Ohm.MIDI_MIN).toFloat()
+                    MacroSlider(
+                        label = "NOTE",
+                        value = (ohmPatch.midi - Ohm.MIDI_MIN) / midiSpan,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(ohmPatch.midi),
+                        onValueChange = { value ->
+                            updateOhmPerformance { patch ->
+                                patch.copy(midi = (Ohm.MIDI_MIN + value * midiSpan).roundToInt()
+                                    .coerceIn(Ohm.MIDI_MIN, Ohm.MIDI_MAX))
+                            }
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = ohmPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            updateOhmPerformance { patch -> patch.copy(velocity = value.coerceIn(0f, 1f)) }
+                        },
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (gesture in OhmGesture.entries) {
+                            ActionButton(
+                                gesture.name,
+                                scheme,
+                                enabled = true,
+                                lit = ohmPatch.gesture == gesture,
+                                modifier = Modifier.weight(1f).semantics { selected = ohmPatch.gesture == gesture },
+                                accessibilityLabel = "OHM ${gesture.name}",
+                            ) {
+                                updateOhmPerformance { patch -> patch.copy(gesture = gesture) }
+                            }
+                        }
+                    }
+                    TapeText(
+                        when {
+                            macros.getValue("MEDDLING") == 0f -> "ONE FINITE NOTE. MEDDLING AT ZERO PLAYS SOLO."
+                            ohmPatch.gesture == OhmGesture.GATHER -> "ONE FINITE NOTE. COMPANY ARRIVES AS IT RINGS."
+                            else -> "ONE FINITE NOTE. LENGTH SHAPES THE RING."
+                        },
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                     )
                 }
 
@@ -1609,7 +1704,9 @@ fun SynthScreen(
                                 Bellows.scramble(voice as BellowsVoice, random, near = loadedPatch)
                             else -> engine.scramble(voice, random)
                         }
-                        macrosByVoice[engine to voice] = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
+                        val values = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
+                        macrosByVoice[engine to voice] = values
+                        keepOhmMacros(values)
                     }
                     // Between SCRAMBLE and SEND TO PAD: the sound is kept
                     // before it is placed. No kit is needed — a preset is
@@ -2460,7 +2557,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OHM;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2496,6 +2593,7 @@ private enum class Engine {
         MURMUR -> MurmurVoice.entries
         OSPREY -> OspreyVoice.entries
         OPENSKY -> OpenSkyVoice.entries
+        OHM -> OhmVoice.entries
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
@@ -2540,6 +2638,7 @@ private enum class Engine {
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
         OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
         OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
+        OHM -> Ohm.MACROS
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
@@ -2584,6 +2683,7 @@ private enum class Engine {
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
         OSPREY -> Osprey.defaults(voice as OspreyVoice)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
+        OHM -> Ohm.defaults()
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
@@ -2628,6 +2728,7 @@ private enum class Engine {
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
         OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
         OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
+        OHM -> Ohm.MACROS.associate { it.name to random.nextFloat() }
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
@@ -2677,6 +2778,7 @@ private enum class Engine {
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
         OSPREY -> Osprey.render(voice as OspreyVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
+        OHM -> Ohm.render(macros)
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
@@ -2727,6 +2829,7 @@ private enum class Engine {
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
+        OHM -> DrumClass.TONAL
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
@@ -2771,6 +2874,7 @@ private enum class Engine {
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
         OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)
+        OHM -> OhmPatch(name, macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)

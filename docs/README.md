@@ -1,9 +1,9 @@
 # Which document to trust
 
 **OHM.** [`OHM.md`](OHM.md) records the dry coupled-string listening
-prototype, versioned recipes and the control-authority revision. Its audition
-compares the original and revised renderers directly. The owner's listening
-verdict remains open.
+instrument, versioned recipes and the control-authority revision. Its audition
+compares the original and revised renderers directly. The revised sound is the
+working baseline, with five auditioned recipes in the synth picker.
 
 The tree has moved faster than some of the notes. When two of them
 disagree, this is the order.

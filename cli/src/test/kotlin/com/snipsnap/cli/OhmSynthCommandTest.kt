@@ -12,6 +12,21 @@ import kotlin.test.assertFalse
 
 class OhmSynthCommandTest {
     @Test
+    fun `all renders the factory bank without changing its stored performance`() {
+        val dir = kotlin.io.path.createTempDirectory("ohm-cli-factory").toFile()
+        try {
+            assertEquals(0, SynthCommand.run(listOf("OHM", "STRING", "--all", "--out", dir.path),
+                PrintStream(ByteArrayOutputStream())))
+            val files = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
+            assertEquals(5, files.size)
+            for ((index, patch) in OhmPresets.all().withIndex()) {
+                val expected = ByteArrayOutputStream().also { WavWriter.write(it, patch.render()) }.toByteArray()
+                assertContentEquals(expected, files[index].readBytes(), patch.name)
+            }
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test
     fun `CLI retains gathering while applying explicit pitch velocity and seed`() {
         val dir = kotlin.io.path.createTempDirectory("ohm-cli").toFile()
         try {
