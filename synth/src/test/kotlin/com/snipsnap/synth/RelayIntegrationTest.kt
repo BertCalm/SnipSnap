@@ -248,7 +248,7 @@ class RelayIntegrationTest {
             val outcome = Exporters.export(format, kit, source, File(temp, "card-${format.id}"), dualGeneration = true)
             val failures = ExportReadBack.verify(kit, outcome).filter { it.severity == Severity.FAIL }
             assertTrue(failures.isEmpty(), "$format: ${failures.joinToString { it.message }}")
-            val sampleDir = outcome.companion ?: outcome.primary.parentFile
+            val sampleDir = outcome.companion ?: outcome.primary
             for (pad in kit.pads) {
                 val filenames = pad.velocityLayers.map { it.sampleFile }.ifEmpty { listOf(pad.sampleFile) }
                 for (filename in filenames) {
@@ -260,7 +260,7 @@ class RelayIntegrationTest {
                     assertContentEquals(original.samples, exported.samples, "$format preserves the selected sample region")
                 }
             }
-            val xpm = if (format == ExportFormat.PROGRAM_FOLDER) outcome.primary else File(sampleDir, "${kit.name}.xpm")
+            val xpm = File(sampleDir, "${kit.name}.xpm")
             val document = SafeXml.newFactory().newDocumentBuilder().parse(xpm)
             val instruments = document.getElementsByTagName("Instrument")
             for (slot in 1..2) {

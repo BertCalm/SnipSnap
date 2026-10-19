@@ -87,8 +87,8 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: ""
-      - name: Assemble the app
-        run: ./gradlew --no-daemon :app:assembleDebug
+      - name: Assemble the app and compile device tests
+        run: ./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin
       # The job already builds a working APK and then throws it away with
       # the runner. Keeping it is the difference between "the app compiles"
       # and "here is the app" — every green build on every branch becomes

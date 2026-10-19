@@ -92,7 +92,7 @@ class ExportReadBackTest {
         val dir = File(temp, "mangle-src")
         val kit = kit(dir)
         val outcome = Exporters.export(ExportFormat.PROGRAM_FOLDER, kit, dir, File(temp, "card-mangle"), overwrite = true)
-        val xpm = outcome.primary
+        val xpm = File(outcome.primary, "${kit.name}.xpm")
         val text = xpm.readText()
         // Pad A01's coarse tune is the only 3 in the file - the program-level
         // TuneCoarse is a literal 0 - so this edit lands on exactly one pad.

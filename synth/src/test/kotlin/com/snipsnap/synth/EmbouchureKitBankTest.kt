@@ -87,7 +87,8 @@ class EmbouchureKitBankTest {
                     val findings = ExportReadBack.verify(saved, exported)
                     assertTrue(findings.none { it.severity == Severity.FAIL }, "${bank.id} $format: ${findings.joinToString { it.message }}")
                     assertEquals(17, findings.count { it.severity == Severity.OK })
-                    assertTrue(exported.primary.isFile)
+                    val program = if (format == ExportFormat.PROGRAM_FOLDER) File(exported.primary, "${saved.name}.xpm") else exported.primary
+                    assertTrue(program.isFile, "${bank.id} $format: ${program.path}")
                 }
                 for (pad in saved.pads) EmbouchurePresetAcceptance.assertAudio(WavReader.read(File(work, pad.sampleFile)), "${bank.id} ${pad.slot} saved PCM")
             }
