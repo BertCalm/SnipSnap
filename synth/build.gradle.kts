@@ -1049,6 +1049,18 @@ tasks.register<JavaExec>("generateAlloyAudition") {
     if (project.hasProperty("alloyRefreshPage")) args("--refresh-page")
 }
 
+/** Separate candidate recipes; the released Alloy audition remains unchanged. */
+tasks.register<JavaExec>("generateAlloyContrastAudition") {
+    group = "distribution"
+    description = "Render 60 ALLOY voice/role/held comparisons, candidate patches and MPC kit under testkit/alloy-contrast/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AlloyContrastAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("alloyContrastOutput").orNull ?: "${rootDir}/testkit/alloy-contrast")
+    if (project.hasProperty("alloyContrastRefreshPage")) args("--refresh-page")
+}
+
 /** Render Contour's original tables, related layers and complete dry listening matrix. */
 tasks.register<JavaExec>("generateContourAudition") {
     group = "distribution"

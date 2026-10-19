@@ -267,3 +267,6 @@ testkit/SnipSnap-Wick-Prototype-Kit.zip
 # Generated Shoal listening assets; recipes and player sources live under synth/.
 testkit/shoal-audition/
 testkit/shoal-audition-v1/
+
+# Focused Alloy voice/preset comparison audio is regenerated from source.
+testkit/alloy-contrast/
