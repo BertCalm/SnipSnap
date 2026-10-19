@@ -7,9 +7,9 @@ coloration. Restrained companion strings beat as they decay. The
 supplies the musical starting point: a heavy ring, felt-to-hard contact, bloom and
 resonance. This implementation uses original synthesized material and no external samples.
 
-The [listening page](https://snipsnap-oven-audition.bertcalm.chatgpt.site) is the first
-sonic gate. GRAND, FELT, FORGED and BLOOM are articulations of the same core. Ten
-small starter recipes await the owner's listening verdict.
+The [listening page](https://snipsnap-oven-audition.bertcalm.chatgpt.site) established
+the approved sonic baseline. GRAND, FELT, FORGED and BLOOM are articulations of
+the same core. The owner accepted the revised ten-preset roster for app integration.
 
 ## Preset revision 2 — 14 October 2026
 
@@ -34,7 +34,7 @@ and matched WAV hashes against the tracked `oven-roster-r1.json` snapshot.
 The regression screen compares relative upper-harmonic power, attack timing and
 decay, before and after output leveling. It also checks gain/padding invariance,
 the named felt pair and Afterglow's independently stored halo tail. These metrics
-support the next listen; they do not establish universal audible distinctness.
+support the listening decision; they do not establish universal audible distinctness.
 Earlier browser reviews follow their exact waveform hashes and remain exportable.
 Revised media uses fresh URLs to avoid replaying cached first-roster audio.
 
@@ -77,9 +77,16 @@ version. Patches, factory presets, native velocity variants and `SynthKits.oven(
 use the same renderer. The sixteen-pad dry starter has a playable C-minor-pentatonic
 scale and examples of the articulations; its recipes regenerate through `PadRecipe`.
 
-This first gate covers the offline core, not a new phone synth-picker or MAKE
-INSTRUMENT entry. The existing phone keygroup player uses gain for velocity and
-would need sample-layer selection for faithful soft/hard keyboard playing.
+The phone SYNTH picker exposes all four articulations, six macros and ten approved
+factory presets. ROOT selects MIDI 24–96 and VELOCITY sets the rendered strike;
+TUNE remains relative to the selected root. Preview, SCRAMBLE, SAVE PRESET and
+SEND TO PAD retain the full recipe, including root, velocity and model. Leaving
+and reopening SYNTH restores the OVEN draft. Pad recipes can regenerate the same
+finite note after further editing. Long tails remain TONAL rather than LOOP.
+
+MAKE INSTRUMENT and a FRESH TAPE menu entry remain later work. The existing phone
+keygroup player uses gain for velocity and would need sample-layer selection for
+faithful soft/hard keyboard playing.
 Shared resonance reacting to notes played together and physical damper/pedal
 transitions would also require additional playback DSP. The current HALO is saved
 inside each note. Offline phrases mix independent rendered notes and make no claim

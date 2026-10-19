@@ -5,7 +5,7 @@ package com.snipsnap.synth
  * articulations share one struck-string and iron-body core; no external rack
  * supplies the halo or bloom. The second roster separates attack, colour and
  * decay at a common note and velocity; saved patches retain their own controls.
- * These revised identities await the owner's sonic verdict.
+ * The owner accepted this revised ten-preset roster as the integration baseline.
  */
 object OvenPresets {
     private fun p(
