@@ -58,7 +58,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
-### CREASE — pressure memory in a phase map (gesture and preset study)
+### CREASE — pressure memory in a phase map (native integration)
 
 ROUND, PINCH and RUBBER share two smooth, monotonic phase-distortion layers.
 FOLD sets their geometry; PRESSURE drives bounded deformation; DRAG delays it;
@@ -73,8 +73,9 @@ standalone audition recipes in `testkit/crease-audition-r3/`. The first audition
 had insufficient variation; the owner preferred model 2's wider analytic phase
 maps. Model 3 retains those shapes and refines lag/recovery, with six named
 listening presets and constant-level gesture comparisons. Models 1 and 2 remain
-exactly replayable. Factory expansion and production patch/phone/kit registration
-follow listening acceptance. [CREASE](CREASE.md) records the prototype scope and
+exactly replayable. The approved three voices and six presets are registered in native patches,
+velocity routing, the SYNTH picker, FRESH TAPE and CLI. Voice expansion and a
+dedicated multisampled instrument builder remain separate work. [CREASE](CREASE.md) records the prototype scope and
 reproduction commands.
 
 ### THUMP — analog-style drum voices (the drum synth engine)

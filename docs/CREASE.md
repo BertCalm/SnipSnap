@@ -1,4 +1,4 @@
-# CREASE — gesture and preset study
+# CREASE — native integration
 
 CREASE is an original, offline pitched engine inspired by phase-distortion synthesis.
 Its gesture is bend → crease → unfold: pressure changes two periodic phase maps,
@@ -12,8 +12,10 @@ checks without establishing useful timbral variation.
 The owner preferred the wider model-2 voices. Model 3 keeps those analytic phase
 shapes and refines their pressure/recovery timing. Six listening presets explore
 fast, delayed and slowly unfolding gestures across ROUND, PINCH and RUBBER;
-voicing remains provisional. The six-voice/36-preset factory roster and production
-app, patch, kit and keyboard-instrument registration remain later work.
+the owner approved this listening direction. The three voices and six presets
+are now registered in the native patch/preset, kit, CLI and phone paths. The
+remaining voice expansion and dedicated multisampled instrument builder remain
+later work.
 
 ## Controls and performance
 
@@ -84,11 +86,11 @@ for 178 clips in total.
 The first and second auditions' output directories are retained separately.
 
 Browser playback uses these Kotlin-engine WAVs. Matched files use the common
-audition loudness; separate prelevel WAVs retain original dynamics. The JSON files
-are standalone audition recipes, not registered production SnipSnap Patch objects.
-`CreasePresets.kt` is the shared source of truth for six complete, immutable
-listening presets. The presets are available in the audition; factory registration
-in the production app remains later work.
+audition loudness; separate prelevel WAVs retain original dynamics. The original audition JSON files retain their standalone schema. Native
+`CreasePatch` JSON is separate and carries the common Patch version, model, MIDI
+and velocity. `CreasePresets.kt` is the shared source of truth: `all()` retains
+the listening data while `patches()` exposes the same six sounds as native
+factory patches.
 
 | Voice | Preset | Listening role |
 | --- | --- | --- |
@@ -127,13 +129,31 @@ contrasts describe the rendered sound and do not establish musical acceptance.
 checks the contracts, and `CreaseAuditionGenerator.kt` generates the evidence.
 The audition site's static source is kept in its own Sites source repository.
 
-After listening acceptance, follow the explicit MIDI/velocity recipe pattern in
-`TanglePatch.kt`. Full integration also needs `Patches`, `Presets`, native
-`Velocity` routing, `SynthKits`, shell starter visibility, CLI overrides and the
-phone's engine adapter. Generic classification files long finite sounds as LOOP
-by length; finite TONAL filing and actual HOLD readiness need separate handling.
+`CreasePatch` is registered in `Patches`, `Presets`, native `Velocity` routing,
+`SynthKits`, FRESH TAPE, CLI and the phone SYNTH picker. Patch edits preserve the
+saved model, MIDI root and velocity. Native JSON without a model selects the
+first native schema's model 3; old standalone audition JSON without a model
+continues to select model 1. Explicit models 1, 2 and 3 replay their own sound.
+
+The sixteen-pad dry starter has eight C-minor-pentatonic Corner Bass notes, the
+six approved presets, and Paper Keys/Ink Ribbon HOLD loops. Its fourteen finite
+pads are TONAL regardless of duration; the two held pads are LOOP. The phone
+uses the saved MIDI root for SPREAD and offers ROOT/VELOCITY beside the six
+controls. A dedicated MAKE INSTRUMENT/`Keys.creasePad` builder is separate work;
+the generic sampled-instrument player is unchanged.
+
+CLI example:
+
+```sh
+./gradlew :cli:run --args='synth crease round --preset 2 --midi 60 --velocity .8 --model 3 --out /tmp/crease-native'
+```
+
+The audition offers six native patch JSON files and a shelf backup with a
+playable starter kit and editable saved presets. The official shelf import
+restores the kit's WAVs/settings; its six saved presets retain full recipes.
 
 The full production JVM gate is `./gradlew --no-daemon test` without an Android
 SDK. CI builds Android separately; JVM checks cannot validate future phone UI
-wiring. This listening revision uses focused engine, replay, audio and browser
-checks; it does not claim a completed repository-wide regression run.
+wiring. Native integration is checked through engine replay, registry/serialization,
+velocity, CLI, shelf import and app build validation. Device interaction still
+requires a phone or emulator.

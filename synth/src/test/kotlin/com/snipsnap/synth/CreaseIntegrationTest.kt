@@ -13,6 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -119,14 +120,7 @@ class CreaseIntegrationTest {
     fun `the native six preset bank retains the exact approved R3 sounds through JSON`() {
         // Native normalized Float32 hashes from the approved baf449c R3 listening manifest.
         // Matched audition WAV gain is deliberately outside this native render contract.
-        val approved = mapOf(
-            "Corner Bass" to "61a8f7e57f79b497b69162a49482796d3f67baa11fb13e50a2467c6a437c5848",
-            "Paper Keys" to "e5115373f1e157a9aceb8f78893a4d560eddf884fcee7eb8fd0765e230381a7e",
-            "Reed Mark" to "10b38495aa17ef4e1c2430dbf848530be5c076f38faef33e6bfcfcaff7511b8d",
-            "Return Stroke" to "2b2ecb19569d7971078d40c7473531d7fbab7ba3176946fc053374ef018bf5b1",
-            "Late Mark" to "e6700be0a4db9f32ee7750819e38de859da4dace70709b482626bc97850a9a04",
-            "Ink Ribbon" to "8d2831c9ea2e7825ed0b42f07f69c57bca2605dbce364c7bd725b5f87beb64ee",
-        )
+        val approved = approvedR3Hashes()
         val native = CreasePresets.patches()
         assertEquals(approved.keys, native.map { it.name }.toSet())
         assertEquals(6, native.size, "only the six approved recipes enter the factory roster")
@@ -152,6 +146,39 @@ class CreaseIntegrationTest {
         }
         assertTrue(Presets.forVoice("CREASE", "UNKNOWN").isEmpty())
         assertNull(Presets.byName("CREASE", "ROUND", "UNKNOWN"))
+    }
+
+    @Test
+    fun `the sixteen pad kit stores dry native scale approved and held recipes with intentional placement`() {
+        val pads = SynthKits.crease().map { assertNotNull(it, "the CREASE kit must fill all sixteen pads") }
+        assertEquals(16, pads.size)
+        assertEquals(List(14) { DrumClass.TONAL } + List(2) { DrumClass.LOOP }, pads.map { it.drumClass })
+        val recipes = pads.map { PadRecipe.fromJsonValue(assertNotNull(it.recipe)) }
+        assertTrue(recipes.all { it.fx == null }, "native CREASE kit positions stay dry")
+        val patches = recipes.map { assertIs<CreasePatch>(it.patch) }
+        for ((pad, patch) in pads.zip(patches)) {
+            assertEquals(patch.name, pad.displayName)
+            assertEquals(3, patch.model)
+            assertEquals(.8f, patch.velocity)
+        }
+        val approved = CreasePresets.patches()
+        assertEquals(approved, patches.subList(8, 14), "A09-A14 are the unchanged six approved positions")
+        for ((pad, patch) in pads.subList(8, 14).zip(approved)) {
+            assertEquals(approvedR3Hashes().getValue(patch.name), hash(pad.snip.samples), patch.name)
+        }
+        val bass = approved.single { it.name == "Corner Bass" }
+        val semitones = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        for ((index, semitone) in semitones.withIndex()) {
+            assertEquals(bass.copy(name = "Corner Bass ${index + 1}", midi = bass.midi + semitone), patches[index])
+        }
+        assertContentEquals(pads[8].snip.samples, pads[0].snip.samples, "the first scale key keeps the approved bass root")
+        assertContentEquals(patches[7].render().samples, pads[7].snip.samples, "the scale's saved upper root regenerates its audio")
+        for ((index, name) in listOf("Paper Keys", "Ink Ribbon").withIndex()) {
+            val source = approved.single { it.name == name }
+            val expected = source.copy(name = "$name LOOP", macros = source.macros + ("HOLD" to 1f))
+            assertEquals(expected, patches[14 + index], "the held variant changes only its label and HOLD")
+            assertContentEquals(expected.render().samples, pads[14 + index].snip.samples)
+        }
     }
 
     @Test
@@ -211,6 +238,15 @@ class CreaseIntegrationTest {
             assertEquals(source.copy(macros = macros), source.withMacros(macros))
         }
     }
+
+    private fun approvedR3Hashes() = mapOf(
+        "Corner Bass" to "61a8f7e57f79b497b69162a49482796d3f67baa11fb13e50a2467c6a437c5848",
+        "Paper Keys" to "e5115373f1e157a9aceb8f78893a4d560eddf884fcee7eb8fd0765e230381a7e",
+        "Reed Mark" to "10b38495aa17ef4e1c2430dbf848530be5c076f38faef33e6bfcfcaff7511b8d",
+        "Return Stroke" to "2b2ecb19569d7971078d40c7473531d7fbab7ba3176946fc053374ef018bf5b1",
+        "Late Mark" to "e6700be0a4db9f32ee7750819e38de859da4dace70709b482626bc97850a9a04",
+        "Ink Ribbon" to "8d2831c9ea2e7825ed0b42f07f69c57bca2605dbce364c7bd725b5f87beb64ee",
+    )
 
     private fun hash(samples: FloatArray): String {
         val bytes = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
