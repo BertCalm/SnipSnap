@@ -260,6 +260,7 @@ object Velocity {
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
         is NacrePatch -> Nacre.macrosFor(patch.voice)
         is OvenPatch -> Oven.macrosFor(patch.voice)
+        is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
     }
 
     /**
@@ -346,6 +347,7 @@ object Velocity {
      * ORPHICA changes string excitation while retaining the saved grain history recipe and seed.
      * REGISTERS uses its saved note and model while velocity changes rank/reed excitation once.
      * VENT scales the onset perturbation while retaining the saved trajectory controls, note and seed.
+     * CREASE changes excitation pressure while retaining its saved phase-map model and root.
      * WICK changes admitted gate charge and excitation effort, retaining the saved note and six controls.
      * OVEN changes hammer contact and partial excitation while retaining its saved root and body recipe.
      * FLOTILLA renders velocity itself, with its saved MIDI note.
@@ -400,6 +402,7 @@ object Velocity {
         is ChamberPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
+        is CreasePatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()

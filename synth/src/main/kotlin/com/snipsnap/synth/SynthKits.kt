@@ -953,6 +953,26 @@ object SynthKits {
     }
 
     /**
+     * Eight Corner Bass keys in C minor pentatonic from C2, the six approved positions,
+     * then two held variants. Every dry pad stores its exact root, velocity and model.
+     * Finite notes route as TONAL; the last two pads contain settled LOOP material.
+     */
+    fun crease(): List<ArrangedPad?> {
+        fun arranged(patch: CreasePatch) = pad(patch, Crease.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName = patch.name)
+        val approved = CreasePresets.patches()
+        val bass = approved.single { it.name == "Corner Bass" }
+        val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            arranged(bass.copy(name = "Corner Bass ${index + 1}", midi = bass.midi + semitone))
+        }
+        val held = listOf("Paper Keys", "Ink Ribbon").map { name ->
+            val source = approved.single { it.name == name }
+            arranged(source.copy(name = "$name LOOP", macros = source.macros + ("HOLD" to 1f)))
+        }
+        return scale + approved.map(::arranged) + held
+    }
+
+    /**
      * Sixteen dry finite flock performances. A01–A08 play First Gathering up
      * C minor pentatonic from C4; the upper eight pads retain the other factory
      * recipes, including every RIBBON and SPLIT. Notes share the base recipe's

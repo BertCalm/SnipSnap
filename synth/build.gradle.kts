@@ -1316,6 +1316,19 @@ tasks.register<JavaExec>("generateRelayAudition") {
     if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }
 
+/** CREASE's reproducible dry prototype matrix and standalone audition assets. */
+tasks.register<JavaExec>("generateCreaseAudition") {
+    group = "distribution"
+    description = "Render CREASE revision 3's 87-clip gesture/preset listening set under testkit/crease-audition-r3/. -PcreaseFull adds the complete engineering matrix."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CreaseAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("creaseOutput")?.toString() ?: "${rootDir}/testkit/crease-audition-r3")
+    project.findProperty("creaseRecipe")?.toString()?.let { args("--recipe=$it") }
+    if (project.hasProperty("creaseFull")) args("--full")
+}
+
 /** Render Shoal's first two voices with causal comparisons and moving held loops. */
 tasks.register<JavaExec>("generateShoalAudition") {
     group = "distribution"

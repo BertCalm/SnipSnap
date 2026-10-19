@@ -1,4 +1,6 @@
 build/
+testkit/crease-audition/
+testkit/crease-audition-r2/
 testkit/nacre-audition/
 testkit/overlap-audition/
 testkit/overlap-audition-r1/
@@ -265,6 +267,8 @@ testkit/vent-audition/
 # Four controlled, uncoloured VENT trajectory studies; generated for listening.
 testkit/vent-isolation-audition/
 
+# Third Crease listening study
+/testkit/crease-audition-r3/
 # Regenerable PRISM spectral-motion listening assets
 /testkit/prism-motion-audition/
 /testkit/prism-palette-audition/
