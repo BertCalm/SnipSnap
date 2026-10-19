@@ -49,6 +49,8 @@ replayable. Its
 [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) compares
 neighbor interaction with fixed detuning and independent motion. HOLD always
 sets a finite duration; sustained loops and phone/MPC hardware checks remain open.
+The separate RIBBON sustain study compares long continuous renders with captured
+roughly six-second loops at three FLOW settings, without changing the finite presets.
 
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating

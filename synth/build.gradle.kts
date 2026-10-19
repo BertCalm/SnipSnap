@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** First finite Nacre listening proof: two harps, current, coral and seaweed. */
+tasks.register<JavaExec>("generateNacreAudition") {
+    group = "distribution"
+    description = "Render NACRE's finite duet, control and causal comparisons with recipes and a listening page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-audition")
+}
+
 /** Sixteen dry finite FLOCK factory pads, editable recipes and native exports for both MPC generations. */
 tasks.register<JavaExec>("generateFlockKit") {
     group = "distribution"
@@ -56,6 +67,17 @@ tasks.register<JavaExec>("generateFlockFlowAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("flockFlowOutput").orNull ?: "${rootDir}/testkit/flock-flow-audition")
     args(providers.gradleProperty("flockBaseline").orNull ?: "${rootDir}/testkit/flock-audition")
+}
+
+/** Experimental RIBBON sustain: long continuous / repeated-body WAV comparisons at three FLOW rates. */
+tasks.register<JavaExec>("generateFlockRibbonSustainAudition") {
+    group = "distribution"
+    description = "Render six long FLOCK RIBBON sustain comparisons, sampler WAVs, exact experimental recipes and split raw/matched listening packs."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlockRibbonSustainAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockSustainOutput").orNull ?: "${rootDir}/testkit/flock-ribbon-sustain")
 }
 
 /** Three-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
