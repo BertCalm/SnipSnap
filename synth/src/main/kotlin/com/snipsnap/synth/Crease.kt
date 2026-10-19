@@ -55,7 +55,7 @@ data class CreaseProbe(
  */
 object Crease {
     const val MODEL_VERSION = 3
-    const val RATE = 44100
+    const val RATE = Dsp.RATE
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 24
     const val MIDI_MAX = 84
