@@ -319,3 +319,7 @@ testkit/oven-kit/
 
 # OSPREY's dry field-sketch WAV, MIDI, score and performance archive.
 testkit/osprey-field-sketch/
+
+# CAUSTIC's finite circular first-listen audio, recipes and portable pack.
+testkit/caustic-audition/
+testkit/.caustic-audition-building-*/

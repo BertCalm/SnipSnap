@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111513">
+  <meta name="description" content="Listen to the first Caustic prototype for SnipSnap. Compare source, pickup position, and phase-preserving geometry in rendered audio.">
+  <title>Caustic — SnipSnap listening study</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="manifest.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listening">Skip to the audio</a>
+  <div class="site-shell">
+    <header class="masthead">
+      <a class="wordmark" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noreferrer" aria-label="SnipSnap on GitHub"><span class="brand-mark" aria-hidden="true">✳</span> SnipSnap<span class="wordmark-divider">/</span><span class="wordmark-sub">Sound studies</span></a>
+      <a class="header-link" href="#about">About this prototype <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="status-light" aria-hidden="true"></span> ENGINE STUDY / 01</p>
+          <h1 id="hero-title">Caustic<span class="title-dot">.</span></h1>
+          <p class="hero-deck">Move the pickup.<br>Hear the body change.</p>
+          <p class="hero-description">A first listening study for SnipSnap: reflected paths meet a bank of resonances. Source and pickup position decide which harmonics sing.</p>
+          <a class="primary-link" href="#listening">Listen to the study <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="vessel-art" aria-hidden="true">
+          <svg class="vessel-svg" viewBox="0 0 600 600" fill="none">
+            <defs>
+              <radialGradient id="vesselGlow"><stop stop-color="#c7f58c" stop-opacity=".10"/><stop offset="1" stop-color="#65ddc7" stop-opacity="0"/></radialGradient>
+              <linearGradient id="rayFade" x1="60" y1="300" x2="500" y2="300" gradientUnits="userSpaceOnUse"><stop stop-color="#9de6c9" stop-opacity=".12"/><stop offset=".6" stop-color="#a4f1cf" stop-opacity=".65"/><stop offset="1" stop-color="#d5f58c" stop-opacity=".3"/></linearGradient>
+            </defs>
+            <circle cx="300" cy="300" r="260" fill="url(#vesselGlow)"/>
+            <path class="art-grid" d="M0 300H600M300 0V600"/>
+            <circle class="art-circle" cx="300" cy="300" r="242"/>
+            <circle class="art-circle inner-circle" cx="300" cy="300" r="190"/>
+            <g class="art-rays" stroke="url(#rayFade)" stroke-width="1">
+              <path d="M35 100H437L326 456"/><path d="M35 120H463L341 442"/><path d="M35 140H481L355 428"/><path d="M35 160H497L368 414"/><path d="M35 180H510L380 400"/><path d="M35 200H520L390 386"/><path d="M35 220H529L399 371"/><path d="M35 240H534L405 357"/><path d="M35 260H539L410 342"/><path d="M35 280H541L413 328"/><path d="M35 300H542L415 313"/><path d="M35 320H541L413 298"/><path d="M35 340H539L410 284"/><path d="M35 360H534L405 269"/><path d="M35 380H529L399 255"/><path d="M35 400H520L390 240"/><path d="M35 420H510L380 226"/><path d="M35 440H497L368 212"/><path d="M35 460H481L355 198"/><path d="M35 480H463L341 184"/><path d="M35 500H437L326 170"/>
+            </g>
+            <path class="caustic-line" d="M326 170C386 226 415 275 415 313C415 350 386 401 326 456"/>
+            <circle class="pickup-halo" cx="413" cy="313" r="24"/><circle class="pickup-dot" cx="413" cy="313" r="5"/>
+            <path class="art-tick" d="M300 49V67M300 533V551M49 300H67M533 300H551"/>
+            <text x="318" y="38" class="art-caption">CIRCULAR BOUNDARY</text><text x="438" y="321" class="art-caption accent-caption">PICKUP</text><text x="60" y="565" class="art-caption">ONE REFLECTION · FINITE APERTURES</text>
+          </svg>
+          <div class="art-note"><span class="note-line" aria-hidden="true"></span>Reflected paths. Uneven concentration.<br>Position becomes timbre.</div>
+        </div>
+      </section>
+
+      <div class="study-strip" aria-label="Study details">
+        <div><span class="strip-label">Status</span><span>Dry listening prototype</span></div>
+        <div><span class="strip-label">Material</span><span id="clip-count">Kotlin-rendered WAVs</span></div>
+        <div><span class="strip-label">Format</span><span id="format-label">Mono · 44.1 kHz</span></div>
+        <a href="audition.zip" download class="pack-link">Download the full study <span aria-hidden="true">↗</span></a>
+      </div>
+
+      <section id="listening" class="listening-intro" aria-labelledby="listening-title">
+        <div class="section-heading">
+          <p class="eyebrow">THE LISTENING ROOM</p>
+          <h2 id="listening-title">Follow the focus.</h2>
+        </div>
+        <div class="listening-guide"><span class="guide-number">01—04</span><p>Start with the dry source, then focus. Use <strong>Level matched</strong> for tone and <strong>Shared gain</strong> for bloom strength. Headphones help; begin at a comfortable level.</p></div>
+      </section>
+
+      <div class="listening-toolbar">
+        <fieldset class="gain-mode">
+          <legend>Comparison level</legend>
+          <div class="segmented-control">
+            <label><input type="radio" name="gain-mode" value="matched" checked><span>Level matched</span></label>
+            <label><input type="radio" name="gain-mode" value="raw"><span>Shared gain</span></label>
+          </div>
+        </fieldset>
+        <label class="position-option"><input id="keep-position" type="checkbox" checked><span>Keep playhead when comparing</span></label>
+        <div class="filter-control"><label for="section-filter">Listen to</label><select id="section-filter"><option value="all">All studies</option></select></div>
+      </div>
+      <p id="gain-explanation" class="mode-explanation">Level matched reduces loudness differences so changes in tone are easier to hear.</p>
+
+      <div id="load-status" class="load-status" role="status"><span class="loading-dot"></span> Loading the listening study…</div>
+      <div id="studies"></div>
+
+      <section class="evidence-section" id="geometry" aria-labelledby="geometry-title">
+        <div class="evidence-copy">
+          <p class="eyebrow">BEHIND THE SOUND</p>
+          <h2 id="geometry-title">A place to<br>concentrate.</h2>
+          <p>Rays reflect from a circular boundary. Finite pickups collect the paths that pass nearby; path lengths preserve phase before the resonant body is excited.</p>
+          <p>This preliminary geometry study shows where collected paths concentrate as the source and pickup move. It supports the starting setup; it does not validate the specification’s .001R envelope target or establish how the instrument sounds.</p>
+          <a class="text-link" href="assets/geometry.png" target="_blank" rel="noreferrer">Open the geometry study <span aria-hidden="true">↗</span></a>
+        </div>
+        <figure class="geometry-figure"><a href="assets/geometry.png" target="_blank" rel="noreferrer" aria-label="Open full resolution preliminary geometry study"><img src="assets/geometry.png" alt="Preliminary circular-boundary ray geometry and pickup scans for several source positions" loading="lazy"></a><figcaption><span>FIG. 01 / PRELIMINARY GEOMETRY</span><span>Collection ≠ acoustic energy</span></figcaption></figure>
+      </section>
+
+      <section class="notebook-section" aria-labelledby="notebook-title">
+        <div><p class="eyebrow">YOUR LISTENING NOTES</p><h2 id="notebook-title">Keep what you hear.</h2><p>Notes stay in this browser, tied to this model and clip. Export them to keep or share your listening record.</p></div>
+        <div class="notebook-actions"><span id="notes-count">0 clips annotated</span><button id="export-notes" type="button" class="button-secondary">Export notes <span aria-hidden="true">↗</span></button><button id="clear-notes" type="button" class="text-button">Clear notes</button></div>
+      </section>
+
+      <section id="about" class="about-section">
+        <details open>
+          <summary><span>How this was rendered</span><span class="details-plus" aria-hidden="true">+</span></summary>
+          <div class="about-grid">
+            <div><p class="eyebrow">THE SIGNAL</p><p>These are audio files rendered by the Kotlin prototype, played directly in your browser. Mono, 44.1 kHz, with 4× internal oversampling. No external effects or sampled instruments. The browser adds only the listening volume.</p></div>
+            <div><p class="eyebrow">THE QUESTION</p><p>Does phase-preserving geometry make a musically useful change in the body? Compare the full model with the mechanism controls. The controls isolate the contribution of routing and phase; each clip’s recipe records its actual variant.</p></div>
+            <div><p class="eyebrow">THE BOUNDARY</p><p>This first prototype covers circular geometry, source position, and pickup focus. CURVE, SCATTER, ORBIT, seamless HOLD, and phone integration are later work. Replaying a rendered clip is not HOLD. This page is an audition, not an accepted production engine.</p></div>
+          </div>
+          <div class="provenance"><span id="provenance">Reading render provenance…</span><a href="manifest.json" target="_blank" rel="noreferrer">Render manifest ↗</a><a href="diagnostics.json" target="_blank" rel="noreferrer">Diagnostics ↗</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noreferrer">Source repository ↗</a></div>
+        </details>
+      </section>
+    </main>
+    <footer><span class="footer-brand">SnipSnap <span>/</span> Caustic</span><span>A listening study. Let your ears decide.</span><a href="#hero-title">Back to top ↑</a></footer>
+  </div>
+
+  <aside id="player" class="player" aria-label="Audio player" hidden>
+    <div class="player-inner">
+      <button id="player-toggle" class="player-play" type="button" aria-label="Play selected clip"><span aria-hidden="true">▶</span></button>
+      <div class="player-identity"><span class="player-kicker" id="player-mode">LEVEL MATCHED</span><strong id="player-title">Choose a clip</strong><a id="player-download" download>Download WAV ↗</a></div>
+      <div class="player-transport"><div class="seek-row"><label for="seek" class="sr-only">Playback position</label><input id="seek" type="range" min="0" max="1" value="0" step="0.01"><span id="player-time">0:00 / 0:00</span></div><div class="player-subcontrols"><button id="player-stop" class="text-button" type="button">Stop</button><label class="replay-option"><input id="repeat" type="checkbox"><span>Replay clip</span></label><span id="player-filename"></span></div></div>
+      <label class="volume-control" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.65"></label>
+      <button id="close-player" type="button" class="close-player" aria-label="Stop and close player">×</button>
+    </div>
+    <p id="playback-error" role="alert" hidden></p>
+  </aside>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
