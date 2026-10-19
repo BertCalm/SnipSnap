@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 class RegistersCommandTest {
     @Test
-    fun `CLI note and velocity overrides render the approved model for both voices`() {
+    fun `CLI note and velocity overrides retain each voice factory model`() {
         val dir = createTempDirectory("registers-cli").toFile()
         try {
             for (voice in RegistersVoice.entries) {
@@ -36,21 +36,24 @@ class RegistersCommandTest {
     fun `CLI instrument writes nine held zones and both MPC generations`() {
         val dir = createTempDirectory("registers-instrument-cli").toFile()
         try {
-            val output = ByteArrayOutputStream()
-            assertEquals(0, Cli.run(arrayOf("synth", "registers", "musette", "--instrument", "--release", ".8", "--out", dir.path),
-                PrintStream(output), PrintStream(ByteArrayOutputStream())))
-            val (sidecar, instrument) = InstrumentStore.list(dir).single()
-            assertEquals((48..72 step 3).toList(), instrument.zones.map { it.rootNote })
-            assertEquals(.8f, instrument.release)
-            assertTrue(instrument.zones.all { it.loopStartFrame in 1 until it.frameCount })
-            assertTrue(instrument.zones.all { File(sidecar.parentFile, it.sample).isFile })
-            val xty = dir.listFiles { f -> f.extension == "xty" }!!.single()
-            assertTrue("\"LoopMode\": 1" in Acvs.read(xty).payloadText)
-            val data = dir.listFiles { f -> f.isDirectory && f.name.endsWith("_[TrackData]") }!!.single()
-            assertEquals(9, data.listFiles { f -> f.extension == "wav" }!!.size)
-            assertTrue("<SliceLoop>1</SliceLoop>" in data.listFiles { f -> f.extension == "xpm" }!!.single().readText())
-            assertTrue("9 zones, each holds" in output.toString())
-            assertTrue("speaking attack retained" in output.toString())
+            for (voice in listOf(RegistersVoice.MUSETTE, RegistersVoice.TRANSISTOR)) {
+                val directory = File(dir, voice.name).apply { mkdirs() }
+                val output = ByteArrayOutputStream()
+                assertEquals(0, Cli.run(arrayOf("synth", "registers", voice.name.lowercase(), "--instrument", "--release", ".8", "--out", directory.path),
+                    PrintStream(output), PrintStream(ByteArrayOutputStream())))
+                val (sidecar, instrument) = InstrumentStore.list(directory).single()
+                assertEquals((48..72 step 3).toList(), instrument.zones.map { it.rootNote })
+                assertEquals(.8f, instrument.release)
+                assertTrue(instrument.zones.all { it.loopStartFrame in 1 until it.frameCount })
+                assertTrue(instrument.zones.all { File(sidecar.parentFile, it.sample).isFile })
+                val xty = directory.listFiles { f -> f.extension == "xty" }!!.single()
+                assertTrue("\"LoopMode\": 1" in Acvs.read(xty).payloadText)
+                val data = directory.listFiles { f -> f.isDirectory && f.name.endsWith("_[TrackData]") }!!.single()
+                assertEquals(9, data.listFiles { f -> f.extension == "wav" }!!.size)
+                assertTrue("<SliceLoop>1</SliceLoop>" in data.listFiles { f -> f.extension == "xpm" }!!.single().readText())
+                assertTrue("9 zones, each holds" in output.toString())
+                assertTrue("authored attack retained" in output.toString())
+            }
         } finally { dir.deleteRecursively() }
     }
 

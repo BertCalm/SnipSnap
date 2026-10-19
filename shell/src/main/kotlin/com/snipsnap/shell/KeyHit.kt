@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.kit.InstrumentStore
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * What one key press asks the audio engine to play - the keygroup's
@@ -53,10 +54,13 @@ object KeyHit {
     fun resolve(instrument: InstrumentStore.Instrument, note: Int, velocity: Float, framesOf: (String) -> Long?): Hit? {
         require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }
         val zone = instrument.zoneFor(note) ?: return null
-        val frames = framesOf(zone.sample)?.takeIf { it > 0 } ?: return null
-        val loop = if (zone.loopStartFrame > 0 && zone.loopStartFrame < frames - 1) zone.loopStartFrame else -1L
+        // MIDI velocity zero is note-off; a zero-gain touch still resolves the softest positive zone.
+        val midiVelocity = (velocity * 127).roundToInt().coerceIn(1, 127)
+        val layer = zone.layerFor(midiVelocity) ?: return null
+        val frames = framesOf(layer.sample)?.takeIf { it > 0 } ?: return null
+        val loop = if (layer.loopStartFrame > 0 && layer.loopStartFrame < frames - 1) layer.loopStartFrame else -1L
         return Hit(
-            sampleFile = zone.sample,
+            sampleFile = layer.sample,
             frames = frames,
             loopStartFrame = loop,
             gain = velocity * InstrumentEngine.VOICE_LEVEL,

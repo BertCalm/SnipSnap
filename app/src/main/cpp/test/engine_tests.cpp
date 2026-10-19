@@ -115,6 +115,24 @@ PadEngine& seeded() {
     return *e;
 }
 
+/** Frame i holds i*i/10000: a parabola, which a four-point cubic reproduces between frames and a straight line cannot. */
+std::vector<float> parabola(int64_t frames) {
+    std::vector<float> v(static_cast<size_t>(frames));
+    for (int64_t i = 0; i < frames; ++i) v[static_cast<size_t>(i)] = static_cast<float>(i * i) / 10000.0f;
+    return v;
+}
+PadEngine& banked(std::vector<float>&& frames, int32_t channels, int32_t rate) {
+    static PadEngine* e = nullptr;
+    delete e;
+    e = new PadEngine(kRate);
+    e->beginBank();
+    e->addSample(std::move(frames), channels, rate);
+    e->commitBank();
+    callback(*e, 8);
+    ended(*e);
+    return *e;
+}
+
 }  // namespace
 
 // ---- SpscRing ------------------------------------------------------------------
@@ -493,6 +511,131 @@ TEST(pad_engine_a_stereo_loop_interpolates_both_channels_across_the_seam) {
     CHECK_NEAR(out[2 * 19], 0.0065f, 1e-6);       // 9.5: (0.009 + 0.004) / 2
     CHECK_NEAR(out[2 * 19 + 1], -0.013f, 1e-6);   // (-0.018 + -0.008) / 2
     CHECK_NEAR(out[2 * 20 + 1], -0.008f, 1e-6);   // 10 wraps to 4
+}
+
+// ---- the cubic read ------------------------------------------------------------
+
+TEST(pad_engine_an_unpitched_read_at_the_stream_rate_is_the_samples_exactly) {
+    std::vector<float> noise(4000);
+    uint32_t x = 12345u;
+    for (auto& s : noise) { x = x * 1664525u + 1013904223u; s = static_cast<float>(static_cast<int32_t>(x)) / 2147483648.0f; }
+    const std::vector<float> want = noise;
+    for (int pass = 0; pass < 3; ++pass) {
+        PadEngine& e = banked(std::vector<float>(want), 2, kRate);  // 2000 stereo frames
+        PadCommand c = noteOn(1, 0, 0, 2000);
+        if (pass == 1) c.reverse = true;
+        if (pass == 2) c.loopStart = 500;
+        e.pushCommand(c);
+        const auto out = callback(e, 1500);
+        int bad = 0;
+        for (int i = 0; i < 1500; ++i) {
+            const int64_t at = pass == 1 ? 1999 - i : i;
+            if (out[static_cast<size_t>(2 * i)] != want[static_cast<size_t>(2 * at)] || out[static_cast<size_t>(2 * i + 1)] != want[static_cast<size_t>(2 * at + 1)]) ++bad;
+        }
+        CHECK_EQ(bad, 0);
+    }
+}
+
+TEST(pad_engine_reads_between_frames_through_four_neighbours) {
+    PadEngine& e = banked(parabola(40), 1, kRate);
+    e.pushCommand(noteOn(1, 0, 0, 30, 1.0f, 1.0f, 0.25));
+    const auto out = callback(e, 48);
+    CHECK_NEAR(out[2 * 40], 0.0100f, 1e-7);       // position 10: frame 10 itself
+    CHECK_NEAR(out[2 * 41], 0.01050625f, 1e-7);   // 10.25 on the parabola (a straight line reads 0.010525)
+    CHECK_NEAR(out[2 * 42], 0.011025f, 1e-7);     // 10.5 (0.01105)
+    CHECK_NEAR(out[2 * 43], 0.01155625f, 1e-7);   // 10.75 (0.011575)
+}
+
+TEST(pad_engine_a_cubic_read_never_reaches_past_its_window) {
+    // A chain slice: frames 10..19 hold 0.10..0.19, every frame outside holds 0.9.
+    std::vector<float> slab(40, 0.9f);
+    for (int i = 10; i < 20; ++i) slab[static_cast<size_t>(i)] = 0.1f + static_cast<float>(i - 10) / 100.0f;
+    {
+        PadEngine& e = banked(std::vector<float>(slab), 1, kRate);
+        e.pushCommand(noteOn(1, 0, 10, 20, 1.0f, 1.0f, 0.5));
+        const auto out = callback(e, 24);
+        CHECK_NEAR(out[2 * 1], 0.104375f, 1e-6);   // 10.5: taps 10, 10, 11, 12 - the first frame held, never frame 9
+        CHECK_NEAR(out[2 * 17], 0.185625f, 1e-6);  // 18.5: taps 17, 18, 19, 19 - the far tap held at the last frame
+        CHECK_NEAR(out[2 * 18], 0.19f, 1e-6);      // 19.0: the last frame
+        CHECK_NEAR(out[2 * 19], 0.190625f, 1e-6);  // 19.5: taps 18, 19, 19, 19 - the last frame held, never 20
+        CHECK_NEAR(out[2 * 20], 0.0f, 1e-7);       // and then it ends
+    }
+    {
+        PadEngine& e = banked(std::vector<float>(slab), 1, kRate);
+        PadCommand c = reversed(2, 0, 10, 20);
+        c.pitch = 0.5;
+        e.pushCommand(c);
+        const auto out = callback(e, 24);
+        CHECK_NEAR(out[2 * 0], 0.19f, 1e-6);       // starts on the last frame
+        CHECK_NEAR(out[2 * 1], 0.185625f, 1e-6);   // 18.5: taps 17, 18, 19, 19
+        CHECK_NEAR(out[2 * 17], 0.104375f, 1e-6);  // 10.5
+        CHECK_NEAR(out[2 * 18], 0.10f, 1e-6);      // 10.0
+        CHECK_NEAR(out[2 * 19], 0.0f, 1e-7);       // 9.5 is below start: ended
+    }
+}
+
+TEST(pad_engine_a_cubic_reads_a_loop_seam_by_its_own_frames_both_ways) {
+    // Stereo parabola (L) and minus twice it (R) over 20 frames, the window [0, 10), looping [4, 10), half speed.
+    std::vector<float> st(40);
+    for (int i = 0; i < 20; ++i) { st[static_cast<size_t>(2 * i)] = static_cast<float>(i * i) / 10000.0f; st[static_cast<size_t>(2 * i + 1)] = -2.0f * static_cast<float>(i * i) / 10000.0f; }
+    {
+        PadEngine& e = banked(std::vector<float>(st), 2, kRate);
+        PadCommand c = looping(1, 0, 10, 4);
+        c.pitch = 0.5;
+        e.pushCommand(c);
+        const auto out = callback(e, 24);
+        CHECK_NEAR(out[2 * 19], 0.0049f, 1e-7);        // 9.5: taps 8, 9, 4, 5
+        CHECK_NEAR(out[2 * 19 + 1], -0.0098f, 1e-7);
+        CHECK_NEAR(out[2 * 20], 0.0016f, 1e-7);        // 10 wraps to 4
+        CHECK_NEAR(out[2 * 21], 0.002025f, 1e-7);      // 4.5: taps 3, 4, 5, 6 - the parabola itself
+        CHECK_NEAR(out[2 * 21 + 1], -0.00405f, 1e-7);
+    }
+    {
+        PadEngine& e = banked(std::vector<float>(st), 2, kRate);
+        PadCommand c = reversed(2, 0, 0, 10);
+        c.loopStart = 4;
+        c.pitch = 0.5;
+        e.pushCommand(c);
+        const auto out = callback(e, 24);
+        // 9.0, 8.5 ... 4.0 (out 10), 3.5 wraps to 9.5 (out 11), 9.0, 8.5.
+        CHECK_NEAR(out[2 * 1], 0.00775f, 1e-7);        // 8.5: taps 7, 8, 9 and the loop's first (4)
+        CHECK_NEAR(out[2 * 9], 0.002025f, 1e-7);       // 4.5
+        CHECK_NEAR(out[2 * 10], 0.0016f, 1e-7);        // 4.0
+        CHECK_NEAR(out[2 * 11], 0.0049f, 1e-7);        // 9.5: taps 8, 9, 4, 5
+        CHECK_NEAR(out[2 * 11 + 1], -0.0098f, 1e-7);
+    }
+}
+
+TEST(pad_engine_a_loop_that_closes_is_as_smooth_across_its_seam_off_the_root) {
+    const double pi = 3.14159265358979323846;
+    for (int which = 0; which < 2; ++which) {
+        std::vector<float> sine(2000);
+        for (int i = 0; i < 2000; ++i) sine[static_cast<size_t>(i)] = 0.5f * static_cast<float>(std::sin(2.0 * pi * i / 100.0));
+        PadEngine& e = banked(std::move(sine), 1, kRate);
+        PadCommand c = looping(1, 0, 2000, 1000);
+        c.pitch = which == 0 ? 1.5 : 0.75;
+        e.pushCommand(c);
+        double pos = 0.0;
+        float seam = 0.0f, inside = 0.0f;
+        for (int block = 0; block < 8; ++block) {
+            const auto out = callback(e, 1000);
+            for (int i = 0; i < 1000; ++i) {
+                const float want = 0.5f * static_cast<float>(std::sin(2.0 * pi * pos / 100.0));
+                const float err = std::fabs(out[static_cast<size_t>(2 * i)] - want);
+                double p = pos; while (p >= 2000.0) p -= 1000.0;
+                const bool nearSeam = p >= 1997.0 || (pos >= 2000.0 && p < 1002.0);
+                // The window's first two frames are left out: frame 0 has no frame before it, so the
+                // cubic holds it there, by design, and the read is not the ideal sine.
+                if (pos >= 2.0) {
+                    if (nearSeam) seam = std::max(seam, err);
+                    else inside = std::max(inside, err);
+                }
+                pos += c.pitch;
+            }
+        }
+        CHECK(inside < 1e-4f);
+        CHECK(seam <= inside * 1.5f + 1e-6f);
+    }
 }
 
 TEST(latency_is_minus_one_with_no_stream) {
@@ -1625,6 +1768,8 @@ TEST(pad_engine_a_backwards_loop_wraps_the_other_way) {
 TEST(pad_engine_a_backwards_loop_interpolates_the_seam_and_survives_a_fast_voice) {
     // Half speed backwards over [150, 200): position 199.5 sits between the last frame (199) and the
     // loop's first (150), and reads their mean; the walk down is 150.0, then 199.5 (wrapped), 199.0, 198.5.
+    // At 198.5 the cubic's far tap is two frames on from 198: inside the loop that is its first frame (150),
+    // never frame 200 past the window (which would read 0.1985) nor the last frame held (0.1985625).
     PadEngine& e = seeded();
     PadCommand c = reversed(80, 0, 0, 200);
     c.loopStart = 150;
@@ -1634,7 +1779,7 @@ TEST(pad_engine_a_backwards_loop_interpolates_the_seam_and_survives_a_fast_voice
     CHECK_NEAR(out[2 * 98], 0.150f, 1e-6);
     CHECK_NEAR(out[2 * 99], 0.1745f, 1e-6);
     CHECK_NEAR(out[2 * 100], 0.199f, 1e-6);
-    CHECK_NEAR(out[2 * 101], 0.1985f, 1e-6);
+    CHECK_NEAR(out[2 * 101], 0.201625f, 1e-6);  // (-0.197 + 9 * 0.198 + 9 * 0.199 - 0.150) / 16
     CHECK(ended(e).empty());
     e.pushCommand(stop(80, 1.0f));
     callback(e, 64);

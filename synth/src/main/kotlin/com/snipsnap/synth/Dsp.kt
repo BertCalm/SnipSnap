@@ -561,13 +561,36 @@ internal object Dsp {
      */
     const val MELODIC_LOUDNESS_TARGET = 0.1834f
 
+    /**
+     * The finite peak of [buf]: non-finite samples are not "the loudest",
+     * the rule [com.snipsnap.audio.Snip.peak] already keeps. Without it a
+     * single Inf made the peak Inf, the gain 0, and `Inf * 0` then spread
+     * NaN across the whole buffer — one bad sample silencing a render by
+     * turning it into poison instead of leaving a hole where it was.
+     */
+    internal fun finitePeak(buf: FloatArray): Float {
+        var peak = 0f
+        for (v in buf) {
+            if (!v.isFinite()) continue
+            val a = if (v < 0) -v else v
+            if (a > peak) peak = a
+        }
+        return peak
+    }
+
+    /** Scale [buf] by [g] in place, scrubbing any non-finite result to silence. */
+    private fun scaleFinite(buf: FloatArray, g: Float) {
+        for (i in buf.indices) {
+            val v = buf[i] * g
+            buf[i] = if (v.isFinite()) v else 0f
+        }
+    }
+
     /** Peak-normalize in place to [target]; silence is left alone. */
     fun normalize(buf: FloatArray, target: Float = 0.95f) {
-        var peak = 0f
-        for (v in buf) { val a = if (v < 0) -v else v; if (a > peak) peak = a }
+        val peak = finitePeak(buf)
         if (peak <= 1e-9f) return
-        val g = target / peak
-        for (i in buf.indices) buf[i] *= g
+        scaleFinite(buf, target / peak)
     }
 
     /**
@@ -618,13 +641,12 @@ internal object Dsp {
         var foldPeak = 0f
         for (f in 0 until buf.size / channels) {
             var sum = 0f
-            for (c in 0 until channels) sum += buf[f * channels + c]
+            for (c in 0 until channels) { val v = buf[f * channels + c]; sum += if (v.isFinite()) v else 0f }
             val a = if (sum < 0) -sum else sum
             if (a > foldPeak) foldPeak = a
         }
         if (foldPeak <= 1e-9f) return
-        val g = target / foldPeak
-        for (i in buf.indices) buf[i] *= g
+        scaleFinite(buf, target / foldPeak)
     }
 
     /**
@@ -651,14 +673,13 @@ internal object Dsp {
         var foldPeak = 0f
         for (f in 0 until buf.size / channels) {
             var sum = 0f
-            for (c in 0 until channels) sum += buf[f * channels + c]
+            for (c in 0 until channels) { val v = buf[f * channels + c]; sum += if (v.isFinite()) v else 0f }
             val avg = sum / channels
             val a = if (avg < 0) -avg else avg
             if (a > foldPeak) foldPeak = a
         }
         if (foldPeak <= 1e-9f) return
-        val g = target / foldPeak
-        for (i in buf.indices) buf[i] *= g
+        scaleFinite(buf, target / foldPeak)
     }
 
     /**
@@ -668,7 +689,11 @@ internal object Dsp {
      * peaks, so it is not a true-peak ceiling. Not a live bug: every
      * melodic engine already renders oversampled and Tape self-
      * renormalises downstream, but the claim itself was broader than what
-     * the code does.
+     * the code does. A caller that needs the inter-sample guarantee now
+     * has one: [com.snipsnap.audio.TruePeak.limit] after this, at the
+     * ceiling it chooses — deliberately not folded in here, because
+     * true-peak limiting moves shipped loudness and that is an audition
+     * decision, not a bug fix.
      *
      * Peak normalisation makes a sine-heavy patch sit quieter than a saw at
      * the same target number - crest factor, not perceived level, decides
@@ -690,10 +715,11 @@ internal object Dsp {
      */
     fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f, channels: Int = 1) {
         if (buf.isEmpty() || channels < 1) return
-        val measured = Loudness.of(Snip(buf.copyOf(), channels = channels, sampleRate = rate))
+        // Measured over the raw buffer: Loudness never mutates its input,
+        // so the copy this used to make was pure allocation per render.
+        val measured = Loudness.of(buf, channels, rate)
         if (measured <= 1e-6f) return
-        val gain = target / measured
-        for (i in buf.indices) buf[i] *= gain
+        scaleFinite(buf, target / measured)
         limitPeak(buf, ceiling)
     }
 
@@ -707,22 +733,23 @@ internal object Dsp {
      * unconditionally overwriting the level that stage just chose.
      */
     fun limitPeak(buf: FloatArray, ceiling: Float = 1f) {
-        var peak = 0f
-        for (v in buf) { val a = if (v < 0) -v else v; if (a > peak) peak = a }
+        val peak = finitePeak(buf)
         if (peak <= ceiling || peak <= 1e-9f) return
-        val g = ceiling / peak
-        for (i in buf.indices) buf[i] *= g
+        scaleFinite(buf, ceiling / peak)
     }
 
     /**
      * Decimates [buf] (rendered at `rate * OVERSAMPLE`) back down to [rate],
      * via [Resampler] - the same windowed-sinc kernel already used for
      * device-rate conversion at bake time. Two cascaded 2x steps, not one
-     * 4x step: `Resampler`'s own doc comment scopes its well-rejected range
-     * to roughly 0.5x-2x of unity, and a straight 4:1 pass measured only
-     * -10.9 dB rejection just above the new Nyquist versus -17.9 dB
-     * cascaded (25 kHz probe, 176.4 kHz source) - each stage this way stays
-     * inside the kernel's own documented comfort zone.
+     * 4x step. Historically that was a rejection decision (a straight 4:1
+     * pass measured only -10.9 dB just above the new Nyquist versus
+     * -17.9 dB cascaded on a 25 kHz probe); since `Resampler`'s far-ratio
+     * kernel widening, a direct 4:1 step rejects within a few percent of
+     * the cascade at every probed frequency (DspTest). The cascade stays
+     * because every shipped render is pinned to its exact arithmetic —
+     * switching would re-voice every oversampled engine for no measured
+     * gain — not because the direct step is still weak.
      *
      * Each channel is resampled on its own. Running the kernel straight down
      * an interleaved buffer would interpolate across the L/R boundary -
@@ -777,15 +804,30 @@ internal object Dsp {
     /**
      * A variable-speed head: for each output frame, [headAt] says where to
      * read (fractional) and how loud. Linearly interpolated between
-     * neighbours; a position at or past the last source frame, or a zero
+     * neighbours by default; a position at or past the last source frame, or a zero
      * gain, leaves that output frame silent — a stop that outruns its
      * material simply runs out.
      *
      * The rack's two varispeed stages read through here — MOTION's capstan,
      * where the position is the integral of a speed ramp, and SPEED's pitch,
      * where it is a straight line — so they cannot drift apart in quality.
+     *
+     * [cubic] opts into Catmull-Rom interpolation over the four nearest
+     * frames (edge frames replicated): linear interpolation is a triangle
+     * kernel whose response falls ~4 dB at a quarter of the sample rate
+     * and images audibly on a pitch-down, while the cubic reads the same
+     * sine at ~0.4x the linear read's RMS error (measured, DspResampleTest)
+     * and can overshoot slightly on steps — the sampler-era trade, offered
+     * per call rather than imposed. It is
+     * off by default because both shipped stages were voiced and tested
+     * against the linear read; adopting it is a per-stage audition.
      */
-    inline fun readAt(snip: Snip, outFrames: Int, headAt: (Int) -> Pair<Double, Float>): Snip {
+    inline fun readAt(
+        snip: Snip,
+        outFrames: Int,
+        cubic: Boolean = false,
+        headAt: (Int) -> Pair<Double, Float>,
+    ): Snip {
         val ch = snip.channels
         val src = snip.samples
         val last = snip.frameCount - 1
@@ -796,9 +838,17 @@ internal object Dsp {
             val i = pos.toInt()
             val frac = (pos - i).toFloat()
             for (c in 0 until ch) {
-                val a = src[i * ch + c]
                 val b = src[(i + 1) * ch + c]
-                out[k * ch + c] = (a + (b - a) * frac) * gain
+                val a = src[i * ch + c]
+                out[k * ch + c] = if (cubic) {
+                    val p0 = src[(if (i > 0) i - 1 else 0) * ch + c]
+                    val p3 = src[(if (i + 2 <= last) i + 2 else last) * ch + c]
+                    val f2 = frac * frac
+                    val f3 = f2 * frac
+                    (0.5f * ((2f * a) + (-p0 + b) * frac + (2f * p0 - 5f * a + 4f * b - p3) * f2 + (-p0 + 3f * a - 3f * b + p3) * f3)) * gain
+                } else {
+                    (a + (b - a) * frac) * gain
+                }
             }
         }
         return Snip(out, ch, snip.sampleRate)

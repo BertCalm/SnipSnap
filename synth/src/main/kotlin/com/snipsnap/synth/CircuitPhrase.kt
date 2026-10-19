@@ -19,6 +19,7 @@ internal class CircuitPhrase(
     private val paceHz: Double,
     private val held: Boolean,
     private val breath: Double,
+    private val repeatCellArch: Boolean = false,
 ) {
     companion object {
         const val ORIGIN = .16
@@ -71,7 +72,8 @@ internal class CircuitPhrase(
         require(timeSeconds.isFinite())
         val position = (timeSeconds - origin) / cellSeconds
         val bounded = if (held) position else position.coerceIn(0.0, cellCount.toDouble())
-        val archPhase = if (held) timeSeconds / loopSeconds
+        val archPhase = if (repeatCellArch) bounded - floor(bounded)
+            else if (held) timeSeconds / loopSeconds
             else (position / cellCount).coerceIn(0.0, 1.0)
         val arch = .80 + .20 * sin(PI * archPhase).let { it * it }
         return profile(warp(bounded - floor(bounded))) * arch
