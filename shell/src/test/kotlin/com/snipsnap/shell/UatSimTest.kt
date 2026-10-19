@@ -177,8 +177,9 @@ class UatSimTest {
             check(make.settings(Bench.SYNTH)["engine"] == "RESIN")
         }
         val dock = DockModel()
-        dock.offer("THE PADS ARE LOADED. TAKE THE KIT OUT.", Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT)))
-        dock.say("DUSTED A02.")
+        val cut = Location(Place.TAPE, Stage.CUT)
+        dock.offer("THE PADS ARE LOADED. TAKE THE KIT OUT.", Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT)), cut)
+        dock.say("DUSTED A02.", cut)
         note("the dock's door survives a plain line: '${dock.now.text}' still offers ${dock.now.door?.label} — J10's timed offer retires")
     }
 
@@ -193,9 +194,9 @@ class UatSimTest {
 
         step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
-        note("the only primary button reads: NEW KIT ▸ STARTERS")
+        note("the one filled button reads: ${Places.CATCH_FIRST}; NEW KIT ▸ STARTERS is the outline row beneath it")
 
-        step(++taps, "Tap NEW KIT ▸ STARTERS. Menu heading: PICK A STARTER")
+        step(++taps, "Tap the outline row, NEW KIT ▸ STARTERS. Menu heading: PICK A STARTER")
         StarterKits.ALL.forEachIndexed { i, s ->
             note("${i + 1}. ${s.displayName.padEnd(14)} ${if (s.seeded) "(TAPS REROLL) " else ""}— ${s.blurb}")
         }
@@ -211,7 +212,7 @@ class UatSimTest {
         note("the app then auto-navigates to KIT — user did not ask for that, but it is what they wanted")
 
         step(taps, "KIT screen. Pads are tappable and sound immediately.")
-        note("kit-open hint fires (up to 3 times): \"${Copy.PAD_SHEET_HINT}\"")
+        note("the strip reads, until a pad is tapped: \"${Copy.PADS_RESTING_LINE}\"")
 
         step(++taps, "Tap EXPORT in the menu row.")
         val wiz = ExportWizardModel(kit, dir)
@@ -263,7 +264,7 @@ class UatSimTest {
         val root = tmp("j2")
         var taps = 0
 
-        step(++taps, "Shelf: two primary buttons, stacked — LISTEN · MIC / APP AUDIO ▸ RECORD AN APP")
+        step(++taps, "Cold shelf: ${Places.CATCH_FIRST} is the one filled button and arms the mic like LISTEN · MIC in the dock")
         note("LISTEN raises RECORD_AUDIO (+POST_NOTIFICATIONS on 33+). One system dialog.")
         note("armed toast: \"${Copy.SESSION_ARMED}\"")
         note("armed UI = level meter + mm:ss + STOP | SNIP ▸ UP TO 60s")
@@ -276,6 +277,8 @@ class UatSimTest {
         step(0, "…and now what? The snip has landed in SNIPS. Nothing navigates there.")
         note("the user must: STOP, then find SNIPS ▸ EVERY CATCH, ONE LIST at the bottom of the shelf")
         note("from a SNIPS row: → TAPE (trim) or → PAD (place). → PAD needs a kit that exists.")
+        note("on a cold shelf the FIRST snip is placed for them: a project, an empty kit, A01 selected and lit, and \"${Copy.FIRST_CATCH_LANDED}\" after the CUT ▸ offer")
+        note("what follows is the route a LATER failure or an emptied shelf still takes")
 
         // route A: → PAD with no kit on the shelf
         step(++taps, "Tap SNIPS ▸ EVERY CATCH, ONE LIST")

@@ -48,6 +48,7 @@ class PresetsTest {
         for (voice in PitchwheelVoice.entries) assertEquals(PitchwheelPresets.forVoice(voice), Presets.forVoice("PITCHWHEEL", voice.name))
         for (voice in LacquerVoice.entries) assertEquals(LacquerPresets.forVoice(voice), Presets.forVoice("LACQUER", voice.name))
         for (voice in TangleVoice.entries) assertEquals(TanglePresets.forVoice(voice), Presets.forVoice("TANGLE", voice.name))
+        for (voice in FlockVoice.entries) assertEquals(FlockPresets.forVoice(voice), Presets.forVoice("FLOCK", voice.name))
         for (voice in OverlapTopology.entries) assertEquals(OverlapFactoryPresets.forVoice(voice), Presets.forVoice("OVERLAP", voice.name))
         for (voice in EmbouchureVoice.entries) assertEquals(EmbouchurePresets.forVoice(voice), Presets.forVoice("EMBOUCHURE", voice.name))
         for (voice in BellowsVoice.entries) assertEquals(BellowsPresets.forVoice(voice), Presets.forVoice("BELLOWS", voice.name))
@@ -61,8 +62,11 @@ class PresetsTest {
         for (voice in StoopVoice.entries) assertEquals(StoopPresets.forVoice(voice), Presets.forVoice("STOOP", voice.name))
         for (voice in SkitterVoice.entries) assertEquals(SkitterPresets.forVoice(voice), Presets.forVoice("SKITTER", voice.name))
         for (voice in RelayVoice.entries) assertEquals(RelayPresets.forVoice(voice), Presets.forVoice("RELAY", voice.name))
+        for (material in OrphicaMaterial.entries) assertEquals(OrphicaPresets.forVoice(material), Presets.forVoice("ORPHICA", material.name))
         for (voice in RegistersVoice.entries) assertEquals(RegistersPresets.forVoice(voice), Presets.forVoice("REGISTERS", voice.name))
+        for (voice in OvenVoice.entries) assertEquals(OvenPresets.forVoice(voice), Presets.forVoice("OVEN", voice.name))
         for (voice in OpenSkyVoice.entries) assertEquals(OpenSkyPresets.forVoice(voice), Presets.forVoice("OPENSKY", voice.name))
+        for (voice in VentVoice.entries) assertEquals(VentKitPresets.forVoice(voice), Presets.forVoice("VENT", voice.name))
     }
 
     /**
@@ -82,6 +86,10 @@ class PresetsTest {
             for (voice in PatchTypes.voicesOf(type)) {
                 val filed = all.filter { it.engine == engine && it.voiceName == voice }
                 assertEquals(filed, Presets.forVoice(engine, voice), "$engine/$voice: forVoice disagrees with the presets all() files under it")
+                PatchTypes.PROTOTYPE_VOICES[engine]?.let { provisional ->
+                    assertEquals(voice in provisional, filed.isEmpty(),
+                        "$engine/$voice: only its explicitly named prototype voices may be absent")
+                }
             }
         }
 
@@ -103,6 +111,11 @@ class PresetsTest {
         for (engine in PatchTypes.PROTOTYPES) {
             val roster = rosterClass(engine)
             assertTrue(runCatching { Class.forName(roster) }.isSuccess, "$engine is listed as a prototype but has no $roster to audition")
+        }
+        for ((engine, voices) in PatchTypes.PROTOTYPE_VOICES) {
+            assertTrue(engine in rostered && engine !in PatchTypes.PROTOTYPES && engine !in PatchTypes.ROSTERLESS)
+            val type = PatchTypes.all.single { PatchTypes.engineOf(it) == engine }
+            assertTrue(voices.isNotEmpty() && PatchTypes.voicesOf(type).containsAll(voices))
         }
     }
 
@@ -135,7 +148,7 @@ class PresetsTest {
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
-            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all()
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

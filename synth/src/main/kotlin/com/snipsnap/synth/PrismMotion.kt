@@ -3,21 +3,29 @@ package com.snipsnap.synth
 import com.snipsnap.json.JsonValue
 import java.util.Collections
 
-/** Finite-note spectral motion. B replaces template amplitudes, never its carrier ratios. */
+/** Finite-note spectral motion. Saved endpoint amplitudes never replace template carrier ratios. */
 class PrismMotion(
     amplitudesB: List<Float>,
     val morph: Float = 0f,
     val evolve: Float = 0f,
     val seconds: Float = 1.5f,
     val groupLag: Float = 0f,
+    amplitudesA: List<Float>? = null,
 ) {
     val amplitudesB: List<Float> = Collections.unmodifiableList(amplitudesB.toList())
+    val amplitudesA: List<Float>? = amplitudesA?.let { Collections.unmodifiableList(it.toList()) }
 
     init {
         require(amplitudesB.size == Prism.PARTIALS && amplitudesB.all { it.isFinite() && it in 0f..2f }) {
             "PRISM motion B requires 32 finite amplitudes in 0..2"
         }
         require(amplitudesB.first() >= .05f) { "PRISM motion B must retain a root amplitude of at least .05" }
+        this.amplitudesA?.let { a ->
+            require(a.size == Prism.PARTIALS && a.all { it.isFinite() && it in 0f..2f }) {
+                "PRISM motion A requires 32 finite amplitudes in 0..2"
+            }
+            require(a.first() >= .05f) { "PRISM motion A must retain a root amplitude of at least .05" }
+        }
         require(morph.isFinite() && morph in 0f..1f) { "PRISM motion morph must be 0..1" }
         require(evolve.isFinite() && evolve in 0f..1f) { "PRISM motion evolve must be 0..1" }
         require(seconds.isFinite() && seconds in .1f..6f) { "PRISM motion seconds must be .1..6" }
@@ -38,21 +46,30 @@ class PrismMotion(
         evolve: Float = this.evolve,
         seconds: Float = this.seconds,
         groupLag: Float = this.groupLag,
-    ) = PrismMotion(amplitudesB, morph, evolve, seconds, groupLag)
+        amplitudesA: List<Float>? = this.amplitudesA,
+    ) = PrismMotion(amplitudesB, morph, evolve, seconds, groupLag, amplitudesA)
 
     override fun equals(other: Any?): Boolean = other is PrismMotion && amplitudesB == other.amplitudesB &&
-        morph == other.morph && evolve == other.evolve && seconds == other.seconds && groupLag == other.groupLag
+        morph == other.morph && evolve == other.evolve && seconds == other.seconds && groupLag == other.groupLag &&
+        amplitudesA == other.amplitudesA
 
-    override fun hashCode(): Int = listOf(amplitudesB, morph, evolve, seconds, groupLag).hashCode()
-    override fun toString(): String = "PrismMotion($amplitudesB,$morph,$evolve,$seconds,$groupLag)"
+    override fun hashCode(): Int = listOf(amplitudesB, morph, evolve, seconds, groupLag).hashCode().let {
+        if (amplitudesA == null) it else 31 * it + amplitudesA.hashCode()
+    }
+    override fun toString(): String = if (amplitudesA == null) "PrismMotion($amplitudesB,$morph,$evolve,$seconds,$groupLag)"
+        else "PrismMotion($amplitudesB,$morph,$evolve,$seconds,$groupLag,$amplitudesA)"
 
-    internal fun toJsonValue() = JsonValue.Obj(linkedMapOf(
-        "amplitudesB" to JsonValue.Arr(amplitudesB.map { JsonValue.Num(it.toDouble()) }),
-        "morph" to JsonValue.Num(morph.toDouble()),
-        "evolve" to JsonValue.Num(evolve.toDouble()),
-        "seconds" to JsonValue.Num(seconds.toDouble()),
-        "groupLag" to JsonValue.Num(groupLag.toDouble()),
-    ))
+    internal fun toJsonValue(): JsonValue.Obj {
+        val fields = linkedMapOf(
+            "amplitudesB" to JsonValue.Arr(amplitudesB.map { JsonValue.Num(it.toDouble()) }),
+            "morph" to JsonValue.Num(morph.toDouble()),
+            "evolve" to JsonValue.Num(evolve.toDouble()),
+            "seconds" to JsonValue.Num(seconds.toDouble()),
+            "groupLag" to JsonValue.Num(groupLag.toDouble()),
+        )
+        if (amplitudesA != null) fields["amplitudesA"] = JsonValue.Arr(amplitudesA.map { JsonValue.Num(it.toDouble()) })
+        return JsonValue.Obj(fields)
+    }
 
     companion object {
         internal fun fromJsonValue(value: JsonValue): PrismMotion {
@@ -64,6 +81,7 @@ class PrismMotion(
                 evolve = number("evolve", 0f),
                 seconds = number("seconds", 1.5f),
                 groupLag = number("groupLag", 0f),
+                amplitudesA = obj["amplitudesA"]?.takeUnless { it is JsonValue.Null }?.arr()?.map { it.num().toFloat() },
             )
         }
     }

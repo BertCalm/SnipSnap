@@ -251,12 +251,12 @@ fun TapeScreen(
     /** DONE on the catch grid: App, which owns the writes, says what landed and opens KIT on its bank. */
     onCatchDone: () -> Unit = {},
     /**
-     * [EmptyDeck]'s own route: ARM/SNIP and a kit's own fallback sample
-     * both live on the shelf (KitsScreen) — see this function's own KDoc
-     * above on why `entry` is nullable. No default — a screen that forgets
-     * to wire this fails the compile, not the user.
+     * [EmptyDeck]'s own route: SNIPS, where an earlier catch is opened onto
+     * the deck (the other way in, LISTEN · MIC, is in the dock on every
+     * screen and needs no door here). No default — a screen that forgets to
+     * wire this fails the compile, not the user.
      */
-    onNavigateKits: () -> Unit,
+    onNavigateSnips: () -> Unit,
     /**
      * True while a CATCH is live — reported up so `App` can hold a
      * share-sheet import back instead of reloading the deck out from under
@@ -347,13 +347,16 @@ fun TapeScreen(
     }
 
     val tapeData = loaded
-    if (tapeData == null) {
+    if (tapeData == null || tapeData.samples.isEmpty()) {
         // Either still decoding, or nothing resolved — no snip, no
         // last-commit source, and nothing on the (possibly empty) kit was
-        // a readable WAV — the empty-shelf face covers both; a blank LCD
-        // for the moment it takes to read a file is the honest state to
-        // show in between.
-        if (failed) EmptyDeck(onNavigateKits) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        // a readable WAV — or a file that decoded to no audio at all. The
+        // last two have no deck worth drawing: no needle to scrub, nothing
+        // to mark IN or OUT on, so the transport and edit groups give way
+        // to one panel (S4a). A blank LCD for the moment it takes to read a
+        // file is still the honest state to show in between: "no tape yet"
+        // said over a decode that is about to finish would be a lie.
+        if (failed || tapeData != null) EmptyDeck(onNavigateSnips) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
         return
     }
 
@@ -377,13 +380,13 @@ fun TapeScreen(
 }
 
 @Composable
-private fun EmptyDeck(onNavigateKits: () -> Unit) {
-    // EMPTY_SHELF ("NOTHING TAPED YET.") is genuinely TAPE's own copy —
-    // this is the screen it was written for, unlike EXPORT's borrowed use
-    // of the same string. The route: ARM/SNIP and a kit's own fallback
-    // sample both live on the shelf (KitsScreen) — see this file's own
-    // TapeScreen KDoc on why `entry` is nullable.
-    EmptyStatePanel(Copy.EMPTY_SHELF, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+private fun EmptyDeck(onNavigateSnips: () -> Unit) {
+    // The way in is named twice, because there are two: LISTEN · MIC is the
+    // dock's, on every screen, so it is a sentence and not a button here;
+    // an earlier catch is on SNIPS, which is the one door this panel draws.
+    // EMPTY_SHELF ("NOTHING TAPED YET.") stays where it is still true: the
+    // shelf's own empty list.
+    EmptyStatePanel(Copy.NO_TAPE_YET, listOf(EmptyStateRoute("SNIPS ▸", onNavigateSnips)))
 }
 
 /** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
@@ -665,7 +668,7 @@ private fun TapeDeckContent(
     // as EXPORT's own overwrite arm.
     DisposableEffect(Unit) { onDispose { onCatchInFlight(false) } }
     // Which bank the 4×4 grid shows (0 is A). TAPE is a portrait screen,
-    // so both banks abreast never fit (PadGrid's `windowRows`); the grid
+    // so both banks abreast never fit (PadGrid's `BankRow`); the grid
     // opens on the first bank with a free pad and a switch flips it.
     var catchBank by remember(model) { mutableStateOf(0) }
     val catchGlow = remember(model) { (1..PadBanks.SIZE * 2).associateWith { Animatable(0f) } }
@@ -974,11 +977,12 @@ private fun TapeDeckContent(
             // CATCH A HIT (docs/CATCH.md): the grid takes the controls'
             // place while the loop runs — one bank as the 4×4 window every
             // portrait screen draws, with a switch for the other. Not
-            // `BankRow`: that is PLAY's landscape shape, two banks of eight
-            // abreast, and on this portrait screen it fell to its scroll
-            // branch, so bank A's last column was clipped and bank B was a
-            // scroll away during a hold (September wiring review, finding
-            // 3). A pad that lands shows its name the moment App's write
+            // `BankRow`: that is PLAY's landscape shape, two banks abreast,
+            // and this portrait screen is under its 440 dp floor, so it
+            // would stack them and halve every pad; this grid was once
+            // `BankRow` and fell to a scroll, so bank A's last column was
+            // clipped and bank B was a scroll away during a hold
+            // (September wiring review, finding 3). A pad that lands shows its name the moment App's write
             // comes back as `entry.kit`; a pad that had a sound already
             // refuses at the press. PLAY/STOP stays, since the transport
             // row is under this; DONE puts the deck back and hands over to
@@ -989,7 +993,7 @@ private fun TapeDeckContent(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TapeText(Copy.CATCH_HEADER, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
+                    TapeText(Copy.CATCH_HEADER, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
                     DeckButton(if (model.playing) "■" else "▶", Modifier.width(56.dp)) { onPlayStop() }
                     DeckButton(Copy.CATCH_DONE_BUTTON, Modifier.width(80.dp)) { finishCatch() }
                 }
@@ -1028,14 +1032,14 @@ private fun TapeDeckContent(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink2.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice, ::touch)
                 DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
                 WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
             }
 
-            TapeText("EDIT", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("EDIT", TapeType.pixelSmall, scheme.ink2.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 DeckButton(
                     "IN",
@@ -1175,7 +1179,7 @@ private fun TapeDeckContent(
                 }
             }
 
-            TapeText("DESTINATIONS", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("DESTINATIONS", TapeType.pixelSmall, scheme.ink2.tape)
             // Wave ZZ, the phone reads: three more readings of the same tape.
             // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
             // the next tap; READ AS GROOVE hears the tape as a rhythm for the

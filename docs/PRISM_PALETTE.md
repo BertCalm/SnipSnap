@@ -54,3 +54,6 @@ judge which characteristics survive and which call for a different transfer.
 
 These are finite samples. Held spectral motion, factory-preset expansion and
 new phone controls remain outside this audition.
+
+The [opening comparison](PRISM_OPENING.md) tries a body derived from each
+destination's lower harmonics in place of the generic harmonically rich start.

@@ -73,13 +73,16 @@ object Cli {
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        render factory presets to wav, to hear them
         |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY: --midi N --velocity 0..1)
-        |                        (WICK: provisional PLUCK/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
+        |                        (WICK: provisional PLUCK/WOOD/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (CONTOUR: --patch recipe.json replays a complete sound;
+        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
         |                        (REGISTERS: PIPE/MUSETTE; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
         |                        (OSPREY SWELL: --seed N --seconds .25..12 --model 1|2|3;
         |                        HOLD extends a finite sea gesture)
-        |                        (FLOCK prototype: GATHER/RIBBON/SPLIT; --all,
+        |                        (FLOCK: GATHER/RIBBON/SPLIT; --all,
         |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
         |                        HOLD extends a finite flock performance)
         |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N

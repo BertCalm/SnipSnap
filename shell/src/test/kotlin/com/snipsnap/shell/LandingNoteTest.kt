@@ -133,4 +133,32 @@ class LandingNoteTest {
         for (line in note.lines) assertEquals(line.text, line.text.uppercase(java.util.Locale.ROOT))
     }
 
+
+    @Test
+    fun `a dub names the thing and where it is, the files and the sides, and the path as it is`() {
+        val phone = LandingNote.dubbed("Funk Kit", onCard = false, files = 17, where = "/storage/Android/data/Funk Kit")
+        assertEquals("FUNK KIT IS SAVED ON THIS PHONE.", phone.title)
+        assertEquals(
+            listOf("17 FILES · SIDE A: PROGRAMS · SIDE B: SAMPLES", "/storage/Android/data/Funk Kit"),
+            phone.lines.map { it.text },
+            "the path keeps its case: it is a place on a case-sensitive disk, not a sentence",
+        )
+        assertTrue(phone.lines.none { it.trouble })
+        assertNull(phone.route, "SHARE is the caller's to give, and a session has none to give")
+        assertNull(phone.tile)
+
+        val card = LandingNote.dubbed("Funk Kit", onCard = true, files = 1, where = "SD/Funk Kit")
+        assertEquals("FUNK KIT IS ON THE CARD.", card.title)
+        assertEquals("1 FILE · SIDE A: PROGRAMS · SIDE B: SAMPLES", card.lines.first().text)
+    }
+
+    @Test
+    fun `a dub's one route is SHARE, and it goes where the caller sent it`() {
+        var shared = 0
+        val n = LandingNote.dubbed("Funk", onCard = true, files = 4, where = "SD/Funk", share = { shared++ })
+        val route = assertNotNull(n.route)
+        assertEquals("SHARE ▸", route.label)
+        route.go()
+        assertEquals(1, shared)
+    }
 }
