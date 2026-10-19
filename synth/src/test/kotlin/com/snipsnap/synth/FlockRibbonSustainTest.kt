@@ -65,12 +65,22 @@ class FlockRibbonSustainTest {
                 it.slopeChange <= a.diagnostics.naturalSlopeChangeMax * 1.1
         }, "a blend or wrap exceeds the original waveform's natural sample changes")
         assertTrue(a.diagnostics.outputPeak <= .900001)
+        val search = a.diagnostics.endpointSearch
+        assertTrue(abs(p.loopFrames - p.nominalLoopFrames) <= p.endpointSearchRadiusFrames)
+        assertTrue(search.selectedMin50msDb >= search.baselineMin50msDb)
+        assertTrue(search.evaluatedCandidates in 1..600)
+        assertEquals(p.loopFrames, search.selectedLoopFrames)
+        val fixed = FlockRibbonSustain.render(heldSeconds = 9.0, loopSeconds = 2.0,
+            crossfadeSeconds = .25, releaseSeconds = .5, endpointSearchSeconds = 0.0, oversample = 1)
+        assertContentEquals(fixed.rawReference, a.rawReference, "endpoint selection changed the continuous reference")
+        assertEquals(fixed.diagnostics.endpointSearch.baselineMin50msDb, search.baselineMin50msDb)
+        assertEquals(1, fixed.diagnostics.endpointSearch.evaluatedCandidates)
     }
 
     @Test
     fun `release phase wraps are included in the actual playback evidence`() {
         val probe = FlockRibbonSustain.render(heldSeconds = 9.0, loopSeconds = 2.0,
-            crossfadeSeconds = .25, releaseSeconds = 2.5, oversample = 1)
+            crossfadeSeconds = .25, releaseSeconds = 2.5, endpointSearchSeconds = 0.0, oversample = 1)
         val p = probe.plan
         assertEquals(3, p.wrapFrames.count { it < p.releaseStartFrame })
         val releasedWraps = p.wrapFrames.filter { it >= p.releaseStartFrame }
@@ -83,6 +93,7 @@ class FlockRibbonSustainTest {
     @Test
     fun `long FLOW comparisons retain motion and release from whichever loop phase is playing`() {
         val slow = FlockRibbonSustain.render(macros = Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to 0f), oversample = 1)
+        val normal = FlockRibbonSustain.render(oversample = 1)
         val fast = FlockRibbonSustain.render(macros = Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to 1f), oversample = 1)
         assertEquals(.12, slow.source.diagnostics.motionRate)
         assertEquals(4.0, fast.source.diagnostics.motionRate)
@@ -95,7 +106,7 @@ class FlockRibbonSustainTest {
             val d = slow.rawLooped[i].toDouble() - fast.rawLooped[i]; d * d
         } / slow.rawLooped.size)
         assertTrue(distance > .01, "FLOW has no audible output over a sustained recording")
-        for (probe in listOf(slow, fast)) {
+        for (probe in listOf(slow, normal, fast)) {
             val p = probe.plan
             assertEquals(0f, probe.rawReference.first())
             assertEquals(0f, probe.rawLooped.first())
@@ -113,6 +124,10 @@ class FlockRibbonSustainTest {
             assertTrue(probe.rawLooped.all { it.isFinite() })
             assertTrue(probe.diagnostics.blendMin50msDb.isFinite())
             assertTrue(probe.diagnostics.blendMax50msDb.isFinite())
+            assertTrue(probe.diagnostics.blendMin50msDb > -3.0,
+                "canonical RIBBON capture has excessive blend cancellation after endpoint selection: ${probe.diagnostics.endpointSearch}")
+            assertTrue(probe.diagnostics.blendMax50msDb < 3.1)
+            assertTrue(probe.diagnostics.endpointSearch.selectedMin50msDb >= probe.diagnostics.endpointSearch.baselineMin50msDb)
         }
     }
 
@@ -129,5 +144,11 @@ class FlockRibbonSustainTest {
         assertFailsWith<IllegalArgumentException> { FlockRibbonSustain.render(loopSeconds = .25) }
         assertFailsWith<IllegalArgumentException> { FlockRibbonSustain.render(crossfadeSeconds = 4.0) }
         assertFailsWith<IllegalArgumentException> { FlockRibbonSustain.render(releaseSeconds = 0.0) }
+        assertFailsWith<IllegalArgumentException> { FlockRibbonSustain.render(endpointSearchSeconds = .2) }
+        assertFailsWith<IllegalArgumentException> { FlockRibbonSustain.render(loopSeconds = .50003, crossfadeSeconds = .250015) }
+        val tight = FlockRibbonSustain.render(heldSeconds = 3.5001, loopSeconds = .5,
+            crossfadeSeconds = .25, releaseSeconds = .1, oversample = 1)
+        assertTrue(tight.plan.loopFrames >= 2 * tight.plan.crossfadeFrames)
+        assertTrue(tight.plan.wrapFrames.count { it < tight.plan.releaseStartFrame } >= 3)
     }
 }

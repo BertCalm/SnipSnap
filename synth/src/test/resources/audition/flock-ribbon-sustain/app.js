@@ -36,23 +36,23 @@
       card.append(el('h3', '', pair.label), el('p', 'flow-rate', `${number(pair.motionRate, 2)}× simulation clock`), el('p', 'flow-description', pair.description));
       const buttons = el('div', 'pair-buttons'); buttons.setAttribute('role', 'group'); buttons.setAttribute('aria-label', `${pair.label} comparison`);
       for (const id of [pair.continuousId, pair.loopedId]) {
-        const clip = state.clips.get(id); const button = el('button', 'clip-button'); button.type = 'button'; button.dataset.clip = id; button.setAttribute('aria-pressed', 'false'); button.setAttribute('aria-label', `Play ${pair.label}, ${clip.kind === 'continuous' ? 'continuous performance' : 'repeated six-second body'}`);
-        const label = el('span'); label.append(el('span', 'play-icon', '▶'), document.createTextNode(clip.kind === 'continuous' ? 'Continuous' : 'Repeated body')); button.append(label, el('small', '', clip.kind === 'continuous' ? 'keeps evolving' : `${number(manifest.settings.loopSeconds, 0)} s cycle`));
+        const clip = state.clips.get(id); const button = el('button', 'clip-button'); button.type = 'button'; button.dataset.clip = id; button.setAttribute('aria-pressed', 'false'); button.setAttribute('aria-label', `Play ${pair.label}, ${clip.kind === 'continuous' ? 'continuous performance' : 'repeated captured body'}`);
+        const label = el('span'); label.append(el('span', 'play-icon'), document.createTextNode(clip.kind === 'continuous' ? 'Continuous' : 'Repeated body')); button.append(label, el('small', '', clip.kind === 'continuous' ? 'keeps evolving' : `${number(pair.timing.loopPeriodSeconds, 2)} s cycle`));
         button.addEventListener('click', () => select(clip, true)); buttons.append(button);
       }
       card.append(buttons);
-      const links = el('div', 'card-links'); const continuousRecipe = el('a', '', 'Continuous recipe ↗'); setLink(continuousRecipe, state.clips.get(pair.continuousId).recipeSrc); const loopRecipe = el('a', '', 'Loop recipe ↗'); setLink(loopRecipe, state.clips.get(pair.loopedId).recipeSrc); links.append(continuousRecipe, loopRecipe); card.append(links);
+      const links = el('div', 'card-links'); const continuousRecipe = el('a', '', 'Continuous recipe'); setLink(continuousRecipe, state.clips.get(pair.continuousId).recipeSrc); const loopRecipe = el('a', '', 'Loop recipe'); setLink(loopRecipe, state.clips.get(pair.loopedId).recipeSrc); links.append(continuousRecipe, loopRecipe); card.append(links);
       const details = el('details'); details.append(el('summary', '', 'Loop timing and sample'));
       const list = el('dl');
-      for (const [key, value] of [['Capture', `${number(pair.timing.captureStartSeconds, 1)}–${number(pair.timing.captureEndSeconds, 1)} s`], ['Crossfade', `${number(manifest.settings.crossfadeSeconds, 1)} s`], ['Returns before release', String(pair.timing.wrapSeconds.length)], ['First return', `${number(pair.timing.wrapSeconds[0], 1)} s`]]) list.append(el('dt', '', key), el('dd', '', value));
+      for (const [key, value] of [['Capture', `${number(pair.timing.captureStartSeconds, 2)}–${number(pair.timing.captureEndSeconds, 2)} s`], ['Nominal / actual cycle', `${number(manifest.settings.loopSeconds, 1)} / ${number(pair.timing.loopPeriodSeconds, 3)} s`], ['Crossfade', `${number(manifest.settings.crossfadeSeconds, 1)} s`], ['Returns before release', String(pair.timing.wrapSeconds.filter(at => at < manifest.settings.heldSeconds).length)], ['First return', `${number(pair.timing.wrapSeconds[0], 3)} s`]]) list.append(el('dt', '', key), el('dd', '', value));
       details.append(list);
-      const sample = el('a', '', 'Experimental sampler WAV ↓'); sample.download = ''; setLink(sample, pair.samplerSrc); details.append(sample); card.append(details);
+      const sample = el('a', '', 'Experimental sampler WAV'); sample.download = ''; setLink(sample, pair.samplerSrc); details.append(sample); card.append(details);
       $('flow-cards').append(card);
     }
     updateLevel();
     const settings = manifest.settings;
     const source = manifest.source;
-    const lines = [['Voice / model', `RIBBON / finite engine model ${settings.sourceModel}; experimental sustain v1`], ['Root / velocity', `C4 (MIDI ${settings.midi}) / ${number(settings.velocity)}`], ['Seed', settings.seed], ['Companion macros', Object.entries(settings.macros).filter(([key]) => key !== 'FLOW').map(([key, value]) => `${key} ${number(value)}${key === 'HOLD' ? ' (unused; duration is explicit)' : ''}`).join(' · ')], ['Rendering', `${settings.sampleRate.toLocaleString()} Hz mono PCM16; ${settings.oversample}× synthesis oversampling; dry`], ['Source revision', `${source.revision}${source.dirty ? ' + recorded working-tree snapshots' : ''}`], ['Listening scope', 'A sustain experiment, outside the app patch and factory-kit schema. No finite recipe changes.']];
+    const lines = [['Voice / model', `RIBBON / finite engine model ${settings.sourceModel}; experimental sustain v1`], ['Root / velocity', `C4 (MIDI ${settings.midi}) / ${number(settings.velocity)}`], ['Seed', settings.seed], ['Nominal loop target', `${number(settings.loopSeconds, 1)} seconds; each actual period is shown above`], ['Endpoint selection', manifest.endpointSearchPolicy], ['Companion macros', Object.entries(settings.macros).filter(([key]) => key !== 'FLOW').map(([key, value]) => `${key} ${number(value)}${key === 'HOLD' ? ' (unused; duration is explicit)' : ''}`).join(' · ')], ['Rendering', `${settings.sampleRate.toLocaleString()} Hz mono PCM16; ${settings.oversample}× synthesis oversampling; dry`], ['Source revision', `${source.revision}${source.dirty ? ' + recorded working-tree snapshots' : ''}`], ['Listening scope', 'A sustain experiment, outside the app patch and factory-kit schema. No finite recipe changes.']];
     $('settings').replaceChildren(); for (const [key, value] of lines) $('settings').append(el('dt', '', key), el('dd', '', value));
     if (!state.selected) select(state.clips.get(manifest.pairs[1].continuousId), false);
   }
@@ -94,7 +94,7 @@
     finally { if (token === state.token) { document.querySelectorAll('[data-clip]').forEach(button => button.setAttribute('aria-busy', 'false')); updatePlay(); } }
   }
 
-  function updatePlay() { const playing = !audio.paused; $('play').setAttribute('aria-label', playing ? 'Pause' : 'Play'); $('play').firstElementChild.textContent = playing ? 'Ⅱ' : '▶'; }
+  function updatePlay() { const playing = !audio.paused; $('play').setAttribute('aria-label', playing ? 'Pause' : 'Play'); $('play').classList.toggle('is-playing', playing); }
   function updateTime() {
     if (!state.selected) return;
     const value = audio.currentTime || 0; $('seek').value = String(value); $('elapsed').textContent = time(value);

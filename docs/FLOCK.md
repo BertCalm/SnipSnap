@@ -183,11 +183,13 @@ control in SYNTH; the experiment validates but ignores it and sets its own timin
 
 The study compares FLOW 0, the RIBBON default 0.78, and 1 at C4, velocity 1 and
 seed 42001, with all other controls fixed. Each pair has an uninterrupted source
-and actual repeated-loop playback: a two-second introduction, a six-second
+and actual repeated-loop playback: a two-second introduction, a nominal six-second
 captured body, a 30-second total hold and a 1.5-second release. The last half-second
 of the captured body blends toward the natural source immediately before its
-start. This preserves the waveform context at each wrap; it does not make the
-flock equations periodic.
+start. A deterministic search shifts the capture endpoint by at most 100 ms
+to reduce destructive phase cancellation; each actual period and wrap position
+is saved. This preserves the waveform context at each wrap; it does not make
+the flock equations periodic.
 
 Both comparison files use one linear gain per pair. Raw audio, complete experiment
 recipes, source snapshots, traces and SHA256 manifests retain the evidence needed

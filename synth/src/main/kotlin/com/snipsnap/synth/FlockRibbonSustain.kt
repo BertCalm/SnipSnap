@@ -24,13 +24,16 @@ object FlockRibbonSustain {
     const val EXPERIMENT_VERSION = 1
     const val INTRO_SECONDS = 2.0
     const val ATTACK_SECONDS = .045
+    const val ENDPOINT_SEARCH_SECONDS = .1
 
     data class Plan(
         val sampleRate: Int,
         val attackFrames: Int,
         val loopStartFrame: Int,
         val loopEndExclusive: Int,
+        val nominalLoopFrames: Int,
         val loopFrames: Int,
+        val endpointSearchRadiusFrames: Int,
         val crossfadeFrames: Int,
         val sourceBlendStartFrame: Int,
         val sourceBlendTargetStartFrame: Int,
@@ -82,9 +85,27 @@ object FlockRibbonSustain {
         val naturalStepMax: Double,
         val naturalSlopeChangeP99: Double,
         val naturalSlopeChangeMax: Double,
+        val endpointSearch: EndpointSearch,
         val capturedMotion: Motion,
         val continuedMotion: Motion,
         val edges: List<Edge>,
+    )
+
+    data class EndpointSearch(
+        val nominalLoopFrames: Int,
+        val selectedLoopFrames: Int,
+        val radiusFrames: Int,
+        val minLoopFrames: Int,
+        val maxLoopFrames: Int,
+        val coarseStrideFrames: Int,
+        val evaluatedCandidates: Int,
+        val windowFrames: Int,
+        val hopFrames: Int,
+        val baselineMin50msDb: Double,
+        val baselineMax50msDb: Double,
+        val selectedMin50msDb: Double,
+        val selectedMax50msDb: Double,
+        val tieBreak: String = "closest to nominal endpoint, then lower frame",
     )
 
     data class Probe(
@@ -113,6 +134,7 @@ object FlockRibbonSustain {
         crossfadeSeconds: Double = .5,
         releaseSeconds: Double = 1.5,
         oversample: Int = 4,
+        endpointSearchSeconds: Double = ENDPOINT_SEARCH_SECONDS,
         cancelled: () -> Boolean = { false },
     ): Probe {
         require(loopSeconds.isFinite() && loopSeconds in .5..12.0) { "RIBBON audition loop must be .5..12 seconds" }
@@ -123,32 +145,31 @@ object FlockRibbonSustain {
             "RIBBON audition needs at least three held wraps and at most 80 held seconds"
         }
         require(releaseSeconds.isFinite() && releaseSeconds in .1..6.0) { "RIBBON audition release must be .1..6 seconds" }
+        require(endpointSearchSeconds.isFinite() && endpointSearchSeconds in 0.0..ENDPOINT_SEARCH_SECONDS) {
+            "RIBBON audition endpoint search must be 0..$ENDPOINT_SEARCH_SECONDS seconds"
+        }
         val rate = Dsp.RATE
         val intro = (INTRO_SECONDS * rate).roundToInt()
-        val length = (loopSeconds * rate).roundToInt()
+        val nominalLength = (loopSeconds * rate).roundToInt()
+        val searchRadius = (endpointSearchSeconds * rate).roundToInt()
         val blend = (crossfadeSeconds * rate).roundToInt()
         val held = (heldSeconds * rate).roundToInt()
         val release = (releaseSeconds * rate).roundToInt()
         val total = held + release
-        require(held > intro + 3 * length) { "RIBBON audition needs at least three wraps strictly before note-off" }
+        require(2 * blend <= nominalLength) { "RIBBON audition crossfade must fit half the rounded loop frames" }
+        require(held > intro + 3 * nominalLength) { "RIBBON audition needs three wraps strictly before note-off" }
         val attack = (ATTACK_SECONDS * rate).roundToInt()
         val m = Flock.settled(macros, FlockVoice.RIBBON)
         val source = Flock.renderContinuousRibbon(total.toDouble() / rate, m, midi, velocity, seed, oversample, cancelled)
         val raw = source.rawSamples
         check(raw.size == total)
-        val tailStart = intro + length - blend
         val targetStart = intro - blend
-        val correlation = correlation(raw, tailStart, targetStart, blend)
+        val (candidate, search) = selectEndpoint(raw, intro, nominalLength, blend, searchRadius, held)
+        val length = candidate.frames
+        val tailStart = intro + length - blend
+        val correlation = candidate.correlation
         val loop = raw.copyOfRange(intro, intro + length)
-        val r = correlation.coerceIn(0.0, 1.0)
-        for (i in 0 until blend) {
-            val t = .5 * PI * smooth(i.toDouble() / (blend - 1))
-            val scale = sqrt(1.0 + r * sin(2.0 * t))
-            loop[length - blend + i] = ((cos(t) * raw[tailStart + i] + sin(t) * raw[targetStart + i]) / scale).toFloat()
-        }
-        // Exact endpoint weights retain the natural one-sample context on both sides of the wrap.
-        loop[length - blend] = raw[tailStart]
-        loop[length - 1] = raw[intro - 1]
+        candidate.blend.copyInto(loop, destinationOffset = length - blend)
         val reference = raw.copyOf()
         val played = FloatArray(total) { frame -> if (frame < intro) raw[frame] else loop[(frame - intro) % length] }
         envelope(reference, attack, held, release)
@@ -163,7 +184,8 @@ object FlockRibbonSustain {
         val loopOut = scaled(loop, gain)
         val attackLoop = played.copyOfRange(0, intro + length)
         val wraps = generateSequence(intro + length) { it + length }.takeWhile { it < total - 1 }.toList()
-        val plan = Plan(rate, attack, intro, intro + length, length, blend, tailStart, targetStart, held, release, total, wraps)
+        val plan = Plan(rate, attack, intro, intro + length, nominalLength, length, searchRadius,
+            blend, tailStart, targetStart, held, release, total, wraps)
         val natural = raw.copyOfRange(intro, intro + length)
         val steps = DoubleArray(natural.size - 1) { abs(natural[it + 1].toDouble() - natural[it]) }
         val changes = DoubleArray(natural.size - 2) { abs(natural[it + 2].toDouble() - 2.0 * natural[it + 1] + natural[it]) }
@@ -179,12 +201,11 @@ object FlockRibbonSustain {
         }
         for (frame in wraps) edges += edge("loop-wrap", frame, played, step99, change99, held)
         edges += edge("note-off", held, played, step99, change99, held)
-        val blendLevels = blendLevels(loop, raw, tailStart, targetStart, blend)
         val diagnostics = Diagnostics(gain, rawReferencePeak, rawLoopedPeak, max(peak(referenceOut), peak(playedOut)),
-            correlation, blendLevels.minOrNull() ?: 0.0, blendLevels.maxOrNull() ?: 0.0,
+            correlation, candidate.minDb, candidate.maxDb,
             dbRatio(power(loop, 0, loop.size), power(natural, 0, natural.size)),
-            (length - blend).toDouble() / length, step99, stepMax, change99, changeMax,
-            motion(source.trace, INTRO_SECONDS, INTRO_SECONDS + loopSeconds),
+            (length - blend).toDouble() / length, step99, stepMax, change99, changeMax, search,
+            motion(source.trace, INTRO_SECONDS, (intro + length).toDouble() / rate),
             motion(source.trace, INTRO_SECONDS, heldSeconds), edges.sortedBy { it.outputFrame })
         return Probe(reference, played, loop, snip(referenceOut), snip(playedOut), snip(scaled(attackLoop, gain)),
             loopOut, source, plan, diagnostics)
@@ -211,6 +232,66 @@ object FlockRibbonSustain {
             dot += av * bv; aa += av * av; bb += bv * bv
         }
         return if (aa * bb > 1e-24) (dot / sqrt(aa * bb)).coerceIn(-1.0, 1.0) else 0.0
+    }
+
+    private data class Candidate(val frames: Int, val correlation: Double, val blend: FloatArray, val minDb: Double, val maxDb: Double)
+
+    /** Change only the captured endpoint; never alter the source's flock, carriers or playback gain. */
+    private fun selectEndpoint(source: FloatArray, intro: Int, nominal: Int, blend: Int, radius: Int, held: Int): Pair<Candidate, EndpointSearch> {
+        val low = max(nominal - radius, 2 * blend)
+        val high = minOf(nominal + radius, (held - intro - 1) / 3, source.size - intro - 1)
+        val aWeight = DoubleArray(blend)
+        val bWeight = DoubleArray(blend)
+        val overlap = DoubleArray(blend)
+        for (i in 0 until blend) {
+            val t = .5 * PI * smooth(i.toDouble() / (blend - 1))
+            aWeight[i] = cos(t); bWeight[i] = sin(t); overlap[i] = sin(2.0 * t)
+        }
+        val evaluated = mutableSetOf<Int>()
+        fun candidate(frames: Int): Candidate {
+            evaluated += frames
+            val tail = intro + frames - blend
+            val target = intro - blend
+            val correlation = correlation(source, tail, target, blend)
+            val r = correlation.coerceIn(0.0, 1.0)
+            val samples = FloatArray(blend) { i ->
+                ((aWeight[i] * source[tail + i] + bWeight[i] * source[target + i]) /
+                    sqrt(1.0 + r * overlap[i])).toFloat()
+            }
+            // Exact weights keep the source's native one-sample context on each side of the wrap.
+            samples[0] = source[tail]
+            samples[blend - 1] = source[intro - 1]
+            val levels = blendLevels(samples, source, tail, target, blend)
+            return Candidate(frames, correlation, samples, levels.minOrNull() ?: 0.0, levels.maxOrNull() ?: 0.0)
+        }
+        fun better(a: Candidate, b: Candidate): Boolean = when {
+            abs(a.minDb - b.minDb) > 1e-12 -> a.minDb > b.minDb
+            abs(a.frames - nominal) != abs(b.frames - nominal) -> abs(a.frames - nominal) < abs(b.frames - nominal)
+            else -> a.frames < b.frames
+        }
+        val baseline = candidate(nominal)
+        var best = baseline
+        val stride = max(1, (high - low + 127) / 128)
+        val coarse = (listOf(nominal, low, high) + (low..high step stride).toList()).distinct()
+        val ranked = mutableListOf<Candidate>()
+        for (frames in coarse) {
+            val c = if (frames == nominal) baseline else candidate(frames)
+            if (better(c, best)) best = c
+            // Only the best three coarse positions retain their blend buffers.
+            ranked += c
+            ranked.sortWith { a, b -> if (better(a, b)) -1 else if (better(b, a)) 1 else 0 }
+            if (ranked.size > 3) ranked.removeAt(ranked.lastIndex)
+        }
+        for (center in ranked.map { it.frames }) {
+            for (frames in max(low, center - stride)..minOf(high, center + stride)) {
+                if (frames in evaluated) continue
+                val c = candidate(frames)
+                if (better(c, best)) best = c
+            }
+        }
+        val window = minOf(blend, (Dsp.RATE * .05).roundToInt())
+        return best to EndpointSearch(nominal, best.frames, radius, low, high, stride, evaluated.size, window, max(1, window / 2),
+            baseline.minDb, baseline.maxDb, best.minDb, best.maxDb)
     }
 
     private fun power(x: FloatArray, from: Int, count: Int): Double {

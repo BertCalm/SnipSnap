@@ -22,6 +22,7 @@ object FlockRibbonSustainAuditionGenerator {
     private const val RELEASE = 1.5
     private const val LOOP = 6.0
     private const val CROSSFADE = .5
+    private const val ENDPOINT_SEARCH = .1
     private const val MIDI = 60
     private const val VELOCITY = 1f
     private const val SEED = 42001L
@@ -38,7 +39,7 @@ object FlockRibbonSustainAuditionGenerator {
         Setting("flow-default", "Default FLOW", .78f,
             "The accepted RIBBON default keeps its original simulation speed. Does the repeated movement stay interesting?"),
         Setting("flow-high", "High FLOW", 1f,
-            "A fast clock. Listen for a recurring turn or a change in texture as the same six seconds return."),
+            "A fast clock. Listen for a recurring turn or a change in texture as the captured body returns."),
     )
 
     @JvmStatic
@@ -70,7 +71,8 @@ object FlockRibbonSustainAuditionGenerator {
         val rendered = settings.map { setting ->
             val macros = Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to setting.flow)
             val start = System.nanoTime()
-            val probe = FlockRibbonSustain.render(macros, MIDI, VELOCITY, SEED, HELD, LOOP, CROSSFADE, RELEASE, OVERSAMPLE)
+            val probe = FlockRibbonSustain.render(macros, MIDI, VELOCITY, SEED, HELD, LOOP, CROSSFADE, RELEASE, OVERSAMPLE,
+                endpointSearchSeconds = ENDPOINT_SEARCH)
             renderNanos += System.nanoTime() - start
             require(probe.plan.sampleRate == 44_100 && probe.plan.totalFrames == ((HELD + RELEASE) * 44_100).toInt())
             require(probe.rawReference.size == probe.plan.totalFrames && probe.rawLooped.size == probe.plan.totalFrames)
@@ -103,6 +105,8 @@ object FlockRibbonSustainAuditionGenerator {
             val timing = linkedMapOf<String, Any?>(
                 "captureStartSeconds" to p.loopStartFrame.toDouble() / p.sampleRate,
                 "captureEndSeconds" to p.loopEndExclusive.toDouble() / p.sampleRate,
+                "nominalLoopPeriodSeconds" to p.nominalLoopFrames.toDouble() / p.sampleRate,
+                "loopPeriodSeconds" to p.loopFrames.toDouble() / p.sampleRate,
                 "wrapSeconds" to p.wrapFrames.map { it.toDouble() / p.sampleRate },
             )
             for ((kind, samples) in listOf("continuous" to probe.rawReference, "looped" to probe.rawLooped)) {
@@ -133,11 +137,14 @@ object FlockRibbonSustainAuditionGenerator {
                     "entryPoint" to "FlockRibbonSustain.render", "selectedOutput" to kind,
                     "parameters" to linkedMapOf("macros" to macros, "midi" to MIDI, "velocity" to VELOCITY,
                         "seed" to SEED.toString(), "heldSeconds" to HELD, "loopSeconds" to LOOP,
-                        "crossfadeSeconds" to CROSSFADE, "releaseSeconds" to RELEASE, "oversample" to OVERSAMPLE),
+                        "loopSecondsMeaning" to "Nominal target. The selected Plan.loopFrames is authoritative for actual playback.",
+                        "crossfadeSeconds" to CROSSFADE, "releaseSeconds" to RELEASE, "oversample" to OVERSAMPLE,
+                        "endpointSearchSeconds" to ENDPOINT_SEARCH),
                     "envelope" to linkedMapOf("attackSeconds" to FlockRibbonSustain.ATTACK_SECONDS,
                         "attackAndReleaseShape" to "smoothstep", "finiteHoldMacroIgnored" to true,
                         "continuousSourceHasFiniteGestureEnvelope" to false),
                     "loopAssembly" to linkedMapOf("plan" to plan(p),
+                        "endpointSearch" to endpointSearch(probe.diagnostics.endpointSearch),
                         "method" to "Equal-power sine/cosine tail blend, normalized by nonnegative whole-blend source correlation; smoothstep blend phase; exact endpoint weights.",
                         "target" to "The 0.5 seconds immediately before the original loop start, preserving natural one-sample wrap context.",
                         "continuation" to "Reference advances the simulation throughout; looped output replays the captured body. Both share identical attack and release envelopes."),
@@ -178,10 +185,13 @@ object FlockRibbonSustainAuditionGenerator {
                 "experimentVersion" to FlockRibbonSustain.EXPERIMENT_VERSION,
                 "midi" to MIDI, "velocity" to VELOCITY, "seed" to SEED.toString(),
                 "macros" to Flock.defaults(FlockVoice.RIBBON), "heldSeconds" to HELD,
-                "releaseSeconds" to RELEASE, "loopSeconds" to LOOP, "crossfadeSeconds" to CROSSFADE,
+                "releaseSeconds" to RELEASE, "loopSeconds" to LOOP,
+                "loopSecondsMeaning" to "Nominal target; each selected Plan.loopFrames controls playback.",
+                "crossfadeSeconds" to CROSSFADE, "endpointSearchSeconds" to ENDPOINT_SEARCH,
                 "attackSeconds" to FlockRibbonSustain.ATTACK_SECONDS, "sampleRate" to 44_100,
                 "channels" to 1, "format" to "PCM_16", "oversample" to OVERSAMPLE),
-            "captureNote" to "The body captures source seconds 2–8. Its last 0.5 seconds blend into the 0.5 seconds immediately before the capture. At low FLOW, this short window may contain initialization drift; no convergence or natural periodicity is claimed.",
+            "endpointSearchPolicy" to "Search the nominal loop end within ±0.1 seconds. Coarse candidates and single-frame refinement maximize the quietest 50-ms blend-window power relative to the average power of its two source partners; ties prefer the nearest nominal period, then the lower frame. This changes capture length, not source pitch or gain. Full search controls, candidate counts, nominal evidence and selected evidence are recorded per pair.",
+            "captureNote" to "Each body starts at source second 2 and lasts about 6 seconds. A deterministic endpoint search within 0.1 seconds of the nominal end selects a capture by measured crossfade energy; the actual cycle and first return are shown for each pair. Its last 0.5 seconds blend into the 0.5 seconds immediately before the capture. At low FLOW, this short window may contain initialization drift; no convergence or natural periodicity is claimed.",
             "levelPolicy" to linkedMapOf(
                 "matched" to "Level matched: one fixed gain shared by each continuous/repeated pair. The louder of its two loudest-200-ms RMS measurements targets 0.12, with a shared 0.90 peak guard. FLOW pairs can use different gains; within each pair no dynamics are altered.",
                 "raw" to "Raw: the unlevelled synthesis and offline assembly, with one shared only-down safety gain across all six recordings and the sampler files. No per-clip normalization, compression, effects or browser synthesis.",
@@ -194,13 +204,21 @@ object FlockRibbonSustainAuditionGenerator {
             "archives" to listOf("flock-ribbon-sustain-matched.zip", "flock-ribbon-sustain-raw.zip"),
         )
         writeJson(File(root, "manifest.json"), manifest)
+        val selectionSummary = rendered.joinToString("\n            ") { item ->
+            val p = item.probe.plan
+            val s = item.probe.diagnostics.endpointSearch
+            String.format(Locale.ROOT,
+                "%s: period %.6f s; first return %.6f s; min 50-ms blend energy %.2f -> %.2f dB",
+                item.setting.id, p.loopFrames.toDouble() / p.sampleRate, p.wrapFrames.first().toDouble() / p.sampleRate,
+                s.baselineMin50msDb, s.selectedMin50msDb)
+        }
         File(root, "README.txt").writeText("""
             FLOCK / RIBBON sustain experiment v1
 
             Six dry mono PCM16 recordings, 44.1 kHz, 31.5 seconds each.
             Three FLOW settings (0, original RIBBON default 0.78, 1), each comparing:
               continuous: 30 held seconds of evolving simulation + 1.5-second release
-              looped: same introduction, then a repeated six-second body + same release
+              looped: same introduction, then a repeated body of about six seconds + same release
             Root C4 / MIDI 60, velocity 1, seed "42001", original companion macros.
             The 45-ms attack and 1.5-second smoothstep release are shared by both paths.
             Sustain overrides finite HOLD duration; HOLD is retained only as source state.
@@ -211,13 +229,26 @@ object FlockRibbonSustainAuditionGenerator {
             is claimed. Sampler WAVs carry root and exclusive loop bounds via RIFF smpl,
             but their attack-plus-loop samples need a sampler envelope for note release.
 
-            The loop captures seconds 2–8. Its final 0.5 seconds blend toward source
-            seconds 1.5–2, so its last sample naturally precedes the first loop sample.
+            The loop starts at source second 2 and targets a six-second captured body.
+            A bounded deterministic endpoint search considers ends within +/-0.1 seconds
+            of that target and selects by measured crossfade energy. It uses no AGC,
+            waveform gain automation, pitch change or source resimulation. Actual periods,
+            capture endpoints and return times are recorded per pair in manifest.json and the exact recipes. The
+            final 0.5 seconds blend toward source seconds 1.5–2, so the last sample
+            naturally precedes the first loop sample.
             This makes a sample loop; it does not make the simulation periodic or prove
             it has converged. Slow FLOW may replay initialization drift. Listen through
-            the returns at seconds 8, 14, 20 and 26, against the continuous reference.
+            several actual returns, using Next join, against the continuous reference.
+            The search compares coarse candidates and refines the best three at single-
+            frame resolution. Its baseline/selected energy, candidate counts, radius
+            and actual period are in each pair's diagnostics.endpointSearch. Ties choose
+            the nearest nominal period, then the lower frame. These are measured
+            crossfade diagnostics, not a claim of audible transparency.
             Diagnostics quantify edges, crossfade energy and captured motion; the final
             decision about audible recurrence and join quality remains a listening check.
+
+            Selected captures and measured nominal -> selected blend evidence:
+            $selectionSummary
 
             matched/: shared fixed gain within each continuous/looped pair. The greater
             loudest-200-ms RMS targets 0.12; one shared 0.90 peak guard applies to both.
@@ -237,7 +268,7 @@ object FlockRibbonSustainAuditionGenerator {
             Optional destination: -PflockSustainOutput=/absolute/output/directory
             Serve this folder over HTTP to use the listening page (fetch needs HTTP).
             The page's audio sources are these WAVs. Its repeat switch repeats the whole
-            recording, including attack/release; internal six-second returns are baked in.
+            recording, including attack/release; internal repeated-body returns are baked in.
 
             Source revision: ${source.getValue("revision")}
             Working tree changed at capture: ${source.getValue("dirty")}
@@ -251,6 +282,7 @@ object FlockRibbonSustainAuditionGenerator {
 
     private fun plan(p: FlockRibbonSustain.Plan): Map<String, Any?> = linkedMapOf(
         "sampleRate" to p.sampleRate, "attackFrames" to p.attackFrames,
+        "nominalLoopFrames" to p.nominalLoopFrames, "endpointSearchRadiusFrames" to p.endpointSearchRadiusFrames,
         "loopStartFrame" to p.loopStartFrame, "loopEndExclusive" to p.loopEndExclusive,
         "loopFrames" to p.loopFrames, "crossfadeFrames" to p.crossfadeFrames,
         "sourceBlendStartFrame" to p.sourceBlendStartFrame, "sourceBlendTargetStartFrame" to p.sourceBlendTargetStartFrame,
@@ -266,7 +298,20 @@ object FlockRibbonSustainAuditionGenerator {
         "rmsEndpointDriftSemitones" to m.rmsEndpointDriftSemitones,
     )
 
+    private fun endpointSearch(s: FlockRibbonSustain.EndpointSearch): Map<String, Any?> = linkedMapOf(
+        "nominalLoopFrames" to s.nominalLoopFrames, "selectedLoopFrames" to s.selectedLoopFrames,
+        "radiusFrames" to s.radiusFrames, "minLoopFrames" to s.minLoopFrames, "maxLoopFrames" to s.maxLoopFrames,
+        "coarseStrideFrames" to s.coarseStrideFrames,
+        "evaluatedCandidates" to s.evaluatedCandidates, "windowFrames" to s.windowFrames, "hopFrames" to s.hopFrames,
+        "baselineMin50msDb" to s.baselineMin50msDb, "baselineMax50msDb" to s.baselineMax50msDb,
+        "selectedMin50msDb" to s.selectedMin50msDb, "selectedMax50msDb" to s.selectedMax50msDb,
+        "tieBreak" to s.tieBreak,
+        "objective" to "Maximize the quietest 50-ms blend-window power relative to the average power of its two source partners.",
+        "boundsPolicy" to "Clip the requested radius so that crossfade occupies at most half the actual loop, at least three wraps occur strictly before note-off, and the capture remains inside the continuous source.",
+    )
+
     private fun diagnostics(d: FlockRibbonSustain.Diagnostics): Map<String, Any?> = linkedMapOf(
+        "endpointSearch" to endpointSearch(d.endpointSearch),
         "rendererConvenienceGain" to d.commonGain,
         "rendererConvenienceGainUsedForPack" to false,
         "rawReferencePeak" to d.rawReferencePeak, "rawLoopedPeak" to d.rawLoopedPeak,
