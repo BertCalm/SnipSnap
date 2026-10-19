@@ -80,7 +80,9 @@ object Patches {
             TesseraPatch.ENGINE -> TesseraPatch.fromJsonValue(value)
             PitchwheelPatch.ENGINE -> PitchwheelPatch.fromJsonValue(value)
             EmbouchurePatch.ENGINE -> EmbouchurePatch.fromJsonValue(value)
+            BellowsPatch.ENGINE -> BellowsPatch.fromJsonValue(value)
             MurmurPatch.ENGINE -> MurmurPatch.fromJsonValue(value)
+            OspreyPatch.ENGINE -> OspreyPatch.fromJsonValue(value)
             PrismPatch.ENGINE -> PrismPatch.fromJsonValue(value)
             AlloyPatch.ENGINE -> AlloyPatch.fromJsonValue(value)
             ContourPatch.ENGINE -> ContourPatch.fromJsonValue(value)
@@ -88,7 +90,14 @@ object Patches {
             LacquerPatch.ENGINE -> LacquerPatch.fromJsonValue(value)
             SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
             TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
+            OverlapPatch.ENGINE -> OverlapPatch.fromJsonValue(value)
+            FlockPatch.ENGINE -> FlockPatch.fromJsonValue(value)
+            ShoalPatch.ENGINE -> ShoalPatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
+            OpenSkyPatch.ENGINE -> OpenSkyPatch.fromJsonValue(value)
+            RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
+            VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
+            WickPatch.ENGINE -> WickPatch.fromJsonValue(value)
             ScannedChainPatch.ENGINE -> ScannedChainPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
@@ -122,9 +131,13 @@ object Patches {
         if (version != VERSION) throw JsonException("unsupported patch version $version")
         val voiceName = obj["voice"]?.str() ?: throw JsonException("patch has no voice")
         val voice = voiceOf(voiceName) ?: throw JsonException("unknown voice $voiceName")
-        val macros = (obj["macros"] as? JsonValue.Obj)?.entries
-            ?.mapValues { (_, v) -> v.num().toFloat() }
-            ?: emptyMap()
+        val macros = when (val raw = obj["macros"]) {
+            // Absent or null is a partial map with nothing in it; the engine fills every macro as it fills any missing one.
+            null, JsonValue.Null -> emptyMap()
+            is JsonValue.Obj -> raw.entries.mapValues { (_, v) -> v.num().toFloat() }
+            // Any other type is a malformed map, not an empty one: read as empty, the patch would load with none of its macros.
+            else -> throw JsonException("patch macros must be an object, got ${raw::class.simpleName}")
+        }
         val name = obj["name"]?.str() ?: throw JsonException("patch has no name")
         return build(name, voice, macros)
     }

@@ -24,8 +24,8 @@ class WavReaderTest {
         Snip(FloatArray(frames * channels) { (it % 201) / 100f - 1f }, channels, 44_100)
 
     /**
-     * Snip.equals compares format and length only, never sample values — so a
-     * naive assertEquals would pass on completely different audio.
+     * Snip.equals compares the sample array by identity, never sample values —
+     * so a naive assertEquals would fail on a faithful round trip.
      */
     private fun assertSamplesClose(expected: Snip, actual: Snip, tolerance: Float) {
         assertEquals(expected.channels, actual.channels, "channels")

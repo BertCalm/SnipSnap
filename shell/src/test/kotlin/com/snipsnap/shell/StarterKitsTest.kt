@@ -4,14 +4,44 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
+import com.snipsnap.synth.Alloy
+import com.snipsnap.synth.AlloyPatch
+import com.snipsnap.synth.AlloyVoice
+import com.snipsnap.synth.Bellows
+import com.snipsnap.synth.BellowsPatch
+import com.snipsnap.synth.BellowsVoice
+import com.snipsnap.synth.Circuit
+import com.snipsnap.synth.CircuitPatch
+import com.snipsnap.synth.CircuitVoice
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
+import com.snipsnap.synth.ContourVoice
+import com.snipsnap.synth.Embouchure
+import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LacquerPresets
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.Murmur
+import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.Nimbus
+import com.snipsnap.synth.NimbusPatch
+import com.snipsnap.synth.NimbusVoice
+import com.snipsnap.synth.Osprey
+import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OspreyPresets
+import com.snipsnap.synth.OspreyVoice
+import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.Prism
+import com.snipsnap.synth.PrismPatch
+import com.snipsnap.synth.PrismVoice
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.StoopVoice
@@ -24,12 +54,24 @@ import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
+import com.snipsnap.synth.Spool
+import com.snipsnap.synth.SpoolPatch
+import com.snipsnap.synth.SpoolVoice
+import com.snipsnap.synth.Suture
+import com.snipsnap.synth.SuturePatch
+import com.snipsnap.synth.SutureVoice
 import com.snipsnap.synth.Tessera
 import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.TesseraVoice
 import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
+import com.snipsnap.synth.Thaw
+import com.snipsnap.synth.ThawPatch
+import com.snipsnap.synth.ThawVoice
+import com.snipsnap.synth.Undertow
+import com.snipsnap.synth.UndertowPatch
+import com.snipsnap.synth.UndertowVoice
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -37,6 +79,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -48,6 +91,54 @@ class StarterKitsTest {
     fun cleanUp() {
         temp.deleteRecursively()
     }
+
+    /** What a single-engine starter is built from: its patch type, every voice it can play, and its engine's own filing. */
+    private class OneEngine(val patch: Class<out Patch>, val voices: Set<String>, val drumClassFor: (Patch) -> DrumClass)
+
+    /**
+     * The single-engine starters with no block of their own below. Each SynthKits
+     * builder lands sixteen pads through `pad(patch, drumClass)` with no chain, so
+     * every pad is dry, carries its engine's patch, is filed by that engine's
+     * drumClassFor, and the sixteen reach every voice (measured for all twelve).
+     */
+    private val oneEngineStarters: Map<String, OneEngine> = mapOf(
+        "circuit" to OneEngine(CircuitPatch::class.java, CircuitVoice.entries.map { it.name }.toSet()) {
+            (it as CircuitPatch).let { p -> Circuit.drumClassFor(p.voice, p.macros) }
+        },
+        "thaw" to OneEngine(ThawPatch::class.java, ThawVoice.entries.map { it.name }.toSet()) {
+            (it as ThawPatch).let { p -> Thaw.drumClassFor(p.voice, p.macros) }
+        },
+        "nimbus" to OneEngine(NimbusPatch::class.java, NimbusVoice.entries.map { it.name }.toSet()) {
+            (it as NimbusPatch).let { p -> Nimbus.drumClassFor(p.voice, p.macros) }
+        },
+        "undertow" to OneEngine(UndertowPatch::class.java, UndertowVoice.entries.map { it.name }.toSet()) {
+            (it as UndertowPatch).let { p -> Undertow.drumClassFor(p.voice, p.macros) }
+        },
+        "suture" to OneEngine(SuturePatch::class.java, SutureVoice.entries.map { it.name }.toSet()) {
+            (it as SuturePatch).let { p -> Suture.drumClassFor(p.voice, p.macros) }
+        },
+        "prism" to OneEngine(PrismPatch::class.java, PrismVoice.entries.map { it.name }.toSet()) {
+            (it as PrismPatch).let { p -> Prism.drumClassFor(p.voice, p.macros) }
+        },
+        "alloy" to OneEngine(AlloyPatch::class.java, AlloyVoice.entries.map { it.name }.toSet()) {
+            (it as AlloyPatch).let { p -> Alloy.drumClassFor(p.voice, p.macros) }
+        },
+        "contour" to OneEngine(ContourPatch::class.java, ContourVoice.entries.map { it.name }.toSet()) {
+            (it as ContourPatch).let { p -> ContourEngine.drumClassFor(p.voice, p.macros) }
+        },
+        "spool" to OneEngine(SpoolPatch::class.java, SpoolVoice.entries.map { it.name }.toSet()) {
+            (it as SpoolPatch).let { p -> Spool.drumClassFor(p.voice, p.macros) }
+        },
+        "embouchure" to OneEngine(EmbouchurePatch::class.java, EmbouchureVoice.entries.map { it.name }.toSet()) {
+            (it as EmbouchurePatch).let { p -> Embouchure.drumClassFor(p.voice, p.macros) }
+        },
+        "bellows" to OneEngine(BellowsPatch::class.java, BellowsVoice.entries.map { it.name }.toSet()) {
+            (it as BellowsPatch).let { p -> Bellows.drumClassFor(p.voice, p.macros) }
+        },
+        "murmur" to OneEngine(MurmurPatch::class.java, MurmurVoice.entries.map { it.name }.toSet()) {
+            (it as MurmurPatch).let { p -> Murmur.drumClassFor(p.voice, p.macros) }
+        },
+    )
 
     @Test
     fun `every starter renders a preflight-clean kit folder`() {
@@ -66,6 +157,44 @@ class StarterKitsTest {
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
                 assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
+                // Every starter fills bank A; the A/B dip fills bank B with a twin of each.
+                val slots = if (starter.id == "lucky-dip-ab") 32 else 16
+                assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
+                // Every recipe a starter writes reads back through the typed layer.
+                for (pad in kit.pads) {
+                    if (pad.recipe != null) assertNotNull(Breed.recipeOf(pad.recipe), "${starter.id} ${pad.displayName}: its recipe does not parse")
+                }
+                // CLOUD's grain clouds (A07-A16) are render-only: GRAINS has no Patch type.
+                // Every other pad of every starter carries its recipe.
+                val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
+                assertEquals(if (starter.id == "cloud") (7..16).toList() else emptyList(), renderOnly, "${starter.id}: pads with no recipe")
+            }
+            oneEngineStarters[starter.id]?.let { engine ->
+                val model = KitBuilderModel.open(dir)
+                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = assertNotNull(Breed.recipeOf(pad.recipe), "${starter.id} ${pad.displayName}: no recipe")
+                    val patch = assertNotNull(recipe.patch, "${starter.id} ${pad.displayName}: the recipe has no patch")
+                    assertTrue(engine.patch.isInstance(patch), "${starter.id} ${pad.displayName}: a ${patch.javaClass.simpleName}, not a ${engine.patch.simpleName}")
+                    assertNull(recipe.fx, "${starter.id} ${pad.displayName}: starter pads land dry")
+                    assertEquals(engine.drumClassFor(patch), pad.drumClass, "${starter.id} ${pad.displayName}: filed by its engine")
+                    assertTrue(pad.oneShot, "${starter.id} ${pad.displayName}: plays its complete rendered buffer")
+                    patch
+                }
+                assertEquals(engine.voices, patches.map { it.voiceName }.toSet(), "${starter.id}: every voice is reachable")
+                // The first pad (a finite note) and the last (held for most kits) each
+                // regenerate their saved WAV exactly from the recipe alone.
+                val first = model.kit.pads.first()
+                val last = model.kit.pads.last()
+                val firstBytes = File(dir, first.sampleFile).readBytes()
+                val lastBytes = File(dir, last.sampleFile).readBytes()
+                val firstAgain = RecipeReplay.apply(model, last.slot, first.recipe!!, last.displayName)
+                assertEquals(first.recipe, firstAgain.pad.recipe, "${starter.id}: the first pad's recipe survives replay")
+                assertTrue(firstBytes.contentEquals(File(dir, firstAgain.pad.sampleFile).readBytes()), "${starter.id}: the first pad regenerates exactly")
+                val lastAgain = RecipeReplay.apply(model, first.slot, last.recipe!!, first.displayName)
+                assertEquals(last.recipe, lastAgain.pad.recipe, "${starter.id}: the last pad's recipe survives replay")
+                assertTrue(lastBytes.contentEquals(File(dir, lastAgain.pad.sampleFile).readBytes()), "${starter.id}: the last pad regenerates exactly")
             }
             if (starter.id == "cistern") {
                 // Reuse this rendered kit to exercise its saved recipes through
@@ -147,6 +276,7 @@ class StarterKitsTest {
                     patch
                 }
                 assertEquals(LacquerVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(LacquerPresets.references(), patches.drop(8), "the sixteen-pad starter preserves its original eight reference recipes")
                 assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
                 assertEquals(1, model.kit.pads.count { it.drumClass == DrumClass.LOOP })
                 val source = model.kit.pads.first()
@@ -273,6 +403,35 @@ class StarterKitsTest {
                 assertEquals(source.recipe, replayed.pad.recipe, "source definitions and phrase scheduling survive replay")
                 assertTrue(original.contentEquals(File(dir, replayed.pad.sampleFile).readBytes()), "the saved phrase regenerates exactly")
             }
+            if (starter.id == "osprey") {
+                // Not one of oneEngineStarters: every pad sits at C4, so the kit names no key.
+                val model = KitBuilderModel.open(dir)
+                assertNull(model.kit.key, "OSPREY's pads all sit at C4 and name no key")
+                assertEquals(16, model.kit.pads.size)
+                val patches = model.kit.pads.map { pad ->
+                    val recipe = assertNotNull(Breed.recipeOf(pad.recipe), "${pad.displayName}: no recipe")
+                    val patch = assertIs<OspreyPatch>(recipe.patch)
+                    assertNull(recipe.fx, "${pad.displayName}: the sea gesture lands dry")
+                    assertEquals(Osprey.drumClassFor(patch.voice, patch.macros), pad.drumClass)
+                    assertTrue(pad.oneShot, "${pad.displayName}: plays its complete finite gesture")
+                    patch
+                }
+                assertEquals(OspreyVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(OspreyPresets.all(), patches.take(15), "the fifteen shore/sea presets, in roster order")
+                assertTrue(patches.all { it.midi == 60 && it.seed == 731 && it.modelVersion == Osprey.MODEL_VERSION }, "rooted at C4, one seed, the current model")
+                assertEquals(1f, patches.last().macros.getValue("HOLD"), "the sixteenth pad is the coast with extended excitation")
+                // The first pad and the extended last one each regenerate their saved WAV exactly.
+                val first = model.kit.pads.first()
+                val last = model.kit.pads.last()
+                val firstBytes = File(dir, first.sampleFile).readBytes()
+                val lastBytes = File(dir, last.sampleFile).readBytes()
+                val firstAgain = RecipeReplay.apply(model, last.slot, first.recipe!!, last.displayName)
+                assertEquals(first.recipe, firstAgain.pad.recipe, "note, seed, duration and model survive replay")
+                assertTrue(firstBytes.contentEquals(File(dir, firstAgain.pad.sampleFile).readBytes()), "the first sea gesture regenerates exactly")
+                val lastAgain = RecipeReplay.apply(model, first.slot, last.recipe!!, first.displayName)
+                assertEquals(last.recipe, lastAgain.pad.recipe, "the extended coast's recipe survives replay")
+                assertTrue(lastBytes.contentEquals(File(dir, lastAgain.pad.sampleFile).readBytes()), "the extended sea gesture regenerates exactly")
+            }
             assertEquals(starter, StarterKits.byId(starter.id))
         }
         assertEquals(null, StarterKits.byId("nope"))
@@ -298,7 +457,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "embouchure", "murmur", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -333,6 +492,10 @@ class StarterKitsTest {
         assertEquals("MURMUR", murmur.displayName)
         assertFalse(murmur.seeded, "MURMUR is a fixed dry audition kit")
         assertEquals(KeySpec.parse("Cminpent"), murmur.key)
+        val osprey = StarterKits.byId("osprey")!!
+        assertEquals("OSPREY", osprey.displayName)
+        assertFalse(osprey.seeded, "OSPREY is a fixed dry audition kit")
+        assertNull(osprey.key, "OSPREY's sea gestures all sit at C4 and name no key")
         val revel = StarterKits.byId("revel")!!
         assertEquals("REVEL", revel.displayName)
         assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")

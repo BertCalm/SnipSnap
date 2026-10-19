@@ -33,6 +33,37 @@ class AlloyTest {
     }
 
     @Test
+    fun `an interrupted held render stops instead of finishing beside its replacement`() {
+        // The held path converges its cycles before the passes; it must stop on the flag as the finite one does.
+        Thread.currentThread().interrupt()
+        try {
+            assertFailsWith<java.util.concurrent.CancellationException>(
+                "ALLOY held render did not stop on the interrupt at its first look in the cycle convergence",
+            ) { Alloy.render(AlloyVoice.KEY, mapOf("HOLD" to 1f)) }
+        } finally {
+            Thread.interrupted()
+        }
+    }
+
+    @Test
+    fun `the conditioning pass looks again after its band limit when the render is no longer wanted`() {
+        // The pass looks on entry, so a flag set before it is caught there and says nothing about the looks
+        // between its band limit and its decimation; an interrupt that lands after that first look must still stop it.
+        // At the internal rate the resample is skipped, so an uninterrupted pass looks exactly three times: on entry,
+        // after the band limit and after the resample. Removing either later look changes that count.
+        val internalRate = Alloy.RATE * Dsp.OVERSAMPLE
+        val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
+        assertEquals(4096, clear.run { Alloy.finish(FloatArray(Dsp.OVERSAMPLE * 4096), internalRate) }.size, "an uninterrupted pass still conditions")
+        assertEquals(3, clear.looks, "an uninterrupted pass looks on entry, after the band limit and after the resample, before the decimation")
+        val late = LateInterrupt(clearLooks = 1)
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "ALLOY's conditioning pass did not stop on the interrupt at its look after the band limit",
+        ) {
+            late.run { Alloy.finish(FloatArray(Dsp.OVERSAMPLE * 4096), internalRate) }
+        }
+    }
+
+    @Test
     fun `six dry voices reproduce complete inputs and ignore macro insertion order`() {
         assertEquals(setOf("BASS", "KEY", "PLUCK", "BRASS", "STRING", "SOFT"), AlloyVoice.entries.map { it.name }.toSet())
         for (voice in AlloyVoice.entries) {
@@ -171,6 +202,7 @@ class AlloyTest {
             assertTrue(p.previousCycle.size == p.samples.size && p.previousCycle.size > 256, "$voice held render lost the real preceding cycle")
             assertTrue(p.prerollCycles in 2..32, "$voice held preroll is unbounded or absent: ${p.prerollCycles}")
             assertTrue(p.stateError.isFinite() && p.stateError < 1e-3, "$voice oscillator/source/filter state did not settle: ${p.stateError}")
+            assertHeldPrerollSettles(p, "$voice")
             val seam = Keys.seamError(p.previousCycle + p.samples, p.previousCycle.size)
             assertTrue(seam.isFinite() && seam < Keys.MAX_SEAM_ERROR, "$voice held seam $seam")
             assertEquals(seam, p.seamError, 1e-12, "$voice reported an artificial seam")
@@ -187,6 +219,20 @@ class AlloyTest {
             val breath = Alloy.renderProbe(voice, macros + ("MATERIAL" to 1f), midi = 48)
             assertTrue(spectralDistance(wood.body, breath.body, 0.01f, 0.35f) > 0.004, "$voice settled held MATERIAL was inaudible")
         }
+    }
+
+    /**
+     * The held preroll runs at least three cycles and stops after twelve, or as soon as a cycle
+     * changes the state by at most 1e-5, and it throws past 1e-3; so `prerollCycles in 2..32` and
+     * `stateError < 1e-3` above hold by construction. Measured 2026-10-13: every voice, at the
+     * settings of both held tests, settled at the third cycle with a last-cycle change of at most
+     * 4.6e-11. A cap reached unsettled (a change between 1e-5 and 1e-3, which the engine accepts)
+     * or a slower settle fails here.
+     */
+    private fun assertHeldPrerollSettles(p: Alloy.Probe, label: String) {
+        assertTrue(p.stateError <= 1e-5, "$label held preroll ran out its cycles unsettled: last-cycle state change ${p.stateError}")
+        assertEquals(3, p.prerollCycles, "$label held state needed ${p.prerollCycles} preroll cycles, not the minimum three")
+        assertTrue(p.stateError < 1e-9, "$label last-cycle state change ${p.stateError} lost its measured margin")
     }
 
     @Test
@@ -220,6 +266,7 @@ class AlloyTest {
                 "$voice MIDI $midi held excitation exceeded its bounds")
             assertTrue(p.stateError < 1e-3 && p.prerollCycles <= 32,
                 "$voice MIDI $midi held all-high state did not settle: ${p.stateError}")
+            assertHeldPrerollSettles(p, "$voice MIDI $midi all-high")
             val seam = Keys.seamError(p.previousCycle + p.samples, p.previousCycle.size)
             assertTrue(seam < Keys.MAX_SEAM_ERROR, "$voice MIDI $midi held all-high seam $seam")
             assertTrue(rms(p.samples) > 1e-4, "$voice MIDI $midi settled by becoming silent")

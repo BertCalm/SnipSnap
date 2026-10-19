@@ -319,12 +319,19 @@ object Lacquer {
         }
     }
 
-    private fun finish(raw: FloatArray): FloatArray {
-        // The tick loop polls the preview thread's interrupt; this band-limit and resample
-        // pass over the full 4x buffer is long enough to deserve its own check first.
-        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("LACQUER render cancelled")
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this thread, and
+    // the tick loop and every pass over the whole buffer poll it so a stale render stops.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw CancellationException("LACQUER render cancelled")
+    }
+
+    internal fun finish(raw: FloatArray): FloatArray {
+        // The tick loop polls the preview thread's interrupt; the band limit and the decimation
+        // each pass over the full 4x buffer and are long enough to deserve their own check first.
+        stopIfUnwanted()
         val filtered = raw.copyOf()
         Tide.bandLimit(filtered, INTERNAL_RATE)
+        stopIfUnwanted()
         val out = Dsp.decimate(filtered, RATE)
         if (out.isEmpty()) return out
         val hp = Dsp.OnePole(RATE)
@@ -369,8 +376,7 @@ object Lacquer {
         val taps = if (recordLayers) profile.layers.associate { it.role to FloatArray(n) } else emptyMap()
         var index = 0L
         fun tick(destination: Int) {
-            if (index and 8191L == 0L && Thread.currentThread().isInterrupted)
-                throw CancellationException("LACQUER render cancelled")
+            if (index and 8191L == 0L) stopIfUnwanted()
             var sum = 0.0
             for (i in states.indices) {
                 val x = states[i].tick(index)
@@ -386,6 +392,7 @@ object Lacquer {
         val finished = finish(raw)
         val layerSamples = taps.mapValues { finish(it.value) }
         var seam = 0.0
+        stopIfUnwanted()
         val unwrappedSeam = if (held && velocity > 0f) Keys.seamError(finished, loop.frames) else 0.0
         if (held) {
             check(unwrappedSeam < Keys.MAX_SEAM_ERROR) { "LACQUER $voice sustain failed to settle: $unwrappedSeam" }
@@ -400,10 +407,13 @@ object Lacquer {
                 val src = loop.frames - need + i
                 finished[dst] = ((1 - w) * finished[dst] + w * finished[src]).toFloat()
             }
+            stopIfUnwanted()
             if (normalize && velocity > 0f) Dsp.levelTo(finished, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+            stopIfUnwanted()
             seam = if (velocity == 0f) 0.0 else Keys.seamError(finished, loop.frames)
             check(seam < Keys.MAX_SEAM_ERROR) { "LACQUER $voice held seam $seam" }
         } else {
+            stopIfUnwanted()
             if (normalize && velocity > 0f) Dsp.levelTo(finished, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(finished)
         }

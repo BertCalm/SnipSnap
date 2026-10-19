@@ -272,6 +272,48 @@ object Prism {
         }
     }
 
+    /** Unmasked spectral coefficients, including entries outside the current note's usable band. */
+    fun amplitudeEndpoint(template: PrismTemplate): List<Float> = List(PARTIALS) { i ->
+        template.amplitudeOverrides.getOrNull(i) ?: templateAmplitude(template.spectralId, i).toFloat()
+    }
+
+    /** Source carrier frequencies in partial-index order, before bandwidth culling. */
+    fun partialFrequencies(
+        voice: PrismVoice,
+        macros: Map<String, Float> = emptyMap(),
+        template: PrismTemplate = templateFor(voice),
+    ): List<Float> {
+        val hz = frequencyFor(voice, settled(voice, macros).getValue("TUNE"))
+        return List(PARTIALS) { i ->
+            hz * (template.ratioOverrides.getOrNull(i)
+                ?: if (template.spectralId == PrismSpectrum.BELL) BELL_RATIOS[i] else i + 1f)
+        }
+    }
+
+    /** Build original fixed-Hz colours on A's carrier map; no sample audio is mixed into the note. */
+    fun motionEndpoint(
+        voice: PrismVoice,
+        color: PrismMotionColor,
+        macros: Map<String, Float> = emptyMap(),
+        template: PrismTemplate = templateFor(voice),
+    ): List<Float> {
+        val frequencies = partialFrequencies(voice, macros, template)
+        return List(PARTIALS) { i ->
+            val n = i + 1.0
+            val hz = frequencies[i].toDouble()
+            val amplitude = when (color) {
+                PrismMotionColor.VOWEL -> .07 / n.pow(.7) +
+                    .95 * (gaussian(hz - 730.0, 160.0) + .75 * gaussian(hz - 1090.0, 190.0) +
+                        .55 * gaussian(hz - 2440.0, 320.0)) / n.pow(.35)
+                PrismMotionColor.REED -> n.pow(-.65) * (if (i % 2 == 0) 1.0 else .16) *
+                    (.30 + .90 * gaussian(ln(hz / 1600.0), .85))
+                PrismMotionColor.GLASS -> n.pow(-.63) * (.12 + .88 * sin(n * 1.17).pow(2)) *
+                    (.30 + .70 * gaussian(ln(hz / 3300.0), 1.0))
+            }
+            (if (i == 0) max(.45, amplitude) else amplitude).coerceIn(0.0, 2.0).toFloat()
+        }
+    }
+
     private fun gaussian(distance: Double, width: Double): Double = exp(-.5 * (distance / width).pow(2))
     private fun mix(a: Double, b: Double, x: Double): Double = a + (b - a) * x
     private fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
@@ -301,6 +343,44 @@ object Prism {
     }
 
     private data class PartialBank(val hz: DoubleArray, val weights: FloatArray, val groups: IntArray)
+
+    private data class MotionBank(val a: PartialBank, val weightsB: FloatArray)
+
+    private fun motionBank(
+        a: PartialBank,
+        template: PrismTemplate,
+        hz: Double,
+        macros: Map<String, Float>,
+        velocity: Float,
+        motion: PrismMotion,
+    ): MotionBank {
+        val b = bank(template.copy(amplitudeOverrides = motion.amplitudesB), hz, macros, velocity, null)
+        check(a.hz.contentEquals(b.hz) && a.groups.contentEquals(b.groups)) { "PRISM motion must share A's carrier map" }
+        val weightsA = a.weights.copyOf()
+        val weightsB = b.weights.copyOf()
+        if (weightsA.isNotEmpty()) {
+            // Keep the pitch anchor constant while colour travels. Matching roots rather than
+            // normalizing every control block avoids motion-dependent gain pumping.
+            val root = weightsA[0]
+            val gainB = if (weightsB[0] > 0f) root / weightsB[0] else 0f
+            for (p in weightsB.indices) weightsB[p] *= gainB
+            weightsB[0] = root
+            for (p in 1 until weightsB.size) weightsB[p] = weightsB[p].coerceAtMost(root / 1.12f)
+        }
+        // A lagged group can arrive before another. Bound that combination too, with one
+        // fixed gain for the whole note and the largest allowed group-envelope excursion.
+        val worstSum = (0 until GROUPS).sumOf { group ->
+            val sumA = weightsA.indices.filter { a.groups[it] == group }.sumOf { weightsA[it].toDouble() }
+            val sumB = weightsB.indices.filter { a.groups[it] == group }.sumOf { weightsB[it].toDouble() }
+            max(sumA, sumB)
+        }
+        val trim = (RAW_PEAK_CEILING / (1.35 * worstSum.coerceAtLeast(1e-20))).coerceAtMost(1.0)
+        for (p in weightsA.indices) {
+            weightsA[p] = (weightsA[p] * trim).toFloat()
+            weightsB[p] = (weightsB[p] * trim).toFloat()
+        }
+        return MotionBank(PartialBank(a.hz, weightsA, a.groups), weightsB)
+    }
 
     private fun bank(template: PrismTemplate, hz: Double, m: Map<String, Float>, velocity: Float, loop: LoopPlan?): PartialBank {
         val grain = m.getValue("GRAIN").toDouble()
@@ -417,6 +497,12 @@ object Prism {
 
     internal data class LoopPlan(val frames: Int, val periods: Int, val baseHz: Double)
 
+    // SynthScreen previews run in runInterruptible and keygroup exports pass a cancel
+    // callback; either stops a long render instead of letting it finish unwanted.
+    private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
+        if (Thread.currentThread().isInterrupted || cancelled()) throw CancellationException("PRISM render no longer wanted")
+    }
+
     /** Search whole note periods near the patch duration; fit frames to the pitch with <.1 cent movement. */
     internal fun planLoop(hz: Double, template: PrismTemplate): LoopPlan {
         val step = if (template.spectralId == PrismSpectrum.BELL && template.ratioOverrides.isEmpty()) 4 else 1
@@ -448,6 +534,8 @@ object Prism {
         frames: Int,
         loop: LoopPlan?,
         cancelled: () -> Boolean,
+        motion: PrismMotion? = null,
+        weightsB: FloatArray? = null,
     ): FloatArray {
         val rate = RATE * Dsp.OVERSAMPLE
         val raw = FloatArray(frames * Dsp.OVERSAMPLE)
@@ -459,13 +547,25 @@ object Prism {
         val stepCos = DoubleArray(phases.size) { cos(TWO_PI * partials.hz[it] / rate) }
         val current = DoubleArray(GROUPS)
         val increment = DoubleArray(GROUPS)
+        val movingWeights = if (motion != null) DoubleArray(partials.weights.size) else null
+        val weightIncrement = if (motion != null) DoubleArray(partials.weights.size) else null
         for (i in raw.indices) {
             if (i % BLOCK == 0) {
-                if (cancelled()) throw CancellationException("PRISM render cancelled")
+                stopIfUnwanted(cancelled)
                 val t = i.toDouble() / rate
                 for (g in 0 until GROUPS) {
                     current[g] = envelope(t, g, c, m, loop)
                     increment[g] = (envelope((i + BLOCK).toDouble() / rate, g, c, m, loop) - current[g]) / BLOCK
+                }
+                if (motion != null && movingWeights != null && weightIncrement != null && weightsB != null) {
+                    for (p in partials.weights.indices) {
+                        val a = partials.weights[p].toDouble()
+                        val difference = weightsB[p] - a
+                        val group = partials.groups[p]
+                        movingWeights[p] = a + difference * motion.positionAt(t, group)
+                        val next = a + difference * motion.positionAt((i + BLOCK).toDouble() / rate, group)
+                        weightIncrement[p] = (next - movingWeights[p]) / BLOCK
+                    }
                 }
                 // Exact rephasing bounds recursive oscillator roundoff without resetting any envelope.
                 for (p in phases.indices) {
@@ -476,7 +576,13 @@ object Prism {
             }
             var sample = 0.0
             for (p in phases.indices) {
-                sample += partials.weights[p] * current[partials.groups[p]] * oscillatorSin[p]
+                if (movingWeights == null) {
+                    // Preserve model-1 arithmetic exactly when spectral motion is absent.
+                    sample += partials.weights[p] * current[partials.groups[p]] * oscillatorSin[p]
+                } else {
+                    sample += movingWeights[p] * current[partials.groups[p]] * oscillatorSin[p]
+                    movingWeights[p] += requireNotNull(weightIncrement)[p]
+                }
                 val s = oscillatorSin[p] * stepCos[p] + oscillatorCos[p] * stepSin[p]
                 oscillatorCos[p] = oscillatorCos[p] * stepCos[p] - oscillatorSin[p] * stepSin[p]
                 oscillatorSin[p] = s
@@ -487,7 +593,8 @@ object Prism {
         return raw
     }
 
-    /** Pre-level evidence: genuine adjacent held cycles, precondition 4× samples, and the actual partial bank. */
+    /** Pre-level evidence: genuine adjacent held cycles, precondition 4× samples, and the actual partial bank.
+     * [raw] is empty when [probe] was asked not to keep it. */
     internal data class Probe(
         val samples: FloatArray,
         val raw: FloatArray,
@@ -508,20 +615,28 @@ object Prism {
         normalize: Boolean = false,
         cancelled: () -> Boolean = { false },
         seconds: Float? = null,
+        keepRaw: Boolean = true,
+        motion: PrismMotion? = null,
     ): Probe {
         val m = settled(voice, macros)
+        require(motion == null || !isLoop(m.getValue("HOLD"))) { "PRISM spectral motion supports finite notes only; HOLD loops are not supported" }
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val loop = if (isLoop(m.getValue("HOLD"))) planLoop(hz, template) else null
-        val bank = bank(template, loop?.baseHz ?: hz, m, v, loop)
+        val originalBank = bank(template, loop?.baseHz ?: hz, m, v, loop)
+        val moving = motion?.let { motionBank(originalBank, template, hz, m, v, it) }
+        val bank = moving?.a ?: originalBank
         val contours = contours(template, m)
         val finiteSeconds = seconds?.takeIf { it.isFinite() && it > 0f }?.toDouble()?.coerceAtMost(contours.seconds) ?: contours.seconds
         // Three genuine cycles: a bounded preroll, an independent evidence cycle, and the exported cycle.
         // A small postroll keeps the decimator's edge outside the exported loop.
         val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds * RATE).roundToInt().coerceAtLeast(64)
-        val raw = synthesize(voice, m, template, bank, contours, frames, loop, cancelled)
-        val conditioned = raw.copyOf()
+        val raw = synthesize(voice, m, template, bank, contours, frames, loop, cancelled, motion, moving?.weightsB)
+        stopIfUnwanted(cancelled)
+        // Only a test reads the unconditioned 4x sum back; a render conditions it in place.
+        val conditioned = if (keepRaw) raw.copyOf() else raw
         Tide.bandLimit(conditioned, RATE * Dsp.OVERSAMPLE)
+        stopIfUnwanted(cancelled)
         val down = Dsp.decimate(conditioned, RATE)
         val out: FloatArray
         var previous: FloatArray? = null
@@ -549,6 +664,7 @@ object Prism {
             // Match timbres to the shared melodic reference while preserving performance dynamics.
             // Use the same gain on the preceding cycle so the measured seam remains meaningful.
             val unlevel = if (previous != null) out.copyOf() else null
+            stopIfUnwanted(cancelled)
             Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET * v.pow(.65f))
             if (previous != null && unlevel != null) {
                 val reference = unlevel.indices.maxByOrNull { abs(unlevel[it]) } ?: 0
@@ -556,7 +672,10 @@ object Prism {
                 for (i in previous.indices) previous[i] *= gain
             }
         }
-        return Probe(out, raw, bank.hz, bank.weights, bank.groups, loop?.baseHz ?: hz, loop?.frames ?: 0, previous, seam)
+        val initialWeights = if (motion != null && moving != null) FloatArray(bank.weights.size) { p ->
+            mix(bank.weights[p].toDouble(), moving.weightsB[p].toDouble(), motion.positionAt(0.0, bank.groups[p])).toFloat()
+        } else bank.weights
+        return Probe(out, if (keepRaw) raw else FloatArray(0), bank.hz, initialWeights, bank.groups, loop?.baseHz ?: hz, loop?.frames ?: 0, previous, seam)
     }
 
     fun render(
@@ -564,7 +683,8 @@ object Prism {
         macros: Map<String, Float> = emptyMap(),
         velocity: Float = 1f,
         template: PrismTemplate = templateFor(voice),
-    ): Snip = Snip(probe(voice, macros, velocity, template, normalize = true).samples, channels = 1, sampleRate = RATE)
+        motion: PrismMotion? = null,
+    ): Snip = Snip(probe(voice, macros, velocity, template, normalize = true, keepRaw = false, motion = motion).samples, channels = 1, sampleRate = RATE)
 
     fun renderAtMidi(
         voice: PrismVoice,
@@ -572,9 +692,10 @@ object Prism {
         midi: Int,
         velocity: Float = 1f,
         template: PrismTemplate = templateFor(voice),
+        motion: PrismMotion? = null,
     ): Snip {
         require(midi - rootMidi(voice) in 0..TUNE_SEMITONES) { "PRISM $voice supports MIDI ${rootMidi(voice)}..${rootMidi(voice) + TUNE_SEMITONES}, got $midi" }
-        return render(voice, macros + ("TUNE" to (midi - rootMidi(voice)) / TUNE_SEMITONES.toFloat()), velocity, template)
+        return render(voice, macros + ("TUNE" to (midi - rootMidi(voice)) / TUNE_SEMITONES.toFloat()), velocity, template, motion)
     }
 
     /** Loop-only export: the settled harmonic body and periodic group development, without a strike. */
@@ -584,5 +705,15 @@ object Prism {
         velocity: Float = 1f,
         template: PrismTemplate = templateFor(voice),
         cancelled: () -> Boolean = { false },
-    ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled).samples
+    ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled, keepRaw = false).samples
+
+    /** Explicit refusal keeps old positional and trailing-lambda loop callers source compatible. */
+    fun renderLoop(
+        voice: PrismVoice,
+        macros: Map<String, Float> = emptyMap(),
+        velocity: Float = 1f,
+        template: PrismTemplate = templateFor(voice),
+        cancelled: () -> Boolean = { false },
+        motion: PrismMotion,
+    ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled, keepRaw = false, motion = motion).samples
 }

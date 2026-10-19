@@ -96,6 +96,37 @@ import kotlinx.coroutines.withContext
 private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
+// The keys SNAP writes into its MAKE settings bag (docs/SCREEN_PLAN_2026_10.md
+// §3.6) — see the `settings` parameter on [SnapScreen]. Named for what they
+// hold; the values are plain strings so the navigation model never learns a
+// SNAP type.
+private const val KEY_VOICE = "voice"
+private const val KEY_MACRO_PREFIX = "macro."
+private const val KEY_DRAWN = "drawn"
+private const val KEY_ENVELOPE = "envelope"
+
+/** `1,2,3` for a drawn table; the bag holds text, and 256 small ints is about a kilobyte of it. */
+private fun IntArray.toBag(): String = joinToString(",")
+
+/**
+ * The inverse of [toBag], defensive: a table of the wrong length, one with
+ * a value outside the 0..255 brightness range, or anything that does not
+ * parse is no table at all (the lab starts clear) rather than a throw or a
+ * half-line the renderer would read past.
+ */
+private fun String?.toTable(size: Int): IntArray? {
+    if (this == null) return null
+    val parts = split(',')
+    if (parts.size != size) return null
+    val out = IntArray(size)
+    for (i in 0 until size) {
+        val v = parts[i].trim().toIntOrNull() ?: return null
+        if (v !in 0..255) return null
+        out[i] = v
+    }
+    return out
+}
+
 /**
  * The longest side a photo is read at. `TakePicturePreview` is documented
  * as a small bitmap, but it crosses from the camera app through shared
@@ -138,6 +169,11 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
  * set from (LUM, SAT, HUE, DETAIL), so a pad that came out dark or dirty
  * can be traced to the picture that made it — the same "inspectable, not
  * mysterious" rule the classifier lives by.
+ *
+ * Leaving to hear a pad and coming back does not reset the lab (§3.6): the
+ * player's unkeyed work is mirrored into `settings` as it changes and read
+ * back when the screen composes. The photo is the one exception — see that
+ * parameter.
  */
 @Composable
 fun SnapScreen(
@@ -167,21 +203,64 @@ fun SnapScreen(
     // App()'s own scope, same as SynthScreen's: a SEND TO PAD write in
     // flight survives a MenuRow tab switch instead of being cancelled by it.
     appScope: CoroutineScope,
+    // The navigation model's MAKE bag for this lab (`MakeState.settings`,
+    // §3.6): it outlives this composable, so the choices the player made
+    // survive a trip to another place. It is not Compose state — the
+    // `remember`ed vars below stay the live state; each is seeded from the
+    // bag when the screen composes and written back when it changes.
+    // Keys: "voice" (the LINE chip, a SnapVoice name, default HORIZON),
+    // "macro.TUNE" / "macro.BRIGHT" / "macro.DECAY" / "macro.GRIT" (each a
+    // 0..1 float, defaults from Snap.defaults), "drawn" (the last drawn
+    // line, 256 comma-joined 0..255 ints; absent when nothing was drawn)
+    // and "envelope" (the drawn volume shape, 64 comma-joined ints; absent
+    // for SNAP's own decay). NOT held: the photo. TakePicturePreview hands
+    // back a bitmap, not a file or a URI, so there is nothing to name it by
+    // in text and nothing to reload it from; the photo, its reading and its
+    // line are left alone, and a returning player takes or freezes a new
+    // one with the knobs and chip as they left them. An unparseable value
+    // falls back to the default.
+    settings: MutableMap<String, String> = mutableMapOf(),
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
+    // The drawn line comes out of the bag first: a restored DRAWN chip
+    // needs its table behind it (the photo is not held, so a DRAWN voice
+    // with no table would be a chip lit over silence), and `line` below is
+    // seeded from it.
+    val seededDrawn = remember { settings[KEY_DRAWN].toTable(Snap.TABLE_SIZE) }
+
     var photo by remember { mutableStateOf<Photo?>(null) }
     var thumb by remember { mutableStateOf<Bitmap?>(null) }
     var reading by remember { mutableStateOf<Snap.Reading?>(null) }
-    var voice by remember { mutableStateOf(SnapVoice.HORIZON) }
-    var macros by remember { mutableStateOf(Snap.defaults(SnapVoice.HORIZON)) }
+    var voice by remember {
+        val saved = settings[KEY_VOICE]?.let { name -> SnapVoice.values().firstOrNull { it.name == name } }
+        mutableStateOf(if (saved == null || (saved == SnapVoice.DRAWN && seededDrawn == null)) SnapVoice.HORIZON else saved)
+    }
+    LaunchedEffect(voice) { settings[KEY_VOICE] = voice.name }
+    var macros by remember {
+        // Each knob clamped to its 0..1 range; a missing or garbled one is
+        // its default.
+        mutableStateOf(
+            Snap.defaults(SnapVoice.HORIZON).mapValues { (name, default) ->
+                settings[KEY_MACRO_PREFIX + name]?.toFloatOrNull()?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: default
+            },
+        )
+    }
+    LaunchedEffect(macros) { for ((name, v) in macros) settings[KEY_MACRO_PREFIX + name] = v.toString() }
     // The line read for the current (photo, voice) — see [Line]. A flat
     // line is `Snap.read`'s one refusal; it is toasted once when the line
     // is read, and SEND stays off until a different line or photo reads
     // through. `line` is stale (and SEND off) from the moment the photo
     // or the chip changes until the read below replaces it.
-    var line by remember { mutableStateOf<Line?>(null) }
+    var line by remember {
+        // A restored DRAWN chip owns its line outright (nothing reads it
+        // off a photo), so it is rebuilt from the held table; a photo's
+        // line is read again when a photo arrives.
+        mutableStateOf(
+            if (voice == SnapVoice.DRAWN) seededDrawn?.let { Line(null, SnapVoice.DRAWN, it, Snap.isFlat(it)) } else null,
+        )
+    }
     // A drawn line has no photo behind it and is current for as long as
     // the DRAW chip is the selected one; a photo line is current while it
     // is the one read off this photo along this chip.
@@ -189,14 +268,22 @@ fun SnapScreen(
     var looking by remember { mutableStateOf(false) }
     // The drawn volume shape, or null for SNAP's own decay. Independent of
     // the line: a photo's line under a drawn shape is a fine pad.
-    var envelope by remember { mutableStateOf<IntArray?>(null) }
+    var envelope by remember { mutableStateOf(settings[KEY_ENVELOPE].toTable(Draw.ENVELOPE_SIZE)) }
+    LaunchedEffect(envelope) {
+        val e = envelope
+        if (e == null) settings.remove(KEY_ENVELOPE) else settings[KEY_ENVELOPE] = e.toBag()
+    }
     // The DRAW surface is open: it auditions on its own, so the main
     // render loop below stands still while it is.
     var drawing by remember { mutableStateOf(false) }
     // The last line a finger drew, kept across chip taps and new photos:
     // a photo chip used to throw it away (its read replaced `line`), and
     // reopening DRAW started from blank. DRAW's LAST button brings it back.
-    var drawn by remember { mutableStateOf<IntArray?>(null) }
+    var drawn by remember { mutableStateOf(seededDrawn) }
+    LaunchedEffect(drawn) {
+        val d = drawn
+        if (d == null) settings.remove(KEY_DRAWN) else settings[KEY_DRAWN] = d.toBag()
+    }
     // Set when the surface closes: it just played whatever it had, so the
     // main loop's re-render on its way back renders without a replay.
     var quietResume by remember { mutableStateOf(false) }

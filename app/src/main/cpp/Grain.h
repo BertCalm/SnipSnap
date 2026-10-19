@@ -3,6 +3,8 @@
 #include <cmath>
 #include <cstdint>
 
+#include "DspMath.h"
+
 namespace snipsnap {
 namespace grain {
 
@@ -20,8 +22,7 @@ namespace grain {
  * macros.
  */
 
-/** 0..1, NaN-safe (`!(v > 0)` catches NaN where `v < 0` would pass it on). */
-inline float clamp01(float v) { return !(v > 0.0f) ? 0.0f : (v > 1.0f ? 1.0f : v); }
+// clamp01 (0..1, NaN-safe) comes from DspMath.h, shared with the engines.
 
 /** SIZE's range: a grain is somewhere between a click and a quarter second. */
 constexpr float kMinLengthMs = 10.0f;

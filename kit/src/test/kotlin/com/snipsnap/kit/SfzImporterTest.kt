@@ -140,4 +140,39 @@ class SfzImporterTest {
         val junk = File(temp, "junk.sfz").apply { writeText("this is not an instrument") }
         assertFailsWith<java.io.IOException> { SfzImporter.import(junk, File(temp, "junk-out")) }
     }
+
+    @Test
+    fun `an import that lands nothing leaves nothing on disk`() {
+        val dir = File(temp, "empty")
+        dir.mkdirs()
+        File(dir, "Nothing.sfz").writeText("<region> sample=missing.wav key=36")
+        val out = File(temp, "empty-out")
+        assertFailsWith<java.io.IOException> { SfzImporter.import(File(dir, "Nothing.sfz"), out) }
+        assertTrue(!File(out, "Nothing").exists(), "no kit folder for a refused import")
+    }
+
+    @Test
+    fun `only samples a landed pad names are copied`() {
+        val dir = File(temp, "orphans")
+        dir.mkdirs()
+        WavWriter.write(File(dir, "kick.wav"), Snip(FloatArray(segFrames) { 0.4f }, 1, rate))
+        WavWriter.write(File(dir, "soft.wav"), Snip(FloatArray(segFrames) { 0.2f }, 1, rate))
+        WavWriter.write(File(dir, "loud.wav"), Snip(FloatArray(segFrames) { 0.4f }, 1, rate))
+        // The second pad's velocity ranges overlap, so it is read (its samples
+        // found) and then refused - which used to leave both behind as orphans.
+        File(dir, "Orphans.sfz").writeText(
+            """
+            <region> sample=kick.wav key=36
+            <region> sample=soft.wav key=37 lovel=0 hivel=100
+            <region> sample=loud.wav key=37 lovel=50 hivel=127
+            """.trimIndent(),
+        )
+        val r = SfzImporter.import(File(dir, "Orphans.sfz"), File(temp, "orphans-out"))
+        assertEquals(listOf(1), r.kit.pads.map { it.slot }, "the overlapping pad is skipped")
+        assertEquals(
+            listOf("kick.wav", KitStore.FILE_NAME).sorted(),
+            r.directory.list()!!.sorted(),
+            "the skipped pad's samples are not copied",
+        )
+    }
 }
