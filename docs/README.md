@@ -47,3 +47,7 @@ loops and the owner's sonic acceptance remain open.
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
+
+**Orphica.** [`ORPHICA.md`](ORPHICA.md) records the microsound harp, approved
+finite listening audition, phone controls and captured-sustain instrument
+export. Phone and MPC listening checks remain open.
