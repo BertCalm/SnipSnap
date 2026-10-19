@@ -72,7 +72,9 @@ class CausticGeometryTest {
                     val along = (pickups[path.pickup] - boundary).dot(reflected)
                     val extent = -2.0 * boundary.dot(reflected)
                     assertTrue(along >= 0.0 && along <= extent)
-                    assertEquals(1.0, (boundary + reflected * extent).let { it.dot(it) }, 3e-15)
+                    // Trigonometry, normalization, reflection and the second intersection each
+                    // contribute roundoff. Allow 64 ulps of squared unit radius (about 1.4e-14).
+                    assertEquals(1.0, (boundary + reflected * extent).let { it.dot(it) }, 64.0 * Math.ulp(1.0))
                     assertEquals(CausticGeometry.incidentRelativeDistance(source, boundary) + along + 1.0,
                         path.delayR, 1e-15)
                     sums[path.pickup] += path.weight
