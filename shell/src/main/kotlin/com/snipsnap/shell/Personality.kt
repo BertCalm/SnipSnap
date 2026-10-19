@@ -30,85 +30,46 @@ object Copy {
     /**
      * The product loop, named once, on the only screen a new user is
      * guaranteed to see (September UAT, finding 3: capture -> trim -> grid
-     * -> export is never stated anywhere in the app, and `BOOT_LINES` had
-     * no caller outside HELP).
+     * -> export was never stated anywhere in the app). The shelf draws the
+     * four places above it ([Places.PLACES]) and this sentence under them.
      *
-     * **These are the menu tabs, not prose.** Learning the line teaches the
-     * navigation, because the words are the tabs - a `ConventionTest` law
-     * holds every stage here to a real `MenuItem` label, so a renamed tab
-     * fails the build rather than leaving the app's one explanation of
-     * itself pointing at a screen that no longer exists.
+     * Four verbs, then two places. The verbs say what you do at each stop:
+     * RECORD IT on TAPE, CUT IT on its CUT stage, KIT IT on PROJECT's
+     * PADS, WRITE IT on its OUT. What follows names two places rather
+     * than four tabs, because CUT is a stage of TAPE and WRITE is a stage
+     * of PROJECT (`docs/SCREEN_PLAN_2026_10.md` §3.1); `PlacesTest` holds
+     * the verbs and the two names, and the loop-names law in
+     * `ConventionTest` holds the names to real places.
      *
-     * A list rather than a written-out string for the same reason: the
-     * separator is applied once, in [FIRST_RUN_LOOP], and the law reads the
-     * stages without having to parse it back out.
-     */
-    val FIRST_RUN_LOOP_STAGES = listOf("TAPE", "CHOP", "KIT", "EXPORT")
-
-    /** [FIRST_RUN_LOOP_STAGES] as the shelf draws it. Furniture: a row of tab names, not a sentence. */
-    val FIRST_RUN_LOOP: String = FIRST_RUN_LOOP_STAGES.joinToString(" ▸ ")
-
-    /**
-     * What the four words mean, in verbs.
-     *
-     * The finding's complaint is that the *loop* is never stated - and four
-     * tab names alone are a map, not an explanation. This is the sentence
-     * that makes them one: it says what you do at each stop, in the order
-     * [FIRST_RUN_LOOP] lists them.
-     *
-     * No door is named here on purpose. NEW KIT sits directly under this
-     * panel as the screen's primary action, and TAPE is a tab on the row
-     * above it - a line pointing at either would be a third copy of a
-     * control already twice on screen.
-     *
-     * The verb for step three is KIT IT, not PLAY IT (J13). PLAY is a real
-     * tab six places along the menu row, and the app's only explanation of
-     * its own loop was glossing a different screen with its name - the
-     * exact failure `the first-run loop names real menu tabs` exists to
-     * stop, one line below where that law was looking. KIT IT is the
-     * app's own verb for the step already ([orbitBounced] says "TRIM IT,
-     * CHOP IT, KIT IT"), so the sentence now names the tab it means.
+     * The verb for step three is KIT IT, not PLAY IT (J13): PLAY was a
+     * tab, and the app's only explanation of its own loop glossed a
+     * different screen with its name. KIT IT is the app's own verb for
+     * the step already ([orbitBounced] says "TRIM IT, CHOP IT, KIT IT").
      *
      * **Step four is WRITE IT, not DUB IT** (persona review, P1.1). DUB is
-     * the app's word and it stays the app's word everywhere else - the
-     * dub is what EXPORT calls the write while it runs ("DUBBING…", "DUB
-     * COMPLETE") - but this is the one sentence whose whole job is to be
-     * understood by somebody who has not used the app yet, and a beginner
-     * does not arrive knowing it. The word it arrives at is the one on the
-     * button: EXPORT's primary action reads WRITE KIT. That is J13's own
-     * rule applied to the last step rather than the third - name what the
-     * screen names.
+     * the app's word everywhere else — the dub is what OUT calls the write
+     * while it runs — but this is the one sentence whose whole job is to
+     * be understood by somebody who has not used the app yet, and the word
+     * they arrive at is the one on the button: WRITE KIT.
      *
-     * **The last clause no longer claims the walk is compulsory** (P2.4,
-     * P3.2). Those two findings ask for a second entry point to be
-     * advertised here, and reading the screen says they are aimed slightly
-     * wrong: the second entry point is already the most prominent thing on
-     * it - NEW KIT ▸ STARTERS, directly below this panel - and the doors
-     * that skip the middle (INSTANT KIT, CATCH A HIT) are buttons on TAPE.
-     * Nothing is hidden. What was wrong is that this sentence ended "FOUR
-     * TABS, IN ORDER", which is stricter than the app: a starter kit
-     * begins at step three, and either TAPE shortcut lands sounds on pads
-     * without CHOP. Saying so costs a clause and keeps the note's own rule
-     * that it names no door - which is why a line pointing at STARTERS
-     * would have been a third copy of a control already twice on screen.
-     */
-    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. FOUR TABS, IN ORDER — OR START FURTHER IN."
-
-    /**
-     * The same sentence for the four-place shape (`docs/SCREEN_PLAN_2026_10.md`
-     * §3.1), written beside [FIRST_RUN_LOOP_NOTE] rather than over it: the
-     * app still draws the twelve tabs, and `ConventionTest`'s loop-names
-     * law reads the old note against them. The SDK session swaps the
-     * shelf to this one and retires the other with the tabs.
-     *
-     * The four verbs are unchanged. What follows them names two places,
-     * not four tabs, because CUT is a stage of TAPE and WRITE is a stage
-     * of PROJECT. [Places] holds the words the rows draw.
+     * **The last clause does not claim the walk is compulsory** (P2.4,
+     * P3.2): a starter kit begins at step three, and INSTANT KIT and CATCH
+     * A HIT land sounds on pads without CUT. No door is named here on
+     * purpose: NEW KIT sits directly under this panel and TAPE is on the
+     * row above it, so a line pointing at either would be a third copy of
+     * a control already twice on screen.
      */
     const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN."
 
     /** The dock's resting line, with no door beside it. */
     const val DOCK_READY = "READY WHEN YOU ARE."
+
+    /**
+     * Opening or starting a project failed on disk: its `project.json`
+     * would not read or write. Law 3's shape, like [KIT_DELETE_FAILED] —
+     * what happened, in the user's words, with the thing it happened to.
+     */
+    const val PROJECT_OPEN_FAILED = "COULDN'T OPEN THAT PROJECT."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
@@ -332,9 +293,8 @@ object Copy {
      * `onCommit` puts the range in a `remember`ed `lastCommit` for CHOP to
      * pick up - nothing is taped, nothing is cut, nothing lands on a shelf
      * to be renamed, and the same selection can be kept again a second
-     * later. The line KEEP says now is [CAPTURE_OFFER], set by that same
-     * `onCommit`, which says what did happen and carries the door to the
-     * step that acts on it.
+     * later. KEEP says nothing now: it moves the stage to CUT, where the
+     * kept tape is on the table, which is the whole of what happened.
      */
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
     /** The deck glided onto an onset after a coast. */
@@ -464,45 +424,22 @@ object Copy {
     }
 
     /**
-     * What CHOP is about to slice, when it is not what you just taped (J30).
+     * What CUT is about to slice (J30, then `docs/SCREEN_PLAN_2026_10.md`
+     * §3.2).
      *
-     * CHOP's load is a silent three-tier fallback: the last TAPE commit,
-     * else **the open kit's longest sample**, else nothing. So a player
-     * who opens CHOP without taping first is about to cut up whichever pad
-     * happens to be longest, and nothing on the screen said so - the
-     * filename was read, used to derive a kit name, and never shown.
+     * CUT's load is a three-tier fallback: the last TAPE commit, else
+     * **the open kit's longest sample**, else nothing. So a player who
+     * opens CUT without taping first is about to cut up whichever pad
+     * happens to be longest, and nothing on the screen used to say so -
+     * the filename was read, used to derive a kit name, and never shown.
      *
-     * Said only on the fallback, deliberately. Arriving from a COMMIT, you
-     * just chose the thing on the previous screen and being told again is
-     * noise; arriving on the fallback, the app picked for you.
+     * Said on every load now. J30 said it only on the fallback, because
+     * arriving from a COMMIT you had just chosen the thing on the previous
+     * screen. CUT is a stage of TAPE since the four-place shape, one
+     * row-tap away at any time, so the thing on the table may be a tape
+     * kept an hour ago; the header names it every time.
      */
     fun chopFromKit(name: String): String = "FROM $name"
-
-    /**
-     * The handoff at the end of a capture (J10).
-     *
-     * CHOP and EXPORT are steps 2 and 4 of the loop the app advertises and
-     * received **zero** programmatic navigations between them: the app
-     * automated the one join in the middle (CHOP → KIT) and left the two at
-     * the ends to the user. This is the first of the two.
-     *
-     * An offer, not a handoff: it names what just happened and what can be
-     * done with it, and going nowhere is a perfectly good answer. That is
-     * why it rides a toast rather than moving the screen — being moved
-     * without asking is the same complaint as a destructive control
-     * changing its own target.
-     *
-     * States rather than asks. Both of these were written as questions
-     * first and the full-stop law refused them — correctly: they were the
-     * only two question marks in the whole of [Copy]. The house voice does
-     * not ask, it says what happened and what to do next ("CLEAR SOFT HITS
-     * FIRST, THEN STACK."), and the door beside it is what makes it an
-     * offer rather than an instruction.
-     */
-    const val CAPTURE_OFFER = "THAT IS ON TAPE. CHOP IT INTO PADS."
-
-    /** The door out of [CAPTURE_OFFER]; "▸" because it opens another screen, the convention `KitsScreen.kt`'s `ArmControl` documents. */
-    const val CAPTURE_OFFER_DOOR = "CHOP ▸"
 
     /**
      * The handoff at the end of a kit (J10), the other end of the loop.
@@ -665,33 +602,22 @@ object Copy {
     // ---- HELP: what the app is, said inside the app ----
 
     /**
-     * HELP's body, kept here rather than in the Composable that draws it.
+     * HELP's long list, kept here rather than in the Composable that drew it.
      *
      * The September UAT's finding 1: HELP was twenty hardcoded lines in
      * `StubScreen.kt` describing "the M0 skeleton" and promising that
      * capture "arrives with M1" — months after capture shipped. It was the
      * only in-app explanation of anything, and every line of it was false.
+     * It rotted because it lived where nothing could test it; here it is
+     * ordinary data in a module with tests.
      *
-     * It rotted because it lived where nothing could test it. Here it is
-     * ordinary data in a module with tests, and `PersonalityTest` holds it
-     * to the app as built: no milestone tags, and the four steps of the
-     * loop named in order. The next person to move a feature has to walk
-     * past a failing test to leave this stale.
+     * HELP draws [Places.HELP] now — one section per place and one for the
+     * dock (`docs/SCREEN_PLAN_2026_10.md` §3.7) — and the loop section that
+     * named four tabs went with the tabs. These twenty-one lines are the
+     * inventory the sections were distilled from; `PersonalityTest` and the
+     * ladder law still read them, and the copy sweep that follows the shape
+     * decides what of them [Places.HELP] still lacks.
      */
-    const val HELP_LOOP_HEADER = "THE LOOP:"
-
-    val HELP_LOOP = listOf(
-        // RECORD, not CATCH (prior #27): CATCH is the name of a feature on
-        // this very screen - CATCH A HIT, seventeen lines below in
-        // HELP_MORE - so HELP's first line was using the app's own feature
-        // name as a generic verb for something else. RECORD is the verb
-        // FIRST_RUN_LOOP_NOTE already uses for this step.
-        "· TAPE — RECORD A SOUND. THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
-        "· CHOP — CUT IT ON THE HITS. THE MACHINE GUESSES; ARGUE WITH IT.",
-        "· KIT — 16 PADS. TAP TO HEAR, HOLD FOR THE PAD SHEET.",
-        "· EXPORT — ONTO THE CARD, EIGHT WAYS. THE MPC IS ONE OF THEM.",
-    )
-
     const val HELP_MORE_HEADER = "WORTH KNOWING:"
 
     val HELP_MORE = listOf(

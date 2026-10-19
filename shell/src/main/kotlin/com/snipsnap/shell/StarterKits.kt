@@ -214,6 +214,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.relay() },
         Starter(
+            "shoal", "SHOAL",
+            "Glass and ripples gather into moving harmonic groups in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.shoal() },
+        Starter(
             "embouchure", "EMBOUCHURE",
             "Dry expressive reeds, muted brass, breathy bass and bowed notes in C minor pentatonic.",
             seeded = false,
@@ -236,6 +242,12 @@ object StarterKits {
             "Five coasts at calm, rough and storm energy. Dry finite sea gestures rooted at C4.",
             seeded = false,
         ) { SynthKits.osprey() },
+        Starter(
+            "opensky", "OPENSKY",
+            "Wide anthems, clear leads, glowing pads and bells in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.openSky() },
         Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",

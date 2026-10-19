@@ -12,6 +12,16 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
+        for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = ShoalPatch("Population canary", voice,
+                Shoal.defaults(voice) + mapOf("CURRENT" to .7f, "STRAY" to .5f, "HOLD" to hold),
+                midi = 57, velocity = .6f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice HOLD$hold")
+        }
+    }
+
+    @Test
     fun `the same seed gives the same phases`() {
         assertContentEquals(Dsp.phases(4, Dsp.seedFor("TINES", "BELL")), Dsp.phases(4, Dsp.seedFor("TINES", "BELL")))
     }

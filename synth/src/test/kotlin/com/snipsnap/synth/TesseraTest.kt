@@ -8,6 +8,7 @@ import com.snipsnap.json.JsonException
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -73,6 +74,72 @@ class TesseraTest {
             assertTrue(rootShare(samples, hz) > 0.10, "material $material TUNE $tune has a weak apparent root")
         }
         println("TESSERA isolated coupled-material tuning: worst $worst cents")
+    }
+
+    @Test
+    fun `bar and tube identifying modes survive the contact across register and hardness`() {
+        var weakestBar = Double.POSITIVE_INFINITY
+        var weakestTube = Double.POSITIVE_INFINITY
+        var leastDecaySeparation = Double.POSITIVE_INFINITY
+        for (coupled in listOf(false, true)) for (tune in listOf(0f, .5f, 1f)) for (hammer in listOf(.25f, .4f, .75f)) {
+            val options = Tessera.ProbeOptions(chamberEnabled = false, collectorsEnabled = false,
+                frameCouplingEnabled = coupled, durationSeconds = .7f)
+            val controls = mapOf("TUNE" to tune, "HAMMER" to hammer, "MOTION" to 0f)
+            val root = Tessera.frequencyFor(TesseraVoice.ANSWER, tune).toDouble()
+            val bar = Tessera.probe(TesseraVoice.ANSWER, controls,
+                options = options.copy(isolatedMaterial = 0)).directMaterials[0]
+            val tube = Tessera.probe(TesseraVoice.ANSWER, controls,
+                options = options.copy(isolatedMaterial = 2)).directMaterials[2]
+            val barBands = modalBandPower(bar, listOf(root, root * 4), .02, .18)
+            val tubeBands = modalBandPower(tube, listOf(root, root * 2.7, root * 4.6), .02, .18)
+            val barDb = 10 * log10(barBands[1] / barBands[0])
+            val tubeDb = 10 * log10((tubeBands[1] + tubeBands[2]) / tubeBands[0])
+            weakestBar = minOf(weakestBar, barDb)
+            weakestTube = minOf(weakestTube, tubeDb)
+            // These floors guard against a nearly sinusoidal source. They establish
+            // available identifying modes, not a verdict on how the materials sound.
+            assertTrue(barDb > -32.0, "bar 4x mode disappeared at TUNE $tune HAMMER $hammer coupled=$coupled: $barDb dB")
+            assertTrue(tubeDb > -25.0, "tube inharmonic modes disappeared at TUNE $tune HAMMER $hammer coupled=$coupled: $tubeDb dB")
+            assertTrue(rootShare(bar, root.toFloat()) > .35, "bar identity obscured the requested fundamental")
+            assertTrue(rootShare(tube, root.toFloat()) > .35, "tube identity obscured the requested fundamental")
+            val barLate = modalBandPower(bar, listOf(root * 4), .45, .61)[0] / barBands[1]
+            val tubeLate = modalBandPower(tube, listOf(root * 2.7, root * 4.6), .45, .61).sum() /
+                (tubeBands[1] + tubeBands[2])
+            val separationDb = 10 * log10(tubeLate / barLate)
+            leastDecaySeparation = minOf(leastDecaySeparation, separationDb)
+            assertTrue(barLate < .01, "bar upper attack did not recede: $barLate")
+            assertTrue(tubeLate > .015, "tube upper ring did not persist: $tubeLate")
+            assertTrue(separationDb > 10.0, "bar/tube upper-mode decays collapsed at TUNE $tune HAMMER $hammer: $separationDb dB")
+            println("TESSERA material modes TUNE=$tune HAMMER=$hammer coupled=$coupled: bar4x=$barDb dB, tube2.7x+4.6x=$tubeDb dB, decay separation=$separationDb dB")
+        }
+        println("TESSERA identifying-mode minima: bar $weakestBar dB, tube $weakestTube dB, decay separation $leastDecaySeparation dB")
+    }
+
+    @Test
+    fun `material bands remain distinct in the coupled dry mix before first returns`() {
+        val options = Tessera.ProbeOptions(collectorsEnabled = false, durationSeconds = .35f)
+        for (tune in listOf(0f, .5f, 1f)) {
+            // Spacious static geometry puts all chamber arrivals beyond this analysis
+            // window. The complete frame and all material receiving loads remain live.
+            val controls = mapOf("TUNE" to tune, "HAMMER" to .4f, "SCALE" to 1f,
+                "FOLD" to .35f, "MOTION" to 0f)
+            val wood = Tessera.probe(TesseraVoice.ANSWER, controls + ("MATERIAL" to 0f), options = options)
+            val metal = Tessera.probe(TesseraVoice.ANSWER, controls + ("MATERIAL" to 1f), options = options)
+            assertTrue((wood.arrivals + metal.arrivals).all { it.timeSeconds > .18f })
+            val root = Tessera.frequencyFor(TesseraVoice.ANSWER, tune).toDouble()
+            val frequencies = listOf(root, root * 4, root * 2.7, root * 4.6)
+            val woodPower = modalBandPower(wood.samples, frequencies, .02, .18)
+            val metalPower = modalBandPower(metal.samples, frequencies, .02, .18)
+            val wood4 = woodPower[1] / woodPower[0]
+            val metal4 = metalPower[1] / metalPower[0]
+            val woodInharmonic = (woodPower[2] + woodPower[3]) / woodPower[0]
+            val metalInharmonic = (metalPower[2] + metalPower[3]) / metalPower[0]
+            assertTrue(10 * log10(wood4) > -32.0, "bar identifying mode was lost in the complete dry mix")
+            assertTrue(10 * log10(metalInharmonic) > -25.0, "tube identifying modes were lost in the complete dry mix")
+            assertTrue(10 * log10(wood4 / metal4) > 6.0, "MATERIAL did not favor the bar's own upper mode")
+            assertTrue(10 * log10(metalInharmonic / woodInharmonic) > 6.0, "MATERIAL did not favor the tube's own inharmonic modes")
+            println("TESSERA full dry mix TUNE=$tune: wood4x=${10 * log10(wood4)} dB, metal2.7x+4.6x=${10 * log10(metalInharmonic)} dB, bar contrast=${10 * log10(wood4 / metal4)} dB, tube contrast=${10 * log10(metalInharmonic / woodInharmonic)} dB")
+        }
     }
 
     @Test
@@ -488,6 +555,23 @@ class TesseraTest {
             energy += max(x * x, y * y)
         }
         return sqrt(difference / energy.coerceAtLeast(1e-30))
+    }
+
+    /** Equal Hann windows measure modal energy without confusing pitch-grid bins or gain. */
+    private fun modalBandPower(samples: FloatArray, frequencies: List<Double>, from: Double, to: Double): List<Double> {
+        val start = (from * Dsp.RATE).roundToInt()
+        val count = ((to - from) * Dsp.RATE).roundToInt()
+        val re = FloatArray(32768)
+        val im = FloatArray(re.size)
+        for (i in 0 until count) re[i] = (samples[start + i] * (.5 - .5 * cos(2 * PI * i / (count - 1)))).toFloat()
+        Fft.forward(re, im)
+        return frequencies.map { frequency ->
+            val halfWidth = max(15.0, frequency * .02)
+            var energy = 0.0
+            for (k in 1 until re.size / 2) if (abs(k.toDouble() * Dsp.RATE / re.size - frequency) < halfWidth)
+                energy += re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            energy
+        }
     }
 
     /** A narrow pitch estimator alone can report a root that carries negligible energy. */

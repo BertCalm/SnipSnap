@@ -29,9 +29,12 @@ full-stack source taps, coupling/funnel/
 contact switches, geometry corners, finite decay and difficult held loops.
 Generated files are ignored by Git; source, tests and templates are tracked.
 
-When HOLD before/revised is present, start there. Compare the sustained
-low drone, piercing upper tones and gentle motion at the same listening
-target, then replay several cycles to check continuity.
+Start with Six HOLD voices: the six current default C4 rolls appear together
+so their material colors and brightness can be compared directly. Listen for
+soft overlapping rings like a cymbal rolled with felted mallets, with natural
+decays and no hard accents. Then use HOLD before/revised, when present, to
+compare with the preserved previous audio at the same listening target.
+Replay several cycles to judge voice identity, softness, continuity and pitch.
 
 Use the ensemble demonstration at C4 next. For both RING and GATHER,
 the whole event, selected connected component, selected-muted event,
@@ -103,7 +106,7 @@ clean source revision:
 ```sh
 ./gradlew --no-daemon :synth:generateNimbusAudition \
   -PnimbusBaselineDir=/absolute/path/to/preserved-nimbus-audition \
-  -PnimbusBaselineRevision=98a02845627c735f9257d8ea7bbf807c343b461f \
+  -PnimbusBaselineRevision=0571950daf90d91dc2cde4760fe515c9a9861037 \
   -PnimbusCompareHoldAll=true
 ```
 
@@ -120,7 +123,8 @@ the difficult settled CONTACT rim case at C3, for 363 clips. Comparison
 partners use the same note, controls, velocity and listening target.
 `nimbusCompareHoldAll=true` includes all six default C4 HOLD voices plus
 the settled CONTACT rim case at C3, for 371 clips. Their previous/revised
-section comes first so a sustain revision can be judged directly. Both
+section follows the six current HOLD voices so both voice identity and the
+sustain revision can be judged directly. Both
 versions use the same controls and listening target; the previous PCM is
 preserved unchanged. Normal 345-clip regeneration needs no preserved baseline.
 Page refresh uses the existing manifest and retains its comparison section.
@@ -219,25 +223,44 @@ Early path lengths are fixed per render to avoid delay-motion energy and
 unwanted Doppler; movement changes loading rather than moving delay taps.
 This is a deliberate simplification of the design specification.
 
-Intermediate HOLD adds a smooth finite drive that releases before the tail;
-HOLD at .99 and above returns a settled repeating region. Both use weak
-modal forcing, distinct from stabilization. Voice and selected-material
-weights also shape the sustained upper modes. The settled drive retains
-multiple material contributions after the finite onset-transfer path drains. The
-continuous force uses a separately normalized native-body vector with a
-smooth ratio and frequency taper, so high strike partials receive less
-permanent excitation. A smaller principal target and alternating drive
-phases reduce the coherent common-note bed while retaining relative rim
-motion. Each plate's supplied force breathes at a staggered phase over one
-exact loop period; the work ledger accounts for every velocity increment.
-These changes affect powered sustain, while HOLD at zero retains the
-accepted finite event and its original random sequence. The
-seamless region follows bounded preroll of the complete acoustic and
-mechanical state. The probe retains an independently rendered preceding
-cycle for the current `Keys.seamError` metric; a copied boundary cannot serve
-as the continuity evidence. Upper drive frequencies align to the repeat
-period for a stable loop, while its principal remains at the requested note
-within sample-period quantization.
+Intermediate HOLD adds a finite soft roll that releases before the tail;
+HOLD at .99 and above returns a settled repeating region. The powered source
+supplies short, smooth contact pulses distributed across all six plates,
+with small deterministic variations in timing, strength and width. This is
+an invented felted-mallet-like excitation of the existing cymbals. Each
+stroke uses a native contact vector, with a small principal projection and
+voice-specific upper participation. Contact width, spatial softness and the
+distribution of paid stroke impulses favor each voice's native materials:
+Body for RING, Paper for SHIMMER, Flex for GATHER, Dark for THROAT, Wire for
+CONTACT and Bell for SUSPEND. All six plates still receive real contacts;
+the preferences act at excitation, before the unchanged modal losses and
+radiation. EXCITE retains its native body projection and stroke-impulse
+effects. CONTACT also keeps a firmer Wire touch above its ordinary EXCITE;
+the other voices retain their felt contact width. Between
+pulses the source supplies no force;
+the plates ring and decay at their existing modal loss rates. No resonant
+carrier or inverse-loss compensation maintains their partials.
+
+The staggered strokes overlap in the acoustic response rather than imposing
+a common slow volume cycle. Supplied acoustic and suspension work belongs
+to the powered source ledger, distinct from passive field stabilization.
+The finite onset-transfer path still drains before the settled HOLD region.
+HOLD at zero retains the accepted finite event and its original random
+sequence. The roll schedule repeats over the existing loop interval without
+resetting the physical state. Powered HOLD samples its slow controls on that
+same loop grid and integrates the actual duration of the final shorter block.
+Bounded preroll settles the complete acoustic and mechanical state: powered
+HOLD with contacts enabled and SPACING at or below .28 uses eighteen cycles;
+other held renders use six. This follows the existing contact-capable spacing
+range and gives weak-field repeated contacts time to settle, at the cost of
+longer precomputation for close rims. The probe retains an independently rendered
+preceding cycle for `Keys.seamError`; a copied boundary cannot serve as
+continuity evidence. Weak-field rim contacts can retain small nonlinear
+variation between cycles. Contact repeat checks use the existing boundary
+limit and 3% RMS-normalized difference over the central 60% of each cycle;
+they do not require identical physical states. Modal frequencies retain the requested note within
+sample-period quantization. Listening must establish whether the result
+feels like soft overlapping rings rather than hard accents or a drone.
 
 ## Checks and acceptance
 
@@ -255,6 +278,17 @@ Raw probes expose six cymbal taps, chamber/contact/return taps, acoustic and
 mechanical energy, per-cymbal modal energy, transfer reservoirs and release
 events, heights, resting positions, velocity, controller work,
 penetration, contact count, powered work and the genuine preceding cycle.
+Powered HOLD also records finite mallet contacts, force samples, and positive
+and returned source work. Loop contact events cover the returned interval;
+the aggregate work totals include settling and preroll. An isolated-contact
+check verifies that supplied force ends while the native cymbal continues
+ringing and decaying. Steady roll pitch is measured over a complete period
+so nearby beating lines are not confused with a retuned principal.
+Held voice checks compare the native upper spectra with their shared root
+excluded, and compare each roll's high-band fraction with its own accepted
+finite body. These catch a common dark metallic texture that can pass broad
+upper-energy and six-contributor checks. They support a listening review;
+they do not establish audible voice identity or softness by themselves.
 Tests check deterministic variation, silence at rest, isolated and full-root
 calibration, isolated spectral identity, audible-band upper energy through
 attack and body, contrasting voice spectra and temporal profiles, causal

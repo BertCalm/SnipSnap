@@ -26,7 +26,7 @@ opening position or stitch travel.
 Velocity supplies finite release energy for a one-shot and changes actual
 travel and force in a powered HOLD cycle. It is passed through `Velocity`
 and is not an extra saved macro. Patches save the voice and macro map with
-JSON version 1. DSP model revision 2 does not change that schema: existing
+JSON version 1. DSP model revision 3 does not change that schema: existing
 SUTURE recipes retain their controls and requested note and render through
 the revised model. `PadRecipe` retains the optional `FxChain`.
 `SynthKits.suture()` supplies sixteen dry pads, and FRESH TAPE includes a
@@ -38,7 +38,7 @@ and release. A long one-shot can also receive the host's duration-based LOOP
 classification; that routing is separate from a certified repeating HOLD
 buffer.
 
-## Control mappings in model revision 2
+## Control mappings from model revision 2
 
 The owner heard distinct voices but weak parameter changes in the first
 audition. Analysis of its matched C4 sweeps found that the requested root
@@ -80,7 +80,8 @@ factor `1 / 0.50`, then normalize together with the plate projection into
 one shared gesture allowance. The work-limited sliding friction increasingly
 projects into upper cord modes. Cord fundamentals retain a fixed `1.0`
 stretch factor; upper modes use
-`1 + 0.10 × max(0, strain − (0.10 + 0.26 × CORD))`.
+`1 + sensitivity × max(0, strain − (0.10 + 0.26 × CORD))`.
+Sensitivity is `0.10` except for revision 3's STRAIN calibration below.
 The primary reciprocal cord bridge uses angular rate `0.125 + 0.45 × CORD`,
 bounding its unloaded per-mode shift below `1.3` cents at C3. Keeping the
 harmonic reference fixed and its bridge weak limits near-root phase
@@ -89,8 +90,36 @@ peak even when their individual frequencies remain close to the root.
 
 TUNE, velocity, HOLD format, voice roster and factory recipe values retain
 their existing contracts. Saved recipes keep their settings but can sound
-different under revision 2. Compare raw and matched clips of the same inputs
+different under the current revision. Compare raw and matched clips of the same inputs
 to assess changes in color, timing and decay independently of level.
+
+## STRAIN calibration in model revision 3
+
+The owner heard STRAIN as chaotic across different controls and preferred
+the Combined option in the [focused comparison](https://snipsnap-suture-audition.bertcalm.chatgpt.site/strain-review/).
+The wider cord response in revision 2 exposed competing fixed and stretched
+harmonics, plus strong tones from grain-modulated sliding, as the bronze
+decayed. The selected calibration changes two acoustic sensitivities on
+STRAIN:
+
+| Sensitivity | Revision 2 | Revision 3 |
+| --- | ---: | ---: |
+| Upper-cord stretch per unit excess strain | `0.10` | `0.045` |
+| Surface-speed grain modulation | `0.56` | `0.12` |
+
+The other five voices retain their previous values. The full elastic strain
+still supplies linkage reaction and contact loading; the contact-rate grain
+factor remains `0.24`. Opening, carriage travel, finite work reserves,
+reciprocal coupling and the fixed cord fundamentals keep their existing laws.
+The closing-travel burst remains part of the gesture. This calibration
+reduces competing pitch movement and grain tones; it does not uniformly
+soften the amplitude envelope.
+
+The selected preview at default C4 reduced the upper pair's separation from
+about 27 Hz to 14 Hz during 0.18–0.40 seconds. Its defined 180–210 Hz grain-band
+power share fell from 8.29% to about 0.23%. These measurements describe that
+capture. The unchanged range and pitch checks remain required across the
+broader control matrix.
 
 ## Reduced vessel model
 
@@ -161,36 +190,58 @@ pitch-scaled footprint; upper cavity modes retain their stronger loading.
 
 ## Verification
 
-The complete JVM gate, `./gradlew --no-daemon test`, exits zero for final
-revision 2 `Suture.kt` SHA-256
-`91854d3248e672f3b64c24297bcad8844cf5274ce69aad42592ffd75119b7fcc`.
-Its reports contain 4,296 tests in 432 suites: 1,105 freshly executed in
-CLI and shell, and 3,191 retained from cached modules. Both groups have
-zero failures, errors or skips. All 29 SUTURE checks—22 engine and seven
-patch checks—freshly passed in the archived prior full attempt against
-the same DSP, test and build inputs; the successful retry reused them.
-`./gradlew --no-daemon :app:assembleDebug` also exits zero and packages the
-debug APK. This verifies Android compilation and packaging; no on-device
-audio, timing or Compose tests were run.
+Revision 3 verification completed on 2026-10-15 for `Suture.kt` SHA-256
+`3fec28599401f9d475947dae1a9effd6086017ad1c8e7ed455da5d433de91319`.
+The focused engine/patch gate freshly executed all 31 tests with exit 0.
+The complete SDK-free `./gradlew --no-daemon test` exited 0: 4,786 tests
+freshly executed and 148 prior/cached results, with no failures, errors or
+skips. Its build continued through session disconnects; a detached observer
+captured the original wrapper's actual kernel exit status and retained that
+recovery provenance. Android `./gradlew --no-daemon :app:assembleDebug`
+also exited 0 and produced the debug APK. Both gates retained the same
+frozen source, tests, build inputs and fixtures. Final documentation updates
+were recorded separately. Android compilation and packaging do not establish
+device audio, timing or Compose behavior.
 
 The added range check covers all six voices and five timbral controls at
-C4 with strong finite gesture energy and neutral companions. All 30 endpoint
-comparisons and 120 adjacent quarter-step comparisons pass fixed targets.
+C4 with strong finite gesture energy and neutral companions. Its 30 endpoint
+comparisons and 120 adjacent quarter-step comparisons use fixed targets.
 Endpoints require spectral-energy L1 of at least `0.16` or envelope-energy
 L1 of at least `0.45`; each quarter requires at least `0.02` or `0.06`
 respectively. Both spectral windows and 50 ms envelope bins operate on the
 finished, unnormalized 44.1 kHz output. Independently normalizing their energy
 prevents a gain-only change from satisfying these checks. The same 150 C4
-renders pass the house pitch detector's 50-cent root limit.
-All 120 public-render endpoint cases also pass, covering all six voices,
+renders must retain the house pitch detector's 50-cent root limit.
+The 120 public-render endpoint cases cover all six voices,
 five timbral controls and their zero/one endpoints at C3 and C5 with neutral companions:
 the requested-root FFT must stay within 10 cents and the house detector
-within 50 cents. Existing pitch, routing, passive-energy and convergence
-limits remain unchanged. These descriptors
+within 50 cents. Existing requested-root, public-routing, passive-energy and
+convergence limits remain unchanged. These descriptors
 establish measurable travel, while the owner determines whether the range
 sounds useful.
 
-The before/after analysis pairs all 150 preserved revision 1 sweep recipes
+The selected STRAIN C3 sound changes one short-capture classification.
+Its 0.85-second dry observation is now `TOM`: cleaning up the cord sound
+reduces its measured peak-to−20 dB decay from about 580 ms to 464 ms,
+crossing the generic classifier's 500 ms sustained-bass boundary. Extending
+the observation to 1.49 seconds gives the same result. This is a known
+classification ambiguity in a short crop; the public full export remains
+`LOOP`. The first focused gate recorded this change as a failure. The
+revised check explicitly expects `TOM` only for STRAIN at C3 and additionally
+requires short-crop pitch detection within 50 cents, confidence at least
+`0.8`, and root spectral share at least `0.45`. All other short-capture drum
+exclusions and all public-export routing and pitch checks remain in place.
+
+Two STRAIN spectrum checks retain the selected voicing at default C4.
+Over the first 1.2 seconds, energy from 180–240 Hz must stay below `0.06`
+of the requested-root band's energy. From 0.40–0.75 seconds, the sounding
+upper peak must stay 20–50 cents above the second harmonic while its band
+retains at least 5% of measured spectral energy. Both use the finished raw
+signal and Hann windows, so turning down the whole output cannot satisfy
+them. Restoring either acoustic sensitivity alone fails its corresponding
+guard in an isolated source-revert probe.
+
+The historical before/after analysis pairs all 150 preserved revision 1 sweep recipes
 with final revision 2 at C4, strong gesture energy and HOLD off. Whole-note
 total variation is half the L1 distance between independently normalized
 energy distributions, so a gain change cannot satisfy it. Each table entry
@@ -213,6 +264,8 @@ These whole-note descriptors are less sensitive to narrow partial movement
 than the fixed Hann-window gate and need not give the same numerical values.
 Passing that gate establishes activity, not a wider range for every control.
 Neither descriptor establishes audibility.
+The table records revision 2's range expansion; STRAIN's revision 3 voicing
+is described separately above.
 
 The checks cover requested roots, matched-level macro activity, passive
 acoustic balance, bounded powered input, finite tails, deterministic renders,
@@ -236,19 +289,22 @@ retain their audibility, pitch and powered-work requirements.
 ## Audition
 
 The [hosted SUTURE audition](https://snipsnap-suture-audition.bertcalm.chatgpt.site)
-is published as owner-only Site version 3 from site source commit
-`4005646fc968638c9a8b9f21bdf5a7934ba3f3fb`, using the final DSP source above.
-Its 986 indexed FLAC clips decode to byte-identical original PCM, and its
-112 deterministic gzip traces decompress exactly to the generated CSVs.
-Local Chromium checks pass playback, RAW/MATCHED position preservation,
-previous/current comparison, seeking, held wrap, 375-pixel mobile layout
-and exact HTTP Range responses. The corrected Stop handler cancels the
-comparison and restores single-clip Repeat; native Play then wraps that
-clip when Repeat is checked and ends without advancing when unchecked.
-The browser receipt records zero application JavaScript errors and three
-local favicon 404 warnings. These checks use the saved deployment bundle
-locally; authenticated production playback and Android device
-performance have not been measured.
+is owner-only. Revision 3 is published in the main audition and
+[first listen](https://snipsnap-suture-audition.bertcalm.chatgpt.site/first-listen/).
+The main audition compares revision 2 and revision 3 at identical sweep
+recipes. The [focused STRAIN review](https://snipsnap-suture-audition.bertcalm.chatgpt.site/strain-review/)
+defaults to Combined and labels the earlier voice Before; all four original
+comparison recordings remain unchanged. The verified local packs are also
+installed at the canonical `testkit` paths, with the earlier packs preserved.
+Audio remains lossless mono PCM-24 at 44.1 kHz, transported as seek-indexed
+FLAC; hosted diagnostic CSVs use deterministic gzip. The published bundle
+contains 986 canonical FLACs, 112 exact gzip traces and 144 preserved review
+FLACs. Static and portable Chromium checks passed for playback, comparison,
+position preservation, seeking, held-buffer wrapping, notes and mobile layout
+against those exact bytes. Native Sites deployment succeeded from Site source
+commit `7ea1aa3a3cab9f4366add60c29df79ce7ed02026`, preserving the existing
+audience. Authenticated production playback and Android device performance
+are separate from these local browser and compilation checks.
 
 ```sh
 ./gradlew --no-daemon test
@@ -268,20 +324,17 @@ The manifest identifies the DSP source by SHA-256 and records JVM render
 cost and memory observations. Those measurements describe the generator,
 not Android device performance.
 
-The verified final-source export contains 325 full-gallery listening cases
-from 320 renders: 650 current clips plus 300 unchanged revision 1 sweep
-clips, with 112 mechanical CSV traces. The first-listen export contains
-18 cases and 36 current clips. All 986 WAVs are PCM-24 mono at 44.1 kHz.
-The 150 previous/current sweep recipes match exactly, and every copied
-previous clip matches its preserved original byte for byte.
-
-All 24 full-gallery held captures and both first-listen held captures
-converge. The full gallery's maximum complete-state error is `7.43e-4`
-and maximum seam error is `4.05e-5`; none of these captures falls below
-the optional raw-RMS `1e-5` audibility flag. Held actuator and acoustic
-work remain positive, and the finite diagnostics report zero recovery
-resets. The gallery evidence and manifests identify the same final source
-as the JVM gate.
+The generation matrix contains 325 full-gallery listening cases from 320
+renders: 650 current clips and 300 preserved comparison sweep clips, with
+112 mechanical CSV traces. First listen selects 18 cases and 36 clips.
+Revision 3 export validation passed: all 150 paired recipes match their
+inputs and all 300 revision 2 comparison WAVs retain their original bytes.
+The selected Combined reproduction matches 48 capture/trace/recipe files,
+six final-state records and 36 preview WAVs exactly. All 546 current WAVs
+and 85 mechanical CSVs from the other five voices are unchanged. All 26
+held captures converged without quiet-output flags; their largest complete
+state error was `0.00074304` and largest normalized wrap step `0.000040524`.
+These numerical and browser checks do not replace listening judgments.
 
 The focused parameter panel keeps the voice and companion controls fixed
 while playing 0, .25, .5, .75 and 1. It can play the complete range or alternate
@@ -307,7 +360,7 @@ audibility flags for that export. Low model output can be physically
 converged while still falling below the shared loudness processor's
 amplification threshold.
 
-The owner's sonic verdict is still required. Listen for one connected object:
+The owner selected Combined for STRAIN. Continue listening for one connected object:
 the bronze pulls the cords, eyelets answer actual travel, vibration delays
 the stitchers, and closing changes the cavity and seam. Numerical evidence
 cannot establish that identity or exclude an audible change in motion at
