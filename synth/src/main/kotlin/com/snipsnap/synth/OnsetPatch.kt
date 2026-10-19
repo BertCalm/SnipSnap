@@ -72,7 +72,11 @@ class OnsetPatch(
             // from the current renderer: that would silently change a saved sound.
             val modelVersion = obj["modelVersion"]?.int()
                 ?: throw JsonException("ONSET patch has no modelVersion")
-            val macros = obj["macros"]?.obj() ?: throw JsonException("ONSET patch has no macros")
+            val macros = when (val raw = obj["macros"]) {
+                null, JsonValue.Null -> throw JsonException("ONSET patch requires its complete macro snapshot")
+                is JsonValue.Obj -> raw.entries
+                else -> throw JsonException("patch macros must be an object, got ${raw::class.simpleName}")
+            }
             for ((key, value) in macros) {
                 val number = value.num()
                 if (!number.isFinite() || number !in 0.0..1.0) {
