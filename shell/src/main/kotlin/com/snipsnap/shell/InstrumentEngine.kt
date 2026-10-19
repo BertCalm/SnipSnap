@@ -1,7 +1,6 @@
 package com.snipsnap.shell
 
 import com.snipsnap.kit.InstrumentStore
-import kotlin.math.pow
 
 /**
  * The keygroup voice, pure JVM: a small sample-playback engine for the
@@ -38,17 +37,25 @@ class InstrumentEngine(
         require(outRate > 0) { "output rate must be positive, got $outRate" }
     }
 
-    /** An instrument with its samples in memory: every zone's mono floats at [sampleRate]. */
+    /** An instrument with its samples in memory at [sampleRate]. */
     class Loaded(
         val instrument: InstrumentStore.Instrument,
         val sampleRate: Int,
         /** Per zone, in the instrument's zone order. */
         val samples: List<FloatArray>,
+        /** All velocity samples by sidecar path. The legacy list remains the per-zone hardest samples. */
+        val layerSamples: Map<String, FloatArray> = emptyMap(),
     ) {
+        constructor(instrument: InstrumentStore.Instrument, sampleRate: Int, samplesByFile: Map<String, FloatArray>) :
+            this(instrument, sampleRate, instrument.zones.map { samplesByFile[it.sample] ?: FloatArray(0) }, samplesByFile)
+
         init {
             require(samples.size == instrument.zones.size) { "one sample per zone" }
             require(sampleRate > 0)
         }
+
+        fun sampleFor(file: String, zoneIndex: Int): FloatArray? = layerSamples[file]
+            ?: samples[zoneIndex].takeIf { file == instrument.zones[zoneIndex].sample }
     }
 
     private class Voice(
@@ -76,16 +83,16 @@ class InstrumentEngine(
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
         val zone = instrument.instrument.zoneFor(note) ?: return false
         val zoneIndex = instrument.instrument.zones.indexOf(zone)
-        val sample = instrument.samples[zoneIndex]
-        if (sample.isEmpty()) return false
-        val semis = note - zone.rootNote
-        val step = 2.0.pow(semis / 12.0) * instrument.sampleRate / outRate
-        val loopStart = zone.loopStartFrame.toInt().coerceIn(0, sample.size - 1)
+        val hit = KeyHit.resolve(instrument.instrument, note, velocity.coerceIn(0f, 1f)) { file ->
+            instrument.sampleFor(file, zoneIndex)?.size?.toLong()
+        } ?: return false
+        val sample = instrument.sampleFor(hit.sampleFile, zoneIndex) ?: return false
+        val step = hit.pitchRatio * instrument.sampleRate / outRate
         if (voices.count { !it.dead } >= maxVoices) {
             // Steal the oldest.
             voices.filter { !it.dead }.minByOrNull { it.born }?.dead = true
         }
-        voices.add(Voice(note, zoneIndex, sample, if (zone.loopStartFrame > 0) loopStart else -1, step, velocity.coerceIn(0f, 1f) * VOICE_LEVEL, clock++))
+        voices.add(Voice(note, zoneIndex, sample, hit.loopStartFrame.toInt(), step, hit.gain, clock++))
         return true
     }
 
