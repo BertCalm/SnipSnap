@@ -16,11 +16,39 @@ def main():
     parser.add_argument("--renders", type=Path, default=root / "testkit/spool-audition")
     parser.add_argument("--output", type=Path, default=root / "testkit/spool-audition-site")
     parser.add_argument("--source-base", help="Git revision preceding the port (defaults to the engine's introduction parent)")
-    parser.add_argument("--compare-renders", type=Path, help="Preserved earlier renders for labelled before/after transition listening")
+    comparisons = parser.add_mutually_exclusive_group()
+    comparisons.add_argument("--compare-renders", type=Path, help="Preserved earlier renders for labelled before/after transition listening")
+    comparisons.add_argument("--preserve-comparisons", type=Path,
+                             help="Published page whose existing before/after entries and assets stay unchanged (may equal output)")
     args = parser.parse_args()
     renders, output = args.renders.resolve(), args.output.resolve()
     if output == renders or renders in output.parents:
         parser.error("output must be outside the render directory")
+    # Capture the published comparison metadata and asset hashes before any writes.
+    # The existing page is commonly both the preservation source and the output.
+    preserved_root = args.preserve_comparisons.resolve() if args.preserve_comparisons else None
+    preserved, preserved_clips, preserved_assets = None, [], {}
+    if preserved_root:
+        preserved = json.loads((preserved_root / "manifest.json").read_text())
+        preserved_clips = copy.deepcopy([clip for clip in preserved["clips"]
+                                        if clip["section"] == "transition-comparison"])
+        if not preserved_clips or len(preserved_clips) % 2 or "comparison" not in preserved:
+            raise ValueError("Published page has no complete before/after comparison")
+        for clip in preserved_clips:
+            references = {clip[field] for field in ("rawPath", "matchedPath")}
+            for stem in clip.get("stems", {}).values():
+                if isinstance(stem, dict):
+                    references.update(stem[field] for field in ("rawPath", "matchedPath") if stem.get(field))
+            references.update(clip["diagnostics"][field]
+                              for field in ("tracePath", "eventsPath", "pickupTracePath", "sequencePath")
+                              if clip.get("diagnostics", {}).get(field))
+            references.update(clip[field] for field in ("patchPath", "recipePath") if clip.get(field))
+            for reference in references:
+                relative = Path(reference)
+                source = (preserved_root / relative).resolve()
+                if preserved_root not in source.parents or not source.is_file():
+                    raise ValueError(f"Missing or invalid preserved comparison asset: {relative}")
+                preserved_assets[relative] = hashlib.sha256(source.read_bytes()).hexdigest()
     manifest = json.loads((renders / "manifest.json").read_text())
     clips = manifest["clips"]
     assets = set()
@@ -109,13 +137,31 @@ def main():
                                   "beforeProvenance": before.get("provenance", {}),
                                   "pairs": len(pairs) // 2,
                                   "description": "Compare the previous reverse/flutter version with more distinct bowed, vowel, airy and brass source families at the same audition level."}
+    if preserved is not None:
+        for relative, expected_hash in sorted(preserved_assets.items()):
+            source, target = preserved_root / relative, output / relative
+            if target.is_file():
+                if hashlib.sha256(target.read_bytes()).hexdigest() != expected_hash:
+                    raise ValueError(f"Fresh rendering differs from a preserved comparison asset: {relative}")
+            else:
+                if hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash:
+                    raise ValueError(f"Preserved comparison asset changed during preparation: {relative}")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+            if relative.suffix.lower() == ".wav":
+                assets.add(relative)
+        clips.extend(preserved_clips)
+        manifest["comparison"] = copy.deepcopy(preserved["comparison"])
+        manifest["preservedComparisonProvenance"] = copy.deepcopy(
+            preserved.get("preservedComparisonProvenance") or
+            {"sourceCommit": preserved.get("sourceCommit"), "provenance": preserved.get("provenance", {})})
     engine = root / "synth/src/main/kotlin/com/snipsnap/synth/Spool.kt"
     manifest["dspSourceSha256"] = hashlib.sha256(engine.read_bytes()).hexdigest()
     rendered_hash = manifest.get("provenance", {}).get("sourceSha256")
     if rendered_hash and rendered_hash != manifest["dspSourceSha256"]:
         raise ValueError("Spool source changed since rendering; regenerate the audition first")
     source_paths = [Path("synth/src/main/kotlin/com/snipsnap/synth") / name
-                    for name in ("Spool.kt", "SpoolPatch.kt", "SpoolPresets.kt")]
+                    for name in ("Spool.kt", "SpoolPatch.kt", "SpoolPresets.kt", "Dsp.kt", "Tide.kt")]
     actual_sources = {str(path): hashlib.sha256((root / path).read_bytes()).hexdigest()
                       for path in source_paths}
     recorded_sources = manifest.get("provenance", {}).get("sourceFilesSha256")
@@ -142,7 +188,9 @@ def main():
     # Keep each hosted download comfortably below the static provider's 25 MiB
     # per-asset limit. Every part carries the manifest and patch roster.
     entries = [(output / relative, relative.as_posix()) for relative in sorted(assets)]
-    for name in ("patches", "kit", "diagnostics"):
+    # The kit has its own complete download above; duplicating it across the
+    # listening parts also duplicates five MiB in the expanded hosted package.
+    for name in ("patches", "diagnostics"):
         entries.extend((path, path.relative_to(output).as_posix())
                        for path in sorted((output / name).rglob("*")) if path.is_file())
     parts, current, size = [], [], 0

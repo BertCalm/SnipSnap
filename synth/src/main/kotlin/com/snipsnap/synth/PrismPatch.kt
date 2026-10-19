@@ -16,16 +16,20 @@ data class PrismPatch(
     val velocity: Float = 1f,
     val template: PrismTemplate = Prism.templateFor(voice),
     val model: Int = Prism.MODEL_VERSION,
+    val motion: PrismMotion? = null,
 ) : Patch {
     init {
         Patches.validateMacros(this, Prism.macrosFor(voice))
         require(velocity.isFinite() && velocity in 0f..1f) { "PRISM velocity out of 0..1: $velocity" }
         require(model == Prism.MODEL_VERSION) { "unsupported prism model $model" }
+        require(motion == null || !Prism.isLoop(Prism.settled(voice, macros).getValue("HOLD"))) {
+            "PRISM spectral motion supports finite notes only; HOLD loops are not supported"
+        }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Prism.render(voice, macros, velocity, template)
+    override fun render() = Prism.render(voice, macros, velocity, template, motion)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -50,6 +54,7 @@ data class PrismPatch(
             "decaySeconds" to (template.decaySeconds?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "loopSeconds" to JsonValue.Num(template.loopSeconds.toDouble()),
         ))
+        if (motion != null) obj["motion"] = motion.toJsonValue()
         return JsonValue.Obj(obj)
     }
 
@@ -103,11 +108,12 @@ data class PrismPatch(
             val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: Prism.MODEL_VERSION
             if (model != Prism.MODEL_VERSION) throw JsonException("unsupported prism model $model")
             val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
+            val motion = obj["motion"]?.takeUnless { it is JsonValue.Null }?.let { PrismMotion.fromJsonValue(it) }
             return Patches.decode(value, ENGINE, { n -> PrismVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 val fallback = savedTemplateFallback(voice)
                 val template = obj["template"]?.takeUnless { it is JsonValue.Null }
                     ?.let { templateFrom(it, fallback) } ?: fallback
-                PrismPatch(name, voice, macros, velocity, template, model)
+                PrismPatch(name, voice, macros, velocity, template, model, motion)
             }
         }
 

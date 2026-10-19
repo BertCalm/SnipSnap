@@ -16,6 +16,9 @@ class CircuitIntegrationTest {
     @Test
     fun `every voice and every macro survives the shared patch and pad recipe formats`() {
         for (voice in CircuitVoice.entries) {
+            assertEquals(60, Circuit.midiFor(Circuit.defaults(voice).getValue("TUNE")), "$voice starts at C4")
+            assertEquals(.5f, Circuit.macrosFor(voice).first { it.name == "TUNE" }.neutral,
+                "$voice retains C3 as the neutral audition companion")
             val macros = Circuit.defaults(voice) + mapOf("TUNE" to 0.25f, "HOLD" to 1f)
             val patch = CircuitPatch("Saved Circle", voice, macros)
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()), voice.name)

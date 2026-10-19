@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Stage the real renderer's listening evidence with the buildless audition UI."""
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import shutil
+import subprocess
+
+repo = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--audition', type=Path, default=repo / 'testkit/confluence-audition')
+parser.add_argument('--output', type=Path, default=repo / 'testkit/confluence-audition-site')
+args = parser.parse_args()
+source, output = args.audition.resolve(), args.output.resolve()
+manifest = json.loads((source / 'manifest.json').read_text())
+clips = manifest['clips']
+assert clips, 'Run :synth:generateConfluenceAudition first'
+assert output != source and source not in output.parents, 'Keep site output separate from renderer output'
+output.mkdir(parents=True, exist_ok=True)
+# Copy only generated evidence. Never remove unrelated files in a supplied output directory.
+for item in source.iterdir():
+    if item.name.startswith('.'):
+        continue
+    target = output / item.name
+    if item.is_dir():
+        shutil.copytree(item, target, dirs_exist_ok=True)
+    else:
+        shutil.copy2(item, target)
+for filename in ('index.html', 'styles.css', 'app.js'):
+    shutil.copy2(repo / 'design/confluence-audition' / filename, output / filename)
+for clip in clips:
+    for field in ('rawPath', 'matchedPath', 'recipePath', 'diagnosticsPath'):
+        relative = Path(clip[field])
+        assert not relative.is_absolute() and '..' not in relative.parts, f'Unsafe {field}'
+        assert (output / relative).is_file(), f'Missing {relative}'
+    assert clip['finite'] and clip['channels'] == 1 and clip['sampleRate'] == 44100
+role_family = [clip for clip in clips if clip.get('matchingPolicy') == 'shared-gathering-gain']
+if role_family:
+    required = {'low_foundation', 'airy_upper', 'clear_answer', 'role_gathering'}
+    assert required <= {clip['id'] for clip in role_family}, 'The three-role listening family is incomplete'
+    assert {clip['matchedReferenceId'] for clip in role_family} == {'role_gathering'}
+    assert len({clip['matchedGain'] for clip in role_family}) == 1, 'Do not individually level the role stems'
+    assert len({clip['rawExportGain'] for clip in role_family}) == 1, 'Role stems must share the full raw export gain'
+    assert len({clip['frames'] for clip in role_family}) == 1, 'Role stems must retain the complete arrangement timeline'
+    for clip in role_family:
+        assert clip['roleIds'] and set(clip['roleIds']) <= {'FOUNDATION', 'AIRY', 'ANSWER'}
+        assert clip['evidence']['sharedSchedule'] and clip['evidence']['sharedMasterGain']
+    airy = next(item for item in manifest['sources'] if item['id'] == 'airy-female')
+    assert airy['license'] and airy['licenseUrl'] and airy['attribution'] and airy['modifications']
+    assert hashlib.sha256((output / airy['path']).read_bytes()).hexdigest() == airy['sha256'], 'Airy source provenance does not match its WAV'
+# Preserve the renderer manifest byte-for-byte: independent reviews and the
+# replay bundle identify it by SHA-256. Site staging metadata belongs separately.
+publication = {
+    'sourceRepository': 'https://github.com/BertCalm/SnipSnap/tree/codex/confluence-first-audition',
+    'sourceCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip(),
+    'sourceTreeCleanAtPackaging': not bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=repo, text=True).strip()),
+    'title': 'Confluence — SnipSnap audition', 'finitePrototype': True, 'maxPerformers': 8,
+    'manifestSha256': hashlib.sha256((source / 'manifest.json').read_bytes()).hexdigest(),
+    'threeRoleArrangement': bool(role_family),
+}
+(output / 'site-build.json').write_text(json.dumps(publication, indent=2) + '\n')
+for item in output.rglob('*'):
+    if item.is_file():
+        assert item.stat().st_size <= 25 * 1024 * 1024, f'Hosting asset exceeds 25 MiB: {item}'
+print(json.dumps({'output': str(output), 'clips': len(clips), 'files': sum(p.is_file() for p in output.rglob('*'))}))

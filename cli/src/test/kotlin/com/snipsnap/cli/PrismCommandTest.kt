@@ -60,6 +60,31 @@ class PrismCommandTest {
     }
 
     @Test
+    fun `expanded bank CLI selection retains the final veil template with note and velocity overrides`() {
+        val dir = createTempDirectory("prism-bank-cli").toFile()
+        try {
+            val presets = PrismPresets.forVoice(PrismVoice.VEIL)
+            val preset = presets.last()
+            assertTrue(presets.size > 2, "select a newly authored preset beyond the original pair")
+            assertTrue(preset.template != Prism.templateFor(preset.voice), "exercise a saved custom template")
+            val output = ByteArrayOutputStream()
+            assertEquals(0, Cli.run(
+                arrayOf("synth", "prism", "veil", "--preset", presets.size.toString(),
+                    "--midi", "67", "--velocity", ".45", "--out", dir.path),
+                PrintStream(output), PrintStream(ByteArrayOutputStream()),
+            ))
+            val wav = dir.listFiles { f -> f.extension == "wav" }!!.single()
+            val expectedPatch = preset.copy(velocity = .45f,
+                macros = preset.macros + ("TUNE" to (67 - Prism.rootMidi(preset.voice)) / Prism.TUNE_SEMITONES.toFloat()))
+            val expected = ByteArrayOutputStream().also { WavWriter.write(it, expectedPatch.render()) }.toByteArray()
+            assertTrue(expected.contentEquals(wav.readBytes()), "the expanded bank keeps its authored envelope and group motion")
+            assertTrue("1 rendered into" in output.toString())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `additive CLI rejects unsupported notes energy and export shapes before writing`() {
         val dir = createTempDirectory("prism-invalid-cli").toFile()
         try {
