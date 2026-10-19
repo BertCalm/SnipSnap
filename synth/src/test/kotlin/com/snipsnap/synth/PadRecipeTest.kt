@@ -22,7 +22,19 @@ class PadRecipeTest {
         temp.deleteRecursively()
     }
 
-    private fun onePatchPerEngine(): List<Patch> = listOf(
+    /**
+     * One patch of every engine [Patches] reads. The hand-built ones carry the state a
+     * factory preset would not exercise (a SNAP table, a drawn GYRE, saved roots and
+     * velocities) and cover the engines with no roster; every other engine is its first
+     * factory preset, so an engine that ships a roster is covered without a new line here.
+     */
+    private fun onePatchPerEngine(): List<Patch> {
+        val handBuilt = handBuiltPatches()
+        val covered = handBuilt.map { it.engine }.toSet()
+        return handBuilt + Presets.all().filter { it.engine !in covered }.distinctBy { it.engine }
+    }
+
+    private fun handBuiltPatches(): List<Patch> = listOf(
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
         SkinPatch("Room Kick Test", SkinVoice.KICK, mapOf("TUNE" to 0.3f)),
         TinesPatch("Bell Test", TinesVoice.BELL, mapOf("RATIO" to 0.9f)),
@@ -52,11 +64,26 @@ class PadRecipeTest {
         StoopPatch("Groove Test", StoopVoice.TINE, mapOf("TOUCH" to 0.6f), midi = 55, velocity = 0.6f, shadowInterval = 12),
         TanglePatch("Knot Test", TangleVoice.BASS, mapOf("TANGLE" to 0.6f), midi = 36, velocity = 0.6f),
         MurmurPatch("Mouth Test", MurmurVoice.KEY, mapOf("MOUTH" to 0.7f), midi = 55, velocity = 0.6f),
+        ShoalPatch("Population Test", ShoalVoice.RIPPLE, mapOf("COHESION" to .8f, "STRAY" to .3f), midi = 43, velocity = .6f),
+        // VENT is a prototype held outside Presets (PatchTypes.PROTOTYPES), so no factory
+        // preset covers it; this one also carries a saved note, velocity and seed.
+        VentPatch("Orbit Test", VentVoice.WIRE, mapOf("CHAOS" to 0.6f, "LENGTH" to 0.1f), midi = 48, velocity = 0.6f, seed = 7),
+        // OVERLAP is a prototype too; its patch carries a saved note and velocity.
+        OverlapPatch("Network Test", OverlapTopology.TREFOIL, mapOf("KNOT" to 0.6f), midi = 57, velocity = 0.6f),
+        // FLOCK also keeps its provisional recipes outside the factory preset roster.
+        FlockPatch("Flock Test", FlockVoice.RIBBON, mapOf("FLOW" to 0.65f, "HOLD" to 0f), midi = 55, velocity = 0.6f, seed = 7),
+        WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
     )
 
     @Test
     fun `every engine's patch dispatches through the same door`() {
-        for (patch in onePatchPerEngine()) {
+        val patches = onePatchPerEngine()
+        val covered = patches.map { it.engine }.toSet()
+        assertEquals(
+            PatchTypes.engines, covered,
+            "no patch of ${PatchTypes.engines - covered} goes through the door; a rosterless engine needs a hand-built patch",
+        )
+        for (patch in patches) {
             val back = Patches.fromJsonText(patch.toJsonText())
             assertEquals(patch, back, "${patch.engine} did not round-trip")
             assertTrue(
@@ -89,6 +116,17 @@ class PadRecipeTest {
         val restored = PadRecipe.fromJsonText(recipe.toJsonText())
         assertEquals(recipe, restored, "recipe dispatch retains state outside the macro map")
         assertNull(restored.fx)
+    }
+
+    @Test
+    fun `editing a shoal recipe retains its root velocity and synthesis model`() {
+        val source = ShoalPatch("Low population", ShoalVoice.RIPPLE, mapOf("DENSITY" to .7f),
+            midi = 36, velocity = .3f, model = Shoal.MODEL_VERSION)
+        val macros = source.macros + ("CURRENT" to .8f)
+        val edited = Patches.edited(source, "Rising population", macros)
+        assertEquals(source.copy(name = "Rising population", macros = macros), edited)
+        val recipe = PadRecipe(edited)
+        assertEquals(recipe, PadRecipe.fromJsonText(recipe.toJsonText()))
     }
 
     @Test

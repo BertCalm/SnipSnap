@@ -21,6 +21,8 @@ data class OrphicaPatch(
     }
 
     override val engine get() = ENGINE
+    /** Material is the saved voice enum used by the shared engine registry. */
+    val voice get() = config.material
     override val voiceName get() = config.material.name
     override fun render() = Orphica.render(Orphica.configWithMacros(config, macros))
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)

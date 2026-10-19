@@ -6,7 +6,7 @@ import com.snipsnap.audio.DrumClass
 /**
  * The TapeOS scheme system as data — the single Kotlin source for what
  * `design/Schemes.dc.html` keeps as CSS custom properties (`.t-metal` …
- * `.t-vapor`) and what the two working prototypes render live.
+ * `.t-vent`) and what the two working prototypes render live.
  *
  * The app's theme object reads these tables; the design files remain the
  * visual reference, but a colour that exists only in a design file cannot
@@ -77,6 +77,33 @@ data class Scheme(
     val winFrame: Int = title2,
     /** Centre of the radial glow behind the desk; fades to [desk1]. */
     val deskGlow: Int = desk2,
+    /**
+     * Which drawing these colours are for (`docs/DIRECTION_2026_10.md`
+     * §4): CLASSIC is the bevelled TapeOS surface language in `Bevel.kt`;
+     * MODERN is the audition pages' — flat fills, hairlines, system
+     * faces — which the SDK session draws. Data only until then: the
+     * picker groups by it, and a MODERN scheme under the CLASSIC drawing
+     * still reads (VENT's KDoc says how).
+     */
+    val look: Look = Look.CLASSIC,
+    /**
+     * Destructive-action text — STOP, DELETE, EMPTY THE BIN, FORGET → BIN
+     * — which must read as red in every scheme (`docs/MODERN_LOOK.md` §4).
+     * [Schemes.BIN_RED_GLOW] by default, the one value tuned for dark
+     * chrome; a paper scheme gives its own, because a glow tuned to read on
+     * dark reads at 2.5 : 1 on paper. `ContrastTest` holds every scheme's
+     * to AA on its chrome and its LCD.
+     */
+    val bin: Int = Schemes.BIN_RED_GLOW,
+    /**
+     * The same word on the LCD — the dock's STOP. One red cannot clear AA
+     * on both a paper chrome and a dark LCD (the luminance a paper needs
+     * is below what a dark surface needs), so a paper scheme gives the
+     * dock its own: the page's active player light, which is what its
+     * dock turns the word. [bin] by default, which reads on both where the
+     * chrome is dark.
+     */
+    val binLcd: Int = bin,
 ) {
     /** Rec.601 luma 0..255 — used by the two-surface test and ink fallbacks. */
     companion object {
@@ -123,6 +150,12 @@ data class Scheme(
     }
 }
 
+/** The two surface languages a scheme can be drawn in. The second axis beside [SchemeId]. */
+enum class Look(val displayName: String) {
+    CLASSIC("CLASSIC"),
+    MODERN("MODERN"),
+}
+
 enum class SchemeId(val displayName: String) {
     METAL("METAL"),
     OILSLICK("OILSLICK"),
@@ -132,6 +165,9 @@ enum class SchemeId(val displayName: String) {
     SODIUM("SODIUM"),
     ICE("ICE"),
     VAPOR("VAPOR"),
+    VENT("VENT"),
+    /** Paper, ink and a deep orange — the first light modern scheme, from the OPENSKY audition page (`docs/MODERN_LOOK.md` §2). */
+    OPENSKY("OPENSKY"),
 }
 
 object Schemes {
@@ -157,8 +193,8 @@ object Schemes {
     val OILSLICK = Scheme(
         SchemeId.OILSLICK, "t-oilslick",
         gray = 0x221A34, grayHi = 0x40306A, grayEdge = 0x2A2044, grayMid = 0x120E1A, grayDark = 0x060410,
-        // ink2 lightened from 0x7A6AA0 (3.47:1 against gray, worst of the
-        // 8 schemes and OILSLICK is Schemes.DEFAULT) to clear 4.5:1. Same
+        // ink2 lightened from 0x7A6AA0 (3.47:1 against gray, the worst of
+        // every scheme then, and OILSLICK is Schemes.DEFAULT) to clear 4.5:1. Same
         // hue/saturation, luminance raised. See ContrastTest.
         ink = 0xC8B2F8, ink2 = 0x8D80AE,
         title1 = 0x5A2AE0, title2 = 0xE040C8, titleInk = 0xFFFFFF,
@@ -236,8 +272,71 @@ object Schemes {
         lcd = 0x06120E, lcdInk = 0xA8F0D8, amber = 0xB27AF8, field = 0x0C1A16,
     )
 
+    /**
+     * VENT — the first scheme of the modern look (`docs/DIRECTION_2026_10.md`
+     * §4), transcribed from the VENT audition page's `:root` and the slots
+     * its components fill: slate chrome, warm off-white ink, one ember
+     * accent that serves chrome and LCD alike. The page draws no bevels and
+     * no gradients, so under today's drawing its bevel highlight is the
+     * page's hairline and its title bar is a dark band (the page's masthead
+     * is the ground with a hairline, which the OG title bar cannot draw);
+     * both read correctly once the modern drawing lands and are honest
+     * until then.
+     *
+     * Every value clears every law in `SchemesTest` and `ContrastTest` as
+     * written — including a third ink tier at 5.48:1, which no earlier
+     * scheme's does — so it ships as data ahead of the look that was
+     * designed for it. Pinned by `SchemesTest`.
+     */
+    val VENT = Scheme(
+        SchemeId.VENT, "t-vent",
+        gray = 0x1D1E1B, grayHi = 0x393B33, grayEdge = 0x2D2F28, grayMid = 0x181916, grayDark = 0x0E0F0D,
+        ink = 0xEEEADD, ink2 = 0xB3B4A6,
+        title1 = 0x0F100E, title2 = 0x232420, titleInk = 0xEEEADD,
+        desk1 = 0x151614, desk2 = 0x151614,
+        lcd = 0x0F100E, lcdInk = 0xEEEADD, amber = 0xE08A68, field = 0x232420,
+        warn = 0xE08A68, ink3 = 0x929587, accent = 0xE08A68,
+        // winFrame is the page's axis stroke (#55564B), not its console
+        // border (#45473C): the border sits exactly 40 luma from gray, on
+        // the floor of SchemesTest's "selection is visible" law, and a
+        // frame drawn 3dp in the OG look needs the margin.
+        raised = 0x232420, win = 0x1D1E1B, winFrame = 0x55564B, deskGlow = 0x2A1E18,
+        look = Look.MODERN,
+    )
+
+    /**
+     * OPENSKY: the first paper scheme, every value from the audition page's
+     * `:root` mapped onto the slot that does the same job
+     * (`docs/MODERN_LOOK.md` §2). The August cut of light shells
+     * (`DESIGN_GAP.md` §2f) is reopened for it on purpose, by the decision
+     * of 2026-10-15: this is not CLEAR coming back — a pale bevelled shell
+     * — but a printed page that happens to be light, drawn by the modern
+     * look's flat forms. The two-surface rule holds: the LCD is the page's
+     * dark dock, one step darker so it sits inside the dark-surface law
+     * with margin, and `amber` reads there (6.9 : 1), never on paper
+     * (2.1 : 1) — on chrome the modern look reaches for `accent`.
+     *
+     * `bin` is the page's own error colour, not the dark-chrome glow:
+     * `BIN_RED_GLOW` is 2.5 : 1 on paper.
+     */
+    val OPENSKY = Scheme(
+        SchemeId.OPENSKY, "t-opensky",
+        gray = 0xF8F3E9, grayHi = 0xFFFFFF, grayEdge = 0xDBD5C7, grayMid = 0xEEE6D8, grayDark = 0xB4AD9E,
+        ink = 0x292820, ink2 = 0x69675A,
+        title1 = 0xF8F3E9, title2 = 0xF8F3E9, titleInk = 0x292820,
+        desk1 = 0xEFE8DA, desk2 = 0xF3EDDF,
+        lcd = 0x22211A, lcdInk = 0xF8F3E9, amber = 0xFF8C00, field = 0xFFFAF1,
+        warn = 0xFF8C00, ink3 = 0x817A6B, accent = 0xA74C00,
+        raised = 0xFFFAF1, win = 0xF8F3E9, winFrame = 0xB4AD9E, deskGlow = 0xFFD350,
+        look = Look.MODERN,
+        bin = 0x813600, binLcd = 0xFF8C00,
+    )
+
     /** Picker order — the order the design system tells its story in. */
-    val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR)
+    val ALL: List<Scheme> = listOf(METAL, OILSLICK, PETROL, INFRARED, ACID, SODIUM, ICE, VAPOR, VENT, OPENSKY)
+
+    /** The picker's groups: each look's schemes, in [ALL]'s order, looks in [Look]'s order. */
+    fun byLook(): Map<Look, List<Scheme>> = Look.entries.associateWith { look -> ALL.filter { it.look == look } }
 
     val DEFAULT: Scheme = OILSLICK
 
@@ -285,6 +384,26 @@ object Schemes {
     fun padLabelInk(scheme: Scheme, drumClass: DrumClass): Int {
         val c = classColor(drumClass)
         return DARK_PAD_INK[c] ?: darken(c, 0.75f)
+    }
+
+    /**
+     * Ink for a pad's name on a light pad (`docs/MODERN_LOOK.md` §4's
+     * "ink3 is 3.9 : 1 on paper", met for the class colours): the class
+     * colour itself, darkened in 5 % steps just until it clears AA text
+     * contrast against [surface], so lime stays lime and cyan stays cyan
+     * while reading. On a dark surface the app tints the other way (55 %
+     * to white, the handoff's rule) and never reaches for this. A colour
+     * that cannot get there by 90 % darkening (none of the eight can;
+     * `SchemesTest` says so) comes back as dark as it got.
+     */
+    fun classInkOn(classColor: Int, surface: Int): Int {
+        var amount = 0f
+        var ink = classColor
+        while (Scheme.contrastRatio(ink, surface) < 4.5 && amount < 0.9f) {
+            amount += 0.05f
+            ink = darken(classColor, amount)
+        }
+        return ink
     }
 
     private val DARK_PAD_INK: Map<Int, Int> = mapOf(
@@ -357,49 +476,24 @@ object Layout {
      * measured off this constant, so the strip grows and the screen under
      * it shrinks by the same amount.
      *
-     * A taller strip is only half of it: `MenuRow` has to make each tab
+     * A taller strip is only half of it: the row has to make each place
      * *fill* that height too. A 48dp strip around a text-sized tap area
-     * is a taller strip with the same finding still in it.
+     * is a taller strip with the same finding still in it. The place row
+     * (`Frame.kt`, four chips, no scroll) is cut to this; the old menu
+     * row's edge gutters and group seams went with its thirteen tabs.
      */
     const val MENU_ROW_H = 48
 
     /**
-     * The width kept clear at each end of the menu row for its overflow
-     * cue — the arrow that says there are more tabs that way (September
-     * UAT, finding 10).
-     *
-     * Narrow on purpose. The twelve tabs already run past the usable width
-     * at the design frame, so every dp spent here hides a little more of
-     * what it is pointing at.
-     *
-     * It lives here rather than in `MenuRow` because it is not only that
-     * composable's business: the UAT sim measures what fits in the row,
-     * and a gutter width with two homes is a gutter width that drifts.
+     * The dock at the foot of every screen (`docs/SCREEN_PLAN_2026_10.md`
+     * §1): one LCD row holding the beat's transport, the capture light and
+     * the standing line with its door. Taller than [MIN_HIT_TARGET] so a
+     * two-line sentence fits beside a door chip without either shrinking.
+     * It replaces the status bar at the frame's foot, whose three cells it
+     * absorbs; [STATUS_BAR_H] stays for the one row still cut to it, the
+     * fullscreen grid's own header.
      */
-    const val MENU_EDGE_W = 12
-
-    /**
-     * The vertical rule between two groups of menu tabs (J12): the shelf,
-     * the four flow tabs, the five instruments, the two utilities.
-     *
-     * Two dp, because that is what a Win9x toolbar separator is - a shadow
-     * line and a highlight line, one dp each - and because the row cannot
-     * afford more. The tabs do not fit at the design frame and the order
-     * above `MENU_GROUPS` was chosen so EXPORT, step four of the app's own
-     * stated loop, lands inside the run that shows without a drag. Running
-     * the UAT sim's own arithmetic over the three boundaries: at 2 the
-     * visible run is unchanged, at 4 it loses its last tab. So this is not
-     * a taste number with room to grow - it is the width at which the
-     * separators cost nothing. `UatSimTest` walks the row twice, with the
-     * rules and without, and raises a J12 finding if raising this ever
-     * costs a tab, so the claim is recomputed rather than remembered.
-     *
-     * It lives here for the same reason [MENU_EDGE_W] does: `MenuRow`
-     * draws it and `UatSimTest` measures around it, and a width with two
-     * homes is a width that drifts.
-     */
-    const val MENU_GROOVE_W = 2
-
+    const val DOCK_H = 56
     const val STATUS_BAR_H = 26
     const val LCD_HEADER_H = 40
     const val PAD_GAP = 8
@@ -458,25 +552,15 @@ object Layout {
 object Motion {
     /** Reel rotation period while playing, ms per revolution. */
     const val REEL_SPIN_MS = 1200
-    /** Toast rise+fade, ms, ease-out. */
-    const val TOAST_IN_MS = 250
-    /** Toast dwell before dismissing itself, ms. */
-    const val TOAST_DWELL_MS = 2600
-
     /**
-     * How long a toast that carries a door stays up (J10).
-     *
-     * [TOAST_DWELL_MS] is right for a line you only have to read. It is
-     * wrong for one you have to *reach*: an offer that vanishes at 2.6
-     * seconds is a target that sometimes catches the thumb and sometimes
-     * does not, which is worse than no offer at all — a control that works
-     * intermittently teaches nobody where the door is.
-     *
-     * Still a dwell rather than a box that waits: the offer comes after
-     * every capture and every kit, so one that had to be dismissed would
-     * be a toll on the loop it is trying to help.
+     * The dock line's fade-in when its words change, ms, ease-out. The
+     * toast used to rise and fade over this and then dwell — 2.6 s for a
+     * line you only read, 7 s for one carrying a door you had to reach.
+     * Both dwells are gone with the toast: the line stays until the next
+     * one replaces it and the door stays until it is taken, so nothing in
+     * the dock is timed (J10's standing next step).
      */
-    const val TOAST_OFFER_DWELL_MS = 7000
+    const val TOAST_IN_MS = 250
     /** Pad hit glow decay, ms. */
     const val PAD_GLOW_MS = 180
     /** Export dub progress, ms per file. */

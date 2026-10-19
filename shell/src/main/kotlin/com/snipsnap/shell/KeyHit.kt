@@ -11,9 +11,17 @@ import kotlin.math.pow
  * instrument declares. The native voice only ever hears "this sample,
  * from here, looping back to there, at this gain and speed".
  *
- * The map is [InstrumentEngine]'s own, so a note sounds the same on the
- * native path as it did on the JVM one that engine still renders for
- * the CLI and the tests.
+ * The map is [InstrumentEngine]'s own: the zone, the speed, the loop and
+ * the gain at [InstrumentEngine.VOICE_LEVEL] are resolved as that engine
+ * resolves them. What happens after the voices are summed is not shared.
+ * [InstrumentEngine] soft-clips its bus above 0.9; the phone's native bus
+ * (`PadEngine::render` in `app/src/main/cpp/PadEngine.cpp`) hard-clamps at
+ * full scale, so a chord that sums past 0.9 is shaped differently on the
+ * phone, and one past full scale flat-tops there. Before the sum, the
+ * native voice also caps its read speed at 64x (PadEngine's `kMaxSpeed`),
+ * which [InstrumentEngine] does not. Nothing in the shop
+ * plays through [InstrumentEngine]: it is the JVM reference that
+ * `InstrumentEngineTest` and the pad makers' tests render.
  */
 object KeyHit {
 

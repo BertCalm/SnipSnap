@@ -50,7 +50,8 @@ object Glint {
     /**
      * The musical ceiling. Aliasing is not what bounds this: the burst is
      * generated at `Dsp.RATE * Dsp.OVERSAMPLE`, so folding starts only above
-     * `k·f0 ≈ 88 kHz` — k ≈ 1443 at A1, ≈ 361 at A3, ≈ 76 at C6.
+     * that rate's Nyquist, `k·f0` = 88.2 kHz — k ≈ 1604 at A1, ≈ 401 at A3,
+     * ≈ 84 at C6.
      */
     const val K_MAX = 40f
 
@@ -382,6 +383,7 @@ object Glint {
         // DEPTH 0.5) and, above 0.5, mixes the sine in (GlintShape).
         val shape = GlintShape.of(m.getValue("DEPTH")) { path.sineGain() }
         for (i in 0 until frames) {
+            if (i % 8192 == 0) stopIfUnwanted()
             val t = i.toFloat() / rate
             if (shape == null) {
                 val w = windowAt(phase.toFloat())
@@ -417,12 +419,20 @@ object Glint {
         return out
     }
 
+    // SynthScreen previews run in runInterruptible: a newer request interrupts this
+    // thread, so the frame loop and the passes stop instead of finishing beside their replacement.
+    private fun stopIfUnwanted() {
+        if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("GLINT render no longer wanted")
+    }
+
     fun render(voice: GlintVoice, macros: Map<String, Float> = emptyMap()): Snip {
         // U6: render at 4x RATE so the burst's harmonics fold above 22.05 kHz
         // instead of into the band, then decimate.
         val renderRate = Dsp.RATE * Dsp.OVERSAMPLE
         val raw = synthesize(voice, macros, renderRate)
+        stopIfUnwanted()
         val out = Dsp.decimate(raw, Dsp.RATE)
+        stopIfUnwanted()
         Dsp.levelTo(out, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = Dsp.RATE)

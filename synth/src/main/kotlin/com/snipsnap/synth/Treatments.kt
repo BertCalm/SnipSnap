@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonValue
+import kotlin.math.ln
 
 /**
  * The rack's named characters, available one pad at a time — the remix
@@ -72,9 +73,23 @@ object Treatments {
         // SECTION together toward their neutrals, so a lower AMT is the chorus
         // coming in under the same six players, all of it shallower and narrower).
         // RATE is left at its
-        // centre, its neutral, as "ensembled" leaves it. Appended last: the
-        // names list is pinned in order.
+        // centre, its neutral, as "ensembled" leaves it. The names list is pinned
+        // in order, so the two pedal recipes below follow it.
         "sectioned" to FxChain(ensemble = mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)),
+        // A drive pedal: VALVE at the top of its gain law (DRIVE 1.0 is gain 1000; at the pad sheet's
+        // AMT 0.7 the recipe's DRIVE fades to 0.7, which is VALVE's own default gain 11.3) with little
+        // sag and the speaker barely in. TONE is left out (its centre is its neutral); CAB takes a small
+        // non-neutral value so AMT can move it (a missing macro would be VALVE's default 0.6). The
+        // owner's pick, heard against a hot crunch and a lead tone at the pedal board's round two
+        // (docs/superpowers/specs/2026-10-04-pedal-board-design.md). On a pad that is already through an
+        // amp this is a second amp, not a pedal in front of one. apply() fades the pad's last
+        // milliseconds before it, see PRE_AMP_FADE.
+        "driven" to FxChain(valve = mapOf("DRIVE" to 1.0f, "SAG" to 0.15f, "CAB" to 0.08f)),
+        // A compressor pedal for now: the strongest SQUASH there is (AMOUNT at its top, the fastest
+        // ATTACK that is not its neutral), the owner's pick at round two. The sustain compressor the
+        // owner asked for is its own section (spec, Stage 2); this recipe moves to it then. The bank's
+        // "punched" is SQUASH plus CRUNCH; this has no crunch.
+        "compressed" to FxChain(squash = mapOf("AMOUNT" to 1.0f, "ATTACK" to 0.05f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA
@@ -119,10 +134,63 @@ object Treatments {
 
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)
 
+    /**
+     * Characters that run a hot amp, and the fade that goes ahead of it. VALVE lifts a quiet tail by
+     * its own gain (1000 at the top of DRIVE), so a cut nobody hears dry ends in a click through it,
+     * and a fade ahead of the amp survives the amp (MAGNET's lesson). The fade is the tail's alone:
+     * its length follows the amp's lift (see [endFaded]: about a third of the full length at the pad
+     * sheet's AMT 0.7, none where the amp does not lift), and it never reaches the first half of a
+     * pad. The full length and shape are chosen against the spec's bars and no others, from a declared grid:
+     * the fade must leave a snare and a choir ending at least 53 dB under their peaks (the spec's 50 dB
+     * plus 3 dB of margin) with a DC mean under 1e-4, at AMT 0.7, 0.8, 0.9 and 1, and the grid is 30 to
+     * 120 ms (steps of 5 to 10) and powers 2 to 7. The first cell of that grid, by length and then by
+     * power, that passes is 95 ms at power 5: 95 ms at power 4 ends the snare at AMT 1 at -52.0 dB, and
+     * 90 ms misses the DC bar at every power up to 7 (1.02e-4 at best), because a saturated tail the
+     * fade has not reached leaves its tube's asymmetry in the mean. Finer cells pass too (94 ms at
+     * power 5 by under 1 percent, 90 ms at power 8): they were not taken, because the DC mean moves a
+     * few percent from one millisecond to the next, so a pass that close to its bar is fragile, and
+     * a power of 8 is not mild. No claim is made of a 1 ms optimum.
+     */
+    private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 95f, power = 5))
+
+    private class EndFade(val ms: Float, val power: Int)
+
+    /** The log of the gain the chain's VALVE DRIVE sets, never under 0: an amp that does not lift needs no fade. */
+    private fun ampLift(fx: FxChain): Double {
+        val drive = fx.section("valve")?.get("DRIVE") ?: Valve.defaults().getValue("DRIVE")
+        return ln(Valve.gainFor(drive).toDouble()).coerceAtLeast(0.0)
+    }
+
+    /**
+     * [snip] with its tail faded ahead of the amp, for a character in [PRE_AMP_FADE] at [amount];
+     * [snip] itself for any other, or where the amp does not lift. The fade is the character's
+     * [EndFade.ms] times the amp's lift at [amount] over its lift at 1 (the dB of the gain DRIVE sets
+     * then, against the dB it sets at the full character), at most the pad's second half, and
+     * shapes the gain by `x^power` (x is 0 at the last frame, 1 at the fade's start). Everything
+     * before the fade is [snip]'s own samples.
+     */
+    internal fun endFaded(snip: Snip, name: String, amount: Float): Snip {
+        val fade = PRE_AMP_FADE[name] ?: return snip
+        if (amount <= 0f) return snip
+        val full = ampLift(chain(name, 1f))
+        if (full <= 0.0) return snip
+        val lift = (ampLift(chain(name, amount)) / full).coerceAtMost(1.0)
+        val frames = snip.frameCount
+        val n = minOf(frames / 2, (fade.ms / 1000.0 * lift * snip.sampleRate).toInt())
+        if (n <= 0) return snip
+        val out = snip.samples.copyOf()
+        for (d in 0 until n) {
+            val g = Math.pow(d.toDouble() / n, fade.power.toDouble()).toFloat()
+            val frame = frames - 1 - d
+            for (c in 0 until snip.channels) out[frame * snip.channels + c] *= g
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
+    }
+
     fun apply(name: String, snip: Snip, amount: Float = 1f): Treated {
         val fx = chain(name, amount)
         val recipe = PadRecipe(fx = fx, treatment = name, amount = amount).toJsonValue()
         if (fx.isBypass) return Treated(snip, recipe)
-        return Treated(fx.process(snip), recipe)
+        return Treated(fx.process(endFaded(snip, name, amount)), recipe)
     }
 }

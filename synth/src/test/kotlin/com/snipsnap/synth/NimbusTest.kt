@@ -10,11 +10,11 @@ import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -25,6 +25,30 @@ class NimbusTest {
         DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM,
     )
     private val timbralControls = listOf("EXCITE", "SPACING", "HEIGHT", "FIELD", "FUNNEL")
+
+    @Test
+    fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
+        val voice = NimbusVoice.RING
+        for ((label, render) in listOf<Pair<String, () -> Unit>>(
+            "finite" to { Nimbus.render(voice) },
+            "held" to { Nimbus.render(voice, Nimbus.defaults(voice) + ("HOLD" to 1f)) },
+        )) {
+            Thread.currentThread().interrupt()
+            try {
+                assertFailsWith<java.util.concurrent.CancellationException>(
+                    "NIMBUS $label render did not stop on the interrupt at its look before the simulation",
+                ) { render() }
+            } finally {
+                Thread.interrupted()
+            }
+        }
+        assertFailsWith<java.util.concurrent.CancellationException>(
+            "NIMBUS held render did not stop on the export cancel callback at its look before the simulation",
+        ) {
+            Nimbus.renderLoop(voice, emptyMap()) { true }
+        }
+        assertTrue(Nimbus.render(voice).samples.any { it != 0f }, "an uninterrupted render still sounds")
+    }
 
     @Test
     fun `seeded excitation reproduces the whole stack and changing the seed changes sound`() {
@@ -213,31 +237,116 @@ class NimbusTest {
     }
 
     @Test
-    fun `held force supports the native middle body with slow variation across registers`() {
-        // The previous HOLD split into a dominant shared principal or continuously driven
-        // high partials. These balance and slow-envelope bounds guard that failure without
-        // asserting a listening preference. Measure the complete returned interval.
+    fun `held voices retain distinct native colors and useful finite body brightness`() {
+        // The common felt roll passed the participation and smoothness guards while
+        // erasing the voices' upper colors. Compare native upper spectra, excluding
+        // their shared principal so different root levels cannot fake an identity.
+        val options = Nimbus.ProbeOptions(recordDiagnostics = false)
+        val held = NimbusVoice.entries.associateWith { voice ->
+            val p = Nimbus.probe(voice, mapOf("HOLD" to 1f), options = options)
+            bands(p.samples, p.rootHz.toDouble(), 0.0, p.samples.size.toDouble() / Dsp.RATE,
+                upperCutoff = 1.35, profileCutoff = 1.35, rectangular = true)
+        }
+        val bodies = NimbusVoice.entries.associateWith { voice ->
+            val p = Nimbus.probe(voice, options = options.copy(durationSeconds = .8f))
+            bands(p.samples, p.rootHz.toDouble(), .18, .65, upperCutoff = 1.35)
+        }
+        val deficient = mutableListOf<String>()
+        for ((index, voice) in NimbusVoice.entries.withIndex()) for (other in NimbusVoice.entries.take(index)) {
+            val contrast = spectralDifference(held.getValue(voice).profile, held.getValue(other).profile)
+            println("NIMBUS $voice/$other held native upper contrast=$contrast")
+            // Reuse the finite voices' existing spectral anti-collapse allowance.
+            if (contrast < .20) deficient += "$voice/$other native upper spectra collapsed: $contrast"
+        }
+        for (voice in NimbusVoice.entries) {
+            fun nativeBrightness(tone: Bands) = tone.highShare / tone.upperShare.coerceAtLeast(1e-30)
+            val finite = nativeBrightness(bodies.getValue(voice))
+            val roll = nativeBrightness(held.getValue(voice))
+            val retained = roll / finite.coerceAtLeast(1e-30)
+            println("NIMBUS $voice held native brightness: roll=$roll finiteBody=$finite retained=$retained")
+            // A soft touch may darken the sharp finite event. Allow a full 10 dB
+            // reduction in its native high-power fraction; every original held voice
+            // clears this allowance. The rejected common roll retained under 0.6%.
+            if (retained < .10) deficient += "$voice lost its native upper color: held/finite brightness=$retained"
+        }
+        val highContrast = held.getValue(NimbusVoice.SHIMMER).highShare /
+            held.getValue(NimbusVoice.THROAT).highShare.coerceAtLeast(1e-30)
+        println("NIMBUS held SHIMMER/THROAT high-band contrast=$highContrast")
+        if (highContrast <= 1.5) deficient += "SHIMMER/THROAT lost the intended bright/dark contrast: $highContrast"
+        assertTrue(deficient.isEmpty(), "Held voice colors regressed: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
+    fun `held rolls preserve the native middle body without gaps or hard accents across registers`() {
+        // Whole-loop balance alone missed the harsh held texture. Measure short attacks
+        // and overlap too. A smooth roll may have nearly constant overall loudness; a
+        // compulsory one-cycle swell would reject that behavior and does not prove a roll.
         val deficient = mutableListOf<String>()
         for (voice in NimbusVoice.entries) for (tune in floatArrayOf(0f, .5f, 1f)) {
             val label = "$voice TUNE $tune"
             val p = Nimbus.probe(voice, mapOf("TUNE" to tune, "HOLD" to 1f),
-                options = Nimbus.ProbeOptions(recordDiagnostics = false))
+                options = Nimbus.ProbeOptions(snapshotStride = 65536))
+            if (p.malletStrokes.isEmpty()) deficient += "$label supplied no finite mallet contacts"
             val tone = heldTone(p.samples, p.rootHz.toDouble())
-            val breathing = heldBreathing(p.samples)
-            val cents = FineTuning.cents(FineTuning.measuredHz(p.samples, Dsp.RATE, p.rootHz, .08f, .45f), p.rootHz.toDouble())
-            println("NIMBUS $label held body: low=${tone.low} middle=${tone.middle} high=${tone.high} above3k=${tone.above3k} principal=${tone.principal}, RMS100msCV=${breathing.cv} oneCycleDepth=${breathing.depth}, root=$cents cents seam=${p.seamError}")
+            val envelope = heldEnvelope(p)
+            val cents = FineTuning.cents(heldRootHz(p.samples, p.rootHz.toDouble()), p.rootHz.toDouble())
+            println("NIMBUS $label held body: low=${tone.low} middle=${tone.middle} high=${tone.high} above3k=${tone.above3k} principal=${tone.principal}, RMS100msCV=${envelope.cv} RMS20msFloor=${envelope.floor} RMS20msCrest=${envelope.crest} rise20ms95dB=${envelope.rise95Db} rise20msMaxdB=${envelope.riseMaxDb}, root=$cents cents seam=${p.seamError}")
             if (tone.low > .45 || tone.middle < .35 || tone.high > .35 || tone.above3k > .15) {
                 deficient += "$label sustained body lost balance: low=${tone.low} middle=${tone.middle} high=${tone.high} above3k=${tone.above3k}"
             }
-            if (breathing.cv < .03 || breathing.cv > .30 || breathing.depth < .04) {
-                deficient += "$label lacks gentle slow supplied-power variation: CV=${breathing.cv} oneCycleDepth=${breathing.depth}"
+            if (envelope.cv > .30 || envelope.floor < .25 || envelope.crest > 2.0 ||
+                envelope.rise95Db > 3.0 || envelope.riseMaxDb > 6.0) {
+                deficient += "$label has held gaps or abrupt accents: $envelope"
             }
             if (tone.principal < .01 || abs(cents) > 10.0) deficient += "$label lost its material requested root: share=${tone.principal} cents=$cents"
             if (p.previousCycle.size != p.samples.size || p.seamError >= Keys.MAX_SEAM_ERROR) {
-                deficient += "$label slow held body did not retain a genuine preceding cycle: seam=${p.seamError}"
+                deficient += "$label held roll did not retain a genuine preceding cycle: seam=${p.seamError}"
             }
         }
         assertTrue(deficient.isEmpty(), "Sustained native body regression: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
+    fun `a soft mallet ends its paid contact while the native cymbal keeps ringing`() {
+        // Isolate the exciter from the initial strike and all acoustic returns. A continuous
+        // resonant force can sound smooth too; it must not masquerade as a finite contact.
+        for (tune in floatArrayOf(0f, .5f, 1f)) {
+            val p = Nimbus.probe(NimbusVoice.RING, mapOf("TUNE" to tune, "HOLD" to .5f), options = Nimbus.ProbeOptions(
+                couplingEnabled = false, funnelEnabled = false, contactsEnabled = false,
+                primaryStrikeEnabled = false, selectedCymbal = 0, durationSeconds = 1f,
+                snapshotStride = 32, singleMalletStroke = true,
+            ))
+            val stroke = p.malletStrokes.single()
+            val end = stroke.timeSeconds + stroke.durationSeconds
+            assertTrue(stroke.durationSeconds in .0005f.. .04f, "TUNE $tune mallet contact was not soft and finite: $stroke")
+            assertTrue(stroke.impulse > 0f && stroke.peakForce > 0f)
+            assertTrue(p.peakMalletForceStep / stroke.peakForce < .10f,
+                "TUNE $tune forcing contains a hard edge: step=${p.peakMalletForceStep}, peak=${stroke.peakForce}")
+            assertEquals(0.0, p.initialEnergy, "the isolated contact received a hidden note event")
+            assertTrue(p.positivePoweredWork.isFinite() && p.positivePoweredWork > 0.0)
+            assertTrue(p.returnedPoweredWork.isFinite() && p.returnedPoweredWork >= 0.0)
+            assertEquals(p.positivePoweredWork - p.returnedPoweredWork, p.poweredDriveWork, 1e-10)
+            assertEquals(stroke.positiveWork - stroke.returnedWork, stroke.signedWork, 1e-10)
+            assertEquals(stroke.positiveWork, p.positivePoweredWork, 1e-10)
+            assertEquals(stroke.returnedWork, p.returnedPoweredWork, 1e-10)
+            assertEquals(stroke.signedWork, p.poweredDriveWork, 1e-10)
+            assertTrue(p.snapshots.any { state -> state.malletForce.any { it > 0f } }, "the contact force was never applied")
+            val unforced = p.snapshots.filter { it.timeSeconds > end + 4f / (Dsp.RATE * Dsp.OVERSAMPLE) }
+            assertTrue(unforced.isNotEmpty())
+            assertTrue(unforced.all { it.malletForce.size == 6 && it.malletForce.all { force -> force == 0f } },
+                "TUNE $tune supplied force persisted beyond the contact")
+            val maximumEnergy = p.snapshots.maxOf { it.passiveEnergy }
+            assertTrue(maximumEnergy > 0.0 && maximumEnergy <= p.positivePoweredWork * 1.02,
+                "TUNE $tune native ring exceeded paid mallet work: $maximumEnergy/${p.positivePoweredWork}")
+            assertTrue(p.finalPassiveEnergy < maximumEnergy * .10, "the unforced cymbal did not decay")
+            val early = rms(p.samples, ((end + .008) * Dsp.RATE).roundToInt(), ((end + .08) * Dsp.RATE).roundToInt())
+            val late = rms(p.samples, ((end + .45) * Dsp.RATE).roundToInt(), ((end + .75) * Dsp.RATE).roundToInt())
+            val freeRoot = FineTuning.cents(FineTuning.measuredHz(p.samples, Dsp.RATE, p.rootHz, end + .02f, .45f), p.rootHz.toDouble())
+            assertTrue(abs(freeRoot) <= 10.0, "TUNE $tune freely ringing native root was $freeRoot cents out")
+            assertTrue(early > 1e-6 && late < early * .65,
+                "TUNE $tune contact has no audible freely decaying ring: early=$early late=$late")
+            println("NIMBUS TUNE $tune isolated mallet: duration=${stroke.durationSeconds} forceStep/peak=${p.peakMalletForceStep / stroke.peakForce} paid=${p.positivePoweredWork} returned=${p.returnedPoweredWork} ring=$early -> $late")
+        }
     }
 
     @Test
@@ -525,13 +634,45 @@ class NimbusTest {
     }
 
     @Test
+    fun `close rim rolls at zero field repeat the actual preceding cycle in both registers`() {
+        // The full audition found a C5 corner that the default/C3 cases missed. A longer
+        // render on the old global control clock still drifted between mallet cycles.
+        val cases = listOf(1f to 0f, 0f to 0f, 0f to .6f)
+        val deficient = mutableListOf<String>()
+        for ((tune, field) in cases) try {
+            val label = "CONTACT TUNE $tune FIELD $field"
+            val macros = mapOf("TUNE" to tune, "EXCITE" to 1f, "SPACING" to 0f,
+                "HEIGHT" to .5f, "FIELD" to field, "FUNNEL" to (if (field == 0f) 1f else Nimbus.defaults(NimbusVoice.CONTACT).getValue("FUNNEL")), "HOLD" to 1f)
+            val p = Nimbus.probe(NimbusVoice.CONTACT, macros, options = Nimbus.ProbeOptions(snapshotStride = 4096))
+            assertEquals(p.samples.size, p.previousCycle.size, "$label supplied no actual preceding cycle")
+            val seam = Keys.seamError(p.previousCycle + p.samples, p.previousCycle.size)
+            val mismatch = normalizedDifference(p.previousCycle, p.samples)
+            val from = p.samples.size / 5
+            val to = p.samples.size * 4 / 5
+            val interior = normalizedDifference(p.previousCycle.copyOfRange(from, to), p.samples.copyOfRange(from, to))
+            println("NIMBUS $label close roll: seam=$seam fullCycleMismatch=$mismatch interiorMismatch=$interior contacts=${p.contactEvents} penetration=${p.peakContactPenetration}")
+            assertTrue(seam < Keys.MAX_SEAM_ERROR, "$label genuine held seam $seam")
+            assertTrue(interior < .03, "$label preceding cycle remained unsettled: $interior")
+            assertTrue(p.samples.all { it.isFinite() } && p.rawPeak < 1f)
+            assertTrue(p.poweredDriveWork > 0.0 && p.malletStrokes.map { it.cymbal }.toSet().size == 6)
+            assertTrue(p.contactEvents > 0 && rms(p.contact) > 1e-7, "$label contains no actual audible rim contacts")
+            assertTrue(p.peakContactPenetration.isFinite() && p.peakContactPenetration in 0f.. .003f)
+            assertTrue(p.snapshots.all { it.geometryValid && it.passiveEnergy.isFinite() })
+        } catch (failure: AssertionError) {
+            deficient += "CONTACT TUNE $tune FIELD $field: ${failure.message}"
+        }
+        assertTrue(deficient.isEmpty(), "Close rim roll convergence regressed: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
     fun `powered metal and difficult contact holds converge across a genuine preceding cycle`() {
         val cases = listOf(
             NimbusVoice.SUSPEND to mapOf("TUNE" to 0f, "HOLD" to 1f),
             NimbusVoice.CONTACT to mapOf("TUNE" to 0f, "EXCITE" to 1f, "SPACING" to 0f, "FIELD" to .6f, "HOLD" to 1f),
             NimbusVoice.SHIMMER to (timbralControls.associateWith { 1f } + mapOf("TUNE" to 1f, "HOLD" to 1f)),
         )
-        for ((voice, macros) in cases) {
+        val deficient = mutableListOf<String>()
+        for ((voice, macros) in cases) try {
             val p = Nimbus.probe(voice, macros)
             assertEquals(p.samples.size, p.previousCycle.size, "$voice supplied no natural preceding cycle")
             assertTrue(p.poweredDriveWork > 0.0, "$voice HOLD was not powered separately")
@@ -539,6 +680,10 @@ class NimbusTest {
             val heldMetal = bands(p.samples, p.rootHz.toDouble(), .05, .65)
             assertTrue(heldMetal.upperShare >= .15 && heldMetal.upperOccupied >= 4, "$voice held texture collapsed to a sparse bell: upper=${heldMetal.upperShare}, bands=${heldMetal.upperOccupied}")
             assertTrue(heldMetal.rootShare >= .01, "$voice held requested root became negligible: ${heldMetal.rootShare}")
+            // Harder touch must retain the same held-roll treble ceiling. The old
+            // extra felt compression reopened a sustained >3 kHz layer at C5.
+            val tone = heldTone(p.samples, p.rootHz.toDouble())
+            assertTrue(tone.above3k <= .15, "$voice difficult held treble exceeded the soft-roll balance: >3kHz power=${tone.above3k}")
             if (voice == NimbusVoice.CONTACT) {
                 assertTrue(p.contactEvents > 0, "difficult held case contained no settled rim contacts")
                 assertTrue(p.contact.all { it.isFinite() } && rms(p.contact) > 1e-7, "settled contacts emitted no finite contact sound")
@@ -557,10 +702,39 @@ class NimbusTest {
             val to = p.samples.size * 4 / 5
             val mismatch = normalizedDifference(p.previousCycle.copyOfRange(from, to), p.samples.copyOfRange(from, to))
             assertTrue(mismatch < .03, "$voice preceding cycle remained unsettled: $mismatch")
-            val cents = FineTuning.cents(FineTuning.measuredHz(p.samples, Dsp.RATE, p.rootHz, .05f, .35f), p.rootHz.toDouble())
+            val cents = FineTuning.cents(heldRootHz(p.samples, p.rootHz.toDouble()), p.rootHz.toDouble())
             assertTrue(abs(cents) <= 10.0, "$voice HOLD transposed $cents cents")
             assertTrue(p.snapshots.all { it.geometryValid && it.passiveEnergy.isFinite() })
             println("NIMBUS $voice HOLD: seam $seam, interior mismatch $mismatch, root $cents cents")
+        } catch (failure: AssertionError) {
+            deficient += "$voice: ${failure.message}"
+        }
+        assertTrue(deficient.isEmpty(), "Difficult held cases regressed: ${deficient.joinToString("; ")}")
+    }
+
+    @Test
+    fun `every held voice repeats its preceding cycle over whole principal periods of the requested root`() {
+        // assertEquals(seam, p.seamError) above recomputes probe()'s own expression on the same two
+        // arrays, and previousCycle.size == samples.size holds because both are cut cycleFrames long.
+        // The seam itself is real: a full preceding cycle of one continuous render, no cross-fade and
+        // no check() in the engine. Measure it on the exported audio at every voice's defaults and
+        // every factory preset that reaches LOOP_THRESHOLD, and check the loop against the requested
+        // root rather than against the other cut: whole periods of the fitted root, which stays
+        // within the .03 cents probe() documents.
+        val cases = NimbusVoice.entries.map { NimbusPatch("$it defaults", it, Nimbus.defaults(it) + ("HOLD" to 1f)) } +
+            NimbusPresets.all().filter { Nimbus.isLoop(it.macros["HOLD"] ?: 0f) }
+        for (patch in cases) {
+            val p = Nimbus.probe(patch.voice, patch.macros, options = Nimbus.ProbeOptions(normalize = true, recordDiagnostics = false))
+            val requested = Nimbus.frequencyFor(patch.voice, Nimbus.settled(patch.voice, patch.macros).getValue("TUNE")).toDouble()
+            val fit = FineTuning.cents(p.rootHz.toDouble(), requested)
+            // rootHz is a Float, good to ~1e-7 of a period per period; a one-frame cut moves this by root / RATE.
+            val periods = p.samples.size * p.rootHz.toDouble() / Dsp.RATE
+            val seam = Keys.seamError(p.previousCycle + p.samples, p.previousCycle.size)
+            println("NIMBUS HOLD ${patch.name}: seam $seam, ${p.samples.size} frames = $periods periods of ${p.rootHz} Hz, $fit cents from $requested Hz")
+            assertTrue(abs(fit) < .03, "${patch.name} held root ${p.rootHz} Hz is $fit cents from the requested $requested Hz")
+            assertTrue(abs(periods - periods.roundToInt()) < 2e-4,
+                "${patch.name} loop of ${p.samples.size} frames is $periods periods of its ${p.rootHz} Hz root")
+            assertTrue(seam < Keys.MAX_SEAM_ERROR, "${patch.name} loop does not repeat its genuine preceding cycle: seam $seam")
         }
     }
 
@@ -639,7 +813,7 @@ class NimbusTest {
     private fun heldTone(samples: FloatArray, root: Double): HeldTone {
         var n = 1
         while (n < samples.size) n *= 2
-        // A rectangular complete-cycle capture avoids weighting one breathing phase more
+        // A rectangular complete-cycle capture avoids weighting one part of the roll more
         // heavily. Zero padding supplies the radix-2 FFT; shares use the same power sum.
         val re = samples.copyOf(n)
         val im = FloatArray(n)
@@ -667,34 +841,86 @@ class NimbusTest {
         return HeldTone(low / denominator, middle / denominator, high / denominator, above3k / denominator, principal / denominator)
     }
 
-    private data class HeldBreathing(val cv: Double, val depth: Double)
+    private data class HeldEnvelope(
+        val cv: Double, val floor: Double, val crest: Double, val rise95Db: Double, val riseMaxDb: Double,
+    )
 
-    private fun heldBreathing(samples: FloatArray): HeldBreathing {
-        val width = (.1 * Dsp.RATE).roundToInt()
-        val energy = DoubleArray(samples.size + width + 1)
-        for (i in 0 until energy.lastIndex) {
-            val sample = samples[i % samples.size].toDouble()
-            energy[i + 1] = energy[i] + sample * sample
+    private fun heldEnvelope(p: Nimbus.Probe): HeldEnvelope {
+        val samples = p.samples
+        fun windows(input: FloatArray, seconds: Double): DoubleArray {
+            val width = (seconds * Dsp.RATE).roundToInt()
+            val energy = DoubleArray(samples.size + width + 1)
+            for (i in 0 until energy.lastIndex) {
+                val sample = input[i % input.size].toDouble()
+                energy[i + 1] = energy[i] + sample * sample
+            }
+            val count = (samples.size / (.005 * Dsp.RATE)).roundToInt()
+            return DoubleArray(count) { index ->
+                val start = (index * samples.size.toDouble() / count).roundToInt()
+                sqrt((energy[start + width] - energy[start]).coerceAtLeast(0.0) / width)
+            }
         }
-        val values = DoubleArray(128) { index ->
-            val start = (index * samples.size.toDouble() / 128).roundToInt()
-            sqrt((energy[start + width] - energy[start]).coerceAtLeast(0.0) / width)
-        }
-        val mean = values.average().coerceAtLeast(1e-30)
-        val cv = sqrt(values.sumOf { (it - mean) * (it - mean) } / values.size) / mean
-        var cosine = 0.0
-        var sine = 0.0
-        for (i in values.indices) {
-            val phase = 2 * PI * i / values.size
-            cosine += (values[i] - mean) * cos(phase)
-            sine += (values[i] - mean) * sin(phase)
-        }
-        // The one-cycle component isolates slow breathing from ordinary carrier beating.
-        val depth = 2 * sqrt(cosine * cosine + sine * sine) / (values.size * mean)
-        return HeldBreathing(cv, depth)
+        fun quantile(values: DoubleArray, fraction: Double): Double = values.sortedArray()[
+            (fraction * (values.size - 1)).roundToInt()]
+        val slow = windows(samples, .1)
+        val mean = slow.average().coerceAtLeast(1e-30)
+        val cv = sqrt(slow.sumOf { (it - mean) * (it - mean) } / slow.size) / mean
+        val short = windows(samples, .02)
+        val median = quantile(short, .5).coerceAtLeast(1e-30)
+        val offset = (.020 * Dsp.RATE * short.size / samples.size).roundToInt()
+        // Sum separate plate powers at their real gain before measuring stroke accents.
+        // Coherent cancellation between neighboring ringing partials can create a 10 dB
+        // mixed-envelope rise with no corresponding increase in native ringing energy.
+        val plateWindows = p.cymbals.map { windows(it, .02) }
+        val independent = DoubleArray(short.size) { index -> sqrt(plateWindows.sumOf { it[index] * it[index] }) }
+        val independentMedian = quantile(independent, .5).coerceAtLeast(1e-30)
+        val period = samples.size.toDouble() / Dsp.RATE
+        val rises = independent.indices.mapNotNull { index ->
+            val start = index * period / independent.size
+            // Both 20 ms comparison windows, including a contact crossing the loop cut.
+            val hasContact = p.malletStrokes.any { event ->
+                val distance = (event.timeSeconds - start + period) % period
+                distance <= .04 || distance + event.durationSeconds >= period
+            }
+            if (!hasContact) null else {
+                val before = (independent[index] / independentMedian).coerceAtLeast(.03)
+                val after = (independent[(index + offset) % independent.size] / independentMedian).coerceAtLeast(.03)
+                max(0.0, 20 * log10(after / before))
+            }
+        }.toDoubleArray()
+        require(rises.isNotEmpty()) { "a held roll supplied no measurable contact intervals" }
+        return HeldEnvelope(cv, quantile(short, .05) / median, quantile(short, .99) / median,
+            quantile(rises, .95), rises.max())
     }
 
-    private fun bands(samples: FloatArray, root: Double, start: Double, end: Double, upperCutoff: Double = 1.8): Bands {
+    private fun heldRootHz(samples: FloatArray, root: Double): Double {
+        // A short Hann window can select a modulation sideband of a pulsed root. Search
+        // actual Fourier lines of the complete periodic render, retaining the same tuning
+        // bound and the separate audible-principal floor. Upper modes need not be quieter.
+        val scale = samples.size.toDouble() / Dsp.RATE
+        val from = maxOf(1, (root * .944 * scale).roundToInt())
+        val to = (root * 1.059 * scale).roundToInt()
+        var best = from
+        var power = -1.0
+        for (bin in from..to) {
+            val coefficient = 2 * cos(2 * PI * bin / samples.size)
+            var first = 0.0
+            var second = 0.0
+            for (sample in samples) {
+                val next = sample + coefficient * first - second
+                second = first
+                first = next
+            }
+            val candidate = first * first + second * second - coefficient * first * second
+            if (candidate > power) { power = candidate; best = bin }
+        }
+        return best / scale
+    }
+
+    private fun bands(
+        samples: FloatArray, root: Double, start: Double, end: Double,
+        upperCutoff: Double = 1.8, profileCutoff: Double = 0.0, rectangular: Boolean = false,
+    ): Bands {
         val from = (start * Dsp.RATE).roundToInt()
         val count = minOf(samples.size - from, ((end - start) * Dsp.RATE).roundToInt())
         require(count > 8)
@@ -704,7 +930,9 @@ class NimbusTest {
         val im = FloatArray(n)
         var windowPower = 0.0
         for (i in 0 until count) {
-            val window = .5 - .5 * cos(2 * PI * i / (count - 1))
+            // Complete periodic captures weight the whole roll equally. Padding only
+            // adapts the transform to the repository's radix-2 FFT.
+            val window = if (rectangular) 1.0 else .5 - .5 * cos(2 * PI * i / (count - 1))
             re[i] = (samples[from + i] * window).toFloat()
             windowPower += window * window
         }
@@ -727,7 +955,7 @@ class NimbusTest {
             if (hz >= root * upperCutoff) upper += energy
             if (hz >= root * 4.0) high += energy
             while (band < energyBands.size && hz >= edges[band + 1]) band++
-            if (band < energyBands.size && hz >= edges[band]) energyBands[band] += energy
+            if (band < energyBands.size && hz >= edges[band] && hz >= root * profileCutoff) energyBands[band] += energy
         }
         val denominator = total.coerceAtLeast(1e-30)
         val occupied = energyBands.indices.count { edges[it] >= root * upperCutoff && energyBands[it] >= total * .005 }

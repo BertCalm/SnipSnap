@@ -269,7 +269,13 @@ guards do not remove percussion to obtain this routing.
 | EXPANSE | Wide, slow formation and longer returns | .50 | .85 | .20 | .25 | .85 |
 | CONFLUENCE | Rapid playing and faster movement | .70 | .55 | .75 | .80 | .65 |
 
-All voices default to TUNE .5 and HOLD 0. Neutral companion values for
+All voices default to TUNE 1 (C4, approximately 261.6 Hz) and HOLD 0. This
+adopts the owner's preferred higher foundation from the C3/C4 audition while
+retaining the shared phrase, source balance and gradual attacks and releases.
+Stored TUNE values and explicitly pitched presets and kit notes retain their
+chosen register; a patch that omits TUNE uses the new default.
+
+Neutral companion values for
 controlled auditions are BREATH .45, DIAMETER .40, ORBIT 0, PACE .35,
 CANYON .40, HOLD 0 and TUNE .5. Neutral is distinct from each voice's defaults.
 

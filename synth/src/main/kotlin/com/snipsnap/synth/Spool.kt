@@ -57,6 +57,7 @@ object Spool {
     private const val PHASE_HANDOFF_SECONDS = .060
     private const val GEOMETRY_FADE_SECONDS = .200
     private const val REENCOUNTER_RAMP_SECONDS = .060
+    private const val IMPRINT_DEPTH_RAMP_SECONDS = .035
     private const val LOOP_REST_SECONDS = .025
     private const val REST_COORDINATE_SECONDS = .012
     private const val REVERSE_PREVIEW_GATE = .45
@@ -151,7 +152,10 @@ object Spool {
 
     private class Material(val originals: Array<FloatArray>, val overlays: Array<FloatArray>,
                            val strips: List<SpoolStrip>, val hashes: List<Int>, val peak: Float,
-                           val rootPhases: DoubleArray)
+                           val rootPhases: DoubleArray,
+                           // History records actual delayed commits, including silent writes.
+                           // It is independent of overlay amplitudes and survives a frozen snapshot.
+                           val recordedStrips: BooleanArray = BooleanArray(3))
 
     /** A finite performance with an evolving articulation, rather than a repeated static waveform. */
     // SynthScreen previews run in runInterruptible: a newer request interrupts this thread,
@@ -167,18 +171,29 @@ object Spool {
         var peak = 0f
         val originals = Array(3) { strip ->
             val s = strips[strip]
+            val family = s.family
             val random = Random(Dsp.seedFor("SPOOL", voice.name, midiFor(voice, m.getValue("TUNE")), machine.seed, strip))
             val harmonics = min(24, floor(SOURCE_BANDWIDTH / hz).toInt()).coerceAtLeast(1)
-            val phase = DoubleArray(harmonics) { if (it == 0) .13 * strip else random.nextDouble() * 2 * PI }
+            val filterA = (1.0 - exp(-2 * PI * SOURCE_BANDWIDTH / INTERNAL_RATE)).toFloat().toDouble()
+            val filterMemory = 1 - filterA
+            val phase = DoubleArray(harmonics) { index ->
+                val h = index + 1
+                val angle = 2 * PI * hz * h / INTERNAL_RATE
+                val filterPhase = atan2(-filterMemory * sin(angle), 1 - filterMemory * cos(angle))
+                val sign = if (family == SpoolSourceFamily.BRASS && h > 1 && h % 2 == 1) PI else 0.0
+                // An even carrier profile survives time reversal in EVERY partial. Compensate
+                // the four causal source filters so their phase does not undo this relation.
+                // Recorded envelopes, vowel movement and airflow still play backwards.
+                PI / 2 + h * .13 * strip + sign - 4 * filterPhase
+            }
             val oscSin = DoubleArray(harmonics) { sin(phase[it]) }
             val oscCos = DoubleArray(harmonics) { cos(phase[it]) }
             val stepSin = DoubleArray(harmonics)
             val stepCos = DoubleArray(harmonics)
             val gain = DoubleArray(harmonics)
-            val family = s.family
             val attack = when (family) {
-                SpoolSourceFamily.STRING -> .085; SpoolSourceFamily.CHOIR -> .145
-                SpoolSourceFamily.FLUTE -> .065; SpoolSourceFamily.BRASS -> .035
+                SpoolSourceFamily.STRING -> .085; SpoolSourceFamily.CHOIR -> .190
+                SpoolSourceFamily.FLUTE -> .050; SpoolSourceFamily.BRASS -> .022
             }
             var doubleSin = sin(.8 + strip)
             var doubleCos = cos(.8 + strip)
@@ -186,6 +201,7 @@ object Spool {
             val ds = sin(doubleStep); val dc = cos(doubleStep)
             val out = FloatArray(n)
             var breath = 0.0
+            var fastBreath = 0.0
             for (i in out.indices) {
                 if (i % 8192 == 0) stopIfUnwanted()
                 val t = i.toDouble() / INTERNAL_RATE
@@ -199,19 +215,33 @@ object Spool {
                         stepSin[h - 1] = sin(step); stepCos[h - 1] = cos(step)
                         val f = hz * h
                         val a = when (family) {
-                            SpoolSourceFamily.STRING -> h.toDouble().pow(-1.30) * exp(-f / (1550 + 1500 * evolution))
-                            SpoolSourceFamily.CHOIR -> if (h == 1) .72 else (.12 +
-                                .90 * exp(-((f - 740) / 260).pow(2)) +
-                                .55 * exp(-((f - 1160 - 100 * sin(t * 1.2)) / 340).pow(2)) +
-                                .20 * exp(-((f - 2480) / 400).pow(2))) / h.toDouble().pow(.80)
-                            SpoolSourceFamily.FLUTE -> when (h) { 1 -> 1.0; 2 -> .16 + .09 * evolution; 3 -> .055; else -> .025 / h }
-                            SpoolSourceFamily.BRASS -> h.toDouble().pow(-.98) * exp(-f / (1100 + 1700 * evolution))
+                            SpoolSourceFamily.STRING -> (if (h == 1) .80 else 1.20 / h.toDouble().pow(.78)) *
+                                exp(-f / (3400 + 1600 * evolution))
+                            SpoolSourceFamily.CHOIR -> if (h == 1) .42 else (.020 +
+                                1.35 * exp(-((f - 730 - 35 * sin(t * 1.6)) / 145).pow(2)) +
+                                1.10 * exp(-((f - 1260 - 45 * sin(t * 1.1)) / 300).pow(2)) +
+                                .70 * exp(-((f - 2500) / 260).pow(2))) / h.toDouble().pow(.18)
+                            SpoolSourceFamily.FLUTE -> when (h) { 1 -> 1.0; 2 -> .045 + .035 * evolution; 3 -> .018; else -> .008 / h }
+                            SpoolSourceFamily.BRASS -> (when {
+                                h == 1 -> .72
+                                h % 2 == 0 -> 1.40 / h.toDouble().pow(.28)
+                                else -> .60 / h.toDouble().pow(.58)
+                            }) * exp(-f / (3100 + 2100 * evolution))
                         }
                         // The recording has a bright, decaying attack. Reading this same
                         // immutable articulation backwards produces a growing breath/bow swell.
-                        val bloom = .68 + .32 * exp(-t / .24)
+                        val bloom = when (family) {
+                            SpoolSourceFamily.STRING -> .68 + .32 * exp(-t / .24)
+                            SpoolSourceFamily.CHOIR -> .96 + .04 * exp(-t / .35)
+                            SpoolSourceFamily.FLUTE -> .74 + .26 * exp(-t / .08)
+                            SpoolSourceFamily.BRASS -> .90 + .10 * exp(-t / .12)
+                        }
                         gain[h - 1] = a * if (h == 1) 1.0 else (.65 + .35 * velocity) * bloom
                     }
+                    // Bound every recorded family by the same partial-amplitude budget;
+                    // audition leveling then compares color instead of oscillator loudness.
+                    val budget = gain.sum()
+                    if (budget > 2.6) for (h in gain.indices) gain[h] *= 2.6 / budget
                 }
                 var y = 0.0
                 for (h in 0 until harmonics) {
@@ -225,12 +255,30 @@ object Spool {
                 doubleCos = doubleCos * dc - old * ds
                 y = y * (1 - .18 * s.doubling) + .18 * s.doubling * doubleSin
                 // Original airflow is restrained, bandwidth-limited and never the voice's identity.
-                breath += .021 * (random.nextDouble(-1.0, 1.0) - breath)
-                if (family == SpoolSourceFamily.FLUTE) y += .025 * breath
+                val air = random.nextDouble(-1.0, 1.0)
+                breath += .021 * (air - breath)
+                fastBreath += .15 * (air - fastBreath)
+                val airflow = fastBreath - breath
+                y += when (family) {
+                    SpoolSourceFamily.FLUTE -> .38 * airflow * (.65 + .35 * exp(-t / .10))
+                    SpoolSourceFamily.CHOIR -> .06 * airflow
+                    SpoolSourceFamily.STRING -> .025 * airflow
+                    SpoolSourceFamily.BRASS -> .04 * airflow * exp(-t / .08)
+                }
                 val env = smooth(t / attack) * smooth((machine.sourceSeconds - t) / .16)
-                val gesture = (.90 + .07 * sin(2 * PI * .75 * t + strip * .45)) *
-                    (1 - .09 * exp(-((t - .38 - strip * .09) / .13).pow(2)))
-                val articulation = .55 + .45 * exp(-t / .32)
+                val gesture = when (family) {
+                    SpoolSourceFamily.STRING -> (.90 + .07 * sin(2 * PI * .75 * t + strip * .45)) *
+                        (1 - .09 * exp(-((t - .38 - strip * .09) / .13).pow(2)))
+                    SpoolSourceFamily.CHOIR -> .88 + .10 * sin(2 * PI * .32 * t + strip * .6)
+                    SpoolSourceFamily.FLUTE -> .97 + .02 * sin(2 * PI * t + strip * .4)
+                    SpoolSourceFamily.BRASS -> (.82 + .16 * exp(-t / .12) + .04 * sin(2 * PI * .55 * t)).coerceAtMost(1.0)
+                }
+                val articulation = when (family) {
+                    SpoolSourceFamily.STRING -> .55 + .45 * exp(-t / .32)
+                    SpoolSourceFamily.CHOIR -> .74 + .26 * exp(-t / .60)
+                    SpoolSourceFamily.FLUTE -> .92 + .08 * exp(-t / .22)
+                    SpoolSourceFamily.BRASS -> .44 + .56 * exp(-t / .17)
+                }
                 out[i] = (.36 * y * env * gesture * articulation * (.60 + .40 * velocity)).toFloat()
             }
             val sourceFilters = Array(4) { Dsp.OnePole(INTERNAL_RATE) }
@@ -317,10 +365,17 @@ object Spool {
         }
     }
 
-    private data class Pickup(val first: Double, val second: Double, val blend: Double)
+    /** Filled in place by [pickup]: the per-frame varispeed read and each grain launch reuse one apiece. */
+    private class Pickup(var first: Double = 0.0, var second: Double = 0.0, var blend: Double = 0.0) {
+        fun set(first: Double, second: Double, blend: Double): Pickup {
+            this.first = first; this.second = second; this.blend = blend
+            return this
+        }
+    }
 
     /** Two matched read windows, not a pointer jump, across each of at most four cuts. */
-    private fun pickup(coordinate: Double, support: Double, amount: Double, schedule: List<SpoolSplice>, sourceLength: Double): Pickup {
+    private fun pickup(coordinate: Double, support: Double, amount: Double, schedule: List<SpoolSplice>, sourceLength: Double,
+                       out: Pickup): Pickup {
         fun folded(x: Double): Double {
             // Smooth reflection near ends preserves position and gain without hard pointer clipping.
             if (support <= 0) return 0.0
@@ -329,10 +384,12 @@ object Spool {
             if (p < 0) p += period
             return if (p <= support) p else period - p
         }
-        if (amount <= 0 || schedule.isEmpty()) return Pickup(folded(coordinate), folded(coordinate), 0.0)
-        val active = schedule.take((1 + 3 * amount).toInt().coerceIn(1, 4))
+        if (amount <= 0 || schedule.isEmpty()) return out.set(folded(coordinate), folded(coordinate), 0.0)
+        // The first one to four cuts in order, read by index rather than through a taken copy.
+        val active = min((1 + 3 * amount).toInt().coerceIn(1, 4), schedule.size)
         var previous = 0.0
-        for (cut in active) {
+        for (c in 0 until active) {
+            val cut = schedule[c]
             // The serialized schedule always refers to immutable recorded time, on both
             // journeys. Only valid read support shrinks on return. Source >=2s and
             // boundary spacing >=.06 guarantee >=120ms between cuts, greater than
@@ -342,12 +399,12 @@ object Spool {
             if (coordinate < boundary - SPLICE_OVERLAP) break
             if (coordinate <= boundary + SPLICE_OVERLAP) {
                 val b = smooth((coordinate - boundary + SPLICE_OVERLAP) / (2 * SPLICE_OVERLAP))
-                return Pickup(folded(coordinate + previous), folded(coordinate + displaced), b)
+                return out.set(folded(coordinate + previous), folded(coordinate + displaced), b)
             }
             previous = displaced
         }
         val p = folded(coordinate + previous)
-        return Pickup(p, p, 0.0)
+        return out.set(p, p, 0.0)
     }
 
     private fun tap(buffer: FloatArray, pickup: Pickup, speed: Double, overlay: Boolean = false): Float =
@@ -363,7 +420,8 @@ object Spool {
         private val strain = m.getValue("STRAIN").toDouble()
         private val head = m.getValue("HEAD").toDouble()
         private val splice = m.getValue("SPLICE").toDouble()
-        private val imprint = sqrt(m.getValue("IMPRINT").toDouble())
+        private val imprint = m.getValue("IMPRINT").toDouble()
+        private val imprintFilterAlpha = 1.0 - exp(-2 * PI * (120.0 + 2280.0 * imprint.pow(1.6)) / INTERNAL_RATE)
         private val answer = m.getValue("RETURN").toDouble()
         private val sourceLength = (material.originals[0].size - 3.0) / INTERNAL_RATE
         private val hold = if (cycle) 0.0 else m.getValue("HOLD").coerceAtMost(.998f).toDouble()
@@ -395,6 +453,10 @@ object Spool {
         private val contact = DoubleArray(3) { material.strips[it].contact * (.52 + .48 * velocity) }
         private val nominalDrag = (0..2).sumOf { contact[it] * .045 * material.strips[it].drag }
         private var overlayAvailable = material.overlays.any { b -> b.any { it != 0f } }
+        private val imprintDepthStart = DoubleArray(3) {
+            if (material.recordedStrips[it]) -IMPRINT_DEPTH_RAMP_SECONDS else Double.POSITIVE_INFINITY
+        }
+        private val pickupDepth = DoubleArray(3)
         private val pitchBlend = smooth((strain - .35) / .55)
         private val period = 1.0 / frequencyFor(voice, m.getValue("TUNE"))
         private val hopFrames = (max(3.0, round(GRAIN_HOP_SECONDS / period)) * period * INTERNAL_RATE).toInt().coerceAtLeast(16)
@@ -412,6 +474,10 @@ object Spool {
         private var carrierTime = 0.0
         private var tapeRate = 1.0
         private var released = false
+        // Per-frame scratch, rewritten in full before each read: head weights, varispeed windows, launch windows.
+        private val headWeightBuffer = DoubleArray(3)
+        private val varispeedWindows = Pickup()
+        private val launchWindows = Pickup()
 
         private data class Grain(
             val startFrame: Int, val carrierStart: Double, val length: Int, val dryStart: Double, val firstStart: Double,
@@ -451,7 +517,7 @@ object Spool {
                     return origin + cycle * period
                 }
                 val desiredCenter = center.coerceIn(duration / 2 + guard, canvas - duration / 2 - guard)
-                val p = pickup(desiredCenter, canvas, splice, machine.spliceSchedule, sourceLength)
+                val p = pickup(desiredCenter, canvas, splice, machine.spliceSchedule, sourceLength, launchWindows)
                 grains[slot] = Grain(frame, carrierTime, length, anchor(desiredCenter), anchor(p.first), anchor(p.second),
                     p.blend, smooth(splice) * geometry, canvas)
                 slot = (slot + 1) % grains.size
@@ -498,7 +564,9 @@ object Spool {
                 overlayRead = (inherited / normalization).toFloat()
                 coordinate /= max(weightSum, 1e-12)
                 if (!minCoordinate.isFinite()) minCoordinate = 0.0
-                return ((original + inherited) / normalization).toFloat()
+                // Expose inherited texture by reducing only the dry recording. The overlay
+                // coefficient stays exactly one; write history, never its amplitude, enables depth.
+                return ((original * (1 - pickupDepth[strip]) + inherited) / normalization).toFloat()
             }
         }
 
@@ -574,11 +642,18 @@ object Spool {
         private fun headWeights(t: Double): DoubleArray {
             val phase = if (frozenHead) 0.0 else 2 * PI * t / max(.4, gate + machine.returnSeconds)
             val q = .5 + .5 * sin(phase)
-            val w = DoubleArray(3) { k -> material.strips[k].gain.toDouble() *
-                if (k == 0) 1 - .46 * head else 1 + head * (1.2 + 1.8 * (if (k == 1) q else 1 - q)) }
+            val w = headWeightBuffer
+            for (k in 0..2) w[k] = material.strips[k].gain.toDouble() *
+                if (k == 0) 1 - .46 * head else 1 + head * (1.2 + 1.8 * (if (k == 1) q else 1 - q))
             val sum = w.sum().coerceAtLeast(1e-12)
             for (k in w.indices) w[k] /= sum
             return w
+        }
+
+        /** Whether any head both carries more than .01 of its gain and is reading, scanned in head order. */
+        private fun reading(gains: DoubleArray, heads: Array<PitchHead>): Boolean {
+            for (k in gains.indices) if (gains[k] > .01 && heads[k].readRate != 0f) return true
+            return false
         }
 
         fun run(): Played {
@@ -589,6 +664,9 @@ object Spool {
             // of its current cell and a routed donor with norm <= .55 of the current bound;
             // induction over commits keeps the bound <= .40 throughout. IMPRINT=0 bypasses
             // this step and all writes exactly. Snapshot loops do not invoke it while playing.
+            // For fixed write history, dry pickup depth is identical for both tapes and does
+            // not depend on audio samples. Its original term cancels in their difference;
+            // inherited pickup gain remains <=1, as does the convex write filter at every setting.
             if (writes && imprint > 0) for (overlay in material.overlays)
                 for (j in overlay.indices) overlay[j] *= GENERATION_RETENTION
             // Allocate to a conservative finite upper bound, trim once after return travel is known.
@@ -609,6 +687,8 @@ object Spool {
                 if (i % 8192 == 0 && Thread.currentThread().isInterrupted)
                     throw java.util.concurrent.CancellationException("SPOOL render no longer wanted")
                 val t = i.toDouble() / INTERNAL_RATE
+                for (k in 0..2) pickupDepth[k] = if (imprint > 0 && material.recordedStrips[k])
+                    .85 * imprint * smooth((t - imprintDepthStart[k]) / IMPRINT_DEPTH_RAMP_SECONDS) else 0.0
                 if (t >= gate && !released) release()
                 val inReturn = released && t < returnEnd
                 val inReread = !cycle && rereadLength > 0 && t >= rereadStart && t < rereadStart + rereadLength
@@ -694,9 +774,9 @@ object Spool {
                         val coordinate = (positions[k] + head * a * motion * geometry).coerceIn(kernelGuard, support - kernelGuard)
                         val speed = if (frozenHead) rates[k] else rates[k] *
                             (1 + head * a * cos(theta) * PI / max(.12, support) * geometry) + head * a * motion * geometryPrime
-                        val windows = pickup(coordinate, support, splice, machine.spliceSchedule, sourceLength)
-                        val p = Pickup(windows.first.coerceIn(kernelGuard, support - kernelGuard),
-                            windows.second.coerceIn(kernelGuard, support - kernelGuard), windows.blend)
+                        val p = pickup(coordinate, support, splice, machine.spliceSchedule, sourceLength, varispeedWindows)
+                        p.first = p.first.coerceIn(kernelGuard, support - kernelGuard)
+                        p.second = p.second.coerceIn(kernelGuard, support - kernelGuard)
                         val wet = smooth(splice) * geometry
                         fun physical(buffer: FloatArray, overlay: Boolean): Float {
                             val dry = read(buffer, coordinate, speed, overlay)
@@ -705,10 +785,12 @@ object Spool {
                         val base = if (!stopped) physical(material.originals[k], false) else 0f
                         val inherited = if (!stopped && overlayAvailable) physical(material.overlays[k], true) else 0f
                         if (t < gate) {
-                            forwardPickup = (forwardPickup * (1 - pitchBlend) + (base + inherited) * pitchBlend).toFloat()
+                            forwardPickup = (forwardPickup * (1 - pitchBlend) +
+                                (base * (1 - pickupDepth[k]) + inherited) * pitchBlend).toFloat()
                             forwardOverlay = (forwardOverlay * (1 - pitchBlend) + inherited * pitchBlend).toFloat()
                         } else {
-                            backwardPickup = (backwardPickup * (1 - pitchBlend) + (base + inherited) * pitchBlend).toFloat()
+                            backwardPickup = (backwardPickup * (1 - pitchBlend) +
+                                (base * (1 - pickupDepth[k]) + inherited) * pitchBlend).toFloat()
                             returnOverlay = (returnOverlay * (1 - pitchBlend) + inherited * pitchBlend).toFloat()
                         }
                     }
@@ -723,8 +805,7 @@ object Spool {
                     heard[k] = if (reverseOpen && !stopped) backwardPickup else 0f
                     overlayReads[k] = (abs(forwardOverlay) * forwardGains[k] + abs(returnOverlay) * reverseGains[k]).toFloat()
                 }
-                if (forwardGains.indices.any { forwardGains[it] > .01 && forwardHeads[it].readRate != 0f } &&
-                    reverseGains.indices.any { reverseGains[it] > .01 && reverseHeads[it].readRate != 0f }) overlapFrames++
+                if (reading(forwardGains, forwardHeads) && reading(reverseGains, reverseHeads)) overlapFrames++
                 if (firstOverlayRead == null && overlayReads.any { it > 1e-7f }) firstOverlayRead = t.toFloat()
                 forwardRaw?.set(i, if (velocity == 0f) 0f else forwardSum.toFloat())
                 reverseRaw?.set(i, if (velocity == 0f) 0f else reverseSum.toFloat())
@@ -748,14 +829,20 @@ object Spool {
                             }
                             writeCount++
                             overlayAvailable = true
+                            if (!material.recordedStrips[destination]) {
+                                material.recordedStrips[destination] = true
+                                imprintDepthStart[destination] = t
+                            }
                             if (firstWrite == null) firstWrite = t.toFloat()
                         }
                         pendingPositions[destination][slot] = -1.0
                         pending[destination][slot] = 0f
                     }
                     if (inReturn) {
-                        for (source in 0..2) writeFilter[source] += .012 * (heard[source] - writeFilter[source])
-                        for (route in machine.routes) {
+                        for (source in 0..2) writeFilter[source] += imprintFilterAlpha * (heard[source] - writeFilter[source])
+                        val routes = machine.routes
+                        for (r in 0 until routes.size) {
+                            val route = routes[r]
                             val destination = route.destination
                             if (t >= gate + returnStops[destination]) continue
                             val gain = route.gain * imprint * (.24 + .76 * answer)

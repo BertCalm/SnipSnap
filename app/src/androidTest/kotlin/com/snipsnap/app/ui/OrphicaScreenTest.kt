@@ -1,5 +1,8 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -37,6 +40,8 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class OrphicaScreenTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val settings = mutableMapOf<String, String>()
+    private var showingSynth by mutableStateOf(true)
     private val shelfRoot = File(
         InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
         "orphica-screen-${System.nanoTime()}",
@@ -50,16 +55,19 @@ class OrphicaScreenTest : ComposeScreenTest() {
 
     private fun show() {
         setPhoneContent {
-            SynthScreen(
-                entry = null,
-                shelfRoot = shelfRoot,
-                onToast = {},
-                onKitUpdated = {},
-                onShelfAssetWritten = {},
-                onDroneToLoop = { _, _, _ -> },
-                onOpenSurface = {},
-                appScope = appScope,
-            )
+            if (showingSynth) {
+                SynthScreen(
+                    entry = null,
+                    shelfRoot = shelfRoot,
+                    onToast = {},
+                    onKitUpdated = {},
+                    onShelfAssetWritten = {},
+                    onDroneToLoop = { _, _, _ -> },
+                    onOpenSurface = {},
+                    appScope = appScope,
+                    settings = settings,
+                )
+            }
         }
         // Invoke semantics directly, as PadSheetScreenTest does for sliders:
         // controls below the fold need no animated scroll on the frozen clock.
@@ -154,6 +162,35 @@ class OrphicaScreenTest : ComposeScreenTest() {
         val knownControls = Orphica.macrosFor(original.config.material).map { it.name }.toSet()
         assertTrue(saved.macros.keys.all { it in knownControls })
         assertTrue(saved.macros.getValue("HOLD") < .99f)
+    }
+
+    @Test
+    fun leaving_the_lab_and_returning_keeps_the_edited_mode_root_and_capture() {
+        val original = OrphicaPatch("RETURN HARP", OrphicaConfig(
+            midi = 65, mode = OrphicaMode.FREEZE, velocity = .42f,
+            grainSizeMs = 66.06575775146484f, grainRateHz = 37f,
+            seconds = .7f, captureSeconds = .23f, seed = Long.MAX_VALUE - 29,
+        ))
+        load(original)
+        click("MODE REVERSE")
+        click("ROOT UP")
+        dial("FRACTURE", .67f)
+        dial("HOLD", 1f)
+        val before = OrphicaPatch.fromJsonText(settings.getValue("patch.ORPHICA.NYLON"))
+
+        compose.runOnIdle { showingSynth = false }
+        pump()
+        compose.runOnIdle { showingSynth = true }
+        pump()
+
+        button("ENGINE ORPHICA · TAP FOR NEXT").assertExists()
+        button("MODE REVERSE").assertIsSelected()
+        assertEquals(.67f, value("FRACTURE"), 0f)
+        assertEquals(1f, value("HOLD"), 0f)
+        val returned = saveAs("RETURNED HARP")
+        assertEquals(original.config.copy(midi = 66, mode = OrphicaMode.REVERSE), returned.config)
+        assertEquals(before.config, returned.config)
+        assertEquals(before.macros, returned.macros)
     }
 
     @Test

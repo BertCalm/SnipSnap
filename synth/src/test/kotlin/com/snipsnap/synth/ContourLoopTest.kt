@@ -75,4 +75,42 @@ class ContourLoopTest {
             assertTrue(scan > still + .3, "$voice: MOTION .35 changes harmonics only $scan dB ($still still)")
         }
     }
+
+    @Test
+    fun `held loops settle far inside the engine's bars and their root keygroup pads export them`() {
+        // Keys.seamError over the blended pair is zero by construction: the blend copies the
+        // preceding cycle's last 256 frames over the loop's. So is the seam Keys.contourPad requires
+        // and ContourIntegrationTest asserts, taken over two copies of one loop. The engine's
+        // pre-blend seam, periodic and state errors are real, but renderLoopMeasured check()s each
+        // below 1e-3, so a bar of 1e-3 on them cannot fail before the engine throws. Nor, in
+        // practice, can one on a 256-frame window of the frames the blend leaves untouched: the
+        // periodic check holds their summed squared difference under 1e-6 of the cycle's energy.
+        // Every case here settles far below the engine's bar (worst, all PLUCK defaults: seam
+        // 5.5e-14, periodic 2.5e-7, state 6.0e-8), so hold each at least ten times above its worst
+        // instead. A fitted root rounded to Float drifts the oscillators by 1e-6 to 2e-5 of a cycle
+        // per loop, which the engine's bars let through (periodic 1.3e-5 to 3.8e-4) and these do not.
+        val seamMargin = 1e-12
+        val periodicMargin = 3e-6
+        val stateMargin = 1e-6
+        val defaults = ContourVoice.entries.map { ContourPatch("$it defaults", it, ContourEngine.defaults(it) + ("HOLD" to 1f)) }
+        val heldLoops = mutableMapOf<ContourPatch, FloatArray>()
+        for (patch in defaults + ContourPresets.all().filter { ContourEngine.isLoop(it.macros.getValue("HOLD")) }) {
+            val measured = ContourEngine.renderLoopMeasured(patch.voice, patch.macros, patch.velocity, patch.config)
+            println("CONTOUR HOLD ${patch.name}: seam before the blend ${measured.seamBeforeBlend} periodic ${measured.periodicError} state ${measured.stateError} over a ${measured.loopStart}-frame cycle")
+            assertTrue(measured.seamBeforeBlend < seamMargin,
+                "${patch.name} seam before the blend ${measured.seamBeforeBlend} is not under $seamMargin")
+            assertTrue(measured.periodicError < periodicMargin,
+                "${patch.name} held cycles differ by ${measured.periodicError}, not under $periodicMargin")
+            assertTrue(measured.stateError < stateMargin,
+                "${patch.name} oscillator/filter state differs by ${measured.stateError} after a cycle, not under $stateMargin")
+            heldLoops[patch] = measured.samples.copyOfRange(measured.loopStart, measured.samples.size)
+        }
+        // At its root zone a keygroup pad plays the default TUNE, so it must export the loop just measured.
+        for (patch in defaults) {
+            val pad = Keys.contourPad(patch.voice, emptyMap(), ContourEngine.rootMidi(patch.voice))
+            assertContentEquals(heldLoops.getValue(patch),
+                pad.snip.samples.copyOfRange(pad.loopStartFrame.toInt(), pad.snip.samples.size),
+                "${patch.voice} root pad does not export the measured held loop")
+        }
+    }
 }

@@ -390,15 +390,17 @@ object ContourEngine {
         if (Thread.currentThread().isInterrupted || cancelled()) throw java.util.concurrent.CancellationException("CONTOUR render no longer wanted")
     }
 
-    /** Band limiting and DC conditioning only; deliberately no limiter or gain. */
+    /** Band limiting and DC conditioning only; deliberately no limiter or gain.
+     * Consumes [raw]: it is band-limited in place, so a caller must not read it afterwards. */
     internal fun finish(raw: FloatArray, normalize: Boolean = false, fade: Boolean = false): FloatArray {
         stopIfUnwanted()
-        val filtered = raw.copyOf()
-        Tide.bandLimit(filtered, INTERNAL_RATE)
-        val out = Dsp.decimate(filtered, RATE)
+        Tide.bandLimit(raw, INTERNAL_RATE)
+        stopIfUnwanted()
+        val out = Dsp.decimate(raw, RATE)
         val mean = out.sumOf { it.toDouble() } / out.size.coerceAtLeast(1)
         val hp = Dsp.OnePole(RATE)
         for (i in out.indices) { val x = out[i] - mean.toFloat(); out[i] = x - hp.lp(x, 8f) }
+        stopIfUnwanted()
         if (normalize) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         if (fade) Dsp.fadeTail(out)
         return out
@@ -444,6 +446,7 @@ object ContourEngine {
             difference += d * d
             energy += out[i].toDouble() * out[i]
         }
+        stopIfUnwanted(cancelled)
         val seamBeforeBlend = if (energy <= 1e-20) 0.0 else Keys.seamError(out, plan.frames)
         val periodicError = sqrt(difference / energy.coerceAtLeast(1e-30))
         check(seamBeforeBlend < 1e-3 && periodicError < 1e-3 && stateError < 1e-3) {
@@ -457,7 +460,9 @@ object ContourEngine {
             val ending = out.size - need + i
             out[ending] = ((1 - w) * out[ending] + w * out[preceding]).toFloat()
         }
+        stopIfUnwanted(cancelled)
         if (normalize) Dsp.levelTo(out, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        stopIfUnwanted(cancelled)
         check(energy <= 1e-20 || Keys.seamError(out, plan.frames) < 1e-3) { "CONTOUR $voice loop seam failed" }
         return LoopRender(out, plan.frames, plan.noteHz, plan.actualHz,
             motionCycles(m.getValue("MOTION").toDouble(), plan.frames.toDouble() / RATE, config), plan.edgeRatio,

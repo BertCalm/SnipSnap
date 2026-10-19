@@ -158,7 +158,9 @@ threshold by.
 ```
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
+snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
+snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
 ```
 
@@ -166,14 +168,88 @@ Renders the voice's factory presets to WAV (`Presets.forVoice`). `--all`
 writes every preset; `--preset N` writes one, counting from 1; with
 neither, the first preset. A string-machine preset that lands with
 ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
-`--instrument` and `--drone` are RESIN only: a held nine-zone instrument
-(`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
-hold on the phone's MAKE INSTRUMENT; this command refuses them. An
-engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR)
-still renders here.
+`--instrument` supports RESIN, REGISTERS and OPENSKY HALO: a held nine-zone
+instrument (`.xty` plus the `.xpm` twin). REGISTERS and OPENSKY keep their
+speaking attack, so they take `--release` and refuse `--attack`. `--drone`
+is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
+MAKE INSTRUMENT; this command refuses them. An engine with a roster and
+no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
+VENT, a prototype outside
+both the roster and the picker, renders six provisional recipes
+(`VentPresets`, one per voice):
+ROUND, WIRE and TEAR use model 1; the clean PULSE, COIL and PLUME voices use
+model 2. The voice selects its saved model; see [VENT](VENT.md).
+WICK follows the same provisional path with four PLUCK and four BUBBLE recipes,
+including held material; see [WICK](WICK.md).
 
-LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
-eight-preset audition bank. `--midi 24..96` and `--velocity 0..1` override
+`--midi N` and `--velocity 0..1` set a pad audition's note and strike
+energy on the engines below and are refused on any other, and with
+`--instrument` or `--drone` except ORPHICA and OPENSKY HALO instrument roots
+and authoring velocity. The ranges are `SynthCommand`'s note-range
+table; a `--midi` outside the voice's range is refused with the range in
+the message.
+
+| Engine | `--midi` |
+|---|---|
+| ALLOY | 24–96 |
+| CISTERN | 36–84 |
+| FLOTILLA | 36–84 |
+| TESSERA | 48–72 |
+| PITCHWHEEL | 24–96 |
+| REVEL | 48–72 |
+| PRISM | BASS 24–48; ORGAN 36–60; KEY, PLUCK, VEIL 48–72; GLASS 60–84 |
+| REGISTERS | 24–96 |
+| ORPHICA | 21–108 |
+| CONTOUR | BASS 12–60; HOLLOW, SWELL 24–72; KEY, PLUCK, LEAD 36–84 |
+| STOOP | 24–96 |
+| LACQUER | 24–96 |
+| SPOOL | 48–72 |
+| SKITTER | 24–84 |
+| TANGLE | 24–84 |
+| SHOAL | 24–84 |
+| RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
+| EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
+| BELLOWS | 48–72 |
+| MURMUR | 36–96 |
+| OSPREY | 36–84 |
+| OPENSKY | 0–127 finite; HALO instrument root 36–96 |
+| VENT | 36–84 |
+| WICK | 24–84 |
+
+ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
+the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
+reset TUNE to zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
+and RELAY rewrite TUNE to land on the note; the rest store the note
+itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
+repeatable macro variation around the chosen preset). OSPREY also takes
+`--seed N` (its sea gesture's variation), `--seconds .25..12` (the length
+of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
+`--seed N` for its starting trajectory and refuses `--scramble`. `--seed`
+is supported by SKITTER, OSPREY, VENT and ORPHICA; `--scramble` by SKITTER only;
+`--seconds` and `--model` by OSPREY only. Other engines refuse these options.
+
+ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
+accepts the full signed 64-bit range. `--instrument [--release S]` packages
+attack-preserving stereo captured-sustain zones; release is 0.1–1.5 seconds.
+It accepts `--midi` and `--velocity` for the sampled root and string excitation,
+and refuses `--all`, `--attack` and `--drone`. See [ORPHICA](ORPHICA.md).
+
+OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
+their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and
+`--dry` / `--wet` explicitly select its room path. `--patch recipe.json` loads
+a complete saved OPENSKY recipe for the requested voice, exclusive with
+`--preset` and `--all`. HALO `--instrument [--release S]` packages nine stereo
+attack/sustain zones; release is 0.1–1.5 seconds, applied by the sample player.
+That mode rejects `--gate` and `--attack`; its attack comes from the saved source.
+
+```sh
+snipsnap synth OPENSKY SOAR --preset 2 --midi 60 --velocity 0.7 --gate 0.4 --dry --out lead
+snipsnap synth OPENSKY HALO --preset 2 --instrument --release 1.2 --out keys
+```
+
+LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK with six recipes per
+voice. `--all` exports those six recipes; the original first preset for each
+voice remains the default. `--midi` and `--velocity 0..1` override
 the stored root and strike energy, while TUNE remains the saved ±12-semitone
 offset. For example:
 
@@ -183,11 +259,12 @@ snipsnap synth LACQUER GLASS --all --midi 60 --velocity 0.7 --out <dir>
 
 HOLD presets render settled loop material. The wider listening matrix and
 native/matched comparison page come from `:synth:generateLacquerAudition`;
-`:synth:generateLacquerKit` exports the dry starter pads as an MPC 3 track
-with an MPC 2 twin. These remain provisional sounds pending the owner's audition.
+`:synth:generateLacquerKit` exports the original dry starter plus three
+twelve-preset bank programs, each as an MPC 3 track with an MPC 2 twin.
+The expanded recipes are available for the owner's audition.
 
-RELAY auditions use the complete saved phrase at the requested root: `--midi`
-accepts 48–72 for KEY, PLUCK, ORGAN, CHIME and FLOW, or 24–48 for BASS.
+RELAY auditions use the complete saved phrase at the requested root (each
+voice's `--midi` range is in the table above).
 `--velocity 0..1` changes excitation and accent energy. Its six dry factory
 seeds each cover one voice; rendered pulse timing follows sample transposition.
 
@@ -397,25 +474,34 @@ itself: the same hit, played slower or faster, snapped to semitones),
 machine's back half; its WIDTH widens a mono pad's WAV to stereo),
 `sectioned` (the same section with six independent players in place of
 three locked taps: each drifts, vibratos, enters and sounds on their own, so
-a note reads as several playing and not one swirled) and
+a note reads as several playing and not one swirled),
 `amped` (a tube amp and its speaker on a hit that was never a guitar:
 DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
-cabinet — run four times over inside so a hot tube folds back far less).
+cabinet — run four times over inside so a hot tube folds back far less),
+`driven` (a drive pedal: the tube at the top of its gain law with the
+speaker barely in, the last stretch of the pad faded ahead of the amp so
+a quiet tail is not lifted into a click) and `compressed` (a compressor
+pedal, for now: SQUASH at its strongest, the body leaned on so the tail
+stands up; `punched` is the same section plus CRUNCH, this has no
+crunch).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
 phone the same characters, less `crushed` (CRUSH already draws that era)
 and `amped` (its chip is a later layout decision), sit on the PAD SHEET's
-TREATMENT card, six
-rows grouped by what an effect *does* rather than which family implements
-it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
+TREATMENT card, seven
+rows, six of them grouped by what an effect *does* rather than which family
+implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
 the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its
 character once it is itself (PUNCH · RING · DUB · VINYL · PHASE ·
 CONTOUR), row four what happens to it in time (SLAP · WASH · ROLL ·
 GATE · ENSEMBLE · SECTION), row five
-the machine's own transport (FLIP · STOP · START · PITCH), and row six
+the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
-ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
+ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
+the pedals (DRIVE · COMP — `driven` and `compressed`),
+grouped by what an effect *is*, because a guitarist looks for a pedal by
+its name; tapping any
 of them changes every file the pad references, velocity layers included.
 
 ### `recipe <kit-dir> <pad> --from <kit-dir>:<pad>` — do it again
@@ -891,6 +977,16 @@ k-th pattern), mixer wired, samples pooled per-kit-prefixed in
 `_[ProjectData]/`. `--mixdown` also renders the whole session — every
 kit playing its groove, summed and peak-limited — as `<Name>.wav`
 beside the `.xpj`: the beat as a file you can send anywhere.
+
+`--project <shelf>/Projects/<name>` takes a stored project instead of
+kit folders ([`DIRECTION_2026_10.md`](DIRECTION_2026_10.md) §2): its
+held kits, in its order, resolved against the shelf two folders up; its
+**beat on the active kit's track** in place of that kit's own grooves
+(the others keep theirs); its tempo on the session; its name, made
+card-safe, as the session's unless `--name` says otherwise. A held kit
+whose folder is gone is refused by name before anything is written.
+`--mixdown` plays the beat's first pattern on the active kit the same
+way. Kit folders and `--project` are two ways in, not one command line.
 
 ### `sidea <kit-dir>... --title NAME` — the beat tape
 

@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.mpc3.Mpc3Clip
 import java.io.File
 
 /**
@@ -14,10 +15,34 @@ object SessionMixdown {
     /** The shared ceiling with [KitPreview] — a mix must never clip harshly. */
     const val PEAK = 0.95f
 
-    fun render(kitDirs: List<File>, tempoBpm: Float? = null): Snip {
+    /**
+     * A [Project]'s mixdown: the beat's first pattern on the active kit,
+     * every other kit playing its own first groove, at the project's
+     * tempo — the same routing [SessionBuilder.build] gives the session.
+     * [kitDirs] is for a caller that staged the kits elsewhere, as there.
+     */
+    fun render(
+        project: Project,
+        shelfRoot: File,
+        tempoBpm: Float? = project.tempoBpm,
+        kitDirs: List<File> = ProjectStore.kitDirs(shelfRoot, project),
+    ): Snip {
+        val missing = ProjectStore.missingKits(shelfRoot, project)
+        if (missing.isNotEmpty()) throw ProjectKitsMissingException(project.name, missing)
+        val lead = ProjectStore.beat(ProjectStore.dir(shelfRoot, project.name)).firstOrNull()
+        val active = ProjectStore.activeIndex(shelfRoot, project)
+        return render(kitDirs, tempoBpm, clipFor = { index, _ -> if (index == active) lead else null })
+    }
+
+    fun render(
+        kitDirs: List<File>,
+        tempoBpm: Float? = null,
+        /** The clip each track plays, by index; null means the kit's own first groove. */
+        clipFor: (Int, File) -> Mpc3Clip? = { _, _ -> null },
+    ): Snip {
         require(kitDirs.isNotEmpty()) { "a mixdown needs at least one kit" }
-        val renders = kitDirs.map { dir ->
-            KitPreview.render(KitStore.load(dir), dir, tempoBpm = tempoBpm)
+        val renders = kitDirs.mapIndexed { index, dir ->
+            KitPreview.render(KitStore.load(dir), dir, clip = clipFor(index, dir), tempoBpm = tempoBpm)
         }
         if (renders.size == 1) return renders[0]
 
