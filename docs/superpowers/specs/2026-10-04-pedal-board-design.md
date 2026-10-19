@@ -1,6 +1,6 @@
 # The pedal board: guitar-pedal effects for the FX rack
 
-**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is next.
+**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is built with its listening gate pending (`2026-10-17-wah-section-design.md`). A brainstorm of the pedals that could follow the staged ones, and of how the chain and the PEDALS row grow, is `2026-10-19-pedal-board-brainstorm.md` (2026-10-19, nothing in it decided).
 **Builds on:** VALVE (the rack's amp section, `2026-09-29-magnet-valve-design.md`) and the MAGNET guitar engine (merged, PR #438).
 **Roadmap row:** S30 in `docs/SYNTH_ROADMAP.md` (the table is numbered by arrival; SUTURE already claims S29).
 
@@ -76,7 +76,7 @@ A real wah: a resonant band-pass swept over hundreds of milliseconds, **before t
 - **Macros (proposal, to be fixed at the section's own design):** MODE (touch, auto, rock; default auto: a stepped macro like ENSEMBLE's SECTION), SPEED (the LFO rate, the follower's release, or the rock's length), RANGE (how far the centre travels), Q (resonance), with the 0.05 dry as a constant. Neutrals so AMT 0 does nothing (the contract tests require AMT 0 to land on every neutral and a near-copy at neutral).
 - **Hazards the prototype showed:** the touch move with the brief's 5 ms attack and 150 ms release failed on guitars (the filter opens before the first window and the pluck's own decay darkens at the same slope: they cancel), so the follower is slow (20 ms attack, 8 dB span); a pure band-pass sweeps hardest but leaves nothing off-centre, so the small dry stays; TptSvf with damping 0.1 to 0.25 is stable and bounded in the prototype; the end of a note through a high-gain amp is checked (the last 20 ms at least 50 dB under the peak).
 - **Needs Stage 3** to be a pedal in front of the amp on guitar pads: the owner heard the rig way on jangle and preferred it; the pad-sheet way (a wah after the baked amp) was "not usable" on guitars.
-- Gate: the owner's ends ("extreme enough") per macro, and the MODE switch; the WAH chip joins the row only if it passes.
+- Gate: the owner's ends ("extreme enough") per macro, and the three moves (the WAH spec's decision 2 replaced the MODE switch with three weights); the WAH chip joins the row only if it passes.
 
 ## Stage 2: the COMPRESSOR section
 
@@ -120,7 +120,7 @@ Octave; a noise gate; a tuner; through-zero flanging; an optical-tremolo model; 
 
 ## Effort, from footprints
 
-Stage 0 (revised): two recipes, one removed recipe, a pre-amp fade and the tests: small. WAH: about PHASE's size plus an envelope follower and a stepped MODE. COMPRESSOR: a compressor with lookahead, about SQUASH's size. Stage 3: a design first. TREMOLO and FLANGER: each about PHASE's size. FUZZ: about VALVE's size.
+Stage 0 (revised): two recipes, one removed recipe, a pre-amp fade and the tests: small. WAH: about PHASE's size plus an envelope follower (and, as built, three move weights in place of a stepped MODE). COMPRESSOR: a compressor with lookahead, about SQUASH's size. Stage 3: a design first. TREMOLO and FLANGER: each about PHASE's size. FUZZ: about VALVE's size.
 
 ## Verification (every stage)
 

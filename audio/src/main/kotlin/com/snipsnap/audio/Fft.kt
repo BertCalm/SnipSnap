@@ -39,18 +39,26 @@ object Fft {
         var len = 2
         while (len <= n) {
             val angle = -2.0 * PI / len
-            val wRe = cos(angle).toFloat()
-            val wIm = sin(angle).toFloat()
+            // The twiddle recurrence runs in Double, not Float. In Float
+            // each step rounds the rotating phasor again, so by the last
+            // stage of a 4096/8192-point transform its phase has drifted
+            // measurably (probe vs a naive double DFT: ~3.6e-5 relative
+            // at 8192) and that drift lands in every bin. Double costs
+            // nothing audible in speed here — this is offline analysis —
+            // and keeps the recurrence's own error far below the Float
+            // butterfly's rounding, which is the floor that should rule.
+            val wRe = cos(angle)
+            val wIm = sin(angle)
 
             var i = 0
             while (i < n) {
-                var curRe = 1f
-                var curIm = 0f
+                var curRe = 1.0
+                var curIm = 0.0
                 for (k in 0 until len / 2) {
                     val uRe = re[i + k]
                     val uIm = im[i + k]
-                    val vRe = re[i + k + len / 2] * curRe - im[i + k + len / 2] * curIm
-                    val vIm = re[i + k + len / 2] * curIm + im[i + k + len / 2] * curRe
+                    val vRe = (re[i + k + len / 2] * curRe - im[i + k + len / 2] * curIm).toFloat()
+                    val vIm = (re[i + k + len / 2] * curIm + im[i + k + len / 2] * curRe).toFloat()
 
                     re[i + k] = uRe + vRe
                     im[i + k] = uIm + vIm
@@ -96,7 +104,9 @@ object Fft {
         val n = minOf(samples.size, size)
 
         for (i in 0 until n) {
-            val window = 0.5f - 0.5f * cos(2.0 * PI * i / (size - 1)).toFloat()
+            // size == 1 has no window shape to speak of (and (size - 1)
+            // would divide by zero): the single sample passes as-is.
+            val window = if (size == 1) 1f else 0.5f - 0.5f * cos(2.0 * PI * i / (size - 1)).toFloat()
             re[i] = samples[i] * window
         }
 
