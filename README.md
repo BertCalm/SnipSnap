@@ -973,12 +973,18 @@ stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
 contrasting push/pull colors, asymmetric folk reeds, and tracking drones
-with pressure-gated bridge chatter. Eight dry presets, saved player gestures,
-a sixteen-pad starter kit, CLI and the synth picker share the same renderer.
-Run `./gradlew :synth:generateBellowsAudition` for its raw/matched listening
-page and control comparisons. The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
-awaits the owner's sonic verdict; [implementation notes](docs/BELLOWS.md)
-describe expression, drone and HOLD limits.
+with pressure-gated bridge chatter. Twenty-four dry presets, saved player
+gestures, a sixteen-pad starter kit, CLI and the synth picker share the same
+renderer. MAKE INSTRUMENT adds C3–C5 attack/sustain keygroups with three
+velocity timbres; WHEEL's fixed tonic companion stays separate from melody.
+Run `./gradlew :synth:generateBellowsAudition` for the library, phrases,
+chords and raw/matched control comparisons, and
+`./gradlew :cli:generateBellowsInstruments` for the phone/MPC package.
+The owner accepted the four dry voice identities and parameter differences.
+The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
+now supports the playable review; [implementation notes](docs/BELLOWS.md)
+and the [playtest guide](docs/BELLOWS_PLAYTEST.md) describe the remaining
+phone/MPC checks.
 
 ### `:mpc3`
 

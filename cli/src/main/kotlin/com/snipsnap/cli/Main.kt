@@ -70,6 +70,8 @@ object Cli {
         |                        needs --into <kit-dir> and becomes that
         |                        kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
+        |  bellows-keys         four model-2 BELLOWS keygroups + fixed C3 bed
+        |                        (--out DIR, --release .1..1.5, --overwrite)
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        render factory presets to wav, to hear them
         |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY: --midi N --velocity 0..1)
@@ -365,6 +367,7 @@ object Cli {
                 "export" -> ExportCommand.run(args.drop(1), out)
                 "import" -> ImportCommand.run(args.drop(1), out)
                 "keys" -> KeysCommand.run(args.drop(1), out)
+                "bellows-keys" -> BellowsKeysCommand.run(args.drop(1), out)
                 "pad" -> PadCommand.run(args.drop(1), out)
                 "remix" -> RemixCommand.run(args.drop(1), out)
                 "resample" -> ResampleCommand.run(args.drop(1), out)

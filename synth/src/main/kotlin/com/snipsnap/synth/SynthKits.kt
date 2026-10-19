@@ -641,7 +641,8 @@ object SynthKits {
 
     /**
      * Sixteen dry bellows pads: eight CHAMBER notes in C minor pentatonic from
-     * C3 and the eight contrasting presets. Each recipe retains its MIDI base,
+     * C3 and the original eight contrasting presets. The larger preset library
+     * does not change this kit's sixteen-pad layout. Each recipe retains its MIDI base,
      * excitation velocity, model and bellows gesture. Held presets route as LOOP.
      */
     fun bellows(): List<ArrangedPad?> {
@@ -654,7 +655,11 @@ object SynthKits {
                 midi = Bellows.ROOT_MIDI + semitone,
             ))
         }
-        return scale + BellowsPresets.all().map(::landed)
+        val contrasts = listOf(
+            "Amber Breath", "Silver Ranks", "Midnight Pull", "Forward Push",
+            "Village Stab", "Dancing Reeds", "Quiet Wheel", "Wrist Sparks",
+        )
+        return scale + contrasts.map { name -> BellowsPresets.all().first { it.name == name } }.map(::landed)
     }
 
     /**

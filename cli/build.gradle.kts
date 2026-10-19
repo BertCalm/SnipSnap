@@ -60,3 +60,12 @@ tasks.register<Jar>("snipsnapJar") {
     dependsOn(configurations.runtimeClasspath)
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
 }
+
+tasks.register<JavaExec>("generateBellowsInstruments") {
+    group = "distribution"
+    description = "Export four model-2 BELLOWS keygroups, fixed C3 WHEEL bed and unchecked phone/MPC validation ZIP under testkit/bellows-audition/."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("com.snipsnap.cli.MainKt")
+    args("bellows-keys", "--out", rootProject.file("testkit/bellows-audition").absolutePath, "--overwrite")
+    workingDir = rootProject.projectDir
+}
