@@ -1,0 +1,504 @@
+{
+  "version": 1,
+  "provenance": {
+    "description": "Published STOOP factory-note rows before the preset contrast revision. Golden anchors preserve the complete saved recipe; roster identities preserve listening comparability.",
+    "manifestSha256": "e8bad7efd44ab8c2031b01c88f8622b3fdc9a0fd37cb41558d21ecd95402d203",
+    "source": "stoop-palette-reference/manifest.json; clips category=presets, id suffix=_note"
+  },
+  "roster": [
+    {
+      "name": "Round Corner",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Rubber Sole",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Muted Wire",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Square Pocket",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Nose Bass",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Heel Slap",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Soft Curb",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Amber Sub",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Bent Pulse",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Dry Step",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Grain Pocket",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Back Alley",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Fifth Reply",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Double Step",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Velvet Root",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Held Corner",
+      "voice": "BASS",
+      "midi": 36,
+      "velocity": 1
+    },
+    {
+      "name": "Dust Tines",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Bent Bell",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Amber Key",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Clean Contact",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Soft Bell",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Low Window",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Tin Roof",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "After Key",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Night Key",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Held Amber",
+      "voice": "TINE",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Soft Clav",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Short Wire",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Back Step",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Dry Mute",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Copper Pick",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Round Rhythm",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Grain String",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Two Picks",
+      "voice": "CLAV",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Amber Organ",
+      "voice": "ORGAN",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Small Pipes",
+      "voice": "ORGAN",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Corner Stab",
+      "voice": "ORGAN",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Bright Loft",
+      "voice": "ORGAN",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Worn Room",
+      "voice": "ORGAN",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Held Pipes",
+      "voice": "ORGAN",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Nose Talk",
+      "voice": "LEAD",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Pocket Whistle",
+      "voice": "LEAD",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Thin Brass",
+      "voice": "LEAD",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Long Lantern",
+      "voice": "LEAD",
+      "midi": 60,
+      "velocity": 1
+    },
+    {
+      "name": "Velvet Stack",
+      "voice": "CHORD",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Small Cinema",
+      "voice": "CHORD",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Minor Corner",
+      "voice": "CHORD",
+      "midi": 48,
+      "velocity": 1
+    },
+    {
+      "name": "Late Strings",
+      "voice": "CHORD",
+      "midi": 48,
+      "velocity": 1
+    }
+  ],
+  "anchors": [
+    {
+      "engine": "STOOP",
+      "version": 1,
+      "name": "Round Corner",
+      "voice": "BASS",
+      "macros": {
+        "TOUCH": 0.23999999463558197,
+        "COLOR": 0.3199999928474426,
+        "SHADOW": 0,
+        "WEAR": 0,
+        "LENGTH": 0.41999998688697815,
+        "HOLD": 0
+      },
+      "model": 1,
+      "midi": 36,
+      "velocity": 1,
+      "source": {
+        "shape": 0.11999999731779099,
+        "sub": 0.699999988079071,
+        "fmRatio": 2,
+        "fmIndex": 0.699999988079071,
+        "harmonicTilt": 0.18000000715255737,
+        "detuneCents": 0
+      },
+      "shadowInterval": 0,
+      "shadowDelayMs": 110,
+      "shadowArticulation": 0.25,
+      "shadowReplies": 1,
+      "chordIntervals": [
+        0,
+        7,
+        12
+      ]
+    },
+    {
+      "engine": "STOOP",
+      "version": 1,
+      "name": "Dust Tines",
+      "voice": "TINE",
+      "macros": {
+        "TOUCH": 0.4000000059604645,
+        "COLOR": 0.41999998688697815,
+        "SHADOW": 0.20000000298023224,
+        "WEAR": 0.41999998688697815,
+        "LENGTH": 0.6200000047683716,
+        "HOLD": 0
+      },
+      "model": 1,
+      "midi": 60,
+      "velocity": 1,
+      "source": {
+        "shape": 0.2800000011920929,
+        "sub": 0.11999999731779099,
+        "fmRatio": 2,
+        "fmIndex": 0.699999988079071,
+        "harmonicTilt": 0.3400000035762787,
+        "detuneCents": 0
+      },
+      "shadowInterval": 0,
+      "shadowDelayMs": 110,
+      "shadowArticulation": 0.25,
+      "shadowReplies": 1,
+      "chordIntervals": [
+        0,
+        7,
+        12
+      ]
+    },
+    {
+      "engine": "STOOP",
+      "version": 1,
+      "name": "Soft Clav",
+      "voice": "CLAV",
+      "macros": {
+        "TOUCH": 0.2800000011920929,
+        "COLOR": 0.3799999952316284,
+        "SHADOW": 0.15000000596046448,
+        "WEAR": 0.25,
+        "LENGTH": 0.30000001192092896,
+        "HOLD": 0
+      },
+      "model": 1,
+      "midi": 48,
+      "velocity": 1,
+      "source": {
+        "shape": 0.30000001192092896,
+        "sub": 0.2199999988079071,
+        "fmRatio": 1,
+        "fmIndex": 0.30000001192092896,
+        "harmonicTilt": 0.25999999046325684,
+        "detuneCents": 0
+      },
+      "shadowInterval": 0,
+      "shadowDelayMs": 110,
+      "shadowArticulation": 0.25,
+      "shadowReplies": 1,
+      "chordIntervals": [
+        0,
+        7,
+        12
+      ]
+    },
+    {
+      "engine": "STOOP",
+      "version": 1,
+      "name": "Amber Organ",
+      "voice": "ORGAN",
+      "macros": {
+        "TOUCH": 0.20000000298023224,
+        "COLOR": 0.3400000035762787,
+        "SHADOW": 0.15000000596046448,
+        "WEAR": 0.20000000298023224,
+        "LENGTH": 0.6499999761581421,
+        "HOLD": 0
+      },
+      "model": 1,
+      "midi": 60,
+      "velocity": 1,
+      "source": {
+        "shape": 0.2800000011920929,
+        "sub": 0.2800000011920929,
+        "fmRatio": 2,
+        "fmIndex": 0.699999988079071,
+        "harmonicTilt": 0.23999999463558197,
+        "detuneCents": 0
+      },
+      "shadowInterval": 0,
+      "shadowDelayMs": 110,
+      "shadowArticulation": 0.25,
+      "shadowReplies": 1,
+      "chordIntervals": [
+        0,
+        7,
+        12
+      ]
+    },
+    {
+      "engine": "STOOP",
+      "version": 1,
+      "name": "Nose Talk",
+      "voice": "LEAD",
+      "macros": {
+        "TOUCH": 0.6800000071525574,
+        "COLOR": 0.7200000286102295,
+        "SHADOW": 0.20000000298023224,
+        "WEAR": 0.20000000298023224,
+        "LENGTH": 0.4000000059604645,
+        "HOLD": 0
+      },
+      "model": 1,
+      "midi": 60,
+      "velocity": 1,
+      "source": {
+        "shape": 0.8799999952316284,
+        "sub": 0.07999999821186066,
+        "fmRatio": 2,
+        "fmIndex": 0.6499999761581421,
+        "harmonicTilt": 0.7400000095367432,
+        "detuneCents": 0
+      },
+      "shadowInterval": 0,
+      "shadowDelayMs": 110,
+      "shadowArticulation": 0.25,
+      "shadowReplies": 1,
+      "chordIntervals": [
+        0,
+        7,
+        12
+      ]
+    },
+    {
+      "engine": "STOOP",
+      "version": 1,
+      "name": "Velvet Stack",
+      "voice": "CHORD",
+      "macros": {
+        "TOUCH": 0.2800000011920929,
+        "COLOR": 0.3799999952316284,
+        "SHADOW": 0.20000000298023224,
+        "WEAR": 0.30000001192092896,
+        "LENGTH": 0.5199999809265137,
+        "HOLD": 0
+      },
+      "model": 1,
+      "midi": 48,
+      "velocity": 1,
+      "source": {
+        "shape": 0.2800000011920929,
+        "sub": 0.23999999463558197,
+        "fmRatio": 2,
+        "fmIndex": 0.699999988079071,
+        "harmonicTilt": 0.3199999928474426,
+        "detuneCents": 3
+      },
+      "shadowInterval": 0,
+      "shadowDelayMs": 110,
+      "shadowArticulation": 0.25,
+      "shadowReplies": 1,
+      "chordIntervals": [
+        0,
+        7,
+        12
+      ]
+    }
+  ]
+}

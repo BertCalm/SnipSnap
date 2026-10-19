@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f2e9">
+  <meta name="description" content="Listen to a finite PRISM spectral-motion proof for SnipSnap. Compare dry offline engine renders and keep your listening notes.">
+  <title>PRISM / Motion study · SnipSnap</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listen">Skip to the listening desk</a>
+  <div class="page">
+    <header class="masthead">
+      <a class="wordmark" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap source on GitHub">SNIP<span>/</span>SNAP</a>
+      <span class="masthead-study">PRISM <span>/</span> MOTION STUDY</span>
+      <button class="text-button" id="export-notes" type="button">Export notes <span aria-hidden="true">↗</span></button>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> FIRST FINITE PROOF</p>
+          <h1 id="page-title">A note changing material.</h1>
+          <p id="study-description">Spectral groups move between two materials while the musical pitch stays anchored. Listen to the change inside the note.</p>
+        </div>
+        <div class="proof-stamp"><span>RENDERED BY SNIPSNAP</span><strong>Dry. Finite. Listen first.</strong><span>Dry audio · finite notes</span></div>
+      </section>
+
+      <div id="load-status" class="load-status" role="status">Loading the listening study…</div>
+      <section id="load-error" class="load-error" hidden aria-labelledby="load-error-title">
+        <h2 id="load-error-title">The renders could not load.</h2>
+        <p id="load-error-detail">The listening manifest is unavailable.</p>
+        <button class="button" id="retry" type="button">Try again</button>
+        <a href="./manifest.json">Open render manifest ↗</a>
+      </section>
+
+      <div id="study" hidden>
+        <section class="listening-desk" id="listen" aria-labelledby="desk-title">
+          <div class="comparison">
+            <div class="section-label"><span>01 / COMPARE A GESTURE</span><span id="family-count"></span></div>
+            <div class="family-heading">
+              <div class="family-picker"><label for="family-select" class="sr-only">Sound family</label><select id="family-select"></select></div>
+              <div class="pitch-picker"><label for="pitch-select">Pitch</label><select id="pitch-select"></select></div>
+            </div>
+            <h2 id="desk-title" class="sr-only">Compare a sound family</h2>
+            <p class="what-to-hear"><strong>What to hear</strong><span id="family-guide"></span></p>
+            <div class="compare-cards" id="compare-cards" role="group" aria-label="Compare renders in this family"></div>
+            <div class="motion-choices" id="motion-choices"><span>Movement</span><div id="motion-buttons" role="group" aria-label="Choose motion speed or staggered groups"></div></div>
+            <figure class="spectrum-figure">
+              <div class="figure-heading"><span id="plot-label">PARTIAL MOTION / ILLUSTRATION</span><span id="plot-key">Body → colour → air</span></div>
+              <canvas id="spectrum" role="img" aria-label="Illustrative partial amplitudes; this is a concept drawing, not a measurement of the audio."></canvas>
+              <figcaption id="plot-caption">Illustrative partial amplitudes. The audio above is the evidence.</figcaption>
+            </figure>
+          </div>
+
+          <aside class="review" aria-labelledby="review-title">
+            <div class="section-label"><span>YOUR LISTENING NOTES</span><span id="review-count">0 reviewed</span></div>
+            <h2 id="review-title">Does the movement earn its place?</h2>
+            <p class="review-clip" id="review-clip">Select a render.</p>
+            <div class="verdicts" role="group" aria-label="Verdict for this render">
+              <button type="button" data-verdict="keep" aria-pressed="false">Keep</button>
+              <button type="button" data-verdict="revise" aria-pressed="false">Revise</button>
+              <button type="button" data-verdict="pass" aria-pressed="false">Pass</button>
+            </div>
+            <label for="note">What do you hear?</label>
+            <textarea id="note" rows="4" placeholder="A useful change? A clear root? A smooth transition?…"></textarea>
+            <p class="save-status" id="save-status" role="status">Notes stay in this browser. Export a copy to keep them.</p>
+            <details class="render-details">
+              <summary>Selected render details</summary>
+              <dl id="render-details"></dl>
+            </details>
+          </aside>
+        </section>
+
+        <section class="library" aria-labelledby="library-title">
+          <div class="library-heading"><div><p class="eyebrow">02 / ALL RENDERS</p><h2 id="library-title">The listening shelf.</h2></div><span id="clip-count"></span></div>
+          <div class="filters">
+            <label class="search-label"><span class="sr-only">Search renders</span><input id="search" type="search" placeholder="Search a sound or gesture…" autocomplete="off"></label>
+            <label><span class="sr-only">Filter by family</span><select id="library-family"><option value="">All families</option></select></label>
+            <label><span class="sr-only">Filter by variant</span><select id="library-variant"><option value="">All variants</option></select></label>
+            <button class="text-button" id="reset-filters" type="button">Reset</button>
+          </div>
+          <div id="clip-list"></div>
+          <p id="empty-state" class="empty-state" hidden>No renders match. Reset the filters to see the whole study.</p>
+        </section>
+
+        <section class="study-notes" aria-label="About this proof">
+          <div><span class="eyebrow">LISTEN IN THREE PASSES</span><p>Start with the baseline. Hear the moving note. Check its destination. Matched playback helps compare the timbre at similar listening levels.</p></div>
+          <div><span class="eyebrow">THE SCOPE OF THIS STUDY</span><p>These are finite dry files from the Kotlin engine. This proof explores spectral motion; it does not demonstrate a held loop or new phone integration.</p><p id="donor-disclosure" hidden>Any synthesized donor is identified on its render. It is a generated test source, not captured real-world audio.</p></div>
+        </section>
+      </div>
+    </main>
+
+    <footer><span>SnipSnap <span class="coral">/</span> PRISM motion study</span><div><a href="./manifest.json">Render manifest ↗</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source ↗</a></div></footer>
+  </div>
+
+  <section class="player-dock" id="player-dock" aria-label="Shared audio player" hidden>
+    <div class="player-inner">
+      <button class="play-toggle" id="play" type="button" aria-label="Play selected render" aria-pressed="false"><span id="play-icon" aria-hidden="true">▶︎</span></button>
+      <button class="stop-button" id="stop" type="button" aria-label="Stop and return to the beginning">■</button>
+      <div class="now-playing"><span class="eyebrow" id="player-family">SELECT A RENDER</span><strong id="player-title">Ready to listen</strong><span id="audio-status" role="status" aria-live="polite"></span></div>
+      <div class="timeline"><label for="seek" class="sr-only">Playback position in seconds</label><input id="seek" type="range" min="0" max="1" step="0.01" value="0"><div><span id="current-time">0:00</span><span id="duration">0:00</span></div></div>
+      <div class="player-options"><div class="level-switch" role="group" aria-label="Listening level"><button type="button" id="level-matched" aria-pressed="true">Matched</button><button type="button" id="level-raw" aria-pressed="false">Native</button></div><div class="downloads"><a id="download-wav" download>WAV ↓</a><a id="download-recipe" download>Recipe ↓</a></div></div>
+    </div>
+    <details class="browser-player"><summary>Browser player</summary><audio id="audio" controls preload="metadata">Your browser does not support WAV audio. Use the download link.</audio></details>
+  </section>
+  <div id="notification" class="notification" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">Enable JavaScript to compare renders and keep notes. The <a href="./manifest.json">render manifest</a> lists the audio files.</p></noscript>
+</body>
+</html>
