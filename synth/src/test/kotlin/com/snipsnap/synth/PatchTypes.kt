@@ -50,8 +50,9 @@ internal object PatchTypes {
      * OVERLAP's first finite comparisons likewise stay in its audition generator.
      * WICK keeps its provisional starting points in its own preset object and
      * renders through the CLI while awaiting that verdict.
+     * NACRE's finite PEARL duet likewise has provisional listening recipes only.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, OverlapPatch.ENGINE, WickPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, OverlapPatch.ENGINE, WickPatch.ENGINE, NacrePatch.ENGINE)
 }

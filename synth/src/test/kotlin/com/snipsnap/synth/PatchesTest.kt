@@ -47,6 +47,7 @@ class PatchesTest {
         VentPresets.all().first(),
         OverlapPresets.all().first(),
         WickPresets.all().first(),
+        NacrePresets.all().first(),
     )
 
     @Test
