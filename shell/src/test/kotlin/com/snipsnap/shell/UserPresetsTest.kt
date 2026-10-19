@@ -19,6 +19,10 @@ import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerRole
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.OrphicaConfig
+import com.snipsnap.synth.OrphicaMaterial
+import com.snipsnap.synth.OrphicaMode
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurFormantTarget
@@ -29,6 +33,8 @@ import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OspreyVoice
+import com.snipsnap.synth.OvenPatch
+import com.snipsnap.synth.OvenVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -236,6 +242,8 @@ class UserPresetsTest {
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is OrphicaPatch) {
+                assertEquals(preset, orphicaFromRosterLine(line), "${preset.name}: complete microsound recipe promotion")
             } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
                 assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
@@ -497,7 +505,7 @@ class UserPresetsTest {
      * way the compiler would ([KotlinLiteral]) and rebuilds the patch from it.
      */
     @Test
-    fun `a saved mouth retains root velocity and its complete instrument definition when promoted`() {
+    fun `a saved mouth retains root velocity model and its complete instrument definition when promoted`() {
         val root = shelf()
         try {
             val held = MurmurPresets.all().first { it.name == "HELD HUM" }
@@ -511,14 +519,18 @@ class UserPresetsTest {
                     MurmurFormantTarget("Wide", listOf(700.0, 1_200.0, 2_400.0, 3_200.0),
                         listOf(180.0, 210.0, 310.0, 390.0), listOf(1.2, 1.3, .6, .35), .6),
                 ),
+                model = 1,
             )
-            val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config)
-            UserPresets.save(root, source, 1L)
-            val saved = UserPresets.read(root).single()
-            assertEquals(source, saved.patch, "the shelf retains root, velocity and the complete configuration")
-            val line = UserPresets.rosterLine(saved.patch)
-            assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
-            assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds the saved mouth exactly")
+            assertEquals(2, held.config.model, "the promotion helper starts from the new model")
+            for (model in 1..2) {
+                val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config.copy(model = model))
+                UserPresets.save(root, source, 1L)
+                val saved = UserPresets.read(root).single()
+                assertEquals(source, saved.patch, "the shelf retains model $model, root, velocity and the complete configuration")
+                val line = UserPresets.rosterLine(saved.patch)
+                assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+                assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds model $model exactly")
+            }
         } finally {
             root.deleteRecursively()
         }
@@ -589,6 +601,7 @@ class UserPresetsTest {
                     sourceBalance = double(t.named.getValue("sourceBalance")),
                 )
             },
+            model = int(a.getValue("model")),
         )
     }
 
@@ -620,6 +633,30 @@ class UserPresetsTest {
         return LacquerPatch.fromJsonText(json)
     }
 
+    private fun orphicaFromRosterLine(line: String): OrphicaPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("OrphicaPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return OrphicaPatch.fromJsonText(recipe)
+    }
+
+    @Test
+    fun `Orphica promotion preserves the entire saved cloud and escapes the recipe as text`() {
+        val patch = OrphicaPatch("CLOUD \"\$X\"", OrphicaConfig(
+            material = OrphicaMaterial.CRYSTAL, mode = OrphicaMode.FREEZE,
+            midi = 67, velocity = .42f, pluck = .81f, fracture = .73f,
+            grainSizeMs = 39f, grainRateHz = 51f, scatter = .64f, damping = .19f,
+            seconds = .8f, seed = Long.MIN_VALUE, captureSeconds = .11f, hold = .75f,
+        ), macros = mapOf("PLUCK" to .7f, "TUNE" to .6f, "HOLD" to 1f))
+        assertEquals(patch, orphicaFromRosterLine(UserPresets.rosterLine(patch)))
+        assertEquals("OrphicaMaterial", UserPresets.voiceEnum(patch.engine))
+        assertEquals("OrphicaPresets.kt", UserPresets.rosterFile(patch.engine))
+    }
+
     private fun openSkyFromRosterLine(line: String): OpenSkyPatch {
         val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
         assertEquals("fromJsonText", call.name)
@@ -639,14 +676,28 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == OpenSkyPatch.ENGINE) {
+            if (engine == RelayPatch.ENGINE) {
+                val decoder = RelayPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(RelayPatch::class.java, decoder.returnType, "RELAY promotion retains its complete phrase JSON")
+            } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == OvenPatch.ENGINE) {
+                val constructor = OvenPatch::class.java.getConstructor(
+                    String::class.java, OvenVoice::class.java, Map::class.java,
+                    Int::class.javaPrimitiveType, Float::class.javaPrimitiveType, Int::class.javaPrimitiveType,
+                )
+                assertEquals(OvenPatch::class.java, constructor.declaringClass,
+                    "OVEN promotion names its public complete-recipe constructor")
             } else if (engine == StoopPatch.ENGINE) {
                 assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
                     assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
                 }
+            } else if (engine == OrphicaPatch.ENGINE) {
+                assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
+                val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
             } else {
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")

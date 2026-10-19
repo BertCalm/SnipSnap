@@ -1,7 +1,5 @@
 package com.snipsnap.shell
 
-import java.awt.Color
-import java.awt.Graphics2D
 import kotlin.math.max
 import kotlin.math.min
 
@@ -24,9 +22,9 @@ object PixelType {
 
     /**
      * The filled squares [draw] would paint for [text], without painting
-     * them — pure layout, no `Graphics2D` — so a non-AWT renderer
-     * (`android.graphics`, say) can fill each one with its own APIs.
-     * [draw] itself is just this plus one `fillRect` per square.
+     * them — pure layout — so any renderer can fill each one with its own
+     * APIs. [draw] itself is just this plus one [ArtCanvas.fillRect] per
+     * square, which is why it never names `java.awt`.
      */
     fun rects(
         text: String,
@@ -64,18 +62,17 @@ object PixelType {
      * when [centered].
      */
     fun draw(
-        g: Graphics2D,
+        canvas: ArtCanvas,
         text: String,
         x: Int,
         y: Int,
         heightPx: Int,
-        color: Color,
+        colorRgb: Int,
         centered: Boolean = false,
         maxWidthPx: Int = Int.MAX_VALUE,
     ) {
-        g.color = color
         for (r in rects(text, x, y, heightPx, centered, maxWidthPx)) {
-            g.fillRect(r.x, r.y, r.w, r.h)
+            canvas.fillRect(r.x, r.y, r.w, r.h, colorRgb)
         }
     }
 
