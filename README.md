@@ -438,7 +438,9 @@ remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudit
 for paired R1/R3 renders and creature-muted body comparisons. The original
 46-clip study remains preserved. After the [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
 the owner said, “We are in a better spot audio wise.” R3 is the working audio
-baseline; final listening and phone/MPC acceptance remain open. Run
+baseline. The owner subsequently confirmed, “Sounds good in app, let's proceed.”
+In-app listening is confirmed; save/reopen, recipe replay and MPC playback checks
+remain open. The [MPC listening pass](docs/OSPREY_MPC_PASS.md) is next. Run
 `./gradlew :shell:generateOspreyHandoff` for the existing sixteen-pad starter as
 a SnipSnap working folder, native MPC 3 export and compatibility twin, with raw
 renders, recipes and checks. [Implementation notes](docs/OSPREY.md) describe the
