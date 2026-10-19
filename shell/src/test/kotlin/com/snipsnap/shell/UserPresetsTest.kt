@@ -42,6 +42,9 @@ import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.ShoalMaterial
+import com.snipsnap.synth.ShoalPatch
+import com.snipsnap.synth.ShoalVoice
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Presets
@@ -738,6 +741,18 @@ class UserPresetsTest {
             } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == ShoalPatch.ENGINE) {
+                // SHOAL promotes the complete constructor directly: passing a held harmonic
+                // recipe through the finite WOOD helper first would reject it or lose metadata.
+                val constructor = ShoalPatch::class.java.getConstructor(
+                    String::class.java, ShoalVoice::class.java, Map::class.java,
+                    Int::class.javaPrimitiveType, Float::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType, ShoalMaterial::class.java,
+                )
+                assertEquals(ShoalPatch::class.java, constructor.declaringClass,
+                    "SHOAL promotion names its public complete seven-argument constructor")
+                assertTrue(Regex("\\bShoalPatch\\s*\\(").containsMatchIn(text), "SHOAL's table uses that public constructor")
+                assertTrue(Regex("\\bmaterial\\s*=\\s*material\\b").containsMatchIn(text), "SHOAL's table forwards the selected material")
             } else if (engine == VentPatch.ENGINE) {
                 assertEquals("VentKitPresets.kt", table.name)
                 val decoder = VentPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)

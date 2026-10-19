@@ -21,7 +21,9 @@ import kotlin.random.Random
 enum class ShoalVoice { GLASS, RIPPLE }
 
 /**
- * SHOAL. Model 2 gives GLASS and RIPPLE distinct material populations; model 1 is retained.
+ * SHOAL. Model 3 separates resonating material from GLASS/RIPPLE motion. Models 1 and 2
+ * retain their exact harmonic synthesis. Material models are finite; harmonic HOLD alone uses
+ * the captured periodic trajectory described below.
  * Harmonics exchange nonnegative energy before they become oscillator amplitudes.
  * CURRENT biases conservative neighbor transfers; COHESION reads the previous energy snapshot.
  * The protected fundamental never participates in this graph.
@@ -35,15 +37,23 @@ enum class ShoalVoice { GLASS, RIPPLE }
  * All voicing numbers are provisional and await the owner's listening verdict.
  */
 object Shoal {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val LEGACY_MODEL_VERSION = 1
-    fun supportsModel(model: Int): Boolean = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION
+    const val HARMONIC_MODEL_VERSION = 2
+    fun supportsModel(model: Int): Boolean = model in LEGACY_MODEL_VERSION..MODEL_VERSION
+    fun supportsMaterial(model: Int, material: ShoalMaterial): Boolean =
+        supportsModel(model) && (model == MODEL_VERSION || material == ShoalMaterial.HARMONIC)
+    fun supportsHold(model: Int, material: ShoalMaterial): Boolean =
+        supportsMaterial(model, material) && material == ShoalMaterial.HARMONIC
+    fun defaultMaterial(model: Int = MODEL_VERSION): ShoalMaterial =
+        if (model == MODEL_VERSION) ShoalMaterial.WOOD else ShoalMaterial.HARMONIC
     const val MIN_MIDI = 24
     const val MAX_MIDI = 84
     const val MOVING_PARTIALS = 24
     const val LOOP_THRESHOLD = .975f
     const val HOLD_LOOP = LOOP_THRESHOLD
     const val MAX_FINITE_SECONDS = 8f
+    const val MAX_MATERIAL_SECONDS = 12f
     private const val CONTROL_FRAMES = 128
     private const val TWO_PI = 2.0 * PI
     private const val BAND_START = 14_000.0
@@ -68,8 +78,13 @@ object Shoal {
         (macros[k]?.takeIf { it.isFinite() } ?: v).coerceIn(0f, 1f)
     }
     fun isLoop(hold: Float): Boolean = hold.isFinite() && hold >= LOOP_THRESHOLD
-    fun drumClassFor(voice: ShoalVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
-        if (isLoop(settled(voice, macros).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
+    fun drumClassFor(voice: ShoalVoice, macros: Map<String, Float> = emptyMap(),
+        model: Int = MODEL_VERSION, material: ShoalMaterial = ShoalMaterial.HARMONIC): DrumClass {
+        require(supportsMaterial(model, material)) { "unsupported SHOAL model/material combination" }
+        val held = isLoop(settled(voice, macros).getValue("HOLD"))
+        require(!held || supportsHold(model, material)) { "SHOAL $material does not support HOLD" }
+        return if (held) DrumClass.LOOP else DrumClass.TONAL
+    }
     fun scramble(voice: ShoalVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
         val seed = base + near?.macros.orEmpty().filterKeys { it in base }
@@ -85,10 +100,22 @@ object Shoal {
     internal data class Diagnostics(val rawPeak: Double, val rawRms: Double, val rawDc: Double,
         val minEnergy: Double, val maxEnergySum: Double, val maxTransferResidual: Double,
         val activePartials: Int, val maxFrequencyHz: Double, val phaseClosureError: Double)
+    /** Material radiating energy, separate from the conservative population controller. */
+    internal data class RadiationFrame(val seconds: Double, val energy: DoubleArray, val rootEnergy: Double,
+        val supply: Double, val strayCents: DoubleArray)
+    internal data class MaterialDiagnostics(val material: ShoalMaterial, val modeHz: DoubleArray,
+        val modeRatios: DoubleArray, val modeT60Seconds: DoubleArray, val rootT60Seconds: Double,
+        val rootGain: Double, val contactSeconds: Double, val contactCutoffHz: Double,
+        val excitationWeights: DoubleArray, val headroomTrim: Double, val radiationEnergyScale: Double,
+        val retainedEnergyRatio: Double, val rootPowerFraction: Double, val sourceDurationSeconds: Double,
+        val passiveTailSeconds: Double, val maxRadiationEnergySum: Double, val maxRootEnergy: Double,
+        val velocityEnergyBudget: Double)
     internal data class Probe(val samples: FloatArray, val raw: FloatArray, val diagnostics: Diagnostics,
         val energyTrace: List<EnergyFrame>, val previousCycle: FloatArray? = null, val seamError: Double = 0.0,
         val stateError: Double = 0.0, val loopFrames: Int = 0, val effectiveHz: Double,
-        val supplyCutoffSeconds: Double, val periodicCapture: Boolean = false) {
+        val supplyCutoffSeconds: Double, val periodicCapture: Boolean = false,
+        val radiationTrace: List<RadiationFrame> = emptyList(), val materialDiagnostics: MaterialDiagnostics? = null,
+        val material: ShoalMaterial = ShoalMaterial.HARMONIC, val model: Int = HARMONIC_MODEL_VERSION) {
         val rawPeak get() = diagnostics.rawPeak
         val rawRms get() = diagnostics.rawRms
         val rawDc get() = diagnostics.rawDc
@@ -290,7 +317,7 @@ object Shoal {
      * a rounded low/middle body, receives a traveling supply packet, and flows through adjacent
      * harmonics. Both remain integer-harmonic instruments with the same protected fundamental. */
     private fun materialTrajectory(voice: ShoalVoice, m: Map<String, Float>, noteHz: Double, velocity: Double,
-        seconds: Float?, ablation: Ablation, cancel: () -> Boolean): Trajectory {
+        seconds: Float?, ablation: Ablation, cancel: () -> Boolean, modeRatios: DoubleArray? = null): Trajectory {
         val glass = voice == ShoalVoice.GLASS
         val density = m.getValue("DENSITY").toDouble()
         val current = m.getValue("CURRENT").toDouble()
@@ -307,7 +334,7 @@ object Shoal {
         val steps = ceil(frames.toDouble() / CONTROL_FRAMES).toInt()
         val dt = CONTROL_FRAMES.toDouble() / Dsp.RATE
         val reserve = 2.0.pow((if (held) 84.0 else 42.0) / 1200.0)
-        val count = (2..MOVING_PARTIALS + 1).count { it * hz * reserve < BAND_END }
+        val count = modeRatios?.size ?: (2..MOVING_PARTIALS + 1).count { it * hz * reserve < BAND_END }
         val profile = normalized(DoubleArray(count) { i ->
             val n = i + 2.0
             val material = if (glass) {
@@ -320,7 +347,7 @@ object Shoal {
                 (gaussian(n - 3.3, 1.05 + 2.0 * density) + .35 * gaussian(n - 7.0, 1.4 + 1.5 * density) +
                     (.05 + .40 * density) / n.pow(.8)) * exp(-max(0.0, n - 10.0) / 3.0)
             }
-            material * guard(n * hz * reserve).pow(2)
+            material * guard((modeRatios?.get(i) ?: n) * hz * reserve).pow(2)
         })
         val initialProfile = normalized(DoubleArray(count) { i ->
             val n = i + 2.0
@@ -478,9 +505,9 @@ object Shoal {
         }
     }
 
-    internal fun probe(voice: ShoalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
+    private fun harmonicProbe(voice: ShoalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
         velocity: Float = 1f, seconds: Float? = null, ablation: Ablation = Ablation.NONE,
-        cancelled: () -> Boolean = { false }, model: Int = MODEL_VERSION): Probe {
+        cancelled: () -> Boolean = { false }, model: Int = HARMONIC_MODEL_VERSION): Probe {
         checkCancelled(cancelled)
         require(supportsModel(model)) { "unsupported SHOAL model $model" }
         require(midi in MIN_MIDI..MAX_MIDI) { "SHOAL MIDI must be $MIN_MIDI..$MAX_MIDI" }
@@ -597,10 +624,186 @@ object Shoal {
             if (held) trajectory.frames else 0, hz, trajectory.cutoff, held)
     }
 
+    /** Versioned dispatcher. Harmonic model 3 deliberately keeps model 2's exact oscillator
+     * identity; material bodies are finite and never silently fall back to a harmonic HOLD. */
+    internal fun probe(voice: ShoalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
+        velocity: Float = 1f, seconds: Float? = null, ablation: Ablation = Ablation.NONE,
+        cancelled: () -> Boolean = { false }, model: Int = MODEL_VERSION,
+        material: ShoalMaterial = ShoalMaterial.HARMONIC): Probe {
+        checkCancelled(cancelled)
+        require(supportsMaterial(model, material)) { "unsupported SHOAL model $model / material $material" }
+        require(midi in MIN_MIDI..MAX_MIDI) { "SHOAL MIDI must be $MIN_MIDI..$MAX_MIDI" }
+        val m = settled(voice, macros)
+        require(!isLoop(m.getValue("HOLD")) || supportsHold(model, material)) {
+            "SHOAL $material is finite only; HOLD requires HARMONIC"
+        }
+        if (material == ShoalMaterial.HARMONIC) {
+            val harmonicModel = if (model == MODEL_VERSION) HARMONIC_MODEL_VERSION else model
+            return harmonicProbe(voice, macros, midi, velocity, seconds, ablation, cancelled, harmonicModel)
+                .copy(model = model, material = material)
+        }
+        return modalProbe(voice, m, midi, velocity, seconds, ablation, cancelled, material)
+    }
+
+    /** Model 3 ports the approved dry material study. The population remains the model-2 motion
+     * donor, while separately driven modal and fundamental energies radiate through a material.
+     * These energies are not claimed to be the conservative transport network. Velocity changes
+     * contact time and normalized modal excitation, rather than only changing final amplitude. */
+    private fun modalProbe(voice: ShoalVoice, m: Map<String, Float>, midi: Int, velocity: Float,
+        seconds: Float?, ablation: Ablation, cancelled: () -> Boolean, material: ShoalMaterial): Probe {
+        val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f).toDouble()
+        val hz = Keys.midiHz(midi).toDouble()
+        val reserve = 2.0.pow(42.0 / 1200.0)
+        // Modal ratios are monotone. Reduce the actual physical bank, not an unrelated harmonic
+        // bank, and normalize the donor's budget over those eligible modes. This is particularly
+        // important for the wooden bar's ratio-40 upper modes on the top keyboard octave.
+        val count = (0 until MOVING_PARTIALS).takeWhile { material.ratio(it) * hz * reserve < BAND_END }.size
+        require(count > 0) { "SHOAL $material has no eligible modes at MIDI $midi" }
+        val ratios = DoubleArray(count) { material.ratio(it) }
+        val t60 = DoubleArray(count) { material.modeT60(it) }
+        // Always simulate/calibrate the natural note, even for an early evidence window.
+        val tr = materialTrajectory(voice, m, hz, v, null, ablation, cancelled, ratios)
+        val nodes = tr.nodes
+        val dt = tr.stepSeconds
+        val cutoff = material.contactCutoff(v)
+        val referenceCutoff = material.contactCutoff(.8f.toDouble())
+        val referenceStrike = DoubleArray(count) { material.strike(it) }
+        val strike = DoubleArray(count) { p ->
+            val frequency = ratios[p] * hz
+            referenceStrike[p] * (1.0 + (frequency / referenceCutoff).pow(2)) /
+                (1.0 + (frequency / cutoff).pow(2))
+        }
+        val referenceBudget = nodes.first().energy.indices.sumOf { nodes.first().energy[it] * referenceStrike[it] }
+        val contactBudget = nodes.first().energy.indices.sumOf { nodes.first().energy[it] * strike[it] }
+        val contactScale = if (contactBudget > 1e-30) referenceBudget / contactBudget else 1.0
+        for (p in strike.indices) strike[p] *= contactScale
+        val sourceSteps = nodes.size - 1
+        val tailSteps = ceil(.90 * max(material.rootT60, t60.maxOrNull() ?: material.rootT60) / dt).toInt()
+        val intervals = sourceSteps + tailSteps
+        val ring = Array(intervals + 1) { DoubleArray(count) }
+        val rootRing = DoubleArray(intervals + 1)
+        rootRing[0] = nodes[0].energy.sum()
+        for (p in 0 until count) ring[0][p] = nodes[0].energy[p] * strike[p]
+        for (k in 0 until intervals) {
+            if (k % 32 == 0) checkCancelled(cancelled)
+            val sourceActive = k < sourceSteps
+            val old = if (sourceActive) nodes[k] else nodes.last()
+            val next = if (sourceActive) nodes[k + 1] else nodes.last()
+            val total = next.energy.sum().coerceAtLeast(1e-30)
+            val arrivals = if (sourceActive) next.energy.indices.sumOf { max(0.0, next.energy[it] - old.energy[it]) } else 0.0
+            val rootDrive = if (sourceActive) .32 * arrivals + .80 * old.supply * dt else 0.0
+            rootRing[k + 1] = rootRing[k] * exp(-2 * ln(1000.0) * dt / material.rootT60) + rootDrive
+            for (p in 0 until count) {
+                val influx = if (sourceActive) max(0.0, next.energy[p] - old.energy[p]) else 0.0
+                val feed = if (sourceActive) old.supply * next.energy[p] / total * dt else 0.0
+                val drive = (influx + .55 * feed) * strike[p] * material.drive
+                ring[k + 1][p] = ring[k][p] * exp(-2 * ln(1000.0) * dt / t60[p]) + drive
+            }
+        }
+        val cents = Array(intervals + 1) { k -> if (k <= sourceSteps) nodes[k].cents.copyOf()
+            else DoubleArray(count) { p -> nodes.last().cents[p] * exp(-(k - sourceSteps) * dt / .075) } }
+        val frequency = Array(intervals + 1) { k -> DoubleArray(count) { p ->
+            ratios[p] * hz * 2.0.pow(cents[k][p] / 1200.0)
+        } }
+        // Fixed per-note source calibration, never per-frame loudness correction. Use the actual
+        // post-guard moving power so a high register does not lose the body beneath its root.
+        val controlArea = nodes.sumOf { it.energy.sum() }
+        val ringArea = (0..sourceSteps).sumOf { k -> (0 until count).sumOf { p ->
+            ring[k][p] * guard(frequency[k][p]).pow(2)
+        } }.coerceAtLeast(1e-30)
+        val radiationScale = controlArea / ringArea
+        for (k in ring.indices) for (p in 0 until count) ring[k][p] *= radiationScale
+        val phaseArea = Array(intervals + 1) { DoubleArray(count) }
+        for (k in 0 until intervals) for (p in 0 until count)
+            phaseArea[k + 1][p] = phaseArea[k][p] + .5 * (frequency[k][p] + frequency[k + 1][p]) * dt
+        val movingGain = .16
+        val rootGain = material.rootGain
+        val amplitudes = Array(intervals + 1) { k -> DoubleArray(count) { p ->
+            movingGain * sqrt(ring[k][p]) * guard(frequency[k][p])
+        } }
+        val worstL1 = amplitudes.maxOf { it.sum() } + rootGain * sqrt(rootRing.maxOrNull() ?: 0.0)
+        val trim = min(1.0, .86 / worstL1.coerceAtLeast(1e-30))
+        val fullFrames = intervals * CONTROL_FRAMES
+        check(fullFrames <= (MAX_MATERIAL_SECONDS * Dsp.RATE).roundToInt()) { "SHOAL material render exceeds its bound" }
+        val requestedFrames = seconds?.takeIf { it.isFinite() && it > 0f }?.let {
+            (it * Dsp.RATE).roundToInt().coerceIn(64, fullFrames)
+        } ?: fullFrames
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val raw = FloatArray(requestedFrames * Dsp.OVERSAMPLE)
+        // Keep the approved study's carrier phases. Material identity is not a random phase change.
+        val phases = Dsp.phases(count + 1, Dsp.seedFor("SHOAL", HARMONIC_MODEL_VERSION, voice.name, midi))
+        val contactSeconds = material.contact * (1.65 - .8 * v)
+        var peak = 0.0
+        var sum = 0.0
+        var squares = 0.0
+        var rootSquares = 0.0
+        var movingSquares = 0.0
+        for (i in raw.indices) {
+            if (i % (CONTROL_FRAMES * Dsp.OVERSAMPLE) == 0) checkCancelled(cancelled)
+            val time = i.toDouble() / rate
+            val segment = min((time / dt).toInt(), intervals - 1)
+            val tau = time - segment * dt
+            val mix = (tau / dt).coerceIn(0.0, 1.0)
+            val attack = 1.0 - exp(-time / contactSeconds)
+            val rootAmplitude = sqrt(rootRing[segment]) * (1 - mix) + sqrt(rootRing[segment + 1]) * mix
+            val root = rootGain * attack * rootAmplitude * sin(TWO_PI * (phases[0] + hz * time))
+            var moving = 0.0
+            for (p in 0 until count) {
+                val phase = phases[p + 1] + phaseArea[segment][p] + frequency[segment][p] * tau +
+                    .5 * (frequency[segment + 1][p] - frequency[segment][p]) / dt * tau * tau
+                val a = amplitudes[segment][p] * (1 - mix) + amplitudes[segment + 1][p] * mix
+                moving += a * attack * sin(TWO_PI * phase)
+            }
+            val sample = (root + moving) * trim
+            raw[i] = sample.toFloat()
+            peak = max(peak, abs(sample)); sum += sample; squares += sample * sample
+            rootSquares += root * root; movingSquares += moving * moving
+        }
+        checkCancelled(cancelled)
+        val conditioned = raw.copyOf()
+        Tide.bandLimit(conditioned, rate)
+        checkCancelled(cancelled)
+        val out = Dsp.decimate(conditioned, Dsp.RATE)
+        val mean = out.sumOf { it.toDouble() } / out.size
+        val dc = Dsp.OnePole(Dsp.RATE)
+        for (i in out.indices) { val x = (out[i] - mean).toFloat(); out[i] = x - dc.lp(x, 8f) }
+        if (requestedFrames == fullFrames) Dsp.fadeTail(out)
+        var retained = 0.0
+        var beforeGuard = 0.0
+        for (k in ring.indices) for (p in 0 until count) {
+            beforeGuard += ring[k][p]
+            retained += ring[k][p] * guard(frequency[k][p]).pow(2)
+        }
+        val visibleEnd = min(intervals, ceil(requestedFrames.toDouble() / CONTROL_FRAMES).toInt())
+        val stride = max(1, (1.0 / (30.0 * dt)).roundToInt())
+        val radiation = (0..visibleEnd).filter { it % stride == 0 || it == visibleEnd }.map { k ->
+            RadiationFrame(k * dt, ring[k].copyOf(), rootRing[k],
+                if (k < sourceSteps) nodes[k].supply else 0.0, cents[k].copyOf())
+        }
+        val controlEnd = min(sourceSteps, visibleEnd)
+        val controller = (0..controlEnd).filter { it % stride == 0 || it == controlEnd }.map { k ->
+            EnergyFrame(k * dt, nodes[k].energy.copyOf(), nodes[k].centers.copyOf(), nodes[k].cents.copyOf(),
+                nodes[k].energy.sum(), nodes[k].supply)
+        }
+        val diagnostics = Diagnostics(peak, sqrt(squares / raw.size), sum / raw.size,
+            nodes.minOf { it.energy.minOrNull() ?: 0.0 }, nodes.maxOf { it.energy.sum() }, tr.transferResidual,
+            count, frequency.maxOf { it.maxOrNull() ?: hz }, 0.0)
+        val materialDiagnostics = MaterialDiagnostics(material, DoubleArray(count) { ratios[it] * hz }, ratios, t60,
+            material.rootT60, rootGain, contactSeconds, cutoff, strike, trim, radiationScale,
+            retained / beforeGuard.coerceAtLeast(1e-30), rootSquares / (rootSquares + movingSquares).coerceAtLeast(1e-30),
+            tr.frames.toDouble() / Dsp.RATE, (fullFrames - tr.frames).toDouble() / Dsp.RATE,
+            ring.maxOf { it.sum() }, rootRing.maxOrNull() ?: 0.0, (.40 + .60 * v) * v * v)
+        check(raw.all { it.isFinite() } && out.all { it.isFinite() }) { "SHOAL material non-finite output" }
+        return Probe(out, raw, diagnostics, controller, effectiveHz = hz,
+            supplyCutoffSeconds = tr.cutoff, radiationTrace = radiation, materialDiagnostics = materialDiagnostics,
+            material = material, model = MODEL_VERSION)
+    }
+
     fun render(voice: ShoalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
-        velocity: Float = 1f, cancelled: () -> Boolean = { false }, model: Int = MODEL_VERSION): Snip {
+        velocity: Float = 1f, cancelled: () -> Boolean = { false }, model: Int = MODEL_VERSION,
+        material: ShoalMaterial = ShoalMaterial.HARMONIC): Snip {
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
-        val out = probe(voice, macros, midi, v, cancelled = cancelled, model = model).samples
+        val out = probe(voice, macros, midi, v, cancelled = cancelled, model = model, material = material).samples
         checkCancelled(cancelled)
         if (v > 0f) Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET * v.pow(.65f))
         return Snip(out, channels = 1, sampleRate = Dsp.RATE)

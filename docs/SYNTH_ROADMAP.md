@@ -514,23 +514,24 @@ five-point sweeps, interaction corners and HOLD extremes. Run
 sonic review is positive. Phone and MPC playback still require device validation;
 PRISM remains a working name pending release naming checks.
 
-### SHOAL — a moving population of harmonics
+### SHOAL — materials animated by moving energy
 
-The first Shoal audition implements GLASS and RIPPLE from the supplied
-engineering concept. DENSITY, CURRENT, COHESION, STRAY and GLOW shape an additive
-population with a protected root, conservative neighbor transport, attraction
-to occupied neighborhoods and bounded pitch departures. Root MIDI 24–84 and
-native excitation velocity are separate from the six controls, including HOLD.
+Model 3 carries the owner's preferred material-study direction into the engine:
+WOOD, BOWL and WIRE select resonant frequencies, contact coupling and decay;
+GLASS and RIPPLE select how energy moves. Native velocity changes contact and
+modal excitation as well as loudness. Root MIDI 24–84 and material stay separate
+from the six controls. New patches start with WOOD; saved models 1 and 2 retain
+their exact harmonic renderer. Ordinary edits and native velocity retain the
+saved model and material.
 
-Eight provisional dry recipes, a sixteen-pad C minor pentatonic kit, patch
-serialization, CLI note/velocity overrides and the phone picker form the first
-integration. HOLD returns moving repeating material without the initiating
-attack; its captured periodic trajectory is an approximation to the free-running
-transport model. `./gradlew :synth:generateShoalAudition` builds the listening
-matrix. The owner's first listen found GLASS and RIPPLE too similar. Model 2
-revises their contrast while preserving saved model-1 recipes; its listening
-verdict remains pending. ORGAN, WHISTLE,
-DRIFT, SWARM and the proposed 36-preset roster are later work.
+Six finite material recipes, two HARMONIC held recipes and a sixteen-pad C minor
+pentatonic starter are available through the factory registry, CLI and phone
+picker. The new bodies include passive resonant tails and explicitly refuse
+HOLD loops. HARMONIC retains the tested captured periodic control trajectory.
+`./gradlew :synth:generateShoalMaterialAudition` renders the production material,
+motion, note and velocity comparisons; `generateShoalAudition` preserves the
+model-2 matrix. Touch/velocity listening and phone/MPC playback remain validation
+steps. ORGAN, WHISTLE, DRIFT, SWARM and the proposed 36-preset roster are later work.
 [SHOAL](SHOAL.md) records the as-built contracts and retained proposal.
 
 ### ALLOY — generated attack entering a four-operator tonal body

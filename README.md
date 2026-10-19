@@ -538,16 +538,17 @@ interaction grids, velocity and loop probes. The
 includes the complete factory bank and the original/revised GLASS comparisons.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 
-SHOAL's first prototype offers GLASS and RIPPLE: harmonic energy gathers,
-migrates between partials and briefly strays before returning. DENSITY, CURRENT,
-COHESION, STRAY and GLOW shape the population; HOLD supplies a moving loop.
-ROOT and VELOCITY remain independent controls. Eight provisional dry recipes,
-saved patches, a sixteen-pad starter kit, CLI rendering and the phone picker
-support the first listen. Run `./gradlew :synth:generateShoalAudition` for the
-audition. The remaining four proposed voices and 36-preset expansion await
-later work. The first listen found the two voices too similar; model 2 revises
-their contrast and awaits another listen. Saved model-1 recipes retain their sound.
-[Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
+SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are
+animated by GLASS or RIPPLE energy transport. Velocity changes contact and
+excitation as well as level. ROOT and VELOCITY remain independent of DENSITY,
+CURRENT, COHESION, STRAY, GLOW and HOLD. Model 3 supplies six dry material
+recipes, two harmonic HOLD recipes, a sixteen-pad starter, saved patches, CLI
+`--material` selection and the phone material picker. The material bodies play
+finite notes with passive tails; HARMONIC retains the moving HOLD approximation.
+Saved model-1 and model-2 recipes retain their sound. Run
+`./gradlew :synth:generateShoalMaterialAudition` for the playable comparison, or
+`generateShoalAudition` for the preserved model-2 listening matrix.
+[Implementation notes](docs/SHOAL.md) describe the material and loop contracts.
 
 OVEN is a struck keyboard instrument: velocity-sensitive
 stiff strings, restrained paired-string beating, dark fixed body coloration and
