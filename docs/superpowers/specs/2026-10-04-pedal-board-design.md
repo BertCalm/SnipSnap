@@ -1,6 +1,6 @@
 # The pedal board: guitar-pedal effects for the FX rack
 
-**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is built with its listening gate pending (`2026-10-17-wah-section-design.md`).
+**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is built with its listening gate pending (`2026-10-17-wah-section-design.md`). A brainstorm of the pedals that could follow the staged ones, and of how the chain and the PEDALS row grow, is `2026-10-19-pedal-board-brainstorm.md` (2026-10-19, nothing in it decided).
 **Builds on:** VALVE (the rack's amp section, `2026-09-29-magnet-valve-design.md`) and the MAGNET guitar engine (merged, PR #438).
 **Roadmap row:** S30 in `docs/SYNTH_ROADMAP.md` (the table is numbered by arrival; SUTURE already claims S29).
 
