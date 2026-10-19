@@ -1,0 +1,962 @@
+{
+  "provenance": "Accepted published Model 2 audition, frozen before factory preset expansion; whole WAV SHA-256 uses the unchanged WavWriter without metadata.",
+  "manifestSha256": "54966d8f554d20c07820037dfe525ee28ca7b95b123719583619fc9d93b0820e",
+  "rendererFingerprint": {
+    "algorithm": "SHA-256 of sorted compiled renderer/support class names and bytes",
+    "sha256": "8702bc2b7a06c7e8b74772a637c9e783588650072274d9f4391ad7b38079703e",
+    "classes": [
+      "com.snipsnap.audio.Loudness",
+      "com.snipsnap.audio.Resampler",
+      "com.snipsnap.synth.Bore",
+      "com.snipsnap.synth.Bore$Gate",
+      "com.snipsnap.synth.Bore$LoopPlan",
+      "com.snipsnap.synth.Bore$LoopRender",
+      "com.snipsnap.synth.Bore$Voicing",
+      "com.snipsnap.synth.Bore$Voicing$Companion",
+      "com.snipsnap.synth.Bore$WhenMappings",
+      "com.snipsnap.synth.Dsp",
+      "com.snipsnap.synth.Dsp$Biquad",
+      "com.snipsnap.synth.Dsp$Env",
+      "com.snipsnap.synth.Dsp$Ladder",
+      "com.snipsnap.synth.Dsp$Ladder$Companion",
+      "com.snipsnap.synth.Dsp$Noise",
+      "com.snipsnap.synth.Dsp$OnePole",
+      "com.snipsnap.synth.Dsp$Svf",
+      "com.snipsnap.synth.Dsp$TptSvf",
+      "com.snipsnap.synth.Embouchure",
+      "com.snipsnap.synth.Embouchure$Engine",
+      "com.snipsnap.synth.Embouchure$Engine$WhenMappings",
+      "com.snipsnap.synth.Embouchure$LoopRender",
+      "com.snipsnap.synth.Embouchure$Mode",
+      "com.snipsnap.synth.Embouchure$Played",
+      "com.snipsnap.synth.Embouchure$Player",
+      "com.snipsnap.synth.Embouchure$Player$WhenMappings",
+      "com.snipsnap.synth.Embouchure$Probe",
+      "com.snipsnap.synth.Embouchure$Trace",
+      "com.snipsnap.synth.Embouchure$Voice",
+      "com.snipsnap.synth.Embouchure$Wave",
+      "com.snipsnap.synth.Embouchure$WhenMappings",
+      "com.snipsnap.synth.EmbouchureDriver",
+      "com.snipsnap.synth.EmbouchureGesture",
+      "com.snipsnap.synth.EmbouchureV1",
+      "com.snipsnap.synth.EmbouchureV1$Engine",
+      "com.snipsnap.synth.EmbouchureV1$Engine$WhenMappings",
+      "com.snipsnap.synth.EmbouchureV1$LoopRender",
+      "com.snipsnap.synth.EmbouchureV1$Mode",
+      "com.snipsnap.synth.EmbouchureV1$Played",
+      "com.snipsnap.synth.EmbouchureV1$Player",
+      "com.snipsnap.synth.EmbouchureV1$Player$WhenMappings",
+      "com.snipsnap.synth.EmbouchureV1$Probe",
+      "com.snipsnap.synth.EmbouchureV1$Trace",
+      "com.snipsnap.synth.EmbouchureV1$Voice",
+      "com.snipsnap.synth.EmbouchureV1$Wave",
+      "com.snipsnap.synth.EmbouchureV1$WhenMappings",
+      "com.snipsnap.synth.EmbouchureVoice",
+      "com.snipsnap.synth.Keys",
+      "com.snipsnap.synth.Keys$LoopPlan",
+      "com.snipsnap.synth.Siren",
+      "com.snipsnap.synth.Siren$Lfo",
+      "com.snipsnap.synth.Siren$LoopPlan",
+      "com.snipsnap.synth.Siren$Tone",
+      "com.snipsnap.synth.Siren$WhenMappings",
+      "com.snipsnap.synth.Strings",
+      "com.snipsnap.synth.Strings$Bow",
+      "com.snipsnap.synth.Strings$Bow$Companion",
+      "com.snipsnap.synth.Strings$Bridge",
+      "com.snipsnap.synth.Strings$Damping",
+      "com.snipsnap.synth.Strings$Dispersion",
+      "com.snipsnap.synth.Strings$Dispersion$Companion",
+      "com.snipsnap.synth.Strings$Loop",
+      "com.snipsnap.synth.Strings$Membrane",
+      "com.snipsnap.synth.Strings$Membrane$Companion",
+      "com.snipsnap.synth.Strings$Tuning",
+      "com.snipsnap.synth.Tide",
+      "com.snipsnap.synth.Tide$Gate",
+      "com.snipsnap.synth.Tide$WhenMappings"
+    ]
+  },
+  "presets": [
+    {
+      "id": "preset_leaning_reed",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Leaning Reed",
+        "voice": "REED",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.5,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "LEANING_SWELL"
+      },
+      "frames": 131761,
+      "bits": 16,
+      "sha256": "a6f05f8ea51545ae6b13abf0a0d5e8af6ba61fa4efadcc6c2e4f005959e76cbc"
+    },
+    {
+      "id": "preset_muted_bell",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Muted Bell",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.550000011920929,
+          "REED": 0.44999998807907104,
+          "SHAPE": 0.6200000047683716,
+          "GRAIN": 0.15000000596046448,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "LIP",
+        "gesture": "PRESSURE_RELEASE"
+      },
+      "frames": 132132,
+      "bits": 16,
+      "sha256": "b79fca1dc06a1ddae16a6b737b482f563943c9756a80ad1b381240e1fe03d304"
+    },
+    {
+      "id": "preset_breath_pocket",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Breath Pocket",
+        "voice": "BASS",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.4000000059604645,
+          "SHAPE": 0.550000011920929,
+          "GRAIN": 0.3199999928474426,
+          "LENGTH": 0.3499999940395355,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 36,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "PRESSURE_RELEASE"
+      },
+      "frames": 116525,
+      "bits": 16,
+      "sha256": "56a09e3e6d1bf3b4f9b52de5823bf6380286f5e3ba535751c57cbdf0a1d57952"
+    },
+    {
+      "id": "preset_soft_entry",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Soft Entry",
+        "voice": "SOFT",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.30000001192092896,
+          "REED": 0.25,
+          "SHAPE": 0.5,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.75,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "SOFT_ENTRY"
+      },
+      "frames": 217621,
+      "bits": 16,
+      "sha256": "c6f636b85f8b178505e83c0530729faa841a1990a7ef03f8019f47af26169b27"
+    },
+    {
+      "id": "preset_short_overblow",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Short Overblow",
+        "voice": "REED",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.75,
+          "REED": 0.6499999761581421,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.25,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "OVERPRESSURE"
+      },
+      "frames": 106865,
+      "bits": 16,
+      "sha256": "6ce476856f9f5bd6cd81e6c3bf57a41e22b093066a1023d5c5861ebb34b4c674"
+    },
+    {
+      "id": "preset_relaxed_bow",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Relaxed Bow",
+        "voice": "BOW",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.3499999940395355,
+          "REED": 0.3499999940395355,
+          "SHAPE": 0.4000000059604645,
+          "GRAIN": 0.18000000715255737,
+          "LENGTH": 0.6499999761581421,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "BOW",
+        "gesture": "BOWED_CAPTURE"
+      },
+      "frames": 203512,
+      "bits": 16,
+      "sha256": "817b503a9d0ed4c924167a6130f0469815b2dfd3099d5ea86a418cf14f28a567"
+    },
+    {
+      "id": "preset_narrow_air",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Narrow Air",
+        "voice": "WHISTLE",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.3499999940395355,
+          "REED": 0.30000001192092896,
+          "SHAPE": 0.6499999761581421,
+          "GRAIN": 0.07999999821186066,
+          "LENGTH": 0.550000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "SOFT_ENTRY"
+      },
+      "frames": 136446,
+      "bits": 16,
+      "sha256": "430e6c8277a724aecf181c4f6435ecf47e8a4e83b8b299f2fda17abe5a5c8ee3"
+    },
+    {
+      "id": "preset_held_effort",
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Held Effort",
+        "voice": "SOFT",
+        "macros": {
+          "TUNE": 0.5,
+          "EFFORT": 0.44999998807907104,
+          "REED": 0.25,
+          "SHAPE": 0.5,
+          "GRAIN": 0.20000000298023224,
+          "LENGTH": 0.6499999761581421,
+          "HOLD": 1
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 1,
+        "driver": "REED",
+        "gesture": "LEANING_SWELL"
+      },
+      "frames": 88663,
+      "bits": 16,
+      "sha256": "e0318f57c2b0d7d96903b6a0c4b47aa435e172e486e21c94e6ab78813a51d5e9"
+    }
+  ],
+  "starter": [
+    {
+      "pad": {
+        "slot": 1,
+        "sample": "A01_Tonal_01.wav",
+        "name": "Reed 1",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 1",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 48,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "48a7df16657c72c7f21ceead121f127787a6076c95e7f5599f79ea643b66a438"
+    },
+    {
+      "pad": {
+        "slot": 2,
+        "sample": "A02_Tonal_02.wav",
+        "name": "Reed 2",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 2",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 51,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "4dc4f183cd8fcb3139e78861e535719c245d9c7a9b396589208836a1279cdb82"
+    },
+    {
+      "pad": {
+        "slot": 3,
+        "sample": "A03_Tonal_03.wav",
+        "name": "Reed 3",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 3",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 53,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "5bae28c13ef04df9260e2129b24de36f023ae5c4057f871c550925958458f908"
+    },
+    {
+      "pad": {
+        "slot": 4,
+        "sample": "A04_Tonal_04.wav",
+        "name": "Reed 4",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 4",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 55,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "c60fba406b938543bed45478a597280c4bb0578bbefca4e516dcdc07a8b12588"
+    },
+    {
+      "pad": {
+        "slot": 5,
+        "sample": "A05_Tonal_05.wav",
+        "name": "Reed 5",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 5",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 58,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "bbaf0ed6bc8ddb1bfe80a888c4aa3754b8206730041897a7c1fb921ab9bd17c1"
+    },
+    {
+      "pad": {
+        "slot": 6,
+        "sample": "A06_Tonal_06.wav",
+        "name": "Reed 6",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 6",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 60,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "1a9e3127021b2c33d75b9d39c68c2dd5aa90a10c0bccf228804b6a3c8287b4ab"
+    },
+    {
+      "pad": {
+        "slot": 7,
+        "sample": "A07_Tonal_07.wav",
+        "name": "Reed 7",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 7",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 63,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "74b3a870c3e882b068fdd50af0eddf2be3f01bbc8e2e1eb5cb769075fee96c84"
+    },
+    {
+      "pad": {
+        "slot": 8,
+        "sample": "A08_Tonal_08.wav",
+        "name": "Reed 8",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Reed 8",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 65,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "afe0ae1034f3975de9c84147c7db05d2b052df47313b11f88b7f9a8c04a7f024"
+    },
+    {
+      "pad": {
+        "slot": 9,
+        "sample": "A09_Tonal_09.wav",
+        "name": "Leaning Reed",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Leaning Reed",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.5,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 48,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 131761,
+      "bits": 24,
+      "sha256": "1a9e3127021b2c33d75b9d39c68c2dd5aa90a10c0bccf228804b6a3c8287b4ab"
+    },
+    {
+      "pad": {
+        "slot": 10,
+        "sample": "A10_Tonal_10.wav",
+        "name": "Muted Bell",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Muted Bell",
+            "voice": "BRASS",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.550000011920929,
+              "REED": 0.44999998807907104,
+              "SHAPE": 0.6200000047683716,
+              "GRAIN": 0.15000000596046448,
+              "LENGTH": 0.5,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 48,
+            "velocity": 1,
+            "driver": "LIP",
+            "gesture": "PRESSURE_RELEASE"
+          },
+          "alias": false
+        }
+      },
+      "frames": 132132,
+      "bits": 24,
+      "sha256": "35ba6bc7fca0dd91e3155f019f3215a01067185fbd61d68fc00511e686571487"
+    },
+    {
+      "pad": {
+        "slot": 11,
+        "sample": "A11_Tonal_11.wav",
+        "name": "Breath Pocket",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Breath Pocket",
+            "voice": "BASS",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.4000000059604645,
+              "SHAPE": 0.550000011920929,
+              "GRAIN": 0.3199999928474426,
+              "LENGTH": 0.3499999940395355,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 36,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "PRESSURE_RELEASE"
+          },
+          "alias": false
+        }
+      },
+      "frames": 116525,
+      "bits": 24,
+      "sha256": "c1544def58cfbcd83c82697cc1cc6acbf44680f1c69027076aae543e371285b2"
+    },
+    {
+      "pad": {
+        "slot": 12,
+        "sample": "A12_Tonal_12.wav",
+        "name": "Soft Entry",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Soft Entry",
+            "voice": "SOFT",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.30000001192092896,
+              "REED": 0.25,
+              "SHAPE": 0.5,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.75,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 48,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "SOFT_ENTRY"
+          },
+          "alias": false
+        }
+      },
+      "frames": 217621,
+      "bits": 24,
+      "sha256": "b41586c5eccd2129c98899ad8562eed973b0e94fad89e6f84015821e83eab34e"
+    },
+    {
+      "pad": {
+        "slot": 13,
+        "sample": "A13_Tonal_13.wav",
+        "name": "Short Overblow",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Short Overblow",
+            "voice": "REED",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.75,
+              "REED": 0.6499999761581421,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.25,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 48,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "OVERPRESSURE"
+          },
+          "alias": false
+        }
+      },
+      "frames": 106865,
+      "bits": 24,
+      "sha256": "0ce35bbc9e2eeee08bcf720c9c42c88990c027417d1e063d38bbc68093132a11"
+    },
+    {
+      "pad": {
+        "slot": 14,
+        "sample": "A14_Tonal_14.wav",
+        "name": "Relaxed Bow",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Relaxed Bow",
+            "voice": "BOW",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.3499999940395355,
+              "REED": 0.3499999940395355,
+              "SHAPE": 0.4000000059604645,
+              "GRAIN": 0.18000000715255737,
+              "LENGTH": 0.6499999761581421,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 48,
+            "velocity": 1,
+            "driver": "BOW",
+            "gesture": "BOWED_CAPTURE"
+          },
+          "alias": false
+        }
+      },
+      "frames": 203512,
+      "bits": 24,
+      "sha256": "89a45f3b2ccec4c83f641d5e451cbca0cd00d865f7b175c0de7123e84a9694e7"
+    },
+    {
+      "pad": {
+        "slot": 15,
+        "sample": "A15_Tonal_15.wav",
+        "name": "Narrow Air",
+        "class": "TONAL",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#b06cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Narrow Air",
+            "voice": "WHISTLE",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.3499999940395355,
+              "REED": 0.30000001192092896,
+              "SHAPE": 0.6499999761581421,
+              "GRAIN": 0.07999999821186066,
+              "LENGTH": 0.550000011920929,
+              "HOLD": 0
+            },
+            "model": 2,
+            "midi": 60,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "SOFT_ENTRY"
+          },
+          "alias": false
+        }
+      },
+      "frames": 136446,
+      "bits": 24,
+      "sha256": "2bc867eb81acb3e7818c7bc80a96da7a09ec6c03b5551cae55447d2fb0734d12"
+    },
+    {
+      "pad": {
+        "slot": 16,
+        "sample": "A16_Loop_01.wav",
+        "name": "Held Effort",
+        "class": "LOOP",
+        "level": 0.7079460024833679,
+        "pan": 0.5,
+        "tuneCoarse": 0,
+        "tuneFine": 0,
+        "muteGroup": 0,
+        "oneShot": true,
+        "colorHex": "#3f8cf0",
+        "recipe": {
+          "recipe": 2,
+          "patch": {
+            "engine": "EMBOUCHURE",
+            "version": 1,
+            "name": "Held Effort",
+            "voice": "SOFT",
+            "macros": {
+              "TUNE": 0.5,
+              "EFFORT": 0.44999998807907104,
+              "REED": 0.25,
+              "SHAPE": 0.5,
+              "GRAIN": 0.20000000298023224,
+              "LENGTH": 0.6499999761581421,
+              "HOLD": 1
+            },
+            "model": 2,
+            "midi": 48,
+            "velocity": 1,
+            "driver": "REED",
+            "gesture": "LEANING_SWELL"
+          },
+          "alias": false
+        }
+      },
+      "frames": 88663,
+      "bits": 24,
+      "sha256": "cefd253afbe0d40e43f9435ff22ad619534e17dfbf9f9ac517ef84e17bfacc23"
+    }
+  ]
+}

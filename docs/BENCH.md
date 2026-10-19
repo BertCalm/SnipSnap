@@ -362,8 +362,13 @@ nothing — it is a few dozen bytes and every other sampler reads it.
 ### B8 · Osprey R3 handoff
 
 Added 2026-10-14. The owner said, “We are in a better spot audio wise.”
-R3 is the working audio baseline; final listening and this phone/MPC pass
-remain open. This adds a queued check and does not lift the bench pause.
+R3 is the working audio baseline. On 2026-10-18 the owner confirmed,
+“Sounds good in app, let's proceed.” In-app listening is confirmed; the app
+build and phone were not supplied. Save/reopen, recipe replay and MPC playback
+remain open. Proceed with this OSPREY handoff; the general bench pause remains
+in place for the other entries.
+
+Use the [MPC listening pass](OSPREY_MPC_PASS.md) with the unchanged published kit.
 
 Build `./gradlew :shell:generateOspreyHandoff`; unpack the sixteen-pad
 `testkit/osprey-handoff/osprey-r3-kit.zip` bundle. The first fifteen pads
@@ -380,7 +385,11 @@ seed-731, eight-second one-shots, not the audition's level-matched files.
   warmth retained, voices distinct enough, no harshness, clicks or cut tails?
   HOLD still ends; there is no repeating-loop claim.
 
-→ phone/build, MPC firmware, format, pad and exact error if any:
+→ In-app listening: owner confirmed 2026-10-18, “Sounds good in app, let's proceed.”
+
+→ Save/reopen and recipe replay: not yet reported.
+
+→ MPC firmware, format, pad and exact error if any: not yet reported.
 
 ---
 

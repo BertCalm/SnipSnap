@@ -62,6 +62,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MediaDecode
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.MixVoice
@@ -71,6 +72,7 @@ import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.amberOnChrome
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -2751,7 +2753,7 @@ fun PadSheetScreen(
             TapeText(
                 clipboard?.let { "ON THE CLIPBOARD: ${it.word} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.ink2.tape,
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
@@ -2892,7 +2894,7 @@ fun PadSheetScreen(
                 scheme = scheme,
             ) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             StepperSlider(
                 label = "DEPTH",
                 fraction = pendingDepth,
@@ -2924,7 +2926,7 @@ fun PadSheetScreen(
 
         // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             val away = pad.source["desampled"]
             TapeText(
                 if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
@@ -3064,7 +3066,7 @@ fun PadSheetScreen(
             // the only way to move — so the middle cell says where you are
             // rather than promising a gesture that doesn't exist (law 3).
             val position = (idx + 1).takeIf { idx >= 0 }?.let { "$it OF ${assignedSlots.size}" } ?: ""
-            TapeText(position, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText(position, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton(
                 nextSlot?.let { "${padTag(it)} ►" } ?: "►",
                 scheme,
@@ -3305,15 +3307,15 @@ private fun HeaderChip(
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree, so TalkBack finds ◀ BEFORE
             // (and ◄ KIT) during the same busy spell sighted users see it.
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, spoken = spokenBack(label), onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.4f))
     }
 }
 
@@ -3367,6 +3369,9 @@ internal fun StepperSlider(
     // whichever ones were captured the first time it started.
     val currentOnChange by rememberUpdatedState(onFractionChange)
     val currentOnCommit by rememberUpdatedState(onFractionCommit)
+    // A notch where the value is set - the release, or TalkBack's adjust - not
+    // along the drag, which would buzz continuously under a sliding finger.
+    val haptics = LocalHaptics.current
 
     Row(
         Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
@@ -3397,6 +3402,7 @@ internal fun StepperSlider(
                             val clamped = target.coerceIn(0f, 1f)
                             currentOnChange(clamped)
                             currentOnCommit()
+                            haptics.tick()
                             true
                         }
                     } else {
@@ -3416,6 +3422,7 @@ internal fun StepperSlider(
                                 if (!change.pressed) {
                                     currentOnChange(fractionAt(change.position.x))
                                     currentOnCommit()
+                                    haptics.tick()
                                     change.consume()
                                     break
                                 }
@@ -3801,7 +3808,7 @@ private fun DustFromRow(
             TapeText(
                 tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO TAPE YET",
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.ink2.tape,
                 Modifier.weight(1f),
                 maxLines = 1,
             )
@@ -3819,7 +3826,7 @@ private fun DustFromRow(
                 )
             }
             if (tapes.size > DUST_FROM_SHOWN) {
-                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
         }
     }
@@ -3861,7 +3868,7 @@ private fun ShapeCard(
             // What the line is for is the thing the legend cannot say -
             // that these four are metadata the hardware applies, not edits
             // to the audio on disk - so that is all it says now.
-            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -3947,7 +3954,7 @@ private fun MutateCard(
     val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
             ActionButton("UNDO", scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
@@ -4051,7 +4058,7 @@ private fun MutateCard(
         // The rooms on the shelf, two to a row (their names are words, not
         // tags); the row is absent until OUTSIDE has kept one.
         if (rooms.isNotEmpty()) {
-            TapeText("ROOMS ON THE SHELF · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("ROOMS ON THE SHELF · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
             for (row in rooms.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -4085,7 +4092,7 @@ private fun MutateCard(
         // then its pads (four to a row) - the shelf with intent, where
         // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
-            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             for (row in otherKits.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (k in row) {
@@ -4179,7 +4186,7 @@ private fun MutateCard(
             modifier = Modifier.fillMaxWidth(),
             onClick = onHear,
         )
-        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         // KEEP writes the move in place (no ▸, which means "goes
         // somewhere"); DRIFT beside it is the card's one-tap blend and save,
         // and says it saves. Each half row holds DRIFT's 20 characters.
@@ -4230,7 +4237,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {

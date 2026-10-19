@@ -55,9 +55,19 @@ data class PadRecipe(
     val alias: Boolean = impliesAlias(patch, fx),
     /** An ordered compound board after the source's existing finishing rack. */
     val board: BoardRecipe? = null,
+    /**
+     * Optional delivery fade for a periodic source placed on a one-shot pad. This
+     * changes only the end of the delivered audio, after the source and rack have
+     * rendered; the saved instrument and its seamless HOLD buffer stay untouched.
+     * Null preserves existing recipes and their exact audio. Duration is milliseconds.
+     */
+    val terminalFadeMs: Float? = null,
 ) {
     init {
         require(patch != null || fx != null || board != null) { "an empty recipe records nothing" }
+        terminalFadeMs?.let {
+            require(it.isFinite() && it in 1f..100f) { "terminal fade must be finite and within 1..100 ms" }
+        }
     }
 
     /** Regenerate a synth pad's audio from scratch. */
@@ -70,7 +80,14 @@ data class PadRecipe(
     /** Re-treat captured audio with the stored chain. */
     fun process(snip: Snip): Snip {
         val finished = fx?.process(snip) ?: snip
-        return board?.process(finished) ?: finished
+        return terminalFade(board?.process(finished) ?: finished)
+    }
+
+    private fun terminalFade(snip: Snip): Snip {
+        val ms = terminalFadeMs ?: return snip
+        val samples = snip.samples.copyOf()
+        Dsp.fadeTail(samples, ms = ms, rate = snip.sampleRate, channels = snip.channels)
+        return snip.copy(samples = samples)
     }
 
     fun toJsonValue(): JsonValue.Obj {
@@ -82,6 +99,7 @@ data class PadRecipe(
         amount?.let { obj["amount"] = JsonValue.Num(it.toDouble()) }
         obj["alias"] = JsonValue.Bool(alias)
         board?.let { obj["board"] = it.toJsonValue() }
+        terminalFadeMs?.let { obj["terminalFadeMs"] = JsonValue.Num(it.toDouble()) }
         return JsonValue.Obj(obj)
     }
 
@@ -121,6 +139,7 @@ data class PadRecipe(
                 amount = obj["amount"]?.num()?.toFloat(),
                 alias = obj["alias"]?.bool() ?: impliesAlias(patch, fx),
                 board = obj["board"]?.let { BoardRecipe.fromJsonValue(it) },
+                terminalFadeMs = obj["terminalFadeMs"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat(),
             )
         }
 
