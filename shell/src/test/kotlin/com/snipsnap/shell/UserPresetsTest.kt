@@ -638,7 +638,10 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == OpenSkyPatch.ENGINE) {
+            if (engine == RelayPatch.ENGINE) {
+                val decoder = RelayPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(RelayPatch::class.java, decoder.returnType, "RELAY promotion retains its complete phrase JSON")
+            } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
             } else if (engine == StoopPatch.ENGINE) {

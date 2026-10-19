@@ -1392,6 +1392,25 @@ fun SynthScreen(
                     )
                 }
 
+                // Relay's touch changes excitation and brightness without replacing its
+                // saved sources, handoff schedules or phrase clock.
+                if (engine == Engine.RELAY) {
+                    val relayPatch = loadedPatch as? RelayPatch
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = relayPatch?.velocity ?: 1f,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as RelayPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                }
+
                 // SWELL is a finite sea gesture. ROOT and VELOCITY are recipe
                 // fields beside its six macros; SECONDS bounds the complete render.
                 if (engine == Engine.OSPREY) {
@@ -1576,6 +1595,8 @@ fun SynthScreen(
                                 engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SHOAL && spec.name == "HOLD" && Shoal.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.RELAY && spec.name == "HOLD" && Relay.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.RELAY && spec.name == "TUNE" ->
+                                    Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(spec.name)))
                                 engine == Engine.EMBOUCHURE && spec.name == "HOLD" && Embouchure.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.BELLOWS && spec.name == "HOLD" && Bellows.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"

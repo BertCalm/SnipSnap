@@ -120,9 +120,13 @@ can be changed by semitone or octave without resetting that recipe. Its 48
 provisional presets and dry starter kit await listening.
 TANGLE's six voices, 36 recipes and dry starter kit likewise await the
 owner's listening verdict; saved recipes preserve explicit note and velocity.
-RELAY adds six
-dry phrase seeds and a dry sixteen-pad starter; its larger proposed roster
-waits for the same listening approval.
+RELAY exposes native VELOCITY and note names while preserving loaded phrase
+recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
+KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
+seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
+pads. `:synth:generateRelayPerformanceAudition` builds a 76-clip page covering the
+bank, musical performances, velocity response and starter pads. The expanded bank
+awaits listening review and hands-on device verification.
 GRAINS, SNAP and DRAW work on source material beside the engine picker.
 
 ## What's here

@@ -764,12 +764,18 @@ rounded pluck, harmonic body, bell detail and soft tone. Source-order schedules
 morph continuously at a fixed phrase clock; independent accents place rhythmic
 emphasis without changing the requested root. TUNE, ORDER, PULSE, BLEND, COLOR,
 LENGTH and HOLD use the pitched host conventions. The port includes complete
-phrase serialization, native velocity, six dry identity presets,
-`SynthKits.relay()`, the phone picker, a FRESH TAPE starter and
-`generateRelayAudition`. HOLD exports repeating material without a separate
-attack region. [RELAY.md](RELAY.md) records the integration and listening pack.
-**Awaiting the owner's sonic verdict.** The proposed 36-preset roster remains
-deferred until the dry identities are heard and approved.
+phrase serialization, native velocity, `SynthKits.relay()`, the phone picker and
+a FRESH TAPE starter. The performance bank now contains 36 dry recipes: eight
+KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW. The six earlier seeds
+remain unchanged. The SYNTH panel adds a VELOCITY control and note names; explicit
+kit selections supply sixteen distinct pads without growing with the bank.
+`generateRelayPerformanceAudition` builds a 76-clip raw/matched listening page
+with all presets, six musical performances, three velocities per voice and the
+sixteen starter pads. The earlier `generateRelayAudition` engineering matrix
+remains available. HOLD exports repeating material without a separate attack
+region. [RELAY.md](RELAY.md) records the integration and listening packs.
+**The expanded bank remains a listening and playability candidate.** The owner's
+listening verdict and hands-on device verification remain open.
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
