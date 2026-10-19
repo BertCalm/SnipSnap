@@ -4,7 +4,7 @@ package com.snipsnap.synth
 object RegistersPresets {
     private fun p(voice: RegistersVoice, name: String, vararg macros: Pair<String, Float>) =
         RegistersPatch(name, voice, Registers.defaults(voice) + macros.toMap(),
-            midi = 60, velocity = 1f, model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3)
+            midi = 60, velocity = 1f, model = if (voice == RegistersVoice.TRANSISTOR) 5 else 3)
 
     private val presets = listOf(
         p(RegistersVoice.PIPE, "Pipe Air"),
