@@ -1,0 +1,90 @@
+{
+  "status": "passed",
+  "checkCount": 214,
+  "upstreamRepository": "https://github.com/BertCalm/XO_OX-XOmnibus",
+  "upstreamGitSha": "a9bdc7803d899f0b1688fe0c0abc4ce481a76c3e",
+  "executable": "/workspace/aquarium-audition/native/aquarium-render",
+  "executableSha256": "a7ae6e15da23c230c68e1def0114c46b476a279449939a353b2c7d896417afa1",
+  "executableModifiedUtc": "2026-10-14T22:50:34.655833+00:00",
+  "validationRecordedUtc": "2026-10-14T22:51:04.157941+00:00",
+  "compiler": "g++ C++17 -O2 -Wall -Wextra -Wpedantic",
+  "sampleRates": [
+    44100,
+    48000,
+    96000,
+    192000
+  ],
+  "fixedBlockSizes": [
+    1,
+    257,
+    4096
+  ],
+  "irregularBlockPattern": [
+    1,
+    17,
+    511,
+    4,
+    4096,
+    3
+  ],
+  "presets": [
+    "dry",
+    "fathom",
+    "drift",
+    "tide",
+    "reef",
+    "surface",
+    "biolume",
+    "depth",
+    "motion",
+    "color",
+    "full"
+  ],
+  "checks": [
+    "bit-exact zero-mix bypass",
+    "Surface zero-dB identity in all modes",
+    "Surface shelf direction/endpoints at \u00b16dB",
+    "Surface shelf half-dB midpoint at \u00b16 and \u00b118dB",
+    "bell center gain",
+    "shelf cutoff movement above Fs/4",
+    "fixed and irregular block-size equality",
+    "deterministic reset and repeated prepare",
+    "Drift rate changes output",
+    "Tide stereo phase changes output",
+    "sample-and-hold block-size equality",
+    "Fathom compensated depth-zero neutrality",
+    "Fathom linked stereo gain ratio",
+    "Fathom loud-to-quiet release response",
+    "finite bounded impulse peaks and decaying tails across sample rates",
+    "Biolume high-drive soft/hard/fold finite output"
+  ],
+  "measurements": {
+    "bellMinus6Db": -5.99977,
+    "bellPlus6Db": 5.99977,
+    "fathomReleaseEarlyRms": 0.00140169,
+    "fathomReleaseLateRms": 0.00346816
+  },
+  "limitations": [
+    "Audition extraction with documented DSP corrections; not an unchanged desktop suite or completed Android integration.",
+    "Biolume is feedforward harmonic shimmer with an inherited unwindowed 2\u00d7 pitch ring; no octave feedback loop, and grain seams remain about every 100 ms at 48 kHz.",
+    "Biolume preserves input-minus-cascaded-lowpass HP approximation.",
+    "Reef preserves hard 5000-sample delay ceiling; sample-rate tests establish stability, not equivalent acoustics.",
+    "Fathom preserves complementary one-pole crossover topology and level-sensitive upward compression.",
+    "No final limiter or loudness normalization in native processor.",
+    "No mobile latency/CPU/power profiling, JNI/live routing, automation contract, or listening verdict."
+  ],
+  "pairMembership": {
+    "depth": [
+      "fathom",
+      "surface"
+    ],
+    "motion": [
+      "drift",
+      "tide"
+    ],
+    "color": [
+      "reef",
+      "biolume"
+    ]
+  }
+}

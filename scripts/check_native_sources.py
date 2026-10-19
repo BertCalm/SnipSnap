@@ -10,6 +10,7 @@ Test-only files (engine_tests.cpp, the stubs) are allowed in the harness.
 Every production .cpp must appear in the harness.
 """
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -45,6 +46,12 @@ def main():
         )
     if not prod_src:
         sys.exit("check_native_sources: production library lists no .cpp files")
+    # The JVM resource and fixed native tables originate from this one registry.
+    # Check retained generated files here, where native CI already runs Python;
+    # Android Studio's production CMake build needs no Python installation.
+    aquarium = ROOT / "app/src/main/cpp/aquarium"
+    for generator in ("generate_tables.py", "regenerate_core.py"):
+        subprocess.run([sys.executable, str(aquarium / generator), "--check"], check=True)
     print("native sources agree: " + ", ".join(sorted(prod_src)))
 
 

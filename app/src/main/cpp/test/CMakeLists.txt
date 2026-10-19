@@ -45,6 +45,7 @@ add_executable(engine_tests
     "${ENGINE_DIR}/SurfaceEngine.cpp"
     "${ENGINE_DIR}/PadEngine.cpp"
     "${ENGINE_DIR}/LiveSnapEngine.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumProcessor.cpp"
     # The bridge, built here against stub/jni.h. It needs a JVM to link in
     # the app, which is why it went untested for so long; the stub is
     # enough to run it, and android-build against the NDK's own header is
@@ -64,3 +65,14 @@ target_link_libraries(engine_tests PRIVATE Threads::Threads)
 
 enable_testing()
 add_test(NAME engine_tests COMMAND engine_tests)
+
+# The same production processor is driven through its public block API here.
+# Frozen accepted-audition DSP under test/aquarium/reference is parity evidence
+# only; it never enters the Android library or existing engine/JNI harness.
+add_executable(aquarium_tests
+    aquarium_tests.cpp
+    "${ENGINE_DIR}/aquarium/AquariumProcessor.cpp"
+)
+target_include_directories(aquarium_tests PRIVATE "${ENGINE_DIR}")
+target_compile_options(aquarium_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME aquarium_tests COMMAND aquarium_tests)

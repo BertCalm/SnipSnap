@@ -203,6 +203,14 @@ dependencies {
     testImplementation(project(":mpc3"))
 }
 
+// The native processor and the JVM recipe reader share one canonical registry.
+// This is data copying only: the JVM module still builds without an Android SDK.
+tasks.processResources {
+    from(rootProject.file("app/src/main/cpp/aquarium/parameters.json")) {
+        into("com/snipsnap/synth/aquarium")
+    }
+}
+
 // Java 17 bytecode so the Android app can consume this module directly.
 kotlin {
     compilerOptions {

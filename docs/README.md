@@ -47,3 +47,10 @@ loops and the owner's sonic acceptance remain open.
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
+
+**Aquarium.** The accepted [six-effect audition](https://snipsnap-aquarium-pedals-audition.bertcalm.chatgpt.site)
+is preserved by the shared native processor and standalone settings contract.
+The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md)
+and [implementation plan](superpowers/plans/2026-10-18-aquarium-foundation.md)
+separate that foundation from the planned pad rendering, performance routing
+and controls. The foundation does not yet process app playback.
