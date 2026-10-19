@@ -17,7 +17,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.Scales
 import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Orphica
@@ -53,11 +56,11 @@ class OrphicaScreenTest : ComposeScreenTest() {
         shelfRoot.deleteRecursively()
     }
 
-    private fun show() {
+    private fun show(entry: KitShelf.Entry? = null) {
         setPhoneContent {
             if (showingSynth) {
                 SynthScreen(
-                    entry = null,
+                    entry = entry,
                     shelfRoot = shelfRoot,
                     onToast = {},
                     onKitUpdated = {},
@@ -98,9 +101,9 @@ class OrphicaScreenTest : ComposeScreenTest() {
         pump(32)
     }
 
-    private fun load(patch: OrphicaPatch) {
+    private fun load(patch: OrphicaPatch, entry: KitShelf.Entry? = null) {
         UserPresets.save(shelfRoot, patch, System.currentTimeMillis())
-        show()
+        show(entry)
         waitFor("the saved ORPHICA preset") {
             compose.onAllNodesWithText(patch.name).fetchSemanticsNodes().isNotEmpty()
         }
@@ -191,6 +194,40 @@ class OrphicaScreenTest : ComposeScreenTest() {
         assertEquals(original.config.copy(midi = 66, mode = OrphicaMode.REVERSE), returned.config)
         assertEquals(before.config, returned.config)
         assertEquals(before.macros, returned.macros)
+    }
+
+    private fun spreadAtAuthoredPitch(midi: Int, tune: Float, expectedRoot: Int, firstPadTune: Int) {
+        val dir = File(shelfRoot, "spread-kit").apply { mkdirs() }
+        val kit = Kit(name = "SPREAD TEST", pads = emptyList())
+        KitStore.save(kit, dir)
+        load(OrphicaPatch(
+            "SPREAD HARP", OrphicaConfig(midi = midi, seconds = .4f),
+            macros = mapOf("TUNE" to tune),
+        ), KitShelf.Entry(dir, kit))
+        click("SPREAD ACROSS PADS")
+        waitFor("SPREAD at the authored ORPHICA pitch") {
+            compose.onAllNodesWithText("ROOT ${Scales.nameOf(expectedRoot)}", useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        click("SPREAD")
+        waitFor("the spread kit on disk") { KitStore.load(dir).pads.isNotEmpty() }
+        val first = KitStore.load(dir).pads.single { it.slot == 1 }
+        assertEquals(firstPadTune, first.tuneCoarse)
+        assertEquals(0, first.tuneFine)
+    }
+
+    @Test
+    fun spread_uses_the_authored_low_note_with_its_saved_tune_offset() {
+        // MIDI 27 is below the detector's 40 Hz floor, so pitch guessing
+        // would open at C4 instead of retaining the authored low register.
+        spreadAtAuthoredPitch(midi = 21, tune = .75f, expectedRoot = 27, firstPadTune = 0)
+    }
+
+    @Test
+    fun spread_keeps_the_authored_high_note_when_its_destination_root_is_clamped() {
+        // The source is MIDI 102 after TUNE; SPREAD caps its destination
+        // root at 96, so the first pad needs an exact six-semitone drop.
+        spreadAtAuthoredPitch(midi = 108, tune = .25f, expectedRoot = 96, firstPadTune = -6)
     }
 
     @Test

@@ -146,3 +146,19 @@ counts and WAV loop metadata, wrap steps/slopes below ordinary waveform
 maxima, and fundamental error below 0.012 cents by FFT and 0.097 cents by
 unconstrained YIN. Stereo side/mid RMS remains 3.54–4.48%. These are waveform
 and format checks, not a phone or MPC listening verdict.
+
+
+## Current-host integration — 2026-10-19
+
+The integration preserves SnipSnap's 42-engine picker, its current MAKE
+navigation and the other held-instrument exporters. ORPHICA keeps a complete
+per-material recipe in the navigation settings so mode, root, capture and seed
+survive leaving the lab. SPREAD uses the resolved saved MIDI note, including
+TUNE, across the full supported range instead of guessing the pitch.
+
+104 focused JVM tests passed, including the current registry, patch decoding,
+recipe replay and velocity contracts. All 70 approved audition WAV fingerprints
+remain exact. The debug APK and Android test sources compile; six screen tests
+cover preset editing, navigation, low/high SPREAD roots and held export. CI
+emulator results are tracked on [PR #584](https://github.com/BertCalm/SnipSnap/pull/584).
+Physical phone audio and MPC listening checks remain open.

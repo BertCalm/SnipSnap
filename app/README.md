@@ -128,8 +128,9 @@ listening verdict. Material, grain mode, explicit root and six macros preserve
 its saved physical recipe; stereo previews keep the grain image. HOLD adds
 captured sustain, and MAKE INSTRUMENT exports stereo attack-plus-loop keygroups
 with release control. `:app:assembleDebug` and
-`:app:compileDebugAndroidTestKotlin` passed on 2026-10-13; the three new UI tests
-still need a device run. Those new held sounds and phone/MPC behavior need
+`:app:compileDebugAndroidTestKotlin` passed on 2026-10-19; six UI tests cover
+presets, navigation, SPREAD roots and instrument export. Device execution is
+tracked on the integration PR. Those new held sounds and phone/MPC behavior need
 device validation; see [ORPHICA](../docs/ORPHICA.md).
 GRAINS, SNAP and DRAW work on source material beside the engine picker.
 

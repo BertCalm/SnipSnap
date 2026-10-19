@@ -1191,6 +1191,7 @@ fun SynthScreen(
                     val midi = when (patch) {
                         is StoopPatch -> patch.midi.toFloat()
                         is OpenSkyPatch -> patch.midi.toFloat()
+                        is OrphicaPatch -> Orphica.configWithMacros(patch.config, patch.macros).midi.toFloat()
                         else -> Spread.detect(rendered)
                     }
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
