@@ -17,8 +17,8 @@ starting points.
    SAVE AS PRESET retains the patch for another kit; the recall control loads a
    scanned-chain pad's settings back into the editor.
 
-The three voices provide a pluck, a metallic tone and a slower developing
-body. BLOOM uses the quieter bright strike established in the listening
+The three presets are Spring Pluck, Metallic Trace and Evolving Bloom.
+BLOOM uses the quieter bright strike established in the listening
 experiment, giving its delayed low-mode force room to emerge.
 
 ## Controls
@@ -49,6 +49,10 @@ values, note, velocity, seed, duration, envelope and physical configuration.
 It does not need the source WAV when recalled or replayed. Drawn shapes and
 source shapes are centered and bounded once when created; decoded patches
 retain their saved points exactly.
+Creation also bounds the cyclic step between neighboring points to 0.25,
+using one uniform gain that preserves the contour. This limits excessive
+initial strain in broadband shapes before the simulation starts. The factory
+shapes already meet that bound; damping and the running state are unchanged.
 
 The JSON engine tag is `SCANNED_CHAIN`, with model 1 inside the existing
 patch and pad-recipe formats. Model 1 fixes mechanical and driver frequencies
@@ -83,3 +87,14 @@ exact patch/recipe recall, deterministic synthesis, note and velocity edits,
 kit persistence, recipe replay and MPC export. Android editor checks cover
 shape editing and recalled state. Actual phone render latency and hardware
 listening remain device checks.
+
+The first integration passed 78 focused JVM tests, including the original
+experiment and the shared preset, velocity and replay contracts. An additional
+234 production stress renders passed: 192 macro/voice/shape corner cases and
+42 mixed-contour/configuration cases at velocity 1 and the four-second maximum.
+Maximum measured displacement was 0.758, below the 0.9 model guard. This is
+empirical coverage, rather than a proof for every possible contour.
+
+The Android debug APK and the four new Compose editor tests compile with
+Java 17 and Android SDK 35. Device execution of those tests was not run in the
+local environment, which has no Android device or readable KVM device.

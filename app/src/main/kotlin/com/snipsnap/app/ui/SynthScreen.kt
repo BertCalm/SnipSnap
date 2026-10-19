@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,6 +113,9 @@ import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.ScannedChain
+import com.snipsnap.synth.ScannedChainPatch
+import com.snipsnap.synth.ScannedChainVoice
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
@@ -285,6 +289,9 @@ private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
 private const val SETTINGS_PRESET_PREFIX = "preset."
+private const val SETTINGS_SCANNED_RECIPE_PREFIX = "scanned.recipe."
+
+private fun scannedRecipeSettingsKey(voice: ScannedChainVoice): String = "$SETTINGS_SCANNED_RECIPE_PREFIX${voice.name}"
 
 private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): String =
     "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}.$macro"
@@ -400,6 +407,17 @@ fun SynthScreen(
     }
     LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
     LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
+    // Custom coordinates and recalled pad effects are part of this voice's work,
+    // including a trip to KIT to hear the rendered pad. The navigation bag holds
+    // the complete finite recipe; no source WAV or mutable solver state is needed.
+    val restoredScannedRecipes = remember {
+        ScannedChainVoice.entries.mapNotNull { v ->
+            settings[scannedRecipeSettingsKey(v)]?.let { stored ->
+                runCatching { PadRecipe.fromJsonText(stored) }.getOrNull()
+                    ?.takeIf { (it.patch as? ScannedChainPatch)?.voice == v }?.let { v to it }
+            }
+        }.toMap()
+    }
     // Per-(engine, voice) macro state, seeded with factory defaults and kept
     // for the life of the screen: switching engine or voice (or coming back
     // to one) restores whatever was last touched on it, same as the
@@ -416,7 +434,8 @@ fun SynthScreen(
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
-                    put(e to v, if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
+                    val restored = if (e == Engine.SCANNED_CHAIN) restoredScannedRecipes[v as ScannedChainVoice]?.patch?.macros else null
+                    put(e to v, if (restored != null) defaults + restored else if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
                         settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
                             ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
                     })
@@ -454,12 +473,32 @@ fun SynthScreen(
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
+            for ((v, recipe) in restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, requireNotNull(recipe.patch))
+        }
+    }
+    val recalledRecipesByVoice = remember {
+        mutableStateMapOf<Pair<Engine, Enum<*>>, PadRecipe>().apply {
+            for ((v, recipe) in restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, recipe)
         }
     }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
+    val recalledRecipe = recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
         Patches.edited(it, name, macros)
     } ?: engine.buildPatch(name, voice, macros)
+    fun buildCurrentRecipe(name: String): PadRecipe {
+        val patch = buildCurrentPatch(name)
+        return recalledRecipe?.copy(patch = patch) ?: PadRecipe(
+            patch = patch,
+            fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros),
+        )
+    }
+    LaunchedEffect(engine, voice, macros, loadedPatch, recalledRecipe) {
+        if (engine == Engine.SCANNED_CHAIN) {
+            settings[scannedRecipeSettingsKey(voice as ScannedChainVoice)] =
+                buildCurrentRecipe(engine.patchDisplayName(voice)).toJsonText()
+        }
+    }
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
     // "a starting point to wreck, not a locked sound", so this clears the
@@ -508,6 +547,7 @@ fun SynthScreen(
     }
     fun loadPreset(patch: Patch) {
         touched = true
+        recalledRecipesByVoice.remove(engine to voice)
         // Audition recipes can save an explicit root beside a different TUNE.
         // Canonicalize the sliders without changing that sound or its model.
         val editable = editablePreset(patch)
@@ -695,12 +735,13 @@ fun SynthScreen(
     // with clearTimeout/setTimeout in the prototype. Keyed on `engine` too
     // now — switching engines must cancel an in-flight render exactly like
     // switching voices always has.
-    LaunchedEffect(engine, voice, macros, loadedPatch) {
+    LaunchedEffect(engine, voice, macros, loadedPatch, recalledRecipe) {
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
             val previewJob = coroutineContext[Job]
             val rendered = runInterruptible(Dispatchers.Default) {
+                if (recalledRecipe != null) return@runInterruptible buildCurrentRecipe(engine.patchDisplayName(voice)).render()
                 val patch = if (loadedPatch != null || engine == Engine.OPENSKY) buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
                     patch is OpenSkyPatch -> patch.render {
@@ -752,7 +793,6 @@ fun SynthScreen(
                 // but constructing it inside the try means an unexpected
                 // failure toasts honestly instead of crashing the screen.
                 val name = engine.patchDisplayName(voice)
-                val patch = buildCurrentPatch(name)
                 // A SIREN one-shot carries the rack's ECHO in its recipe and
                 // renders through it; a SIREN LOOP lands dry, since the
                 // SURFACE's echo is its own (Siren.landingChain). An unmoved
@@ -761,8 +801,7 @@ fun SynthScreen(
                 // player's own sound under a factory name lands dry
                 // (Presets.landingFor). Every other sound lands with no chain,
                 // exactly as before.
-                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
-                val padRecipe = PadRecipe(patch = patch, fx = fx)
+                val padRecipe = buildCurrentRecipe(name)
                 val recipe = padRecipe.toJsonValue()
                 val cls = engine.drumClass(voice, macros)
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
@@ -1248,7 +1287,7 @@ fun SynthScreen(
                         // cyclers (a real word name, not a glyph, but the
                         // TapeText below still doesn't merge into this
                         // node for free).
-                        .tapeClick(label = "ENGINE ${engine.name} · TAP FOR NEXT") {
+                        .tapeClick(label = "ENGINE ${engine.displayName} · TAP FOR NEXT") {
                             touched = true
                             val next = engine.next()
                             engine = next
@@ -1259,7 +1298,7 @@ fun SynthScreen(
                     // Batch 3, Task 4: no ▸ — the tap cycles to the next
                     // engine in place, same as the cyclers below; it doesn't
                     // navigate or open a panel.
-                    TapeText(engine.name, TapeType.lcdHeader, scheme.lcdInk.tape)
+                    TapeText(engine.displayName, TapeType.lcdHeader, scheme.lcdInk.tape)
                 }
                 TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
             }
@@ -1536,6 +1575,32 @@ fun SynthScreen(
                                 "LOOP STARTS AT THE SETTLED TONE. LOW SPREAD MAY SOUND IN UNISON."
                             else "HOLD: NOTE LENGTH · TOP STEP: LOOP WITHOUT ATTACK.",
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                        )
+                    }
+                }
+
+                if (engine == Engine.SCANNED_CHAIN) {
+                    key(voice) {
+                        ScannedShapeControls(
+                            patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ScannedChainPatch,
+                            entry = entry,
+                            onPatchChanged = { edited ->
+                                val target = Engine.SCANNED_CHAIN to edited.voice
+                                touched = true
+                                currentPresetByVoice.remove(target)
+                                loadedPatchesByVoice[target] = edited
+                            },
+                            onRecallPatch = { recipe ->
+                                val patch = recipe.patch as? ScannedChainPatch ?: return@ScannedShapeControls
+                                val target = Engine.SCANNED_CHAIN to patch.voice
+                                touched = true
+                                engine = Engine.SCANNED_CHAIN
+                                voice = patch.voice
+                                loadedPatchesByVoice[target] = patch
+                                recalledRecipesByVoice[target] = recipe
+                                macrosByVoice[target] = ScannedChain.defaults(patch.voice) + patch.macros
+                                currentPresetByVoice.remove(target)
+                            },
                         )
                     }
                 }
@@ -2068,7 +2133,7 @@ private fun PresetNameDialog(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText("SAVE AS PRESET", TapeType.lcdSmall, scheme.ink.tape)
-            TapeText("${engine.name} · ${chipLabel(engine, voice)}", TapeType.pixel, scheme.ink2.tape)
+            TapeText("${engine.displayName} · ${chipLabel(engine, voice)}", TapeType.pixel, scheme.ink2.tape)
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -2460,13 +2525,16 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY;
+    THUMP, SCANNED_CHAIN, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY;
+
+    val displayName: String get() = name.replace('_', ' ')
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
         THUMP -> ThumpVoice.entries
+        SCANNED_CHAIN -> ScannedChainVoice.entries
         SKIN -> SkinVoice.entries
         TINES -> TinesVoice.entries
         VELVET -> VelvetVoice.entries
@@ -2511,6 +2579,7 @@ private enum class Engine {
 
     fun macrosFor(voice: Enum<*>) = when (this) {
         THUMP -> Thump.macrosFor(voice as ThumpVoice)
+        SCANNED_CHAIN -> ScannedChain.macrosFor(voice as ScannedChainVoice)
         SKIN -> Skin.macrosFor(voice as SkinVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
@@ -2555,6 +2624,7 @@ private enum class Engine {
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
         THUMP -> Thump.defaults(voice as ThumpVoice)
+        SCANNED_CHAIN -> ScannedChain.defaults(voice as ScannedChainVoice)
         SKIN -> Skin.defaults(voice as SkinVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
@@ -2599,6 +2669,7 @@ private enum class Engine {
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
         THUMP -> Thump.scramble(voice as ThumpVoice, random)
+        SCANNED_CHAIN -> ScannedChain.scramble(voice as ScannedChainVoice, random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
@@ -2648,6 +2719,7 @@ private enum class Engine {
     // this screen wants, so the uniform two-arg call reaches it fine.
     fun render(voice: Enum<*>, macros: Map<String, Float>): Snip = when (this) {
         THUMP -> Thump.render(voice as ThumpVoice, macros)
+        SCANNED_CHAIN -> ScannedChain.render(voice as ScannedChainVoice, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
@@ -2696,6 +2768,7 @@ private enum class Engine {
      */
     fun drumClass(voice: Enum<*>, macros: Map<String, Float> = emptyMap()): DrumClass = when (this) {
         THUMP -> (voice as ThumpVoice).drumClass
+        SCANNED_CHAIN -> ScannedChain.drumClassFor(voice as ScannedChainVoice, macros)
         SKIN -> (voice as SkinVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> (voice as VelvetVoice).drumClass
@@ -2742,6 +2815,7 @@ private enum class Engine {
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
         THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
+        SCANNED_CHAIN -> ScannedChainPatch(name, voice as ScannedChainVoice, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
@@ -2787,7 +2861,7 @@ private enum class Engine {
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
     fun patchDisplayName(voice: Enum<*>): String {
         val voiceName = voice.name.split('_').joinToString(" ") { w -> w.lowercase().replaceFirstChar { it.uppercase() } }
-        val engineName = name.lowercase().replaceFirstChar { it.uppercase() }
+        val engineName = displayName.lowercase().split(' ').joinToString(" ") { it.replaceFirstChar { letter -> letter.uppercase() } }
         return "$voiceName $engineName"
     }
 }

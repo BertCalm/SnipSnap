@@ -47,3 +47,8 @@ loops and the owner's sonic acceptance remain open.
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
+
+**Scanned Chain.** [`SCANNED_CHAIN.md`](SCANNED_CHAIN.md) describes the editable
+render-to-pad voice, three presets, factory/drawn/sample shapes and complete
+patch recall. The earlier [listening experiment](SCANNED_CHAIN_EXPERIMENT.md)
+and its published comparisons remain available separately.

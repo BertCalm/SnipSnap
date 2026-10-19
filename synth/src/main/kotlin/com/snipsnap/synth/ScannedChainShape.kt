@@ -53,6 +53,9 @@ class ScannedChainShape(
     init {
         require(saved.size == ScannedChain.SHAPE_SIZE) { "a scanned-chain shape needs 128 points" }
         require(saved.all { it.isFinite() && abs(it) <= .350001f }) { "scanned-chain points must be finite and within +/-0.35" }
+        require(saved.indices.all { i ->
+            abs(saved[(i + 1) % saved.size].toDouble() - saved[i]) <= MAX_CYCLIC_DELTA + COORDINATE_TOLERANCE
+        }) { "scanned-chain neighboring points must differ by at most $MAX_CYCLIC_DELTA, including the wrap" }
         require(abs(saved.sumOf { it.toDouble() } / saved.size) <= 1e-5) { "a saved scanned-chain shape must be centered" }
         require(label.isNotBlank() && label.length <= 256) { "a scanned-chain shape needs a label of at most 256 characters" }
         require((source == ScannedChainShapeSource.SAMPLE) == (sample != null)) { "sample provenance must match the shape source" }
@@ -80,6 +83,9 @@ class ScannedChainShape(
     })
 
     companion object {
+        const val MAX_CYCLIC_DELTA = .25f
+        private const val COORDINATE_TOLERANCE = 1e-6
+
         fun factory(voice: ScannedChainVoice): ScannedChainShape {
             val points = if (voice == ScannedChainVoice.BLOOM) {
                 condition(FloatArray(128) { i ->
@@ -164,7 +170,13 @@ class ScannedChainShape(
             val mean = points.average()
             val centered = FloatArray(128) { (points[it] - mean).toFloat() }
             val peak = centered.maxOf { abs(it.toDouble()) }
-            val gain = if (peak > targetPeak || scaleUp && peak > 0) targetPeak / peak else 1.0
+            val peakGain = if (peak > targetPeak || scaleUp && peak > 0) targetPeak / peak else 1.0
+            val strain = centered.indices.maxOf { i -> abs(centered[(i + 1) % centered.size].toDouble() - centered[i]) }
+            // Rough initial shapes can focus passive nonlinear energy into a few masses at
+            // zero damping. One initial scalar bounds cyclic spring strain without changing
+            // the contour, adding damping, clipping the solver, or normalizing moving state.
+            val strainGain = if (strain > 0) MAX_CYCLIC_DELTA / strain else Double.POSITIVE_INFINITY
+            val gain = minOf(peakGain, strainGain)
             return FloatArray(128) { (centered[it] * gain).toFloat() }
         }
 

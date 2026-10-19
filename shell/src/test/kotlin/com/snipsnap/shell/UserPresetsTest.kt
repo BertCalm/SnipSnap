@@ -28,6 +28,7 @@ import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.ScannedChainPatch
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
@@ -231,6 +232,11 @@ class UserPresetsTest {
             if (preset is OpenSkyPatch) {
                 val promoted = openSkyFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete source, articulation and render-state promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is ScannedChainPatch) {
+                val promoted = scannedChainFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete shape, physical settings and render-state promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is LacquerPatch) {
@@ -630,6 +636,17 @@ class UserPresetsTest {
         return OpenSkyPatch.fromJsonText(recipe)
     }
 
+    private fun scannedChainFromRosterLine(line: String): ScannedChainPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("ScannedChainPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return ScannedChainPatch.fromJsonText(recipe)
+    }
+
     @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
@@ -641,6 +658,10 @@ class UserPresetsTest {
             if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == ScannedChainPatch.ENGINE) {
+                val decoder = ScannedChainPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(ScannedChainPatch::class.java, decoder.returnType,
+                    "SCANNED_CHAIN promotion names its public complete-JSON constructor")
             } else if (engine == StoopPatch.ENGINE) {
                 assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
