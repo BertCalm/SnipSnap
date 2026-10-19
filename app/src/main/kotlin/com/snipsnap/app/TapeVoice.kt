@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
- * The TAPE screen's unity-speed voice: streams [tape] forward through a mono
+ * The TAPE screen's unity-speed voice: streams [tape] forward through a mono or stereo
  * float `AudioTrack`, starting from wherever [start] last pointed and running
  * until it hits the end of the buffer or is told to [stop].
  *
@@ -40,7 +40,19 @@ import kotlin.concurrent.thread
  * output — self-healing, and a different order of problem than a foreign
  * thread flushing the live stream.
  */
-class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : AudioVoice {
+class TapeVoice(
+    private val tape: FloatArray,
+    private val sampleRate: Int,
+    private val channels: Int = 1,
+) : AudioVoice {
+
+    init {
+        require(channels in 1..2) { "TapeVoice supports mono or stereo" }
+        require(tape.size % channels == 0) { "TapeVoice needs complete interleaved frames" }
+        require(sampleRate > 0) { "TapeVoice needs a positive sample rate" }
+    }
+
+    private val frameCount = tape.size / channels
 
     private val running = AtomicBoolean(false)
     private val cursor = AtomicInteger(0)
@@ -85,13 +97,13 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
      */
     fun start(frame: Int, loop: IntRange? = null) {
         if (loop != null && loop.last + 1 > loop.first && loop.first >= 0) {
-            loopIn.set(loop.first.coerceAtMost(tape.size))
-            loopOut.set((loop.last + 1).coerceAtMost(tape.size))
+            loopIn.set(loop.first.coerceAtMost(frameCount))
+            loopOut.set((loop.last + 1).coerceAtMost(frameCount))
         } else {
             loopIn.set(-1)
             loopOut.set(-1)
         }
-        cursor.set(frame.coerceIn(0, tape.size))
+        cursor.set(frame.coerceIn(0, frameCount))
         running.set(true)
         val myGeneration = generation.incrementAndGet()
         focusOwners.incrementAndGet()
@@ -136,18 +148,18 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
     private fun padToFillBuffer(track: AudioTrack, alreadyWritten: Int, myGeneration: Int): Int {
         val remaining = track.bufferSizeInFrames - alreadyWritten
         if (remaining <= 0) return 0
-        val silence = FloatArray(minOf(remaining, BLOCK_FRAMES))
+        val silence = FloatArray(minOf(remaining, BLOCK_FRAMES) * channels)
         var padded = 0
         while (padded < remaining) {
             if (generation.get() != myGeneration) break
-            val chunk = minOf(silence.size, remaining - padded)
+            val chunk = minOf(BLOCK_FRAMES, remaining - padded) * channels
             val w = try {
                 track.write(silence, 0, chunk, AudioTrack.WRITE_BLOCKING)
             } catch (e: IllegalStateException) {
                 break
             }
             if (w <= 0) break
-            padded += w
+            padded += w / channels
         }
         return padded
     }
@@ -171,7 +183,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
         // deliberate, narrower fix than plumbing a toast out of a class that
         // has none of the callback machinery for one.
         val track = try {
-            buildTrack(sampleRate, tape.size)
+            buildTrack(sampleRate, frameCount, channels)
         } catch (e: Exception) {
             Log.w(TAG, "TapeVoice: buildTrack rejected the format, staying silent", e)
             running.set(false)
@@ -188,7 +200,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
         var framesWritten = 0
         try {
             runCatching { track.play() }
-            val block = FloatArray(BLOCK_FRAMES)
+            val block = FloatArray(BLOCK_FRAMES * channels)
             while (running.get() && generation.get() == myGeneration) {
                 var at = cursor.get()
                 val out = loopOut.get()
@@ -196,7 +208,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
                     at = loopIn.get()
                     cursor.set(at)
                 }
-                if (at >= tape.size) {
+                if (at >= frameCount) {
                     running.set(false)
                     ranToCompletion = true
                     // Even a buffer capped to the clip's own size (see
@@ -214,14 +226,15 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
                     framesWritten += padToFillBuffer(track, framesWritten, myGeneration)
                     return
                 }
-                val limit = if (out > 0) minOf(out, tape.size) else tape.size
+                val limit = if (out > 0) minOf(out, frameCount) else frameCount
                 val n = minOf(BLOCK_FRAMES, limit - at)
-                System.arraycopy(tape, at, block, 0, n)
+                val samples = n * channels
+                System.arraycopy(tape, at * channels, block, 0, samples)
                 var written = 0
-                while (written < n) {
+                while (written < samples) {
                     if (!running.get() || generation.get() != myGeneration) return
                     val w = try {
-                        track.write(block, written, n - written, AudioTrack.WRITE_BLOCKING)
+                        track.write(block, written, samples - written, AudioTrack.WRITE_BLOCKING)
                     } catch (e: IllegalStateException) {
                         // The track vanished under us (screen exit racing this write) —
                         // drop the rest of this block rather than propagate, matching
@@ -314,7 +327,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
         const val DRAIN_MARGIN_NANOS = 300_000_000L
         const val DRAIN_POLL_MILLIS = 5L
 
-        fun buildTrack(sampleRate: Int, tapeFrames: Int): AudioTrack = AudioTrack.Builder()
+        fun buildTrack(sampleRate: Int, tapeFrames: Int, channels: Int): AudioTrack = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -325,10 +338,10 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
                 AudioFormat.Builder()
                     .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                     .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setChannelMask(channelMask(channels))
                     .build(),
             )
-            .setBufferSizeInBytes(bufferBytes(sampleRate, tapeFrames))
+            .setBufferSizeInBytes(bufferBytes(sampleRate, tapeFrames, channels))
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
 
@@ -346,13 +359,16 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
          * construction. Longer clips keep the original streaming-sized
          * buffer untouched.
          */
-        fun bufferBytes(sampleRate: Int, tapeFrames: Int): Int {
-            val wanted = sampleRate * BUFFER_MILLIS / 1000 * BYTES_PER_FLOAT
-            val tapeBytes = tapeFrames * BYTES_PER_FLOAT
+        fun channelMask(channels: Int): Int =
+            if (channels == 2) AudioFormat.CHANNEL_OUT_STEREO else AudioFormat.CHANNEL_OUT_MONO
+
+        fun bufferBytes(sampleRate: Int, tapeFrames: Int, channels: Int): Int {
+            val wanted = sampleRate * BUFFER_MILLIS / 1000 * BYTES_PER_FLOAT * channels
+            val tapeBytes = tapeFrames * BYTES_PER_FLOAT * channels
             val capped = if (tapeBytes in 1 until wanted) tapeBytes else wanted
             val minimum = AudioTrack.getMinBufferSize(
                 sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO,
+                channelMask(channels),
                 AudioFormat.ENCODING_PCM_FLOAT,
             )
             return maxOf(capped, minimum)

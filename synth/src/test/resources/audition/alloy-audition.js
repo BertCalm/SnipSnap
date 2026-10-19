@@ -3,7 +3,7 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const sectionDefinitions = [
-    { id: "presets", title: "Presets", sources: ["presets"], description: "Twelve provisional starting points. Pick a sound, then listen to what its attack does to the body." },
+    { id: "presets", title: "Presets", sources: ["presets"], description: "Thirty-six starting points, six per voice. The original twelve keep their settings; explore the additions on the same engine tuning." },
     { id: "voices", title: "Voices", sources: ["voices"], description: "Six voices across registers and velocities. Listen for a stable root, a distinct material, and a body that belongs to the attack." },
     { id: "controls", title: "Controls", sources: ["sweeps", "grids", "controls"], description: "Five-point macro sweeps and interaction grids. Choose a study below and compare adjacent steps at the same note and velocity." },
     { id: "fusion", title: "Fusion", sources: ["fuse", "fusion"], description: "Matched-level comparisons with the direct attack preserved. Switch the attack modulation on and off at the same playback position; listen for the change inside the tonal body." },
@@ -272,7 +272,7 @@
     $("player-title").textContent = clip.title;
     $("player-voice").textContent = clip.voice;
     $("player-detail").textContent = clip.detail || "Listen for the attack changing the tonal body as it enters.";
-    $("player-category").textContent = state.section === "presets" ? "PROVISIONAL PRESET" : clip.loop ? "SETTLED / LOOP-ONLY RENDER" : `${state.sections.find(section => section.id === state.section)?.title || "ALLOY"} / OFFLINE RENDER`;
+    $("player-category").textContent = state.section === "presets" ? "FACTORY PRESET" : clip.loop ? "SETTLED / LOOP-ONLY RENDER" : `${state.sections.find(section => section.id === state.section)?.title || "ALLOY"} / OFFLINE RENDER`;
     $("duration").textContent = timeLabel(clip.duration);
     updateRepeatButton();
     $("loop-button").title = clip.loop ? "Repeat the complete settled buffer without playback gaps" : "Repeat this complete finite render";

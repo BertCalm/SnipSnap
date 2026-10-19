@@ -16,6 +16,10 @@ raw and matched versions, then explore macro sweeps and the interaction grids.
 Repeat HOLD clips for several cycles. Listening notes stay on the current
 device and can be exported as JSON.
 
+The listening room decodes each selected clip into a Web Audio buffer. With
+Loop enabled, HOLD clips repeat on the audio clock without restarting the file
+between cycles. Downloads retain the original engine WAVs.
+
 ```text
 ./gradlew --no-daemon test
 ./gradlew --no-daemon :synth:generatePrismAudition
@@ -23,12 +27,34 @@ device and can be exported as JSON.
 
 Generated WAVs, the manifest and the listening page live under
 `testkit/prism-audition/` and are ignored by Git. The source page and generator
-are tracked. The current matrix contains 148 cases with raw/matched partners;
-nine comparison-only clips bring the GLASS revision pack to 157.
+are tracked. The current matrix contains 176 cases with raw/matched partners;
+nine comparison-only clips bring the full pack to 185. The original 157 clips
+retain their IDs, audio and listening notes; the 28 additions are factory presets.
 Matched files use SnipSnap's shared audition target of .03 RMS over the loudest
-200 ms, distinct from the engine's melodic output target. The initial eight
-presets are an audition roster. The proposed
-36-preset expansion waits for the owner's approval of the dry sound.
+200 ms, distinct from the engine's melodic output target. The manifest records
+each recipe, PCM fingerprint, pitch, levels, render cost and relevant loop metrics.
+
+## Factory bank
+
+The owner's positive review of the dry sound led to a complete 36-preset bank.
+The original eight recipes remain unchanged; 28 additions use the existing
+renderer and bounded template controls to provide different attacks, harmonic
+balances and group development. Every preset has a musical role on the audition
+page and is available through the shared factory preset registry, phone synth
+picker and CLI.
+
+| Family | Presets | Voices |
+| --- | ---: | --- |
+| Keys and plucks | 10 | KEY 5, PLUCK 5 |
+| Organs | 6 | ORGAN |
+| Basses | 6 | BASS |
+| Sustained textures | 8 | VEIL |
+| Glass and bells | 6 | GLASS |
+
+Presets retain their finite or held behavior when rendered. Held material exports
+only its seamless sustain region; use the finite voices and velocity probes to
+judge the strike and early harmonic development. The factory bank adds no FX,
+external samples or changes to the calibrated GLASS renderer.
 
 ## GLASS listening revision
 
@@ -90,6 +116,12 @@ notes carry TONAL metadata; held notes carry LOOP metadata.
 ./gradlew :cli:run --args="synth PRISM GLASS --all --midi 72 --out /tmp/prism-glass"
 ```
 
+`--all` renders every preset for the selected voice: five KEY or PLUCK presets,
+six ORGAN, BASS or GLASS presets, or eight VEIL presets. `--preset` selects a
+one-based index within that voice; the original eight keep their existing
+positions. These commands export pad WAVs. The CLI's `--instrument` and `--drone`
+options currently apply to other engines.
+
 HOLD exports a settled loop only. The current pad format has no onset-plus-loop
 region, so the finite STRIKE attack is excluded from loop-only material. Carrier
 cycles and envelope motion recur over the selected period. Loop checks cover
@@ -101,5 +133,11 @@ Numerical checks cover deterministic replay, finite raw levels, pitch, DC,
 bandwidth, decay, velocity, spectral macro differences, template serialization,
 routing and difficult held loops. The audition adds five-point sweeps and the
 required GRAIN × SHAPE, DRIFT × STRIKE, BODY × GRAIN and DRIFT × SHAPE grids.
-These checks support listening; they do not establish sonic approval. Phone
-and MPC playback still require device validation.
+The dry sound has received the owner's positive listening review. Numerical
+checks continue to support the expanded bank; phone and MPC playback still
+require device validation.
+
+An opt-in [finite spectral-motion audition](PRISM_MOTION.md) adds saved A/B
+amplitude travel and a synthesized-donor colour experiment. Its 31 dry cases
+are generated with `:synth:generatePrismMotionAudition`; existing patches keep
+the original renderer and motion patches do not support HOLD loops.

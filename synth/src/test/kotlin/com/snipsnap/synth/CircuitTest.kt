@@ -224,7 +224,7 @@ class CircuitTest {
     @Test
     fun `PACE preserves the pitched root in the full ensemble`() {
         val voice = CircuitVoice.ROOT
-        val hz = Keys.midiHz(Circuit.ROOT_MIDI + Circuit.TUNE_SEMITONES / 2)
+        val hz = Keys.midiHz(60) // The preferred C4 starting pitch.
         val evidence = mutableListOf<String>()
         for (pace in listOf(0f, 1f)) {
             val m = Circuit.defaults(voice) + mapOf("PACE" to pace, "ORBIT" to 0f, "BREATH" to 0.45f)
@@ -238,7 +238,7 @@ class CircuitTest {
 
     @Test
     fun `the full ensemble keeps its root in every normal voice`() {
-        val hz = Keys.midiHz(Circuit.ROOT_MIDI + Circuit.TUNE_SEMITONES / 2)
+        val hz = Keys.midiHz(60) // Every fresh voice starts at C4.
         val evidence = mutableListOf<String>()
         for (voice in CircuitVoice.entries) {
             val report = Circuit.inspect(voice, Circuit.defaults(voice))
