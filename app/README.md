@@ -109,8 +109,9 @@ MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
 remains provisional. Saved audition recipes retain note, velocity and model.
 Instrument samples preserve the finite attack before a verified held loop and
 export through the existing MPC 2/MPC 3 and phone keygroup package.
-MURMUR exposes saved ROOT and VELOCITY beside its six macros; its twelve presets
-and dry starter also await owner listening review.
+MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
+have owner approval; the expanded 36-preset bank and dry starter remain available
+for listening and device review.
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
 owner's positive feedback; final listening and phone/MPC handoff remain open for

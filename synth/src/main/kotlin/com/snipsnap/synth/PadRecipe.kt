@@ -53,20 +53,37 @@ data class PadRecipe(
      * pass it directly to override.
      */
     val alias: Boolean = impliesAlias(patch, fx),
+    /**
+     * Optional delivery fade for a periodic source placed on a one-shot pad. This
+     * changes only the end of the delivered audio, after the source and rack have
+     * rendered; the saved instrument and its seamless HOLD buffer stay untouched.
+     * Null preserves existing recipes and their exact audio. Duration is milliseconds.
+     */
+    val terminalFadeMs: Float? = null,
 ) {
     init {
         require(patch != null || fx != null) { "an empty recipe records nothing" }
+        terminalFadeMs?.let {
+            require(it.isFinite() && it in 1f..100f) { "terminal fade must be finite and within 1..100 ms" }
+        }
     }
 
     /** Regenerate a synth pad's audio from scratch. */
     fun render(): Snip {
         val p = requireNotNull(patch) { "recipe has no patch to render; use process() on the captured audio" }
         val dry = p.render()
-        return fx?.process(dry) ?: dry
+        return terminalFade(fx?.process(dry) ?: dry)
     }
 
     /** Re-treat captured audio with the stored chain. */
-    fun process(snip: Snip): Snip = fx?.process(snip) ?: snip
+    fun process(snip: Snip): Snip = terminalFade(fx?.process(snip) ?: snip)
+
+    private fun terminalFade(snip: Snip): Snip {
+        val ms = terminalFadeMs ?: return snip
+        val samples = snip.samples.copyOf()
+        Dsp.fadeTail(samples, ms = ms, rate = snip.sampleRate, channels = snip.channels)
+        return snip.copy(samples = samples)
+    }
 
     fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap<String, JsonValue>()
@@ -76,6 +93,7 @@ data class PadRecipe(
         treatment?.let { obj["treatment"] = JsonValue.Str(it) }
         amount?.let { obj["amount"] = JsonValue.Num(it.toDouble()) }
         obj["alias"] = JsonValue.Bool(alias)
+        terminalFadeMs?.let { obj["terminalFadeMs"] = JsonValue.Num(it.toDouble()) }
         return JsonValue.Obj(obj)
     }
 
@@ -114,6 +132,7 @@ data class PadRecipe(
                 treatment = obj["treatment"]?.str(),
                 amount = obj["amount"]?.num()?.toFloat(),
                 alias = obj["alias"]?.bool() ?: impliesAlias(patch, fx),
+                terminalFadeMs = obj["terminalFadeMs"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat(),
             )
         }
 

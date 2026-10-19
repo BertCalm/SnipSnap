@@ -3,6 +3,8 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
@@ -10,7 +12,9 @@ import com.snipsnap.kit.KitExporter
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
 import com.snipsnap.xpm.WavInfo
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -21,13 +25,21 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class MurmurIntegrationTest {
-    private fun patch(voice: MurmurVoice = MurmurVoice.KEY) =
-        MurmurPatch("My Mouth", voice, Murmur.defaults(voice), midi = 57, velocity = .65f)
+    private fun patch(voice: MurmurVoice = MurmurVoice.KEY, model: Int = 2) =
+        MurmurPatch("My Mouth", voice, Murmur.defaults(voice), midi = 57, velocity = .65f,
+            config = Murmur.configurationFor(voice, model))
+
+    /** The exact saved shape before render models were introduced. */
+    private fun legacyJson(source: MurmurPatch): JsonValue.Obj {
+        val fields = LinkedHashMap(source.toJsonValue().entries)
+        fields["config"] = JsonValue.Obj(fields.getValue("config").obj() - "model")
+        return JsonValue.Obj(fields)
+    }
 
     @Test
     fun `complete routing ratios mouth targets trajectory envelopes root and velocity survive JSON and editing`() {
-        for (voice in MurmurVoice.entries) {
-            val original = patch(voice)
+        for (model in 1..2) for (voice in MurmurVoice.entries) {
+            val original = patch(voice, model)
             val base = original.config
             val altered = base.copy(
                 routing = MurmurRouting.entries.first { it != base.routing },
@@ -40,7 +52,9 @@ class MurmurIntegrationTest {
                 sustain = base.sustain * .95,
                 release = base.release * 1.1,
                 targets = base.targets.map { it.copy(
-                    name = "Custom ${it.name}", centers = it.centers.map { hz -> hz * 1.07 },
+                    name = "Custom ${it.name}",
+                    // Maps the full valid 150..6000 Hz range to 235..5500 Hz, retaining band order.
+                    centers = it.centers.map { hz -> 100.0 + hz * .9 },
                     widths = it.widths.map { width -> width * 1.1 }, gains = it.gains.map { gain -> gain * .85 },
                     sourceBalance = (it.sourceBalance + .03).coerceAtMost(1.0),
                 ) },
@@ -61,18 +75,96 @@ class MurmurIntegrationTest {
     }
 
     @Test
-    fun `optional note config fields use voice defaults and partial macros preserve their meaning`() {
-        for (optional in listOf("", "\"midi\":null,\"velocity\":null,\"config\":null,")) {
-            val text = """{"engine":"MURMUR","version":1,"name":"Partial","voice":"PLUCK",$optional"macros":{"MOUTH":0.6},"future":true}"""
+    fun `legacy optional config fields retain model one while partial macros preserve their meaning`() {
+        for (voice in MurmurVoice.entries) for (optional in listOf("", "\"midi\":null,\"velocity\":null,\"config\":null,")) {
+            val text = """{"engine":"MURMUR","version":1,"name":"Partial","voice":"${voice.name}",$optional"macros":{"MOUTH":0.6},"future":true}"""
             val restored = MurmurPatch.fromJsonText(text)
             assertEquals(Murmur.DEFAULT_MIDI, restored.midi)
             assertEquals(1f, restored.velocity)
-            assertEquals(Murmur.configurationFor(MurmurVoice.PLUCK), restored.config)
+            assertEquals(Murmur.configurationFor(voice, model = 1), restored.config)
             assertEquals(mapOf("MOUTH" to .6f), restored.macros)
         }
         val source = MurmurPatch("Partial", MurmurVoice.PLUCK, mapOf("MOUTH" to .6f))
         assertContentEquals(Murmur.render(source.voice, Murmur.defaults(source.voice) + source.macros).samples,
             source.render().samples, "missing macros do not resolve to voice defaults")
+    }
+
+    @Test
+    fun `new patches explicitly save model two without changing the shared patch version`() {
+        for (voice in MurmurVoice.entries) {
+            val source = MurmurPatch("New Mouth", voice, Murmur.defaults(voice))
+            assertEquals(2, source.config.model)
+            assertEquals(Murmur.configurationFor(voice, model = 2), source.config)
+            val json = source.toJsonValue().entries
+            assertEquals(1, json.getValue("version").int())
+            assertEquals(2, json.getValue("config").obj().getValue("model").int())
+            assertEquals(source, Patches.fromJsonText(source.toJsonText()))
+        }
+    }
+
+    @Test
+    fun `legacy saved configurations retain every field and materialize model one on resave`() {
+        for (voice in MurmurVoice.entries) {
+            val original = patch(voice, model = 1)
+            val source = original.copy(config = original.config.copy(
+                routing = MurmurRouting.STACK,
+                ratios = listOf(1.0, 1.5, 2.25, 3.75),
+                direction = -original.config.direction,
+                targets = original.config.targets.reversed(),
+            ))
+            val legacy = legacyJson(source)
+            val restored = assertIs<MurmurPatch>(Patches.fromJsonText(Json.write(legacy)))
+            assertEquals(source, restored, "$voice's saved model-one definition was replaced")
+            val savedConfig = restored.toJsonValue().entries.getValue("config").obj()
+            assertEquals(1, savedConfig.getValue("model").int())
+            assertEquals(legacy.entries.getValue("config").obj(), savedConfig - "model")
+            assertEquals(restored, Patches.fromJsonText(restored.toJsonText()))
+
+            val rack = FxChain(reverse = true)
+            val recipeFields = LinkedHashMap(PadRecipe(source, rack).toJsonValue().entries)
+            recipeFields["patch"] = legacy
+            val recipe = PadRecipe.fromJsonText(Json.write(JsonValue.Obj(recipeFields)))
+            assertEquals(PadRecipe(source, rack), recipe, "old pad recipes must retain their render model")
+        }
+    }
+
+    @Test
+    fun `legacy model reproduces frozen published PCM for six defaults and two held voices`() {
+        // Frozen from the 46e1d838 publication, before model two: raw mono PCM-24 WAVs,
+        // MIDI 60, velocity 1. Explicit macro values keep the saved recipes independent
+        // of future factory-default changes. These hashes were not generated by this test.
+        data class Fixture(val voice: MurmurVoice, val values: List<Float>, val sha256: String)
+        val fixtures = listOf(
+            Fixture(MurmurVoice.BASS, listOf(.25f, .35f, .08f, .25f, .75f, 0f),
+                "b7605d03569a58fd270d50a6f13aabbf9b879c99660e7202e5bcf36c1031c376"),
+            Fixture(MurmurVoice.KEY, listOf(.40f, .40f, .12f, .25f, .55f, 0f),
+                "9fa94ccde4ca7098b8b4c8c95e376aab40fd10b1f13512b26008e168c4e84723"),
+            Fixture(MurmurVoice.PLUCK, listOf(.35f, .55f, .10f, .35f, .45f, 0f),
+                "035f0243da51b73bb369034aa2891f75de0dcc53c7452fb8eac62294dcd68d94"),
+            Fixture(MurmurVoice.LEAD, listOf(.55f, .45f, .20f, .45f, .50f, 0f),
+                "50164fa5df06dd1c853895b28ccf0f632570b9a929f99e2993663f4918488064"),
+            Fixture(MurmurVoice.CHOIR, listOf(.45f, .20f, .30f, .30f, .65f, 0f),
+                "b54669b6992be268d2a9c482f1c72c8e56c45b0ae53668f58dee3c673250a55c"),
+            Fixture(MurmurVoice.METAL, listOf(.35f, .75f, .15f, .40f, .40f, 0f),
+                "1fd093ff3dcc661ea929ed29eb18d2cfa33a5054b226175368d7f98eba2972d2"),
+            Fixture(MurmurVoice.KEY, listOf(.40f, .40f, .12f, .25f, .55f, 1f),
+                "a9d2e649bb955c21f0dff59e1c21feb2310558db57839668b449fa0f8af2d538"),
+            Fixture(MurmurVoice.CHOIR, listOf(.45f, .20f, .30f, .30f, .65f, 1f),
+                "f301d8831be51d5a2b00d823d3dd575005cdcd77bc0101800a893208ee6f1d4e"),
+        )
+        val names = listOf("MOUTH", "EDGE", "BREATH", "MOTION", "BODY", "HOLD")
+        for (fixture in fixtures) {
+            val source = MurmurPatch("Published legacy fixture", fixture.voice, names.zip(fixture.values).toMap(),
+                config = Murmur.configurationFor(fixture.voice, model = 1))
+            val restored = MurmurPatch.fromJsonText(Json.write(legacyJson(source)))
+            val raw = Murmur.renderRaw(restored.voice, restored.macros, restored.midi, restored.velocity, restored.config)
+            val encoded = ByteArrayOutputStream().also {
+                WavWriter.write(it, Snip(raw, 1, Dsp.RATE), WavWriter.BitDepth.PCM_24)
+            }.toByteArray()
+            val actual = MessageDigest.getInstance("SHA-256").digest(encoded).joinToString("") { "%02x".format(it) }
+            assertEquals(fixture.sha256, actual,
+                "${fixture.voice} HOLD ${fixture.values.last()} changed an already-published saved recipe")
+        }
     }
 
     @Test
@@ -115,6 +207,15 @@ class MurmurIntegrationTest {
             refuses("macro $name out of 0..1: $value", "$name $value") { source.copy(macros = mapOf(name to value)) }
         }
         val config = source.config
+        for (model in listOf(0, 3)) {
+            refuses("unsupported Murmur model $model", "model $model") { config.copy(model = model) }
+            val invalid = JsonValue.Obj(LinkedHashMap(source.toJsonValue().entries.getValue("config").obj()).also {
+                it["model"] = JsonValue.Num(model.toDouble())
+            })
+            refusesJson("unsupported Murmur model $model", "saved model $model") {
+                MurmurPatch.fromJsonValue(changed("config", invalid))
+            }
+        }
         refuses("Murmur needs four bounded operator ratios", "three ratios") { config.copy(ratios = listOf(1.0, 2.0, 3.0)) }
         refuses("Murmur needs four bounded operator ratios", "zero ratios") { config.copy(ratios = config.ratios.map { 0.0 }) }
         refuses("Murmur's principal carrier must bear the requested root", "carrier ratio 2") {
@@ -140,38 +241,47 @@ class MurmurIntegrationTest {
 
     @Test
     fun `pad recipes replay effects and production velocity layers excite the saved instrument`() {
-        val source = patch()
-        val rack = FxChain(reverse = true)
-        val recipe = PadRecipe(source, rack)
-        val restored = PadRecipe.fromJsonText(recipe.toJsonText())
-        assertEquals(recipe, restored)
-        val reference = source.render()
-        assertContentEquals(rack.process(reference).samples, restored.render().samples)
-        assertFalse(reference.samples.contentEquals(restored.render().samples))
-        val soft = source.copy(velocity = .25f).render()
-        assertContentEquals(soft.samples, Velocity.atVelocity(source, .25f).samples)
-        assertContentEquals(Velocity.peakMatch(reference, soft).samples,
-            Velocity.layerAt(reference, source, null, .25f, Velocity.brightnessSpec(source)).samples)
-        assertFalse(Velocity.soften(reference, .75f).samples.contentEquals(soft.samples),
-            "velocity uses a finished-sample filter instead of the saved excitation")
-        assertTrue(Velocity.canUseAtVelocity(reference, source, null))
-        assertFalse(Velocity.canUseAtVelocity(reference, source, rack))
+        for (model in 1..2) {
+            val source = patch(model = model)
+            val rack = FxChain(reverse = true)
+            val recipe = PadRecipe(source, rack)
+            val restored = PadRecipe.fromJsonText(recipe.toJsonText())
+            assertEquals(recipe, restored)
+            val reference = source.render()
+            assertContentEquals(rack.process(reference).samples, restored.render().samples)
+            assertFalse(reference.samples.contentEquals(restored.render().samples))
+            val soft = source.copy(velocity = .25f).render()
+            assertContentEquals(soft.samples, Velocity.atVelocity(source, .25f).samples)
+            assertContentEquals(Velocity.peakMatch(reference, soft).samples,
+                Velocity.layerAt(reference, source, null, .25f, Velocity.brightnessSpec(source)).samples)
+            assertFalse(Velocity.soften(reference, .75f).samples.contentEquals(soft.samples),
+                "velocity uses a finished-sample filter instead of the saved excitation")
+            assertTrue(Velocity.canUseAtVelocity(reference, source, null))
+            assertFalse(Velocity.canUseAtVelocity(reference, source, rack))
+        }
     }
 
     @Test
-    fun `provisional dry recipes are discoverable for every voice and preserve pitched routing`() {
+    fun `the complete thirty six preset bank is discoverable through shared rosters and preserves pitched routing`() {
         val presets = MurmurPresets.all()
-        assertTrue(presets.isNotEmpty())
+        val registered = Presets.all().filter { it.engine == MurmurPatch.ENGINE }
+        assertEquals(36, registered.size, "the global roster must expose the complete Murmur bank")
+        assertEquals(presets, registered, "the shared roster must retain every authored recipe and its order")
         assertEquals(presets.size, presets.map { it.name }.distinct().size)
-        assertTrue(Presets.all().containsAll(presets))
-        for (voice in MurmurVoice.entries) {
-            val group = MurmurPresets.forVoice(voice)
-            assertTrue(group.isNotEmpty(), "$voice has no audition proposal")
-            assertEquals(group, Presets.forVoice(MurmurPatch.ENGINE, voice.name))
-            for (proposal in group) {
-                assertEquals(proposal, Patches.fromJsonText(proposal.toJsonText()))
-                val expected = if (Murmur.isLoop(proposal.macros.getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
-                assertEquals(expected, Murmur.drumClassFor(proposal.voice, proposal.macros))
+        val expectedSizes = linkedMapOf(
+            MurmurVoice.BASS to 8, MurmurVoice.KEY to 4, MurmurVoice.PLUCK to 4,
+            MurmurVoice.LEAD to 8, MurmurVoice.CHOIR to 6, MurmurVoice.METAL to 6,
+        )
+        assertEquals(MurmurVoice.entries.toSet(), expectedSizes.keys)
+        for ((voice, expectedSize) in expectedSizes) {
+            val group = Presets.forVoice(MurmurPatch.ENGINE, voice.name)
+            assertEquals(expectedSize, group.size, "$voice must expose its complete bank to the CLI and picker")
+            assertEquals(MurmurPresets.forVoice(voice), group)
+            for (entry in group) {
+                val preset = assertIs<MurmurPatch>(entry)
+                assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
+                val expected = if (Murmur.isLoop(preset.macros.getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
+                assertEquals(expected, Murmur.drumClassFor(preset.voice, preset.macros))
             }
         }
     }

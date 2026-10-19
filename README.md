@@ -422,11 +422,12 @@ driver approximations, recipes and held-sample export limits.
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
-remain saved with each patch. Twelve provisional presets and a sixteen-pad
+remain saved with each patch. Thirty-six dry presets and a sixteen-pad
 C minor pentatonic FRESH TAPE starter are included. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
-describe the renderer, settled HOLD loops and the pending owner listening review.
+describe the approved six-voice sound, settled HOLD loops and the expanded bank's
+listening review.
 
 OSPREY adapts XOsprey into a finite SWELL articulation. The original sound was
 positively received, with a request for slightly more distinct voices. R2 was

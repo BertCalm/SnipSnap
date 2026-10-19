@@ -6,8 +6,8 @@ import com.snipsnap.json.JsonValue
 
 /**
  * A complete dry FM/formant recipe. Root and excitation velocity live beside the six
- * macros; operator routing, ratios, mouth targets, trajectory and envelopes are saved
- * explicitly so a pad rebuilds the sound that was auditioned.
+ * macros; operator routing, ratios, mouth targets, trajectory, envelopes and render
+ * model are saved explicitly so a pad rebuilds the sound that was auditioned.
  */
 data class MurmurPatch(
     override val name: String,
@@ -49,7 +49,7 @@ data class MurmurPatch(
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
                 try {
                     val config = obj["config"]?.takeUnless { it is JsonValue.Null }?.let(::configFromJson)
-                        ?: Murmur.configurationFor(voice)
+                        ?: Murmur.configurationFor(voice, model = 1)
                     MurmurPatch(name, voice, macros, midi, velocity, config)
                 } catch (e: IllegalArgumentException) {
                     throw JsonException(e.message ?: "invalid MURMUR recipe")
@@ -77,6 +77,7 @@ data class MurmurPatch(
                 "gains" to numbers(target.gains),
                 "sourceBalance" to JsonValue.Num(target.sourceBalance),
             )) }),
+            "model" to JsonValue.Num(config.model.toDouble()),
         ))
 
         private fun configFromJson(value: JsonValue): MurmurConfig {
@@ -105,6 +106,8 @@ data class MurmurPatch(
                         sourceBalance = targetField("sourceBalance").num(),
                     )
                 },
+                // Existing saved definitions predate model selection and retain their original renderer.
+                model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: 1,
             )
         }
     }

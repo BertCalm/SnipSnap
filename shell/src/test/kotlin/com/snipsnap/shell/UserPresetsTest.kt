@@ -504,7 +504,7 @@ class UserPresetsTest {
      * way the compiler would ([KotlinLiteral]) and rebuilds the patch from it.
      */
     @Test
-    fun `a saved mouth retains root velocity and its complete instrument definition when promoted`() {
+    fun `a saved mouth retains root velocity model and its complete instrument definition when promoted`() {
         val root = shelf()
         try {
             val held = MurmurPresets.all().first { it.name == "HELD HUM" }
@@ -518,14 +518,18 @@ class UserPresetsTest {
                     MurmurFormantTarget("Wide", listOf(700.0, 1_200.0, 2_400.0, 3_200.0),
                         listOf(180.0, 210.0, 310.0, 390.0), listOf(1.2, 1.3, .6, .35), .6),
                 ),
+                model = 1,
             )
-            val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config)
-            UserPresets.save(root, source, 1L)
-            val saved = UserPresets.read(root).single()
-            assertEquals(source, saved.patch, "the shelf retains root, velocity and the complete configuration")
-            val line = UserPresets.rosterLine(saved.patch)
-            assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
-            assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds the saved mouth exactly")
+            assertEquals(2, held.config.model, "the promotion helper starts from the new model")
+            for (model in 1..2) {
+                val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config.copy(model = model))
+                UserPresets.save(root, source, 1L)
+                val saved = UserPresets.read(root).single()
+                assertEquals(source, saved.patch, "the shelf retains model $model, root, velocity and the complete configuration")
+                val line = UserPresets.rosterLine(saved.patch)
+                assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+                assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds model $model exactly")
+            }
         } finally {
             root.deleteRecursively()
         }
@@ -596,6 +600,7 @@ class UserPresetsTest {
                     sourceBalance = double(t.named.getValue("sourceBalance")),
                 )
             },
+            model = int(a.getValue("model")),
         )
     }
 

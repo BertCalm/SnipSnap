@@ -853,12 +853,18 @@ fun SynthScreen(
                 // (Presets.landingFor). Every other sound lands with no chain,
                 // exactly as before.
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
-                val padRecipe = PadRecipe(patch = patch, fx = fx)
-                val recipe = padRecipe.toJsonValue()
                 val cls = engine.drumClass(voice, macros)
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
+                        // A held Murmur source is seamless, but a one-shot pad stops
+                        // at its final frame. Save the delivery fade with that pad;
+                        // gated pads and SURFACE keep the unfaded loop source.
+                        val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true) &&
+                            patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f)
+                        ) 8f else null
+                        val padRecipe = PadRecipe(patch = patch, fx = fx, terminalFadeMs = terminalFade)
+                        val recipe = padRecipe.toJsonValue()
                         val rendered = padRecipe.render()
                         val alreadyThere = model.pad(slot) != null
                         if (alreadyThere) {
