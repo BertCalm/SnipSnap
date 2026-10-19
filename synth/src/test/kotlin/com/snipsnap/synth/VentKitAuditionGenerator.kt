@@ -144,15 +144,37 @@ object VentKitAuditionGenerator {
                     (value["bpm"] as? JsonValue.Num)?.value == groove.bpm.toDouble()
                 }) { "Session sequence tempo differs" }
                 val imported = Mpc3Importer.importProject(session.xpj, File(root, ".verify/${groove.id}-$variant"), overwrite = true)
-                check(imported.skipped.isEmpty() && imported.kits.size == 1)
+                val expectedInfrastructure = mapOf("Submix 1" to 8, "Out 1/2" to 9, "Out 3/4" to 9)
+                val contentName = if (variant == "Dry") dryKit.name else wetKit.name
+                val content = project.tracks.filter { (it["name"] as? JsonValue.Str)?.value == contentName }
+                check(content.size == 1 && content.single().getValue("program").obj().getValue("type").int() == 0) {
+                    "$name: expected one drum content track named $contentName"
+                }
+                val infrastructure = project.tracks.filter { it !in content }
+                check(infrastructure.size == expectedInfrastructure.size && infrastructure.all { node ->
+                    val nodeName = node.getValue("name").str()
+                    val program = node.getValue("program").obj()
+                    expectedInfrastructure[nodeName] == program.getValue("type").int() && "drum" !in program
+                }) { "$name: unexpected non-content tracks ${project.trackNames}" }
+                val expectedSkipped = expectedInfrastructure.keys.associateWith { "'$it' has no drum block" }
+                check(imported.skipped == expectedSkipped && imported.kits.size == 1) {
+                    "$name: unexpected project import result: skipped=${imported.skipped}, kits=${imported.kits.map { it.trackName }}"
+                }
                 val track = imported.kits.single()
-                check(track.kit.pads.size == 12 && GrooveStore.load(track.directory) == listOf(groove.clip)) { "Session did not retain all pads and exact events" }
-                val replay = SessionMixdown.render(listOf(track.directory), groove.bpm) { _, _ -> groove.clip }
+                check(track.trackName == contentName && track.kit.pads.size == 12) {
+                    "$name: content track did not retain its twelve pads"
+                }
+                // importProject restores the sample kit, but does not read the
+                // sequence timeline. Decode the actual project events independently.
+                val decodedClip = projectTimeline(project, contentName)
+                check(decodedClip == groove.clip) { "$name: project timeline differs: $decodedClip" }
+                val replay = SessionMixdown.render(listOf(track.directory), groove.bpm) { _, _ -> decodedClip }
                 check(sameBits(if (variant == "Dry") dry else wet, replay)) { "Imported session mix differs" }
                 sessionReports += linkedMapOf("id" to groove.id, "variant" to variant, "tempoBpm" to groove.bpm,
                     "project" to session.xpj.relativeTo(bundle).invariantSeparatorsPath,
                     "padCount" to 12, "eventCount" to groove.clip.notes.size,
-                    "eventsRoundtrip" to true, "mixRoundtrip" to true)
+                    "projectTimelineReadback" to true, "samplerMixReplay" to true,
+                    "skippedInfrastructure" to imported.skipped)
             }
             linkedMapOf<String, Any?>(
                 "id" to groove.id, "title" to groove.title, "description" to groove.description,
@@ -177,7 +199,8 @@ object VentKitAuditionGenerator {
             "padCount" to 12, "grooveCount" to 2, "browserWavCount" to 56,
             "finite" to true, "unclipped" to true, "integrationFailures" to 0,
             "deterministic" to true, "recipeRoundtrip" to true, "rawRoundtrip" to true,
-            "sourceKitRoundtrip" to true, "nativeTrackRoundtrip" to true, "sessionMixRoundtrip" to true,
+            "sourceKitRoundtrip" to true, "nativeTrackRoundtrip" to true,
+            "projectTimelineReadback" to true, "samplerMixReplay" to true,
             "allPadsUsed" to true, "maxAbsoluteDc" to (clips + grooveClips).maxOf { c ->
                 maxOf(abs((c.getValue("nativeMetrics") as Map<*, *>)["dc"] as Double),
                     abs((c.getValue("processedNativeMetrics") as Map<*, *>)["dc"] as Double))
@@ -280,6 +303,42 @@ object VentKitAuditionGenerator {
             check(fileHash(File(source, pad.sampleFile)) == fileHash(File(dir, got.sampleFile))) { "Native export changed sample bytes" }
             check(pad.level == got.level && pad.pan == got.pan && pad.muteGroup == got.muteGroup && pad.oneShot == got.oneShot)
         }
+    }
+
+    /** Verification decoder for the one 4/4 sequence written into each real project. */
+    private fun projectTimeline(project: Mpc3Project, trackName: String): Mpc3Clip {
+        val sequences = requireNotNull(project.data)["sequences"]!!.arr()
+        check(sequences.size == 1) { "Expected exactly one project sequence" }
+        val sequence = sequences.single().obj().getValue("value").obj()
+        val bars = sequence.getValue("lengthBars").int()
+        check(sequence.getValue("loopStartBar").int() == 0 && sequence.getValue("loopEndBar").int() == bars) {
+            "Project sequence loop bounds differ"
+        }
+        val signatures = sequence.getValue("timeSignatureTrack").obj().getValue("timeSignatures").arr()
+        check(signatures.size == 1)
+        val meter = signatures.single().obj()
+        check(meter.getValue("barStart").int() == 0 && meter.getValue("beatsPerBar").int() == 4 &&
+            meter.getValue("beatLength").long() == Mpc3Clip.PULSES_PER_BEAT) { "Project meter differs from 4/4" }
+        val rows = sequence.getValue("trackClipMaps").arr()
+        check(rows.size == 1) { "Expected exactly one project clip-map row" }
+        val trackClips = rows.single().arr().filter { it.obj().getValue("key").str() == trackName }
+        check(trackClips.size == 1) { "Project timeline must contain exactly one $trackName clip" }
+        val clip = trackClips.single().obj().getValue("value").obj()
+        val length = bars * Mpc3Clip.PULSES_PER_BAR
+        check(clip.getValue("startPulses").long() == 0L && clip.getValue("endPulses").long() == length &&
+            clip.getValue("loopStartPulses").long() == 0L && clip.getValue("loopEndPulses").long() == length) {
+            "Project clip pulse bounds differ"
+        }
+        val notes = clip.getValue("eventList").obj().getValue("events").arr().map { value ->
+            val event = value.obj()
+            check(event.getValue("type").int() == 3 && !event.getValue("muted").bool()) {
+                "Project clip contains a muted or non-note event"
+            }
+            val note = event.getValue("note").obj()
+            Mpc3Note(note.getValue("note").int(), event.getValue("time").long(),
+                note.getValue("velocity").num().toFloat(), note.getValue("length").long())
+        }
+        return Mpc3Clip(clip.getValue("name").str(), bars, notes)
     }
 
     private fun effects(entry: VentKitPresets.Entry): FxChain {

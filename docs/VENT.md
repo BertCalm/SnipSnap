@@ -402,8 +402,16 @@ renders. It checks raw/native recipe replay, JSON roundtrips, deterministic FX,
 finite unclipped audio, DC below .02 and no emergency integration resets. Source
 kits retain exact recipes; their PCM24 samples agree within quantization error.
 Native tracks are imported back to check sample bytes, pad mixer settings and
-both clips. Every session is imported back and its pattern must replay to the
-same floating-point mix. The MPC 2 twin is structurally read back as twelve pads.
+both clips. Each session's sample kit is imported back, and its actual project
+sequence timeline is decoded independently to verify tempo, meter, bounds and
+all note events against the source pattern. That decoded pattern must replay
+with the imported samples to the same floating-point mix. The current project
+importer restores drum sample kits, not project timeline grooves; editable
+source kits separately preserve both patterns in `groove.json`. Expected mixer
+infrastructure tracks are checked by name/type and recorded as skipped, rather
+than mistaken for missing instruments. Diagnostics label these checks
+`projectTimelineReadback` and `samplerMixReplay`. The MPC 2 twin is structurally
+read back as twelve pads.
 SHA-256 hashes, source-file hashes, Git HEAD and a dirty-tree flag accompany the
 pack. These checks establish repeatability and export coherence, not hardware
 listening approval or musical quality.
