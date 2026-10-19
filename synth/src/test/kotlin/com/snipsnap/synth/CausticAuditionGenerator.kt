@@ -88,6 +88,9 @@ object CausticAuditionGenerator {
             check(abs((measurements.getValue("rootCents") as Number).toDouble()) < ROOT_TOLERANCE_CENTS) {
                 "${case.id}: rendered fundamental misses requested note by ${measurements["rootCents"]} cents"
             }
+            check((measurements["pitchCents"] as? Number)?.toDouble()?.let { abs(it) < ROOT_TOLERANCE_CENTS } == true) {
+                "${case.id}: broadband pitch estimate misses requested note by ${measurements["pitchCents"]} cents"
+            }
             check((measurements["pitchConfidence"] as? Number)?.toDouble()?.let { it >= .3 } == true) {
                 "${case.id}: rendered note lacks confident periodicity (${measurements["pitchConfidence"]})"
             }
@@ -154,11 +157,12 @@ object CausticAuditionGenerator {
             "worstPitchCents" to heard.mapNotNull { (it.metrics["pitchCents"] as? Number)?.toDouble() }.maxOfOrNull { abs(it) },
             "worstRootCents" to heard.maxOf { abs((it.metrics.getValue("rootCents") as Number).toDouble()) },
             "rootToleranceCents" to ROOT_TOLERANCE_CENTS,
+            "pitchToleranceCents" to ROOT_TOLERANCE_CENTS,
             "totalPreparationMillis" to heard.sumOf { it.rendered.prepareMillis },
             "totalRenderMillis" to heard.sumOf { it.rendered.renderMillis },
             "portableRecipeReplay" to "Original full-control and all three C4 characters replayed sample for sample; every recipe round-tripped exactly.",
             "leveling" to "Native: original release gain 1 unchanged; the depth revision shares one recorded gain. Matched: existing AuditionLevel loudest-200-ms rule applied separately to each clip.",
-            "checks" to listOf("finite raw/output/modal diagnostics", "raw and modal peaks below prototype ceiling 8", "no exported clipping", "rendered root within 20 cents with periodicity confidence at least .3", "raw full/short-window classifier avoids drum classes", "exact recipe round trips and representative sample replay"),
+            "checks" to listOf("finite raw/output/modal diagnostics", "raw and modal peaks below prototype ceiling 8", "no exported clipping", "FFT root and broadband pitch estimate within 20 cents with periodicity confidence at least .3", "raw full/short-window classifier avoids drum classes", "exact recipe round trips and representative sample replay"),
             "limits" to listOf("Static circular geometry only", "No ORBIT, deformation, SCATTER or HOLD", "Finite notes; no seamless-loop claim", "No phone picker or factory-preset integration", "Geometry density maxima do not guarantee phase-coherent audio maxima", "Pitch and spectra are measurements, not listening acceptance"),
         )
         val manifest = linkedMapOf<String, Any?>(

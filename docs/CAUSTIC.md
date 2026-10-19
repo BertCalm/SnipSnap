@@ -10,9 +10,9 @@ engine. The working name has not been checked for release.
 ## Listen and reproduce
 
 The [private audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site)
-uses ChatGPT Sites. It provides a suggested listening order, a depth-and-
-character comparison, the original position studies, mechanism controls,
-register/velocity probes and local notes.
+uses ChatGPT Sites. It provides a suggested listening order, a
+depth-and-character comparison, the original position studies, mechanism
+controls, register/velocity probes and local notes.
 
 ```text
 ./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.Caustic*'
@@ -65,8 +65,8 @@ including the lowest supported MIDI note at maximum delay scale. Moving paths
 and arbitrary envelopes need separate validation.
 
 In model 1, fixed pickup losses and signed participation feed sixteen shared,
-uncoupled `Modes.Bank` resonances: twelve harmonic modes and four quiet near-
-harmonic companions. Material gains are fixed; FOCUS adds no independent
+uncoupled `Modes.Bank` resonances: twelve harmonic modes and four quiet
+near-harmonic companions. Material gains are fixed; FOCUS adds no independent
 oscillators. A quiet direct root supports sparse/canceling positions. Rendering
 uses 4x processing, existing antialias filtering, decimation, DC removal and a
 short finite-tail fade, yielding mono 44.1 kHz samples. Stable poles and
@@ -78,8 +78,8 @@ Model 2 uses twenty-four modes: twelve main resonances and twelve nearby
 sympathetic partners. A short transient and a longer tonal envelope illuminate
 the same paths; each uses an exact causal delayed representation. The material
 choices change excitation, spatial participation and resonant
-frequency/lifetime relationships inside the vessel. BODY explores a fuller low-
-mid response and slower bloom. REED emphasizes hollow harmonic colour and
+frequency/lifetime relationships inside the vessel. BODY explores a fuller
+low-mid response and slower bloom. REED emphasizes hollow harmonic colour and
 nearby beating resonances. ALLOY explores a brighter, slightly inharmonic ring.
 All retain the same circular reflection geometry, coherent path delays and
 requested pitch. They are alternative listening candidates rather than a final
@@ -109,8 +109,9 @@ Tests cover reflection, endpoints, forward segments, budgets, ray convergence,
 direct/compressed transfer, determinism, silence, raw/state bounds, spectral
 activity, velocity, scalar controls, cancellation and strict recipe replay. The
 generator checks raw/PCM bounds, early-window drum classification, moderate
-measured pitch error and representative sample-identical replay. The included
-exploratory geometry figure does not establish `.001R` envelope accuracy.
+measured pitch error in both the FFT root and broadband detector, and
+representative sample-identical replay. The included exploratory geometry
+figure does not establish `.001R` envelope accuracy.
 
 The initial 24-clip run measured a maximum raw sample peak of 0.3713, maximum
 modal-state amplitude of 0.3292 and worst constrained root error below 0.62

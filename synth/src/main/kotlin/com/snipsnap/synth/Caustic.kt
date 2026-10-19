@@ -312,7 +312,7 @@ object Caustic {
                 Character.BODY -> h * if (!companion) 1.0 else 1.0 + .0025 * sin(h * 1.71)
                 Character.REED -> h * if (!companion) 1.0 else 1.0 + .0043 * cos(h * 1.37)
                 Character.ALLOY -> if (h == 1) (if (companion) 1.0018 else 1.0) else
-                    h * (1.0 + (if (companion) .009 + .004 * sin(h * 1.7) else .0027 * (h - 1.0).pow(1.20)))
+                    h * (1.0 + (if (companion) .005 + .0022 * sin(h * 1.7) else .0015 * (h - 1.0).pow(1.20)))
             }
         }
         fun t60(m: Int): Double {

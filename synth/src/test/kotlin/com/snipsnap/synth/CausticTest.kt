@@ -1,6 +1,8 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Fft
+import com.snipsnap.audio.Pitch
+import com.snipsnap.audio.Snip
 import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.abs
@@ -10,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Acceptance probes use fixed-gain raw audio so normalization cannot manufacture a result. */
@@ -217,6 +220,18 @@ class CausticTest {
         val sa = shares(pa); val sb = shares(pb)
         val difference = sa.indices.sumOf { abs(sa[it] - sb[it]) }
         assertTrue(difference > .08, "Alloy level matched focus spectral distance $difference")
+    }
+
+    @Test
+    fun `Alloy bass retains broad perceived pitch despite strong upper natural modes`() {
+        val c = Caustic.Config(model = 2, character = Caustic.Character.ALLOY,
+            source = .5, focus = .19, midi = 36, seconds = 1.2)
+        val r = Caustic.inspect(c)
+        val estimate = assertNotNull(Pitch.detect(Snip(r.raw, 1, Caustic.RATE), fromSec = .5f, windowSec = .35f),
+            "Alloy C2 must retain a detectable pitched body")
+        assertTrue(estimate.confidence >= .3, "Alloy C2 pitch confidence ${estimate.confidence}")
+        val cents = 1200 * kotlin.math.ln(estimate.hz / r.diagnostics.noteHz) / kotlin.math.ln(2.0)
+        assertTrue(abs(cents) < 20, "Alloy C2 virtual pitch drift $cents cents")
     }
 
     private fun relativeDifference(a: DoubleArray, b: DoubleArray): Double =
