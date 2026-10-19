@@ -82,7 +82,9 @@ object PadSheetBoxes {
 
     /** What MAKE holds, or what DE-SAMPLE already made of the pad. */
     fun make(pad: KitPad): String =
-        pad.source["desampled"]?.let { "A PATCH NOW, ${it.uppercase(Locale.ROOT)} AWAY" } ?: "PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT"
+        pad.source["desampled"]?.let { "A PATCH NOW, ${it.uppercase(Locale.ROOT)} AWAY" }
+            ?: if (ConfluenceWorkshop.isGathering(pad)) "GATHERING · MAKE VARIATION"
+            else "PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT"
 
     /**
      * Which benches this pad actually carries something from (J36).

@@ -81,7 +81,52 @@ class ConfluenceVoiceBank private constructor(
     fun voicesForRole(role: ConfluenceRole): List<ConfluenceBankVoice> = voices.filter { role in it.roles }
 
     fun render(presetId: String = mainPresetId, normalize: Boolean = true): ConfluenceAssemblyReport =
-        ConfluenceAssembly.render(preset(presetId).recipe, sources, normalize)
+        render(preset(presetId).recipe, normalize)
+
+    /**
+     * Render edited arrangement controls against this exact bank. Source selection may change to
+     * another eligible bank voice, but a phrase, sustain, reference or mode cannot be silently
+     * reinterpreted as an approved recording. No equality with a factory preset is required.
+     */
+    fun render(recipe: ConfluenceAssemblyRecipe, normalize: Boolean = true): ConfluenceAssemblyReport =
+        ConfluenceAssembly.render(checkedRecipe(recipe), sources, normalize)
+
+    /** A complete edited gathering ready for an ordinary finite pad, with its exact source recipe. */
+    fun arrangedPad(recipe: ConfluenceAssemblyRecipe, displayName: String = recipe.name): ArrangedPad {
+        require(displayName.isNotBlank()) { "a Confluence variation needs a display name" }
+        val report = render(recipe, normalize = true)
+        val saved = report.recipe
+        val assigned = saved.roles.associate { spec -> spec.role to voiceFor(spec.region) }
+        val used = assigned.values.distinctBy { it.id }
+        val roleVoiceIds = JsonValue.Obj(ConfluenceRole.entries.associate { role ->
+            role.name to JsonValue.Str(assigned.getValue(role).id)
+        })
+        return ArrangedPad(report.mix, DrumClass.LOOP,
+            source = commonSourceMetadata() + mapOf(
+                "assemblyRecipe" to saved.toJsonText(),
+                "sourceHashes" to saved.roles.joinToString(",") { it.region.assetHash },
+                "roles" to ConfluenceRole.entries.joinToString(",") { it.name },
+                "roleVoiceIds" to Json.write(roleVoiceIds),
+                "attribution" to used.map { it.provenance.entries.getValue("attribution").str() }.distinct().joinToString(" | "),
+                "sourceUrl" to used.map { it.provenance.entries.getValue("sourceUrl").str() }.distinct().joinToString(" | "),
+                "modifications" to used.joinToString(" | ") { "${it.title}: ${it.provenance.entries.getValue("modifications").str()}" } +
+                    " Rendered with the exact stored Confluence assembly recipe and shared melodic loudness leveling.",
+            ), displayName = displayName)
+    }
+
+    private fun voiceFor(region: ConfluenceRegion): ConfluenceBankVoice =
+        voices.firstOrNull { it.region.assetHash == region.assetHash }
+            ?: throw IllegalArgumentException("Confluence arrangement refers to an unknown bank source ${region.assetHash}")
+
+    private fun checkedRecipe(recipe: ConfluenceAssemblyRecipe): ConfluenceAssemblyRecipe {
+        val snapshot = recipe.copy(roles = recipe.roles.map { it.copy(performerIds = it.performerIds.toList()) })
+        for (spec in snapshot.roles) {
+            val voice = voiceFor(spec.region)
+            require(spec.role in voice.roles) { "Confluence voice ${voice.id} is not eligible for ${spec.role}" }
+            require(spec.region == voice.region) { "Confluence voice ${voice.id} requires its exact audited source region, markers, mode and reference" }
+        }
+        return snapshot
+    }
 
     /** Exact portable payloads; callers receive a copy rather than the bank's cached asset bytes. */
     fun assetBytes(relativePath: String): ByteArray = if (relativePath == MANIFEST_FILE) manifestText.toByteArray(Charsets.UTF_8)
@@ -109,14 +154,7 @@ class ConfluenceVoiceBank private constructor(
      */
     fun arrangedPads(): List<ArrangedPad?> {
         val pads = ArrayList<ArrangedPad?>()
-        val common = linkedMapOf(
-            "engine" to "CONFLUENCE_VOICE_BANK", "bankId" to id, "bankVersion" to version.toString(),
-            "content" to "wordless recorded vocals", "sourceDependency" to "bundled Confluence source bank; rendered playback needs no external source",
-            "license" to "CC-BY-4.0", "licenseUrl" to "https://creativecommons.org/licenses/by/4.0/",
-            "attribution" to attributionText,
-            "sourceUrl" to voices.map { it.provenance.entries.getValue("sourceUrl").str() }.distinct().joinToString(" | "),
-            "modifications" to "Recorded source preparation is listed in the bundled bank manifest; arrangement pads additionally apply the exact stored Confluence assembly recipe. LOW AND AIR retains the full gathering's gain.",
-        )
+        val common = commonSourceMetadata()
         for (voice in voices) {
             val source = sources.getValue(voice.region.assetHash)
             val samples = source.pcm.copyOfRange(voice.region.startFrame, voice.region.endFrame)
@@ -149,6 +187,15 @@ class ConfluenceVoiceBank private constructor(
         check(pads.size == STARTER_PAD_COUNT) { "wordless starter must contain exactly $STARTER_PAD_COUNT pads" }
         return pads
     }
+
+    private fun commonSourceMetadata(): Map<String, String> = linkedMapOf(
+        "engine" to "CONFLUENCE_VOICE_BANK", "bankId" to id, "bankVersion" to version.toString(),
+        "content" to "wordless recorded vocals", "sourceDependency" to "bundled Confluence source bank; rendered playback needs no external source",
+        "license" to "CC-BY-4.0", "licenseUrl" to "https://creativecommons.org/licenses/by/4.0/",
+        "attribution" to attributionText,
+        "sourceUrl" to voices.map { it.provenance.entries.getValue("sourceUrl").str() }.distinct().joinToString(" | "),
+        "modifications" to "Recorded source preparation is listed in the bundled bank manifest; arrangement pads additionally apply the exact stored Confluence assembly recipe. LOW AND AIR retains the full gathering's gain.",
+    )
 
     companion object {
         const val SCHEMA = 1

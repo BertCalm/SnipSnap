@@ -9,7 +9,8 @@ as historical scheduling demonstrations; they are not factory bank sources.
 The owner's listening verdict remains open.
 
 The supplied [engineering specification](CONFLUENCE_SPEC.md) is retained unchanged
-as the long-term proposal. This document describes the smaller implemented stage.
+as the long-term proposal. This document describes the smaller implementation in
+the draft app build; it is not a release announcement.
 
 ## Implemented scope
 
@@ -47,13 +48,54 @@ as the long-term proposal. This document describes the smaller implemented stage
   normal pad workflow, with ordinary audio editing and effects. Their source
   metadata retains the bank identities and assembly JSON; they do not expose
   Confluence synthesis controls as a normal typed `Patch`.
+- In the draft build, complete bank-backed gathering pads have a GATHERING card
+  inside MAKE. It rebuilds their saved recording arrangement with a choice of
+  foundation vowel, individuality, room, answer gap and three relative levels.
+  HEAR previews it; MAKE VARIATION writes a separate sample to the first empty
+  pad, retaining the edited pad's existing audio and effects.
 
 No normal `Patch` registration, dedicated source editor, keyboard multisample
 instrument or HOLD is included in this stage. The existing `Patch.render()`
 contract remains unchanged. Ordinary rendered kits provide playback; the native
 voice bank preserves sources and exact finite arrangement recipes.
-Playback uses the kit's WAVs. The adjacent `confluence-voice-bank` folder is only
-needed to replay the source arrangement through the bank API.
+Playback uses the kit's WAVs. The adjacent `confluence-voice-bank` folder preserves
+the source assets and recipes for replay; the draft editor can also resolve the
+exact packaged starter bank when that folder is absent.
+
+## Make a gathering variation in the draft build
+
+Open CONFLUENCE from the kit menu, select a complete arrangement pad such as
+FIRST GATHERING, then open MAKE → **GATHERING · A NEW VARIATION**. The individual
+source pads and LOW AND AIR contribution are ordinary rendered samples and do
+not offer this three-role editor.
+
+- **LOW VOICE** chooses LOW AH or ROUNDED OO from the saved bank.
+- **INDIVIDUALITY** changes the existing small performer differences; **ROOM**
+  changes the shared space.
+- **ANSWER GAP** sets the pause after the complete upper phrase, from 0.05 to
+  2 seconds. **LOW**, **AIR** and **ANSWER** set their relative gains, from
+  0.05× to 2×.
+
+Use **HEAR** to preview the current settings, then **MAKE VARIATION** to save to
+the first empty pad shown on the button. The result rebuilds the stored gathering
+recipe, rather than processing the selected pad's current waveform edits or FX.
+Those treatments remain on the original pad. The variation retains its saved
+bank and recipe metadata, so a complete variation can be opened again.
+
+The saved roster, seed, native pitches, complete source phrases and finite
+24-second duration stay fixed. This card does not import arbitrary recordings
+or expose HOLD or general `Patch` controls. Missing or mismatched bank references
+produce a refusal instead of substituting another voice. The editor checks the
+bank identity, version and exact eligible regions before rendering, and checks
+the source pad and destination again before writing.
+
+The draft transfer paths preserve source credits and bounded bank/recipe
+metadata through XPN import and kit backup. The physical source-bank folder is
+currently omitted from kit merge and backup: keep the native bank ZIP or source
+folder separately for source-level replay. If the folder is absent, editing can
+use the bundled starter bank only when its identity, version and regions match
+the saved arrangement. Making a variation writes that portable bank beside the
+kit. Rendered exports continue to play without a bank.
 
 ## Use the bank
 
@@ -67,7 +109,7 @@ val copiedBank = ConfluenceVoiceBank.fromDirectory(bankDirectory)
 val rounder = copiedBank.render("round-response")
 ```
 
-The voices are LOW AH, BREATHY ARC, CLEAR ARC and ROUND OO: a low `/a/` sustain,
+The voices are LOW AH, BREATHY ARC, CLEAR ARC and ROUNDED OO: a low `/a/` sustain,
 a complete breathy `/a/` arpeggio, a clear wordless `/a/` arpeggio and a rounded
 `/u/` sustain. These are four recordings from two singers, not four newly created
 people. Native pitch and melodic contour are retained. The three presets are
@@ -169,7 +211,7 @@ of one recording; the two-singer comparisons use separately supplied singers.
 
 The wordless study uses VocalSet male singer 3's low sustained `/a/`, female
 singer 1's actual **breathy** `/a/` arpeggio and male singer 3's complete straight
-`/a/` arpeggio as the clear answer. ROUND OO uses another complete male singer 3
+`/a/` arpeggio as the clear answer. ROUNDED OO uses another complete male singer 3
 `/u/` gesture. The factory source pack excludes the nursery-song recordings.
 The upper source now preserves the complete 7.20-second native C4–C5–C4 arpeggio,
 with its natural quiet entrance and release. It uses constant gain without added
@@ -203,8 +245,8 @@ corrected audition uses a complete sustained gesture from VocalSet male singer
 the ending regression check. Audio URLs include their content hashes so revisiting
 the page loads revised files; saved notes retain the recipe version heard.
 
-After a useful dry listening verdict, develop source preparation in TAPE/pad
-workflows, explicit asset resolution and relinking, an editable native source
-bundle, and cancellation/caching for expensive previews. Expand the processor,
+After a useful dry listening verdict, develop source preparation and arbitrary
+recording import in TAPE/pad workflows, asset resolution and relinking beyond
+the verified starter bank, and caching for expensive previews. Expand the processor,
 performance profiles and voice count from measured results. Sustained keyboard
 instruments and periodic HOLD require separate pitch-zone and boundary validation.

@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -89,6 +90,7 @@ import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.ConfluenceWorkshop
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
@@ -225,6 +227,7 @@ fun PadSheetScreen(
     // not gated on `busy`) already moved the user to a different pad on
     // this same still-mounted sheet before the delete's confirmation lands.
     val liveSlot by rememberUpdatedState(slot)
+    val liveKitDir by rememberUpdatedState(entry.dir)
 
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
@@ -290,6 +293,8 @@ fun PadSheetScreen(
     val auditionSibling = remember(builtModel.kit, slot) { Audition.siblingsOf(builtModel.kit.pads, slot).minByOrNull { it.slot } }
 
     var voice by remember(model) { mutableStateOf<TapeVoice?>(null) }
+    // A backgrounded gathering preview must not begin later merely because the app returned.
+    var gatheringPreviewGeneration by remember(model) { mutableIntStateOf(0) }
     DisposableEffect(model) { onDispose { voice?.release() } }
     // Set by `applyTreatment`/`applySmear` when a treatment lands; read
     // (and cleared) by the effect under `audition` below, once the fresh
@@ -305,6 +310,7 @@ fun PadSheetScreen(
     DisposableEffect(lifecycleOwner, model) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
+                gatheringPreviewGeneration++
                 voice?.release()
                 voice = null
             }
@@ -1955,6 +1961,140 @@ fun PadSheetScreen(
     var pendingDepth by remember(entry.dir) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
     var pendingBloom by remember(entry.dir) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
 
+    // A gathering is edited from its saved source recipe, never from this pad's treated WAV.
+    // Local controls survive a metadata refresh, but changing the source/slot opens a new draft.
+    val gatheringEligible = ConfluenceWorkshop.isGathering(pad)
+    val gatheringSource = pad.source
+    var gatheringEditor by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<ConfluenceWorkshop.Editor?>(null) }
+    var gatheringControls by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<ConfluenceWorkshop.Controls?>(null) }
+    var gatheringOpening by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf(false) }
+    var gatheringRefusal by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<String?>(null) }
+    var gatheringStatus by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<String?>(null) }
+    var gatheringPreviewVoice by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<TapeVoice?>(null) }
+
+    DisposableEffect(entry.dir, slot, pad.sampleFile, gatheringSource) {
+        onDispose {
+            gatheringPreviewVoice?.let { preview ->
+                preview.release()
+                if (voice === preview) voice = null
+            }
+        }
+    }
+    LaunchedEffect(model, slot, pad.sampleFile, gatheringSource) {
+        gatheringEditor = null
+        if (!gatheringEligible) return@LaunchedEffect
+        gatheringOpening = true
+        try {
+            val opened = withContext(Dispatchers.IO) { ConfluenceWorkshop.open(entry.dir, pad) }
+            gatheringEditor = opened
+            if (gatheringControls == null) gatheringControls = opened.initialControls
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            gatheringRefusal = e.message?.takeIf { it.isNotBlank() } ?: Copy.actionFailed("GATHERING")
+        } finally {
+            gatheringOpening = false
+        }
+    }
+
+    fun gatheringFailed(e: Exception, sourceSlot: Int, sourceModel: KitBuilderModel) {
+        Log.e("PadSheetScreen", "GATHERING: failed", e)
+        val line = e.message?.takeIf { it.isNotBlank() } ?: Copy.actionFailed("GATHERING")
+        if (scope.isActive && liveSlot == sourceSlot && liveKitDir == sourceModel.kitDir && model === sourceModel) gatheringRefusal = line
+        onToast(line)
+    }
+
+    fun hearGathering() {
+        if (busy) return
+        val editor = gatheringEditor ?: return
+        val controls = gatheringControls ?: return
+        val sourceModel = model ?: return
+        val sourceSlot = slot
+        val kitDir = entry.dir
+        val previewGeneration = gatheringPreviewGeneration
+        gatheringRefusal = null
+        gatheringStatus = "RENDERING THE PREVIEW…"
+        busy = true
+        scope.launch {
+            try {
+                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir &&
+                    model === sourceModel && gatheringEditor === editor &&
+                    gatheringPreviewGeneration == previewGeneration &&
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                ) {
+                    audition(prepared.arrangedPad.snip, prepared.previewLevel)
+                    gatheringPreviewVoice = voice
+                    gatheringStatus = "PREVIEW READY · ORIGINAL KEPT"
+                } else gatheringStatus = null
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                gatheringStatus = null
+                gatheringFailed(e, sourceSlot, sourceModel)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun makeGatheringVariation() {
+        if (busy) return
+        val editor = gatheringEditor ?: return
+        val controls = gatheringControls ?: return
+        val sourceModel = model ?: return
+        val sourceSlot = slot
+        val kitDir = entry.dir
+        val destination = ConfluenceWorkshop.firstEmptySlot(sourceModel)
+        if (destination == null) {
+            val line = "No empty pad. Make room before saving a variation."
+            gatheringRefusal = line
+            onToast(line)
+            return
+        }
+        val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
+        gatheringRefusal = null
+        gatheringStatus = "RENDERING A NEW GATHERING…"
+        busy = true
+        // Disk work outlives this sheet; navigation and preview do not.
+        appScope.launch {
+            try {
+                var firstEmpty: Int? = null
+                val (before, metadataSaved) = withFreshKit(kitDir) { fresh ->
+                    reapplyPendingMetadataFields(fresh, stalePads)
+                    firstEmpty = ConfluenceWorkshop.firstEmptySlot(fresh)
+                }
+                if (metadataSaved) onKitUpdated(before.kit)
+                if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir && model === sourceModel) {
+                    pendingMetadataSlots = emptySet()
+                }
+                check(firstEmpty == destination) {
+                    if (firstEmpty == null) "No empty pad. Make room before saving a variation."
+                    else "The first empty pad changed. Reopen this pad before making a variation."
+                }
+                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                gatheringStatus = "WRITING ${padTag(destination)}…"
+                var made: KitPad? = null
+                val (fresh, _) = withFreshKit(kitDir) { current ->
+                    // The editor rechecks the original source/audio and this exact target.
+                    made = editor.makeVariation(current, prepared, destination)
+                }
+                val result = checkNotNull(made)
+                onKitUpdated(fresh.kit)
+                onToast("GATHERING MADE ON ${padTag(result.slot)} · ORIGINAL KEPT")
+                if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir && model === sourceModel) {
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) onSlotChange(result.slot)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                gatheringFailed(e, sourceSlot, sourceModel)
+            } finally {
+                gatheringStatus = null
+                busy = false
+            }
+        }
+    }
+
     /**
      * MAKE PAD: the same door as MAKE INSTRUMENT (an instrument beside the
      * kits), but any pad qualifies — a drum lands as a drone. Seconds of
@@ -2709,6 +2849,33 @@ fun PadSheetScreen(
                 onToggle = { tapBox(PadSheetBoxes.Box.MAKE) },
                 scheme = scheme,
             ) {
+            if (gatheringEligible) {
+                ConfluenceGatheringCard(
+                    controls = gatheringControls,
+                    foundationVoices = gatheringEditor?.foundationVoices.orEmpty(),
+                    seconds = gatheringEditor?.seconds,
+                    performers = gatheringEditor?.performers,
+                    destination = ConfluenceWorkshop.firstEmptySlot(builtModel)?.let(::padTag),
+                    loading = gatheringOpening,
+                    ready = gatheringEditor != null,
+                    busy = busy,
+                    status = gatheringStatus,
+                    refusal = gatheringRefusal,
+                    scheme = scheme,
+                    fillColor = classColor,
+                    onControlsChange = { updated ->
+                        gatheringPreviewVoice?.let { preview ->
+                            preview.release()
+                            if (voice === preview) voice = null
+                        }
+                        gatheringControls = updated
+                        gatheringRefusal = null
+                        gatheringStatus = null
+                    },
+                    onHear = ::hearGathering,
+                    onMake = ::makeGatheringVariation,
+                )
+            }
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             StepperSlider(
@@ -3179,6 +3346,7 @@ internal fun StepperSlider(
     enabled: Boolean,
     onFractionChange: (Float) -> Unit,
     onFractionCommit: () -> Unit,
+    labelWidth: Dp = 44.dp,
 ) {
     // The gesture loop below runs once, keyed on Unit — rememberUpdatedState
     // is what keeps it calling this recomposition's callbacks instead of
@@ -3191,7 +3359,7 @@ internal fun StepperSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(44.dp))
+        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(labelWidth))
         Box(
             Modifier
                 .weight(1f)

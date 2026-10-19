@@ -28,11 +28,13 @@ import java.util.zip.ZipOutputStream
  * └── [Previews]/<Kit>.xpm.wav   (the real packs' preview convention)
  * ```
  *
- * No manifest rides in the archive (none of the real ones carries one — the
+ * No MPC expansion manifest rides in the archive (none of the real ones carries one — the
  * plain-text manifest belongs to the on-card `Expansions/` folder layout,
  * see [ExpansionWriter]), and no `<File>`/`<SampleFile>` paths appear in the
  * program: across every harvested pack samples are referenced by bare name
  * even when they live in a subfolder.
+ * An optional per-program SnipSnap source sidecar preserves recording
+ * provenance when a native kit is shared or backed up; MPC ignores it.
  *
  * Output is deterministic: fixed entry timestamps, stable ordering — the
  * same kit zips to the same bytes.
@@ -111,6 +113,9 @@ object XpnPackager {
             )
         }
         val programXml = XpmWriter().write(DrumProgram(kit.name, slots.toList()))
+        val programEntry = "Programs/$programStem.xpm"
+        val programBytes = programXml.toByteArray(Charsets.UTF_8)
+        val sourceMetadata = XpnSourceMetadata.render(kit, kitDir, programEntry, programBytes, samplesPrefix)
 
         ZipOutputStream(outputFile.outputStream().buffered()).use { zip ->
             fun put(name: String, bytes: ByteArray) {
@@ -121,7 +126,8 @@ object XpnPackager {
                 zip.closeEntry()
             }
             put(ExpansionWriter.XML_NAME, ExpansionWriter.renderXml(meta, if (artworkPng != null) "artwork.png" else null).toByteArray(Charsets.UTF_8))
-            put("Programs/$programStem.xpm", programXml.toByteArray(Charsets.UTF_8))
+            put(programEntry, programBytes)
+            sourceMetadata?.let { put(XpnSourceMetadata.entryName(programEntry), it) }
             SourceAttribution.render(kit)?.let { put(SourceAttribution.fileName(kit), it.toByteArray(Charsets.UTF_8)) }
             preview?.let {
                 val tmp = File.createTempFile("preview", ".wav")
