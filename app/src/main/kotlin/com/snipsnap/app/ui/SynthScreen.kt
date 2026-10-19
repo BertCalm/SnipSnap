@@ -192,6 +192,9 @@ import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OspreyVoice
+import com.snipsnap.synth.Oven
+import com.snipsnap.synth.OvenPatch
+import com.snipsnap.synth.OvenVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -299,11 +302,23 @@ private fun storedOrphicaPatch(settings: Map<String, String>, material: OrphicaM
         runCatching { OrphicaPatch.fromJsonText(json) }.getOrNull()?.takeIf { it.config.material == material }
     }
 
+private const val SETTINGS_OVEN_PATCH_PREFIX = "patch.OVEN."
+
 private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): String =
     "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}.$macro"
 
 private fun presetSettingsKey(engine: Engine, voice: Enum<*>): String =
     "$SETTINGS_PRESET_PREFIX${engine.name}.${voice.name}"
+
+/** A stale, invalid or differently tagged recipe in the lab bag falls back to the usual defaults. */
+private fun storedOvenPatches(settings: Map<String, String>): Map<Pair<Engine, Enum<*>>, OvenPatch> =
+    buildMap {
+        for (voice in OvenVoice.entries) {
+            val text = settings["$SETTINGS_OVEN_PATCH_PREFIX${voice.name}"] ?: continue
+            val patch = runCatching { Patches.fromJsonText(text) }.getOrNull() as? OvenPatch ?: continue
+            if (patch.voice == voice) put(Engine.OVEN to voice, patch)
+        }
+    }
 
 /**
  * The highlighted-preset names the bag holds, by (engine, voice). A name the
@@ -338,7 +353,7 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS and MURMUR, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, OVEN and MURMUR, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -363,6 +378,8 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    last tapped on that voice and not edited since.
  *  - `patch.ORPHICA.<MATERIAL>` — ORPHICA's complete editable recipe, keeping
  *    its mode, root and capture with its macro values across navigation.
+ *  - `patch.OVEN.<VOICE>` — OVEN's complete current recipe, including the
+ *    saved root, strike velocity and model after the preset has been edited.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
@@ -415,6 +432,7 @@ fun SynthScreen(
     }
     LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
     LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
+    val seededOvenPatches = remember { storedOvenPatches(settings) }
     // Per-(engine, voice) macro state, seeded with factory defaults and kept
     // for the life of the screen: switching engine or voice (or coming back
     // to one) restores whatever was last touched on it, same as the
@@ -435,12 +453,19 @@ fun SynthScreen(
                     } else null
                     val defaults = if (orphica != null) Orphica.macrosFrom(orphica.config) + orphica.macros
                         else e.defaults(v)
+                    val recipe = seededOvenPatches[e to v]
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
-                    put(e to v, if (settings.isEmpty() || orphica != null) defaults else defaults.mapValues { (name, fallback) ->
-                        settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
-                            ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
+                    // A complete OVEN recipe is authoritative: its legacy
+                    // macro keys may predate an edit followed by a voice switch.
+                    put(e to v, when {
+                        recipe != null -> defaults + recipe.macros
+                        settings.isEmpty() || orphica != null -> defaults
+                        else -> defaults.mapValues { (name, fallback) ->
+                            settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
+                                ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
+                        }
                     })
                 }
             }
@@ -456,6 +481,7 @@ fun SynthScreen(
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // REGISTERS retains its synthesis model, saved pitch and velocity.
+    // OVEN likewise retains its saved root, strike velocity and material model.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
@@ -477,6 +503,7 @@ fun SynthScreen(
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
+            putAll(seededOvenPatches)
             for (material in OrphicaMaterial.entries) {
                 storedOrphicaPatch(settings, material)?.let { put(Engine.ORPHICA to material, it) }
             }
@@ -508,6 +535,20 @@ fun SynthScreen(
     LaunchedEffect(presetNames) {
         settings.keys.removeAll { it.startsWith(SETTINGS_PRESET_PREFIX) }
         for ((pair, name) in presetNames) settings[presetSettingsKey(pair.first, pair.second)] = name
+    }
+    // OVEN's relative TUNE alone cannot recover an edited root or strike.
+    // Keep its full recipe in this lab's existing bag, including voices left
+    // earlier in the visit. Other engines retain their established bag format.
+    val ovenRecipes = OvenVoice.entries.associate { ovenVoice ->
+        val pair = Engine.OVEN to ovenVoice
+        val controls = macrosByVoice.getValue(pair)
+        val patch = loadedPatchesByVoice[pair] as? OvenPatch
+            ?: OvenPatch(Engine.OVEN.patchDisplayName(ovenVoice), ovenVoice, controls)
+        ovenVoice to Patches.edited(patch, currentPresetByVoice[pair] ?: patch.name, controls).toJsonText()
+    }
+    LaunchedEffect(ovenRecipes) {
+        settings.keys.removeAll { it.startsWith(SETTINGS_OVEN_PATCH_PREFIX) }
+        for ((ovenVoice, recipe) in ovenRecipes) settings["$SETTINGS_OVEN_PATCH_PREFIX${ovenVoice.name}"] = recipe
     }
     // The prototype gates its very first sound behind a "TAP TO POWER ON"
     // veil — a Web Audio autoplay-policy workaround, not part of the actual
@@ -588,7 +629,16 @@ fun SynthScreen(
             // preset was forgotten while the lab was away. Live state is
             // re-read here, after the await: a preset tapped meanwhile wins.
             for ((pair, name) in seededPresets) {
-                if (currentPresetByVoice[pair] != name || loadedPatchesByVoice[pair] != null) continue
+                if (currentPresetByVoice[pair] != name) continue
+                if (loadedPatchesByVoice[pair] != null) {
+                    // OVEN can retain a full edited recipe after its YOURS
+                    // preset has left the shelf. Keep the sound, not a stale chip.
+                    if (pair.first == Engine.OVEN && Presets.byName(pair.first.name, pair.second.name, name) == null &&
+                        UserPresets.forVoice(live, pair.first.name, pair.second.name).none { it.name == name }) {
+                        currentPresetByVoice.remove(pair)
+                    }
+                    continue
+                }
                 val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
                     .firstOrNull { it.patch.name == name }?.patch
                 if (mine != null) loadedPatchesByVoice[pair] = editablePreset(mine)
@@ -1435,6 +1485,40 @@ fun SynthScreen(
                     )
                 }
 
+                // OVEN's root and hammer energy are saved beside its six macros.
+                // TUNE remains a relative ±12-semitone adjustment to this root.
+                if (engine == Engine.OVEN) {
+                    val ovenPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (ovenPatch.midi - Oven.MIDI_MIN).toFloat() / (Oven.MIDI_MAX - Oven.MIDI_MIN),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(ovenPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val midi = (Oven.MIDI_MIN + value * (Oven.MIDI_MAX - Oven.MIDI_MIN)).roundToInt()
+                                .coerceIn(Oven.MIDI_MIN, Oven.MIDI_MAX)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch).copy(midi = midi)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = ovenPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                }
+
                 // Shoal's root and excitation energy are independent of its six controls.
                 if (engine == Engine.SHOAL) {
                     val shoalPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
@@ -1684,6 +1768,9 @@ fun SynthScreen(
                                 Embouchure.scramble(voice as EmbouchureVoice, random, near = loadedPatch)
                             engine == Engine.BELLOWS && loadedPatch is BellowsPatch ->
                                 Bellows.scramble(voice as BellowsVoice, random, near = loadedPatch)
+                            engine == Engine.OVEN ->
+                                Oven.scramble(voice as OvenVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             else -> engine.scramble(voice, random)
                         }
                         macrosByVoice[engine to voice] = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
@@ -2555,7 +2642,7 @@ internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2603,6 +2690,7 @@ private enum class Engine {
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
+        OVEN -> OvenVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -2648,6 +2736,7 @@ private enum class Engine {
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
+        OVEN -> Oven.macrosFor(voice as OvenVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -2693,6 +2782,7 @@ private enum class Engine {
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
+        OVEN -> Oven.defaults(voice as OvenVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2740,6 +2830,7 @@ private enum class Engine {
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
+        OVEN -> Oven.scramble(voice as OvenVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2790,6 +2881,7 @@ private enum class Engine {
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
+        OVEN -> Oven.render(voice as OvenVoice, macros)
     }
 
     /**
@@ -2841,6 +2933,7 @@ private enum class Engine {
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
+        OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2886,6 +2979,7 @@ private enum class Engine {
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
+        OVEN -> OvenPatch(name, voice as OvenVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

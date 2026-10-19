@@ -33,6 +33,8 @@ import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OspreyVoice
+import com.snipsnap.synth.OvenPatch
+import com.snipsnap.synth.OvenVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
@@ -671,6 +673,13 @@ class UserPresetsTest {
             if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == OvenPatch.ENGINE) {
+                val constructor = OvenPatch::class.java.getConstructor(
+                    String::class.java, OvenVoice::class.java, Map::class.java,
+                    Int::class.javaPrimitiveType, Float::class.javaPrimitiveType, Int::class.javaPrimitiveType,
+                )
+                assertEquals(OvenPatch::class.java, constructor.declaringClass,
+                    "OVEN promotion names its public complete-recipe constructor")
             } else if (engine == StoopPatch.ENGINE) {
                 assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {

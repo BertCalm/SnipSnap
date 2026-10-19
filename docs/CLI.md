@@ -158,6 +158,7 @@ threshold by.
 ```
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
+snipsnap synth OVEN FELT --all --midi 60 --velocity 0.65 --out <dir>
 snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
 snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
@@ -192,6 +193,7 @@ the message.
 | Engine | `--midi` |
 |---|---|
 | ALLOY | 24–96 |
+| OVEN | 24–96 |
 | CISTERN | 36–84 |
 | FLOTILLA | 36–84 |
 | TESSERA | 48–72 |
@@ -216,7 +218,7 @@ the message.
 | VENT | 36–84 |
 | WICK | 24–84 |
 
-ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
+ALLOY, OVEN, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
 reset TUNE to zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
@@ -233,6 +235,12 @@ accepts the full signed 64-bit range. `--instrument [--release S]` packages
 attack-preserving stereo captured-sustain zones; release is 0.1–1.5 seconds.
 It accepts `--midi` and `--velocity` for the sampled root and string excitation,
 and refuses `--all`, `--attack` and `--drone`. See [ORPHICA](ORPHICA.md).
+
+OVEN's GRAND, FELT, FORGED and BLOOM articulations render finite notes with
+their saved six controls and model. `--velocity` changes hammer excitation;
+omitting either override retains that preset's authored root or velocity.
+Its halo is baked into each note's tail. OVEN does not export a held
+instrument or drone from this command.
 
 OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
 their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and

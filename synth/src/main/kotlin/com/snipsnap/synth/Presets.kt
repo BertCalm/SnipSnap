@@ -204,6 +204,10 @@ object Presets {
             val v = RegistersVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             RegistersPresets.forVoice(v)
         }
+        OvenPatch.ENGINE -> {
+            val v = OvenVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OvenPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -236,5 +240,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + OrphicaPresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + OrphicaPresets.all() + OvenPresets.all()
 }

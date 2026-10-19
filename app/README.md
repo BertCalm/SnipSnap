@@ -76,9 +76,9 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 42 engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has 43 engines: THUMP, SKIN, TINES, VELVET,
 VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY.
+CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY and OVEN.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
@@ -94,6 +94,15 @@ VELOCITY, GATE and DRY/WET are saved beside RISE, WIDTH, GLOW, AIR and the
 complete source timbre. Its preview preserves stereo; HALO MAKE INSTRUMENT
 renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
+
+OVEN adds GRAND, FELT, FORGED and BLOOM with six macros and the ten approved
+factory recipes. ROOT and VELOCITY set a native rendered strike; the complete
+recipe survives macro edits, SCRAMBLE, SAVE PRESET, SEND TO PAD and returning
+to SYNTH. Its resonance is baked into each finite note. MAKE INSTRUMENT and
+reactive shared resonance are later work. On a phone, compare Felt Ledger with
+Quiet Room, change ROOT and VELOCITY, leave and reopen SYNTH, save/reload a
+preset, then SEND TO PAD and reopen its recipe; each step should retain the
+chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 
 REGISTERS adds PIPE and MUSETTE, seven controls, six published presets and
 MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE

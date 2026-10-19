@@ -499,6 +499,18 @@ later work. The first listen found the two voices too similar; model 2 revises
 their contrast and awaits another listen. Saved model-1 recipes retain their sound.
 [Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
 
+OVEN is a struck keyboard instrument: velocity-sensitive
+stiff strings, restrained paired-string beating, dark fixed body coloration and
+a baked resonance halo. GRAND, FELT, FORGED and BLOOM share TUNE, HAMMER, BODY,
+RING, BLOOM and HALO. Ten approved factory recipes and a dry sixteen-pad kit use
+the same finite mono renderer as the phone SYNTH picker. ROOT and VELOCITY select
+the note and strike; edits, saved presets and pad recipes retain both and the model.
+MAKE INSTRUMENT and live shared resonance remain later work.
+Run `./gradlew :synth:generateOvenAudition` for raw/matched notes, soft/medium/hard
+keyboard samples, five-point sweeps and causal comparisons. The
+[published audition](https://snipsnap-oven-audition.bertcalm.chatgpt.site) is the
+approved listening baseline. [Implementation notes](docs/OVEN.md) describe its scope and limits.
+
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
 modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
@@ -774,8 +786,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY and GRAINS round out the lineup —
-forty-two engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN and GRAINS round out the lineup —
+forty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -963,7 +975,7 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY
