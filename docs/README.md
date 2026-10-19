@@ -31,6 +31,10 @@ recipe contracts, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
 
+**Oven.** [`OVEN.md`](OVEN.md) records the approved ten-preset sonic baseline,
+the phone synth integration and finite per-note resonance. Keyboard velocity
+layers, shared resonance and phone/MPC hardware acceptance remain later work.
+
 **Tangle.** [`TANGLE.md`](TANGLE.md) records the implemented experimental
 engine, six controls, patch and kit contracts, and held-loop limits. The
 [private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
@@ -47,3 +51,7 @@ loops and the owner's sonic acceptance remain open.
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
+
+**Orphica.** [`ORPHICA.md`](ORPHICA.md) records the microsound harp, approved
+finite listening audition, phone controls and captured-sustain instrument
+export. Phone and MPC listening checks remain open.

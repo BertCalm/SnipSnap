@@ -108,8 +108,27 @@ class Navigation(start: Location = Location(Place.SHELF)) {
      */
     val canGoBack: Boolean get() = history.isNotEmpty()
 
-    /** The label the top bench's back chip reads, or null on a bare stage. */
-    val backChip: String? get() = location.benches.lastOrNull()?.backChip
+    /**
+     * The label the top bench's back chip reads, or null on a bare stage.
+     *
+     * SETUP and HELP are behind the gear, which opens over anything, so
+     * their [Bench.backChip] can only say BACK; here they name where back
+     * goes: the bench under them, if one is stacked, else the stage showing,
+     * else the place. A bench under the gear is named by its place, not its
+     * own label, which can be long ("STACK THE TAKES") for a chip this size.
+     */
+    val backChip: String?
+        get() {
+            val top = location.benches.lastOrNull() ?: return null
+            if (top != Bench.SETUP && top != Bench.HELP) return top.backChip
+            val below = location.benches.getOrNull(location.benches.size - 2)
+            val where = when {
+                below == Bench.SETUP || below == Bench.HELP -> below.label
+                below != null -> location.place.label
+                else -> location.stage?.label ?: location.place.label
+            }
+            return "◄ $where"
+        }
 
     companion object {
         private const val MAX_HISTORY = 64
@@ -174,7 +193,8 @@ enum class Bench(val home: Place, val label: String, val backChip: String) {
     LIVE_SNAP(Place.MAKE, "LIVE", "◄ SNAP"),
     DRAW(Place.MAKE, "DRAW", "◄ SNAP"),
     FIELD(Place.MAKE, "PHOTO FIELD", "◄ SNAP"),
-    // Behind the gear, from anywhere; the back chip says so.
+    // Behind the gear, from anywhere. The chip here is the fallback:
+    // [Navigation.backChip] names the place the gear was opened over.
     SETUP(Place.SHELF, "SETUP", "◄ BACK"),
     HELP(Place.SHELF, "HELP", "◄ BACK"),
 }
