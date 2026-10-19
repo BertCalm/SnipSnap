@@ -3127,6 +3127,7 @@ fun App(shelf: KitShelf) {
                                 kits = kits,
                                 projects = projects,
                                 onOpenProject = { openProject(it.project) },
+                                openProjectName = project?.name,
                                 onNewProject = ::newProject,
                                 busy = busy != null,
                                 onOpen = { entry ->
@@ -3757,7 +3758,8 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                         )
-                        top == Bench.HELP -> HelpScreen()
+                        // The place under the gear: HELP opens its section.
+                        top == Bench.HELP -> HelpScreen(cameFrom = location.place)
                         top == null && location.stage == Stage.BEAT -> {
                             val songEntry = open
                             if (arrangeOpen && songEntry != null) {

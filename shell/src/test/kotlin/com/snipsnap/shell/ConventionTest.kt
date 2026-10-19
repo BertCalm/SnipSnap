@@ -3131,7 +3131,7 @@ class ConventionTest {
      * RE-TRIM return — and its discovery hint was retired inside exactly
      * one of them (J16). A user who found the sheet either of the other
      * two ways was told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit
-     * open, forever. `Copy.PAD_SHEET_HINT`'s own KDoc said opening the sheet
+     * open, forever. The retired `Copy.PAD_SHEET_HINT`'s own KDoc said opening the sheet
      * is "the only event that proves they found it" — true of the intent
      * and false of the code, which is the shape this wave keeps finding: a
      * comment asserting a behaviour the code does not have.

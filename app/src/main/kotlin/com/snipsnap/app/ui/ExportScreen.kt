@@ -62,6 +62,7 @@ import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.etchedBox
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -896,7 +897,7 @@ private fun OutCard(heading: String, scheme: Scheme, content: @Composable Column
         Modifier.fillMaxWidth().etchedBox(scheme).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        TapeText(heading, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText(heading, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         content()
     }
 }
@@ -1071,7 +1072,7 @@ private fun ProjectCard(
 @Composable
 private fun AlsoList(scheme: Scheme, canShare: Boolean, onShareKit: () -> Unit, onBeatWriters: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        TapeText("ALSO", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("ALSO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         ActionButton(
             "SHARE KIT ▸ THIS KIT AS ONE FILE",
             scheme,
@@ -1108,7 +1109,7 @@ private fun DoneContent(
         // Where the write actually landed, in plain words — regardless of
         // whether SHARE is offered below, or ever tapped. No claim about
         // which file browser can reach it, just the fact of it.
-        TapeText(Copy.EXPORT_SAVED_TO, TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText(Copy.EXPORT_SAVED_TO, TapeType.pixelSmall, scheme.ink2.tape)
         TapeText(destinationPath, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         if (readBack.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
@@ -1118,7 +1119,7 @@ private fun DoneContent(
             // the honest limit: our reader agreeing is not the Live III
             // agreeing.
             FindingsCard(readBack, scheme, title = "READ BACK")
-            TapeText(Copy.READ_BACK_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 3)
+            TapeText(Copy.READ_BACK_CAVEAT, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
         }
     }
 }
@@ -1179,7 +1180,7 @@ private val BIN_RED_BORDER = Color(0xFF6A2020)
 @Composable
 private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier, title: String = "PREFLIGHT") {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText(title, TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText(title, TapeType.pixelSmall, scheme.ink2.tape)
         Column(
             Modifier.fillMaxWidth().sunkenField(scheme).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -1252,7 +1253,7 @@ private fun CardRow(
         "${Copy.CARD_PICKED} ${Copy.cardName(tree.lastPathSegment)}"
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("DESTINATION", TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText("DESTINATION", TapeType.pixelSmall, scheme.ink2.tape)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -1302,7 +1303,7 @@ private fun CardRow(
         // either and the legend advertises an action that cannot run - the
         // same "furniture describing nothing" this gate exists to prevent.
         if (tree != null && enabled) {
-            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         }
     }
 }
@@ -1331,7 +1332,7 @@ private fun FormatPickerRow(
     onPick: (ExportFormat) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("FORMAT", TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText("FORMAT", TapeType.pixelSmall, scheme.ink2.tape)
         Box(
             Modifier
                 .fillMaxWidth()
@@ -1403,7 +1404,7 @@ private fun FormatPickerRow(
                             maxLines = 2,
                         )
                         // Finding 8: the reason, not just the name.
-                        TapeText(f.why, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                        TapeText(f.why, TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
                     }
                 }
             }

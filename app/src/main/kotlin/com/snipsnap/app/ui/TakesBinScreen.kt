@@ -35,6 +35,7 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitStore
@@ -358,7 +359,7 @@ fun TakesBinScreen(
         // on in this state).
         BackHandler { onBack() }
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
-            HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
+            HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp), onLcd = true) { onBack() }
             if (loadFailed) {
                 TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
@@ -462,7 +463,7 @@ fun TakesBinScreen(
         // everywhere else in this screen, but this one bullet is a specific,
         // deliberate placement call the brief's author made, not a casual
         // restatement of the artboard, so it wins here.
-        TapeText(Copy.TAKES_BIN_RULE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 2)
+        TapeText(Copy.TAKES_BIN_RULE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
 
         Column(
             // The padding lands *after* verticalScroll so it insets the
@@ -616,7 +617,7 @@ private fun TakeRowLine(
                 TapeText("$headline ${if (expanded) "▾" else "▸"}", TapeType.pixelSmall, headlineInk, maxLines = 1)
             }
             Spacer(Modifier.weight(1f))
-            row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink3.tape) }
+            row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }
             if (row.current) {
                 TapeText("NOW", TapeType.pixelSmall, scheme.amber.tape)
             } else if (row.file != null) {
@@ -651,7 +652,7 @@ private fun TakeRowLine(
                         TapeText(c.text, TapeType.pixelSmall, scheme.ink.tape, maxLines = 3)
                     }
                 }
-                TapeText(Copy.TAKES_DIFF_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
+                TapeText(Copy.TAKES_DIFF_CAVEAT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             }
         }
     }
@@ -676,9 +677,9 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
             Modifier
                 .width(8.dp)
                 .heightIn(min = 8.dp)
-                .background(row.classColor ?: scheme.ink3.tape, RoundedCornerShape(2.dp)),
+                .background(row.classColor ?: scheme.lcdInk2, RoundedCornerShape(2.dp)),
         )
-        TapeText(row.entry.originalName, TapeType.marker, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(row.entry.originalName, TapeType.marker, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         TapeText("${row.daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
         Box(
             Modifier
@@ -771,20 +772,26 @@ private fun HeaderChip(
     scheme: Scheme,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    // True where the chip sits on an LCD panel (the load-failure shell's
+    // header), which wants the LCD's inks rather than the chrome's.
+    onLcd: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val rim = if (onLcd) scheme.lcdInk2 else scheme.ink2.tape
+    val ink = if (onLcd) scheme.lcdInk.tape else scheme.ink.tape
+    val dim = if (onLcd) scheme.lcdInk.tape.copy(alpha = 0.4f) else scheme.ink3.tape
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, rim, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, spoken = spokenBack(label), onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
+        TapeText(label, TapeType.pixel, if (enabled) ink else dim)
     }
 }
 

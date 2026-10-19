@@ -566,7 +566,7 @@ fun KitScreen(
                     .padding(10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Copy.EMPTY_KIT, TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.EMPTY_KIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
             }
         }
 
@@ -607,7 +607,8 @@ fun KitScreen(
                         TapeType.pixel,
                         when {
                             here -> scheme.titleInk.tape
-                            empty -> scheme.ink3.tape
+                            // ink2 either way: the chip is live (it jumps to
+                            // the bank), and the word EMPTY says the rest.
                             else -> scheme.ink2.tape
                         },
                         maxLines = 1,
@@ -845,7 +846,7 @@ fun KitScreen(
                     TapeText(
                         Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
                         TapeType.pixelSmall,
-                        scheme.ink3.tape,
+                        scheme.ink2.tape,
                         Modifier.fillMaxWidth(),
                         maxLines = 1,
                     )
@@ -937,7 +938,7 @@ fun KitScreen(
             // to where it is tapped is not discoverable by looking, and a hint
             // that can be dismissed is a feature that can be lost. The one
             // legend left: the strip carries the other.
-            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             // Where the kit came from (persona review, P4.4). The same move as
             // the two lines above: always there, cannot be dismissed. The
             // finding was that provenance is good and reachable only by
@@ -949,7 +950,7 @@ fun KitScreen(
             // line for "nowhere".
             val cameFrom = Provenance.ofKit(kit.pads)
             if (cameFrom != null) {
-                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
     
             // PLAY's footer, folded in (section 3.3): PANIC always, and the MIDI
@@ -978,7 +979,7 @@ fun KitScreen(
                 if (midiDevices.isEmpty()) {
                     Box(Modifier.weight(1f))
                 } else {
-                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
                     Box(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -1092,7 +1093,7 @@ private fun KeyPanel(
     val root = key?.rootSemitone ?: KeyPicker.DEFAULT_ROOT
     val scaleLabel = key?.let { KeyPicker.scaleLabel(it.scale) } ?: KeyPicker.DEFAULT_SCALE
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         for (row in KeyPicker.ROOTS.indices.chunked(6)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1178,7 +1179,7 @@ private fun TexturePanel(
 ) {
     val scheme = LocalScheme.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })

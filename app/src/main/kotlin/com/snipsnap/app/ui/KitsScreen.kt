@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.snipsnap.app.theme.BinRedGlow
 import androidx.compose.ui.platform.LocalContext
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
@@ -94,6 +96,8 @@ fun KitsScreen(
     /** The projects on the shelf, most recently edited first (`ShelfModel.projects`). */
     projects: List<ShelfModel.ProjectRow>,
     onOpenProject: (ShelfModel.ProjectRow) -> Unit,
+    /** The open project's folder name, so its row can say it is the one open; null while none is. */
+    openProjectName: String? = null,
     /** NEW PROJECT ▸: an empty project, opened. */
     onNewProject: () -> Unit,
     busy: Boolean,
@@ -392,9 +396,9 @@ fun KitsScreen(
             // the shelf yet, the empty-state panel just below carries the
             // real instruction instead (Copy.EMPTY_SHELF_FOR_ASSIGN).
             if (assigningSnip && kits.isNotEmpty()) {
-                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             } else if (breedingFrom != null && kits.size > 1) {
-                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
 
             if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
@@ -469,10 +473,10 @@ fun KitsScreen(
                     // made one per kit before this screen read them.
                     if (!assigningSnip && breedingFrom == null && addingTo == null) {
                         item(key = "projects-header") {
-                            TapeText("PROJECTS · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                         }
                         items(projects, key = { "project:" + it.dir.name }) { row ->
-                            ProjectRow(row, busy, onOpenProject)
+                            ProjectRow(row, row.name == openProjectName, busy, onOpenProject)
                         }
                         // The shelf never shows two: with projects to open the
                         // button is the pinned primary below the list.
@@ -488,7 +492,7 @@ fun KitsScreen(
                             }
                         }
                         item(key = "kits-header") {
-                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                     }
                     // A filter that empties the shelf must say so itself: a
@@ -527,28 +531,28 @@ fun KitsScreen(
                     // forgotten - and RENAME is the only place a kit is ever
                     // named by hand (September UAT, finding 17).
                     item(key = "kits-note") {
-                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                     // INSTRUMENTS left for MAKE ▸ INSTRUMENTS (plan §3.6): they are
                     // what MAKE made, and the list is where you find them.
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
-                            TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
                             RoomRow(room, busy, onForgetRoom, onShareRoom)
                         }
                         if (rooms.isNotEmpty()) {
                             item(key = "rooms-note") {
-                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                             }
                         }
                         // The bin's door on the phone: every forgotten room, its days
                         // left, and RESTORE - the same row TAKES + BIN draws for a pad.
                         if (binnedRooms.isNotEmpty()) {
                             item(key = "rooms-bin-header") {
-                                TapeText("IN THE BIN · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                                TapeText("IN THE BIN · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                             }
                             items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
                                 BinnedRoomRow(binned, busy) {
@@ -642,8 +646,8 @@ fun KitsScreen(
             // SNIPS and TOOLS, two chips in one row (SH1): two full-width rows
             // for two doors that are each a word was 56 dp of the shelf for
             // their descriptions. The row shows the word and its arrow; the
-            // accessible names keep the full descriptions, exactly as they
-            // were, because tests and uiautomator walks read those.
+            // accessible names say the door and what is behind it, without
+            // the arrow, which read aloud is noise.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // SNIPS: always openable, even with zero snips yet (its own
                 // empty state says so) — unlike BACKUP (now behind TOOLS),
@@ -654,7 +658,7 @@ fun KitsScreen(
                     "SNIPS ▸",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "SNIPS ▸ EVERY CATCH, ONE LIST",
+                    accessibilityLabel = "OPEN SNIPS, EVERY CATCH IN ONE LIST",
                     modifier = Modifier.weight(1f),
                     onClick = onSnips,
                 )
@@ -668,7 +672,7 @@ fun KitsScreen(
                     "TOOLS ▸",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "TOOLS ▸ BACKUP, CHOP ALL, X-RAY, DOUBLES",
+                    accessibilityLabel = "OPEN TOOLS, BACKUP, CHOP ALL, X-RAY, DOUBLES",
                     modifier = Modifier.weight(1f),
                     onClick = { toolsMenuOpen = true },
                 )
@@ -740,10 +744,13 @@ fun KitsScreen(
  * One project on the shelf (plan §3.1): its name, then `2 KITS · 94 BPM ·
  * EDITED 2 HR AGO` — the model's own subtitle plus the age the kit rows
  * already show, so the two lists read the same way. Tapping opens it;
- * `App` decides what opening means (the active kit onto PADS).
+ * `App` decides what opening means (the active kit onto PADS). The row of
+ * the project that is [isOpen] wears the selected convention - the
+ * accent border, and OPEN NOW where the rest say OPEN ▸ - so a list of
+ * sixteen that all read the same names the one you are in.
  */
 @Composable
-private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (ShelfModel.ProjectRow) -> Unit) {
+private fun ProjectRow(row: ShelfModel.ProjectRow, isOpen: Boolean, busy: Boolean, onOpen: (ShelfModel.ProjectRow) -> Unit) {
     val scheme = LocalScheme.current
     val age = Ages.agoOrNull(row.editedAtMillis, System.currentTimeMillis())
     val facts = listOfNotNull(row.subtitle, age?.let { "EDITED $it" }).joinToString("  ·  ")
@@ -751,7 +758,8 @@ private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (Shelf
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            .let { if (isOpen) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            .semantics { this.selected = isOpen }
             .tapeClick(label = "OPEN PROJECT ${row.name.uppercase(Locale.ROOT)}", enabled = !busy) { onOpen(row) }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -760,7 +768,7 @@ private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (Shelf
             TapeText(row.name, TapeType.markerBig, scheme.ink.tape)
             TapeText(facts, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText("OPEN ▸", TapeType.pixelSmall, scheme.ink2.tape)
+        TapeText(if (isOpen) "OPEN NOW" else "OPEN ▸", TapeType.pixelSmall, if (isOpen) scheme.ink.tape else scheme.ink2.tape)
     }
 }
 
@@ -887,7 +895,7 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(binned.room.name, TapeType.marker, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(binned.room.name, TapeType.marker, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
         Box(
             Modifier

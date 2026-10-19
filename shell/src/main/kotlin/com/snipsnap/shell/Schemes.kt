@@ -367,6 +367,15 @@ object Schemes {
     const val BIN_RED_GLOW: Int = 0xD6877B
 
     /**
+     * How much of [Scheme.lcdInk] a secondary line on the LCD keeps - the
+     * LCD's own second tier. `ink2` and `ink3` are chrome inks, tuned
+     * against `gray`; on a paper scheme the LCD is the dark surface and they
+     * land at 2.8 : 1 and 3.8 : 1 on it. `ContrastTest` holds this alpha, over
+     * the LCD, at AA in every scheme.
+     */
+    const val LCD_INK2_ALPHA: Float = 0.75f
+
+    /**
      * Class colour for a drum class — one language across shell pads, app
      * pads and MPC pads. Sourced from [AutoPlace.colorFor] so the value
      * exists exactly once in the codebase.

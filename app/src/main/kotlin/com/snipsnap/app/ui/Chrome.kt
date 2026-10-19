@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -93,14 +94,13 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Never a tab: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    /** A MAKE bench: reached from the INSTRUMENTS list there, left by ◄ MAKE. */
     KEYS("KEYS"),
 
     /**
-     * Nor is this one: reached from KIT's action row on the pad you want
-     * taken apart, and left by its own ◄ KIT. A menu of twelve fits no
-     * phone, and SPLIT is something you do *to a pad* — which is what KIT
-     * is for.
+     * A PADS bench: reached from the stage's action row on the pad you
+     * want taken apart, and left by ◄ PADS. SPLIT is something you do *to a
+     * pad*, which is what PADS is for.
      */
     SPLIT("SPLIT"),
 }
@@ -165,6 +165,14 @@ fun TapeText(
  * call sites using a raw `Modifier.pointerInput { detectTapGestures {}
  * }` instead, which registers no semantics node.)
  *
+ * [spoken] is the accessible name when it should differ from [label]:
+ * a chip whose visible label carries a glyph ("SNIPS ▸", "◄ KIT") keeps
+ * the glyph on screen and gives TalkBack the words. It takes the place of
+ * [label] as the `contentDescription`, so a call site that a test finds
+ * by its visible label simply does not pass one. The node is a
+ * `Role.Button`: nothing here is a switch or a tab, and no call site has
+ * ever said otherwise.
+ *
  * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
  * its semantics node (and its name) but exposes Compose's `disabled()`
  * state instead of an actionable one, so a screen-reader user is told
@@ -172,15 +180,28 @@ fun TapeText(
  * from the tree (audit finding 12).
  */
 @Composable
-fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> Unit): Modifier =
+fun Modifier.tapeClick(label: String?, enabled: Boolean = true, spoken: String? = null, onClick: () -> Unit): Modifier =
     clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
         enabled = enabled,
+        // A button, said so: TalkBack reads "button" after the name, and a
+        // switch access scan can tell this node from a label.
+        role = Role.Button,
         onClick = onClick,
     ).let { base ->
-        if (label != null) base.semantics { contentDescription = label } else base
+        val name = spoken ?: label
+        if (name != null) base.semantics { contentDescription = name } else base
     }
+
+/**
+ * A back chip's spoken name: the glyph on the chip is a picture of an
+ * arrow, and "◄ KIT" read aloud is noise before the word. "BACK TO KIT"
+ * for anything that begins with the arrow, null for the rest, so the
+ * caller's `spoken` falls back to the visible label.
+ */
+fun spokenBack(label: String): String? =
+    if (label.startsWith("◄ ")) "BACK TO " + label.removePrefix("◄ ") else null
 
 /**
  * The title bar. [onNote] is the WORKSHOP's NOTE chip (`docs/WORKSHOP.md`,
@@ -233,7 +254,14 @@ fun TitleBar(
         // skeleton it made a finished app look like an abandoned prototype.
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // `weight(1f, fill = false)`: the right-hand cluster is measured first
+        // and the wordmark takes what it leaves, so a long project name
+        // ellipsises itself and never pushes SNIPSNAP.EXE to an ellipsis.
+        Row(
+            Modifier.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             if (modern) {
                 // `.wordmark-square`: the page's tilted square before the name.
                 Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
@@ -242,7 +270,14 @@ fun TitleBar(
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (projectName != null) {
-                TapeText(projectName.uppercase(), TapeType.pixel, scheme.titleInk.tape, Modifier.widthIn(max = 140.dp))
+                // The bar clips the name at 140 dp; the accessible name is the whole of it.
+                val fullName = projectName.uppercase()
+                TapeText(
+                    fullName,
+                    TapeType.pixel,
+                    scheme.titleInk.tape,
+                    Modifier.widthIn(max = 140.dp).semantics { contentDescription = fullName },
+                )
             }
             if (onNote != null) {
                 TitleChip("NOTE", label = "NOTE", onClick = onNote)

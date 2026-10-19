@@ -103,7 +103,12 @@ object Copy {
      * (NEW KIT, right below this panel) rather than denying the snip exists.
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
-    const val EMPTY_KIT = "16 EMPTY PADS."
+    /**
+     * A kit with no pads in it: what is true, and the way in. "16 EMPTY
+     * PADS." said the first and left a person to guess the second (the UX
+     * review's minor list).
+     */
+    const val EMPTY_KIT = "NO PADS YET. HOLD A PAD TO CATCH A SOUND INTO IT, OR SEND A CUT FROM TAPE."
 
     /**
      * The PADS strip before any pad is tapped: tapping is how the strip
@@ -398,43 +403,7 @@ object Copy {
      */
     const val TAPE_TOO_BIG = "THAT TAPE'S TOO BIG TO LOAD. TRY A SHORTER FILE."
 
-    // ---- KIT: teaching the one gesture that opens PAD SHEET ----
-    /**
-     * Shown on opening a kit until the user has actually held a pad, and
-     * never again after that. PAD SHEET is reachable ONLY by a long press on
-     * a filled pad — no button, no menu entry — and it holds every
-     * treatment, shape, tune and mutate control in the app.
-     *
-     * This used to stop after three showings, which meant three dismissals
-     * while busy with something else cost the user that half of the app for
-     * good (September UAT, finding 5). The cap is gone: only opening the
-     * sheet retires the hint, because that is the only event that proves
-     * they found it.
-     *
-     * It is no longer the only teacher either — [PAD_SHEET_LEGEND] sits
-     * under KIT's grid permanently (finding 4), so this is a nudge with a
-     * backstop rather than the single thread the feature hangs from.
-     *
-     * Says what to do and what it gets, in that order, and names the thing
-     * it opens so the toast and the screen agree.
-     */
-    const val PAD_SHEET_HINT = "HOLD A PAD TO OPEN ITS PAD SHEET — SHAPE, TUNE, TREAT."
-
-    /**
-     * The permanent legend under KIT's grid.
-     *
-     * The September UAT's findings 4 and 5: the 480 ms hold was PAD SHEET's
-     * only door, and [PAD_SHEET_HINT] — the toast that taught it — stopped
-     * after three showings. Dismiss it three times while learning something
-     * else and half the app's depth was gone for good.
-     *
-     * ROOMS already had the answer on its own list ("HOLD A ROOM TO FORGET
-     * IT · THE BIN KEEPS 30 DAYS"): one line, always on screen, naming the
-     * gesture and what it opens. A legend cannot be dismissed, so the
-     * feature behind it cannot be lost.
-     */
-    const val PAD_SHEET_LEGEND = "HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"
-
+    // ---- KIT: the legend under the grid ----
     /**
      * The second line under KIT's grid: where you tap a pad is how hard you
      * hit it (J37).
@@ -445,7 +414,7 @@ object Copy {
      * position supplies the velocity a tap on glass otherwise has none of.
      *
      * A gesture with no visible affordance needs a legend for the same
-     * reason the hold does ([PAD_SHEET_LEGEND]): nobody discovers a
+     * reason the hold does ([PADS_RESTING_LINE] says it): nobody discovers a
      * pressure-sensitive pad by looking at it, and a hint that can be
      * dismissed is a feature that can be lost. Says the direction rather
      * than the rule, because "lower is softer" is something a thumb can act
@@ -548,7 +517,7 @@ object Copy {
      *
      * Wording follows the row's own `onLongClickLabel` ("RENAME OR DELETE")
      * so the sighted legend and the TalkBack announcement say the same
-     * thing. No full stop: like ROOMS' legend and [PAD_SHEET_LEGEND], this is
+     * thing. No full stop: like ROOMS' legend and the grid's own, this is
      * furniture that stays on screen, not a line the app says once.
      */
     const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
@@ -611,8 +580,8 @@ object Copy {
      *
      * The finding called provenance "good and half-hidden": good because
      * every door stamps it, half-hidden because reaching any of it meant
-     * holding a pad. Naming it in [PAD_SHEET_LEGEND] was looked at and
-     * rejected — that legend is a sample of what the sheet holds, not an
+     * holding a pad. Naming it in the pad sheet legend (since replaced by the strip's
+     * [PADS_RESTING_LINE]) was looked at and rejected — that legend was a sample of what the sheet holds, not an
      * inventory, and does not name layers or takes either — and a third
      * mark on the grid would crowd the treated dog-ear and the mini
      * waveform for a fact a mark cannot actually state.
@@ -691,9 +660,12 @@ object Copy {
      * inventory the sections were distilled from; `PersonalityTest` and the
      * ladder law still read them, and the copy sweep that follows the shape
      * decides what of them [Places.HELP] still lacks.
+     *
+     * Drawn by nothing. It is kept for the one law whose subject Places.HELP
+     * does not have yet: `ConventionTest` holds the ZOOM ON CHOP line below to
+     * [Ladder.ROW_LABELS] (J42), and HELP's sections carry no ZOOM line to hold
+     * it to. Its header, WORTH KNOWING, was drawn by nothing either and went.
      */
-    const val HELP_MORE_HEADER = "WORTH KNOWING:"
-
     val HELP_MORE = listOf(
         "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
         "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
@@ -2107,7 +2079,7 @@ object Copy {
      *
      * Wording follows the row's `onLongClickLabel` ("FORGET THIS CARD") so
      * the sighted legend and the TalkBack announcement say the same thing -
-     * the rule [SHELF_LEGEND] and [PAD_SHEET_LEGEND] already follow. No full
+     * the rule [SHELF_LEGEND] already follows. No full
      * stop: it stays on screen, so it is furniture, not a line said once.
      */
     const val EXPORT_CARD_LEGEND = "HOLD TO FORGET THIS CARD"
@@ -2144,18 +2116,6 @@ object Copy {
      * means saying what happened, not quoting Java at somebody.
      */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
-
-    /**
-     * `StatusBar`'s third cell (`Chrome.kt`) when no kit is open — its own
-     * resting label, not the empty string `open?.kit?.name.orEmpty()` used
-     * to leave there. An empty bordered box next to the populated `SHELF: n`
-     * cell read as a rendering gap, not a state: the same "is this broken
-     * or just empty" confusion [EMPTY_GROOVE]'s own KDoc names for a blank
-     * screen. No full stop, same register as [CARD_NONE]: this is a
-     * standing label the row wears until a kit opens, not a line the app
-     * says once.
-     */
-    const val NO_KIT_STATUS = "NO KIT OPEN"
 
     // ==================== Escaped strings, brought in (name-and-find follow-ups, Part C) ====================
     //

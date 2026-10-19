@@ -57,6 +57,7 @@ import com.snipsnap.app.TapeCommit
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
@@ -817,7 +818,7 @@ private fun ChopContent(
                 TapeText(
                     Copy.chopFromKit(sourceFile.nameWithoutExtension.uppercase(java.util.Locale.ROOT)),
                     TapeType.lcdSmall,
-                    scheme.ink.tape,
+                    scheme.lcdInk2,
                     maxLines = 1,
                 )
             }
@@ -1381,7 +1382,7 @@ private fun ClassPicker(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .background(
-                                if (picked) Schemes.classColor(dc).tape else scheme.ink3.tape.copy(alpha = 0.15f),
+                                if (picked) Schemes.classColor(dc).tape else scheme.lcdInk.tape.copy(alpha = 0.15f),
                                 RoundedCornerShape(4.dp),
                             )
                             .tapeClick(label = ChopReviewModel.chipName(dc), enabled = enabled, onClick = { onPick(dc) }),
@@ -1414,7 +1415,7 @@ private fun ClassPicker(
             TapeText(
                 "THE MACHINE SAID ${ChopReviewModel.chipName(machine)}",
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.lcdInk2,
                 maxLines = 1,
             )
         }
@@ -1579,13 +1580,13 @@ private fun CutBench(
             }
         }
         if (hits != null) {
-            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (ear in ChopReviewModel.Ear.entries) {
                     SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
-            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }

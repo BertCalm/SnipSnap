@@ -52,6 +52,16 @@ val BinRedOnLcd: Color @Composable get() = LocalScheme.current.binLcd.tape
  */
 val Scheme.amberOnChrome: Color @Composable get() = (if (look == Look.MODERN) accent else amber).tape
 
+/**
+ * The LCD's second tier of text: [Scheme.lcdInk] at [Schemes.LCD_INK2_ALPHA].
+ * `ink`, `ink2` and `ink3` are chrome inks - tuned against `gray`, and on a
+ * paper scheme (where the LCD is the dark surface) near-invisible on it - so
+ * a secondary line inside an LCD reads this, and emphasis there reads `amber`.
+ * Not a composable read, so the canvases that draw their own labels can use
+ * it too. `ContrastTest` holds it at AA over the LCD in every scheme.
+ */
+val Scheme.lcdInk2: Color get() = lcdInk.tape.copy(alpha = Schemes.LCD_INK2_ALPHA)
+
 val LocalScheme = staticCompositionLocalOf { Schemes.DEFAULT }
 
 @Composable

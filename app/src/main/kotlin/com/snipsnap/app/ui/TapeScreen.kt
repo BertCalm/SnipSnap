@@ -993,7 +993,7 @@ private fun TapeDeckContent(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TapeText(Copy.CATCH_HEADER, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
+                    TapeText(Copy.CATCH_HEADER, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
                     DeckButton(if (model.playing) "■" else "▶", Modifier.width(56.dp)) { onPlayStop() }
                     DeckButton(Copy.CATCH_DONE_BUTTON, Modifier.width(80.dp)) { finishCatch() }
                 }
@@ -1032,14 +1032,14 @@ private fun TapeDeckContent(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("TRANSPORT", TapeType.pixelSmall, scheme.ink2.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 WindButton("◄◄", Modifier.weight(1f), -1, model, ::stopVoice, ::touch)
                 DeckButton(if (model.playing) "■ STOP" else "▶ PLAY", Modifier.weight(1f)) { onPlayStop() }
                 WindButton("▶▶", Modifier.weight(1f), 1, model, ::stopVoice, ::touch)
             }
 
-            TapeText("EDIT", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("EDIT", TapeType.pixelSmall, scheme.ink2.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 DeckButton(
                     "IN",
@@ -1179,7 +1179,7 @@ private fun TapeDeckContent(
                 }
             }
 
-            TapeText("DESTINATIONS", TapeType.pixelSmall, scheme.ink3.tape)
+            TapeText("DESTINATIONS", TapeType.pixelSmall, scheme.ink2.tape)
             // Wave ZZ, the phone reads: three more readings of the same tape.
             // DIG finds the break and sets IN and OUT to it, so INSTANT KIT is
             // the next tap; READ AS GROOVE hears the tape as a rhythm for the
