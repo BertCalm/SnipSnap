@@ -7,7 +7,7 @@ Julia Wilkins, Prem Seetharaman, Alison Wahl, and Bryan Pardo (2018).
 - DOI: <https://doi.org/10.5281/zenodo.1193957>
 - License: [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
 - Local license text: [LICENSE-CC-BY-4.0.txt](LICENSE-CC-BY-4.0.txt)
-- Retrieved: 2026-10-17
+- Initial sources retrieved: 2026-10-17; wordless starter expansion: 2026-10-18
 
 The Zenodo record explicitly identifies `cc-by-4.0`; its metadata snapshot is
 retained in `zenodo-record.json`. Preserve the above attribution and license
@@ -19,9 +19,9 @@ dataset authors or singers endorse SnipSnap.
 
 All canonical files are mono, 44.1 kHz, PCM16 WAV. The canonical versions are
 cropped and given constant gain to a -3 dBFS sample peak. The airy vowel has the
-explicit entrance fade described below; the other five files have no fades.
+explicit entrance fade described below; the other seven files have no fades.
 No denoising, EQ, tuning, stretching, synthetic replacement, or generative
-processing was applied. Six complete original recordings remain in `originals/`, including the
+processing was applied. Eight complete original recordings remain in `originals/`, including the
 retired male1 vowel recording retained for the boundary regression history.
 
 | Canonical file | Duration | Reference note / observed frequency | Marked sustain, frames |
@@ -32,11 +32,40 @@ retired male1 vowel recording retained for the boundary regression history.
 | `phrase-female.wav` | 6.55 s | Initial C4 / 263.697 Hz | 26460–39690 |
 | `airy-female.wav` | 1.20 s | C4 / 261.898 Hz | 6615–30870 |
 | `airy-phrase-female.wav` | 7.20 s | Initial C4 / 262.808 Hz | 17640–35280 |
+| `clear-phrase-male.wav` | 8.30 s | Initial C3 / 128.395 Hz | 26460–46305 |
+| `rounded-vowel-male.wav` | 3.55 s | C3 / 127.659 Hz | 26460–110250 |
 
 Frame intervals are half-open: start inclusive, end exclusive. Each complete
 canonical file is also its selected phrase. `manifest.json` is authoritative
 for IDs, paths, frame positions, exact content hashes, original crop ranges,
 gain, attribution, and pitch observations.
+
+## Wordless starter selection
+
+`manifest.json` separates four wordless starter candidates from the earlier
+demonstrations. `starterVoiceIds` maps stable bank IDs to the source fixtures:
+
+| Bank ID | Fixture ID | Actual recorded style | Native material | Role |
+| --- | --- | --- | --- | --- |
+| `low-ah` | `vowel-male` | Straight `/a/`, male3 | C3 vowel | Foundation |
+| `breathy-arc` | `airy-phrase-female` | Breathy `/a/`, female1 | Complete C4–C5–C4 arpeggio | Upper group |
+| `clear-arc` | `clear-phrase-male` | Straight `/a/`, male3 | Complete C3–C4–C3 arpeggio | Wordless answer |
+| `round-oo` | `rounded-vowel-male` | Straight `/u/`, male3 | Complete first C3 vowel gesture | Rounded foundation |
+
+These four entries carry `wordless: true` and `usageFactoryCandidate: true`.
+Their technique names come from the dataset's actual `straight` and `breathy`
+folders. `/a/` and `/u/` are recorded vowels; no words, humming, or different
+singing techniques were manufactured. They are openly licensed third-party
+VocalSet recordings, with the attribution above, rather than project-owned or
+commissioned master recordings. Perceptual acceptance remains a listening
+judgment.
+
+The Row excerpts remain historical comparison material with
+`demonstrationOnly: true`, `wordless: false`, and `usageFactoryCandidate: false`.
+The legacy `primaryPhraseId` still identifies that earlier demonstration;
+the starter selection uses `starterVoiceIds` and `primaryWordlessPhraseId`.
+
+## Source selections
 
 The vowel files retain the first straight `/a/` long-tone gesture and its
 release before the next register gesture. The male vowel uses singer **male3**,
@@ -74,7 +103,21 @@ Its final 50 ms is 1.64% of whole-phrase RMS. An amplitude-only
 `tailBoundaryGuard` verifies this quiet ending without asserting a flat pitch
 over the intentional C4–C5–C4 contour.
 
-The phrase files retain the first
+The clear wordless answer retains male3's **complete straight `/a/` arpeggio**,
+original 0.20–8.50 seconds. It begins quietly on C3, reaches C4, returns to C3,
+and releases naturally around original 8.1–8.3 seconds before its quiet end.
+Only crop and constant gain were applied. The final 50 ms RMS is approximately
+0.00105, 0.65% of whole-phrase RMS; its amplitude-only `tailBoundaryGuard`
+allows the intended melodic contour.
+
+The rounded source retains male3's first **straight `/u/` C3 gesture**,
+original 0.15–3.70 seconds. It releases naturally around original 3.1–3.4 seconds
+and ends before the next register gesture begins around 4.1 seconds. Its final
+50 ms RMS is approximately 0.00361, 1.20% of marked sustain RMS. Its fixture
+guard checks the held pitch and quiet tail. No fade or EQ supplies the rounded
+character; it comes from the recorded vowel.
+
+The historical `phrase-male.wav` and `phrase-female.wav` files retain the first
 source section of the dataset's `row_straight` excerpt through its substantial
 inter-line pause. These sections were selected using the amplitude envelope,
 pitch continuity, and intervening rests. No semantic transcription or owner
@@ -92,7 +135,7 @@ not flatten all notes to the reference.
 ## Reproduction
 
 Run `python reference/fixtures/confluence/acquire.py` from the repository root.
-The script reads only the six retained ZIP members using HTTP ranges, verifies
+The script reads only the eight retained ZIP members using HTTP ranges, verifies
 their CRCs and pinned SHA-256 hashes, and recreates the canonical files from
 the committed manifest. It does not download the complete 2 GB archive.
 

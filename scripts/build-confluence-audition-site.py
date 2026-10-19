@@ -37,20 +37,33 @@ for clip in clips:
     assert clip['finite'] and clip['channels'] == 1 and clip['sampleRate'] == 44100
 role_family = [clip for clip in clips if clip.get('matchingPolicy') == 'shared-gathering-gain']
 if role_family:
-    required = {'low_foundation', 'airy_upper', 'clear_answer', 'role_gathering'}
-    assert required <= {clip['id'] for clip in role_family}, 'The three-role listening family is incomplete'
-    assert {clip['matchedReferenceId'] for clip in role_family} == {'role_gathering'}
-    assert len({clip['matchedGain'] for clip in role_family}) == 1, 'Do not individually level the role stems'
-    assert len({clip['rawExportGain'] for clip in role_family}) == 1, 'Role stems must share the full raw export gain'
-    assert len({clip['frames'] for clip in role_family}) == 1, 'Role stems must retain the complete arrangement timeline'
-    for clip in role_family:
-        assert clip['roleIds'] and set(clip['roleIds']) <= {'FOUNDATION', 'AIRY', 'ANSWER'}
-        assert clip['evidence']['sharedSchedule'] and clip['evidence']['sharedMasterGain']
-    airy_clip = next(clip for clip in role_family if clip['id'] == 'airy_upper')
-    assert len(airy_clip['sourceIds']) == 1, 'The upper role needs one explicit recorded source'
-    airy = next(item for item in manifest['sources'] if item['id'] == airy_clip['sourceIds'][0])
-    assert airy['license'] and airy['licenseUrl'] and airy['attribution'] and airy['modifications']
-    assert hashlib.sha256((output / airy['path']).read_bytes()).hexdigest() == airy['sha256'], 'Airy source provenance does not match its WAV'
+    for reference_id in {clip['matchedReferenceId'] for clip in role_family}:
+        family = [clip for clip in role_family if clip['matchedReferenceId'] == reference_id]
+        assert reference_id in {clip['id'] for clip in family}, 'Missing complete gathering reference'
+        assert {clip['roleIds'][0] for clip in family if len(clip['roleIds']) == 1} == {'FOUNDATION', 'AIRY', 'ANSWER'}, 'The three-role listening family is incomplete'
+        assert len({clip['matchedGain'] for clip in family}) == 1, 'Do not individually level the role stems'
+        assert len({clip['rawExportGain'] for clip in family}) == 1, 'Role stems must share the full raw export gain'
+        assert len({clip['frames'] for clip in family}) == 1, 'Role stems must retain the complete arrangement timeline'
+        for clip in family:
+            assert clip['roleIds'] and set(clip['roleIds']) <= {'FOUNDATION', 'AIRY', 'ANSWER'}
+            assert clip['evidence']['sharedSchedule'] and clip['evidence']['sharedMasterGain']
+        airy_clip = next(clip for clip in family if clip['roleIds'] == ['AIRY'])
+        assert len(airy_clip['sourceIds']) == 1, 'The upper role needs one explicit recorded source'
+        airy = next(item for item in manifest['sources'] if item['id'] == airy_clip['sourceIds'][0])
+        assert airy['license'] and airy['licenseUrl'] and airy['attribution'] and airy['modifications']
+        assert hashlib.sha256((output / airy['path']).read_bytes()).hexdigest() == airy['sha256'], 'Airy source provenance does not match its WAV'
+if 'starterVoiceBank' in manifest:
+    bank_record = manifest['starterVoiceBank']
+    bank_file = output / bank_record['manifestPath']
+    bank = json.loads(bank_file.read_text())
+    assert bank['id'] == bank_record['id'] and bank['version'] == bank_record['version']
+    assert bank['mainPresetId'] == bank_record['mainPresetId']
+    assert all(voice['wordless'] and voice['provenance']['wordless'] for voice in bank['voices'])
+    assert all(not voice['provenance'].get('demonstrationOnly', False) for voice in bank['voices'])
+    wordless = [clip for clip in clips if clip['group'] in ('wordless', 'bank_presets')]
+    source_ids = {voice['fixtureId'] for voice in bank['voices']}
+    assert wordless and all(set(clip['sourceIds']) <= source_ids for clip in wordless), 'Factory auditions may use only the wordless bank'
+    assert all(clip.get('contentClass') == 'historical-demo' for clip in clips if clip['group'] == 'demo_roles')
 # Preserve the renderer manifest byte-for-byte: independent reviews and the
 # replay bundle identify it by SHA-256. Site staging metadata belongs separately.
 publication = {

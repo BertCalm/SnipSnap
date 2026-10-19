@@ -1,0 +1,622 @@
+{
+  "format": "snipsnap-confluence-voice-bank",
+  "schema": 1,
+  "id": "confluence-wordless-starter",
+  "version": 1,
+  "content": "wordless-vocals",
+  "mainPresetId": "first-gathering",
+  "license": {
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "path": "LICENSE-CC-BY-4.0.txt"
+  },
+  "voices": [
+    {
+      "id": "low-ah",
+      "title": "LOW AH",
+      "assetPath": "voices/low-ah.wav",
+      "fixtureId": "vowel-male",
+      "styles": [
+        "low",
+        "straight",
+        "sustained",
+        "ah"
+      ],
+      "technique": "straight",
+      "wordless": true,
+      "roles": [
+        "FOUNDATION"
+      ],
+      "fileSha256": "4d79d7b47111252f4adeb7579e22d7ccde3a3b6f99a7fcf390a8327787a6d089",
+      "frames": 167580,
+      "region": {
+        "assetHash": "845ddee2a4e3a123991b5f76976532d0037d9e6fec9647a1d8ae2f618a0a2dd2",
+        "startFrame": 0,
+        "endFrame": 167580,
+        "mode": "PITCHED",
+        "referenceMidi": 48,
+        "sustainStartFrame": 22050,
+        "sustainEndFrame": 121275
+      },
+      "provenance": {
+        "id": "vowel-male",
+        "path": "vowel-male.wav",
+        "title": "Male singer 3 — sustained ah with natural release",
+        "kind": "vowel",
+        "sampleRate": 44100,
+        "channels": 1,
+        "frames": 167580,
+        "seconds": 3.8,
+        "sha256": "4d79d7b47111252f4adeb7579e22d7ccde3a3b6f99a7fcf390a8327787a6d089",
+        "phraseStartFrame": 0,
+        "phraseEndFrame": 167580,
+        "sustainStartFrame": 22050,
+        "sustainEndFrame": 121275,
+        "referenceMidi": 48,
+        "referenceHz": 126.7079255387386,
+        "referencePolicy": "Manual note label supported by autocorrelation observation; source contour is retained, not flattened.",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "sourceUrl": "https://zenodo.org/records/1193957",
+        "doi": "10.5281/zenodo.1193957",
+        "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+        "originalPath": "originals/m3_long_straight_a.wav",
+        "originalArchiveMember": "FULL/male3/long_tones/straight/m3_long_straight_a.wav",
+        "originalSha256": "0220658c4ac8b96392c2bbcc3348fa757ed6264185610d31daef87ec0399cf4f",
+        "originalCropStartFrame": 6615,
+        "originalCropEndFrame": 174195,
+        "gainDb": 19.81403177899228,
+        "modifications": "Cropped to the listed source-frame range and constant gain applied to -3 dBFS sample peak; mono 44.1 kHz PCM16 retained; no denoising, pitch shift, time stretch, or generated audio. Original complete WAV retained.",
+        "selectionBasis": "First male3 /a/ gesture, retaining its observed natural amplitude release around original3.3–3.8s and quiet margin through3.95s; next register gesture begins around4.3s. Full tail envelope and pitch trajectory inspected; no curated fade. Replaces rejected male1 crop that included the next register gesture.",
+        "pitchObservation": {
+          "medianHz": 126.7079255387386,
+          "medianAutocorrelation": 0.9100932471489701,
+          "windows": 71
+        },
+        "originalRegionPeak": 0.07232666015625,
+        "originalRegionRms": 0.019458491687841105,
+        "boundaryGuard": {
+          "policy": "Fixture-specific held-vowel regression guard; not a rule for arbitrary imported voices.",
+          "tailWindowFrames": 2205,
+          "maxTailToSustainRmsRatio": 0.05,
+          "maxTailRms": 0.012,
+          "tailPitchScanFrames": 22050,
+          "pitchEnergyFractionOfSustain": 0.15,
+          "maxHighEnergyTailPitchExcursionCents": 300,
+          "maxSustainPitchExcursionCents": 150
+        },
+        "wordless": true,
+        "usageFactoryCandidate": true,
+        "demonstrationOnly": false,
+        "sourceTechnique": "straight",
+        "sourceProvenanceKind": "licensed-third-party-recording",
+        "recordedVowel": "a",
+        "bankVoiceId": "low-ah",
+        "styleLabel": "Low Open /a/",
+        "roleEligibility": [
+          "FOUNDATION"
+        ]
+      }
+    },
+    {
+      "id": "breathy-arc",
+      "title": "BREATHY ARC",
+      "assetPath": "voices/breathy-arc.wav",
+      "fixtureId": "airy-phrase-female",
+      "styles": [
+        "airy",
+        "breathy",
+        "moving",
+        "ah"
+      ],
+      "technique": "breathy",
+      "wordless": true,
+      "roles": [
+        "AIRY"
+      ],
+      "fileSha256": "9d1553fbf203f035e97606bd36845f90e6fd63e5504291d051772cf2cca1ecfe",
+      "frames": 317520,
+      "region": {
+        "assetHash": "eea7047d3498d3841d71c28891714253d17775ecc2506e87067a1939b608afcb",
+        "startFrame": 0,
+        "endFrame": 317520,
+        "mode": "PITCHED",
+        "referenceMidi": 60,
+        "sustainStartFrame": 17640,
+        "sustainEndFrame": 35280
+      },
+      "provenance": {
+        "id": "airy-phrase-female",
+        "path": "airy-phrase-female.wav",
+        "title": "Female singer 1 — complete recorded breathy arpeggio",
+        "kind": "airy-phrase",
+        "sourceTechnique": "breathy",
+        "roleEligibility": [
+          "AIRY_UPPER"
+        ],
+        "sampleRate": 44100,
+        "channels": 1,
+        "frames": 317520,
+        "seconds": 7.2,
+        "sha256": "9d1553fbf203f035e97606bd36845f90e6fd63e5504291d051772cf2cca1ecfe",
+        "phraseStartFrame": 0,
+        "phraseEndFrame": 317520,
+        "sustainStartFrame": 17640,
+        "sustainEndFrame": 35280,
+        "referenceMidi": 60,
+        "referenceHz": 262.80781829311303,
+        "referencePolicy": "Manual initial C4 reference supported by autocorrelation; preserve the complete native C4–C5–C4 arpeggio contour. Do not flatten this source to a held note.",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "sourceUrl": "https://zenodo.org/records/1193957",
+        "doi": "10.5281/zenodo.1193957",
+        "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+        "originalPath": "originals/f1_arpeggios_breathy_a.wav",
+        "originalArchiveMember": "FULL/female1/arpeggios/breathy/f1_arpeggios_breathy_a.wav",
+        "originalSha256": "18306bdc3d68f0fbd55828ed6d0ec225b9df84fbbacd6d15a4d551e27f4ef7f7",
+        "originalCropStartFrame": 8820,
+        "originalCropEndFrame": 326340,
+        "gainDb": 20.868749927546347,
+        "modificationOrder": [
+          "crop with natural entrance and release margins",
+          "constant gain to -3 dBFS sample peak",
+          "PCM16 quantization"
+        ],
+        "modifications": "Retained the complete recorded breathy arpeggio with its naturally quiet entrance, full native melodic contour, natural release, and quiet ending. Only source crop and constant -3 dBFS peak normalization were applied. No fades, stretching, repeated excerpt, EQ, generated breath/noise, denoising, or pitch shift. Full original recording and earlier short final-vowel proof retained.",
+        "selectionBasis": "Original0.20–7.40s contains the whole single /a/ arpeggio: initial native C4 gesture from around0.5s, ascending to C5 and returning to C4, then natural voiced release around6.85–7.00s followed by quiet room tone. No adjacent gesture occurs within the original recording. Dataset explicitly labels the technique breathy; perceptual listening approval remains open.",
+        "pitchObservation": {
+          "medianHz": 262.80781829311303,
+          "medianAutocorrelation": 0.9470747759560232,
+          "windows": 13,
+          "region": "Marked initial C4 only; the complete phrase intentionally moves through other notes."
+        },
+        "originalRegionPeak": 0.064056396484375,
+        "originalRegionRms": 0.014517733356890453,
+        "nativeContourDescription": "Complete native C4–C5–C4 vowel arpeggio; duration comes from the recording.",
+        "tailBoundaryGuard": {
+          "policy": "Fixture-specific amplitude-only quiet-ending check for a complete melodic phrase; pitch is intentionally not constrained to a flat vowel.",
+          "tailWindowFrames": 2205,
+          "referenceStartFrame": 0,
+          "referenceEndFrame": 317520,
+          "maxTailRms": 0.006,
+          "maxTailToRegionRmsRatio": 0.04
+        },
+        "wordless": true,
+        "usageFactoryCandidate": true,
+        "demonstrationOnly": false,
+        "sourceProvenanceKind": "licensed-third-party-recording",
+        "recordedVowel": "a",
+        "bankVoiceId": "breathy-arc",
+        "styleLabel": "Breathy Arc /a/"
+      }
+    },
+    {
+      "id": "clear-arc",
+      "title": "CLEAR ARC",
+      "assetPath": "voices/clear-arc.wav",
+      "fixtureId": "clear-phrase-male",
+      "styles": [
+        "clear",
+        "straight",
+        "moving",
+        "ah"
+      ],
+      "technique": "straight",
+      "wordless": true,
+      "roles": [
+        "ANSWER"
+      ],
+      "fileSha256": "06e73ee64287179efc32c5b90343290f1aa1473677b002113a179b887d9e5e16",
+      "frames": 366030,
+      "region": {
+        "assetHash": "1d7c71e74ba455c2d9b3dd7ab402009462982f16fc892f6329d65d061bd6f9c5",
+        "startFrame": 0,
+        "endFrame": 366030,
+        "mode": "PITCHED",
+        "referenceMidi": 48,
+        "sustainStartFrame": 26460,
+        "sustainEndFrame": 46305
+      },
+      "provenance": {
+        "id": "clear-phrase-male",
+        "path": "clear-phrase-male.wav",
+        "title": "Male singer 3 — complete clear wordless arpeggio",
+        "kind": "clear-phrase",
+        "sourceTechnique": "straight",
+        "recordedVowel": "a",
+        "wordless": true,
+        "usageFactoryCandidate": true,
+        "demonstrationOnly": false,
+        "bankVoiceId": "clear-arc",
+        "styleLabel": "Clear Arc /a/",
+        "sourceProvenanceKind": "licensed-third-party-recording",
+        "roleEligibility": [
+          "ANSWER"
+        ],
+        "sampleRate": 44100,
+        "channels": 1,
+        "frames": 366030,
+        "seconds": 8.3,
+        "sha256": "06e73ee64287179efc32c5b90343290f1aa1473677b002113a179b887d9e5e16",
+        "phraseStartFrame": 0,
+        "phraseEndFrame": 366030,
+        "sustainStartFrame": 26460,
+        "sustainEndFrame": 46305,
+        "referenceMidi": 48,
+        "referenceHz": 128.39457712250555,
+        "referencePolicy": "Manual native C3 reference supported by stable-region autocorrelation. Preserve the recorded relative contour; no lyric or phoneme labels are generated.",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "sourceUrl": "https://zenodo.org/records/1193957",
+        "doi": "10.5281/zenodo.1193957",
+        "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+        "originalPath": "originals/m3_arpeggios_straight_a.wav",
+        "originalArchiveMember": "FULL/male3/arpeggios/straight/m3_arpeggios_straight_a.wav",
+        "originalSha256": "03b983d87b9b1da0bd86ffc9d9b3d5cf6012dba29d0f9ddef241362ac8542d74",
+        "originalCropStartFrame": 8820,
+        "originalCropEndFrame": 374850,
+        "gainDb": 20.257630975608187,
+        "modificationOrder": [
+          "crop with natural entrance and release margins",
+          "constant gain to -3 dBFS sample peak",
+          "PCM16 quantization"
+        ],
+        "modifications": "Source crop and constant peak normalization only. No fades, EQ, synthetic breath/noise, denoising, pitch shift, time stretch, repeated excerpt, or new words. Complete original retained.",
+        "selectionBasis": "Complete single straight /a/ arpeggio, original0.20–8.50s; starts quietly before C3, reaches C4, returns to C3 and releases naturally around8.1–8.3s, followed by quiet margin. No adjacent gesture within this recording.",
+        "nativeContourDescription": "Complete native C3–C4–C3 vowel arpeggio; full duration and melodic order come from the recording.",
+        "pitchObservation": {
+          "medianHz": 128.39457712250555,
+          "medianAutocorrelation": 0.9969120281028749,
+          "windows": 14,
+          "region": "Marked native C3 region only; complete phrase contour retained."
+        },
+        "originalRegionPeak": 0.0687255859375,
+        "originalRegionRms": 0.01573143158707375,
+        "tailBoundaryGuard": {
+          "policy": "Fixture-specific amplitude-only quiet-ending guard for a complete melodic phrase. Native C3–C4–C3 contour is intentional.",
+          "tailWindowFrames": 2205,
+          "referenceStartFrame": 0,
+          "referenceEndFrame": 366030,
+          "maxTailRms": 0.006,
+          "maxTailToRegionRmsRatio": 0.04
+        },
+        "retrievedDate": "2026-10-18"
+      }
+    },
+    {
+      "id": "round-oo",
+      "title": "ROUNDED OO",
+      "assetPath": "voices/round-oo.wav",
+      "fixtureId": "rounded-vowel-male",
+      "styles": [
+        "low",
+        "rounded",
+        "sustained",
+        "oo"
+      ],
+      "technique": "straight",
+      "wordless": true,
+      "roles": [
+        "FOUNDATION"
+      ],
+      "fileSha256": "75c266db10260a206ddc232c236750600d775ce89a591bb2f7550fdce5848abd",
+      "frames": 156555,
+      "region": {
+        "assetHash": "47d640b60102af5b5a2295f4ddbd85e28b7025b22a956e251cf4809149f17d6f",
+        "startFrame": 0,
+        "endFrame": 156555,
+        "mode": "PITCHED",
+        "referenceMidi": 48,
+        "sustainStartFrame": 26460,
+        "sustainEndFrame": 110250
+      },
+      "provenance": {
+        "id": "rounded-vowel-male",
+        "path": "rounded-vowel-male.wav",
+        "title": "Male singer 3 — rounded low wordless oo vowel",
+        "kind": "vowel",
+        "sourceTechnique": "straight",
+        "recordedVowel": "u",
+        "wordless": true,
+        "usageFactoryCandidate": true,
+        "demonstrationOnly": false,
+        "bankVoiceId": "round-oo",
+        "styleLabel": "Rounded /u/",
+        "sourceProvenanceKind": "licensed-third-party-recording",
+        "roleEligibility": [
+          "FOUNDATION"
+        ],
+        "sampleRate": 44100,
+        "channels": 1,
+        "frames": 156555,
+        "seconds": 3.55,
+        "sha256": "75c266db10260a206ddc232c236750600d775ce89a591bb2f7550fdce5848abd",
+        "phraseStartFrame": 0,
+        "phraseEndFrame": 156555,
+        "sustainStartFrame": 26460,
+        "sustainEndFrame": 110250,
+        "referenceMidi": 48,
+        "referenceHz": 127.6594460937473,
+        "referencePolicy": "Manual native C3 reference supported by stable-region autocorrelation. Preserve the recorded relative contour; no lyric or phoneme labels are generated.",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "sourceUrl": "https://zenodo.org/records/1193957",
+        "doi": "10.5281/zenodo.1193957",
+        "attribution": "VocalSet: A Singing Voice Dataset — Julia Wilkins, Prem Seetharaman, Alison Wahl, Bryan Pardo (2018), CC BY 4.0.",
+        "originalPath": "originals/m3_long_straight_u.wav",
+        "originalArchiveMember": "FULL/male3/long_tones/straight/m3_long_straight_u.wav",
+        "originalSha256": "46ea405124a2763cc1acfa92a00878fc5ee8f1bb9b00f592b1ca2c2e4d053f7f",
+        "originalCropStartFrame": 6615,
+        "originalCropEndFrame": 163170,
+        "gainDb": 21.64749920448493,
+        "modificationOrder": [
+          "crop with natural entrance and release margins",
+          "constant gain to -3 dBFS sample peak",
+          "PCM16 quantization"
+        ],
+        "modifications": "Source crop and constant peak normalization only. No fades, EQ, synthetic breath/noise, denoising, pitch shift, time stretch, repeated excerpt, or new words. Complete original retained.",
+        "selectionBasis": "First straight /u/ C3 gesture, original0.15–3.70s; starts quietly, releases naturally around3.1–3.4s and retains quiet margin. Next register gesture begins around4.1s. Full selected tail and stable pitch region inspected.",
+        "nativeContourDescription": "First complete native C3 /u/ gesture with natural release before the next register gesture.",
+        "pitchObservation": {
+          "medianHz": 127.6594460937473,
+          "medianAutocorrelation": 0.9976045499733992,
+          "windows": 72,
+          "region": "Marked native C3 region only; complete phrase contour retained."
+        },
+        "originalRegionPeak": 0.058563232421875,
+        "originalRegionRms": 0.02073090606023122,
+        "boundaryGuard": {
+          "policy": "Fixture-specific held-vowel regression guard; not a rule for arbitrary imported voices.",
+          "tailWindowFrames": 2205,
+          "maxTailToSustainRmsRatio": 0.05,
+          "maxTailRms": 0.012,
+          "tailPitchScanFrames": 22050,
+          "pitchEnergyFractionOfSustain": 0.15,
+          "maxHighEnergyTailPitchExcursionCents": 300,
+          "maxSustainPitchExcursionCents": 150
+        },
+        "retrievedDate": "2026-10-18"
+      }
+    }
+  ],
+  "presets": [
+    {
+      "id": "first-gathering",
+      "title": "FIRST GATHERING",
+      "description": "A low ah foundation, the complete breathy upper arc, and a clear wordless answer. Eight persistent transformed performers, close enough to hear the source gestures.",
+      "roleVoiceIds": {
+        "FOUNDATION": "low-ah",
+        "AIRY": "breathy-arc",
+        "ANSWER": "clear-arc"
+      },
+      "recipe": {
+        "engine": "CONFLUENCE_ASSEMBLY_PROTOTYPE",
+        "schema": 1,
+        "model": 1,
+        "analysis": 1,
+        "name": "FIRST GATHERING",
+        "seed": 20261018,
+        "seconds": 24,
+        "space": 0.18,
+        "divergence": 0.18,
+        "callStartSeconds": 1.2,
+        "answerDelaySeconds": 0.4,
+        "exchangeRestSeconds": 0.8,
+        "breathSeconds": 0.2,
+        "roles": [
+          {
+            "role": "FOUNDATION",
+            "gain": 0.55,
+            "performerIds": [
+              0,
+              1,
+              2
+            ],
+            "region": {
+              "assetHash": "845ddee2a4e3a123991b5f76976532d0037d9e6fec9647a1d8ae2f618a0a2dd2",
+              "startFrame": 0,
+              "endFrame": 167580,
+              "mode": "PITCHED",
+              "referenceMidi": 48,
+              "sustainStartFrame": 22050,
+              "sustainEndFrame": 121275
+            }
+          },
+          {
+            "role": "AIRY",
+            "gain": 0.45,
+            "performerIds": [
+              3,
+              4,
+              5
+            ],
+            "region": {
+              "assetHash": "eea7047d3498d3841d71c28891714253d17775ecc2506e87067a1939b608afcb",
+              "startFrame": 0,
+              "endFrame": 317520,
+              "mode": "PITCHED",
+              "referenceMidi": 60,
+              "sustainStartFrame": 17640,
+              "sustainEndFrame": 35280
+            }
+          },
+          {
+            "role": "ANSWER",
+            "gain": 1.05,
+            "performerIds": [
+              6,
+              7
+            ],
+            "region": {
+              "assetHash": "1d7c71e74ba455c2d9b3dd7ab402009462982f16fc892f6329d65d061bd6f9c5",
+              "startFrame": 0,
+              "endFrame": 366030,
+              "mode": "PITCHED",
+              "referenceMidi": 48,
+              "sustainStartFrame": 26460,
+              "sustainEndFrame": 46305
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "breathing-room",
+      "title": "BREATHING ROOM",
+      "description": "Six performers leave more space around the complete breathy arc. A quieter low foundation and longer individual breath windows give the airy group more room.",
+      "roleVoiceIds": {
+        "FOUNDATION": "low-ah",
+        "AIRY": "breathy-arc",
+        "ANSWER": "clear-arc"
+      },
+      "recipe": {
+        "engine": "CONFLUENCE_ASSEMBLY_PROTOTYPE",
+        "schema": 1,
+        "model": 1,
+        "analysis": 1,
+        "name": "BREATHING ROOM",
+        "seed": 20261019,
+        "seconds": 24,
+        "space": 0.48,
+        "divergence": 0.1,
+        "callStartSeconds": 1.8,
+        "answerDelaySeconds": 0.7,
+        "exchangeRestSeconds": 0.9,
+        "breathSeconds": 0.28,
+        "roles": [
+          {
+            "role": "FOUNDATION",
+            "gain": 0.4,
+            "performerIds": [
+              0,
+              1
+            ],
+            "region": {
+              "assetHash": "845ddee2a4e3a123991b5f76976532d0037d9e6fec9647a1d8ae2f618a0a2dd2",
+              "startFrame": 0,
+              "endFrame": 167580,
+              "mode": "PITCHED",
+              "referenceMidi": 48,
+              "sustainStartFrame": 22050,
+              "sustainEndFrame": 121275
+            }
+          },
+          {
+            "role": "AIRY",
+            "gain": 0.64,
+            "performerIds": [
+              2,
+              3
+            ],
+            "region": {
+              "assetHash": "eea7047d3498d3841d71c28891714253d17775ecc2506e87067a1939b608afcb",
+              "startFrame": 0,
+              "endFrame": 317520,
+              "mode": "PITCHED",
+              "referenceMidi": 60,
+              "sustainStartFrame": 17640,
+              "sustainEndFrame": 35280
+            }
+          },
+          {
+            "role": "ANSWER",
+            "gain": 0.9,
+            "performerIds": [
+              4,
+              5
+            ],
+            "region": {
+              "assetHash": "1d7c71e74ba455c2d9b3dd7ab402009462982f16fc892f6329d65d061bd6f9c5",
+              "startFrame": 0,
+              "endFrame": 366030,
+              "mode": "PITCHED",
+              "referenceMidi": 48,
+              "sustainStartFrame": 26460,
+              "sustainEndFrame": 46305
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "round-response",
+      "title": "ROUND RESPONSE",
+      "description": "A rounded oo recording supports a smaller upper group and three clear wordless responders. A drier room and shorter answer gap keep the exchange close.",
+      "roleVoiceIds": {
+        "FOUNDATION": "round-oo",
+        "AIRY": "breathy-arc",
+        "ANSWER": "clear-arc"
+      },
+      "recipe": {
+        "engine": "CONFLUENCE_ASSEMBLY_PROTOTYPE",
+        "schema": 1,
+        "model": 1,
+        "analysis": 1,
+        "name": "ROUND RESPONSE",
+        "seed": 20261020,
+        "seconds": 24,
+        "space": 0.08,
+        "divergence": 0.35,
+        "callStartSeconds": 0.65,
+        "answerDelaySeconds": 0.2,
+        "exchangeRestSeconds": 0.7,
+        "breathSeconds": 0.16,
+        "roles": [
+          {
+            "role": "FOUNDATION",
+            "gain": 0.62,
+            "performerIds": [
+              0,
+              1,
+              2
+            ],
+            "region": {
+              "assetHash": "47d640b60102af5b5a2295f4ddbd85e28b7025b22a956e251cf4809149f17d6f",
+              "startFrame": 0,
+              "endFrame": 156555,
+              "mode": "PITCHED",
+              "referenceMidi": 48,
+              "sustainStartFrame": 26460,
+              "sustainEndFrame": 110250
+            }
+          },
+          {
+            "role": "AIRY",
+            "gain": 0.33,
+            "performerIds": [
+              3,
+              4
+            ],
+            "region": {
+              "assetHash": "eea7047d3498d3841d71c28891714253d17775ecc2506e87067a1939b608afcb",
+              "startFrame": 0,
+              "endFrame": 317520,
+              "mode": "PITCHED",
+              "referenceMidi": 60,
+              "sustainStartFrame": 17640,
+              "sustainEndFrame": 35280
+            }
+          },
+          {
+            "role": "ANSWER",
+            "gain": 1.1,
+            "performerIds": [
+              5,
+              6,
+              7
+            ],
+            "region": {
+              "assetHash": "1d7c71e74ba455c2d9b3dd7ab402009462982f16fc892f6329d65d061bd6f9c5",
+              "startFrame": 0,
+              "endFrame": 366030,
+              "mode": "PITCHED",
+              "referenceMidi": 48,
+              "sustainStartFrame": 26460,
+              "sustainEndFrame": 46305
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

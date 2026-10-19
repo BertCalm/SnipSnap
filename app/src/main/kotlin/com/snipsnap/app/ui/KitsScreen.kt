@@ -1209,6 +1209,7 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
         Column(
             Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(0.9f)
                 .padding(12.dp)
                 .raisedBevel(scheme)
                 // Swallow taps so the scrim's dismiss doesn't fire through.
@@ -1222,32 +1223,26 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText("PICK A STARTER", TapeType.display, scheme.ink.tape)
-            // This Column does NOT scroll, so the roster has a ceiling
-            // rather than merely a length: a row past the bottom of the
-            // frame is a starter nobody can reach, with nothing on screen
-            // to say it is there. Measured when SKIN made it nine: a row
-            // is ~39dp with a one-line blurb and ~49dp with two, so nine
-            // rows plus the heading and padding come to ~554dp of
-            // Layout.FRAME_H's 844 at the worst case - about five rows of
-            // headroom left.
-            // Whoever spends them adds a verticalScroll here first.
-            for (starter in StarterKits.ALL) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .sunkenField(scheme)
-                        .tapeClick(label = "PICK ${starter.displayName.uppercase()}") { onPick(starter) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TapeText(starter.displayName, TapeType.display, scheme.ink.tape)
-                        if (starter.seeded) {
-                            Spacer(Modifier.width(6.dp))
-                            TapeText("TAPS REROLL", TapeType.pixelSmall, scheme.ink2.tape)
+            // Keep the heading visible and every starter reachable as the roster grows.
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(StarterKits.ALL, key = { it.id }) { starter ->
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .sunkenField(scheme)
+                            .tapeClick(label = "PICK ${starter.displayName.uppercase()}") { onPick(starter) }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TapeText(starter.displayName, TapeType.display, scheme.ink.tape)
+                            if (starter.seeded) {
+                                Spacer(Modifier.width(6.dp))
+                                TapeText("TAPS REROLL", TapeType.pixelSmall, scheme.ink2.tape)
+                            }
                         }
+                        TapeText(starter.blurb, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                     }
-                    TapeText(starter.blurb, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 }
             }
         }

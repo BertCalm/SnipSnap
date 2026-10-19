@@ -1,10 +1,11 @@
-# Confluence — recorded-source and three-role audition
+# Confluence — wordless starter voices
 
 Confluence turns supplied vocal regions into a small, independently scheduled
 ensemble and renders ordinary mono samples for SnipSnap's kit workflow. The
-original proof asks whether increasing the number of persistent performers sounds
-like people joining. The next arrangement gives that gathering three explicit
-roles: a low foundation, a real breathy upper group and a clear answering phrase.
+starter bank supplies four actual wordless vowel colors and three finite
+arrangements. Its main gathering has a low foundation, a real breathy upper call
+and a clear wordless answer. The earlier Row Row Row Your Boat recordings remain
+as historical scheduling demonstrations; they are not factory bank sources.
 The owner's listening verdict remains open.
 
 The supplied [engineering specification](CONFLUENCE_SPEC.md) is retained unchanged
@@ -35,18 +36,50 @@ as the long-term proposal. This document describes the smaller implemented stage
   produces the complete finite gathering and role stems from one schedule.
   This adds no profile to the original recipe and changes none of its saved
   source assignments or rendering behavior.
+- `ConfluenceVoiceBank.bundled()` loads four canonical recorded voices and three
+  playable assembly presets from packaged resources. `fromDirectory` and `load`
+  provide the same verified bank through explicit source locations. File hashes,
+  canonical PCM identities, eligible roles and provenance are checked on load.
+- The existing FRESH TAPE catalogue includes CONFLUENCE. Its eight pads are four
+  recorded vowel gestures, three gatherings and the main gathering's low/air
+  contribution. They use the bank's public `arrangedPads()` path and carry a
+  portable source bank beside the kit. These are finite one-shot samples in the
+  normal pad workflow, with ordinary audio editing and effects. Their source
+  metadata retains the bank identities and assembly JSON; they do not expose
+  Confluence synthesis controls as a normal typed `Patch`.
 
-No normal `Patch` registration, Android editor, playable factory presets,
-keyboard multisample instrument or HOLD is included in this stage. The existing
-`Patch.render()` contract remains unchanged. The ordinary rendered kit is a
-playback artifact, while the source bundle preserves editing/reproduction inputs.
+No normal `Patch` registration, dedicated source editor, keyboard multisample
+instrument or HOLD is included in this stage. The existing `Patch.render()`
+contract remains unchanged. Ordinary rendered kits provide playback; the native
+voice bank preserves sources and exact finite arrangement recipes.
+Playback uses the kit's WAVs. The adjacent `confluence-voice-bank` folder is only
+needed to replay the source arrangement through the bank API.
+
+## Use the bank
+
+```kotlin
+val bank = ConfluenceVoiceBank.bundled()
+val report = bank.render(bank.mainPresetId) // FIRST GATHERING
+val sample = report.mix
+
+// The exported native bank uses the same validated loader.
+val copiedBank = ConfluenceVoiceBank.fromDirectory(bankDirectory)
+val rounder = copiedBank.render("round-response")
+```
+
+The voices are LOW AH, BREATHY ARC, CLEAR ARC and ROUND OO: a low `/a/` sustain,
+a complete breathy `/a/` arpeggio, a clear wordless `/a/` arpeggio and a rounded
+`/u/` sustain. These are four recordings from two singers, not four newly created
+people. Native pitch and melodic contour are retained. The three presets are
+FIRST GATHERING, BREATHING ROOM and ROUND RESPONSE; their saved recipes vary the
+roster, role balance, foundation vowel and room.
 
 ## Reproduce the audition
 
 From the repository root, with Java 17 or newer:
 
 ```sh
-./gradlew --no-daemon :synth:test --tests '*ConfluenceTest'
+./gradlew --no-daemon :synth:test --tests '*ConfluenceTest' --tests '*ConfluenceVoiceBankTest'
 ./gradlew --no-daemon :synth:generateConfluenceAudition
 python scripts/build-confluence-audition-site.py
 ./gradlew --no-daemon test
@@ -66,18 +99,21 @@ as well as the marked sustain.
 The generator writes real recorded-source WAVs under
 `testkit/confluence-audition/`, with raw/matched files, exact recipes,
 measurements, source provenance and causal event traces. It also packages a
-rendered MPC kit and a compact source/recipe bundle. The staging script combines
+wordless native bank ZIP and a separate eight-pad MPC playback kit. The earlier
+Row demonstration kit and full source/recipe history remain separate downloads.
+Each archive stays within the hosting file limit; no all-in-one playback archive
+is required. The staging script combines
 that evidence with `design/confluence-audition/` into the buildless listening
 page under `testkit/confluence-audition-site/`. Generated evidence is ignored by
 Git; the renderer, generator, page source and vocal fixtures are retained.
 
 ## What to listen for
 
-Start with the three-role study: low foundation, airy upper group, clear answer,
+Start with the wordless starter study: low foundation, airy upper group, clear answer,
 foundation plus airy voices, then the complete gathering. These 24-second clips
 share one arrangement: three low voices, three upper variants and two responders.
-One complete 7.20-second breathy arpeggio call finishes before the 7.25-second
-answering phrase begins; foundation voices take individual breath rests
+One complete 7.20-second breathy arpeggio call finishes before the 8.30-second
+clear wordless arpeggio begins; foundation voices take individual breath rests
 underneath and continue into a quiet coda. Every source retains its native pitch
 range and melodic contour, with only the existing small identity deviations.
 The audition checks that the upper and answering source durations are comparable
@@ -91,7 +127,12 @@ which roles are audible. The raw role stems reconstruct the full raw gathering;
 the generator records the maximum reconstruction error and verifies a moved-source
 assembly rerender.
 
-The original study remains available. Begin with the source and the dry, matched
+The three complete bank presets are also available at individually matched
+levels. Their native kit export uses the bank's normal engine leveling, which
+is recorded separately from audition comparison gains.
+
+The original study remains available, including the explicitly labeled Row
+demonstration. Begin with the source and the dry, matched
 1/2/4/8 comparison. Compare the existing
 six-player SECTION effect, independent Confluence scheduling, and the two-singer
 version. Judge the vowel and articulated phrase separately. More performers
@@ -126,14 +167,17 @@ or tradition-specific performance claim is made. Vocal transformation does not
 create additional recorded singers: single-source clips are transformed variants
 of one recording; the two-singer comparisons use separately supplied singers.
 
-The three-role study uses VocalSet male singer 3's low sustained `/a/`, female
-singer 1's actual **breathy** `/a/` arpeggio and male singer 1's articulated phrase.
+The wordless study uses VocalSet male singer 3's low sustained `/a/`, female
+singer 1's actual **breathy** `/a/` arpeggio and male singer 3's complete straight
+`/a/` arpeggio as the clear answer. ROUND OO uses another complete male singer 3
+`/u/` gesture. The factory source pack excludes the nursery-song recordings.
 The upper source now preserves the complete 7.20-second native C4–C5–C4 arpeggio,
 with its natural quiet entrance and release. It uses constant gain without added
 fades; no short vowel was stretched or repeated to manufacture a longer call.
-This replaces the earlier 1.20-second final-vowel excerpt, which left the upper
-voice too brief beside the answer. The earlier short excerpt and its explicit
-80 ms entrance-fade metadata remain as a separate retained fixture.
+The clear source retains its complete 8.30-second C3–C4–C3 arpeggio, also with its
+natural entrance and release. No words are synthesized or inferred from these
+vowels. The earlier short breathy excerpt and its explicit 80 ms entrance-fade
+metadata remain as a separate retained fixture, outside the factory bank.
 
 Breathiness comes from the recorded performance, without adding synthesized
 breath or treating ordinary EQ as a different singing technique. `source_airy`
@@ -141,7 +185,10 @@ exposes the full new arpeggio before ensemble processing. The source and rendere
 downloads retain the attribution, CC BY 4.0 link and source-specific modification
 notices.
 
-The source bundle has the canonical sources and recipes required to rerender
+The native wordless bank ZIP contains its exact manifest, four referenced WAVs,
+licence and attribution; the generator verifies a moved-directory replay through
+the public bank loader. The wider historical source bundle has the canonical
+sources and recipes required to rerender
 without relying on local paths or caches. The generator checks a moved-directory
 rerender. MPC WAV/XPM/XTD/XPN output contains rendered playback, not a Confluence
 engine running on the MPC. Broad pitch changes, rough/multiphonic sources,

@@ -9,6 +9,7 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.ExpansionMeta
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Mpc3Exporter
@@ -24,9 +25,9 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * A source-based feasibility audition, not a production engine or a playable factory preset pack.
- * All vocal content comes from the attributed human recordings in the fixture manifest. Raw and
- * matched WAVs, exact recipes and event traces travel together; this generator never writes HTML.
+ * An audition of the usable wordless starter bank and retained source-based engineering proofs.
+ * All vocal content comes from attributed human recordings. Raw and matched WAVs, exact recipes,
+ * event traces and portable source assets travel together; this generator never writes HTML.
  */
 object ConfluenceAuditionGenerator {
     private const val GENERATOR_VERSION = 2
@@ -56,7 +57,9 @@ object ConfluenceAuditionGenerator {
     )
 
     private val groups = listOf(
-        group("roles", "A gathering with three roles", "Hear the low foundation, the actual breathy upper source and the clear answering phrase separately, then together. Every part keeps the complete gathering's schedule and the same playback gain; leave the volume unchanged to hear their balance."),
+        group("wordless", "The wordless starter gathering", "Hear the actual bundled bank: low foundation, complete breathy arpeggio and clear wordless answer, then the gathering. The isolated parts retain its schedule and common gain."),
+        group("bank_presets", "Three playable wordless presets", "These finite arrangements render through the same public bank loader used by the app. Each full preset is matched for comparison; the native bank and rendered kit downloads keep their separate purposes."),
+        group("demo_roles", "Earlier Row Row demonstration", "Historical phrase-scheduling proof using Row Row Row Your Boat. These clips are retained as a demonstration and are excluded from the wordless starter bank."),
         group("source", "Original recordings and existing SECTION", "Hear the actual human recordings first. The existing six-player SECTION comparison uses the same untransformed vowel timeline at WIDTH 0. Every file is mono."),
         group("crowd", "One voice becomes a gathering", "One, two, four and eight persistent transformed variants of the same singer. Matched playback uses the same loudest-window RMS; raw playback retains the engine's crowd gain."),
         group("behavior", "Complete phrases and individual breaths", "UNISON and RESPONSE schedule complete marked source phrases; DRONE uses the marked sustained vowel. These are deterministic finite renders, without HOLD."),
@@ -126,6 +129,7 @@ object ConfluenceAuditionGenerator {
                     "renderMilliseconds" to renderMs, "engine" to diagnostics,
                 ))) + "\n")
             }
+            val containsLyrics = (extra["sourceIds"] as? List<*>)?.contains(primaryPhrase.id) == true
             clips += linkedMapOf<String, Any?>(
                 "id" to id, "group" to group, "title" to title, "description" to description,
                 "seconds" to audio.durationSeconds, "frames" to audio.frameCount,
@@ -140,6 +144,9 @@ object ConfluenceAuditionGenerator {
                 "matchedGain" to matchedGain, "matchingPolicy" to matchingPolicy,
                 "matchedReferenceId" to sharedGains?.referenceId,
                 "renderMilliseconds" to renderMs, "finite" to true,
+                "containsLyrics" to containsLyrics,
+                "contentClass" to if (containsLyrics || group == "demo_roles") "historical-demo" else "engineering-proof",
+                "repertoire" to if (containsLyrics || group == "demo_roles") "Row Row Row Your Boat demonstration" else null,
             ) + extra
             renderedById[id] = matched
             println("Confluence audition ${clips.size}: $id (${audio.durationSeconds}s, ${renderMs.toInt()} ms)")
@@ -282,7 +289,7 @@ object ConfluenceAuditionGenerator {
                 put("stemSumRawMaximumAbsoluteError", json(stemSumError))
                 put("roleExposure", json(roleExposure))
             })
-            record(case.id, "roles", case.title, case.description, audio, recipeJson, diagnostics, assemblyMs,
+            record(case.id, "demo_roles", case.title, case.description, audio, recipeJson, diagnostics, assemblyMs,
                 linkedMapOf(
                     "profile" to "ASSEMBLY", "performerCount" to assemblyRecipe.roles.filter { it.role in case.roles }.sumOf { it.performerIds.size },
                     "rosterCount" to 8, "roleIds" to case.roles.map { it.name },
@@ -294,9 +301,81 @@ object ConfluenceAuditionGenerator {
                 ), familyGains)
         }
         val assemblyPortableCheck = verifyMovedAssembly(root, assemblyRecipe, assembly.mix)
+
+        // The main study comes from the public bundled bank, not an audition-only recipe.
+        val bank = ConfluenceVoiceBank.bundled()
+        val bankDirectory = copyStarterBank(root, bank)
+        val bankPreset = bank.preset(bank.mainPresetId)
+        val bankSources = bankPreset.roleVoiceIds.mapValues { (_, voiceId) ->
+            val voice = bank.voice(voiceId)
+            fixtures.single { it.id == voice.fixtureId }.also {
+                check(it.source.hash == voice.region.assetHash) { "bank fixture does not match its canonical source: ${voice.id}" }
+            }
+        }
+        val wordlessAnswer = bankSources.getValue(ConfluenceRole.ANSWER)
+        record("source_wordless_answer", "source", "Original clear wordless arpeggio",
+            "The complete recorded vowel arpeggio assigned to the starter bank's clear answer. It contains no lyrics and retains the source's native contour.",
+            referenceTimeline(wordlessAnswer, maxOf(10f, regionSeconds(wordlessAnswer) + 1.5f)),
+            referenceRecipe(wordlessAnswer, maxOf(10f, regionSeconds(wordlessAnswer) + 1.5f), "source"),
+            json(mapOf("operation" to "source-playback", "performerCount" to 1)) as JsonValue.Obj, 0.0,
+            mapOf("sourceIds" to listOf(wordlessAnswer.id), "performerCount" to 1, "profile" to "SOURCE",
+                "wordless" to true, "contentClass" to "starter-bank", "bankId" to bank.id))
+        val bankStarted = System.nanoTime()
+        val bankReport = bank.render(bank.mainPresetId, normalize = false)
+        val bankMs = elapsed(bankStarted)
+        val bankExposure = assemblyExposure(bankPreset.recipe, bankReport, bankSources.mapValues { it.value.id })
+        val bankRatio = regionSeconds(bankSources.getValue(ConfluenceRole.AIRY)) / regionSeconds(wordlessAnswer)
+        require(bankRatio in .75f..1.5f) { "the wordless study requires comparable complete call and answer source durations" }
+        val bankStemError = bankReport.raw.indices.maxOf {
+            abs(sumAt(bankReport.rawStems, it) - bankReport.raw[it])
+        }
+        check(bankStemError <= 2e-6f) { "wordless bank stems do not reconstruct their full mix" }
+        val bankGains = SharedGains(minOf(1f, .99f / bankReport.mix.peak().coerceAtLeast(1e-9f)),
+            AuditionLevel.level(bankReport.mix).peak() / bankReport.mix.peak().coerceAtLeast(1e-9f), "wordless_gathering")
+        val wordlessCases = listOf(
+            RoleCase("wordless_low_foundation", "Low wordless foundation", "The starter bank's low vowel foundation, isolated from the full arrangement with its original schedule and gain.", setOf(ConfluenceRole.FOUNDATION)),
+            RoleCase("wordless_airy_upper", "Complete breathy wordless call", "The bank's genuine breathy arpeggio, with its complete native contour and natural release. The other roles are silent; its gain is unchanged.", setOf(ConfluenceRole.AIRY)),
+            RoleCase("wordless_clear_answer", "Clear wordless answer", "A complete clear vowel arpeggio answers the breathy phrase. These are recorded wordless gestures; the engine adds no lyrics.", setOf(ConfluenceRole.ANSWER)),
+            RoleCase("wordless_foundation_airy", "Foundation and breathy call", "The low foundation and breathy call from the same bank arrangement, before adding the wordless answering role.", setOf(ConfluenceRole.FOUNDATION, ConfluenceRole.AIRY)),
+            RoleCase("wordless_gathering", "The wordless starter gathering", "The actual bundled starter preset: low vowel foundation, complete breathy call and clear wordless answer. The isolated parts above share this exact schedule and gain.", ConfluenceRole.entries.toSet()),
+        )
+        for (case in wordlessCases) {
+            val audio = if (case.roles.size == ConfluenceRole.entries.size) bankReport.mix else sum(case.roles.map { bankReport.rawStems.getValue(it) })
+            val events = bankReport.events.filter { it.role in case.roles }
+            val wrapper = bankRecipe(bank, bankPreset, case.roles, bankGains)
+            val diagnostics = JsonValue.Obj(LinkedHashMap(bankReport.diagnosticsJson().entries).apply {
+                put("selectedRoles", json(case.roles.map { it.name })); put("allRolesScheduled", JsonValue.Bool(true))
+                put("roleExposure", json(bankExposure)); put("bankId", json(bank.id)); put("bankPresetId", json(bankPreset.id))
+            })
+            record(case.id, "wordless", case.title, case.description, audio, wrapper, diagnostics, bankMs,
+                mapOf("profile" to "ASSEMBLY", "performerCount" to bankPreset.recipe.roles.filter { it.role in case.roles }.sumOf { it.performerIds.size },
+                    "rosterCount" to bankReport.performers.size, "roleIds" to case.roles.map { it.name },
+                    "firstEntranceSeconds" to events.filter { it.state == "ENTER" }.minOf { it.startFrame } / 44_100.0,
+                    "lastReleaseSeconds" to events.filter { it.state == "RELEASE" }.maxOf { it.endFrame } / 44_100.0,
+                    "sourceIds" to case.roles.map { bankSources.getValue(it).id }, "assemblySourceIds" to bankSources.values.map { it.id },
+                    "wordless" to true, "contentClass" to "starter-bank", "bankId" to bank.id, "bankVersion" to bank.version, "bankPresetId" to bankPreset.id,
+                    "evidence" to mapOf("sharedSchedule" to true, "sharedMasterGain" to true, "hold" to false,
+                        "fullGatheringReferenceId" to "wordless_gathering", "completedExchanges" to bankReport.exchanges,
+                        "stemSumRawMaximumAbsoluteError" to bankStemError, "roleExposure" to bankExposure)), bankGains)
+        }
+        for (preset in bank.presets) {
+            val started = System.nanoTime()
+            val report = if (preset.id == bank.mainPresetId) bankReport else bank.render(preset.id, normalize = false)
+            val elapsedMs = if (preset.id == bank.mainPresetId) bankMs else elapsed(started)
+            record("bank_${preset.id.replace('-', '_')}", "bank_presets", preset.title, preset.description,
+                report.mix, bankRecipe(bank, preset, ConfluenceRole.entries.toSet()), report.diagnosticsJson(), elapsedMs,
+                mapOf("profile" to "ASSEMBLY", "performerCount" to report.performers.size, "rosterCount" to report.performers.size,
+                    "roleIds" to ConfluenceRole.entries.map { it.name },
+                    "sourceIds" to preset.roleVoiceIds.values.map { bank.voice(it).fixtureId }.distinct(),
+                    "wordless" to true, "contentClass" to "starter-bank", "bankId" to bank.id, "bankVersion" to bank.version, "bankPresetId" to preset.id))
+        }
+        val bankPortableCheck = verifyMovedBank(bankDirectory, bank.mainPresetId, bankReport.mix)
+        writeZip(root, File(root, "confluence-wordless-starter-bank.zip"),
+            listOf("starter-bank/README.txt", "starter-bank/SOURCE-ATTRIBUTION.txt") + bank.assetPaths.map { "starter-bank/$it" })
+        val wordlessKit = writeWordlessKit(root, bank)
         val kit = writeRenderedKit(root, clips, renderedById)
         val manifest = linkedMapOf<String, Any?>(
-            "schemaVersion" to GENERATOR_VERSION, "title" to "Confluence · a gathering in three roles",
+            "schemaVersion" to GENERATOR_VERSION, "title" to "Confluence · wordless starter voices",
             "engineVersion" to Confluence.MODEL, "analysisVersion" to Confluence.ANALYSIS_VERSION, "generatorVersion" to GENERATOR_VERSION,
             "implementationSources" to implementationSources,
             "runtime" to runtime(),
@@ -305,16 +384,30 @@ object ConfluenceAuditionGenerator {
             "matchedLoudestWindowRmsTarget" to MATCHED_LOUDEST_WINDOW_RMS,
             "levelPolicy" to "Existing proof clips: repository AuditionLevel, loudest 200 ms filtered RMS .03 with .99 peak guard. Three-role family: one matched gain derived from the full gathering, also applied to every stem and pair; isolated parts intentionally remain quieter. Raw: prelevel renderer output, with the same full-derived peak guard across the role family. Silence and rests are not removed.",
             "status" to "feasibility-prototype-awaiting-owner-listening",
-            "scope" to "Actual licensed human vocal sources; conservative offline transformed variants, persistent seeded roster, complete phrase schedules and a shared mono room. No 48-voice or seamless HOLD claim; no native patch/kit editing integration.",
+            "scope" to "A usable packaged wordless source bank and finite presets, auditioned through its public loader, plus retained historical engineering demonstrations. Conservative offline variants, persistent roster, complete phrase schedules and shared mono room; no 48-voice, seamless HOLD or dedicated source-editor claim.",
             "limitations" to listOf("A transformed copy is not a new human singer.", "Pitch/formant quality and phrase-boundary integrity still need listening.",
                 "Phrase regions were selected from source pauses and waveform/pitch continuity; individual words were not verified by listening or transcription.",
                 "Coordination changes bounded future entrance timing only; no pitch-consensus model is implemented.",
-                "The source bundle is a reproducible prototype archive, not a native SnipSnap project.", "The rendered MPC kit needs no source assets for playback; editing the prototype needs the separate source bundle."),
+                "The full source bundle retains historical engineering proofs; the separate wordless native bank is loaded by ConfluenceVoiceBank.", "Rendered MPC and app pads play ordinary WAVs; source-level replay uses the native bank and its saved arrangement recipes."),
             "sources" to sourceRecords,
             "sourceProvenance" to fixtureJson.filterKeys { it != "sources" }.mapValues { native(it.value) },
             "groups" to groups, "clips" to clips,
             "portableSourceCheck" to portableCheck, "renderedKit" to kit,
             "assemblyPortableSourceCheck" to assemblyPortableCheck,
+            "wordlessAssembly" to mapOf("referenceId" to "wordless_gathering", "roleIds" to ConfluenceRole.entries.map { it.name },
+                "performersPerRole" to bankPreset.recipe.roles.associate { it.role.name to it.performerIds.size },
+                "seconds" to bankPreset.recipe.seconds, "matchingPolicy" to "shared-gathering-gain", "matchedGain" to bankGains.matched,
+                "rawExportGain" to bankGains.raw, "completedExchanges" to bankReport.exchanges,
+                "airySourceSeconds" to regionSeconds(bankSources.getValue(ConfluenceRole.AIRY)), "answerSourceSeconds" to regionSeconds(wordlessAnswer),
+                "airyToAnswerSourceDurationRatio" to bankRatio, "roleExposure" to bankExposure, "stemSumRawMaximumAbsoluteError" to bankStemError),
+            "starterVoiceBank" to mapOf("id" to bank.id, "version" to bank.version, "mainPresetId" to bank.mainPresetId,
+                "zipPath" to "confluence-wordless-starter-bank.zip", "manifestPath" to "starter-bank/bank.json",
+                "manifestSha256" to sha256(File(bankDirectory, "bank.json")), "voices" to bank.voices.map { mapOf("id" to it.id, "title" to it.title, "wordless" to it.wordless, "fixtureId" to it.fixtureId,
+                    "styles" to it.styles, "technique" to it.technique, "roles" to it.roles.map { role -> role.name },
+                    "audioPath" to "starter-bank/${it.assetPath}", "fileSha256" to it.fileSha256) },
+                "presetIds" to bank.presets.map { it.id }, "portableSourceCheck" to bankPortableCheck,
+                "scope" to "Canonical recorded wordless voices and playable finite assembly recipes, loaded by ConfluenceVoiceBank. The Row demonstration is excluded."),
+            "wordlessRenderedKit" to wordlessKit,
             "assembly" to mapOf("referenceId" to "role_gathering", "roleIds" to ConfluenceRole.entries.map { it.name },
                 "performersPerRole" to assemblyRecipe.roles.associate { it.role.name to it.performerIds.size },
                 "seconds" to assemblyRecipe.seconds, "matchingPolicy" to "shared-gathering-gain",
@@ -329,10 +422,10 @@ object ConfluenceAuditionGenerator {
         File(root, "manifest.json").writeText(Json.write(json(manifest)) + "\n")
         File(root, "SOURCE-BUNDLE.txt").writeText(
             "Confluence recorded-source and three-role audition.\n\nRecipes and canonical human-source WAVs are bundled with their content hashes and license attribution. " +
-                "This is a prototype replay archive, not a native SnipSnap project. Use the matching repository revision and Confluence.render or ConfluenceAssembly.render with the recipe's options. " +
+                "This historical replay archive is separate from the compact native wordless bank. Use the matching repository revision and Confluence.render, ConfluenceAssembly.render or ConfluenceVoiceBank with the recipe's options. " +
                 "The assembly's isolated roles use the full gathering's schedule and common playback gains. The generator verifies both recipe types after moving their inputs to a new temporary directory. See manifest.json and sources/fixture-manifest.json.\n"
         )
-        writeZip(root, File(root, "confluence-source-bundle.zip"), listOf("manifest.json", "SOURCE-BUNDLE.txt", "sources", "recipes", "diagnostics", "implementation"))
+        writeZip(root, File(root, "confluence-source-bundle.zip"), listOf("manifest.json", "SOURCE-BUNDLE.txt", "sources", "recipes", "diagnostics", "implementation", "starter-bank"))
         println("Wrote ${clips.size} raw/matched pairs, exact recipes, traces, source bundle and rendered kit under $root")
     }
 
@@ -427,6 +520,7 @@ object ConfluenceAuditionGenerator {
             "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceRecipe.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceVoice.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceAssembly.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/ConfluenceVoiceBank.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/ConfluenceAuditionGenerator.kt")
         return paths.map { path ->
             val source = File(repo, path)
@@ -490,6 +584,88 @@ object ConfluenceAuditionGenerator {
         } finally { moved.deleteRecursively() }
     }
 
+    private fun assemblyExposure(recipe: ConfluenceAssemblyRecipe, report: ConfluenceAssemblyReport, sourceIds: Map<ConfluenceRole, String>): Map<String, Any?> =
+        recipe.roles.associate { spec ->
+            val entrances = report.events.filter { it.role == spec.role && it.state == "ENTER" }
+            val durations = entrances.map { entrance ->
+                val release = report.events.single { it.role == spec.role && it.performerId == entrance.performerId &&
+                    it.eventIndex == entrance.eventIndex && it.state == "RELEASE" }
+                (release.endFrame - entrance.startFrame) / 44_100f
+            }
+            spec.role.name to mapOf("sourceId" to sourceIds.getValue(spec.role),
+                "sourceRegionSeconds" to if (spec.role == ConfluenceRole.FOUNDATION)
+                    (spec.region.sustainEndFrame!! - spec.region.sustainStartFrame!!) / 44_100f else (spec.region.endFrame - spec.region.startFrame) / 44_100f,
+                "completePhrasesPerPerformer" to entrances.groupingBy { it.performerId }.eachCount().mapKeys { it.key.toString() },
+                "minimumPerformedPhraseSeconds" to durations.minOrNull(), "maximumPerformedPhraseSeconds" to durations.maxOrNull(),
+                "firstEntranceSeconds" to entrances.minOf { it.startFrame } / 44_100.0,
+                "lastReleaseSeconds" to report.events.filter { it.role == spec.role && it.state == "RELEASE" }.maxOf { it.endFrame } / 44_100.0)
+        }
+
+    private fun bankRecipe(bank: ConfluenceVoiceBank, preset: ConfluenceBankPreset, roles: Set<ConfluenceRole>, gains: SharedGains? = null): JsonValue.Obj =
+        json(linkedMapOf("format" to "snipsnap-confluence-bank-audition", "version" to GENERATOR_VERSION,
+            "assembly" to Json.parse(preset.recipe.toJsonText()), "selectedRoles" to roles.map { it.name }, "normalize" to false,
+            "bankId" to bank.id, "bankVersion" to bank.version, "bankPresetId" to preset.id,
+            "bankManifestPath" to "starter-bank/bank.json", "wordless" to true,
+            "roleVoiceIds" to preset.roleVoiceIds.mapKeys { it.key.name },
+            "sourceIds" to preset.roleVoiceIds.values.map { bank.voice(it).fixtureId }.distinct(),
+            "sourcePaths" to preset.roleVoiceIds.values.map { "starter-bank/${bank.voice(it).assetPath}" }.distinct(),
+            "sourcePcmHashes" to preset.roleVoiceIds.values.map { bank.voice(it).region.assetHash }.distinct(),
+            "playbackGains" to gains?.let { mapOf("raw" to it.raw, "matched" to it.matched, "referenceId" to it.referenceId) })) as JsonValue.Obj
+
+    private fun copyStarterBank(root: File, bank: ConfluenceVoiceBank): File {
+        val directory = File(root, "starter-bank").apply { mkdirs() }
+        bank.writePortableBank(directory, overwrite = true)
+        File(directory, "README.txt").writeText(
+            "Confluence wordless starter bank ${bank.version}\n\n" +
+                "Recorded wordless vowel sources and finite arrangement presets. No nursery-song recordings are included.\n" +
+                "Load this folder with ConfluenceVoiceBank.fromDirectory(folder), then bank.render(bank.mainPresetId). " +
+                "The same bank is bundled for app use through ConfluenceVoiceBank.bundled().\n" +
+                "The recordings retain their CC BY 4.0 attribution and source-specific modification notices in bank.json; see the licence text.\n")
+        val loaded = ConfluenceVoiceBank.fromDirectory(directory)
+        check(loaded.id == bank.id && loaded.version == bank.version && loaded.voices.all { it.wordless })
+        return directory
+    }
+
+    private fun verifyMovedBank(directory: File, presetId: String, expected: Snip): Map<String, Any?> {
+        val moved = Files.createTempDirectory("confluence-native-bank-check-").toFile()
+        return try {
+            directory.copyRecursively(File(moved, "bank"), overwrite = true)
+            val loaded = ConfluenceVoiceBank.fromDirectory(File(moved, "bank"))
+            val actual = loaded.render(presetId, normalize = false).mix
+            check(expected.samples.contentEquals(actual.samples)) { "moved native bank changed its samples" }
+            mapOf("passed" to true, "sampleIdentical" to true, "presetId" to presetId,
+                "method" to "Loaded the packaged bank from a different directory through ConfluenceVoiceBank.fromDirectory, with fresh assets and no audition resolver.")
+        } finally { moved.deleteRecursively() }
+    }
+
+    private fun writeWordlessKit(root: File, bank: ConfluenceVoiceBank): Map<String, Any?> {
+        val arranged = bank.arrangedPads()
+        check(arranged.size == 8 && arranged.count { it != null } == 8) { "the native wordless starter bank must produce eight pads" }
+        val directory = File(root, "wordless-rendered-kit/Confluence Wordless Starter")
+        val kit = KitAssembler.assembleArranged("Confluence Wordless Starter", arranged, directory)
+        val credit = bank.attributionText
+        File(root, "wordless-rendered-kit/SOURCE-ATTRIBUTION.txt").writeText(credit + "\n")
+        File(root, "starter-bank/LICENSE-CC-BY-4.0.txt").copyTo(File(root, "wordless-rendered-kit/LICENSE-CC-BY-4.0.txt"), overwrite = true)
+        val findings = Preflight.check(kit, directory)
+        check(findings.none { it.severity == Severity.FAIL })
+        Mpc3Exporter.exportTrack(kit, directory, File(root, "wordless-rendered-kit/mpc"), overwrite = true, mpc2Twin = true)
+        val xpn = File(root, "confluence-wordless-rendered-kit.xpn")
+        XpnPackager.write(kit, directory, xpn, ExpansionMeta("Confluence Wordless Starter",
+            identifier = "app.snipsnap.confluence.wordless.starter", version = "${bank.version}.0.0", description = credit), overwrite = true)
+        val zip = File(root, "confluence-wordless-rendered-kit.zip")
+        var contents = listOf("wordless-rendered-kit")
+        writeZip(root, zip, contents)
+        if (zip.length() > 25L * 1024 * 1024) {
+            contents = listOf("wordless-rendered-kit/mpc", "wordless-rendered-kit/SOURCE-ATTRIBUTION.txt", "wordless-rendered-kit/LICENSE-CC-BY-4.0.txt")
+            writeZip(root, zip, contents)
+        }
+        check(zip.length() <= 25L * 1024 * 1024 && xpn.length() <= 25L * 1024 * 1024) { "wordless playback package exceeds hosting limit" }
+        return mapOf("xpnPath" to xpn.name, "zipPath" to zip.name, "nativeKitPath" to "wordless-rendered-kit/Confluence Wordless Starter/kit.json",
+            "pads" to kit.pads.size, "bankId" to bank.id, "bankVersion" to bank.version, "wordless" to true,
+            "preflight" to findings.map { mapOf("severity" to it.severity.name, "message" to it.message) }, "zipContents" to contents,
+            "levelPolicy" to "Actual public bank.arrangedPads output at its normal engine level; audition comparisons use their separately documented matched gains.")
+    }
+
     private fun writeRenderedKit(root: File, clips: List<Map<String, Any?>>, audio: Map<String, Snip>): Map<String, Any?> {
         val provenance = Json.parse(File(root, "sources/fixture-manifest.json").readText()).obj()
         val originalCredit = provenance.getValue("sources").arr().first().obj().getValue("attribution").str()
@@ -530,7 +706,8 @@ object ConfluenceAuditionGenerator {
             "nativeKitPath" to "rendered-kit/Confluence First Proof/kit.json", "pads" to ids.size,
             "caseIds" to ids, "preflight" to findings.map { mapOf("severity" to it.severity.name, "message" to it.message) },
             "zipContents" to zipContents,
-            "editableEngine" to false, "levelPolicy" to "The same matched 24-bit audio heard on the audition page; ordinary unpitched pads, no implicit auto-retune.")
+            "editableEngine" to false, "contentClass" to "historical-demo", "containsLyrics" to true,
+            "label" to "Earlier Row Row demonstration kit", "levelPolicy" to "Historical demonstration audio, including Row Row Row Your Boat; excluded from the wordless starter bank. Same audition matching as the earlier study.")
     }
 
     private fun writeZip(root: File, output: File, paths: List<String>) {
@@ -559,6 +736,7 @@ object ConfluenceAuditionGenerator {
         require(parts.isNotEmpty() && parts.all { it.channels == 1 && it.sampleRate == 44_100 && it.frameCount == parts.first().frameCount })
         return Snip(FloatArray(parts.first().frameCount) { i -> parts.sumOf { it.samples[i].toDouble() }.toFloat() }, 1, 44_100)
     }
+    private fun sumAt(parts: Map<ConfluenceRole, Snip>, frame: Int): Float = ConfluenceRole.entries.sumOf { parts.getValue(it).samples[frame].toDouble() }.toFloat()
     private fun elapsed(started: Long) = (System.nanoTime() - started) / 1e6
     private fun group(id: String, title: String, description: String) = mapOf("id" to id, "title" to title, "description" to description)
     private fun tag(v: Float) = (v * 100).toInt().toString().padStart(3, '0')

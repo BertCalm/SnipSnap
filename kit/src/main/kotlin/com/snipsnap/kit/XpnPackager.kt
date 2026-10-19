@@ -122,6 +122,7 @@ object XpnPackager {
             }
             put(ExpansionWriter.XML_NAME, ExpansionWriter.renderXml(meta, if (artworkPng != null) "artwork.png" else null).toByteArray(Charsets.UTF_8))
             put("Programs/$programStem.xpm", programXml.toByteArray(Charsets.UTF_8))
+            SourceAttribution.render(kit)?.let { put(SourceAttribution.fileName(kit), it.toByteArray(Charsets.UTF_8)) }
             preview?.let {
                 val tmp = File.createTempFile("preview", ".wav")
                 try {
