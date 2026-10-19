@@ -2,7 +2,8 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const audio = $('audio');
-  const state = { manifest: null, clips: new Map(), selected: null, level: 'matched', token: 0, loading: false };
+  const state = { manifest: null, clips: new Map(), selected: null, level: 'matched', token: 0, loading: false, ready: false, position: 0, playIntent: false, cancelMetadata: null };
+  const wavCache = new Map();
   const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
   const number = (value, digits = 2) => Number(value).toFixed(digits);
   const time = value => { const total = Math.max(0, Math.round(Number(value) || 0)); return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`; };
@@ -10,6 +11,59 @@
   const setLink = (node, path) => { node.href = safe(path); };
   const pairFor = clip => state.manifest.pairs.find(pair => pair.id === clip.pairId);
   const error = message => { $('player-error').textContent = message; $('player-error').hidden = !message; };
+
+  // Full, unchanged WAV bytes make seeking work even when hosting has no Range support.
+  // This cache performs no audio decoding, synthesis, crossfade or other processing.
+  function cachedWav(path) {
+    const key = safe(path);
+    if (wavCache.has(key)) return wavCache.get(key).promise;
+    const entry = { url: null, promise: null };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    entry.promise = (async () => {
+      try {
+        const response = await fetch(key, { cache: 'no-cache', signal: controller.signal });
+        if (!response.ok) throw new Error(`The WAV request returned ${response.status}. Choose this recording again to retry.`);
+        const blob = await response.blob();
+        if (!blob.size) throw new Error('The WAV download was empty. Choose this recording again to retry.');
+        entry.url = URL.createObjectURL(new Blob([blob], { type: 'audio/wav' }));
+        return entry.url;
+      } catch (cause) {
+        if (wavCache.get(key) === entry) wavCache.delete(key);
+        if (cause.name === 'AbortError') throw new Error('The WAV is taking too long to download. Choose this recording again to retry.');
+        throw cause;
+      } finally { clearTimeout(timer); }
+    })();
+    wavCache.set(key, entry);
+    return entry.promise;
+  }
+
+  function discardWav(path) {
+    const key = safe(path); const entry = wavCache.get(key);
+    if (!entry) return;
+    wavCache.delete(key);
+    if (entry.url) URL.revokeObjectURL(entry.url);
+  }
+
+  function loadMetadata(url) {
+    return new Promise((resolve, reject) => {
+      const cleanup = () => { audio.removeEventListener('loadedmetadata', loaded); audio.removeEventListener('error', failed); clearTimeout(timer); if (state.cancelMetadata === cancel) state.cancelMetadata = null; };
+      const loaded = () => { cleanup(); resolve(); };
+      const failed = () => { cleanup(); reject(new Error('This WAV could not load. Press Play to try again, or use its download link.')); };
+      const cancel = () => { cleanup(); reject(new Error('Recording selection changed.')); };
+      const timer = setTimeout(() => { cleanup(); reject(new Error('The downloaded WAV could not open. Press Play to try again.')); }, 15000);
+      state.cancelMetadata = cancel;
+      audio.addEventListener('loadedmetadata', loaded, { once: true }); audio.addEventListener('error', failed, { once: true });
+      audio.src = url; audio.load();
+    });
+  }
+
+  function enableTransport() {
+    $('play').disabled = state.loading;
+    $('seek').disabled = !state.ready || state.loading;
+    $('stop').disabled = !state.ready || state.loading;
+    $('next-wrap').disabled = !state.ready || state.loading || state.selected?.kind !== 'looped';
+  }
 
   async function load() {
     $('loading').hidden = false; $('load-error').hidden = true; $('study').hidden = true;
@@ -63,40 +117,46 @@
   }
 
   async function select(clip, autoplay, positionOverride) {
-    const previous = state.selected; const wasPlaying = !audio.paused;
+    const previous = state.selected; const wasPlaying = state.loading ? state.playIntent : !audio.paused;
     const keep = $('keep-position').checked && previous;
-    const position = positionOverride ?? (keep ? audio.currentTime : 0);
-    const token = ++state.token; audio.pause(); state.selected = clip; state.loading = true; error('');
+    const position = positionOverride ?? (keep ? (state.loading ? state.position : audio.currentTime) : 0);
+    const shouldPlay = autoplay || wasPlaying;
+    const token = ++state.token;
+    if (state.cancelMetadata) state.cancelMetadata();
+    audio.pause(); state.selected = clip; state.loading = true; state.ready = false; state.position = position; state.playIntent = shouldPlay; error('');
     document.querySelectorAll('[data-clip]').forEach(button => { const selected = button.dataset.clip === clip.id; button.setAttribute('aria-pressed', String(selected)); button.setAttribute('aria-busy', String(selected)); });
     $('player').hidden = false;
     const pair = pairFor(clip);
     $('player-kicker').textContent = `RIBBON / FLOW ${number(pair.flow)} / ${number(pair.motionRate)}×`;
     $('player-label').textContent = clip.kind === 'continuous' ? 'Continuous performance' : 'Repeated body';
-    $('player-subtitle').textContent = state.level === 'matched' ? 'Level matched · shared pair gain' : 'Raw · shared safety gain';
+    const subtitle = state.level === 'matched' ? 'Level matched · shared pair gain' : 'Raw · shared safety gain';
+    $('player-subtitle').textContent = 'Loading the complete recording…';
     $('seek').max = String(clip.duration); $('total').textContent = time(clip.duration);
-    $('next-wrap').disabled = clip.kind !== 'looped';
-    setLink($('wav-link'), clip[state.level === 'matched' ? 'src' : 'rawSrc']);
-    audio.src = safe(clip[state.level === 'matched' ? 'src' : 'rawSrc']);
-    $('play').disabled = true; updatePlay();
+    $('seek').value = String(position); $('elapsed').textContent = time(position); $('phase').textContent = 'Loading recording…';
+    const path = clip[state.level === 'matched' ? 'src' : 'rawSrc'];
+    setLink($('wav-link'), path);
+    enableTransport(); updatePlay();
+    let mediaLoaded = false;
     try {
-      await new Promise((resolve, reject) => {
-        const cleanup = () => { audio.removeEventListener('loadedmetadata', loaded); audio.removeEventListener('error', failed); clearTimeout(timer); };
-        const loaded = () => { cleanup(); resolve(); };
-        const failed = () => { cleanup(); reject(new Error('This WAV could not load. Try its download link or choose another recording.')); };
-        const timer = setTimeout(() => { cleanup(); reject(new Error('The WAV is taking too long to load. Try again.')); }, 30000);
-        audio.addEventListener('loadedmetadata', loaded, { once: true }); audio.addEventListener('error', failed, { once: true }); audio.load();
-      });
+      const url = await cachedWav(path);
+      if (token !== state.token) return;
+      await loadMetadata(url);
       if (token !== state.token) return;
       audio.currentTime = Math.min(Math.max(0, Number(position) || 0), Math.max(0, clip.duration - .02));
-      state.loading = false; $('play').disabled = false; updateTime();
-      if (autoplay || wasPlaying) await audio.play();
-    } catch (cause) { if (token === state.token) { state.loading = false; $('play').disabled = false; error(cause.message || 'Playback could not start. Press Play to try again.'); } }
-    finally { if (token === state.token) { document.querySelectorAll('[data-clip]').forEach(button => button.setAttribute('aria-busy', 'false')); updatePlay(); } }
+      mediaLoaded = true; state.loading = false; state.ready = true; $('player-subtitle').textContent = subtitle; enableTransport(); updateTime();
+      if (shouldPlay) await audio.play();
+    } catch (cause) {
+      if (token === state.token) {
+        state.loading = false;
+        if (!mediaLoaded) { discardWav(path); state.ready = false; $('player-subtitle').textContent = 'Recording unavailable · press Play to retry'; $('phase').textContent = 'Could not load recording'; }
+        enableTransport(); error(cause.message || 'Playback could not start. Press Play to try again.');
+      }
+    } finally { if (token === state.token) { document.querySelectorAll('[data-clip]').forEach(button => button.setAttribute('aria-busy', 'false')); updatePlay(); } }
   }
 
   function updatePlay() { const playing = !audio.paused; $('play').setAttribute('aria-label', playing ? 'Pause' : 'Play'); $('play').classList.toggle('is-playing', playing); }
   function updateTime() {
-    if (!state.selected) return;
+    if (!state.selected || state.loading || !state.ready) return;
     const value = audio.currentTime || 0; $('seek').value = String(value); $('elapsed').textContent = time(value);
     const pair = pairFor(state.selected); const release = state.manifest.settings.heldSeconds;
     if (value >= release) $('phase').textContent = 'Release';
@@ -106,8 +166,13 @@
   }
 
   $('retry').addEventListener('click', load);
-  document.querySelectorAll('input[name=level]').forEach(input => input.addEventListener('change', () => { state.level = input.value; updateLevel(); if (state.selected) select(state.selected, false, audio.currentTime); }));
-  $('play').addEventListener('click', async () => { if (audio.paused) { error(''); try { await audio.play(); } catch (cause) { error(cause.message || 'Playback could not start.'); } } else audio.pause(); });
+  document.querySelectorAll('input[name=level]').forEach(input => input.addEventListener('change', () => { state.level = input.value; updateLevel(); if (state.selected) select(state.selected, false, state.loading ? state.position : audio.currentTime); }));
+  async function playCurrent() {
+    if (state.loading) return;
+    if (!state.ready && state.selected) { await select(state.selected, true, state.position); return; }
+    error(''); try { await audio.play(); } catch (cause) { error(cause.message || 'Playback could not start.'); }
+  }
+  $('play').addEventListener('click', () => { if (!state.ready || audio.paused) playCurrent(); else audio.pause(); });
   $('stop').addEventListener('click', () => { audio.pause(); audio.currentTime = 0; updateTime(); });
   $('repeat').addEventListener('change', event => { audio.loop = event.target.checked; });
   $('seek').addEventListener('input', event => { audio.currentTime = Number(event.target.value); updateTime(); });
@@ -115,6 +180,6 @@
   for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, updatePlay);
   audio.addEventListener('timeupdate', updateTime);
   audio.addEventListener('error', () => { if (!state.loading) error('The recording could not play. Try the WAV download or another render.'); });
-  if ('mediaSession' in navigator) { navigator.mediaSession.setActionHandler('play', () => audio.play().catch(() => error('Press Play to start audio.'))); navigator.mediaSession.setActionHandler('pause', () => audio.pause()); }
+  if ('mediaSession' in navigator) { navigator.mediaSession.setActionHandler('play', playCurrent); navigator.mediaSession.setActionHandler('pause', () => audio.pause()); }
   load();
 })();
