@@ -319,7 +319,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 33 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 34 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -378,22 +378,32 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-OVERLAP is a finite six-delay resonator prototype: a strike rings
+OVERLAP is a finite six-delay resonator: a strike rings
 through selectable self, three-cycle, reflected-pair or six-cycle routing.
-KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response; saved recipes
-retain a reference MIDI note and velocity. `OverlapMusicalBank` adds twelve
-provisional recipes: four plucks, four finite textures and four breaths. Run
+KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response. The picker
+exposes four topologies, ROOT and VELOCITY; edits, saved presets and pads retain
+the recipe's model. The twelve approved `OverlapMusicalBank` recipes enter the
+factory roster through `OverlapFactoryPresets`: four plucks, four finite textures
+and four breaths. FRESH TAPE's fixed OVERLAP starter preserves those twelve on
+A01–A12, then adds octave-lower copies of the four plucks on A13–A16. All sixteen
+are dry TONAL one-shots with complete finite tails.
+
+Run `./gradlew :synth:generateOverlapKit` for `testkit/SnipSnap Overlap Kit/`
+and `testkit/SnipSnap-Overlap-Kit.zip`: an MPC 3 track, its MPC 2 twin and a
+Source Kit with editable recipes and native mono 44.1 kHz PCM24 WAVs. Run
 `./gradlew :synth:generateOverlapMusicalAudition` for fifteen dry clips, including
 three scheduled musical studies, under `testkit/overlap-musical-audition/`.
 Native presets preserve regular renderer leveling and velocity; native studies
 use a common `.25` mix gain. Matched clips use the `.03` audition target. The
 bank ZIP contains native WAVs, recipes and study scores with complete pad recipes
 and frame offsets. This is audition revision 3 on unchanged engine model 2;
-the earlier reference recipes and `generateOverlapAudition` comparisons remain
-available. The [private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site)
-awaits the owner's musical verdict. The bank remains outside the factory roster
-and phone picker; [implementation notes](docs/OVERLAP.md) describe pitch-reference
-limits, free-running breathing and finite HOLD, with no seamless-loop claim.
+the first, second and musical auditions retain their audio. The
+[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site) also
+provides the kit handoff. ROOT is a geometry reference; strongest perceived pitch
+can follow another family. HOLD stays finite and breathing has no tempo sync;
+held-note support is a separate future step. Android compile/device CI and real
+phone validation of this integration remain pending. [Implementation notes](docs/OVERLAP.md)
+include the export layout, verification plan and manual phone pass.
 
 FLOCK is a finite oscillator-flock listening proof: twenty-four oscillators
 scatter and respond through changing local neighborhoods around a played note.
@@ -769,8 +779,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY and GRAINS round out the lineup —
-forty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY and GRAINS round out the lineup —
+forty-two engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -953,10 +963,10 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).

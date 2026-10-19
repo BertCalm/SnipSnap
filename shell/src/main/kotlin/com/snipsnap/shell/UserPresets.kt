@@ -28,6 +28,7 @@ import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
@@ -342,12 +343,18 @@ object UserPresets {
     // ---- the desk: promotion into the roster ----
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
-    fun voiceEnum(engine: String): String = if (engine == OpenSkyPatch.ENGINE) "OpenSkyVoice"
-        else engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
+    fun voiceEnum(engine: String): String = when (engine) {
+        OpenSkyPatch.ENGINE -> "OpenSkyVoice"
+        OverlapPatch.ENGINE -> "OverlapTopology"
+        else -> engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
+    }
 
     /** The table a roster line pastes into, under [ROSTER_DIR]: `ThumpPresets.kt`. */
-    fun rosterFile(engine: String): String = if (engine == OpenSkyPatch.ENGINE) "OpenSkyPresets.kt"
-        else engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
+    fun rosterFile(engine: String): String = when (engine) {
+        OpenSkyPatch.ENGINE -> "OpenSkyPresets.kt"
+        OverlapPatch.ENGINE -> "OverlapFactoryPresets.kt"
+        else -> engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
+    }
 
     /**
      * [patch] as the line its engine's table is written in, using its
@@ -370,9 +377,16 @@ object UserPresets {
      * operator/formant/envelope definition. FLOCK retains its note, velocity,
      * model and exact 64-bit seed. OPENSKY retains its complete source
      * timbre, pitch, velocity, gate, wet mode and render model through the JSON
-     * constructor. Names and embedded JSON are escaped Kotlin string literals.
+     * constructor. OVERLAP likewise keeps its explicit model, geometry reference
+     * note and velocity through the complete JSON constructor in its factory
+     * promotion table. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is OverlapPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "OverlapPatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is OpenSkyPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")

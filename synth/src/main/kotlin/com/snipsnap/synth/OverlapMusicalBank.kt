@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Musical roles for the provisional OVERLAP bank; these are finite rendered sounds. */
+/** Musical roles for the OVERLAP factory bank; these are finite rendered sounds. */
 enum class OverlapPresetFamily { PLUCK, TEXTURE, BREATH }
 
 data class OverlapBankEntry(
@@ -12,8 +12,8 @@ data class OverlapBankEntry(
 )
 
 /**
- * Twelve provisional listening recipes for the unchanged model-two instrument.
- * Kept outside the factory Presets roster until musical listening approval.
+ * The twelve approved factory recipes for the unchanged model-two instrument.
+ * Earlier control-comparison recipes remain separate in [OverlapPresets].
  *
  * MIDI names the geometry reference. Full-depth families retain their documented
  * relationships; intermediate KNOT textures can have a different strongest pitch.

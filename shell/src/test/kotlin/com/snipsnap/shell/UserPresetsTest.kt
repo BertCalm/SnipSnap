@@ -228,7 +228,13 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is OpenSkyPatch) {
+            if (preset is com.snipsnap.synth.OverlapPatch) {
+                val literal = line.removePrefix("OverlapPatch.fromJsonText(").removeSuffix("),")
+                val promoted = com.snipsnap.synth.OverlapPatch.fromJsonText(com.snipsnap.json.Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: complete model, note and velocity promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is OpenSkyPatch) {
                 val promoted = openSkyFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete source, articulation and render-state promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
@@ -638,7 +644,10 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == OpenSkyPatch.ENGINE) {
+            if (engine == com.snipsnap.synth.OverlapPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.OverlapPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.OverlapPatch::class.java, decoder.returnType, "OVERLAP promotion retains the complete versioned recipe")
+            } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
             } else if (engine == StoopPatch.ENGINE) {

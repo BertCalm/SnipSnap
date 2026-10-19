@@ -206,6 +206,9 @@ import com.snipsnap.synth.ShoalVoice
 import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
+import com.snipsnap.synth.Overlap
+import com.snipsnap.synth.OverlapPatch
+import com.snipsnap.synth.OverlapTopology
 import com.snipsnap.synth.Relay
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RelayVoice
@@ -433,7 +436,7 @@ fun SynthScreen(
     }
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
-    // REGISTERS retains its synthesis model, saved pitch and velocity.
+    // REGISTERS and OVERLAP retain their synthesis model, saved pitch and velocity.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
@@ -521,8 +524,11 @@ fun SynthScreen(
         // someone loaded a pre-PUNCH preset.
         // OSPREY's saved model selects its defaults too: filling a partial
         // legacy recipe with the current model's values would change its sound.
-        val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
-            else engine.defaults(voice)
+        val defaults = when (editable) {
+            is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
+            is OverlapPatch -> Overlap.defaults(editable.topology, editable.model)
+            else -> engine.defaults(voice)
+        }
         macrosByVoice[engine to voice] = defaults + editable.macros
         currentPresetByVoice[engine to voice] = patch.name
     }
@@ -550,8 +556,14 @@ fun SynthScreen(
                 if (currentPresetByVoice[pair] != name || loadedPatchesByVoice[pair] != null) continue
                 val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
                     .firstOrNull { it.patch.name == name }?.patch
-                if (mine != null) loadedPatchesByVoice[pair] = editablePreset(mine)
-                else currentPresetByVoice.remove(pair)
+                if (mine != null) {
+                    loadedPatchesByVoice[pair] = editablePreset(mine)
+                    // The named preset is being restored whole. A partial legacy
+                    // OVERLAP recipe must fill its sliders from its saved model.
+                    if (mine is OverlapPatch) {
+                        macrosByVoice[pair] = Overlap.defaults(mine.topology, mine.model) + mine.macros
+                    }
+                } else currentPresetByVoice.remove(pair)
             }
         } catch (e: CancellationException) {
             throw e
@@ -1322,6 +1334,45 @@ fun SynthScreen(
                         ) { updateStoopRoot(root + 12) }
                     }
                 }
+                // OVERLAP keeps its reference note, velocity and render model
+                // beside the six controls. Copying the loaded recipe retains
+                // those fields through slider edits, saving and pad placement.
+                if (engine == Engine.OVERLAP) {
+                    val overlapPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (overlapPatch.midi - Overlap.MIN_MIDI).toFloat() / (Overlap.MAX_MIDI - Overlap.MIN_MIDI),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(overlapPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val midi = (Overlap.MIN_MIDI + value * (Overlap.MAX_MIDI - Overlap.MIN_MIDI)).roundToInt()
+                                .coerceIn(Overlap.MIN_MIDI, Overlap.MAX_MIDI)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch).copy(midi = midi)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = overlapPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    TapeText(
+                        "ROOT IS THE REFERENCE NOTE. HOLD EXTENDS A FINITE SOUND.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                    )
+                }
+
                 // MURMUR has five timbral controls and HOLD. Its requested root and
                 // gesture energy are independent patch fields, retained with the full
                 // operator/formant definition through preview, saving and placement.
@@ -1555,6 +1606,13 @@ fun SynthScreen(
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
                             readout = when {
+                                engine == Engine.OVERLAP && spec.name == "HOLD" -> {
+                                    val hold = macros.getValue(spec.name)
+                                    val legacy = (loadedPatch as? OverlapPatch)?.model == 1
+                                    val seconds = if (legacy) .008f + 2.8f * hold * hold
+                                        else .040f + 5.96f * hold * hold
+                                    "%.1fs".format(Locale.ROOT, seconds)
+                                }
                                 engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -2460,7 +2518,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2496,6 +2554,7 @@ private enum class Engine {
         MURMUR -> MurmurVoice.entries
         OSPREY -> OspreyVoice.entries
         OPENSKY -> OpenSkyVoice.entries
+        OVERLAP -> OverlapTopology.entries
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
@@ -2540,6 +2599,7 @@ private enum class Engine {
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
         OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
         OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
+        OVERLAP -> Overlap.macrosFor(voice as OverlapTopology)
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
@@ -2584,6 +2644,7 @@ private enum class Engine {
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
         OSPREY -> Osprey.defaults(voice as OspreyVoice)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
+        OVERLAP -> Overlap.defaults(voice as OverlapTopology)
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
@@ -2628,6 +2689,7 @@ private enum class Engine {
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
         OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
         OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
+        OVERLAP -> Overlap.scramble(voice as OverlapTopology, random)
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
@@ -2677,6 +2739,7 @@ private enum class Engine {
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
         OSPREY -> Osprey.render(voice as OspreyVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
+        OVERLAP -> Overlap.render(voice as OverlapTopology, macros)
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
@@ -2727,6 +2790,7 @@ private enum class Engine {
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
+        OVERLAP -> Overlap.drumClassFor(voice as OverlapTopology, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
@@ -2771,6 +2835,7 @@ private enum class Engine {
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
         OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)
+        OVERLAP -> OverlapPatch(name, voice as OverlapTopology, macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)

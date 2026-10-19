@@ -132,7 +132,8 @@ object OverlapMusicalAuditionGenerator {
             Replay a study with OverlapMusicalAuditionGenerator --score score.json output.wav.
             All sounds are finite; textures are not seamless loops or tempo-synchronized voices.
             MIDI is a geometry reference; dominant pitch may follow another resonant family.
-            The bank remains provisional and outside the phone picker/factory roster.
+            The twelve musical recipes are available in SnipSnap's OVERLAP picker.
+            The separate MPC starter kit adds four lower plucks and editable source.
         """.trimIndent() + "\n") }
         bundled += listOf(bankFile, readme)
         val manifest = linkedMapOf<String, Any?>(
