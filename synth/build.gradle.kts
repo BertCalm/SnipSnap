@@ -1243,6 +1243,17 @@ tasks.register<JavaExec>("generateOpenSkyAudition") {
     args("${rootDir}/testkit/opensky-audition")
 }
 
+/** Real VENT starter kit, explicit dry/effects pairs and two replayable MPC sampler grooves. */
+tasks.register<JavaExec>("generateVentKitAudition") {
+    group = "distribution"
+    description = "Render VENT's twelve playable pads, two dry/effects grooves, ordinary recipes and native MPC kit/session exports."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentKitAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("ventKitOutput").orNull ?: "${rootDir}/testkit/vent-kit-audition")
+}
+
 /** Musical preset, touch and starter-pad audition for Relay's playability pass. */
 tasks.register<JavaExec>("generateRelayPerformanceAudition") {
     group = "distribution"

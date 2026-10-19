@@ -65,8 +65,8 @@ class PadRecipeTest {
         TanglePatch("Knot Test", TangleVoice.BASS, mapOf("TANGLE" to 0.6f), midi = 36, velocity = 0.6f),
         MurmurPatch("Mouth Test", MurmurVoice.KEY, mapOf("MOUTH" to 0.7f), midi = 55, velocity = 0.6f),
         ShoalPatch("Population Test", ShoalVoice.RIPPLE, mapOf("COHESION" to .8f, "STRAY" to .3f), midi = 43, velocity = .6f),
-        // VENT is a prototype held outside Presets (PatchTypes.PROTOTYPES), so no factory
-        // preset covers it; this one also carries a saved note, velocity and seed.
+        // VENT's model-1 comparisons stay outside the model-2 factory roster;
+        // this one covers their saved note, velocity and seed.
         VentPatch("Orbit Test", VentVoice.WIRE, mapOf("CHAOS" to 0.6f, "LENGTH" to 0.1f), midi = 48, velocity = 0.6f, seed = 7),
         // OVERLAP is a prototype too; its patch carries a saved note and velocity.
         OverlapPatch("Network Test", OverlapTopology.TREFOIL, mapOf("KNOT" to 0.6f), midi = 57, velocity = 0.6f),
