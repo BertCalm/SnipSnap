@@ -13,6 +13,23 @@ import com.snipsnap.kit.ArrangedPad
 object SynthKits {
 
     /**
+     * Twelve dry model-2 VENT pads in C minor pentatonic: bass, short note,
+     * percussive hit and long texture for PULSE, COIL and PLUME. Four slots
+     * remain free for captures. Every finite one-shot retains its full recipe.
+     */
+    fun vent(): List<ArrangedPad?> = VentKitPresets.entries.map { entry ->
+        val level = when (entry.role) {
+            "Bass" -> .72f
+            "Short note" -> .54f
+            "Percussive hit" -> .60f
+            "Long texture" -> .22f
+            else -> error("Unfiled VENT role ${entry.role}")
+        }
+        pad(entry.patch, Vent.drumClassFor(entry.patch.voice, entry.patch.macros))
+            .copy(level = level, displayName = entry.patch.name)
+    }
+
+    /**
      * PLACEHOLDER, not a tuned value — Phase 1's MOTION stage is the real
      * answer to "melodic pads hold dead still"; until it lands, [Tape]'s own
      * wow+flutter (already implemented, `Tape.kt`'s WOW_HZ/FLUTTER_HZ) is

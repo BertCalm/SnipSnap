@@ -157,8 +157,8 @@ class StarterKitsTest {
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
                 assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
-                // Every starter fills bank A; the A/B dip fills bank B with a twin of each.
-                val slots = if (starter.id == "lucky-dip-ab") 32 else 16
+                // VENT leaves four capture slots free; the A/B dip also fills bank B.
+                val slots = when (starter.id) { "lucky-dip-ab" -> 32; "vent" -> 12; else -> 16 }
                 assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
                 // Every recipe a starter writes reads back through the typed layer.
                 for (pad in kit.pads) {
@@ -457,7 +457,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "vent", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!

@@ -947,7 +947,7 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY
@@ -955,11 +955,13 @@ are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
-no roster entry. VENT, a Rössler-attractor synth prototype (not the TapeOS
-scheme of that name), is in the module outside the picker and the preset
-roster: `snipsnap synth VENT` renders six provisional recipes across two
-saved models: ROUND, WIRE and TEAR use model 1; PULSE, COIL and PLUME use the
-clean model 2. The voice selects its model, and
+no roster entry. VENT, the Rössler-attractor synth (separate from the TapeOS
+scheme of that name), brings clean model-2 PULSE, COIL and PLUME to the picker
+and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor
+pentatonic: a bass, short note, percussive hit and long texture per voice,
+leaving four capture slots free. The CLI renders those same four recipes per
+clean voice; ROUND, WIRE and TEAR retain their CLI-only model-1 comparisons.
+The voice selects its model, and
 `--midi`, `--velocity` and `--seed` set their note, strike energy and
 starting trajectory ([`docs/VENT.md`](docs/VENT.md)).
 Each file's own KDoc names its spec.

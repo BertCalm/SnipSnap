@@ -174,11 +174,11 @@ speaking attack, so they take `--release` and refuse `--attack`. `--drone`
 is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
 MAKE INSTRUMENT; this command refuses them. An engine with a roster and
 no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
-VENT, a prototype outside
-both the roster and the picker, renders six provisional recipes
-(`VentPresets`, one per voice):
-ROUND, WIRE and TEAR use model 1; the clean PULSE, COIL and PLUME voices use
-model 2. The voice selects its saved model; see [VENT](VENT.md).
+VENT's clean PULSE, COIL and PLUME voices render four model-2 factory recipes
+each: bass, short note, percussive hit and long texture. These are the same
+patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one
+CLI-only model-1 comparison each from `VentPresets`. The voice selects its
+saved model; see [VENT](VENT.md).
 WICK follows the same provisional path with four PLUCK and four BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
