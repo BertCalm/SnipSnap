@@ -118,6 +118,7 @@
   function sectionFor(group, clips) {
     const id = String(group.id || '').toLowerCase();
     const text = `${id} ${group.title || ''}`.toLowerCase();
+    if (id === 'musical-patterns' || clips.some(clip => clip.kind === 'pattern')) return 'start';
     if (id === 'bubble-tone') return 'start';
     if (id === 'defaults' || /^(default|start|reference)/.test(id)) return 'start';
     if (/mechanism|comparison|ablation|cascade.disabled|depletion.disabled/.test(text) || clips.some(c => c.kind === 'comparison')) return 'mechanism';
@@ -380,9 +381,16 @@
     main.append(play, el('h5', 'clip-name', clipTitle(clip)));
     const description = el('p', 'clip-description', clip.description || `${clip.voice || 'Wick'} · ${clip.kind || 'render'}`);
     const meta = el('div', 'clip-meta');
+    const pattern = clip.kind === 'pattern';
     const note = noteName(clip.midi);
-    if (note) meta.append(el('span', '', `${note} · MIDI ${clip.midi}`));
-    if (finite(clip.velocity)) meta.append(el('span', '', `Vel ${numeric(clip.velocity)}`));
+    if (pattern) {
+      meta.append(el('span', '', 'Pattern'), el('span', '', 'Notes & velocity vary'));
+      if (finite(clip.bpm)) meta.append(el('span', '', `${numeric(clip.bpm)} BPM`));
+      if (finite(clip.bars)) meta.append(el('span', '', `${numeric(clip.bars)} bars`));
+    } else {
+      if (note) meta.append(el('span', '', `${note} · MIDI ${clip.midi}`));
+      if (finite(clip.velocity)) meta.append(el('span', '', `Vel ${numeric(clip.velocity)}`));
+    }
     if (clip.macro && finite(clip.value)) meta.append(el('span', '', `${clip.macro} ${numeric(clip.value, 2)}`));
     if (!clip.macro) meta.append(el('span', '', 'Empty FX chain'));
     if (clip.loop && /replay|schedule|approx/i.test(String(clip.diagnostics?.loop?.strategy || ''))) meta.append(el('span', '', 'Event-replay approximation'));
@@ -391,7 +399,10 @@
     progress.append(el('span'));
     const footer = el('div', 'clip-footer');
     if (clip.file) footer.append(link('WAV ↓', clip.file));
-    if (clip.patchFile || clip.recipeFile) footer.append(link(clip.recipeFile ? 'Recipe ↓' : 'Patch ↓', clip.patchFile || clip.recipeFile));
+    if (pattern) {
+      const sequenceRecipe = clip.sequenceRecipeFile || clip.recipeFile;
+      if (sequenceRecipe) footer.append(link('Sequence recipe ↓', sequenceRecipe));
+    } else if (clip.patchFile || clip.recipeFile) footer.append(link(clip.recipeFile ? 'Recipe ↓' : 'Patch ↓', clip.patchFile || clip.recipeFile));
     const details = el('details', 'clip-details');
     const summary = el('summary', '', 'Diagnostics');
     summary.setAttribute('aria-controls', unique);
@@ -414,7 +425,7 @@
   }
   function createGroup(group) {
     const bubbleTone = group.id === 'bubble-tone';
-    const clips = bubbleTone ? group.clips.slice().sort((a, b) => (a.midi - b.midi) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : group.clips;
+    const clips = bubbleTone ? group.clips.slice().sort((a, b) => (a.midi - b.midi) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : group.id === 'defaults' ? group.clips.slice().sort((a, b) => Number(b.voice === 'WOOD') - Number(a.voice === 'WOOD')) : group.clips;
     const sweep = group.clips.some(clip => clip.kind === 'sweep' || clip.kind === 'held-sweep');
     const section = el('section', `clip-group${sweep ? ' sweep-group' : ''}`);
     section.dataset.group = String(group.id);
@@ -423,11 +434,13 @@
     const header = el('div', 'group-header');
     const heading = el('div', 'group-heading');
     const headingId = `group-${String(group.id).replace(/[^\w-]/g, '-')}`;
-    const title = el('h4', '', bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
+    const musicalPatterns = group.id === 'musical-patterns';
+    const title = el('h4', '', musicalPatterns ? 'Three voices · Short musical phrases' : bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
     title.id = headingId;
     section.setAttribute('aria-labelledby', headingId);
     heading.append(title);
-    if (bubbleTone) heading.append(el('p', '', 'Can you hear the note ring through the smaller pops? Compare each pair at MIDI 48, 60, and 72. Pitch, velocity, and all controls match within each pair; FEED stays at 25%.'));
+    if (musicalPatterns) heading.append(el('p', '', 'Hear each voice across a short phrase, then hear them together. Do the notes stay clear as the little answers overlap? These finite renders include the exact sequence recipes.'));
+    else if (bubbleTone) heading.append(el('p', '', 'Can you hear the note ring through the smaller pops? Compare each pair at MIDI 48, 60, and 72. Pitch, velocity, and all controls match within each pair; FEED stays at 25%.'));
     else if (group.description) heading.append(el('p', '', group.description));
     header.append(heading);
     const playable = clips.filter(clip => clip.status !== 'failed' && clip.file);
@@ -527,8 +540,8 @@
     }
     const metrics = { ...(clip.metrics || {}), ...(data.metrics || {}), ...diagnosticData };
     showValueList(parent, [
-      ['MIDI note', finite(clip.midi) ? `${clip.midi} (${noteName(clip.midi)})` : undefined],
-      ['Velocity', clip.velocity],
+      [clip.kind === 'pattern' ? 'MIDI note range' : 'MIDI note', clip.kind === 'pattern' ? clip.noteRange ? `${clip.noteRange.minMidi}–${clip.noteRange.maxMidi}` : 'Varies by sequence event' : finite(clip.midi) ? `${clip.midi} (${noteName(clip.midi)})` : undefined],
+      [clip.kind === 'pattern' ? 'Velocity range' : 'Velocity', clip.kind === 'pattern' ? clip.velocityRange ? `${numeric(clip.velocityRange.min)}–${numeric(clip.velocityRange.max)}` : 'Varies by sequence event' : clip.velocity],
       ['Render status', clip.status],
       ['Raw peak', metrics.rawPeak],
       ['Event count', diagnosticData.eventCount ?? clip.diagnostics?.eventCount ?? (Array.isArray(diagnosticData.events) ? diagnosticData.events.length : undefined)],
@@ -621,7 +634,7 @@
       if (!host.children.length) host.append(el('pre', '', JSON.stringify(info, null, 2)));
       host.append(link('Download build information ↓', 'build-info.json'));
     } catch (_) {
-      host.replaceChildren(el('p', '', 'This page presents the PLUCK/BUBBLE prototype. Per-render metrics and diagnostic traces are available on each clip; no full-release validation is claimed.'));
+      host.replaceChildren(el('p', '', 'This page presents the WOOD/PLUCK/BUBBLE prototype and finite musical phrases. Per-render metrics and diagnostic traces are available on each clip; no full-release validation is claimed.'));
     }
   }
   async function init() {
@@ -637,13 +650,16 @@
       for (const name of sections) {
         const host = $(`[data-host="${name}"]`);
         const groups = state.groups.filter(group => group.section === name);
-        if (name === 'start') groups.sort((a, b) => Number(b.id === 'bubble-tone') - Number(a.id === 'bubble-tone'));
+        if (name === 'start') {
+          const priority = group => group.id === 'defaults' ? 0 : group.id === 'musical-patterns' ? 1 : group.id === 'bubble-tone' ? 3 : 2;
+          groups.sort((a, b) => priority(a) - priority(b));
+        }
         groups.forEach(group => host.append(createGroup(group)));
         if (!groups.length) host.append(el('p', 'empty-state', 'No renders in this section are included in this build.'));
       }
       const macros = [...new Set(state.groups.filter(group => group.section === 'controls').flatMap(group => group.clips.map(clip => clip.macro).filter(Boolean)))];
       macros.forEach(macro => { const option = el('option', '', macro); option.value = String(macro).toUpperCase(); $('#macro-filter').append(option); });
-      const first = entries.find(clip => clip.kind === 'defaults' && clip.voice === 'PLUCK' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
+      const first = entries.find(clip => clip.kind === 'defaults' && clip.voice === 'WOOD' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
       if (first) {
         $('#first-play').disabled = false;
         $('#first-play').addEventListener('click', () => { switchTab('start'); playClip(first); });
