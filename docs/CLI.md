@@ -797,6 +797,23 @@ whole-period loop found in each note's sustain (crossfaded when the raw
 seam isn't clean), trimmed to the loop-to-end idiom both formats share —
 held pads sing forever. A note with no honest sustain plays unlooped.
 
+### `bellows-keys` — playable BELLOWS validation pack
+
+`bellows-keys --out <folder> [--release .6] [--overwrite]` renders four
+model-2 C3–C5 instruments, each with nine pitch roots and three velocity
+timbres, plus a separate C3-only WHEEL tonic bed. The original source
+attack leads into a sustain loop; note-off uses the program release
+(.1–1.5 seconds). WHEEL melody has its embedded drone disabled.
+
+The result is `<folder>/Bellows-phone-mpc-m2.zip` and a `playable/` folder
+containing `card/` programs, WAVs and phone sidecars, source recipes,
+a checksum manifest and an unchecked device checklist. Smaller per-instrument
+ZIPs sit beside the full pack for download from the audition page. Existing output
+is preserved unless `--overwrite` is supplied. The phone can generate
+the same melody instruments with BELLOWS → MAKE INSTRUMENT; its ordinary
+share-import door does not import this ZIP. See
+[BELLOWS_PLAYTEST.md](BELLOWS_PLAYTEST.md) for loading and validation.
+
 ### `pad <wav> | <kit-dir> <pad>` — pad from anything
 
 One hit becomes a pad that holds while you hold it and plays in every

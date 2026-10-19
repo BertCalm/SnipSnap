@@ -100,6 +100,7 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
+import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
@@ -967,7 +968,7 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: held synths and ORPHICA's captured sustain ----
+    // ---- MAKE INSTRUMENT: held synths (BELLOWS among them) and ORPHICA's captured sustain ----
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN),
     // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
     // (SIREN) and docs/superpowers/specs/2026-09-29-glint-paths-design.md §3
@@ -987,10 +988,13 @@ fun SynthScreen(
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
-    val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS ||
+    val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice))
-    val heldInstrumentReady = engine != Engine.OPENSKY ||
-        OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+    val heldInstrumentReady = when (engine) {
+        Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+        Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
+        else -> true
+    }
     val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
     val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
     LaunchedEffect(makingInstrument, holdBase) {
@@ -1027,6 +1031,10 @@ fun SynthScreen(
         Engine.REGISTERS -> HeldSpec.Registers(RegistersPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, holdRelease,
         ))
+        Engine.BELLOWS -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
+            if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, holdRelease)) else null
+        }
         else -> null
     }
 
@@ -1065,9 +1073,9 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky) {
-                        // Its settled wet state has a larger working buffer.
-                        // Render one zone at a time so phones never hold nine
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows) {
+                        // OPENSKY has larger wet state; BELLOWS renders three
+                        // velocity layers per zone. Render serially so phones never hold nine
                         // independent oversampled states at once; CANCEL and
                         // the same zone counter remain live between them.
                         midis.map { midi ->
@@ -1971,7 +1979,8 @@ fun SynthScreen(
                     }
                     if (!heldInstrumentReady) {
                         TapeText(
-                            "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}",
+                            if (engine == Engine.BELLOWS) "MAKE INSTRUMENT NEEDS A CURRENT BELLOWS SOUND. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
+                            else "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}",
                             TapeType.pixelSmall,
                             scheme.ink2.tape,
                             maxLines = 2,
@@ -2393,7 +2402,7 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: held synths and captured sustain ----------
+// ---------- MAKE INSTRUMENT: held synths (BELLOWS among them) and captured sustain ----------
 
 /**
  * MAKE INSTRUMENT's engines behind one shape, so the render/export
@@ -2414,9 +2423,10 @@ private sealed interface HeldSpec {
 
     /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec]/[RegistersPadMaker.Spec]/[OpenSkyPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
-    fun renderZone(midi: Int, cancelled: () -> Boolean): KeyNote
+    /** One entry per velocity layer, soft first; legacy instruments return one. */
+    fun renderZone(midi: Int, cancelled: () -> Boolean): List<KeyNote>
     fun preview(cancelled: () -> Boolean): Snip
-    fun export(name: String, notes: List<KeyNote>, destRoot: File): KeygroupProgram
+    fun export(name: String, notes: List<List<KeyNote>>, destRoot: File): KeygroupProgram
 
     class Resin(private val spec: ResinPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = ResinPadMaker.zoneMidis(spec)
@@ -2424,45 +2434,45 @@ private sealed interface HeldSpec {
         override val knobLabel
             get() = "ATTACK ${ResinPadMaker.secondsLabel(spec.attackSeconds)} · " +
                 "RELEASE ${ResinPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = ResinPadMaker.renderZone(spec, midi, cancelled)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(ResinPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = ResinPadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = ResinPadMaker.export(name, spec, notes, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = ResinPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Siren(private val spec: SirenPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = SirenPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${SirenPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = SirenPadMaker.renderZone(spec, midi, cancelled)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(SirenPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = SirenPadMaker.export(name, spec, notes, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = SirenPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Glint(private val spec: GlintPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = GlintPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${GlintPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = GlintPadMaker.renderZone(spec, midi, cancelled)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(GlintPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = GlintPadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = GlintPadMaker.export(name, spec, notes, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = GlintPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Orphica(private val spec: OrphicaPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = OrphicaPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "CAPTURED SUSTAIN · RELEASE ${OrphicaPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrphicaPadMaker.renderZone(spec, midi, cancelled)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OrphicaPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OrphicaPadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = OrphicaPadMaker.export(name, spec, notes, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = OrphicaPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class OpenSky(private val spec: OpenSkyPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = OpenSkyPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${OpenSkyPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OpenSkyPadMaker.renderZone(spec, midi, cancelled)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OpenSkyPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OpenSkyPadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = OpenSkyPadMaker.export(name, spec, notes, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = OpenSkyPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Registers(private val spec: RegistersPadMaker.Spec) : HeldSpec {
@@ -2471,14 +2481,26 @@ private sealed interface HeldSpec {
         override val knobLabel get() = "RELEASE ${RegistersPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
             "KEEPS THE NOTE'S ATTACK, THEN HOLDS ITS SETTLED TONE. SYNTH'S LOOP AUDITION STARTS AFTER THE ATTACK."
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = RegistersPadMaker.renderZone(spec, midi, cancelled)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(RegistersPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = RegistersPadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = RegistersPadMaker.export(name, spec, notes, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RegistersPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    class Bellows(private val spec: BellowsPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = BellowsPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${BellowsPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = if (spec.patch.voice == BellowsVoice.WHEEL)
+            "C3–C5 · SOFT, MEDIUM AND HARD TOUCH. MELODY ONLY; THE TONIC BED PLAYS SEPARATELY."
+        else "C3–C5 · SOFT, MEDIUM AND HARD TOUCH. KEEPS THE ATTACK AND SUSTAINS WHILE HELD."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = BellowsPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = BellowsPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BellowsPadMaker.export(name, spec, notes, destRoot)
     }
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS or OPENSKY HALO): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, BELLOWS or OPENSKY HALO): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
