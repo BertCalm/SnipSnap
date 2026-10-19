@@ -47,6 +47,17 @@ tasks.register<JavaExec>("generateFlockFlowAudition") {
     args(providers.gradleProperty("flockBaseline").orNull ?: "${rootDir}/testkit/flock-audition")
 }
 
+/** Experimental RIBBON sustain: long continuous / repeated-body WAV comparisons at three FLOW rates. */
+tasks.register<JavaExec>("generateFlockRibbonSustainAudition") {
+    group = "distribution"
+    description = "Render six long FLOCK RIBBON sustain comparisons, sampler WAVs, exact experimental recipes and split raw/matched listening packs."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlockRibbonSustainAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockSustainOutput").orNull ?: "${rootDir}/testkit/flock-ribbon-sustain")
+}
+
 /** Two-voice WICK milestone: dry audio, causal comparisons and real held-loop evidence. */
 tasks.register<JavaExec>("generateWickAudition") {
     group = "distribution"

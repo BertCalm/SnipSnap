@@ -129,6 +129,9 @@ note-off-release behavior.
 
 ## What the comparison removes
 
+The separate sustained RIBBON study is described below; the original comparison
+and finite factory recipes retain their existing render models.
+
 FLOCK, FIXED and INDEPENDENT begin with the same oscillator phases, note,
 seed, initial particle positions and finite duration. FIXED freezes those
 positions. INDEPENDENT retains each particle's drive and pitch restoration
@@ -170,3 +173,38 @@ the preset registry, sixteen-pad starter and saved model-1/model-2 recipes with
 full-width seeds. The kit generator checks preflight, recipe round-trips and
 unchanged exported WAV bytes. Target-phone render latency and phone/MPC playback
 remain unverified.
+
+## Experimental RIBBON sustain
+
+`FlockRibbonSustain` is a separate offline listening experiment. It uses the
+existing RIBBON simulation and carriers without changing `FlockPatch`, model 1/2,
+the nine factory recipes or finite HOLD behavior. HOLD remains a finite duration
+control in SYNTH; the experiment validates but ignores it and sets its own timing.
+
+The study compares FLOW 0, the RIBBON default 0.78, and 1 at C4, velocity 1 and
+seed 42001, with all other controls fixed. Each pair has an uninterrupted source
+and actual repeated-loop playback: a two-second introduction, a six-second
+captured body, a 30-second total hold and a 1.5-second release. The last half-second
+of the captured body blends toward the natural source immediately before its
+start. This preserves the waveform context at each wrap; it does not make the
+flock equations periodic.
+
+Both comparison files use one linear gain per pair. Raw audio, complete experiment
+recipes, source snapshots, traces and SHA256 manifests retain the evidence needed
+to replay and inspect them. The manifest records actual boundaries, blend power,
+pitch motion and capture drift. FLOW 0 moves at 0.12 times the simulation clock,
+so its early capture can retain initial gathering; the long source comparison
+makes that limitation audible.
+
+The listening questions are whether the captured period repeats distractingly,
+whether blends cause clicks or level scoops, whether FLOW remains distinct, and
+whether note release sounds natural. Numerical edge checks do not establish a
+listening pass. Sustained phone instruments and MPC keygroups remain future work.
+
+```sh
+./gradlew :synth:generateFlockRibbonSustainAudition
+```
+
+The generator writes a standalone listening page and real rendered audio under
+`testkit/flock-ribbon-sustain/`. The existing private audition links to this study
+at `/sustain/`; its finite listening clips remain unchanged.
