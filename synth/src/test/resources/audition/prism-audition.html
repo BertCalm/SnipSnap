@@ -259,11 +259,197 @@
     'use strict';
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => [...document.querySelectorAll(selector)];
-    const audio = new Audio();
-    audio.preload = 'auto';
+    // Decode each selected file once. A held note wraps inside the audio render
+    // graph; media-element restarts and UI timers never schedule its boundaries.
+    class BufferAudio extends EventTarget {
+      constructor() {
+        super();
+        this.context = null; this.gain = null; this.source = null;
+        this.buffer = null; this.cache = new Map(); this.controller = null; this.pending = null;
+        this.url = ''; this.offset = 0; this.startedAt = 0;
+        this.desiredPlaying = false; this.finished = false; this.looping = false;
+        this.level = 1; this.resourceVersion = 0; this.playVersion = 0;
+        this.frame = null; this.error = null; this.sampleRate = 44100;
+      }
+      emit(type) { this.dispatchEvent(new Event(type)); }
+      get paused() { return !this.desiredPlaying; }
+      get ended() { return this.finished; }
+      get duration() { return this.buffer ? this.buffer.duration : NaN; }
+      get src() { return this.url; }
+      set src(value) {
+        ++this.resourceVersion; ++this.playVersion;
+        this.controller?.abort(); this.controller = null; this.pending = null;
+        this.desiredPlaying = false; this.stopSource();
+        this.url = String(value); this.buffer = null; this.offset = 0;
+        this.finished = false; this.error = null;
+        this.emit('emptied');
+      }
+      get volume() { return this.level; }
+      set volume(value) {
+        this.level = Math.max(0,Math.min(1,Number(value) || 0));
+        if (this.gain) this.gain.gain.setValueAtTime(this.level,this.context.currentTime);
+      }
+      positionAt(now) {
+        const elapsed = this.source && this.desiredPlaying ? Math.max(0,now - this.startedAt) : 0;
+        const position = this.offset + elapsed;
+        if (!this.buffer) return position;
+        return this.looping ? position % this.duration : Math.min(position,this.duration);
+      }
+      get currentTime() { return this.positionAt(this.context?.currentTime || 0); }
+      set currentTime(value) {
+        if (!Number.isFinite(value)) return;
+        const active = !!this.source && this.desiredPlaying;
+        this.stopSource();
+        this.offset = Math.max(0,Number.isFinite(this.duration) ? Math.min(value,this.duration) : value);
+        if (this.looping && this.buffer) this.offset %= this.duration;
+        this.finished = !!this.buffer && !this.looping && this.offset >= this.duration;
+        if (this.finished) { this.desiredPlaying = false; ++this.playVersion; }
+        else if (active) this.startSource();
+        this.emit('timeupdate');
+        if (this.finished) this.emit('ended');
+      }
+      get loop() { return this.looping; }
+      set loop(value) {
+        const now = this.context?.currentTime || 0;
+        const position = this.positionAt(now);
+        this.looping = !!value;
+        this.offset = this.looping && this.buffer ? position % this.duration : position;
+        this.startedAt = now;
+        if (this.looping) this.finished = false;
+        if (this.source) this.source.loop = this.looping;
+        this.emit('timeupdate');
+      }
+      get seekable() {
+        const duration = this.duration;
+        return { length:Number.isFinite(duration) ? 1 : 0, start:() => 0, end:() => duration };
+      }
+      ensureContext() {
+        if (this.context && this.context.state !== 'closed') return this.context;
+        const Context = window.AudioContext || window.webkitAudioContext;
+        if (!Context) throw new Error('Web Audio is unavailable in this browser.');
+        try { this.context = new Context({ sampleRate:this.sampleRate }); }
+        catch { this.context = new Context(); }
+        this.gain = this.context.createGain();
+        this.gain.gain.value = this.level;
+        this.gain.connect(this.context.destination);
+        this.context.addEventListener('statechange', () => {
+          // Mobile interruptions freeze the audio clock. Pause explicitly so the
+          // next Play gesture can resume the context at the same sample position.
+          if (this.source && this.desiredPlaying && this.context.state !== 'running') this.pause();
+        });
+        return this.context;
+      }
+      remember(url,buffer) {
+        this.cache.delete(url); this.cache.set(url,buffer);
+        while (this.cache.size > 8) this.cache.delete(this.cache.keys().next().value);
+      }
+      getBuffer() {
+        if (this.buffer) return Promise.resolve(this.buffer);
+        if (this.pending) return this.pending;
+        const url = this.url, version = this.resourceVersion;
+        if (!url) return Promise.reject(new Error('No audio file is selected.'));
+        const context = this.ensureContext();
+        const cached = this.cache.get(url);
+        const controller = new AbortController();
+        this.controller = controller;
+        const pending = (async () => {
+          let buffer = cached;
+          if (!buffer) {
+            const response = await fetch(url,{ signal:controller.signal });
+            if (!response.ok) throw new Error('Audio returned HTTP ' + response.status + '.');
+            const bytes = await response.arrayBuffer();
+            if (controller.signal.aborted) throw new DOMException('Loading cancelled.','AbortError');
+            buffer = await context.decodeAudioData(bytes);
+          }
+          if (!buffer.length || !Number.isFinite(buffer.duration) || buffer.duration <= 0) throw new Error('The decoded audio is empty.');
+          this.remember(url,buffer);
+          if (version === this.resourceVersion) {
+            this.buffer = buffer;
+            this.emit('loadedmetadata'); this.emit('loadeddata'); this.emit('canplay'); this.emit('progress');
+          }
+          return buffer;
+        })();
+        this.pending = pending;
+        pending.finally(() => {
+          if (this.pending === pending) { this.pending = null; this.controller = null; }
+        }).catch(() => {});
+        return pending;
+      }
+      reportError(error) {
+        this.error = error; this.desiredPlaying = false; this.stopSource();
+        this.emit('error');
+      }
+      load() {
+        this.error = null;
+        const version = this.resourceVersion, play = this.playVersion;
+        try {
+          this.getBuffer().catch((error) => {
+            if (version === this.resourceVersion && play === this.playVersion && !this.desiredPlaying) this.reportError(error);
+          });
+        } catch (error) { this.reportError(error); }
+      }
+      async play() {
+        const version = this.resourceVersion, play = ++this.playVersion;
+        if (this.finished) this.offset = 0;
+        this.finished = false; this.error = null; this.desiredPlaying = true;
+        try {
+          const context = this.ensureContext();
+          // Invoke resume directly in the click handler, before fetch/decode awaits.
+          const resumed = context.state === 'running' ? Promise.resolve() : Promise.resolve(context.resume());
+          await Promise.all([resumed,this.getBuffer()]);
+          if (version !== this.resourceVersion || play !== this.playVersion || !this.desiredPlaying) return;
+          if (context.state !== 'running') throw new Error('Playback was interrupted. Press Play to resume.');
+          if (!this.source) this.startSource();
+        } catch (error) {
+          if (version === this.resourceVersion && play === this.playVersion && this.desiredPlaying) this.reportError(error);
+          throw error;
+        }
+      }
+      pause() {
+        this.offset = this.currentTime;
+        ++this.playVersion;
+        const active = this.desiredPlaying || !!this.source;
+        this.desiredPlaying = false; this.stopSource();
+        if (active) { this.emit('timeupdate'); this.emit('pause'); }
+      }
+      stopSource() {
+        if (this.frame !== null) cancelAnimationFrame(this.frame);
+        this.frame = null;
+        const source = this.source;
+        this.source = null;
+        if (source) { source.onended = null; try { source.stop(); } catch {} source.disconnect(); }
+      }
+      startSource() {
+        if (!this.buffer || !this.desiredPlaying) return;
+        const source = this.context.createBufferSource();
+        source.buffer = this.buffer;
+        source.loop = this.looping;
+        source.loopStart = 0;
+        source.loopEnd = this.buffer.duration;
+        source.connect(this.gain);
+        this.source = source;
+        this.startedAt = this.context.currentTime;
+        source.onended = () => {
+          if (this.source !== source || !this.desiredPlaying) return;
+          this.source = null; source.disconnect();
+          if (this.frame !== null) cancelAnimationFrame(this.frame);
+          this.frame = null; this.offset = this.duration;
+          this.desiredPlaying = false; this.finished = true;
+          this.emit('timeupdate'); this.emit('ended');
+        };
+        source.start(this.startedAt,this.offset);
+        this.emit('playing');
+        const tick = () => {
+          if (this.source !== source || !this.desiredPlaying) return;
+          this.emit('timeupdate'); this.frame = requestAnimationFrame(tick);
+        };
+        this.frame = requestAnimationFrame(tick);
+      }
+    }
+    const audio = new BufferAudio();
     audio.volume = 0.8;
     const storageKey = 'snipsnap.prism.verdicts.v1';
-    const state = { clips: [], comparisons: [], comparison: null, factoryBank: null, auditionRevision: null, section: 'presets', voice: 'all', search: '', mode: 'matched', current: null, reviews: {}, storageAvailable: true, loaded: false, request: 0, pendingPosition: null, loading: false };
+    const state = { clips: [], comparisons: [], comparison: null, factoryBank: null, auditionRevision: null, section: 'presets', voice: 'all', search: '', mode: 'matched', current: null, reviews: {}, storageAvailable: true, loaded: false, request: 0, pendingPosition: null, pendingFinished: false, loading: false };
     const sections = {
       voices: ['01', 'Voices', 'Six voices. One harmonic engine.', 'Compare the fundamental characters across register and velocity. Listen for a stable pitched body and partials with their own lifetimes.'],
       presets: ['02', 'Presets', 'The full factory bank.', 'Dry patches for keys and plucks, organs, basses, sustained textures, and glass tones. Filter by voice or search for a name or musical role.'],
@@ -406,8 +592,10 @@
       const request = ++state.request;
       $('#audio-error').hidden = true;
       state.loading = true;
+      if (position === null && state.pendingFinished) { state.pendingPosition = 0; state.pendingFinished = false; }
       if (position !== null) state.pendingPosition = position;
       if (audio.error) audio.load();
+      restorePendingPosition();
       updatePlayback();
       try { await audio.play(); if (request !== state.request) return; state.loading = false; updatePlayback(); }
       catch (error) {
@@ -425,6 +613,7 @@
       audio.pause();
       state.current = clip;
       state.pendingPosition = null;
+      state.pendingFinished = false;
       $('#player-title').textContent = (clip.comparisonGroup ? revisionLabel(clip) + ' / ' : '') + clip.label;
       $('#loop').disabled = !clip.loop;
       $('#loop').checked = false;
@@ -445,7 +634,8 @@
     const setMode = (mode) => {
       if (mode === state.mode) return;
       const wasPlaying = !audio.paused;
-      const position = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      const position = state.pendingPosition !== null ? state.pendingPosition : Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      const finished = state.pendingFinished || audio.ended;
       ++state.request;
       audio.pause();
       state.mode = mode;
@@ -454,6 +644,7 @@
         try {
           const url = clipPath(state.current);
           state.pendingPosition = position;
+          state.pendingFinished = finished;
           state.loading = wasPlaying;
           $('#seek').disabled = true;
           audio.src = url;
@@ -481,6 +672,7 @@
           clipPath(clip, 'raw'); clipPath(clip, 'matched');
         }
         state.clips = manifest.clips;
+        audio.sampleRate = Number.isFinite(manifest.sampleRate) ? manifest.sampleRate : 44100;
         state.factoryBank = manifest.factoryBank || null;
         $('#factory-count').textContent = state.clips.filter((clip) => clip.section === 'presets' && !clip.comparisonOnly).length + ' factory presets';
         state.auditionRevision = manifest.auditionRevision || null;
@@ -559,12 +751,13 @@
     });
     const restorePendingPosition = () => {
       if (state.pendingPosition === null || !Number.isFinite(audio.duration)) return;
-      const target = Math.min(state.pendingPosition, Math.max(0,audio.duration - 0.01));
+      const target = Math.min(state.pendingPosition,Math.max(0,audio.duration));
       let available = target === 0;
       for (let index = 0; index < audio.seekable.length; index++) if (target >= audio.seekable.start(index) && target <= audio.seekable.end(index)) available = true;
       if (!available) return;
       audio.currentTime = target;
       state.pendingPosition = null;
+      state.pendingFinished = false;
     };
     audio.addEventListener('loadedmetadata', () => {
       restorePendingPosition();

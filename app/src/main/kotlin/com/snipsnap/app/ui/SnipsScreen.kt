@@ -39,6 +39,7 @@ import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -644,12 +645,12 @@ private fun HeaderChip(label: String, scheme: Scheme, modifier: Modifier = Modif
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = label, onClick = onClick)
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
+            .tapeClick(label = label, spoken = spokenBack(label), onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.ink.tape)
+        TapeText(label, TapeType.pixel, scheme.lcdInk.tape)
     }
 }
 

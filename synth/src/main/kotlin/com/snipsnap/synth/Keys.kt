@@ -352,6 +352,24 @@ object Keys {
     fun prismPadMidis(voice: PrismVoice): List<Int> =
         (0..Prism.TUNE_SEMITONES step 3).map { Prism.rootMidi(voice) + it }
 
+    /** Nine minor-third HALO zones centred on the saved native MIDI note. */
+    fun openSkyPadMidis(voice: OpenSkyVoice, rootMidi: Int = OpenSky.DEFAULT_MIDI): List<Int> =
+        OpenSkyKeys.midis(voice, rootMidi)
+
+    /** OPENSKY's actual onset and continuous wet state followed by a measured
+     * sustain region. The instrument program owns the release fade.
+     */
+    fun openSkyPad(
+        voice: OpenSkyVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        velocity: Float = 1f,
+        timbre: OpenSkyTimbre = OpenSkyTimbre(),
+        wet: Boolean = true,
+        loopSeconds: Float = OpenSkyKeys.DEFAULT_LOOP_SECONDS,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote = OpenSkyKeys.render(voice, macros, midi, velocity, timbre, wet, loopSeconds, cancelled)
+
     /**
      * A held additive zone at exact MIDI pitch. HOLD is forced to its
      * seamless region and the saved partial template and velocity remain
@@ -527,6 +545,17 @@ object Keys {
         requireSeam("GLINT $voice at MIDI $midi", held.audio, held.loopStart)
         return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
     }
+
+    // ---------- ORPHICA ----------
+
+    /**
+     * A captured microsound-harp note at its zone's exact root. The caller resolves
+     * saved macros first; replacing MIDI here never applies TUNE a second time.
+     * Full HOLD retains the pluck prefix and marks a genuinely periodic sustain.
+     */
+    fun orphicaPad(config: OrphicaConfig, midi: Int = config.midi,
+        cancelled: () -> Boolean = { false }): KeyNote =
+        Orphica.renderHeld(config.copy(midi = midi), cancelled)
 
     // ---------- FORK ----------
     // docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md

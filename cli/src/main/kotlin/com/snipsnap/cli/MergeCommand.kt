@@ -3,6 +3,7 @@ package com.snipsnap.cli
 import com.snipsnap.kit.KitMerge
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.Severity
+import com.snipsnap.shell.BoardSheet
 import java.io.File
 import java.io.PrintStream
 
@@ -39,7 +40,7 @@ object MergeCommand {
         }
 
         val merged = try {
-            KitMerge.merge(aDir, bDir, destDir, name, replace = opts.has("--replace"))
+            KitMerge.merge(aDir, bDir, destDir, name, replace = opts.has("--replace"), importPad = BoardSheet::importPad)
         } catch (e: IllegalArgumentException) {
             throw CliError(e.message ?: "merge refused")
         }

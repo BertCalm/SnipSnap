@@ -68,6 +68,10 @@ object PackBuilder {
                 programDir = File(dest, "Programs"),
                 samplesDir = File(dest, "Samples/${kit.name}"),
             )
+            val programEntry = "Programs/${program.name}"
+            XpnSourceMetadata.render(kit, kitDir, programEntry, program.readBytes(), "Samples/${kit.name}")?.let { bytes ->
+                File(dest, XpnSourceMetadata.entryName(programEntry)).writeBytes(bytes)
+            }
             if (withPreviews) {
                 val previews = File(dest, "[Previews]").apply { mkdirs() }
                 com.snipsnap.audio.WavWriter.write(

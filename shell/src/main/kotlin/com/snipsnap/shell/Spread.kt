@@ -171,6 +171,10 @@ object Spread {
      * so the octaves read at a glance. The caller saves.
      */
     fun apply(model: KitBuilderModel, snip: Snip, plan: Plan, sound: Sound): List<Note> {
+        // SPREAD renames the main WAV and lands single-sample pads. Carrying
+        // an active board's old file inventory would strand REMOVE/UNDO.
+        require(sound.recipe?.entries?.containsKey("boardPad") != true &&
+            sound.like?.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_SPREAD }
         val color = sound.colorHex
         val rootColor = rootTint(color)
         for (note in plan.notes) {

@@ -164,6 +164,15 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CONFLUENCE's first recorded-source proof renders a small gathering from supplied
+vocal regions: one to eight persistent performers, complete phrase responses,
+staggered sustained vowels and a shared mono room. Run
+`./gradlew :synth:generateConfluenceAudition` for attributed human-source,
+raw/matched listening comparisons and portable prototype recipes. The
+[audition](https://confluence-snipsnap-audition.bertcalm.chatgpt.site) awaits the
+owner's listening verdict; [implementation notes](docs/CONFLUENCE.md) distinguish
+this finite renderer from the later phone editor, larger crowd and HOLD stages.
+
 THUMP, the analog-style drum voice engine — S1 of
 [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md), real. Eight voices (kick,
 snare, closed/open hat, clap, tom, cowbell, rim), every macro normalized 0..1
@@ -275,12 +284,18 @@ RELAY makes a compact timbral phrase inside one pitched note: a rounded
 pluck hands off to harmonic body, bell detail and soft tone, with accents
 scheduled independently of the order. KEY, BASS, PLUCK, ORGAN, CHIME and FLOW
 share ORDER, PULSE, BLEND, COLOR, LENGTH and HOLD, plus the host's TUNE
-control. Six dry identity presets, complete phrase recipes, native velocity,
-a sixteen-pad kit, FRESH TAPE and the synth picker use the same renderer.
-Run `./gradlew :synth:generateRelayAudition` for raw/matched voices, sweeps,
-interaction corners and repeated loops under `testkit/relay-audition/`.
+control. Thirty-six dry recipes retain the six earlier seeds unchanged:
+eight KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW presets.
+The SYNTH panel exposes native VELOCITY and note names. Complete phrase recipes,
+sixteen distinct starter pads, FRESH TAPE and the synth picker use the same renderer;
+explicit kit selections keep the starter at sixteen pads as the bank grows.
+Run `./gradlew :synth:generateRelayPerformanceAudition` for the 76-clip page:
+the full bank, six musical performances, three velocities per voice and every
+starter pad, with raw/matched WAVs under `testkit/relay-performance-audition/`.
+The earlier `generateRelayAudition` engineering matrix remains available.
 [Implementation notes](docs/RELAY.md) explain its clock and loop behavior.
-The dry identities await the owner's sonic approval before preset expansion.
+The expanded bank is a listening and playability candidate; hands-on device
+verification and the owner's listening verdict remain open.
 
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
@@ -310,7 +325,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 31 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 34 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -397,26 +412,28 @@ audition includes five Previous/Revised FLOW pairs, with its other clips retaine
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
 with relative TUNE, native velocity, saved playing gestures and settled HOLD
-loops. Eight dry starting presets and a sixteen-pad C minor pentatonic kit
-are available in SYNTH, FRESH TAPE and the CLI. Run
+loops. Thirty-six dry factory presets are available in SYNTH and the CLI;
+FRESH TAPE keeps the original sixteen-pad C minor pentatonic starter. Run
 `./gradlew :synth:generateEmbouchureAudition` for the complete listening page,
-control matrix and MPC 2/3 kit under `testkit/embouchure-audition/`.
+control matrix and four MPC 2/3 kits under `testkit/embouchure-audition/`.
 The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
 contains the revised control matrix, original/revised comparisons and the
-downloadable kit. Model 2 strengthens the controls while preserving all six
-default voices; saved model 1 recipes retain their original render.
-The revised controls await owner listening approval before preset expansion;
-[implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
+downloadable starter and three factory banks covering all 36 presets. Model 2
+strengthens the controls while preserving all six default voices; saved model 1
+recipes retain their original render. The owner accepted the voices and revised
+controls; the expanded presets now have their own listening review.
+[Implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
 
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
-remain saved with each patch. Twelve provisional presets and a sixteen-pad
+remain saved with each patch. Thirty-six dry presets and a sixteen-pad
 C minor pentatonic FRESH TAPE starter are included. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
-describe the renderer, settled HOLD loops and the pending owner listening review.
+describe the approved six-voice sound, settled HOLD loops and the expanded bank's
+listening review.
 
 OSPREY adapts XOsprey into a finite SWELL articulation. The original sound was
 positively received, with a request for slightly more distinct voices. R2 was
@@ -429,11 +446,21 @@ remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudit
 for paired R1/R3 renders and creature-muted body comparisons. The original
 46-clip study remains preserved. After the [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
 the owner said, “We are in a better spot audio wise.” R3 is the working audio
-baseline; final listening and phone/MPC acceptance remain open. Run
+baseline. The owner subsequently confirmed, “Sounds good in app, let's proceed.”
+In-app listening is confirmed; save/reopen, recipe replay and MPC playback checks
+remain open. The [MPC listening pass](docs/OSPREY_MPC_PASS.md) is next. Run
 `./gradlew :shell:generateOspreyHandoff` for the existing sixteen-pad starter as
 a SnipSnap working folder, native MPC 3 export and compatibility twin, with raw
 renders, recipes and checks. [Implementation notes](docs/OSPREY.md) describe the
 three models, audition and hardware handoff.
+
+OPENSKY adapts the XOpenSky concept into four stereo voices: ANTHEM, SOAR,
+HALO and CRYSTAL. RISE, WIDTH, GLOW and AIR shape the source and its octave
+room; eight accepted Round 3 recipes retain their complete timbre, root,
+velocity, gate and wet state when saved. The SYNTH picker, a sixteen-pad
+C minor pentatonic starter, CLI rendering and HALO held-instrument export
+share these production recipes. [Integration notes](docs/OPENSKY_AUDITION.md)
+record the audition baseline and the remaining phone listening checks.
 
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One
@@ -468,6 +495,29 @@ interaction grids, velocity and loop probes. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
 includes the complete factory bank and the original/revised GLASS comparisons.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
+
+SHOAL's first prototype offers GLASS and RIPPLE: harmonic energy gathers,
+migrates between partials and briefly strays before returning. DENSITY, CURRENT,
+COHESION, STRAY and GLOW shape the population; HOLD supplies a moving loop.
+ROOT and VELOCITY remain independent controls. Eight provisional dry recipes,
+saved patches, a sixteen-pad starter kit, CLI rendering and the phone picker
+support the first listen. Run `./gradlew :synth:generateShoalAudition` for the
+audition. The remaining four proposed voices and 36-preset expansion await
+later work. The first listen found the two voices too similar; model 2 revises
+their contrast and awaits another listen. Saved model-1 recipes retain their sound.
+[Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
+
+OVEN is a struck keyboard instrument: velocity-sensitive
+stiff strings, restrained paired-string beating, dark fixed body coloration and
+a baked resonance halo. GRAND, FELT, FORGED and BLOOM share TUNE, HAMMER, BODY,
+RING, BLOOM and HALO. Ten approved factory recipes and a dry sixteen-pad kit use
+the same finite mono renderer as the phone SYNTH picker. ROOT and VELOCITY select
+the note and strike; edits, saved presets and pad recipes retain both and the model.
+MAKE INSTRUMENT and live shared resonance remain later work.
+Run `./gradlew :synth:generateOvenAudition` for raw/matched notes, soft/medium/hard
+keyboard samples, five-point sweeps and causal comparisons. The
+[published audition](https://snipsnap-oven-audition.bertcalm.chatgpt.site) is the
+approved listening baseline. [Implementation notes](docs/OVEN.md) describe its scope and limits.
 
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
@@ -727,6 +777,15 @@ the owner's listening review. Audition: `./gradlew :synth:generateCorollaAuditio
 Individual presets can also be rendered with
 `./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
 
+ORPHICA is a first-listen microsound-harp prototype: each tuned pluck disperses
+into grains of its own recent history. CLEAR, STUTTER, SCATTER, REVERSE and
+captured FREEZE are deterministic stereo renders, with dry attacks and no
+added reverb. Run `./gradlew :synth:generateOrphicaAudition` for the raw/matched
+listening pack. The owner gave the finite sound a positive first-listening verdict. The phone
+picker now provides material, mode, root and HOLD controls; MAKE INSTRUMENT
+exports attack-preserving stereo captured-sustain keygroups. Original finite
+recipes retain their sound. See [ORPHICA](docs/ORPHICA.md).
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -735,8 +794,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY and GRAINS round out the lineup —
-thirty-nine engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN and GRAINS round out the lineup —
+forty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -874,7 +933,12 @@ stretched head and REVERSE's flip included — sees the pitched sound), EQ
 (three
 plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
-hit's onset, on a pad that was never a synth), SQUASH
+hit's onset, on a pad that was never a synth), WAH (a resonant band-pass
+swept between a heel and a toe by three moves held as weights, TOUCH from the
+hit's own envelope, AUTO a sine with a flat top (it rests at the toe for 39
+percent of each cycle at AMT 100 and 14 percent at AMT 70) and ROCK one
+heel-toe-heel gesture, with SPEED and Q beside them; the first pedal on the board, in front of
+the compressor and the amp), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
 tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
 giving way under it on loud passages, TONE after the tube, CAB from no
@@ -909,20 +973,26 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → squash → valve → crunch → ring → dub → vinyl →
+spike → eq → contour → wah → squash → valve → crunch → ring → dub → vinyl →
 tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
+
+**WIDE** is the first editable compound board: TAPE → EQ → ENSEMBLE → SPRING
+in its own order. On the pad sheet, AMT is staged until KEEP, original/result
+previews preserve stereo, and REMOVE/UNDO retain the original audio and recipe.
+See [`docs/WIDE.md`](docs/WIDE.md).
+
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).

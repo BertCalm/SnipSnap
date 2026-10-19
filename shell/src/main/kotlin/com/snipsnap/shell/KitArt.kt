@@ -164,6 +164,12 @@ object KitArt {
         return out.toByteArray()
     }
 
+    /**
+     * [png] in the shape `ExportWizardModel.artRenderer` takes: the desktop
+     * default, named here so the write path never spells the AWT call.
+     */
+    fun awtPng(kit: Kit, kitDir: File, style: Style): ByteArray = png(kit, kitDir, style)
+
     // ---- the AWT adapter — the only place in this file java.awt appears ----
 
     /** Internal, not private: [JCard] reuses [waveform] against its own [Graphics2D]. */

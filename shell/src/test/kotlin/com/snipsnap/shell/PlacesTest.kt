@@ -41,6 +41,15 @@ class PlacesTest {
     }
 
     @Test
+    fun `the boot text finishes inside its ceiling, and its fade is short enough to be a blink`() {
+        // One step per line and one for READY, the run the composable's own loop makes.
+        val run = (Copy.BOOT_LINES.size + 1) * Places.BOOT_STEP_MS
+        assertTrue(run <= Places.BOOT_MAX_MS, "the boot text runs ${run} ms against a ${Places.BOOT_MAX_MS} ms ceiling")
+        assertTrue(Places.BOOT_FADE_MS <= 150L, "the glass lifts in ${Places.BOOT_FADE_MS} ms")
+        assertEquals("READY.", Copy.BOOT_LINES.last())
+    }
+
+    @Test
     fun `every door label carries its own arrow`() {
         for (door in listOf(Places.DOOR_CUT, Places.DOOR_PADS, Places.DOOR_BEAT, Places.DOOR_OUT, PadStrip.DOOR_OPEN, PadStrip.DOOR_CAPTURE, PadStrip.DOOR_FROM_SNIPS)) {
             assertTrue(door.endsWith(" ▸"), door)
@@ -65,5 +74,17 @@ class PlacesTest {
         assertEquals(Places.NO_KITS, Places.switcher(Project("P")))
         assertEquals("KEY Am · BANK B EMPTY · 3 VERSIONS", Places.thisKit("Am", bankBEmpty = true, versions = 3))
         assertEquals("NO KEY · BANK B IN USE · 1 VERSION", Places.thisKit(null, bankBEmpty = false, versions = 1))
+    }
+
+    @Test
+    fun `the kit chip keeps the project count in its name, and the sheet marks the active kit in words`() {
+        val line = Places.switcher(Project("P", listOf("Kitchen", "Funk Room"), activeKit = "Funk Room"))
+        assertEquals("SWITCH KIT · FUNK ROOM · 2 KITS IN THIS PROJECT", Places.switchKitName(line))
+        assertEquals("● FUNK ROOM · ACTIVE", Places.kitRow("Funk Room", active = true))
+        assertEquals("KITCHEN", Places.kitRow("Kitchen", active = false))
+        assertFalse("ON THE GRID" in Places.kitRow("Funk Room", active = true), "ON THE GRID is the quantize phrase")
+        for (drawn in listOf(Places.ADD_KIT, Places.SHEET_ADD_FROM_SHELF)) {
+            assertFalse("▾" in drawn, "▾ has no glyph in either face and draws as a dot: " + drawn)
+        }
     }
 }

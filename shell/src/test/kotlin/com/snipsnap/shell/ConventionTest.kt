@@ -3131,7 +3131,7 @@ class ConventionTest {
      * RE-TRIM return — and its discovery hint was retired inside exactly
      * one of them (J16). A user who found the sheet either of the other
      * two ways was told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit
-     * open, forever. `Copy.PAD_SHEET_HINT`'s own KDoc said opening the sheet
+     * open, forever. The retired `Copy.PAD_SHEET_HINT`'s own KDoc said opening the sheet
      * is "the only event that proves they found it" — true of the intent
      * and false of the code, which is the shape this wave keeps finding: a
      * comment asserting a behaviour the code does not have.
@@ -3184,6 +3184,128 @@ class ConventionTest {
                 "That is how J16 happened — one door did the work and the other doors walked past it. " +
                 "Call openPadSheet(slot) instead.",
         )
+    }
+
+    // ---- Law: nothing the phone runs reaches java.awt ----
+
+    /**
+     * 2026-10-18, the second time. WRITE KIT with the default EXPANSION
+     * format crashed on the phone with `NoClassDefFoundError:
+     * java.awt.image.BufferedImage` at `JCard.render`, reached through
+     * `Inserts.write`. The first time (PR #299) it was `KitArt`: the tile
+     * was drawn with `java.awt`/`javax.imageio`, which exist on the desktop
+     * JVM `:cli` runs on and **do not exist on Android at any API level**,
+     * so only the emulator, never a unit test, could see it. #299 fixed the
+     * one file; the J-Card sat two calls further down the same write path
+     * with the same shape, and nothing said the shape was banned.
+     *
+     * The rule: drawing goes through `ArtCanvas`, and AWT enters only
+     * through the named desktop adapters. Four things hold, each of which
+     * is how the next one would sneak in:
+     *
+     * 1. Of `:shell`'s main sources, only the `awtFiles` below import or
+     *    spell out `java.awt`/`javax.imageio`. A new renderer that wants
+     *    AWT draws through `ArtCanvas` and gets an adapter, or earns an
+     *    entry here with a reason.
+     * 2. `:app` never names them at all, and never calls an AWT entry
+     *    point (`JCard.png`, `KitArt.png`, `Lineage`, ...).
+     * 3. `Inserts.kt` and `ExportWizard.kt` — the write path the phone
+     *    runs — never call `JCard.png`/`JCard.render`/`KitArt.png`/
+     *    `KitArt.render` directly; the renderer is passed in.
+     * 4. Every `ExportWizardModel(` `:app` builds passes both renderers,
+     *    because the defaults are the AWT ones.
+     */
+    @Test
+    fun `law - nothing the phone runs reaches java awt, the renderers are handed in`() {
+        val shellMain = File("src/main/kotlin")
+        val appMain = File("../app/src/main/kotlin")
+        assertTrue(
+            shellMain.isDirectory && appMain.isDirectory,
+            "cannot find ${shellMain.absolutePath} / ${appMain.absolutePath}",
+        )
+        val awt = Regex("""\b(?:java\.awt|javax\.imageio)\b""")
+        fun ktFiles(root: File) = root.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+
+        // 1. :shell main — only the desktop adapters.
+        val awtFiles = mapOf(
+            "KitArt.kt" to "the cover-art AWT adapter (render/png, AwtCanvas) :cli uses",
+            "JCard.kt" to "the J-card AWT adapter (render/png/awtPng) :cli uses",
+            "Lineage.kt" to "the lineage card, drawn with java.awt.Font; desktop-only, no :app caller (checked below)",
+        )
+        val shellFiles = ktFiles(shellMain)
+        assertTrue(shellFiles.isNotEmpty(), "scan found no :shell sources, so it is broken rather than the code being clean")
+        val strayShell = shellFiles
+            .filter { it.name !in awtFiles && awt.containsMatchIn(stripCommentsAndStrings(it.readText())) }
+            .map { it.name }
+        assertEquals(
+            emptyList(),
+            strayShell,
+            "these :shell files name java.awt/javax.imageio: $strayShell. Neither exists on Android at any API " +
+                "level, so the phone dies with NoClassDefFoundError the moment one runs (KitArt in PR #299, " +
+                "JCard on 2026-10-18). Draw through ArtCanvas; AWT belongs only in ${awtFiles.keys}.",
+        )
+        for (name in awtFiles.keys) {
+            assertTrue(
+                shellFiles.any { it.name == name && awt.containsMatchIn(stripCommentsAndStrings(it.readText())) },
+                "$name no longer uses AWT — drop it from this law's allowlist so the allowlist stays exact.",
+            )
+        }
+
+        // 2. :app main — no AWT, no direct call to an AWT entry point.
+        val appFiles = ktFiles(appMain)
+        assertTrue(appFiles.isNotEmpty(), "scan found no :app sources, so it is broken rather than the code being clean")
+        val awtEntry = Regex("""\b(?:JCard\.(?:png|render|awtPng)|KitArt\.(?:png|render)|Lineage\.\w+)\b|\bJCard::awtPng\b""")
+        val strayApp = mutableListOf<String>()
+        for (f in appFiles) {
+            val code = stripCommentsAndStrings(f.readText())
+            awt.find(code)?.let { strayApp += "${f.name}: ${it.value}" }
+            awtEntry.find(code)?.let { strayApp += "${f.name}: ${it.value}" }
+        }
+        assertEquals(
+            emptyList(),
+            strayApp,
+            "the app reaches an AWT path: $strayApp. Use AndroidKitArt.png / AndroidJCard.png.",
+        )
+
+        // 3. The write path takes its renderers; it does not pick the AWT one.
+        val direct = Regex("""\b(?:JCard|KitArt)\.(?:png|render)\b""")
+        for (name in listOf("Inserts.kt", "ExportWizard.kt")) {
+            val f = shellFiles.single { it.name == name }
+            val hit = direct.find(stripCommentsAndStrings(f.readText()))
+            assertTrue(
+                hit == null,
+                "$name calls ${hit?.value} directly. It runs on the phone, where AWT does not exist: take the " +
+                    "renderer as a parameter (jCardPng / artRenderer) and let :cli and the tests default it.",
+            )
+        }
+
+        // 4. Every ExportWizardModel the app builds hands in both renderers, because the defaults are AWT.
+        var built = 0
+        for (f in appFiles) {
+            val code = stripCommentsAndStrings(f.readText())
+            var from = 0
+            while (true) {
+                val at = code.indexOf("ExportWizardModel(", from)
+                if (at < 0) break
+                from = at + 1
+                if (code.substring(maxOf(0, at - 6), at).endsWith("class ")) continue
+                val close = matchingParen(code, at + "ExportWizardModel(".length)
+                    ?: fail("unbalanced ExportWizardModel( in ${f.name}")
+                val args = code.substring(at, close)
+                built++
+                assertTrue(
+                    "artRenderer" in args && "jCardRenderer" in args,
+                    "${f.name} builds an ExportWizardModel without both renderers. The defaults are the AWT ones, " +
+                        "which crash on the phone: pass artRenderer = AndroidKitArt.png and " +
+                        "jCardRenderer = AndroidJCard.png.",
+                )
+            }
+        }
+        assertTrue(built > 0, "found no ExportWizardModel( in :app, so this scan is broken rather than the code being clean")
+        val insertCalls = appFiles.count {
+            Regex("""\bInserts\.write\(""").containsMatchIn(stripCommentsAndStrings(it.readText()))
+        }
+        assertEquals(0, insertCalls, "the app calls Inserts.write directly; go through ExportWizardModel, which hands the renderer in")
     }
 
 }

@@ -609,15 +609,80 @@ object SynthKits {
      * Every pad carries the model, player gesture and native velocity in its recipe.
      * Finite notes are TONAL; Held Effort is a settled LOOP for repeated playback.
      */
-    fun embouchure(): List<ArrangedPad?> {
-        val lead = EmbouchurePresets.all().first { it.name == "Leaning Reed" }
+    fun embouchure(): List<ArrangedPad?> = embouchureStarterPatches().map(::embouchurePad)
+
+    /** The original starter layout remains fixed when the selectable factory roster grows. */
+    fun embouchureStarterPatches(): List<EmbouchurePatch> {
+        val initial = EmbouchurePresets.initial()
+        val lead = initial.single { it.name == "Leaning Reed" }
         val notes = PENTATONIC.take(8).mapIndexed { i, semitone ->
             lead.copy(name = "Reed ${i + 1}", midi = Embouchure.rootMidi(lead.voice) + semitone,
                 macros = lead.macros + ("TUNE" to 0f))
         }
-        return (notes + EmbouchurePresets.all()).map {
-            pad(it, Embouchure.drumClassFor(it.voice, it.macros)).copy(displayName = it.name)
+        return notes + initial
+    }
+
+    private fun embouchurePad(patch: EmbouchurePatch): ArrangedPad =
+        pad(patch, Embouchure.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
+
+    /** Twelve authored presets followed by four complementary notes; every render stays dry. */
+    data class EmbouchureFactoryBank(
+        val id: String,
+        val name: String,
+        val presetPatches: List<EmbouchurePatch>,
+        val notePatches: List<EmbouchurePatch>,
+    ) {
+        init {
+            require(presetPatches.size == 12 && notePatches.size == 4) {
+                "EMBOUCHURE factory banks contain twelve presets and four keyed notes"
+            }
+            require((presetPatches + notePatches).all { it.model == Embouchure.MODEL_VERSION }) {
+                "EMBOUCHURE factory banks use the current renderer model"
+            }
         }
+
+        val patches: List<EmbouchurePatch> get() = presetPatches + notePatches
+        val noteSlots: List<Int> get() = (13..16).toList()
+        fun render(): List<ArrangedPad?> = patches.map { SynthKits.embouchurePad(it) }
+    }
+
+    /**
+     * Three authored factory banks cover each of the thirty-six presets exactly once.
+     * Paired voices keep their own gesture, note and velocity; pads 13–16 add root/fifth
+     * and minor-third/seventh answers in C minor pentatonic, with explicit finite notes.
+     * These additional exports leave the original FRESH TAPE starter unchanged.
+     */
+    fun embouchureFactoryBanks(): List<EmbouchureFactoryBank> {
+        val presets = EmbouchurePresets.all()
+        require(presets.size == 36 && presets.map { it.name }.distinct().size == 36) {
+            "EMBOUCHURE factory banks require thirty-six distinct authored presets"
+        }
+        val initial = EmbouchurePresets.initial().associateBy { it.name }
+        fun note(preset: String, name: String, semitone: Int): EmbouchurePatch {
+            val source = initial.getValue(preset)
+            return source.copy(name = name, midi = Embouchure.rootMidi(source.voice) + semitone,
+                macros = source.macros + mapOf("TUNE" to 0f, "HOLD" to 0f))
+        }
+        fun bank(id: String, name: String, voices: List<EmbouchureVoice>, notes: List<EmbouchurePatch>) =
+            EmbouchureFactoryBank(id, name,
+                voices.flatMap { voice -> presets.filter { it.voice == voice } }, notes)
+        return listOf(
+            bank("embouchure-reeds-air", "Embouchure Reeds and Air",
+                listOf(EmbouchureVoice.REED, EmbouchureVoice.WHISTLE), listOf(
+                    note("Leaning Reed", "Reed Root C3", 0), note("Leaning Reed", "Reed Fifth G3", 7),
+                    note("Narrow Air", "Air Third Eb4", 3), note("Narrow Air", "Air Seventh Bb4", 10),
+                )),
+            bank("embouchure-brass-bass", "Embouchure Brass and Bass",
+                listOf(EmbouchureVoice.BRASS, EmbouchureVoice.BASS), listOf(
+                    note("Breath Pocket", "Bass Root C2", 0), note("Breath Pocket", "Bass Fifth G2", 7),
+                    note("Muted Bell", "Brass Third Eb3", 3), note("Muted Bell", "Brass Seventh Bb3", 10),
+                )),
+            bank("embouchure-bow-soft", "Embouchure Bow and Soft",
+                listOf(EmbouchureVoice.BOW, EmbouchureVoice.SOFT), listOf(
+                    note("Relaxed Bow", "Bow Root C3", 0), note("Relaxed Bow", "Bow Fifth G3", 7),
+                    note("Soft Entry", "Soft Third Eb3", 3), note("Soft Entry", "Soft Seventh Bb3", 10),
+                )),
+        )
     }
 
     /**
@@ -660,7 +725,8 @@ object SynthKits {
     /**
      * Sixteen dry FM/formant pads for the first audition. A01–A08 walk KEY up
      * C minor pentatonic from C3, with explicit roots rather than a tuning macro.
-     * The upper pads contrast all six roles and end with settled held choir.
+     * The upper pads contrast all six roles and end with settled held choir,
+     * delivered once with a saved 8 ms terminal fade rather than a hard stop.
      * Every pad carries operator, mouth and envelope state in its complete recipe.
      */
     fun murmur(): List<ArrangedPad?> {
@@ -675,8 +741,26 @@ object SynthKits {
         return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } +
             contrasts.map { name ->
                 MurmurPresets.all().first { it.name == name }
-                    .let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
+                    .let {
+                        if (name != "HELD HUM") pad(it, Murmur.drumClassFor(it.voice, it.macros))
+                        else {
+                            // HOLD supplies a seamless source; this starter pad plays it once.
+                            // Keep the source recipe intact and save only its delivery edge fade.
+                            val recipe = PadRecipe(it, terminalFadeMs = 8f)
+                            ArrangedPad(recipe.render(), Murmur.drumClassFor(it.voice, it.macros), recipe.toJsonValue())
+                        }
+                    }
             }
+    }
+
+    /** Eight native-note lead pads followed by the accepted Round 3 source recipes. */
+    fun openSky(): List<ArrangedPad?> {
+        val presets = OpenSkyPresets.all()
+        val lead = presets.first { it.name == "Solar Arc" }
+        val notes = PENTATONIC.take(8).mapIndexed { i, semitone ->
+            pad(lead.copy(name = "OpenSky ${i + 1}", midi = 48 + semitone), DrumClass.TONAL)
+        }
+        return notes + presets.map { pad(it, DrumClass.TONAL) }
     }
 
     /**
@@ -827,6 +911,25 @@ object SynthKits {
     }
 
     /**
+     * OVEN's dry finite-note audition kit. A01–A08 walk GRAND up C minor
+     * pentatonic from C3; the remaining pads expose all four articulations.
+     * Every pad retains its requested root, strike velocity and material model.
+     * Long resonance tails remain TONAL; no pad pretends to be a held loop.
+     */
+    fun oven(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = OvenPatch(
+            "Oven Grand $n", OvenVoice.GRAND, Oven.defaults(OvenVoice.GRAND),
+            midi = Oven.ROOT_MIDI + semitone, velocity = .8f,
+        ).let { pad(it, Oven.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = OvenPresets.all().first { it.name == name }
+            .let { pad(it, Oven.drumClassFor(it.voice, it.macros)) }
+        return PENTATONIC.take(8).mapIndexed { i, semitone -> note(i + 1, semitone) } + listOf(
+            preset("Iron Parlour"), preset("Felt Ledger"), preset("Quiet Room"), preset("Bright Ledger"),
+            preset("Hammered Iron"), preset("Cold Rivet"), preset("Afterglow"), preset("Hanging Frame"),
+        )
+    }
+
+    /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
      * PLUCK, WOOD and BUBBLE each speak at C3 and C4. The remaining ten pads
      * compare every nondefault recipe, including three held buffers. Each
@@ -934,6 +1037,20 @@ object SynthKits {
         )
     }
 
+    /** Eight GLASS scale notes, six finite contrasts and two moving held loops, all dry. */
+    fun shoal(): List<ArrangedPad?> {
+        fun arranged(patch: ShoalPatch) = pad(patch, Shoal.drumClassFor(patch.voice, patch.macros))
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            ShoalPatch(
+                "Glass ${index + 1}", ShoalVoice.GLASS, Shoal.defaults(ShoalVoice.GLASS),
+                midi = Shoal.rootMidi(ShoalVoice.GLASS) + semitone,
+            ).let(::arranged)
+        }
+        val recipes = ShoalPresets.all()
+        return notes + recipes.filterNot { Shoal.isLoop(it.macros.getValue("HOLD")) }.map(::arranged) +
+            recipes.filter { Shoal.isLoop(it.macros.getValue("HOLD")) }.map(::arranged)
+    }
+
     /**
      * Relay's dry audition kit: eight C-minor-pentatonic keys, one seed for each voice,
      * and two held phrases. Every pad stores the source definitions, handoff roster,
@@ -949,13 +1066,12 @@ object SynthKits {
                 Relay.defaults(RelayVoice.KEY) + ("TUNE" to semitone / Relay.TUNE_SEMITONES.toFloat()),
             ).let(::arranged)
         }
-        val voices = RelayPresets.all().map(::arranged)
-        val held = listOf(RelayVoice.ORGAN, RelayVoice.FLOW).map { voice ->
-            RelayPatch(
-                if (voice == RelayVoice.ORGAN) "HELD HANDOFF" else "FOUR CORNERS",
-                voice, Relay.defaults(voice) + ("HOLD" to 1f),
-            ).let(::arranged)
-        }
+        fun selected(name: String) = RelayPresets.all().single { it.name == name }.let(::arranged)
+        // The first KEY seed duplicates Handoff 6 at C4. Use its authored contrast here,
+        // and select by name so a growing preset bank never expands this sixteen-pad kit.
+        val voices = listOf("AFTERIMAGE KEY", "POCKET RELAY", "MUTED PASSAGE",
+            "ORGAN AFTERGLOW", "BELL EXIT", "SOFT EXCHANGE").map(::selected)
+        val held = listOf("HELD HANDOFF", "FOUR CORNERS").map(::selected)
         return notes + voices + held
     }
 
