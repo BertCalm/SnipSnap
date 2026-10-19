@@ -211,3 +211,8 @@ testkit/SnipSnap Contour Kit/
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
 testkit/SnipSnap Skitter Kit/
+
+# Reproducible scanned-chain experiment audio and offline listening artifacts.
+testkit/scanned-chain-audition/
+testkit/scanned-chain-audition.zip
+testkit/scanned-chain-listen.html
