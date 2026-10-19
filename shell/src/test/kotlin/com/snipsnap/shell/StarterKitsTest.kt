@@ -470,7 +470,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -497,6 +497,10 @@ class StarterKitsTest {
         assertEquals("TANGLE", tangle.displayName)
         assertFalse(tangle.seeded, "TANGLE is a fixed dry audition kit")
         assertEquals(KeySpec.parse("Cminpent"), tangle.key)
+        val flock = StarterKits.byId("flock")!!
+        assertEquals("FLOCK", flock.displayName)
+        assertFalse(flock.seeded, "FLOCK repeats its saved finite performances")
+        assertEquals(KeySpec.parse("Cminpent"), flock.key)
         val embouchure = StarterKits.byId("embouchure")!!
         assertEquals("EMBOUCHURE", embouchure.displayName)
         assertFalse(embouchure.seeded, "EMBOUCHURE is a fixed dry audition kit")

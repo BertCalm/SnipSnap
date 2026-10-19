@@ -82,7 +82,7 @@ object Cli {
         |                        --seed N sets noise; --scramble N varies macros)
         |                        (OSPREY SWELL: --seed N --seconds .25..12 --model 1|2|3;
         |                        HOLD extends a finite sea gesture)
-        |                        (FLOCK prototype: GATHER/RIBBON/SPLIT; --all,
+        |                        (FLOCK: GATHER/RIBBON/SPLIT; --all,
         |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
         |                        HOLD extends a finite flock performance)
         |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N
