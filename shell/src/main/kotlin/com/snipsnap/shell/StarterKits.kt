@@ -110,6 +110,11 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.chip() },
         Starter(
+            "overlap", "OVERLAP",
+            "Twelve resonator plucks, finite textures and breaths, with four lower pluck answers.",
+            seeded = false,
+        ) { SynthKits.overlap() },
+        Starter(
             "cloud", "CLOUD",
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,

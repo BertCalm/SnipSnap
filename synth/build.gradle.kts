@@ -2,6 +2,44 @@ plugins {
     kotlin("jvm")
 }
 
+/** Twelve approved model-two patches, three dry studies, and the downloadable starter kit. */
+tasks.register<JavaExec>("generateOverlapMusicalAudition") {
+    group = "distribution"
+    description = "Render OVERLAP musical-bank native/matched WAVs, replayable recipes and study scores."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapMusicalAuditionGenerator")
+    workingDir = projectDir
+    val score = providers.gradleProperty("overlapScore").orNull
+    if (score != null) {
+        args("--score", score, providers.gradleProperty("overlapWav").get())
+    } else {
+        args("${rootDir}/testkit/overlap-musical-audition")
+        dependsOn("generateOverlapKit")
+        val kitOutput = providers.gradleProperty("overlapKitOutput")
+            .map { project.file(it) }.orElse(rootProject.file("testkit"))
+        doLast {
+            val assets = rootProject.file("testkit/overlap-musical-audition/assets")
+            check(assets.isDirectory || assets.mkdirs()) { "Cannot create $assets" }
+            kitOutput.get().resolve("SnipSnap-Overlap-Kit.zip")
+                .copyTo(assets.resolve("overlap-starter-kit-v1.zip"), overwrite = true)
+            kitOutput.get().resolve("SnipSnap Overlap Kit/kit-manifest.json")
+                .copyTo(assets.resolve("overlap-starter-kit-manifest.json"), overwrite = true)
+        }
+    }
+}
+
+/** The approved musical bank plus four lower plucks, with native MPC programs and recipes. */
+tasks.register<JavaExec>("generateOverlapKit") {
+    group = "distribution"
+    description = "Export the sixteen-pad dry OVERLAP MPC 3 track, MPC 2 twin, complete source kit and ZIP."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("overlapKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** First finite Nacre listening proof: two harps, current, coral and seaweed. */
 tasks.register<JavaExec>("generateNacreAudition") {
     group = "distribution"
