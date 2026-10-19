@@ -129,9 +129,10 @@ OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
 owner's positive feedback and confirmed in-app listening. The fifteen original
 coast/weather presets and sixteen-pad OSPREY starter remain unchanged. Sixteen
-named musical presets add a separate OSPREY CURATED starter in C minor pentatonic;
-the new bank awaits listening, and save/reopen, recipe replay and MPC playback
-checks remain open.
+named musical presets add a separate OSPREY CURATED starter in C minor pentatonic.
+The owner approved the published curated listening bank on 2026-10-19, saying,
+“Sounds great”. Curated in-app/device listening, save/reopen, recipe replay and
+MPC playback remain unconfirmed.
 PRISM adds six additive voices, thirty-six factory presets and a dry pitched
 starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
 includes the full bank and the original/revised GLASS comparisons.

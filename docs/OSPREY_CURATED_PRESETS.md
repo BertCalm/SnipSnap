@@ -61,9 +61,12 @@ use the new starter for the editable bank in app.
 
 ## Review boundary
 
-The owner's approval established the core R3 sound and in-app listening for the
-earlier bank. These sixteen new settings await their own listening review.
-Check whether each role is useful and distinct while retaining the warmth.
+On 2026-10-19, after the published sixteen-preset bank was offered for listening,
+the owner said, “Sounds great”. This records listening approval of the curated
+bank. The earlier in-app confirmation applies to the original R3 bank; curated
+in-app/device listening, save/reopen, recipe replay and MPC playback remain
+unconfirmed.
+
 Source and artifact checks cover saved recipes, exact regeneration, export
 read-back and finite headroom. They do not establish subjective distinctions,
 MPC playback or the remaining phone persistence checks.
