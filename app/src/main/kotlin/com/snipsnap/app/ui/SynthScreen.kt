@@ -257,6 +257,9 @@ import com.snipsnap.synth.ForkVoice
 import com.snipsnap.synth.Circuit
 import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
+import com.snipsnap.synth.Obbligato
+import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.ObbligatoRelationship
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.AlloyVoice
@@ -503,6 +506,7 @@ fun SynthScreen(
         }
     }
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
+    // OBBLIGATO also retains its renderer model and independent-player seed.
     // REVEL also retains its microphones, phrase and seed configuration.
     // REGISTERS and OVERLAP retain their synthesis model, saved pitch and velocity.
     // OVEN likewise retains its saved root, strike velocity and material model.
@@ -1938,20 +1942,28 @@ fun SynthScreen(
 
                 if (engine == Engine.REGISTERS) {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        val pipe = voice == RegistersVoice.PIPE
                         TapeText(
-                            if (pipe) "PIPE SPEECH, CHIFF AND SOFT SUSTAINED AIR."
-                            else "THREE BEATING REEDS, SHAPED BY BELLOWS.",
+                            when (voice as RegistersVoice) {
+                                RegistersVoice.PIPE -> "PIPE SPEECH, CHIFF AND SOFT SUSTAINED AIR."
+                                RegistersVoice.MUSETTE -> "THREE BEATING REEDS, SHAPED BY BELLOWS."
+                                RegistersVoice.TRANSISTOR -> "SQUARE-WAVE RANKS WITH A TRANSISTOR KEYER."
+                            },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
                         TapeText(
-                            if (pipe) "COLOR: BRIGHTNESS · AIR: FLOW · EDGE: CHIFF"
-                            else "COLOR: REED BODY · AIR: BELLOWS · EDGE: BUZZ",
+                            when (voice as RegistersVoice) {
+                                RegistersVoice.PIPE -> "COLOR: BRIGHTNESS · AIR: FLOW · EDGE: CHIFF"
+                                RegistersVoice.MUSETTE -> "COLOR: REED BODY · AIR: BELLOWS · EDGE: BUZZ"
+                                RegistersVoice.TRANSISTOR -> "COLOR: RANKS · AIR: KEY CLICK · EDGE: DRIVE"
+                            },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
                         TapeText(
-                            if (pipe) "SPREAD: ENSEMBLE · MOTION: TREMULANT"
-                            else "SPREAD: BEATING · MOTION: VIBRATO + SWELL",
+                            when (voice as RegistersVoice) {
+                                RegistersVoice.PIPE -> "SPREAD: ENSEMBLE · MOTION: TREMULANT"
+                                RegistersVoice.MUSETTE -> "SPREAD: BEATING · MOTION: VIBRATO + SWELL"
+                                RegistersVoice.TRANSISTOR -> "SPREAD: DETUNED RANKS · MOTION: VIBRATO"
+                            },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
                         TapeText(
@@ -1961,6 +1973,42 @@ fun SynthScreen(
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                         )
                     }
+                }
+
+                if (engine == Engine.OBBLIGATO) {
+                    val duet = loadedPatch as? ObbligatoPatch
+                    val midi = duet?.midi ?: Obbligato.DEFAULT_MIDI
+                    val velocity = duet?.velocity ?: Obbligato.DEFAULT_VELOCITY
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (midi - Obbligato.MIDI_MIN).toFloat() / (Obbligato.MIDI_MAX - Obbligato.MIDI_MIN),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val root = (Obbligato.MIDI_MIN + value * (Obbligato.MIDI_MAX - Obbligato.MIDI_MIN)).roundToInt()
+                                .coerceIn(Obbligato.MIDI_MIN, Obbligato.MIDI_MAX)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch).copy(midi = root)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    TapeText("BOND ${obbligatoBondLabel(macros.getValue("BOND"))}", TapeType.pixelSmall, scheme.ink2.tape)
+                    TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
@@ -2923,6 +2971,9 @@ internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls
 
 // ---------- the engine adapter ----------
 
+// OBBLIGATO has one complete duet rather than separate source voices.
+private enum class ObbligatoVoice { AIR_REED }
+
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
@@ -2939,7 +2990,7 @@ internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2963,6 +3014,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaVoice.entries
         CISTERN -> CisternVoice.entries
         CIRCUIT -> CircuitVoice.entries
+        OBBLIGATO -> ObbligatoVoice.entries
         ALLOY -> AlloyVoice.entries
         MURK -> MurkVoice.entries
         NIMBUS -> NimbusVoice.entries
@@ -3012,6 +3064,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         CISTERN -> Cistern.macrosFor(voice as CisternVoice)
         CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
+        OBBLIGATO -> Obbligato.macrosFor()
         ALLOY -> Alloy.macrosFor(voice as AlloyVoice)
         MURK -> Murk.macrosFor(voice as MurkVoice)
         NIMBUS -> Nimbus.macrosFor(voice as NimbusVoice)
@@ -3061,6 +3114,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         CISTERN -> Cistern.defaults(voice as CisternVoice)
         CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
+        OBBLIGATO -> Obbligato.defaults()
         ALLOY -> Alloy.defaults(voice as AlloyVoice)
         MURK -> Murk.defaults(voice as MurkVoice)
         NIMBUS -> Nimbus.defaults(voice as NimbusVoice)
@@ -3112,6 +3166,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         CISTERN -> Cistern.scramble(voice as CisternVoice, random)
         CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
+        OBBLIGATO -> Obbligato.macrosFor().associate { it.name to random.nextFloat() }
         ALLOY -> Alloy.scramble(voice as AlloyVoice, random)
         MURK -> Murk.scramble(voice as MurkVoice, random)
         NIMBUS -> Nimbus.scramble(voice as NimbusVoice, random)
@@ -3166,6 +3221,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.render(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
+        OBBLIGATO -> Obbligato.render(macros)
         ALLOY -> Alloy.render(voice as AlloyVoice, macros)
         MURK -> Murk.render(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.render(voice as NimbusVoice, macros)
@@ -3221,6 +3277,7 @@ private enum class Engine {
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         CISTERN -> Cistern.drumClassFor(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
+        OBBLIGATO -> Obbligato.drumClassFor()
         ALLOY -> Alloy.drumClassFor(voice as AlloyVoice, macros)
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.drumClassFor(voice as NimbusVoice, macros)
@@ -3270,6 +3327,7 @@ private enum class Engine {
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         CISTERN -> CisternPatch(name, voice as CisternVoice, macros)
         CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
+        OBBLIGATO -> ObbligatoPatch(name, macros)
         ALLOY -> AlloyPatch(name, voice as AlloyVoice, macros)
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
         NIMBUS -> NimbusPatch(name, voice as NimbusVoice, macros)
@@ -3423,7 +3481,17 @@ private val GlintVoice.drumClass: DrumClass
 private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
     Engine.THUMP -> thumpChipLabel(voice as ThumpVoice)
     Engine.SKIN -> skinChipLabel(voice as SkinVoice)
+    Engine.OBBLIGATO -> "AIR + REED"
     else -> voice.name
+}
+
+/** Name exact stages, and show the two neighbors while BOND blends between them. */
+private fun obbligatoBondLabel(bond: Float): String {
+    val position = bond.coerceIn(0f, 1f) * ObbligatoRelationship.entries.lastIndex
+    val nearest = position.roundToInt()
+    if (kotlin.math.abs(position - nearest) < .00001f) return ObbligatoRelationship.entries[nearest].name
+    val lower = position.toInt()
+    return "${ObbligatoRelationship.entries[lower].name} ↔ ${ObbligatoRelationship.entries[lower + 1].name}"
 }
 
 private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {

@@ -33,6 +33,7 @@ import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.OvenPatch
@@ -241,7 +242,9 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.OverlapPatch) {
+            if (preset is ObbligatoPatch) {
+                assertEquals(preset, obbligatoFromRosterLine(line), "${preset.name}: complete duet recipe promotion")
+            } else if (preset is com.snipsnap.synth.OverlapPatch) {
                 val literal = line.removePrefix("OverlapPatch.fromJsonText(").removeSuffix("),")
                 val promoted = com.snipsnap.synth.OverlapPatch.fromJsonText(com.snipsnap.json.Json.parse(literal).str())
                 assertEquals(preset, promoted, "${preset.name}: complete model, note and velocity promotion")
@@ -650,6 +653,30 @@ class UserPresetsTest {
         return LacquerPatch.fromJsonText(json)
     }
 
+    @Test
+    fun `obbligato roster promotion preserves legacy and current render recipes and escaped names`() {
+        for (model in listOf(1, com.snipsnap.synth.Obbligato.MODEL)) {
+            val source = ObbligatoPatch(
+                name = "DUET \"answer\" \\ \$lead\nnext",
+                macros = linkedMapOf("BOND" to 0.73125f, "BREATH" to 0.321f, "HOLD" to 0.65f),
+                midi = 67, velocity = 0.375f, seed = -437, model = model,
+            )
+            val promoted = obbligatoFromRosterLine(UserPresets.rosterLine(source))
+            assertEquals(source, promoted)
+            assertEquals(source.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+        }
+    }
+
+    private fun obbligatoFromRosterLine(line: String): ObbligatoPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("ObbligatoPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        return ObbligatoPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+    }
+
     private fun orphicaFromRosterLine(line: String): OrphicaPatch {
         val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
         assertEquals("fromJsonText", call.name)
@@ -702,7 +729,10 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == com.snipsnap.synth.OverlapPatch.ENGINE) {
+            if (engine == ObbligatoPatch.ENGINE) {
+                val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.OverlapPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.OverlapPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.OverlapPatch::class.java, decoder.returnType, "OVERLAP promotion retains the complete versioned recipe")
             } else if (engine == RelayPatch.ENGINE) {
@@ -751,8 +781,12 @@ class UserPresetsTest {
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
             }
-            val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
-            assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
+            if (engine == ObbligatoPatch.ENGINE) {
+                assertEquals(listOf(ObbligatoPatch.VOICE), Presets.all().filter { it.engine == engine }.map { it.voiceName }.distinct())
+            } else {
+                val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
+                assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
+            }
         }
     }
 

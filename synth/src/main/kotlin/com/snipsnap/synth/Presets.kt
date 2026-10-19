@@ -72,6 +72,7 @@ object Presets {
             val v = BoreVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             BorePresets.forVoice(v)
         }
+        ObbligatoPatch.ENGINE -> if (voice == ObbligatoPatch.VOICE) ObbligatoPresets.all() else emptyList()
         ArcoPatch.ENGINE -> {
             val v = ArcoVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ArcoPresets.forVoice(v)
@@ -248,7 +249,7 @@ object Presets {
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
+            BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
