@@ -51,7 +51,7 @@ object Places {
     /** The dock's STOP, beside SNIP while armed: the session ends. The shelf's ArmControl said the same word in bin red. */
     const val STOP = "STOP"
 
-    /** The transport chip's accessible names while BEAT is the stage — GROOVE's own PLAY / STOP, read by what they do to the beat. */
+    /** The transport chip's accessible names, wherever a kit is open — the beat's own PLAY / STOP, read by what they do to the beat. */
     const val PLAY_BEAT = "PLAY THE BEAT"
     const val STOP_BEAT = "STOP THE BEAT"
 
@@ -161,7 +161,7 @@ object Places {
             "· INSTRUMENTS: WHAT YOU MADE ONE FROM, PLAYED ON THE SAME 16 PADS.",
         ),
         "THE DOCK" to listOf(
-            "· THE BEAT PLAYS WHILE BEAT IS OPEN. THE CHIP STOPS IT.",
+            "· THE BEAT PLAYS FROM HERE AND KEEPS PLAYING ON PADS, OUT, MAKE AND A PAD BENCH.",
             "· THE LIGHT IS THE TAPE. WHILE IT IS ARMED, SNIP TAKES THE LAST 60s.",
             "· THE LINE SAYS WHAT JUST HAPPENED. A DOOR BESIDE IT STAYS UNTIL YOU TAKE IT.",
         ),

@@ -80,14 +80,16 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  *
  * Opens its own [KitBuilderModel] on [entry]'s folder, same as PAD SHEET,
  * and reports every successful restore back up via [onKitUpdated] so
- * `App`'s copy of the kit stays in step. KIT's engine bank needs no
+ * `App`'s copy of the kit stays in step. The kit's engine bank needs no
  * special invalidation here: `App` renders this screen *instead of*
- * `KitScreen` (see `App.kt`'s `AppScreen.KIT` branch), so `KitScreen`
- * leaves composition while this screen is up and its `DisposableEffect`
- * closes the old `PadEngine`; a fresh one loads from `entry.kit` the
- * moment KIT recomposes on the way back (`LaunchedEffect(entry.kit)`,
- * keyed on structural equality, not identity — any real content change
- * from a restore reloads it).
+ * `KitScreen` (see `App.kt`'s `AppScreen.KIT` branch), and the kit's
+ * `PadHost` is not tied to that screen — it stays open while the beat is
+ * playing, and closes with its last holder otherwise. Either way a restore
+ * reaches it as a fresh `open.kit` through [onKitUpdated], and the host
+ * reloads its bank from it (`PadHost.request`, keyed on the kit's identity
+ * and waiting out a burst of edits): the beat that was playing under this
+ * screen picks the restored sample up, and a host that closed loads from
+ * `entry.kit` the moment KIT recomposes on the way back.
  *
  * `restoreFromBin` no longer means only "a WAV moved back onto disk". A
  * bin entry that came from a [com.snipsnap.shell.KitBuilderModel.clear] —
