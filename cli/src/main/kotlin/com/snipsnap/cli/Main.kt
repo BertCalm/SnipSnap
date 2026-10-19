@@ -79,7 +79,7 @@ object Cli {
         |                        (WICK: provisional PLUCK/WOOD/BUBBLE; --midi 24..84 --velocity 0..1)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
-        |                        (REGISTERS: PIPE/MUSETTE; --instrument [--release S])
+        |                        (REGISTERS: PIPE/MUSETTE/TRANSISTOR; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
         |                        (OSPREY SWELL: --seed N --seconds .25..12 --model 1|2|3;

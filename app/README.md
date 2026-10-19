@@ -104,11 +104,13 @@ Quiet Room, change ROOT and VELOCITY, leave and reopen SYNTH, save/reload a
 preset, then SEND TO PAD and reopen its recipe; each step should retain the
 chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 
-REGISTERS adds PIPE and MUSETTE, seven controls, six published presets and
-MAKE INSTRUMENT. PIPE keeps the selected chiff and sustained airflow; MUSETTE
-remains provisional. Saved audition recipes retain note, velocity and model.
-Instrument samples preserve the finite attack before a verified held loop and
-export through the existing MPC 2/MPC 3 and phone keygroup package.
+REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
+MAKE INSTRUMENT. PIPE/MUSETTE retain the working audition baseline; TRANSISTOR
+adds electronic keying, square-wave ranks, vibrato and drive and awaits listening
+review. AIR controls TRANSISTOR's brief key-click. Saved audition recipes retain
+note, velocity and model; existing presets stay on model 3 and TRANSISTOR uses
+model 4. Instrument samples preserve the finite attack before a verified held
+loop and export through the existing MPC 2/MPC 3 and phone keygroup package.
 
 FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.
 ROOT spans C2–C6; VELOCITY sets the initial disturbance. HOLD selects a finite

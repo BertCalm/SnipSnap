@@ -162,6 +162,7 @@ snipsnap synth OVEN FELT --all --midi 60 --velocity 0.65 --out <dir>
 snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
 snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
+snipsnap synth REGISTERS TRANSISTOR --preset 3 --instrument --release 0.6 --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
 ```
 

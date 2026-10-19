@@ -18,7 +18,7 @@ data class RegistersPatch(
     val model: Int = Registers.MODEL_VERSION,
 ) : Patch {
     init {
-        require(Registers.supportsModel(model)) { "unsupported REGISTERS model $model" }
+        require(Registers.supportsModel(model, voice)) { "unsupported REGISTERS $voice model $model" }
         require(midi in 24..96) { "REGISTERS MIDI must be in 24..96" }
         require(velocity.isFinite() && velocity in 0f..1f) { "REGISTERS velocity must be in 0..1" }
         val defaults = Registers.defaults(voice)
@@ -78,6 +78,7 @@ data class RegistersPatch(
             val voiceName = field("voice").str()
             val voice = RegistersVoice.entries.firstOrNull { it.name == voiceName }
                 ?: throw JsonException("unknown REGISTERS voice $voiceName")
+            if (!Registers.supportsModel(model, voice)) throw JsonException("unsupported REGISTERS $voice model $model")
             val macros = when (val raw = obj["macros"]) {
                 null, JsonValue.Null -> emptyMap()
                 is JsonValue.Obj -> raw.entries.mapValues { it.value.num().toFloat() }
