@@ -110,6 +110,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.shell.SynthWork
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Onset
 import com.snipsnap.synth.OnsetPatch
@@ -352,11 +353,14 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  *    0..1) for every (engine, voice) the player has touched.
  *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
  *    last tapped on that voice and not edited since.
+ *  - `workingRecipe.<ENGINE>.<VOICE>` — the complete reopened pad recipe,
+ *    edited macros and optional shelf-relative source kit/slot.
  * The default is an empty map, so every other call site, and the device
  * tests, compose the lab from factory defaults as before.
  *
- * Not kept: the loaded patch's non-macro recipe (a MURMUR root, a REVEL
- * phrase...) unless a preset carries it, the audition, and every sheet.
+ * Reopened pads retain their full working recipe between visits. Other
+ * loaded patches retain non-macro state when a preset carries it; the
+ * audition and every sheet are transient.
  */
 @Composable
 fun SynthScreen(
@@ -391,6 +395,14 @@ fun SynthScreen(
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
+    val seededWork = remember {
+        SynthWork.read(settings).mapNotNull { work ->
+            val patch = work.recipe.patch ?: return@mapNotNull null
+            val sourceEngine = Engine.entries.firstOrNull { it.name == patch.engine } ?: return@mapNotNull null
+            val sourceVoice = sourceEngine.voices().firstOrNull { it.name == patch.voiceName } ?: return@mapNotNull null
+            (sourceEngine to sourceVoice) to work
+        }.toMap()
+    }
     // Seeded from the bag (§3.6) with the factory start as the fallback: a
     // name the bag holds that this build cannot resolve is ignored, and a
     // voice the restored engine does not have falls back to its first.
@@ -420,10 +432,14 @@ fun SynthScreen(
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
-                    put(e to v, if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
-                        settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
-                            ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
-                    })
+                    val workingPatch = seededWork[e to v]?.recipe?.patch?.let(::editablePreset)
+                    val restoredDefaults = if (workingPatch is OspreyPatch)
+                        Osprey.defaults(workingPatch.voice, workingPatch.modelVersion) else defaults
+                    put(e to v, if (workingPatch != null) restoredDefaults + workingPatch.macros
+                        else if (settings.isEmpty()) defaults else defaults.mapValues { (name, fallback) ->
+                            settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
+                                ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
+                        })
                 }
             }
         }
@@ -458,12 +474,38 @@ fun SynthScreen(
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
+            for ((pair, work) in seededWork) put(pair, editablePreset(requireNotNull(work.recipe.patch)))
         }
     }
     // Reopened pads retain the whole processing recipe, including its explicit
     // alias flag and named treatment. Loading a preset starts a new recipe.
-    val loadedRecipesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, PadRecipe>() }
-    val reopenedPadsByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Pair<File, Int>>() }
+    val loadedRecipesByVoice = remember {
+        mutableStateMapOf<Pair<Engine, Enum<*>>, PadRecipe>().apply {
+            for ((pair, work) in seededWork) put(pair, work.recipe)
+        }
+    }
+    val reopenedPadsByVoice = remember {
+        mutableStateMapOf<Pair<Engine, Enum<*>>, SynthWork.Source>().apply {
+            for ((pair, work) in seededWork) work.source?.let { put(pair, it) }
+        }
+    }
+    fun persistReopenedWork() {
+        SynthWork.replace(settings, loadedRecipesByVoice.map { (pair, recipe) ->
+            val patch = requireNotNull(loadedPatchesByVoice[pair])
+            SynthWork.Working(
+                recipe.copy(patch = Patches.edited(patch, patch.name, macrosByVoice.getValue(pair))),
+                reopenedPadsByVoice[pair],
+            )
+        })
+    }
+    val recipesSnapshot = loadedRecipesByVoice.toMap()
+    val patchesSnapshot = loadedPatchesByVoice.toMap()
+    val macroSnapshot = macrosByVoice.toMap()
+    val sourcesSnapshot = reopenedPadsByVoice.toMap()
+    LaunchedEffect(recipesSnapshot, patchesSnapshot, macroSnapshot, sourcesSnapshot) { persistReopenedWork() }
+    // A navigation tap can dispose the bench before the state effect runs.
+    // These maps remain the live session maps, so flush the final edit here.
+    DisposableEffect(Unit) { onDispose { persistReopenedWork() } }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     val loadedRecipe = loadedRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -477,7 +519,10 @@ fun SynthScreen(
     // describes the sound. Not pre-seeded like [macrosByVoice] — nothing
     // is "loaded" until a tap picks one.
     val currentPresetByVoice = remember {
-        mutableStateMapOf<Pair<Engine, Enum<*>>, String>().apply { putAll(seededPresets) }
+        mutableStateMapOf<Pair<Engine, Enum<*>>, String>().apply {
+            putAll(seededPresets)
+            seededWork.keys.forEach { remove(it) }
+        }
     }
     // A preset can be cleared or set on a voice that is not showing (a FORGET
     // on another voice's chip, a save), so the bag takes the whole map.
@@ -770,7 +815,8 @@ fun SynthScreen(
         val editable = editablePreset(patch)
         loadedPatchesByVoice[key] = editable
         loadedRecipesByVoice[key] = recipe
-        reopenedPadsByVoice[key] = sourceEntry.dir to slot
+        SynthWork.source(shelfRoot, sourceEntry.dir, slot)?.let { reopenedPadsByVoice[key] = it }
+            ?: reopenedPadsByVoice.remove(key)
         val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
             else sourceEngine.defaults(sourceVoice)
         macrosByVoice[key] = defaults + editable.macros
@@ -793,7 +839,8 @@ fun SynthScreen(
                 // value here already came from a 0..1 slider or SCRAMBLE,
                 // but constructing it inside the try means an unexpected
                 // failure toasts honestly instead of crashing the screen.
-                val reopenedHere = reopenedPadsByVoice[engine to voice] == (e.dir to slot)
+                val source = reopenedPadsByVoice[engine to voice]
+                val reopenedHere = source != null && source.slot == slot && source.matches(shelfRoot, e.dir)
                 val name = if (reopenedHere) loadedPatch?.name ?: engine.patchDisplayName(voice)
                     else engine.patchDisplayName(voice)
                 val patch = buildCurrentPatch(name)
@@ -1688,7 +1735,8 @@ fun SynthScreen(
                 ) {
                     reopeningPad = true
                 }
-                reopenedPadsByVoice[engine to voice]?.takeIf { it.first == entry?.dir }?.let { (_, slot) ->
+                reopenedPadsByVoice[engine to voice]?.takeIf { it.matches(shelfRoot, entry?.dir) }?.let { source ->
+                    val slot = source.slot
                     val target = kit?.pad(slot)
                     LabButton(
                         if (sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",

@@ -50,6 +50,8 @@ class SynthScreenTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val roots = mutableListOf<File>()
     private var currentEntry by mutableStateOf<KitShelf.Entry?>(null)
+    private var screenVisible by mutableStateOf(true)
+    private val settings = mutableMapOf<String, String>()
     private val updatedKit = AtomicReference<Kit?>(null)
 
     @After
@@ -69,20 +71,35 @@ class SynthScreenTest : ComposeScreenTest() {
     private fun show(root: File, entry: KitShelf.Entry? = null) {
         currentEntry = entry
         setPhoneContent {
-            SynthScreen(
-                entry = currentEntry,
-                shelfRoot = root,
-                onToast = {},
-                onKitUpdated = { kit ->
-                    updatedKit.set(kit)
-                    currentEntry = currentEntry?.copy(kit = kit)
-                },
-                onShelfAssetWritten = {},
-                onDroneToLoop = { _, _, _ -> },
-                onOpenSurface = {},
-                appScope = appScope,
-            )
+            if (screenVisible) {
+                SynthScreen(
+                    entry = currentEntry,
+                    shelfRoot = root,
+                    onToast = {},
+                    onKitUpdated = { kit ->
+                        updatedKit.set(kit)
+                        currentEntry = currentEntry?.copy(kit = kit)
+                    },
+                    onShelfAssetWritten = {},
+                    onDroneToLoop = { _, _, _ -> },
+                    onOpenSurface = {},
+                    appScope = appScope,
+                    settings = settings,
+                )
+            }
         }
+    }
+
+    /** Remove the screen's remember state, then mount it with the same navigation bag. */
+    private fun leaveAndReturn(entry: KitShelf.Entry? = currentEntry) {
+        compose.runOnIdle { screenVisible = false }
+        pump()
+        button("ENGINE ONSET · TAP FOR NEXT").assertDoesNotExist()
+        compose.runOnIdle {
+            currentEntry = entry
+            screenVisible = true
+        }
+        pump()
     }
 
     private fun macroNode(label: String) =
@@ -206,13 +223,24 @@ class SynthScreenTest : ComposeScreenTest() {
         }
         dialMacro("BLEND", .85f)
         dialMacro("DECAY", .6f)
-        activate("UPDATE PAD ${PadBanks.tag(pad.slot)}")
+        val updateLabel = "UPDATE PAD ${PadBanks.tag(pad.slot)}"
+        val expectedPatch = patch.copy(macros = patch.macros + ("BLEND" to .85f) + ("DECAY" to .6f))
+        val expectedRecipe = recipe.copy(patch = expectedPatch)
+
+        // Leaving SYNTH must flush the complete working recipe, not just its
+        // sliders. The UPDATE target and legacy rack survive a fresh mount.
+        leaveAndReturn()
+        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("KICK").assertIsSelected()
+        button(updateLabel).assertExists()
+        for ((macro, value) in expectedPatch.macros) {
+            assertEquals("restored $macro", value, macroValue(macro), 0f)
+        }
+        activate(updateLabel)
         waitFor("the edited ONSET pad to be saved", timeoutMillis = 30_000) { updatedKit.get() != null }
 
         val saved = checkNotNull(updatedKit.get())
         val savedPad = checkNotNull(saved.pad(pad.slot))
-        val expectedPatch = patch.copy(macros = patch.macros + ("BLEND" to .85f) + ("DECAY" to .6f))
-        val expectedRecipe = recipe.copy(patch = expectedPatch)
         assertEquals(expectedRecipe, PadRecipe.fromJsonValue(checkNotNull(savedPad.recipe)))
         assertEquals(
             pad.copy(recipe = expectedRecipe.toJsonValue(), source = pad.source - "rawSha256"),
@@ -223,5 +251,27 @@ class SynthScreenTest : ComposeScreenTest() {
         assertFalse("the macro edit must regenerate the WAV", before.contentEquals(written))
         val expectedWav = ByteArrayOutputStream().also { WavWriter.write(it, expectedRecipe.render()) }.toByteArray()
         assertArrayEquals("updated audio must include the saved rack and model-2 renderer", expectedWav, written)
+
+        // A second visit after the save must still know the source pad. An
+        // unchanged update proves the restored rack/model produce the same WAV.
+        updatedKit.set(null)
+        leaveAndReturn()
+        button(updateLabel).assertExists()
+        activate(updateLabel)
+        waitFor("the restored ONSET pad to be saved again", timeoutMillis = 30_000) { updatedKit.get() != null }
+        assertEquals(saved, updatedKit.get())
+        assertEquals(saved, KitStore.load(dir))
+        assertArrayEquals("a restored unchanged recipe must regenerate identically", expectedWav, sample.readBytes())
+
+        // The shelf-relative source identity must never become the same slot
+        // in a different kit merely because the player navigated there.
+        val otherDir = File(root, "OTHER KIT").apply { check(mkdirs()) }
+        val otherKit = Kit("OTHER KIT", emptyList())
+        KitStore.save(otherKit, otherDir)
+        leaveAndReturn(KitShelf.Entry(otherDir, otherKit))
+        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button(updateLabel).assertDoesNotExist()
+        assertEquals(otherKit, KitStore.load(otherDir))
+        assertEquals(saved, KitStore.load(dir))
     }
 }
