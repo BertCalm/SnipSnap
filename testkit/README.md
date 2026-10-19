@@ -303,6 +303,36 @@ should light in those colours. If they come up in a single uniform colour
 instead, note it — that's the one part of the blob no vendor file could
 fully prove.
 
+### SnipSnap Obbligato Kit — four wind relationships on pads
+
+Regenerate with `./gradlew :synth:generateObbligatoKit`. The ZIP is
+`testkit/SnipSnap-Obbligato-Kit.zip`. It contains an MPC 3 `.xtd` track and
+its matching `_[TrackData]/` folder; keep those together. For MPC 2, open
+the `.xpm` inside that folder. `kit.json` lives beside the samples so SnipSnap
+can reopen the kit and retain each pad's complete synthesis recipe.
+
+| Pads | Relationship | Notes, left to right |
+| --- | --- | --- |
+| A01–A04 | Harmony | C4, Eb4, F4, G4 |
+| A05–A08 | Play | C4, Eb4, F4, G4 |
+| A09–A12 | Fight | C4, Eb4, F4, G4 |
+| A13–A16 | Protect | C4, Eb4, F4, G4 |
+
+Every pad is a dry, finite model-5 duet at seed 0. The main strike is the
+accepted velocity 0.8 sound; two native renders at 0.3 and 0.6 supply the
+soft and medium zones. Those layers use the standard peak match, leaving
+playback level to the hardware's velocity curve. The saved recipe retains
+the played MIDI note, velocity, seed, renderer model, and four macros.
+HOLD extends a finite note; these samples have no sustain-loop markers.
+
+On hardware, check that all sixteen pads load in the shown order, quiet
+hits choose the softer timbre, and changing rows keeps the played pitch.
+Listen for Play's handoffs, Fight's unequal competing gestures, and Protect's
+flute opening and reed ending. Check that overlapping notes finish naturally
+and that the embedded sequence plays the expected pads. Automated format
+and regeneration checks accompany the generator; hardware playback remains
+a listening check.
+
 ## Reporting back
 
 Three facts close out the format work: (1) loads or not, (2) beep count on

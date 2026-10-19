@@ -211,3 +211,8 @@ testkit/SnipSnap Contour Kit/
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
 testkit/SnipSnap Skitter Kit/
+
+# OBBLIGATO audition audio and playable kit are regenerated and hosted separately.
+testkit/obbligato-audition/
+testkit/SnipSnap Obbligato Kit/
+testkit/SnipSnap-Obbligato-Kit.zip

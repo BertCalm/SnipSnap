@@ -31,6 +31,8 @@ import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.Obbligato
+import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -81,11 +83,13 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and OBBLIGATO) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE's --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
+ * OBBLIGATO accepts `--seed N` for its players and writes each WAV's complete
+ * recipe beside it as a `.patch`, including its renderer model.
  */
 object SynthCommand {
 
@@ -121,6 +125,7 @@ object SynthCommand {
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                ObbligatoPatch.ENGINE -> Obbligato.MIDI_MIN..Obbligato.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
                 SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
@@ -132,7 +137,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE and MURMUR, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, MURMUR and OBBLIGATO, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -143,12 +148,12 @@ object SynthCommand {
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
-        fun skitterSeed(flag: String): Int? = opts[flag]?.let { raw ->
-            if (engine != SkitterPatch.ENGINE) throw CliError("$flag is only supported by SKITTER, got $engine")
+        fun integerSeed(flag: String, supported: Set<String>): Int? = opts[flag]?.let { raw ->
+            if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
-        val seedOverride = skitterSeed("--seed")
-        val scrambleRandom = skitterSeed("--scramble")?.let { Random(it) }
+        val seedOverride = integerSeed("--seed", linkedSetOf(SkitterPatch.ENGINE, ObbligatoPatch.ENGINE))
+        val scrambleRandom = integerSeed("--scramble", setOf(SkitterPatch.ENGINE))?.let { Random(it) }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
@@ -204,6 +209,7 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ObbligatoPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
@@ -226,13 +232,17 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is SkitterPatch) {
-                val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
-                if (scrambleRandom == null) withSeed else withSeed.copy(
-                    name = "Scrambled ${withSeed.name}",
-                    macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
-                )
-            } else withNote
+            when (withNote) {
+                is SkitterPatch -> {
+                    val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
+                    if (scrambleRandom == null) withSeed else withSeed.copy(
+                        name = "Scrambled ${withSeed.name}",
+                        macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
+                    )
+                }
+                is ObbligatoPatch -> if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
+                else -> withNote
+            }
         }
 
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
@@ -248,6 +258,7 @@ object SynthCommand {
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
             FileOutputStream(file).use { WavWriter.write(it, snip) }
+            if (patch is ObbligatoPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s" + if (landing == null) "" else "  (lands with ENSEMBLE, stereo)")
         }
         out.println("${chosen.size} rendered into ${dir.path}")
