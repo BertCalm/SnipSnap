@@ -192,7 +192,7 @@ object Circuit {
             probe.inputOffSeconds ?: Double.POSITIVE_INFINITY)
         val base = phrase.targets(velocity).filter {
             it.timeSeconds < cutoff && (!ceremony || CircuitCeremony.permits(it))
-        }
+        }.map { if (ceremony) CircuitCeremony.accentInvitation(it) else it }
         if (!probe.responses || velocity == 0.0) return base
         val canyon = m.getValue("CANYON").toDouble()
         if (canyon < .015) return base

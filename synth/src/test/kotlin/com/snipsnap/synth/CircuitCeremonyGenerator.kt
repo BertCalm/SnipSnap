@@ -187,6 +187,7 @@ object CircuitCeremonyGenerator {
         }),
         "gainPoints" to arr(CircuitCeremony.gainPoints.map { obj("timeSeconds" to num(it.timeSeconds), "gain" to num(it.gain)) }),
         "replyCells" to arr(CircuitCeremony.replyCells.sorted().map(::num)),
+        "invitationCueEnergyScale" to num(CircuitCeremony.invitationGain),
         "omissions" to arr(listOf(
             "Cells 0,1,9,11 omit ordinary vocal affirmation, weak wood and rising rattle.",
             "Cells 16–18 also omit weak wood, rising rattle, weak rattle and settling rattle.",

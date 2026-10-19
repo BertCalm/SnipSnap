@@ -14,6 +14,7 @@ internal object CircuitCeremony {
     const val cells = 19
     const val phraseSeconds = CircuitPhrase.ORIGIN + cells * cellSeconds + CircuitPhrase.RELEASE_PAD
     const val paceHz = 4.0 / cellSeconds
+    const val invitationGain = 1.02
 
     data class GainPoint(val timeSeconds: Double, val gain: Double)
     data class Stage(val name: String, val startSeconds: Double, val endSeconds: Double, val intent: String)
@@ -58,6 +59,13 @@ internal object CircuitCeremony {
 
     /** These cells offer an answer; the engine still checks its actual listening arrival. */
     fun replyCell(cell: Int): Boolean = cell in replyCells
+
+    /** A little more pressure on a selected call, before its real reflected arrival. */
+    fun accentInvitation(event: Circuit.Event): Circuit.Event {
+        val cell = floor((event.timeSeconds - CircuitPhrase.ORIGIN) / cellSeconds).toInt()
+        return if (event.source == 1 && event.reason == "answer-invitation" && replyCell(cell))
+            event.copy(energy = event.energy * invitationGain) else event
+    }
 
     /** Score omissions apply to new events, without moving or renormalizing retained gestures. */
     fun permits(event: Circuit.Event): Boolean {
