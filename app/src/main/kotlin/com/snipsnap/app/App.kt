@@ -1801,7 +1801,14 @@ fun App(shelf: KitShelf) {
      * SNIPS shelf's USED badge's own durable key, unaffected by a later
      * rename — see `SnipStore.isUsedBy`'s own KDoc).
      */
-    fun assignPendingSnip(file: File, slot: Int) {
+    fun assignPendingSnip(
+        file: File,
+        slot: Int,
+        /** What the dock says once it has landed; the first catch says its own. */
+        placedLine: String = Copy.snipPlaced(slot),
+        /** After the grid holds the new pad and the dock has spoken: the first catch selects and lights it here. */
+        onPlaced: () -> Unit = {},
+    ) {
         val target = open ?: return
         // Cleared synchronously, before the write even starts — a second
         // empty-pad long-press elsewhere while this one is mid-flight must
@@ -1833,7 +1840,8 @@ fun App(shelf: KitShelf) {
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                dock.say(Copy.snipPlaced(slot))
+                dock.say(placedLine)
+                onPlaced()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2926,6 +2934,85 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    // The first catch (the cold shelf's way in): a pad PADS is to light once,
+    // asked for by the landing and consumed by the grid when it has flashed.
+    var lightRequest by remember { mutableStateOf<Int?>(null) }
+    var catchingFirst by remember { mutableStateOf(false) }
+
+    /**
+     * The first SNIP of a cold shelf - no project, no kit - has a home made
+     * for it, instead of EMPTY_SHELF_FOR_ASSIGN's errand: a project (a roll,
+     * like NEW PROJECT's), an empty kit in it (the EMPTY GRID starter under
+     * a rolled name, as INSTANT KIT names its kits), and the snip on A01
+     * through [assignPendingSnip], the one path SNIPS -> PAD uses. PADS comes
+     * up with A01 selected and lit, and the dock says where the sound is.
+     *
+     * The shelf is read from disk, not from [kits] and [projects], which are
+     * only as fresh as the last visit to the shelf. A catch that finds
+     * anything there leaves the snip where every snip waits, in SNIPS.
+     */
+    fun catchFirstSound(file: File) {
+        if (catchingFirst || busy != null || pendingSnipAssign != null) return
+        catchingFirst = true
+        scope.launch {
+            try {
+                val made = try {
+                    withContext(Dispatchers.IO) {
+                        if (KitStore.list(shelf.root).isNotEmpty() || ProjectStore.list(shelf.root).isNotEmpty()) {
+                            return@withContext null
+                        }
+                        // The kit first: a failure after it leaves a kit the
+                        // shelf's own migration adopts, where a failure after
+                        // a project would leave an empty project to explain.
+                        val entry = shelf.render(StarterKits.byId("blank")!!, Random.nextInt(), shelf.rolledName())
+                        val named = shelfModel.newProject(Names.roll(taken = shelfModel.projects().map { it.name }.toSet()))
+                        shelfModel.addKit(named.name, entry.dir.name)
+                        entry to shelfModel.activate(named.name, entry.dir.name)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "catchFirstSound: the first project and kit were not made", e)
+                    dock.say(Copy.CREATE_FAILED)
+                    return@launch
+                }
+                if (made == null) return@launch
+                val (entry, created) = made
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                project = created
+                open = kits.firstOrNull { it.dir == entry.dir } ?: entry
+                goToScreen(AppScreen.KIT)
+                // The first catch is the loop shown once: record, snip, land.
+                // The tape stops here, so the dock's line (the sentence that
+                // says where the sound went) has the dock to itself; while
+                // armed, the capture region holds that slot. The person who
+                // wants more arms it again from the chip, now knowing how.
+                MicSessionService.eject(context)
+                assignPendingSnip(
+                    file, 1,
+                    placedLine = Copy.FIRST_CATCH_LANDED,
+                    onPlaced = {
+                        nav.padsSelectedSlot = 1
+                        lightRequest = 1
+                    },
+                )
+            } finally {
+                catchingFirst = false
+            }
+        }
+    }
+    // A SNIP that lands is the cold shelf's cue. Baselined by file, as the
+    // snip errors above are by attempt: whatever the session last wrote
+    // before this composition mounted is not a new catch.
+    val lastSnip by MicSessionService.lastSnipFile.collectAsState()
+    var lastSnipSeen by remember { mutableStateOf(MicSessionService.lastSnipFile.value) }
+    LaunchedEffect(lastSnip) {
+        val file = lastSnip ?: return@LaunchedEffect
+        if (file == lastSnipSeen) return@LaunchedEffect
+        lastSnipSeen = file
+        catchFirstSound(file)
+    }
+
     // The beat (plan §3.4): one clock for the project, kept here rather than
     // in the screen that draws it, so it plays on when the user leaves BEAT.
     // The dock's chip is its control; GROOVE draws it, edits its program and
@@ -3216,6 +3303,7 @@ fun App(shelf: KitShelf) {
                                 onOpenProject = { openProject(it.project) },
                                 openProjectName = project?.name,
                                 onNewProject = ::newProject,
+                                onCatchFirst = ::requestArm,
                                 busy = busy != null,
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
@@ -3546,6 +3634,9 @@ fun App(shelf: KitShelf) {
                                     onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
                                     bankRequest = kitBankRequest,
                                     onBankRequestConsumed = { kitBankRequest = null },
+                                    lightRequest = lightRequest,
+                                    onLightConsumed = { lightRequest = null },
+                                    beat = beat,
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't

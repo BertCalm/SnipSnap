@@ -102,6 +102,12 @@ fun KitsScreen(
     openProjectName: String? = null,
     /** NEW PROJECT ▸: an empty project, opened. */
     onNewProject: () -> Unit,
+    /**
+     * CATCH YOUR FIRST SOUND ▸, the cold shelf's one filled button: arms the
+     * mic the way the dock's LISTEN · MIC does. No default, so a screen built
+     * without one fails the compile and not the first minute of a new user.
+     */
+    onCatchFirst: () -> Unit,
     busy: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
@@ -248,16 +254,20 @@ fun KitsScreen(
 
     // The footer's one filled button is the shelf's unit of work (SH1): once
     // there are projects to open, that is NEW PROJECT ▸, and NEW KIT ▸
-    // STARTERS steps down to an outline row above the doors. At zero projects
-    // — the first run — STARTERS stays the filled button, as it always was:
-    // it is the only thing that makes the first project. Not mid-pick either:
+    // STARTERS steps down to an outline row above the doors. Not mid-pick:
     // a SNIPS → PAD, BREED or + FROM SHELF pick is choosing a kit, the
     // projects section is not drawn, and EMPTY_SHELF_FOR_ASSIGN sends the
     // user to NEW KIT below. And not on a shelf with no kits, where the
     // project list is not drawn (the empty panel is) and a kit is what is
     // missing.
-    val projectFirst = projects.isNotEmpty() && kits.isNotEmpty() &&
-        !assigningSnip && breedingFrom == null && addingTo == null
+    val picking = assigningSnip || breedingFrom != null || addingTo != null
+    val projectFirst = projects.isNotEmpty() && kits.isNotEmpty() && !picking
+    // The first run — no project and no kit — has a button of its own: the
+    // way in that needs nothing made first is a sound, so CATCH YOUR FIRST
+    // SOUND ▸ is the filled button, and NEW KIT ▸ STARTERS (the other honest
+    // way in, a kit someone already composed) steps down to the outline row.
+    // Once the first SNIP lands the shelf has both, and this is gone for good.
+    val coldShelf = projects.isEmpty() && kits.isEmpty() && !picking
 
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
@@ -577,12 +587,20 @@ fun KitsScreen(
                 }
             }
 
-            if (projectFirst) {
-                PrimaryAction(
-                    label = "NEW PROJECT ▸",
-                    enabled = !busy,
-                    onClick = onNewProject,
-                )
+            if (coldShelf || projectFirst) {
+                if (coldShelf) {
+                    PrimaryAction(
+                        label = Places.CATCH_FIRST,
+                        enabled = !busy,
+                        onClick = onCatchFirst,
+                    )
+                } else {
+                    PrimaryAction(
+                        label = "NEW PROJECT ▸",
+                        enabled = !busy,
+                        onClick = onNewProject,
+                    )
+                }
                 // Outline, one step down: a kit is made inside a project more
                 // often than the other way round, and the menu it opens still
                 // says PICK A STARTER as its own heading.
@@ -1264,7 +1282,10 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
     ) {
         TapeText(
             label,
-            TapeType.displayBig,
+            // Past 22 characters (the longest label proven to fit one line at
+            // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
+            // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
+            if (label.length > 22) TapeType.display else TapeType.displayBig,
             if (enabled) scheme.lcdInk.tape else scheme.ink3.tape,
         )
     }

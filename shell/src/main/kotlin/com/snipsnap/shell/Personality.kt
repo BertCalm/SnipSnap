@@ -65,7 +65,9 @@ object Copy {
      * A HIT land sounds on pads without CUT. No door of this screen is named
      * here on purpose: NEW KIT sits directly under this panel and TAPE is on
      * the row above it, so a line pointing at either would be a third copy of
-     * a control already twice on screen.
+     * a control already twice on screen. (On a cold shelf the primary is now
+     * CATCH YOUR FIRST SOUND ▸, with NEW KIT ▸ STARTERS an outline row under
+     * it; the note still names neither, for the same reason.)
      *
      * **The last clause names the one door that is not on this screen**
      * (the UX review's SH1): the loop starts with a recording, and the way to
@@ -234,6 +236,13 @@ object Copy {
      * exactly what was actually heard, up to that cap.
      */
     const val SNIPPED = "SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."
+
+    /**
+     * The first SNIP of a cold shelf, landed: App has made the project, the
+     * kit and A01 for it, and PADS is up with that pad selected and lit. Said
+     * after [SNIPPED], so the dock keeps SNIPPED's CUT door beside it.
+     */
+    const val FIRST_CATCH_LANDED = "YOUR FIRST SOUND IS ON A01. TAP IT."
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "STOPPED. TAPE IS KEPT."
     const val CAPTURE_BLOCKED =
