@@ -145,6 +145,10 @@ testkit/valve-audition/
 # and published as the listening artifact; never committed.
 testkit/pedal-audition/
 
+# The WAH section's gate clips and manifest, rendered by :synth:generateWahAudition
+# and published as the listening artifact; never committed.
+testkit/wah-audition/
+
 # The BECOME A1 gate's clips, manifest and page, rendered by :shell:generateBecomeAudition
 # and published as the listening artifact; never committed.
 testkit/become-audition/

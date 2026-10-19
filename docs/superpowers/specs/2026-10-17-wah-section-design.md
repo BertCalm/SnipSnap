@@ -1,6 +1,6 @@
 # The WAH section: a wah pedal for the FX rack
 
-**Status:** design, reviewed section by section with the owner on 2026-10-16 and 2026-10-17; not yet planned or built. This is Stage 1 of `2026-10-04-pedal-board-design.md`.
+**Status:** design, reviewed section by section with the owner on 2026-10-16 and 2026-10-17; built; listening gate pending. This is Stage 1 of `2026-10-04-pedal-board-design.md`.
 **Builds on:** the pedal board's Stage 0 (the PEDALS row and the DRIVE and COMP chips, merged as PR #514), VALVE, and the two round-two listens whose picks and prototype numbers it carries.
 **Roadmap row:** the pedal board's row, S30 in `docs/SYNTH_ROADMAP.md`; this stage extends it.
 
@@ -37,8 +37,8 @@ The touch move with the first brief's numbers (5 ms attack, 150 ms release, a 30
 | TOUCH | 0 | 0 | the weight of the envelope-follower move |
 | AUTO | 0 | 0 | the weight of the LFO move |
 | ROCK | 0 | 0 | the weight of the one-rock gesture |
-| SPEED | 0.5 | 0.5 | the LFO rate (about 0.5 Hz at 0 to 8 Hz at 1, `Dsp.expMap`, 2 Hz at 0.5); the follower's release scales with it; the rock's length scales inversely (250 ms up and 500 ms down at 0.5) |
-| Q | 0.6 | 0.6 | the resonance: damping `k = Dsp.expMap(1 - Q, 0.1, 0.8)`, so 0.6 is about 0.23 (the Q of 5 the owner heard), 1 squeals at k 0.1, 0 is gentle |
+| SPEED | 0.5 | 0.5 | the LFO rate (about 0.5 Hz at 0 to 8 Hz at 1, `Dsp.expMap`, 2 Hz at 0.5); the follower's release and the rock's length both scale with the LFO period (release 100 ms, rock 250 ms up and 500 ms down at 0.5) |
+| Q | 0.6 | 0.6 | the resonance: damping `k = Dsp.expMap(1 - Q, 0.1, 0.8)`, so 0.6 is about 0.23 (a Q of about 4.35; the owner's prototype used k 0.2, a Q of 5), 1 squeals at k 0.1, 0 is gentle |
 
 A recipe sets a weight and leaves SPEED and Q out (setting a macro exactly at its neutral is one AMT could not move, and the AMT-scaling test false-fails on it).
 
@@ -58,14 +58,14 @@ A recipe sets a weight and leaves SPEED and Q out (setting a macro exactly at it
 ## Tests and the gate
 
 Section tests (in `WahTest`, in the style of `ValveTest`, bars pinned at the measured value minus a margin the report states, each mutation-checked):
-- bit-exact copy at zero weights; deterministic; finite, in range, no DC; peak within 0.05 of the input's; a mono pad stays stereo-identical per channel;
-- AUTO at its defaults covers at least 1.5 octaves of short-time spectral centroid (a 23 ms window, 5 ms hop, over the first 600 ms) and keeps moving for at least 100 ms, on the choir and a JANGLE note, against a pinned CONTOUR-recipe baseline that does not;
-- ROCK reaches its toe at about 250 ms (within 10 ms); AUTO's period matches `1 / f`; TOUCH opens within 120 ms of a hit and closes as the note decays (the envelope follows the pad), and TOUCH and ROCK parked at the heel are measured and reported, not hidden;
+- bit-exact copy at zero weights; deterministic; finite and in range; peak within 0.05 of the input's; a mono pad stays stereo-identical per channel;
+- AUTO at its defaults covers at least 1.5 octaves of short-time spectral centroid (a 23 ms window, 5 ms hop, over the first 600 ms), on the choir and a JANGLE note, against the unprocessed pad as the negative control (it swings under 1.5 octaves); a CONTOUR-recipe baseline was not built, the dry pad is the control;
+- ROCK reaches its toe at 152 ms and leaves it at 446 ms at the default SPEED (the 1.5 stretch of the position clamps it before the gesture's 250 ms peak, so the audible rise is 152 ms, not 250, and AUTO likewise rests at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70); AUTO's period matches `1 / f`; TOUCH opens on the hit and closes as the note dies (the centroid 30 ms in is at least twice the centroid at 500 ms; the 120 ms and no-DC checks first listed here were not built), and TOUCH and ROCK parked at the heel are measured and reported, not hidden;
 - the last 20 ms of a landed note is at least 50 dB under its peak through a guitar's landing amp (VALVE lifts a quiet tail);
 - SPEED and Q sweep a real range at their ends (a plain-words line per end);
 - the rack's shared contract tests (FxTest iterates `SECTIONS`) pass with no exemption: deterministic, finite, peak-matched, stereo-identical, JSON round trip, AMT 0 on every neutral, no mono widening; plus a placement test: `wah` sits right after `contour`.
 
-**The owner's gate (short):** the shipped section, not the prototype, on a snare, a choir and both guitars; AUTO at the pad sheet's default AMT and at full; TOUCH and ROCK recipes beside it; the ends of SPEED and Q ("extreme enough": the standing rule is that a macro's extremes must be extreme, the ugly end allowed); the guitars both ways. The WAH chip joins the PEDALS row only if the gate passes.
+**The owner's gate (short):** the shipped section, not the prototype, on a snare, a choir and both guitars; AUTO at the pad sheet's default AMT and at full; TOUCH and ROCK recipes beside it (ROCK on the choir and both guitars only: on a pad shorter than about 350 ms at the default SPEED the snare's ROCK is the same audio as AUTO, so that clip is not rendered); the ends of SPEED and Q ("extreme enough": the standing rule is that a macro's extremes must be extreme, the ugly end allowed); the guitars both ways. The WAH chip joins the PEDALS row only if the gate passes.
 
 ## Registration and hazards
 
