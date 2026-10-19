@@ -5,6 +5,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.ExportOutcome
 import com.snipsnap.kit.ExportReadBack
+import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Mpc3Importer
@@ -140,7 +141,7 @@ class ObbligatoKitTest {
                 }
             }
 
-            for ((format, primary) in listOf(ExportFormat.MPC3_TRACK to program, ExportFormat.PROGRAM_FOLDER to data)) {
+            for ((format, primary) in listOf(ExportFormat.MPC3_TRACK to program, ExportFormat.PROGRAM_FOLDER to twin)) {
                 val checks = ExportReadBack.verify(kit, ExportOutcome(format, primary, data, emptyList()))
                 assertTrue(!checks.blocked(), "$format disagrees with saved pad metadata: $checks")
             }
@@ -153,7 +154,7 @@ class ObbligatoKitTest {
                 val populated = saved.pads.filter { it.hasSample }
                 assertEquals((1..16).toList(), populated.map { if (xmlSlots) it.slot + 1 else it.slot })
                 for (pad in populated) {
-                    val layers = pad.layers.filter { it.sampleName != null }
+                    val layers = pad.layers.filter { it.sampleName != null }.sortedBy { it.velocityStart }
                     assertEquals(listOf(1 to 41, 42 to 84, 85 to 127), layers.map { it.velocityStart to it.velocityEnd })
                     for (layer in layers) {
                         val reference = requireNotNull(layer.sampleName)
@@ -165,8 +166,31 @@ class ObbligatoKitTest {
             }
             verifyXmlFrameCounts(twin, data)
 
+            val shippingClip = GrooveStore.load(data).single()
+            assertEquals((1..16).toList(), shippingClip.notes.map { Mpc3Note.slotFor(it.note) })
+            assertTrue(shippingClip.notes.all { it.velocity * 127 >= 85f }, "the shipped preview must address the main native zone")
+            val lastNoteEnd = shippingClip.notes.maxOf { it.timePulses + it.lengthPulses }
+            assertTrue(lastNoteEnd <= shippingClip.lengthPulses, "the shipped sequence truncates a finite duet ending")
+            for (note in shippingClip.notes) {
+                val pad = requireNotNull(kit.pad(Mpc3Note.slotFor(note.note)))
+                val sample = WavInfo.read(File(data, pad.sampleFile))
+                val sampleSeconds = sample.frameCount.toDouble() / sample.sampleRate
+                val noteSeconds = note.lengthPulses.toDouble() / 960 * 60 / 120
+                assertTrue(abs(sampleSeconds - noteSeconds) < .001, "the shipped note length loses pad ${pad.slot}'s full gesture")
+            }
+            val demoFile = File(destination, ObbligatoKitGenerator.DEMO_FILE)
+            val demoInfo = WavInfo.read(demoFile)
+            val demo = WavReader.read(demoFile)
+            assertEquals(44_100, demoInfo.sampleRate)
+            assertEquals(24, demoInfo.bitsPerSample)
+            assertEquals(2, demoInfo.channels)
+            assertTrue(demo.frameCount.toDouble() / demo.sampleRate >= lastNoteEnd.toDouble() / 960 * 60 / 120)
+            assertTrue(demo.samples.all { it.isFinite() && it in -1f..1f })
+            assertTrue(demo.peak() > .01f, "the locally generated preview is silent")
+
             val restored = Mpc3Importer.import(program, File(temp, "imported"))
             assertEquals((1..16).toList(), restored.kit.pads.map { it.slot })
+            assertEquals(listOf(shippingClip), GrooveStore.load(restored.directory), "the native track loses its shipped sequence")
             for (pad in kit.pads) {
                 val loaded = requireNotNull(restored.kit.pad(pad.slot))
                 assertEquals(pad.velocityLayers, loaded.velocityLayers, "pad ${pad.slot} velocity windows changed on load")
@@ -190,7 +214,7 @@ class ObbligatoKitTest {
 
             ZipFile(File(temp, "SnipSnap-Obbligato-Kit.zip")).use { zip ->
                 val entries = zip.entries().toList().filter { !it.isDirectory }
-                val files = destination.walkTopDown().filter { it.isFile }
+                val files = destination.walkTopDown().filter { it.isFile && it != demoFile }
                     .associateBy { destination.name + "/" + it.relativeTo(destination).invariantSeparatorsPath }
                 assertEquals(files.keys, entries.map { it.name }.toSet(), "portable kit omits recipes or program assets")
                 for (entry in entries) assertContentEquals(files.getValue(entry.name).readBytes(),

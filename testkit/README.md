@@ -310,6 +310,10 @@ Regenerate with `./gradlew :synth:generateObbligatoKit`. The ZIP is
 its matching `_[TrackData]/` folder; keep those together. For MPC 2, open
 the `.xpm` inside that folder. `kit.json` lives beside the samples so SnipSnap
 can reopen the kit and retain each pad's complete synthesis recipe.
+The portable ZIP includes all 48 sample WAVs, programs, recipes, pad map, and
+the embedded demo sequence. Regeneration also writes `Obbligato Demo.wav`
+locally beside the program; this reference preview is omitted from the ZIP.
+Listen on the [audition page](https://obbligato-snipsnap-audition.bertcalm.chatgpt.site).
 
 | Pads | Relationship | Notes, left to right |
 | --- | --- | --- |

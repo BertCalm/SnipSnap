@@ -56,7 +56,7 @@ object ObbligatoKitGenerator {
 
             val archive = File(root, "SnipSnap-Obbligato-Kit.zip")
             ZipOutputStream(archive.outputStream().buffered()).use { zip ->
-                destination.walkTopDown().filter { it.isFile }
+                destination.walkTopDown().filter { it.isFile && it != File(destination, DEMO_FILE) }
                     .sortedBy { it.relativeTo(destination).invariantSeparatorsPath }
                     .forEach { file ->
                         val path = destination.name + "/" + file.relativeTo(destination).invariantSeparatorsPath
@@ -122,7 +122,6 @@ object ObbligatoKitGenerator {
             "key" to JsonValue.Str("C minor pentatonic"),
             "pads" to JsonValue.Arr(pads),
             "demo" to JsonValue.Obj(linkedMapOf(
-                "audio" to JsonValue.Str(DEMO_FILE),
                 "clip" to JsonValue.Str(demo.name),
                 "sequence" to JsonValue.Str("${data.name}/${GrooveStore.FILE_NAME}"),
                 "tempoBpm" to num(DEMO_BPM),
@@ -160,5 +159,9 @@ object ObbligatoKitGenerator {
         overlap. Rows start eight seconds apart, with a brief overlap at each boundary.
         The embedded MPC 3 clip and groove.json leave room for the final finite ending.
         The WAV uses the standard KitPreview mix and headroom limiter, without rack FX.
+        Regeneration writes this reference WAV beside the program locally; the portable
+        ZIP omits only this preview WAV. All forty-eight sample WAVs, programs, recipes,
+        pad map and the embedded sequence remain in the ZIP.
+        Online demo: https://obbligato-snipsnap-audition.bertcalm.chatgpt.site
     """.trimIndent() + "\n"
 }
