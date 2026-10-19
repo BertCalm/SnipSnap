@@ -116,10 +116,10 @@ data class FxChain(
         val maxFrames = input.frameCount + (MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()
         if (output.frameCount <= maxFrames) return output
         val out = output.samples.copyOfRange(0, maxFrames * output.channels)
-        val fade = (0.01f * output.sampleRate).toInt() * output.channels
-        for (i in 0 until minOf(fade, out.size)) {
-            out[out.size - 1 - i] *= i.toFloat() / fade
-        }
+        // Per-FRAME through Dsp.fadeTail, like every other fade in the
+        // codebase: the per-sample ramp this used to run gave the two
+        // channels of a stereo frame different gains across the fade.
+        Dsp.fadeTail(out, ms = 10f, rate = output.sampleRate, channels = output.channels)
         return Snip(out, output.channels, output.sampleRate)
     }
 
