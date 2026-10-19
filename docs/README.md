@@ -26,8 +26,8 @@ the original MVP cut. [`SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) measures a
 gap from before the preset library; its counts are that gap, not the
 current roster.
 
-**Wick.** [`WICK.md`](WICK.md) records the PLUCK/BUBBLE first-listen prototype,
-recipe contracts, held-loop strategy and private audition. The supplied
+**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BUBBLE listening prototype,
+recipe contracts, musical phrases, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
 
@@ -48,15 +48,25 @@ awaits the owner's listening verdict. The supplied
 [`engineering specification`](superpowers/specs/2026-10-11-tangle-engine-engineering-spec.md)
 is preserved unchanged as the proposal rather than an acceptance record.
 
-**Flock.** [`FLOCK.md`](FLOCK.md) records the finite oscillator-flock proof,
-its six controls and reproducible comparison contracts. Its
+**Flock.** [`FLOCK.md`](FLOCK.md) records the finite engine, SYNTH controls,
+nine factory recipes, sixteen-pad FRESH TAPE starter and MPC 2/3 kit exports.
+The owner confirmed revised FLOW is audible; saved model-1 recipes remain
+replayable. Its
 [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) compares
-neighbor interaction with fixed detuning and independent motion. Sustained
-loops and the owner's sonic acceptance remain open.
+neighbor interaction with fixed detuning and independent motion. HOLD always
+sets a finite duration; sustained loops and phone/MPC hardware checks remain open.
+The separate RIBBON sustain study compares long continuous renders with captured
+roughly six-second loops at three FLOW settings, without changing the finite presets.
 
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
+
+**Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
+first-listen prototype, complete room recipes, passive feedback model and
+playback limits. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+is published; the owner's listening verdict remains pending. The supplied [`engineering specification`](CHAMBER_SPEC.md)
+remains the unchanged proposal; sustained HOLD and the wider library are later work.
 
 **Orphica.** [`ORPHICA.md`](ORPHICA.md) records the microsound harp, approved
 finite listening audition, phone controls and captured-sustain instrument

@@ -6,6 +6,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
 import com.snipsnap.synth.Shuffle
+import com.snipsnap.synth.ConfluenceVoiceBank
 import com.snipsnap.synth.SkinKits
 import com.snipsnap.synth.SynthKits
 import com.snipsnap.synth.ThumpKits
@@ -21,8 +22,11 @@ import java.io.File
  * seconds, before anything has been captured, and the empty grid never
  * looks empty. Every starter renders offline through the same pipeline as
  * captured audio, and its pads carry per-pad recipes, so a starter kit's
- * main samples remain editable and regenerable. CLOUD, LUCKY DIP A/B and
- * VELOCITY qualify that. CLOUD's GRAINS clouds (A07-A16) carry no recipe;
+ * main samples remain editable and regenerable. CLOUD, CONFLUENCE, LUCKY DIP A/B
+ * and VELOCITY qualify that. CONFLUENCE's eight wordless pads are finite rendered
+ * recordings; their checked source bank and exact arrangement metadata travel
+ * beside the kit, rather than pretending to be asset-free synth recipes.
+ * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
  * chain that re-treated each bank-A pad, which re-treat a sound rather
@@ -32,6 +36,8 @@ import java.io.File
  * beloved kit.
  */
 object StarterKits {
+    const val CONFLUENCE_ID = "confluence-wordless"
+    const val CONFLUENCE_BANK_DIR = "confluence-voice-bank"
 
     class Starter internal constructor(
         /** Stable machine id. */
@@ -44,6 +50,8 @@ object StarterKits {
         val seeded: Boolean,
         /** A key the kit's melodic content is in, when it has one. */
         val key: KeySpec? = null,
+        /** Optional source payloads written before kit.json makes a kit visible. */
+        private val prepare: ((directory: File) -> Unit)? = null,
         private val build: (seed: Int) -> List<ArrangedPad?>,
     ) {
         /**
@@ -52,6 +60,7 @@ object StarterKits {
          */
         fun render(name: String, dir: File, seed: Int = 0): Kit {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
+            prepare?.invoke(dir)
             return KitAssembler.assembleArranged(name, build(seed), dir, key)
         }
     }
@@ -101,10 +110,21 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.chip() },
         Starter(
+            "overlap", "OVERLAP",
+            "Twelve resonator plucks, finite textures and breaths, with four lower pluck answers.",
+            seeded = false,
+        ) { SynthKits.overlap() },
+        Starter(
             "cloud", "CLOUD",
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,
         ) { SynthKits.cloud() },
+        Starter(
+            CONFLUENCE_ID, "CONFLUENCE",
+            "Wordless recorded voices: open, airy and rounded vowels, with answering gatherings.",
+            seeded = false,
+            prepare = { dir -> ConfluenceVoiceBank.bundled().writePortableBank(File(dir, CONFLUENCE_BANK_DIR), overwrite = true) },
+        ) { ConfluenceVoiceBank.bundled().arrangedPads() },
         Starter(
             "circuit", "CIRCUIT",
             "Three breaths, moving accents, and canyon answers in C minor pentatonic.",
@@ -202,6 +222,18 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tangle() },
         Starter(
+            "crease", "CREASE",
+            "Pressure-shaped bass, keys and elastic leads in C minor pentatonic, with unfolding held layers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.crease() },
+        Starter(
+            "flock", "FLOCK",
+            "Gathering notes, traveling ribbons and split harmonics in C minor pentatonic. Finite moving flocks.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.flock() },
+        Starter(
             "relay", "RELAY",
             "One note, four source roles. Ordered handoffs in C minor pentatonic.",
             seeded = false,
@@ -209,7 +241,7 @@ object StarterKits {
         ) { SynthKits.relay() },
         Starter(
             "shoal", "SHOAL",
-            "Glass and ripples gather into moving harmonic groups in C minor pentatonic.",
+            "Wood, bowl and wire bodies carried by moving energy in C minor pentatonic.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.shoal() },
@@ -242,6 +274,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.openSky() },
+        Starter(
+            "vent", "VENT",
+            "Twelve dry orbit sounds: bass, notes, hits and textures. Four pads left for your captures.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.vent() },
         Starter(
             "skin", "SKIN",
             "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",

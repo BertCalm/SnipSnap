@@ -217,6 +217,7 @@ object Velocity {
         is TerraPatch -> Terra.macrosFor(patch.voice)
         is SilkPatch -> Silk.macrosFor(patch.voice)
         is BorePatch -> Bore.macrosFor(patch.voice)
+        is ObbligatoPatch -> Obbligato.macrosFor()
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
@@ -257,7 +258,10 @@ object Velocity {
         is VentPatch -> Vent.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
         is FilamentPatch -> Filament.macrosFor(patch.voice)
+        is ChamberPatch -> Chamber.macrosFor(patch.voice)
+        is NacrePatch -> Nacre.macrosFor(patch.voice)
         is OvenPatch -> Oven.macrosFor(patch.voice)
+        is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
     }
 
     /**
@@ -326,6 +330,7 @@ object Velocity {
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
      * REVEL scales each phrase event's energy while keeping its saved [RevelConfig].
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
+     * OBBLIGATO scales player excitation while preserving the saved duet, note, seed and model.
      * BELLOWS scales reed pressure, harmonic response and level while keeping the saved gesture.
      * MURMUR scales excitation energy and FM bite while retaining its mouth recipe.
      * PRISM scales partial excitation and brightness while preserving STRIKE's contact character.
@@ -343,6 +348,7 @@ object Velocity {
      * ORPHICA changes string excitation while retaining the saved grain history recipe and seed.
      * REGISTERS uses its saved note and model while velocity changes rank/reed excitation once.
      * VENT scales the onset perturbation while retaining the saved trajectory controls, note and seed.
+     * CREASE changes excitation pressure while retaining its saved phase-map model and root.
      * WICK changes admitted gate charge and excitation effort, retaining the saved note and six controls.
      * OVEN changes hammer contact and partial excitation while retaining its saved root and body recipe.
      * FLOTILLA renders velocity itself, with its saved MIDI note.
@@ -373,6 +379,7 @@ object Velocity {
         is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
         is PitchwheelPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
+        is ObbligatoPatch -> patch.copy(velocity = v).render()
         is BellowsPatch -> patch.copy(velocity = v).render()
         is MurmurPatch -> patch.copy(velocity = v).render()
         is OspreyPatch -> patch.copy(velocity = v).render()
@@ -394,7 +401,10 @@ object Velocity {
         is VentPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
         is FilamentPatch -> patch.copy(velocity = v).render()
+        is ChamberPatch -> patch.copy(velocity = v).render()
+        is NacrePatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
+        is CreasePatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()

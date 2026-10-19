@@ -11,6 +11,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class KitMergeTest {
@@ -127,5 +128,19 @@ class KitMergeTest {
         val merged = KitMerge.merge(aDir, bDir, File(temp, "swapped"), replace = true)
         assertEquals("B01_Snare_01.wav", merged.pad(17)!!.sampleFile, "the squatter swapped out")
         assertEquals(listOf(1, 17, 19), merged.pads.map { it.slot })
+    }
+
+    @Test
+    fun `a source backed board refuses before destination writes without its importer`() {
+        val aDir = File(temp, "board-a")
+        val bDir = File(temp, "board-b")
+        kitA(aDir)
+        val b = kitB(bDir)
+        KitStore.save(b.copy(pads = b.pads.map { pad ->
+            if (pad.slot == 1) pad.copy(recipe = JsonValue.Obj(mapOf("boardPad" to JsonValue.Num(1.0)))) else pad
+        }), bDir)
+        val dest = File(temp, "board-refused")
+        assertFailsWith<IllegalArgumentException> { KitMerge.merge(aDir, bDir, dest) }
+        assertFalse(dest.exists(), "a missing source importer must refuse before creating the destination")
     }
 }

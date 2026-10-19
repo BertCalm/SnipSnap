@@ -1,7 +1,6 @@
 package com.snipsnap.shell
 
 import com.snipsnap.kit.InstrumentStore
-import kotlin.math.pow
 
 /**
  * The keygroup voice, pure JVM: a small sample-playback engine for the
@@ -15,7 +14,8 @@ import kotlin.math.pow
  *
  * A note picks the zone that covers it, reads the zone's sample at the
  * ratio between the note and the zone's root (times the sample rate
- * ratio to the device), linearly interpolated; a zone with a loop start
+ * ratio to the device), read between frames with a four-point cubic
+ * (Catmull-Rom) as the phone's native voice reads; a zone with a loop start
  * loops the file's `[loopStart, end)` - the last frame is played and is
  * followed by the first of the loop - and sustains while held; a note
  * that lets go fades over the instrument's release; a zone without a loop
@@ -37,17 +37,25 @@ class InstrumentEngine(
         require(outRate > 0) { "output rate must be positive, got $outRate" }
     }
 
-    /** An instrument with its samples in memory: every zone's mono floats at [sampleRate]. */
+    /** An instrument with its samples in memory at [sampleRate]. */
     class Loaded(
         val instrument: InstrumentStore.Instrument,
         val sampleRate: Int,
         /** Per zone, in the instrument's zone order. */
         val samples: List<FloatArray>,
+        /** All velocity samples by sidecar path. The legacy list remains the per-zone hardest samples. */
+        val layerSamples: Map<String, FloatArray> = emptyMap(),
     ) {
+        constructor(instrument: InstrumentStore.Instrument, sampleRate: Int, samplesByFile: Map<String, FloatArray>) :
+            this(instrument, sampleRate, instrument.zones.map { samplesByFile[it.sample] ?: FloatArray(0) }, samplesByFile)
+
         init {
             require(samples.size == instrument.zones.size) { "one sample per zone" }
             require(sampleRate > 0)
         }
+
+        fun sampleFor(file: String, zoneIndex: Int): FloatArray? = layerSamples[file]
+            ?: samples[zoneIndex].takeIf { file == instrument.zones[zoneIndex].sample }
     }
 
     private class Voice(
@@ -75,16 +83,16 @@ class InstrumentEngine(
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
         val zone = instrument.instrument.zoneFor(note) ?: return false
         val zoneIndex = instrument.instrument.zones.indexOf(zone)
-        val sample = instrument.samples[zoneIndex]
-        if (sample.isEmpty()) return false
-        val semis = note - zone.rootNote
-        val step = 2.0.pow(semis / 12.0) * instrument.sampleRate / outRate
-        val loopStart = zone.loopStartFrame.toInt().coerceIn(0, sample.size - 1)
+        val hit = KeyHit.resolve(instrument.instrument, note, velocity.coerceIn(0f, 1f)) { file ->
+            instrument.sampleFor(file, zoneIndex)?.size?.toLong()
+        } ?: return false
+        val sample = instrument.sampleFor(hit.sampleFile, zoneIndex) ?: return false
+        val step = hit.pitchRatio * instrument.sampleRate / outRate
         if (voices.count { !it.dead } >= maxVoices) {
             // Steal the oldest.
             voices.filter { !it.dead }.minByOrNull { it.born }?.dead = true
         }
-        voices.add(Voice(note, zoneIndex, sample, if (zone.loopStartFrame > 0) loopStart else -1, step, velocity.coerceIn(0f, 1f) * VOICE_LEVEL, clock++))
+        voices.add(Voice(note, zoneIndex, sample, hit.loopStartFrame.toInt(), step, hit.gain, clock++))
         return true
     }
 
@@ -110,6 +118,10 @@ class InstrumentEngine(
             if (v.dead) continue
             val s = v.sample
             val end = s.size
+            val last = end - 1
+            // The cubic's taps past the last frame: inside a loop (the same test as the wrap below) the loop's own
+            // next frames, end -> loopStart and end + 1 -> loopStart + 1; otherwise the last frame, held.
+            val wrap = if (v.loopStart >= 0 && end - 1 > v.loopStart) end - v.loopStart else 0
             for (i in 0 until frames) {
                 if (v.loopStart >= 0 && end - 1 > v.loopStart) {
                     // The loop is the file's [loopStart, end), the MPC's own and the one a file that closes
@@ -123,11 +135,22 @@ class InstrumentEngine(
                     break
                 }
                 val i0 = v.pos.toInt()
-                val frac = (v.pos - i0).toFloat()
-                // Inside a loop the read can sit between the last frame and `end`; the frame after the last
-                // is the loop's first, which is what makes the seam a step the loop makes everywhere else.
-                val next = i0 + 1
-                val x = s[i0] + ((if (next < end) s[next] else s[v.loopStart]) - s[i0]) * frac
+                val t = (v.pos - i0).toFloat()
+                // A four-point cubic (Catmull-Rom) through the frames either side of the read, PadEngine's own.
+                // Inside a loop the read can sit between the last frame and `end`, and the frames after the last
+                // are the loop's first and second, which is what makes the seam a step the loop makes everywhere
+                // else. The frame before is the file's, held at frame 0. At a whole-frame position the weights are
+                // exactly (0, 1, 0, 0): the read is the sample itself.
+                val im1 = if (i0 > 0) i0 - 1 else i0
+                val i1 = if (i0 + 1 <= last) i0 + 1 else if (wrap > 0) i0 + 1 - wrap else last
+                val i2 = if (i0 + 2 <= last) i0 + 2 else if (wrap > 0) i0 + 2 - wrap else last
+                val t2 = t * t
+                val t3 = t2 * t
+                val wm1 = 0.5f * (2f * t2 - t3 - t)
+                val w0 = 1f - 2.5f * t2 + 1.5f * t3
+                val w1 = 0.5f * t + 2f * t2 - 1.5f * t3
+                val w2 = 0.5f * (t3 - t2)
+                val x = wm1 * s[im1] + w0 * s[i0] + w1 * s[i1] + w2 * s[i2]
                 if (v.releasing) {
                     v.level -= releaseStep
                     if (v.level <= 0f) {

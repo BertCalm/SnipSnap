@@ -62,5 +62,6 @@ Difference heard or exact loading error:
 
 Return this short result or record it in [BENCH B8](BENCH.md#b8--osprey-r3-handoff).
 The artifact checks prove file integrity, recipe reproducibility and export
-read-back; hardware playback still needs this listening pass. A musical demo
-follows once the handoff is confirmed.
+read-back; hardware playback still needs this listening pass. A
+[dry musical sketch](OSPREY_FIELD_SKETCH.md) provides listening context while
+these checks remain open.

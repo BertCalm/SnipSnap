@@ -773,51 +773,8 @@ object Bore {
         pop: Float? = null,
         seed: Float? = null,
     ): FloatArray {
-        val flute = voice == BoreVoice.FLUTE
-        val breath = macros.getValue("BREATH")
-        val lip = macros.getValue("LIP")
-        val chiff = macros.getValue("CHIFF")
-        val holdMacro = macros.getValue("HOLD")
-        val bellHz = bellHzFor(voice, hz, breath, lip)
-        val dcHz = if (flute) Strings.DC_BLOCK_HZ else hz / SAX_BLOCKER_DIVISOR
-        val vibCents = VIBRATO_MAX_CENTS * (holdMacro / LOOP_THRESHOLD).coerceIn(0f, 1f)
-        // A retune may only shorten the loop the ring was built for, so the ring is built for the
-        // lowest pitch of the swing and brought up to the note.
-        val tuning = Strings.tune(hz * 2f.pow(-vibCents / 1200f), bellHz, rate, dcBlock = true, dcHz = dcHz)
-        val loop = Strings.Loop(tuning.n, tuning.a, LOOP_GAIN, bellHz, rate, dcBlock = true, dcHz = dcHz)
-        if (vibCents > 0f) loop.retune(hz)
-
-        val noise = Dsp.Noise(Dsp.seedFor("BORE", voice, hz))
-        val turb = turbulence ?: turbulenceFor(voice, breath)
-        val offset = reedOffset(lip)
-        val closing = closingPressure(offset)
-        val pMax = when {
-            pressure == null -> if (flute) flutePressure(breath) else reedPressure(breath, offset)
-            flute -> pressure
-            else -> closing * pressure
-        }
-        val cap = if (flute) FLUTE_PRESSURE_HIGH * 1.3f else closing * CAP_SHARE
-
-        // The jet's transit time is a *fractional* delay (linear interpolation): rounded to a whole
-        // sample it moved the played pitch in steps of about a quarter of a percent (and the periodic LOOP of R1, which
-        // corrected the pitch by measuring it, oscillated instead of converging).
-        val jetDelay = (JET_RATIO * rate / hz).coerceAtLeast(2f)
-        val jet = FloatArray(ceil(jetDelay).toInt() + 2)
-        var jw = 0
-        val jetBias = Dsp.lin(lip, JET_OFFSET_LOW, JET_OFFSET_HIGH)
-
-        val chiffNoise = CHIFF_NOISE * chiff
-        val overshoot = if (flute) 0f else OVERSHOOT
-        val popLevel = if (flute) 0f else pop ?: POP_LEVEL
-        val popStart = (gate.attackN * POP_AT).toInt()
-        val popN = (POP_SECONDS * rate).toInt().coerceAtLeast(2)
-        val seedAmp = if (flute) 0f else seed ?: run {
-            val level = pMax / TONGUE_SEED_PRESSURE
-            (TONGUE_SEED * chiff.pow(TONGUE_SEED_CHIFF_CURVE) * Dsp.lin(breath, TONGUE_SEED_SOFT, 1f) * level * level).coerceAtMost(TONGUE_SEED_MAX)
-        }
-        val seedStart = (gate.attackN * POP_AT).toInt()
-        val seedN = (TONGUE_SEED_PERIODS * rate / hz).toInt().coerceAtLeast(2)
-
+        val player = Player(voice, hz, macros, rate, maxDetuneCents = 0f,
+            turbulence = turbulence, pressure = pressure, pop = pop, seed = seed)
         val out = FloatArray(gate.total)
         for (i in 0 until gate.total) {
             if (i % 8192 == 0) stopIfUnwanted()
@@ -826,16 +783,111 @@ object Bore {
                 i >= gate.attackN + gate.holdN -> ((gate.total - i).toFloat() / gate.releaseN).coerceAtLeast(0f)
                 else -> 1f
             }
-            val t = i.toDouble() / rate
-            if (vibCents > 0f && i % VIBRATO_BLOCK == 0 && t > VIBRATO_DELAY_SECONDS) {
-                val rise = ((t - VIBRATO_DELAY_SECONDS) / VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
-                val cents = vibCents * (rise * sin(2.0 * PI * VIBRATO_HZ * t)).toFloat()
-                loop.retune(hz * 2f.pow(cents / 1200f))
+            out[i] = player.tick(env, i.toDouble() / rate)
+        }
+
+        val chiff = macros.getValue("CHIFF")
+        val thumpGain = ((chiff - THUMP_FROM) / (1f - THUMP_FROM)).coerceIn(0f, 1f)
+        if (thumpGain > 0f && pressure == null) addThump(out, rate, thumpGain * THUMP_LEVEL * player.basePressure)
+        return out
+    }
+
+    /**
+     * A single raw bore advanced by its caller, so an ensemble can evaluate both players under
+     * the same envelope and controls before mixing. No conditioning or loudness normalization
+     * happens here; level the final ensemble once. The legacy [blow] adds its key thump afterwards.
+     *
+     * [hz] is the tuned frequency, as for [blow]. The ring is allocated for the lowest combined
+     * natural vibrato and caller detune, then retuned without discarding its sounding state.
+     * Caller pitch updates share the existing 64-sample vibrato control interval. [noiseSeed]
+     * lets two otherwise identical players keep independent, reproducible turbulence.
+     */
+    internal class Player(
+        voice: BoreVoice,
+        private val hz: Float,
+        macros: Map<String, Float>,
+        private val rate: Int = RATE * Dsp.OVERSAMPLE,
+        private val maxDetuneCents: Float = 32f,
+        noiseSeed: Int? = null,
+        turbulence: Float? = null,
+        pressure: Float? = null,
+        pop: Float? = null,
+        seed: Float? = null,
+    ) {
+        init {
+            require(hz.isFinite() && hz > 0f) { "a bore player needs a positive finite frequency" }
+            require(rate > 0) { "a bore player needs a positive sample rate" }
+            require(maxDetuneCents.isFinite() && maxDetuneCents >= 0f) { "bore detune must be finite and nonnegative" }
+        }
+
+        private val flute = voice == BoreVoice.FLUTE
+        private val breath = macros.getValue("BREATH")
+        private val lip = macros.getValue("LIP")
+        private val chiff = macros.getValue("CHIFF")
+        private val bellHz = bellHzFor(voice, hz, breath, lip)
+        private val dcHz = if (flute) Strings.DC_BLOCK_HZ else hz / SAX_BLOCKER_DIVISOR
+        private val vibCents = VIBRATO_MAX_CENTS * (macros.getValue("HOLD") / LOOP_THRESHOLD).coerceIn(0f, 1f)
+        private val tuning = Strings.tune(hz * 2f.pow(-(vibCents + maxDetuneCents) / 1200f), bellHz, rate, dcBlock = true, dcHz = dcHz)
+        private val loop = Strings.Loop(tuning.n, tuning.a, LOOP_GAIN, bellHz, rate, dcBlock = true, dcHz = dcHz).also {
+            if (vibCents > 0f || maxDetuneCents > 0f) it.retune(hz)
+        }
+        private val noise = Dsp.Noise(noiseSeed ?: Dsp.seedFor("BORE", voice, hz))
+        private val turb = turbulence ?: turbulenceFor(voice, breath)
+        private val offset = reedOffset(lip)
+        private val closing = closingPressure(offset)
+        internal val basePressure = when {
+            pressure == null -> if (flute) flutePressure(breath) else reedPressure(breath, offset)
+            flute -> pressure
+            else -> closing * pressure
+        }
+        private val cap = if (flute) FLUTE_PRESSURE_HIGH * 1.3f else closing * CAP_SHARE
+
+        // Fractional jet transit time, unchanged from the one-shot source.
+        private val jetDelay = (JET_RATIO * rate / hz).coerceAtLeast(2f)
+        private val jet = FloatArray(ceil(jetDelay).toInt() + 2)
+        private var jw = 0
+        private val jetBias = Dsp.lin(lip, JET_OFFSET_LOW, JET_OFFSET_HIGH)
+        private val chiffNoise = CHIFF_NOISE * chiff
+        private val overshoot = if (flute) 0f else OVERSHOOT
+        private val popLevel = if (flute) 0f else pop ?: POP_LEVEL
+        private val attackN = (attackSeconds(chiff) * rate).toInt().coerceAtLeast(1)
+        private val popStart = (attackN * POP_AT).toInt()
+        private val popN = (POP_SECONDS * rate).toInt().coerceAtLeast(2)
+        private val seedAmp = if (flute) 0f else seed ?: run {
+            val level = basePressure / TONGUE_SEED_PRESSURE
+            (TONGUE_SEED * chiff.pow(TONGUE_SEED_CHIFF_CURVE) * Dsp.lin(breath, TONGUE_SEED_SOFT, 1f) * level * level).coerceAtMost(TONGUE_SEED_MAX)
+        }
+        private val seedStart = (attackN * POP_AT).toInt()
+        private val seedN = (TONGUE_SEED_PERIODS * rate / hz).toInt().coerceAtLeast(2)
+        private var frame = 0
+
+        /** Returns the bore's outgoing wave; excitation is injected into its next return. */
+        fun tick(
+            envelope: Float,
+            elapsedSeconds: Double,
+            pressureScale: Float = 1f,
+            pitchCents: Float = 0f,
+            turbulenceScale: Float = 1f,
+            externalExcitation: Float = 0f,
+        ): Float {
+            val i = frame++
+            val t = elapsedSeconds
+            val pitch = if (pitchCents.isFinite()) pitchCents.coerceIn(-maxDetuneCents, maxDetuneCents) else 0f
+            if (i % VIBRATO_BLOCK == 0 && (maxDetuneCents > 0f || (vibCents > 0f && t > VIBRATO_DELAY_SECONDS))) {
+                val vibrato = if (vibCents > 0f && t > VIBRATO_DELAY_SECONDS) {
+                    val rise = ((t - VIBRATO_DELAY_SECONDS) / VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
+                    vibCents * (rise * sin(2.0 * PI * VIBRATO_HZ * t)).toFloat()
+                } else 0f
+                loop.retune(hz * 2f.pow((pitch + vibrato) / 1200f))
             }
+            val scale = if (pressureScale.isFinite()) pressureScale.coerceAtLeast(0f) else 1f
+            val turbulenceGain = if (turbulenceScale.isFinite()) turbulenceScale.coerceAtLeast(0f) else 1f
+            val env = if (envelope.isFinite()) envelope.coerceAtLeast(0f) else 0f
+            val pMax = basePressure * scale
             val over = if (overshoot > 0f) 1f + overshoot * exp(-t / OVERSHOOT_SECONDS).toFloat() else 1f
             val burst = if (chiffNoise > 0f) chiffNoise * exp(-t / CHIFF_NOISE_SECONDS).toFloat() else 0f
             val popNow = if (popLevel > 0f && i >= popStart && i < popStart + popN) popLevel * pMax * sin(PI * (i - popStart) / popN).toFloat() else 0f
-            val pm = (pMax * env * over * (1f + (turb + burst) * noise.next()) + popNow).coerceAtMost(cap)
+            val pm = (pMax * env * over * (1f + (turb + burst) * turbulenceGain * noise.next()) + popNow).coerceAtMost(cap)
             val returning = loop.reflected()
             val y = if (flute) {
                 // The returning wave deflects the jet; the disturbance crosses the mouth (the jet line);
@@ -857,19 +909,16 @@ object Bore {
             }
             // The tongue's seed goes into the bore, not into the mouth pressure (see [TONGUE_SEED]).
             val tongue = if (seedAmp > 0f && i >= seedStart && i < seedStart + seedN) {
-                seedAmp * (0.5f - 0.5f * cos(2.0 * PI * (i - seedStart) / seedN).toFloat()) * sin(2.0 * PI * hz * (i - seedStart) / rate).toFloat()
+                (seedAmp * scale) * (0.5f - 0.5f * cos(2.0 * PI * (i - seedStart) / seedN).toFloat()) * sin(2.0 * PI * hz * (i - seedStart) / rate).toFloat()
             } else 0f
-            loop.inject(y + tongue)
+            val excitation = if (externalExcitation.isFinite()) externalExcitation else 0f
+            loop.inject(if (excitation == 0f) y + tongue else y + tongue + excitation)
             // What is heard is the wave in the bore, not the sample the valve injects: `y` carries the
             // mouth's DC pressure, which after the output high-pass is a sub-200 Hz swell at every
             // onset (the classifier read it as a snare or a clap: R1's first preset roster had 8 of 16
             // in a drum's choke group). The returning wave has been through the loop's DC blocker.
-            out[i] = returning
+            return returning
         }
-
-        val thumpGain = ((chiff - THUMP_FROM) / (1f - THUMP_FROM)).coerceIn(0f, 1f)
-        if (thumpGain > 0f && pressure == null) addThump(out, rate, thumpGain * THUMP_LEVEL * pMax)
-        return out
     }
 
     /** The key thump: a damped 90 Hz sine at the onset, run to under -60 dB. */

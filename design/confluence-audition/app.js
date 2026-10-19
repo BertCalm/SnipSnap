@@ -249,22 +249,22 @@
     state.level = level;
     try { localStorage.setItem(LEVEL_KEY, level); } catch (_) { /* Notes still work without persistent preferences. */ }
     $('level-explanation').textContent = level === 'matched'
-      ? 'Role clips share the complete gathering’s matched gain; the isolated parts stay quieter. Earlier crowd comparisons match each clip separately.'
-      : 'Raw files keep the rendered mix before loudness leveling, with any export peak protection recorded in diagnostics. Role clips share the gathering’s master gain.';
+      ? 'Each role study shares its own complete gathering’s matched gain; isolated parts stay quieter. Earlier crowd comparisons match each clip separately.'
+      : 'Raw files keep the rendered mix before loudness leveling, with any export peak protection recorded in diagnostics. Each role family shares its own master gain.';
     $('player-mode').textContent = level === 'matched' ? 'MATCHED LEVEL' : 'RAW RENDER';
     if (state.selected) loadAudio(state.selected, !audio.paused, audio.currentTime);
   }
 
   function renderRoles() {
     const roles = [
-      { id: 'low_foundation', label: 'Low foundation.', tag: 'ISOLATED ROLE / LOW', description: 'Hear the sustained lower role on its own.', color: 'low' },
-      { id: 'airy_upper', label: 'Airy upper group.', tag: 'ISOLATED ROLE / UPPER', description: 'Hear the recorded breathy upper voices, with the other roles silent.', color: 'airy' },
-      { id: 'clear_answer', label: 'Clear answering phrase.', tag: 'ISOLATED ROLE / ANSWER', description: 'A clear phrase answers the upper group. Its opening rest is part of the arrangement.', color: 'answer' },
-      { id: 'role_gathering', label: 'The complete gathering.', tag: 'ALL THREE ROLES', description: 'The low foundation, airy upper group and clear answer, together.', color: 'gathering' }
+      { id: 'wordless_low_foundation', label: 'Low foundation.', tag: 'ISOLATED ROLE / LOW', description: 'Hear the sustained lower /a/ on its own.', color: 'low' },
+      { id: 'wordless_airy_upper', label: 'Airy upper group.', tag: 'ISOLATED ROLE / UPPER', description: 'Hear the complete recorded breathy /a/ arc, with the other roles silent.', color: 'airy' },
+      { id: 'wordless_clear_answer', label: 'Clear vowel answer.', tag: 'ISOLATED ROLE / ANSWER', description: 'A clear, wordless /a/ arc answers the upper group.', color: 'answer' },
+      { id: 'wordless_gathering', label: 'The wordless gathering.', tag: 'ALL THREE ROLES', description: 'The low foundation, airy upper group and clear vowel answer, together.', color: 'gathering' }
     ];
     const fragment = document.createDocumentFragment();
     for (const [index, role] of roles.entries()) {
-      const clip = state.clips.find((item) => item.id === role.id && item.group === 'roles');
+      const clip = state.clips.find((item) => item.id === role.id);
       if (!clip) continue;
       const button = el('button', `role-clip role-${role.color}`);
       button.type = 'button';
@@ -275,7 +275,9 @@
       const top = el('span', 'role-top');
       top.append(el('span', 'role-index', String(index + 1).padStart(2, '0')), el('span', 'role-tag', role.tag));
       const copy = el('span', 'role-copy');
-      const description = el('span', 'role-description', role.description);
+      const entryNote = role.id === 'wordless_clear_answer' && Number.isFinite(clip.firstEntranceSeconds)
+        ? ` Enters around ${Math.round(clip.firstEntranceSeconds)} seconds, after the airy phrase.` : '';
+      const description = el('span', 'role-description', role.description + entryNote);
       description.id = `role-description-${role.id}`;
       button.setAttribute('aria-describedby', description.id);
       copy.append(el('span', 'role-title', role.label), description);
@@ -326,14 +328,14 @@
 
   function renderGroups() {
     const manifestGroups = Array.isArray(state.manifest.groups) ? state.manifest.groups : [];
-    const groups = [{ id: 'all', title: 'All recordings' }, ...manifestGroups.filter((group) => group.id === 'roles'), ...manifestGroups.filter((group) => group.id !== 'roles')];
+    const groups = [{ id: 'all', title: 'All recordings' }, ...manifestGroups.filter((group) => group.id === 'wordless'), ...manifestGroups.filter((group) => group.id === 'bank_presets'), ...manifestGroups.filter((group) => !['wordless', 'bank_presets', 'demo_roles'].includes(group.id)), ...manifestGroups.filter((group) => group.id === 'demo_roles')];
     const fragment = document.createDocumentFragment();
     const seen = new Set();
     for (const group of groups) {
       if (!group || typeof group.id !== 'string' || seen.has(group.id)) continue;
       seen.add(group.id);
       const count = group.id === 'all' ? state.clips.length : state.clips.filter((clip) => clip.group === group.id).length;
-      const button = el('button', 'group-tab', group.title || group.id);
+      const button = el('button', 'group-tab', group.id === 'demo_roles' ? 'Nursery-song demo (history)' : group.title || group.id);
       button.type = 'button';
       button.setAttribute('aria-pressed', String(state.group === group.id));
       button.dataset.group = group.id;
@@ -349,10 +351,7 @@
     $('group-nav').replaceChildren(fragment);
   }
 
-  function renderLibrary() {
-    const clips = state.clips.filter((clip) => state.group === 'all' || clip.group === state.group);
-    const fragment = document.createDocumentFragment();
-    for (const clip of clips) {
+  function createClipRow(clip) {
       const row = el('article', 'clip-row');
       row.dataset.clipId = clip.id;
       row.dataset.clipTitle = clip.title;
@@ -370,13 +369,29 @@
       verdict.dataset.verdictFor = clip.id;
       title.append(verdict);
       detail.append(title);
+      if (clip.contentClass === 'historical-demo' || clip.group === 'demo_roles') detail.append(el('span', 'history-badge', 'NURSERY-SONG DEMO / HISTORY'));
       if (clip.description) detail.append(el('p', 'clip-description', clip.description));
       const count = Number(clip.performerCount);
       const meta = el('div', 'clip-meta');
       meta.append(el('span', '', Number.isFinite(count) && count > 0 ? `${count} ${count === 1 ? 'performer' : 'performers'}` : 'Source recording'), el('br'), el('span', '', String(clip.profile || (clip.group === 'source' ? 'ORIGINAL' : '')).toUpperCase()));
       row.append(play, detail, meta, el('span', 'clip-duration', time(clip.seconds)));
-      fragment.append(row);
+      return row;
+  }
+
+  function renderStarterBank() {
+    const fragment = document.createDocumentFragment();
+    for (const id of ['bank_first_gathering', 'bank_breathing_room', 'bank_round_response']) {
+      const clip = state.clips.find((item) => item.id === id);
+      if (clip) fragment.append(createClipRow(clip));
     }
+    $('bank-presets').replaceChildren(fragment);
+    $('starter-bank').hidden = !$('bank-presets').childElementCount;
+  }
+
+  function renderLibrary() {
+    const clips = state.clips.filter((clip) => state.group === 'all' || clip.group === state.group);
+    const fragment = document.createDocumentFragment();
+    for (const clip of clips) fragment.append(createClipRow(clip));
     $('clip-list').replaceChildren(fragment);
     $('empty-state').hidden = clips.length > 0;
     updatePlayerState();
@@ -409,15 +424,21 @@
 
   function renderDownloads() {
     const kit = state.manifest.renderedKit || {};
+    const wordlessKit = state.manifest.wordlessRenderedKit || {};
+    const bank = state.manifest.starterVoiceBank || {};
     const artifacts = [
-      { title: 'Rendered MPC expansion', description: `${kit.pads || 'Selected'} ordinary sample pads · XPN`, path: kit.xpnPath },
-      { title: 'Rendered kit files', description: 'Samples and kit exports · ZIP', path: kit.zipPath },
-      { title: 'Sources, recipes & diagnostics', description: 'Prototype replay archive · ZIP', path: state.manifest.sourceBundlePath }
+      { title: 'Wordless MPC expansion', description: `${wordlessKit.pads || 'Selected'} rendered wordless pads · XPN`, path: wordlessKit.xpnPath },
+      { title: 'Wordless kit files', description: 'Wordless samples and kit exports · ZIP', path: wordlessKit.zipPath },
+      { title: 'Wordless starter voice bank', description: 'Four source gestures and starter presets · ZIP', path: bank.zipPath },
+      { title: 'Starter bank manifest', description: 'Wordless sources, presets and provenance · JSON', path: bank.manifestPath },
+      { title: 'All audition sources & diagnostics', description: 'Complete research archive, including historical demos · ZIP', path: state.manifest.sourceBundlePath },
+      { title: 'Historical demo MPC expansion', description: `${kit.pads || 'Selected'} earlier demo pads, including the nursery song · XPN`, path: kit.xpnPath, historical: true },
+      { title: 'Historical demo kit files', description: 'Earlier samples and exports; excluded from the wordless bank · ZIP', path: kit.zipPath, historical: true }
     ];
     for (const artifact of artifacts) {
       const url = safeUrl(artifact.path);
       if (!url) continue;
-      const link = el('a', 'artifact-link');
+      const link = el('a', artifact.historical ? 'artifact-link historical-artifact' : 'artifact-link');
       link.href = url;
       link.setAttribute('download', '');
       const text = el('span');
@@ -443,6 +464,7 @@
       }).map((clip) => ({ ...clip, title: typeof clip.title === 'string' ? clip.title : clip.id }));
       if (!state.clips.length) throw new Error('No playable recording paths were found.');
       renderRoles();
+      renderStarterBank();
       renderFeatured();
       renderGroups();
       renderLibrary();

@@ -188,6 +188,14 @@ Numerical checks do not establish a listening verdict. The owner's positive
 R3 feedback establishes the working baseline and confirms in-app listening.
 Save/reopen, recipe replay and MPC playback acceptance remain open.
 
+## A dry musical sketch
+
+[Between shores](OSPREY_FIELD_SKETCH.md) arranges twelve complete hits from the
+published R3 kit into a sixteen-bar field sketch at 90 BPM, followed by three
+bars for the tails. The downloadable MIDI uses the exported pad notes. The
+reference mix adds no FX or pitch changes; the engine and kit stay unchanged.
+This listening context can proceed alongside the remaining device checks.
+
 ## Attribution
 
 The shore instrument, creature and fluid profile data in `OspreyShore.kt` is
