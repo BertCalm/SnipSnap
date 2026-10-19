@@ -184,6 +184,41 @@ class CausticTest {
         assertEquals(1, Caustic.Config().model, "old implicit configuration remains model1")
     }
 
+    @Test
+    fun `Alloy sustains upper natural rings and geometry changes their level matched balance`() {
+        val c = Caustic.Config(model = 2, character = Caustic.Character.ALLOY,
+            source = .5, focus = .19, seconds = 2.0)
+        val a = Caustic.inspect(c)
+        val b = Caustic.inspect(c.copy(focus = .85))
+        fun spectralPower(x: FloatArray): DoubleArray {
+            val n = 32_768
+            val from = (.4 * Caustic.RATE).toInt()
+            val re = FloatArray(n) { i -> (x[from + i] * (.5 - .5 * cos(2 * PI * i / (n - 1)))).toFloat() }
+            val im = FloatArray(n)
+            Fft.forward(re, im)
+            return DoubleArray(n / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        }
+        val pa = spectralPower(a.raw)
+        val pb = spectralPower(b.raw)
+        val upper = pa.indices.filter { it * Caustic.RATE / 32_768.0 > a.diagnostics.noteHz * 1.5 }.sumOf { pa[it] } / pa.sum()
+        assertTrue(upper > .10, "Alloy settled upper power $upper; metallic body must survive its attack")
+        // Group into fractional-octave bands so different carrier phases alone cannot satisfy the gate.
+        fun shares(power: DoubleArray): DoubleArray {
+            val out = DoubleArray(160)
+            for (k in 1 until power.size) {
+                val hz = k * Caustic.RATE / 32_768.0
+                if (hz < 20) continue
+                val band = (kotlin.math.ln(hz / 20) / kotlin.math.ln(1000.0) * out.size).toInt().coerceIn(out.indices)
+                out[band] += power[k]
+            }
+            val total = out.sum()
+            return DoubleArray(out.size) { out[it] / total }
+        }
+        val sa = shares(pa); val sb = shares(pb)
+        val difference = sa.indices.sumOf { abs(sa[it] - sb[it]) }
+        assertTrue(difference > .08, "Alloy level matched focus spectral distance $difference")
+    }
+
     private fun relativeDifference(a: DoubleArray, b: DoubleArray): Double =
         sqrt(a.indices.sumOf { val d = a[it] - b[it]; d * d } / a.sumOf { it * it }.coerceAtLeast(1e-30))
 

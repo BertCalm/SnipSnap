@@ -328,7 +328,7 @@ object Caustic {
             val base = when (character) {
                 Character.BODY -> when (h) { 1 -> .68; 2 -> 2.8; 3 -> 3.2; else -> 1.8 / (1 + .10 * (h - 3)) }
                 Character.REED -> if (h == 1) .90 else if (h % 2 == 1) 3.7 else .45
-                Character.ALLOY -> if (h == 1) .95 else if (h == 2) 1.6 else 3.2
+                Character.ALLOY -> if (h == 1) .22 else if (h == 2) 2.2 else 3.2
             }
             return base * if (m < 12) 1.0 else when (character) {
                 Character.BODY -> if (h == 1) .12 else .33
@@ -364,7 +364,7 @@ object Caustic {
                 return when (character) {
                     Character.BODY -> .028 * effort * h.toDouble().pow(-1.10)
                     Character.REED -> .075 * effort * h.toDouble().pow(-.80) * (if (h % 2 == 1) 1.0 else .25)
-                    Character.ALLOY -> .20 * effort * h.toDouble().pow(-.60)
+                    Character.ALLOY -> .20 * effort * h.toDouble().pow(-.60) * (if (h == 1) .10 else 2.4)
                 } * rolloff
             }
             val a = when (character) {
@@ -381,7 +381,7 @@ object Caustic {
     private fun profile(c: Config): RichProfile = when (c.character) {
         Character.BODY -> RichProfile(c.character, 1.55, .045, .11, .008, 65.0, 45.0, .72)
         Character.REED -> RichProfile(c.character, 1.25, .016, .080, .004, 78.0, 125.0, .78)
-        Character.ALLOY -> RichProfile(c.character, .64, .006, .018, .0015, 70.0, 480.0, .68)
+        Character.ALLOY -> RichProfile(c.character, .64, .006, .006, .0005, 70.0, 1_500.0, .68)
     }
 
     /** Two independently delayed source envelopes, each represented exactly by two exponentials. */

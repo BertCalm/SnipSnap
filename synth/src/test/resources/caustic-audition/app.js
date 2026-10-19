@@ -262,14 +262,19 @@
       summary.append(node('span', '', state.manifest.summary?.originalClipsOmitted ? 'Original references' : 'The original listening study'), node('span', 'archive-count', `${originalCount} preserved renders`), node('span', 'archive-plus', '+'));
       archive.append(summary);
       const intro = node('div', 'archive-intro');
-      intro.append(node('p', '', 'The original recordings, recipes, and listening notes are preserved. Open the source/focus study and mechanism controls to trace where the character began.'));
+      intro.append(node('p', '', state.manifest.summary?.originalClipsOmitted ? 'This compact pack includes three original register references for comparing the new characters. The complete source/focus study and mechanism controls remain in the original audition archive.' : 'The original recordings, recipes, and listening notes are preserved. Open the source/focus study and mechanism controls to trace where the character began.'));
       if (state.manifest.downloads?.original) { const link = node('a', 'text-link', 'Download the original study →'); link.href = state.manifest.downloads.original; link.download = ''; intro.append(link); }
       archive.append(intro);
     }
     $('section-filter').replaceChildren(new Option('All studies', 'all'));
     order.forEach((key, sectionIndex) => {
       const clips = groups.get(key);
-      const definition = sectionDefinitions[key] || { number: String(sectionIndex + 1).padStart(2, '0'), title: pretty(key), description: '' };
+      const baseDefinition = sectionDefinitions[key] || { number: String(sectionIndex + 1).padStart(2, '0'), title: pretty(key), description: '' };
+      const definition = state.manifest.summary?.originalClipsOmitted && ['mechanism', 'range'].includes(key) ? {
+        ...baseDefinition,
+        title: key === 'mechanism' ? 'Original reference · C4' : 'Original references · C2 & C6',
+        description: 'The original model at the same position, note, and effort as the new characters. Use these recordings as references for the depth comparison.'
+      } : baseDefinition;
       $('section-filter').append(new Option(definition.title, key));
       const section = node('section', 'study-section');
       section.dataset.section = key;
