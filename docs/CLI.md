@@ -184,8 +184,8 @@ including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
-`--instrument` or `--drone` except OPENSKY HALO instrument roots and authoring
-velocity. The ranges are `SynthCommand`'s note-range
+`--instrument` or `--drone` except ORPHICA and OPENSKY HALO instrument roots
+and authoring velocity. The ranges are `SynthCommand`'s note-range
 table; a `--midi` outside the voice's range is refused with the range in
 the message.
 
@@ -199,6 +199,7 @@ the message.
 | REVEL | 48–72 |
 | PRISM | BASS 24–48; ORGAN 36–60; KEY, PLUCK, VEIL 48–72; GLASS 60–84 |
 | REGISTERS | 24–96 |
+| ORPHICA | 21–108 |
 | CONTOUR | BASS 12–60; HOLLOW, SWELL 24–72; KEY, PLUCK, LEAD 36–84 |
 | STOOP | 24–96 |
 | LACQUER | 24–96 |
@@ -216,7 +217,7 @@ the message.
 | WICK | 24–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
-the preset's saved TUNE offset (±12 semitones). EMBOUCHURE and BELLOWS
+the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
 reset TUNE to zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
 itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
@@ -224,8 +225,14 @@ repeatable macro variation around the chosen preset). OSPREY also takes
 `--seed N` (its sea gesture's variation), `--seconds .25..12` (the length
 of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
 `--seed N` for its starting trajectory and refuses `--scramble`. `--seed`
-is supported by SKITTER, OSPREY and VENT; `--scramble` by SKITTER only;
+is supported by SKITTER, OSPREY, VENT and ORPHICA; `--scramble` by SKITTER only;
 `--seconds` and `--model` by OSPREY only. Other engines refuse these options.
+
+ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
+accepts the full signed 64-bit range. `--instrument [--release S]` packages
+attack-preserving stereo captured-sustain zones; release is 0.1–1.5 seconds.
+It accepts `--midi` and `--velocity` for the sampled root and string excitation,
+and refuses `--all`, `--attack` and `--drone`. See [ORPHICA](ORPHICA.md).
 
 OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
 their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and

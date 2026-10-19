@@ -13,6 +13,7 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.Patch
@@ -345,6 +346,7 @@ object UserPresets {
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
     fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
         ScannedChainPatch.ENGINE -> "ScannedChainVoice"
+        OrphicaPatch.ENGINE -> "OrphicaMaterial"
         OpenSkyPatch.ENGINE -> "OpenSkyVoice"
         else -> engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
     }
@@ -378,7 +380,8 @@ object UserPresets {
      * complete physical configuration, note, velocity and render-model version through JSON.
      * FLOCK retains its note, velocity, model and exact 64-bit seed. OPENSKY retains its complete
      * source timbre, pitch, velocity, gate, wet mode and render model through the JSON constructor.
-     * Names and embedded JSON are escaped Kotlin string literals.
+     * ORPHICA retains complete string, grain and captured-history state,
+     * including its exact 64-bit seed and HOLD. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is ScannedChainPatch) {
@@ -390,6 +393,11 @@ object UserPresets {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "OpenSkyPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is OrphicaPatch) {
+            // Encode as a Kotlin string literal; the full config and 64-bit seed belong to this recipe.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OrphicaPatch.fromJsonText($recipe),"
         }
         if (patch is LacquerPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")

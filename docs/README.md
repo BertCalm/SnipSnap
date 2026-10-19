@@ -52,3 +52,7 @@ sea cycles and the owner's sonic acceptance remain open.
 render-to-pad voice, three presets, factory/drawn/sample shapes and complete
 patch recall. The earlier [listening experiment](SCANNED_CHAIN_EXPERIMENT.md)
 and its published comparisons remain available separately.
+
+**Orphica.** [`ORPHICA.md`](ORPHICA.md) records the microsound harp, approved
+finite listening audition, phone controls and captured-sustain instrument
+export. Phone and MPC listening checks remain open.

@@ -11,8 +11,10 @@ original character. Model 3 returns to the original sea, calls, envelopes and
 defaults, making only a small adjustment to the balance of existing modal bodies.
 After hearing the [private R1/R3 audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
 the owner said, “We are in a better spot audio wise.” R3 is the working audio
-baseline; this positive feedback does not close final listening or hardware
-acceptance. The phone picker, CLI, fifteen dry presets and sixteen-pad starter
+baseline. On 2026-10-18 the owner confirmed, “Sounds good in app, let's proceed.”
+This confirms in-app listening. Save/reopen, recipe replay and MPC playback
+remain open; the build and device identifiers were not supplied. The phone
+picker, CLI, fifteen dry presets and sixteen-pad starter
 use the versioned renderer. `OspreyVoice.SWELL` is the finite
 articulation; CHOP, a dedicated CALL voice and certified repeating HOLD are later
 work.
@@ -111,14 +113,19 @@ export filenames; recipes, pad settings and all WAV bytes are unchanged. On a
 phone build containing these OSPREY changes, choose **NEW KIT ▸ STARTERS →
 OSPREY**, or preview OSPREY in SYNTH and send it to a pad. Android's XPM ZIP
 import loads playable samples but does not load these saved recipes. Phone
-playback and MPC loading remain unverified.
+save/reopen, recipe replay and MPC loading remain unverified. In-app listening
+has been confirmed by the owner.
 
 The adjacent `handoff-manifest.json` identifies the complete ZIP by SHA-256 and
 byte count. Checks cover export read-back, recipe regeneration and comparison
 with historical R3 raw audio where an identical published patch exists. They do
 not establish hardware playback. HOLD remains finite even on **BETWEEN SHORES**.
 
-The handoff checks are still open on the phone and MPC Live III:
+Follow the [MPC listening pass](OSPREY_MPC_PASS.md) to load the unchanged published
+kit on the Live III. The published ZIP and its build-time validation manifest
+remain unchanged; the new listening report does not rewrite artifact provenance.
+
+The remaining workflow checks are:
 
 1. In SYNTH, select OSPREY, preview a preset and send it to a pad. Compare its
    onset, water movement and creature-call timing with the preview.
@@ -178,8 +185,8 @@ call events and decay diagnostics. Tests pin model-1 sample bits and model-2
 compatibility, then check model-3 repeatability, preservation of the original
 scene, continuous morphs, tap reconstruction and finite bounded output.
 Numerical checks do not establish a listening verdict. The owner's positive
-R3 feedback establishes the working baseline; final listening and the phone/MPC
-handoff remain open.
+R3 feedback establishes the working baseline and confirms in-app listening.
+Save/reopen, recipe replay and MPC playback acceptance remain open.
 
 ## Attribution
 

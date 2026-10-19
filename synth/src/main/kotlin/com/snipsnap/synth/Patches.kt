@@ -94,6 +94,7 @@ object Patches {
             FlockPatch.ENGINE -> FlockPatch.fromJsonValue(value)
             ShoalPatch.ENGINE -> ShoalPatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
+            OrphicaPatch.ENGINE -> OrphicaPatch.fromJsonValue(value)
             OpenSkyPatch.ENGINE -> OpenSkyPatch.fromJsonValue(value)
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
