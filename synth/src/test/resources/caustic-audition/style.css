@@ -1485,7 +1485,7 @@ body.has-player footer {
     min-height:0
   }
   .hero h1 {
-    font-size:108px;
+    font-size:clamp(82px,27.7vw,108px);
     letter-spacing:-7px;
     margin-bottom:20px
   }
@@ -1862,6 +1862,45 @@ body.has-player footer {
 
 .route-list button:hover {
   color:var(--accent)
+}
+
+/* Draw transport icons so their appearance does not depend on emoji fonts. */
+.play-button,
+.player-play span {
+  font-size:0;
+}
+.player-play {
+  padding:0;
+}
+.play-button::before,
+.player-play span::before {
+  content:"";
+  display:block;
+  width:0;
+  height:0;
+  border-top:4px solid transparent;
+  border-bottom:4px solid transparent;
+  border-left:6px solid currentColor;
+  margin-left:2px;
+}
+.is-playing .play-button::before,
+.player[data-state="playing"] .player-play span::before {
+  width:8px;
+  height:10px;
+  border:0;
+  margin-left:0;
+  background:linear-gradient(to right,currentColor 0 3px,transparent 3px 5px,currentColor 5px 8px);
+}
+.is-loading .play-button::before,
+.player[data-state="loading"] .player-play span::before {
+  content:"···";
+  width:auto;
+  height:auto;
+  border:0;
+  margin-left:0;
+  background:none;
+  font-size:14px;
+  line-height:1;
 }
 
 @media(max-width:560px) {

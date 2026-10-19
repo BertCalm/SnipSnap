@@ -103,7 +103,7 @@
     const top = node('div', 'card-top');
     const label = node('div', 'clip-index');
     label.append(node('span', '', String(index + 1).padStart(2, '0')));
-    if (clip.comparison) label.append(node('span', 'variant-tag', String(clip.comparison)));
+    if (/^[A-D]$/i.test(clip.comparison || '')) label.append(node('span', 'variant-tag', String(clip.comparison)));
     else if (clip.variant && !/^full$/i.test(clip.variant)) label.append(node('span', 'variant-tag', pretty(clip.variant)));
     const play = node('button', 'play-button', '▶');
     play.type = 'button';
@@ -369,6 +369,7 @@
   }
 
   function updatePlayer() {
+    $('player').dataset.state = state.loading ? 'loading' : state.playing ? 'playing' : 'paused';
     state.cards.forEach(({ card, play }, id) => {
       const selected = state.active?.id === id;
       card.classList.toggle('is-selected', selected);

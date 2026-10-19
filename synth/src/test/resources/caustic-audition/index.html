@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#111513">
   <meta name="description" content="Listen to the first Caustic prototype for SnipSnap. Compare source, pickup position, and phase-preserving geometry in rendered audio.">
   <title>Caustic — SnipSnap listening study</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23111513%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2710%27 fill=%27none%27 stroke=%27%23d0ef97%27/%3E%3Ccircle cx=%2721%27 cy=%2716%27 r=%273%27 fill=%27%23d0ef97%27/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script src="manifest.js" defer></script>
   <script src="app.js" defer></script>
@@ -37,13 +38,38 @@
             <path class="art-grid" d="M0 300H600M300 0V600"/>
             <circle class="art-circle" cx="300" cy="300" r="242"/>
             <circle class="art-circle inner-circle" cx="300" cy="300" r="190"/>
+            <!-- Parallel incident rays d=(1,0), circle normal n=(cos θ,sin θ).
+                 Reflection r=d−2(d·n)n; draw through its next circle intersection. -->
             <g class="art-rays" stroke="url(#rayFade)" stroke-width="1">
-              <path d="M35 100H437L326 456"/><path d="M35 120H463L341 442"/><path d="M35 140H481L355 428"/><path d="M35 160H497L368 414"/><path d="M35 180H510L380 400"/><path d="M35 200H520L390 386"/><path d="M35 220H529L399 371"/><path d="M35 240H534L405 357"/><path d="M35 260H539L410 342"/><path d="M35 280H541L413 328"/><path d="M35 300H542L415 313"/><path d="M35 320H541L413 298"/><path d="M35 340H539L410 284"/><path d="M35 360H534L405 269"/><path d="M35 380H529L399 255"/><path d="M35 400H520L390 240"/><path d="M35 420H510L380 226"/><path d="M35 440H497L368 212"/><path d="M35 460H481L355 198"/><path d="M35 480H463L341 184"/><path d="M35 500H437L326 170"/>
+              <path d="M35 80.00H400.82L532.46 232.73"/>
+              <path d="M35 100.00H436.25L535.99 353.59"/>
+              <path d="M35 120.00H461.75L496.20 441.67"/>
+              <path d="M35 140.00H481.56L435.90 500.24"/>
+              <path d="M35 160.00H497.39L366.86 532.58"/>
+              <path d="M35 180.00H510.15L296.54 541.98"/>
+              <path d="M35 200.00H520.37L230.14 531.70"/>
+              <path d="M35 220.00H528.39L171.44 505.03"/>
+              <path d="M35 240.00H534.44L123.20 465.25"/>
+              <path d="M35 260.00H538.67L87.41 415.63"/>
+              <path d="M35 280.00H541.17L65.42 359.45"/>
+              <path d="M35 300.00H542.00L58.00 300.00"/>
+              <path d="M35 320.00H541.17L65.42 240.55"/>
+              <path d="M35 340.00H538.67L87.41 184.37"/>
+              <path d="M35 360.00H534.44L123.20 134.75"/>
+              <path d="M35 380.00H528.39L171.44 94.97"/>
+              <path d="M35 400.00H520.37L230.14 68.30"/>
+              <path d="M35 420.00H510.15L296.54 58.02"/>
+              <path d="M35 440.00H497.39L366.86 67.42"/>
+              <path d="M35 460.00H481.56L435.90 99.76"/>
+              <path d="M35 480.00H461.75L496.20 158.33"/>
+              <path d="M35 500.00H436.25L535.99 246.41"/>
+              <path d="M35 520.00H400.82L532.46 367.27"/>
             </g>
-            <path class="caustic-line" d="M326 170C386 226 415 275 415 313C415 350 386 401 326 456"/>
-            <circle class="pickup-halo" cx="413" cy="313" r="24"/><circle class="pickup-dot" cx="413" cy="313" r="5"/>
+            <!-- Exact ray envelope q(θ)=R/4·(3cos θ−cos3θ,3sin θ−sin3θ). -->
+            <path class="caustic-line" d="M300.00 58.00 L309.50 58.25 L318.96 58.99 L328.36 60.23 L337.67 61.96 L346.84 64.16 L355.86 66.83 L364.69 69.95 L373.30 73.52 L381.66 77.51 L389.76 81.90 L397.55 86.68 L405.03 91.82 L412.17 97.30 L418.95 103.09 L425.35 109.16 L431.36 115.50 L436.97 122.06 L442.15 128.82 L446.92 135.75 L451.25 142.82 L455.15 149.99 L458.61 157.25 L461.63 164.54 L464.22 171.86 L466.38 179.16 L468.13 186.41 L469.46 193.60 L470.39 200.68 L470.94 207.64 L471.12 214.44 L470.95 221.07 L470.44 227.50 L469.62 233.71 L468.52 239.68 L467.15 245.40 L465.53 250.86 L463.70 256.03 L461.68 260.90 L459.50 265.48 L457.18 269.75 L454.76 273.71 L452.25 277.36 L449.70 280.69 L447.11 283.72 L444.53 286.44 L441.98 288.86 L439.48 291.00 L437.06 292.86 L434.73 294.46 L432.54 295.80 L430.48 296.92 L428.59 297.83 L426.88 298.54 L425.36 299.07 L424.05 299.46 L422.97 299.72 L422.11 299.88 L421.50 299.97 L421.12 300.00 L421.00 300.00 L421.12 300.00 L421.50 300.03 L422.11 300.12 L422.97 300.28 L424.05 300.54 L425.36 300.93 L426.88 301.46 L428.59 302.17 L430.48 303.08 L432.54 304.20 L434.73 305.54 L437.06 307.14 L439.48 309.00 L441.98 311.14 L444.53 313.56 L447.11 316.28 L449.70 319.31 L452.25 322.64 L454.76 326.29 L457.18 330.25 L459.50 334.52 L461.68 339.10 L463.70 343.97 L465.53 349.14 L467.15 354.60 L468.52 360.32 L469.62 366.29 L470.44 372.50 L470.95 378.93 L471.12 385.56 L470.94 392.36 L470.39 399.32 L469.46 406.40 L468.13 413.59 L466.38 420.84 L464.22 428.14 L461.63 435.46 L458.61 442.75 L455.15 450.01 L451.25 457.18 L446.92 464.25 L442.15 471.18 L436.97 477.94 L431.36 484.50 L425.35 490.84 L418.95 496.91 L412.17 502.70 L405.03 508.18 L397.55 513.32 L389.76 518.10 L381.66 522.49 L373.30 526.48 L364.69 530.05 L355.86 533.17 L346.84 535.84 L337.67 538.04 L328.36 539.77 L318.96 541.01 L309.50 541.75 L300.00 542.00"/>
+            <circle class="pickup-halo" cx="421" cy="300" r="24"/><circle class="pickup-dot" cx="421" cy="300" r="5"/>
             <path class="art-tick" d="M300 49V67M300 533V551M49 300H67M533 300H551"/>
-            <text x="318" y="38" class="art-caption">CIRCULAR BOUNDARY</text><text x="438" y="321" class="art-caption accent-caption">PICKUP</text><text x="60" y="565" class="art-caption">ONE REFLECTION · FINITE APERTURES</text>
+            <text x="318" y="38" class="art-caption">CIRCULAR BOUNDARY</text><text x="447" y="306" class="art-caption accent-caption">PICKUP</text><text x="60" y="565" class="art-caption">ONE REFLECTION · FINITE APERTURES</text>
           </svg>
           <div class="art-note"><span class="note-line" aria-hidden="true"></span>Reflected paths. Uneven concentration.<br>Position becomes timbre.</div>
         </div>

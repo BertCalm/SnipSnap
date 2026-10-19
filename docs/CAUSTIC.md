@@ -85,6 +85,13 @@ The generator checks raw/PCM bounds, early-window drum classification, moderate
 measured pitch error and representative sample-identical replay. The included
 exploratory geometry figure does not establish `.001R` envelope accuracy.
 
+The initial 24-clip run measured a maximum raw sample peak of 0.3713, maximum
+modal-state amplitude of 0.3292 and worst constrained root error below 0.62 cents.
+One common export gain of 1.0 preserved the original amplitudes. Preparation
+took about 24 ms and rendering about 4.34 s for 108 s of audio on an OpenJDK 21
+Linux amd64 container. These are this pack's measurements, not phone budgets or
+a sonic acceptance verdict.
+
 ## Later work
 
 Deformation, SCATTER, exact-stop ORBIT, verified HOLD, the six-voice/36-preset
