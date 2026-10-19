@@ -1,4 +1,4 @@
-# FLOCK — finite oscillator-flock proof
+# FLOCK — finite oscillator flocks
 
 FLOCK adapts the abandoned XO-Oceanic swarm proposal into SnipSnap's deterministic
 offline synthesis path. Twenty-four directly audible oscillators move in
@@ -6,10 +6,11 @@ logarithmic pitch and an energy coordinate. Separation, velocity alignment and
 cohesion operate over changing local neighborhoods, while PULL restores each
 oscillator toward its played pitch or harmonic center.
 
-This is a listening prototype. The voice names and macro calibrations are
-proposals, and numerical checks do not establish that their interaction is
-musically useful. The [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site)
-contains real Kotlin-rendered WAVs, measured trajectories, and matched comparisons.
+The finite engine is available in SYNTH, the factory preset roster and FRESH TAPE.
+The owner confirmed that revised FLOW is audible. Target-phone playback, render
+latency and MPC hardware checks remain open. The
+[private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) contains
+real Kotlin-rendered WAVs, measured trajectories and matched comparisons.
 
 ## The three gestures
 
@@ -21,8 +22,8 @@ contains real Kotlin-rendered WAVs, measured trajectories, and matched compariso
 
 SPLIT assigns eight particles to each of three harmonic centers. It does not
 promise that those centers merge or exchange members. Every voice uses the
-same simulation and oscillator bank. Nine provisional presets remain outside
-the factory roster and phone picker pending a listening verdict.
+same simulation and oscillator bank. Nine factory presets retain their saved
+seeds and model-2 controls.
 
 ## Playing and saving
 
@@ -33,13 +34,20 @@ the factory roster and phone picker pending a listening verdict.
 | FLOW | Pace of the group's motion and neighbor velocity alignment |
 | SCATTER | Initial disturbance, scaled by playing velocity |
 | EDGE | Second- and third-harmonic carrier content |
-| HOLD | Finite duration from two to six seconds; **never a sustain loop in model 1** |
+| HOLD | Finite duration from two to six seconds; **never a sustain loop** |
 
 `FlockPatch` stores MIDI 36–84, velocity 0–1, its rendering model and an exact signed 64-bit
 seed alongside the six normalized macros. The seed is a canonical decimal JSON
 string because the shared numeric JSON representation uses `Double`. Identical
 recipes reproduce identical samples. A new seed produces another performance;
 ordinary playback repeats the rendered performance.
+
+SYNTH exposes ROOT (C2–C6) and VELOCITY beside the six macros. Macro edits,
+SCRAMBLE, preset saving and SEND TO PAD retain the saved root, velocity, seed
+and model; SCRAMBLE also retains HOLD. SPREAD uses the saved root when tuning
+the rendered sound across pads, including SPLIT's harmonic groups. FLOCK's
+phone controls create finite pads; sustained instruments and drone loops remain
+outside this integration.
 
 ### FLOW revision after the first listen
 
@@ -60,11 +68,11 @@ model 1 so it remains a reproducible record of the first listening round.
 
 The updated audition preserves the other 46 listening clips unchanged and puts
 the five revised FLOW settings beside their original versions. Its mixed-model
-manifest identifies each source. This revision is ready to listen to; measured
-motion differences do not establish perceptual acceptance.
+manifest identifies each source. The owner confirmed the revised FLOW difference
+was audible; phone and MPC hardware validation remain separate checks.
 
 Patches participate in `Patches`, `PadRecipe` and physical velocity rendering.
-The CLI exposes the provisional recipes without adding them to `Presets.all()`:
+The CLI and SYNTH share the nine recipes registered in `Presets`:
 
 ```sh
 ./gradlew :cli:run --args='synth FLOCK GATHER --all --midi 60 --velocity .7 --seed 41001 --out /tmp/flock'
@@ -81,6 +89,43 @@ The focused FLOW task reads a preserved first-flight pack and writes
 `testkit/flock-flow-audition/`, retaining its original audio, recipes and source
 snapshots alongside the revised FLOW files. Preserve the baseline directory
 before regenerating or replacing it.
+
+## Factory kit and exports
+
+FRESH TAPE's fixed FLOCK starter uses `SynthKits.flock()`. A01–A08 play GATHER
+up C minor pentatonic from C4 to F5 with the same saved seed; A09–A16 contain
+the other eight factory recipes. All sixteen pads are dry TONAL one-shots with
+no choke group. Each recipe retains its exact note, velocity, seed and model.
+
+Build the same kit for SnipSnap and both MPC generations:
+
+```sh
+./gradlew :synth:generateFlockKit
+```
+
+The default output layout is:
+
+```text
+testkit/
+  SnipSnap Flock Kit/
+    SnipSnap Flock Kit.xtd
+    SnipSnap Flock Kit_[TrackData]/
+      SnipSnap Flock Kit.xpm
+      kit.json
+      *.wav                     (16 shared mono PCM24 samples, 44.1 kHz)
+    recipes/A01.json … A16.json
+    manifest.json
+    README.txt
+  SnipSnap-Flock-Kit.zip
+  SnipSnap-Flock-Kit.zip.sha256
+```
+
+MPC 3 opens the `.xtd` beside its `_[TrackData]` folder. MPC 2 opens the `.xpm`
+inside that folder. Its `kit.json` preserves an editable SnipSnap kit; the
+separate recipes and manifest record every pad's state and file hashes.
+Use `-PflockKitOutput=/path/to/output` to choose another output root.
+HOLD remains finite in every exported pad; there is no sustained-loop or
+note-off-release behavior.
 
 ## What the comparison removes
 
@@ -120,5 +165,8 @@ These are listening comparisons, not a dynamics processor or added effect.
 
 Focused tests cover seeded replay, strict patch decoding, local causal response,
 comparison isolation, macro authority, velocity, register extremes, cancellation,
-recipe replay, preset promotion and CLI output. Target-phone render latency and
-the owner's sonic verdict remain unmeasured.
+recipe replay, preset promotion and CLI output. Factory integration checks cover
+the preset registry, sixteen-pad starter and saved model-1/model-2 recipes with
+full-width seeds. The kit generator checks preflight, recipe round-trips and
+unchanged exported WAV bytes. Target-phone render latency and phone/MPC playback
+remain unverified.

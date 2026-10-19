@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Sixteen dry finite FLOCK factory pads, editable recipes and native exports for both MPC generations. */
+tasks.register<JavaExec>("generateFlockKit") {
+    group = "distribution"
+    description = "Export the FLOCK factory kit with saved recipes, native MPC 3 track, MPC 2 twin and SnipSnap-Flock-Kit.zip."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FlockKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** First-listen microsound-harp prototype: dry attack, causal grains and captured tails. */
 tasks.register<JavaExec>("generateOrphicaAudition") {
     group = "distribution"

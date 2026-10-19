@@ -125,6 +125,9 @@ import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
 import com.snipsnap.synth.FathomPatch
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.Flock
+import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.FlockVoice
 import com.snipsnap.synth.Resin
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinPatch
@@ -494,7 +497,8 @@ fun SynthScreen(
     // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
     // schedules, EMBOUCHURE and BELLOWS their player gestures, and MURMUR its operator routing, formant
     // targets and envelope definitions. OSPREY retains its variation seed, finite duration
-    // and model version. OPENSKY retains its authored timbre, note,
+    // and model version. FLOCK retains its explicit note, velocity, full-width
+    // variation seed and finite renderer model. OPENSKY retains its authored timbre, note,
     // velocity, gate, effect mode and model. ORPHICA retains its material, mode,
     // capture, seed and physical grain configuration. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
@@ -1572,6 +1576,45 @@ fun SynthScreen(
                     )
                 }
 
+                // FLOCK's note and initial energy live beside its six macros.
+                // Copy the full recipe so a note/velocity edit keeps its seed
+                // and saved model, including a model-1 audition recipe.
+                if (engine == Engine.FLOCK) {
+                    val flockPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (flockPatch.midi - Flock.MIN_MIDI).toFloat() / (Flock.MAX_MIDI - Flock.MIN_MIDI),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(flockPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val midi = (Flock.MIN_MIDI + value * (Flock.MAX_MIDI - Flock.MIN_MIDI)).roundToInt()
+                                .coerceIn(Flock.MIN_MIDI, Flock.MAX_MIDI)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch).copy(midi = midi)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = flockPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    TapeText(
+                        "FINITE GESTURE · HOLD SETS LENGTH",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                    )
+                }
+
                 // Relay's touch changes excitation and brightness without replacing its
                 // saved sources, handoff schedules or phrase clock.
                 if (engine == Engine.RELAY) {
@@ -1754,6 +1797,8 @@ fun SynthScreen(
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
                             readout = when {
+                                engine == Engine.FLOCK && spec.name == "HOLD" ->
+                                    "%.1fs".format(Locale.ROOT, 2f + 4f * macros.getValue(spec.name))
                                 engine == Engine.ORPHICA && spec.name == "HOLD" && Orphica.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1805,6 +1850,9 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            engine == Engine.FLOCK ->
+                                Flock.scramble(voice as FlockVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.EMBOUCHURE && loadedPatch is EmbouchurePatch ->
                                 Embouchure.scramble(voice as EmbouchureVoice, random, near = loadedPatch)
                             engine == Engine.BELLOWS && loadedPatch is BellowsPatch ->
@@ -2683,7 +2731,7 @@ internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, FLOCK;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2719,6 +2767,7 @@ private enum class Engine {
         REVEL -> RevelVoice.entries
         MURMUR -> MurmurVoice.entries
         OSPREY -> OspreyVoice.entries
+        FLOCK -> FlockVoice.entries
         OPENSKY -> OpenSkyVoice.entries
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
@@ -2765,6 +2814,7 @@ private enum class Engine {
         REVEL -> Revel.macrosFor(voice as RevelVoice)
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
         OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
+        FLOCK -> Flock.macrosFor(voice as FlockVoice)
         OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
@@ -2811,6 +2861,7 @@ private enum class Engine {
         REVEL -> Revel.defaults(voice as RevelVoice)
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
         OSPREY -> Osprey.defaults(voice as OspreyVoice)
+        FLOCK -> Flock.defaults(voice as FlockVoice)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
@@ -2859,6 +2910,7 @@ private enum class Engine {
         REVEL -> Revel.scramble(voice as RevelVoice, random)
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
         OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
+        FLOCK -> Flock.scramble(voice as FlockVoice, random)
         OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
@@ -2910,6 +2962,7 @@ private enum class Engine {
         REVEL -> Revel.render(voice as RevelVoice, macros)
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
         OSPREY -> Osprey.render(voice as OspreyVoice, macros)
+        FLOCK -> Flock.render(voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
@@ -2962,6 +3015,7 @@ private enum class Engine {
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
+        FLOCK -> Flock.drumClassFor(voice as FlockVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
@@ -3008,6 +3062,7 @@ private enum class Engine {
         REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
         OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
+        FLOCK -> FlockPatch(name, voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)

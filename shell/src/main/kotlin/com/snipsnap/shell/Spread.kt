@@ -9,6 +9,7 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
@@ -94,6 +95,7 @@ object Spread {
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()
+        is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
         else -> detect(snip)
     }

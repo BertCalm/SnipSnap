@@ -89,6 +89,13 @@ object Flock {
 
     fun defaults(voice: FlockVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
+    /** Vary a sound's character while retaining its finite duration and saved patch state. */
+    fun scramble(voice: FlockVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice) + if (near is FlockPatch && near.voice == voice) near.macros else emptyMap()
+        val amount = (temperature.takeIf { it.isFinite() } ?: .35f).coerceIn(0f, 1f)
+        return Dsp.scrambleNear(base, amount, random) + ("HOLD" to base.getValue("HOLD"))
+    }
+
     fun supportsModel(model: Int): Boolean = model in 1..MODEL_VERSION
 
     /**
