@@ -16,6 +16,14 @@ work. See [CONFLUENCE.md](CONFLUENCE.md) for reproduction, source attribution,
 portable audition recipes and listening limits. The owner's listening verdict
 is pending.
 
+**Caustic circular proof (2026-10-19).** A finite harmonic tone illuminates a
+circular reflective boundary; nine finite pickups route phase-coherent paths
+into sixteen shared damped modes. SOURCE/FOCUS, explicit MIDI and source effort
+are saved in standalone prototype recipes. The 24-clip dry audition includes
+shared-gain/matched positions, phase/bank/gain controls and register/velocity
+probes. Deformation, SCATTER, ORBIT, HOLD, factory/phone integration and the
+owner's sonic acceptance remain open. See [CAUSTIC.md](CAUSTIC.md).
+
 ## Why this is cheaper than it sounds
 
 Pads are one-shots. That means **synthesis here is offline rendering** — a
