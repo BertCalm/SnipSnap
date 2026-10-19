@@ -1083,6 +1083,19 @@ tasks.register<JavaExec>("generatePrismPaletteAudition") {
     args("${rootDir}/testkit/prism-palette-audition")
 }
 
+/** Compare a source-derived opening with the exact previous source-selection references. */
+tasks.register<JavaExec>("generatePrismOpeningAudition") {
+    group = "distribution"
+    description = "Render four source-derived PRISM openings beside preserved palette references under testkit/prism-opening-audition/."
+    dependsOn("generatePrismPaletteAudition")
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismOpeningAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-opening-audition", "${rootDir}/testkit/prism-palette-audition")
+    providers.gradleProperty("prismOpeningReferenceManifest").orNull?.let { args(it) }
+}
+
 /** Render Alloy's provisional dry hybrid patches, causal FUSE comparisons and held-loop listening pack. */
 tasks.register<JavaExec>("generateAlloyAudition") {
     group = "distribution"
