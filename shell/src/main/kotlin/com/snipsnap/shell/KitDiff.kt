@@ -102,6 +102,7 @@ object KitDiff {
      * "RECIPE" — a change is still reported, just not named.
      */
     fun recipeName(recipe: JsonValue.Obj): String {
+        BoardSheet.read(recipe)?.let { return "WIDE ${(it.amount * 100).roundToInt()}%" }
         PadSheet.read(recipe)?.let { applied ->
             val word = applied.segment?.let { PadSheet.displayLabel(it) } ?: applied.treatment.name.uppercase()
             // Rounded, not truncated — the AMT stepper on the card itself

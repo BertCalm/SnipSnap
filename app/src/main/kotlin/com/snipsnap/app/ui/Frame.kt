@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -38,6 +40,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.MicSessionService
@@ -157,8 +160,16 @@ fun rememberNavigation(): NavState = remember { NavState() }
  * snapshot state after it. [now] is the line and its door together, as
  * the model holds them — the door can never outlive the words it was
  * offered with, because they are one value (J10/J44).
+ *
+ * A line is stamped with where it was said, read from [locationNow] at
+ * the moment of the write, so an async `say` landing after the user left
+ * says "here", where it landed. [moved] is how navigation tells the dock
+ * the user is somewhere else.
  */
-class DockState(private val model: DockModel = DockModel()) {
+class DockState(
+    private val locationNow: () -> Location,
+    private val model: DockModel = DockModel(),
+) {
     var now: DockModel.Now by mutableStateOf(model.now)
         private set
 
@@ -181,12 +192,18 @@ class DockState(private val model: DockModel = DockModel()) {
         }
 
     fun say(text: String) {
-        model.say(text)
+        model.say(text, locationNow())
         now = model.now
     }
 
     fun offer(text: String, door: Door) {
-        model.offer(text, door)
+        model.offer(text, door, locationNow())
+        now = model.now
+    }
+
+    /** The user is at [to] now: a line said elsewhere rests, a door's words stay with it. */
+    fun moved(to: Location) {
+        model.moved(to)
         now = model.now
     }
 
@@ -206,7 +223,7 @@ class DockState(private val model: DockModel = DockModel()) {
 }
 
 @Composable
-fun rememberDock(): DockState = remember { DockState() }
+fun rememberDock(locationNow: () -> Location): DockState = remember { DockState(locationNow) }
 
 /**
  * The four places, always visible, never scrolling. The selected place is
@@ -222,7 +239,10 @@ fun PlaceRow(current: Place, onSelect: (Place) -> Unit, modifier: Modifier = Mod
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(Layout.MENU_ROW_H.dp),
+            .heightIn(min = Layout.MENU_ROW_H.dp)
+            // The chips fill the row; the row is as tall as its tallest
+            // chip, so a large font grows it instead of clipping the label.
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -287,14 +307,14 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  * The dock at the foot of every screen, on the LCD surface. Three
  * regions, left to right, each read from [dock]:
  *
- * - **transport**: the project's beat, from GROOVE's own TRANSPORT group.
- *   While BEAT is the stage, [onPlayToggle] is set and the readout is a
- *   button — ▶ to play, ■ to stop, ● while a take goes in; off BEAT the
- *   clock is not running (it is GrooveScreen's frame loop, which BOUNCE,
- *   RECORD and the audition all ride) so the region is a readout that
- *   says `■`, never a button that would do nothing. Keeping the beat
- *   playing across benches wants that clock pulled out of the screen; the
- *   dock is ready for it, the screen is not yet.
+ * - **transport**: the project's beat. The clock is App's (`BeatPlayer`),
+ *   not a screen's, so the beat plays on wherever the user goes and this
+ *   chip is its one control from anywhere a kit is open: [onPlayToggle] is
+ *   set and the readout is a button — ▶ to play (what a tap does, so the
+ *   stopped chip says ▶, not ■), the running readout to stop, ● while a
+ *   take goes in. It is null where the beat cannot run — a bench that
+ *   makes its own sound (ORBIT, SPLIT, LOOP, ARRANGE) — and there a
+ *   stopped beat draws nothing, never a button that would do nothing.
  * - **capture**: the capture session's one control, which used to be the
  *   shelf's ArmControl and nowhere else. Idle, the light is dark and the
  *   words (`LISTEN · MIC`) are the door to arming — a tap opens the
@@ -336,17 +356,25 @@ fun Dock(
     Row(
         modifier
             .fillMaxWidth()
-            .height(Layout.DOCK_H.dp)
+            .heightIn(min = Layout.DOCK_H.dp)
             .lcdPanel(scheme)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Transport.
+        // Transport. A live chip that is stopped says ▶, what a tap does; the
+        // old ■ read as STOP on the one control that would start. Where the
+        // beat cannot run (no chip) a stopped beat has no readout at all: an
+        // inert ■ beside the capture light read as a button that did nothing.
+        val stopped = dock.transport is DockModel.Transport.Stopped
         if (onPlayToggle != null) {
-            val playing = dock.transport !is DockModel.Transport.Stopped
-            DockChip(dock.transportLabel, scheme.amber.tape, onClick = onPlayToggle, label = if (playing) Places.STOP_BEAT else Places.PLAY_BEAT)
-        } else {
+            DockChip(
+                if (stopped) Places.PLAY_GLYPH else dock.transportLabel,
+                scheme.amber.tape,
+                onClick = onPlayToggle,
+                label = if (stopped) Places.PLAY_BEAT else Places.STOP_BEAT,
+            )
+        } else if (!stopped) {
             TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
         }
         // Capture.
@@ -354,7 +382,10 @@ fun Dock(
             Row(
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .widthIn(min = Layout.MIN_HIT_TARGET.dp)
                     .tapeClick(label = Places.LISTEN, onClick = onArm)
+                    // The light is an 8 dp dot: the state it shows, said.
+                    .semantics { stateDescription = if (dock.capture is DockModel.Capture.Snipped) "SNIPPED" else "MIC IDLE" }
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -364,10 +395,18 @@ fun Dock(
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                CaptureLight(lit = true)
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
-                    CaptureMeter(Modifier.width(72.dp).height(6.dp))
+                // The light, the count and the meter, one node that says the
+                // state; SNIP and STOP stay their own, so they are not merged in.
+                Row(
+                    Modifier.semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    CaptureLight(lit = true)
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
+                        CaptureMeter(Modifier.width(72.dp).height(6.dp))
+                    }
                 }
                 DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
                 DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)
@@ -448,6 +487,7 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, border, RoundedCornerShape(4.dp))
             .tapeClick(label = label, onClick = onClick)
             .padding(horizontal = 6.dp),
@@ -457,8 +497,13 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
     }
 }
 
-/** One row of a [ChoiceSheet]: its label and what it does. The label carries its own ▸ when it opens a screen. */
-data class SheetRow(val label: String, val onClick: () -> Unit)
+/**
+ * One row of a [ChoiceSheet]: its label and what it does. The label carries
+ * its own ▸ when it opens a screen. [accessibilityLabel] is the accessible
+ * name when it should not be the label - the name the dock's chip already
+ * wears for the same door.
+ */
+data class SheetRow(val label: String, val accessibilityLabel: String? = null, val onClick: () -> Unit)
 
 /**
  * A short menu over the screen — the shelf's own pop-up shape (a scrim, a
@@ -489,7 +534,7 @@ fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             for (row in rows) {
-                ActionButton(row.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = row.onClick)
+                ActionButton(row.label, scheme, enabled = true, accessibilityLabel = row.accessibilityLabel, modifier = Modifier.fillMaxWidth(), onClick = row.onClick)
             }
             ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
         }
@@ -500,7 +545,7 @@ fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
 @Composable
 fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
     ChoiceSheet(
-        listOf(SheetRow("${Places.GEAR_SETUP} ▸", onSetup), SheetRow("${Places.GEAR_HELP} ▸", onHelp)),
+        listOf(SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup), SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp)),
         onDismiss,
     )
 }
@@ -513,7 +558,7 @@ fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun CaptureSheet(onMic: () -> Unit, onInside: () -> Unit, onDismiss: () -> Unit) {
     ChoiceSheet(
-        listOf(SheetRow(Places.LISTEN, onMic), SheetRow(Places.ARM_INSIDE, onInside)),
+        listOf(SheetRow(Places.ARM_MIC, accessibilityLabel = Places.LISTEN, onClick = onMic), SheetRow(Places.ARM_INSIDE, onClick = onInside)),
         onDismiss,
     )
 }

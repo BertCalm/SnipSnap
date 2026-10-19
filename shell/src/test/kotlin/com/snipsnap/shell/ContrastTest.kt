@@ -171,6 +171,31 @@ class ContrastTest {
         return (r shl 16) or (g shl 8) or b
     }
 
+    // ==================== The LCD's own inks ====================
+
+    @Test
+    fun `the LCD's second tier and its emphasis ink clear AA over the lcd in every scheme`() {
+        // `ink`, `ink2` and `ink3` are chrome inks: on a paper scheme, where
+        // the LCD is the dark surface, they are 2.8:1 and 3.8:1 on it (the
+        // review's L1). A secondary line on the LCD is `lcdInk` at
+        // LCD_INK2_ALPHA, composited over the lcd the way the screen is, and
+        // emphasis there is `amber`; both hold here in every scheme.
+        for (scheme in Schemes.ALL) {
+            val second = blend(scheme.lcdInk, scheme.lcd, Schemes.LCD_INK2_ALPHA.toDouble())
+            val secondRatio = Scheme.contrastRatio(second, scheme.lcd)
+            assertTrue(
+                secondRatio >= AA_TEXT,
+                "${scheme.id}: lcdInk @${Schemes.LCD_INK2_ALPHA} over lcd = %.2f:1, below AA text (%.1f:1)"
+                    .format(secondRatio, AA_TEXT),
+            )
+            val amberRatio = Scheme.contrastRatio(scheme.amber, scheme.lcd)
+            assertTrue(
+                amberRatio >= AA_TEXT,
+                "${scheme.id}: amber vs lcd = %.2f:1, below AA text (%.1f:1)".format(amberRatio, AA_TEXT),
+            )
+        }
+    }
+
     // ==================== OILSLICK's ink3: a documented, measured gap ====================
 
     @Test

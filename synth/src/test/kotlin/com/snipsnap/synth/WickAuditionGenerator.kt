@@ -18,7 +18,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * First WICK listening milestone: PLUCK and BUBBLE from the actual JVM engine.
+ * WICK listening evidence: PLUCK, WOOD and BUBBLE from the actual JVM engine.
  * Native, prelevel raw and matched audio have separate files; diagnostic options
  * have explicit replay recipes rather than masquerading as ordinary patches.
  * A failed held convergence remains visible in the manifest and fails the task.
@@ -236,6 +236,9 @@ object WickAuditionGenerator {
             if (index % 10 == 0 || index == cases.lastIndex) println("WICK ${index + 1}/${cases.size}: ${case.id}")
         }
 
+        val patterns = WickPatternGenerator.generate(root)
+        entries += patterns.entries
+        failures += patterns.failures
         val higherRateReferences = mutableListOf<Map<String, Any?>>()
         for (voice in WickVoice.entries) {
             try {
@@ -251,11 +254,12 @@ object WickAuditionGenerator {
         val groups = cases.groupBy { it.groupId }.map { (id, members) -> linkedMapOf(
             "id" to id, "title" to members.first().group,
             "description" to groupDescription(members.first()), "clipIds" to members.map { it.id },
-        ) }
+        ) } + listOf(patterns.group)
         val summary = linkedMapOf<String, Any?>(
             "clipCount" to entries.size, "readyClips" to entries.count { it["status"] == "ready" },
             "failedCases" to failures, "loopFailures" to failures.filter { it["held"] == true },
             "heldClips" to entries.count { it["loop"] == true },
+            "patternClips" to entries.count { it["kind"] == "pattern" },
             "higherRateReferences" to higherRateReferences.size,
             "maxRawPeak" to maximum("rawPeak"), "maxExportedSeamError" to maximum("exportedSeamError"),
             "renderSeconds" to (System.nanoTime() - started) / 1e9,
@@ -267,16 +271,18 @@ object WickAuditionGenerator {
             "engine" to "WICK", "schemaVersion" to 1, "status" to if (failures.isEmpty()) "requires-owner-listening" else "render-failed",
             "title" to "WICK · First spark", "sampleRate" to Dsp.RATE, "channels" to 1, "oversampling" to 4,
             "generatedAt" to Instant.now().toString(), "quick" to quick, "rawExportGain" to RAW_EXPORT_GAIN,
-            "rawExportNote" to "Raw PCM24 files preserve the prelevel waveform at one common 0.5 gain (-6.02 dB). Raw peak, RMS and DC metrics precede that gain. Native PCM24 files are the engine's normal dry output; matched PCM16 files use the shared 0.03 loudest-200-ms loudness target.",
+            "rawExportNote" to "Raw PCM24 files preserve the prelevel waveform at one common 0.5 gain (-6.02 dB). Raw peak, RMS and DC metrics precede that gain. Native single-note PCM24 files are the engine's normal dry output. Native musical-pattern PCM24 files instead apply one fixed 0.25 assembly gain to the sum of unlevelled raw note renders, preserving the source velocity response without per-hit leveling. Matched PCM16 files use the shared 0.03 loudest-200-ms loudness target on the complete clip.",
             "holdNote" to "HOLD uses periodic source timing and periodic-state convergence. A causal-schedule-replay strategy is explicitly reported when used. The seam-context WAV holds an independently generated preceding period and current period, at the matched export gain; it is not a duplicated loop.",
             "pcmSeamNote" to "Exported PCM16 seam error is the squared difference between independently generated preceding/current final 256-frame windows, divided by preceding-window energy. If both windows are exactly zero, error is 0 and silentBoundary=true; a zero-energy reference with a nonzero difference fails. The actual loop join is screened separately: absolute wrap step divided by local derivative RMS plus one PCM16 unit must be at most 8. This numerical screening does not replace listening.",
-            "scope" to "Two-voice listening prototype. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
+            "scope" to "Three-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
+            "patternNote" to "Musical phrases share an exact eight-note score at 100 BPM. Native pattern WAVs use one fixed 0.25 assembly gain applied to the sum of probe.raw note renders; they bypass the engine's per-note loudness scaling so its velocity response survives. Raw files apply the same common 0.5 export gain as other clips. Only completed phrases are loudness matched. Complete note tails ring out after the two-bar score. Each note resets the engine state, while its own FEED and cascade can add articulations between scored onsets.",
             "classifierNote" to "metrics.classifier and classifierConfidence describe the whole file; the house classifier labels files longer than 1.5 seconds LOOP before judging percussion. The separate onsetClassifier and onsetClassifierConfidence analyze only the first 1.2 seconds, exposing onset/percussion decisions independently of file duration. Neither classifier is a substitute for the requested-root pitch measurements or listening.",
             "listeningQuestions" to listOf(
                 "Does the revised BUBBLE response make the underlying note clearer than the earlier pops at the same controls?",
                 "Does one spark audibly start a chain of gate openings?", "Does disconnecting the cascade remove later articulations?",
                 "Does rapid feeding reveal depletion and recovery memory?", "Does gain-only gating lose the changing brightness of the low-pass gates?",
-                "Do both voices remain useful pitched samples?", "Do held patterns repeat without audible clicks or stutters?",
+                "Do all three voices remain useful pitched samples?", "Does WOOD add a useful firm, woody articulation?",
+                "Do the same musical notes and soft/strong velocities retain each voice's character?", "Do held patterns repeat without audible clicks or stutters?",
             ),
             "summary" to summary, "higherRateReferences" to higherRateReferences, "groups" to groups, "entries" to entries,
         ))
@@ -353,7 +359,7 @@ object WickAuditionGenerator {
             "default_${voice.name.lowercase()}", "${voice.name} · first spark", "Dry voice default at MIDI ${Wick.rootMidi(voice)}, velocity 1. " +
                 (if (voice == WickVoice.BUBBLE) "FEED 25% baseline with the revised gate response. Compare Earlier pops and Longer pitched tone at the same controls below. " else "") +
                 "The same initial excitation and release network used by every normal patch.",
-            "defaults", voice, "defaults", "Start here · two dry voices",
+            "defaults", voice, "defaults", "Start here · three dry voices",
         ))
         val toneControls = linkedMapOf("SPARK" to .40f, "FEED" to .25f, "CASCADE" to .70f, "TIMBRE" to .45f, "RECOVERY" to .50f, "HOLD" to 0f)
         for (midi in listOf(48, 60, 72)) for (reference in listOf(true, false)) add(Case(
@@ -366,11 +372,11 @@ object WickAuditionGenerator {
             options = Wick.Options(legacyBubbleEnvelope = reference), comparison = "bubble-tone-$midi",
             variant = if (reference) "reference" else "candidate", referenceRevision = if (reference) BUBBLE_REFERENCE_REVISION else null,
         ))
-        for (preset in WickPresets.all().filter { it.name !in setOf("Small Spark", "Bubble Chain") }) add(Case(
+        for (preset in WickPresets.all().filter { it.name !in setOf("Small Spark", "Dry Wood", "Bubble Chain") }) add(Case(
             "preset_${slug(preset.name)}", preset.name,
             if (preset.name == "Busy Bubbles") "Busy BUBBLE recipe at FEED 65%, now using the revised gate response. The earlier-response A/B comparison uses FEED 25% with all other controls unchanged."
             else "Provisional ${preset.voice.name.lowercase()} recipe. Dry engine output, with no rack effects.",
-            "preset", preset.voice, "presets", "Seven provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
+            "preset", preset.voice, "presets", "Ten provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
         ))
         val base = Wick.defaults(WickVoice.BUBBLE) + mapOf("SPARK" to .65f, "FEED" to .85f, "CASCADE" to .90f, "RECOVERY" to .90f)
         val comparisons = listOf(
@@ -430,8 +436,8 @@ object WickAuditionGenerator {
     private fun groupDescription(case: Case): String = if (case.groupId == "bubble-tone") {
         "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier pops uses revision 140d951's envelope through an explicit diagnostic option; Longer pitched tone is the provisional revised response. Compare the underlying note and the articulation. Short-window measurements support listening without establishing audibility."
     } else when (case.kind) {
-        "defaults" -> "Listen first to the two dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
-        "preset" -> "Seven provisional recipes, including Busy Bubbles at FEED 65%, Held Glow and Held Bubbles. BUBBLE recipes use the revised gate response. Every clip uses its saved pitch, velocity and six controls."
+        "defaults" -> "Listen first to the three dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
+        "preset" -> "Ten provisional recipes, including three WOOD variations, Busy Bubbles at FEED 65%, and held recipes for all three voices. BUBBLE recipes use the revised gate response. Every clip uses its saved pitch, velocity and six controls."
         "comparison" -> case.description
         "sweep" -> "Five settings: 0, 25, 50, 75 and 100%. Companion controls stay at this voice's defaults."
         "held-sweep" -> "Five settings in a sustained periodic pattern. Each clip supplies cycle-state and exported PCM seam evidence."

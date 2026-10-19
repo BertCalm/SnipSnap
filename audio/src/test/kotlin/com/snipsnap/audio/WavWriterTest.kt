@@ -168,4 +168,24 @@ class WavWriterTest {
             kitDir.listFiles()!!.map { it.name }.toSet(),
         )
     }
+
+    @Test
+    fun `a true-peak ceiling on write holds the reconstructed peak, and the default writes identical bytes`() {
+        // Quarter-rate sine phased between samples: sample peak ~0.70,
+        // true peak ~0.99. Only the ceiling write may move it.
+        val frames = 4_410
+        val hidden = Snip(
+            FloatArray(frames) { (0.99 * kotlin.math.sin(2.0 * Math.PI * 11_025.0 * it / 44_100 + Math.PI / 4)).toFloat() },
+            1, 44_100,
+        )
+        val plain = java.io.ByteArrayOutputStream().also { WavWriter.write(it, hidden) }.toByteArray()
+        val explicitNull = java.io.ByteArrayOutputStream().also { WavWriter.write(it, hidden, truePeakCeiling = null) }.toByteArray()
+        assertTrue(plain.contentEquals(explicitNull), "opting out explicitly must write the historical bytes")
+
+        val cappedBytes = java.io.ByteArrayOutputStream().also { WavWriter.write(it, hidden, truePeakCeiling = 0.8f) }.toByteArray()
+        val back = WavReader.read(cappedBytes)
+        assertTrue(TruePeak.of(back) <= 0.81f, "written true peak ${TruePeak.of(back)} exceeds the 0.8 ceiling")
+        assertTrue(back.peak() < hidden.peak(), "the ceiling write should be the quieter file")
+    }
+
 }

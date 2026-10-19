@@ -262,6 +262,14 @@ void PadEngine::render(float* out, int32_t numFrames) {
         // `last`, so the last frame was never played and every wrap slipped
         // a frame against a file cut to close exactly.)
         const double period = v.loopStart >= 0 ? static_cast<double>(v.end - v.loopStart) : 0.0;
+        // The cubic read's outer taps. Below: the lowest frame this voice
+        // can play - `start`, or loopStart if a loop reaches under the
+        // window (no caller sends one; apply() does not refuse it). Above:
+        // a tap past the last frame is, inside a loop, the loop's own next
+        // frame (end -> loopStart, end + 1 -> loopStart + 1, a loop being
+        // at least two frames long), and otherwise the last frame, held.
+        const int64_t first = v.loopStart >= 0 ? std::min(v.start, v.loopStart) : v.start;
+        const int64_t wrap = v.loopStart >= 0 ? v.end - v.loopStart : 0;
         for (int32_t i = 0; i < numFrames; ++i) {
             // A fast voice over a short loop can cross the far end more
             // than once in one frame: wrap until the read is back inside.
@@ -293,20 +301,28 @@ void PadEngine::render(float* out, int32_t numFrames) {
                 endVoice(v);
                 break;
             }
-            // Inside a loop the pair at the last frame is (last, loopStart):
-            // the seam is interpolated like any other step. A voice that
-            // is not looping holds its last frame instead.
-            const int64_t i1 = (v.loopStart >= 0 && i0 + 1 >= v.end) ? v.loopStart
-                                                                     : std::min<int64_t>(i0 + 1, last);
-            const float frac = static_cast<float>(v.pos - static_cast<double>(i0));
+            // A four-point cubic (Catmull-Rom) through the frames either side
+            // of `pos`. Inside a loop the taps at the last frame run on into
+            // the loop's first, so the seam is read like any other step; a
+            // voice that is not looping holds its edge frames instead. At a
+            // whole-frame position the weights are exactly (0, 1, 0, 0), so
+            // an unpitched read at the stream's rate is the samples, bit for bit.
+            const int64_t im1 = i0 > first ? i0 - 1 : i0;
+            const int64_t i1 = i0 + 1 <= last ? i0 + 1 : (wrap > 0 ? i0 + 1 - wrap : last);
+            const int64_t i2 = i0 + 2 <= last ? i0 + 2 : (wrap > 0 ? i0 + 2 - wrap : last);
+            const float t = static_cast<float>(v.pos - static_cast<double>(i0));
+            const float t2 = t * t;
+            const float t3 = t2 * t;
+            const float wm1 = 0.5f * (2.0f * t2 - t3 - t);
+            const float w0 = 1.0f - 2.5f * t2 + 1.5f * t3;
+            const float w1 = 0.5f * t + 2.0f * t2 - 1.5f * t3;
+            const float w2 = 0.5f * (t3 - t2);
             float l, r;
             if (s.channels == 2) {
-                const float l0 = f[2 * i0], l1 = f[2 * i1];
-                const float r0 = f[2 * i0 + 1], r1 = f[2 * i1 + 1];
-                l = l0 + (l1 - l0) * frac;
-                r = r0 + (r1 - r0) * frac;
+                l = wm1 * f[2 * im1] + w0 * f[2 * i0] + w1 * f[2 * i1] + w2 * f[2 * i2];
+                r = wm1 * f[2 * im1 + 1] + w0 * f[2 * i0 + 1] + w1 * f[2 * i1 + 1] + w2 * f[2 * i2 + 1];
             } else {
-                const float m = f[i0] + (f[i1] - f[i0]) * frac;
+                const float m = wm1 * f[im1] + w0 * f[i0] + w1 * f[i1] + w2 * f[i2];
                 l = r = m;
             }
             // The glide: an exact linear arrival, because closing 1/n of
@@ -327,7 +343,7 @@ void PadEngine::render(float* out, int32_t numFrames) {
             out[2 * i] += l * v.gainL * v.fade;
             out[2 * i + 1] += r * v.gainR * v.fade;
             // The interpolation above is positional, not directional: the
-            // pair either side of `pos` is the same pair whichever way the
+            // four taps around `pos` are the same four whichever way the
             // read is travelling. Only the step changes sign.
             v.pos += v.reverse ? -v.inc : v.inc;
         }
