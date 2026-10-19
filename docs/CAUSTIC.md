@@ -7,7 +7,8 @@ complete proposed engine. The working name has not been checked for release.
 
 ## Listen and reproduce
 
-The private audition uses ChatGPT Sites. It provides a suggested listening order,
+The [private audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site)
+uses ChatGPT Sites. It provides a suggested listening order,
 position studies, mechanism controls, register/velocity probes and local notes.
 
 ```text
