@@ -18,6 +18,8 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourEngine
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourVoice
+import com.snipsnap.synth.Crease
+import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.Lacquer
@@ -92,12 +94,13 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT prototype) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT prototype) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
+ * CREASE also accepts `--model 1|2|3`, retaining its approved note, velocity and six controls.
  * VENT accepts `--seed N` for its initial trajectory. Its three provisional
  * starting recipes are available here while remaining outside the factory roster.
  */
@@ -133,6 +136,7 @@ object SynthCommand {
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
                 RegistersPatch.ENGINE -> 24..96
                 TanglePatch.ENGINE -> Tangle.MIN_MIDI..Tangle.MAX_MIDI
+                CreasePatch.ENGINE -> Crease.MIDI_MIN..Crease.MIDI_MAX
                 LacquerPatch.ENGINE -> Lacquer.MIDI_MIN..Lacquer.MIDI_MAX
                 StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
@@ -152,7 +156,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and VENT, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and VENT, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -175,9 +179,13 @@ object SynthCommand {
                 ?: throw CliError("--seconds wants .25..${Osprey.MAX_SECONDS} seconds, got '$raw'")
         }
         val modelOverride = opts["--model"]?.let { raw ->
-            if (engine != OspreyPatch.ENGINE) throw CliError("--model is only supported by OSPREY, got $engine")
-            raw.toIntOrNull()?.takeIf { it in 1..Osprey.MODEL_VERSION }
-                ?: throw CliError("--model wants 1..${Osprey.MODEL_VERSION}, got '$raw'")
+            val lastModel = when (engine) {
+                OspreyPatch.ENGINE -> Osprey.MODEL_VERSION
+                CreasePatch.ENGINE -> Crease.MODEL_VERSION
+                else -> throw CliError("--model is only supported by OSPREY and CREASE, got $engine")
+            }
+            raw.toIntOrNull()?.takeIf { it in 1..lastModel }
+                ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
         }
         val scrambleRandom = seedFlag("--scramble")?.let { Random(it) }
         if (!instrument && (opts["--attack"] != null || opts["--release"] != null)) {
@@ -227,6 +235,7 @@ object SynthCommand {
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is TanglePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is CreasePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Relay.rootMidi(patch.voice)) / Relay.TUNE_SEMITONES.toFloat()),
@@ -275,6 +284,8 @@ object SynthCommand {
                 seed = seedOverride ?: withNote.seed,
                 durationSeconds = secondsOverride ?: withNote.durationSeconds,
                 modelVersion = modelOverride ?: withNote.modelVersion,
+            ) else if (withNote is CreasePatch) withNote.copy(
+                model = modelOverride ?: withNote.model,
             ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride) else withNote
         }
 

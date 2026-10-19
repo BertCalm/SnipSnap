@@ -202,6 +202,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tangle() },
         Starter(
+            "crease", "CREASE",
+            "Pressure-shaped bass, keys and elastic leads in C minor pentatonic, with unfolding held layers.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.crease() },
+        Starter(
             "relay", "RELAY",
             "One note, four source roles. Ordered handoffs in C minor pentatonic.",
             seeded = false,

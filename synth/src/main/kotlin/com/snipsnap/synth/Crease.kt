@@ -1,7 +1,9 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.DrumClass
 import kotlin.math.*
+import kotlin.random.Random
 
 /** Listening prototype: these three identities and their numeric voicing are provisional. */
 enum class CreaseVoice { ROUND, PINCH, RUBBER }
@@ -87,6 +89,22 @@ object Crease {
     fun defaults(voice: CreaseVoice, model: Int = MODEL_VERSION): Map<String, Float> =
         macrosFor(voice, model).associate { it.name to it.default }
     fun isLoop(hold: Float) = hold >= HOLD_LOOP
+    fun supportsModel(model: Int): Boolean = model in 1..MODEL_VERSION
+
+    /** Native placement keeps finite pitched notes tonal, including long unfolding tails. */
+    fun drumClassFor(voice: CreaseVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): DrumClass =
+        if (isLoop(settled(voice, macros, model).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
+
+    /** Scramble the timbral controls while leaving the explicit note/model in the patch.
+     * The top HOLD step is an intentional loop choice, never an accidental random result. */
+    fun scramble(voice: CreaseVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
+        val model = (near as? CreasePatch)?.model ?: MODEL_VERSION
+        val base = settled(voice, near?.macros ?: emptyMap(), model)
+        val amount = temperature.takeIf { it.isFinite() } ?: .35f
+        return Dsp.scrambleNear(base, amount, random).toMutableMap().also {
+            it["HOLD"] = it.getValue("HOLD").coerceAtMost(.98f)
+        }
+    }
 
     private fun settled(voice: CreaseVoice, macros: Map<String, Float>, model: Int) =
         defaults(voice, model).toMutableMap().also { result ->

@@ -818,6 +818,26 @@ object SynthKits {
     }
 
     /**
+     * Eight Corner Bass keys in C minor pentatonic from C2, the six approved positions,
+     * then two held variants. Every dry pad stores its exact root, velocity and model.
+     * Finite notes route as TONAL; the last two pads contain settled LOOP material.
+     */
+    fun crease(): List<ArrangedPad?> {
+        fun arranged(patch: CreasePatch) = pad(patch, Crease.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName = patch.name)
+        val approved = CreasePresets.patches()
+        val bass = approved.single { it.name == "Corner Bass" }
+        val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            arranged(bass.copy(name = "Corner Bass ${index + 1}", midi = bass.midi + semitone))
+        }
+        val held = listOf("Paper Keys", "Ink Ribbon").map { name ->
+            val source = approved.single { it.name == name }
+            arranged(source.copy(name = "$name LOOP", macros = source.macros + ("HOLD" to 1f)))
+        }
+        return scale + approved.map(::arranged) + held
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled

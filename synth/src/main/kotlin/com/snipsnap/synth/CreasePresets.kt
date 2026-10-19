@@ -2,7 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 
-/** A complete native listening recipe. CREASE is not registered with the production Patch dispatcher yet. */
+/** The approved listening position, retained alongside its editable native Patch conversion. */
 data class CreasePreset(
     val id: String,
     val name: String,
@@ -25,11 +25,16 @@ data class CreasePreset(
     }
 
     fun render(): Snip = Crease.render(voice, macros, midi, velocity, model)
+    fun toPatch(): CreasePatch = CreasePatch(name, voice, macros, midi, velocity, model)
 }
 
 /** Six original listening positions: a fast and a slower evolving role for each voice. */
 object CreasePresets {
     const val MODEL_VERSION = 3
+
+    /** Promotion helper used by UserPresets' exported roster lines; omitted controls stay omitted. */
+    private fun p(voice: CreaseVoice, name: String, vararg macros: Pair<String, Float>) =
+        CreasePatch(name, voice, macros.toMap())
 
     private fun p(
         id: String, name: String, voice: CreaseVoice, family: String, description: String,
@@ -63,4 +68,6 @@ object CreasePresets {
 
     fun all(): List<CreasePreset> = roster
     fun forVoice(voice: CreaseVoice): List<CreasePreset> = roster.filter { it.voice == voice }
+    fun patches(): List<CreasePatch> = roster.map { it.toPatch() }
+    fun patchesForVoice(voice: CreaseVoice): List<CreasePatch> = forVoice(voice).map { it.toPatch() }
 }

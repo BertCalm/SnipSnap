@@ -60,6 +60,7 @@ class PresetsTest {
         for (voice in SkitterVoice.entries) assertEquals(SkitterPresets.forVoice(voice), Presets.forVoice("SKITTER", voice.name))
         for (voice in RelayVoice.entries) assertEquals(RelayPresets.forVoice(voice), Presets.forVoice("RELAY", voice.name))
         for (voice in RegistersVoice.entries) assertEquals(RegistersPresets.forVoice(voice), Presets.forVoice("REGISTERS", voice.name))
+        for (voice in CreaseVoice.entries) assertEquals(CreasePresets.patchesForVoice(voice), Presets.forVoice("CREASE", voice.name))
     }
 
     /**
@@ -131,7 +132,7 @@ class PresetsTest {
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
-            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all()
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + CreasePresets.patches()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

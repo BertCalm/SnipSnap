@@ -198,6 +198,9 @@ import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
+import com.snipsnap.synth.Crease
+import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.CreaseVoice
 import com.snipsnap.synth.Relay
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RelayVoice
@@ -341,9 +344,9 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, CREASE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
-    // REGISTERS retains its synthesis model, saved pitch and velocity.
+    // REGISTERS and CREASE retain their synthesis model, saved pitch and velocity.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
@@ -409,8 +412,11 @@ fun SynthScreen(
         // someone loaded a pre-PUNCH preset.
         // OSPREY's saved model selects its defaults too: filling a partial
         // legacy recipe with the current model's values would change its sound.
-        val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
-            else engine.defaults(voice)
+        val defaults = when (editable) {
+            is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
+            is CreasePatch -> Crease.defaults(editable.voice, editable.model)
+            else -> engine.defaults(voice)
+        }
         macrosByVoice[engine to voice] = defaults + editable.macros
         currentPresetByVoice[engine to voice] = patch.name
     }
@@ -989,9 +995,13 @@ fun SynthScreen(
             try {
                 val src = withContext(Dispatchers.Default) {
                     val rendered = patch.render()
-                    // STOOP keeps an explicit root even when a chord, sub or
-                    // shadow makes the strongest detected partial another note.
-                    val midi = if (patch is StoopPatch) patch.midi.toFloat() else Spread.detect(rendered)
+                    // Keep authored roots when a chord, shadow or strongly
+                    // creased spectrum makes another partial easier to detect.
+                    val midi = when (patch) {
+                        is StoopPatch -> patch.midi.toFloat()
+                        is CreasePatch -> patch.midi.toFloat()
+                        else -> Spread.detect(rendered)
+                    }
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
                 spreadPatch = patch
@@ -1165,6 +1175,46 @@ fun SynthScreen(
                         ) { updateStoopRoot(root + 12) }
                     }
                 }
+                // CREASE's five shape controls and HOLD leave pitch and playing
+                // intensity in the saved recipe. Copy the current patch so a
+                // legacy model keeps its timing through root/velocity edits.
+                if (engine == Engine.CREASE) {
+                    val creasePatch = buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (creasePatch.midi - Crease.MIDI_MIN).toFloat() / (Crease.MIDI_MAX - Crease.MIDI_MIN),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(creasePatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val root = (Crease.MIDI_MIN + value * (Crease.MIDI_MAX - Crease.MIDI_MIN)).roundToInt()
+                                .coerceIn(Crease.MIDI_MIN, Crease.MIDI_MAX)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch).copy(midi = root)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = creasePatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    TapeText(
+                        if (Crease.isLoop(macros.getValue("HOLD"))) "HOLD: REPEATING PRESSURE GESTURE."
+                        else "HOLD: NOTE LENGTH · TOP STEP: LOOP.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                    )
+                }
+
                 // MURMUR has five timbral controls and HOLD. Its requested root and
                 // gesture energy are independent patch fields, retained with the full
                 // operator/formant definition through preview, saving and placement.
@@ -1281,7 +1331,11 @@ fun SynthScreen(
                     }
                 }
 
-                val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
+                val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
+                val macroSpecs = remember(engine, voice, creaseModel) {
+                    if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
+                    else engine.macrosFor(voice)
+                }
                 val registersRoot = if (engine == Engine.REGISTERS)
                     (buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch).midi else null
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1315,6 +1369,7 @@ fun SynthScreen(
                                 engine == Engine.LACQUER && spec.name == "HOLD" && Lacquer.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SKITTER && spec.name == "HOLD" && Skitter.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.CREASE && spec.name == "HOLD" && Crease.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.RELAY && spec.name == "HOLD" && Relay.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.EMBOUCHURE && spec.name == "HOLD" && Embouchure.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.BELLOWS && spec.name == "HOLD" && Bellows.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1343,6 +1398,8 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            engine == Engine.CREASE ->
+                                Crease.scramble(voice as CreaseVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.EMBOUCHURE && loadedPatch is EmbouchurePatch ->
                                 Embouchure.scramble(voice as EmbouchureVoice, random, near = loadedPatch)
                             engine == Engine.BELLOWS && loadedPatch is BellowsPatch ->
@@ -2182,7 +2239,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, CREASE;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2224,6 +2281,7 @@ private enum class Engine {
         SPOOL -> SpoolVoice.entries
         SKITTER -> SkitterVoice.entries
         TANGLE -> TangleVoice.entries
+        CREASE -> CreaseVoice.entries
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
@@ -2266,6 +2324,7 @@ private enum class Engine {
         SPOOL -> Spool.macrosFor(voice as SpoolVoice)
         SKITTER -> Skitter.macrosFor(voice as SkitterVoice)
         TANGLE -> Tangle.macrosFor(voice as TangleVoice)
+        CREASE -> Crease.macrosFor(voice as CreaseVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
@@ -2308,6 +2367,7 @@ private enum class Engine {
         SPOOL -> Spool.defaults(voice as SpoolVoice)
         SKITTER -> Skitter.defaults(voice as SkitterVoice)
         TANGLE -> Tangle.defaults(voice as TangleVoice)
+        CREASE -> Crease.defaults(voice as CreaseVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
@@ -2350,6 +2410,7 @@ private enum class Engine {
         SPOOL -> Spool.scramble(voice as SpoolVoice, random)
         SKITTER -> Skitter.scramble(voice as SkitterVoice, random)
         TANGLE -> Tangle.scramble(voice as TangleVoice, random)
+        CREASE -> Crease.scramble(voice as CreaseVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
@@ -2397,6 +2458,7 @@ private enum class Engine {
         SPOOL -> Spool.render(voice as SpoolVoice, macros)
         SKITTER -> Skitter.render(voice as SkitterVoice, macros)
         TANGLE -> Tangle.render(voice as TangleVoice, macros)
+        CREASE -> Crease.render(voice as CreaseVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
@@ -2445,6 +2507,7 @@ private enum class Engine {
         SPOOL -> Spool.drumClassFor(voice as SpoolVoice, macros)
         SKITTER -> Skitter.drumClassFor(voice as SkitterVoice, macros)
         TANGLE -> Tangle.drumClassFor(voice as TangleVoice, macros)
+        CREASE -> Crease.drumClassFor(voice as CreaseVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
@@ -2487,6 +2550,7 @@ private enum class Engine {
         SPOOL -> SpoolPatch(name, voice as SpoolVoice, macros)
         SKITTER -> SkitterPatch(name, voice as SkitterVoice, macros)
         TANGLE -> TanglePatch(name, voice as TangleVoice, macros)
+        CREASE -> CreasePatch(name, voice as CreaseVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)

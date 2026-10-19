@@ -250,6 +250,7 @@ object Velocity {
         is RelayPatch -> Relay.macrosFor(patch.voice)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
+        is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
     }
 
     /**
@@ -333,13 +334,14 @@ object Velocity {
      * RELAY scales source excitation and accent energy while retaining its saved phrase.
      * REGISTERS uses its saved note and model while velocity changes rank/reed excitation once.
      * VENT scales the onset perturbation while retaining the saved trajectory controls, note and seed.
+     * CREASE changes excitation pressure while retaining its saved phase-map model and root.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
         (patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) ||
             patch is AerostatPatch || patch is TremorPatch || patch is CisternPatch ||
             patch is CircuitPatch || patch is ThawPatch || patch is MurkPatch || patch is NimbusPatch ||
             patch is CorollaPatch || patch is UndertowPatch || patch is SuturePatch || patch is TesseraPatch ||
-            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is OspreyPatch || patch is RegistersPatch || patch is VentPatch
+            patch is PitchwheelPatch || patch is RevelPatch || patch is PrismPatch || patch is AlloyPatch || patch is ContourPatch || patch is StoopPatch || patch is LacquerPatch || patch is SpoolPatch || patch is SkitterPatch || patch is TanglePatch || patch is RelayPatch || patch is EmbouchurePatch || patch is BellowsPatch || patch is MurmurPatch || patch is OspreyPatch || patch is RegistersPatch || patch is VentPatch || patch is CreasePatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -390,6 +392,7 @@ object Velocity {
                 is RelayPatch -> patch.copy(velocity = v).render()
                 is RegistersPatch -> patch.copy(velocity = v).render()
                 is VentPatch -> patch.copy(velocity = v).render()
+                is CreasePatch -> patch.copy(velocity = v).render()
                 is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
                 is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
                 is SpoolPatch -> patch.copy(velocity = v).render()
