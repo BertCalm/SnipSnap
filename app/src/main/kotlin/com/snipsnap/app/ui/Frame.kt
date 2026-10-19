@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -157,8 +159,16 @@ fun rememberNavigation(): NavState = remember { NavState() }
  * snapshot state after it. [now] is the line and its door together, as
  * the model holds them — the door can never outlive the words it was
  * offered with, because they are one value (J10/J44).
+ *
+ * A line is stamped with where it was said, read from [locationNow] at
+ * the moment of the write, so an async `say` landing after the user left
+ * says "here", where it landed. [moved] is how navigation tells the dock
+ * the user is somewhere else.
  */
-class DockState(private val model: DockModel = DockModel()) {
+class DockState(
+    private val locationNow: () -> Location,
+    private val model: DockModel = DockModel(),
+) {
     var now: DockModel.Now by mutableStateOf(model.now)
         private set
 
@@ -181,12 +191,18 @@ class DockState(private val model: DockModel = DockModel()) {
         }
 
     fun say(text: String) {
-        model.say(text)
+        model.say(text, locationNow())
         now = model.now
     }
 
     fun offer(text: String, door: Door) {
-        model.offer(text, door)
+        model.offer(text, door, locationNow())
+        now = model.now
+    }
+
+    /** The user is at [to] now: a line said elsewhere rests, a door's words stay with it. */
+    fun moved(to: Location) {
+        model.moved(to)
         now = model.now
     }
 
@@ -206,7 +222,7 @@ class DockState(private val model: DockModel = DockModel()) {
 }
 
 @Composable
-fun rememberDock(): DockState = remember { DockState() }
+fun rememberDock(locationNow: () -> Location): DockState = remember { DockState(locationNow) }
 
 /**
  * The four places, always visible, never scrolling. The selected place is
@@ -222,7 +238,10 @@ fun PlaceRow(current: Place, onSelect: (Place) -> Unit, modifier: Modifier = Mod
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(Layout.MENU_ROW_H.dp),
+            .heightIn(min = Layout.MENU_ROW_H.dp)
+            // The chips fill the row; the row is as tall as its tallest
+            // chip, so a large font grows it instead of clipping the label.
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -289,10 +308,11 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  *
  * - **transport**: the project's beat, from GROOVE's own TRANSPORT group.
  *   While BEAT is the stage, [onPlayToggle] is set and the readout is a
- *   button — ▶ to play, ■ to stop, ● while a take goes in; off BEAT the
+ *   button — ▶ to play (what a tap does, so the stopped chip says ▶, not
+ *   ■), the running readout to stop, ● while a take goes in; off BEAT the
  *   clock is not running (it is GrooveScreen's frame loop, which BOUNCE,
- *   RECORD and the audition all ride) so the region is a readout that
- *   says `■`, never a button that would do nothing. Keeping the beat
+ *   RECORD and the audition all ride) so a stopped beat draws nothing
+ *   there, never a button that would do nothing. Keeping the beat
  *   playing across benches wants that clock pulled out of the screen; the
  *   dock is ready for it, the screen is not yet.
  * - **capture**: the capture session's one control, which used to be the
@@ -336,17 +356,25 @@ fun Dock(
     Row(
         modifier
             .fillMaxWidth()
-            .height(Layout.DOCK_H.dp)
+            .heightIn(min = Layout.DOCK_H.dp)
             .lcdPanel(scheme)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Transport.
+        // Transport. A live chip that is stopped says ▶, what a tap does; the
+        // old ■ read as STOP on the one control that would start. Off BEAT a
+        // stopped beat has no readout at all: an inert ■ beside the capture
+        // light read as a button that did nothing.
+        val stopped = dock.transport is DockModel.Transport.Stopped
         if (onPlayToggle != null) {
-            val playing = dock.transport !is DockModel.Transport.Stopped
-            DockChip(dock.transportLabel, scheme.amber.tape, onClick = onPlayToggle, label = if (playing) Places.STOP_BEAT else Places.PLAY_BEAT)
-        } else {
+            DockChip(
+                if (stopped) Places.PLAY_GLYPH else dock.transportLabel,
+                scheme.amber.tape,
+                onClick = onPlayToggle,
+                label = if (stopped) Places.PLAY_BEAT else Places.STOP_BEAT,
+            )
+        } else if (!stopped) {
             TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
         }
         // Capture.
@@ -354,6 +382,7 @@ fun Dock(
             Row(
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .widthIn(min = Layout.MIN_HIT_TARGET.dp)
                     .tapeClick(label = Places.LISTEN, onClick = onArm)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -448,6 +477,7 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, border, RoundedCornerShape(4.dp))
             .tapeClick(label = label, onClick = onClick)
             .padding(horizontal = 6.dp),

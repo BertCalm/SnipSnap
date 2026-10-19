@@ -88,6 +88,13 @@ object Copy {
      */
     const val PROJECT_OPEN_FAILED = "COULDN'T OPEN THAT PROJECT."
     /**
+     * A kit would not join the open project: the bookkeeping that records
+     * it (`landKit` after a chop lands, `+ FROM SHELF`) failed on disk. The
+     * kit itself is on the shelf; the project is what did not take it, and
+     * [PROJECT_OPEN_FAILED] said the wrong thing about that.
+     */
+    const val KIT_ADD_FAILED = "COULDN'T ADD THAT KIT TO THE PROJECT."
+    /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
      * from [EMPTY_SHELF], which would otherwise flatly claim nothing exists
@@ -187,6 +194,12 @@ object Copy {
      * a control the screen was not showing (September wiring review,
      * finding 14). [CHOP_AUTO_NONE] does not need the phrase: AUTO is in
      * the same box, so the box is open when that toast fires.
+     *
+     * No toast says it now: it fired on entering CUT and then sat in the
+     * dock on every other screen (the October UX review's S1), and CUT
+     * draws [CHOP_NO_HITS_FOUND] and TRY GRID ▸ itself. Kept for the law
+     * that pins its words (`PersonalityTest`), for a caller that has to
+     * say it from outside CUT.
      */
     const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CUT AND TRY GRID, OR TAPE SOMETHING ELSE."
     /**
@@ -1973,6 +1986,8 @@ object Copy {
      * quoting Java at somebody.
      */
     const val DUB_FAILED = "DUB FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
+    /** DUST threw mid-run: the box's title, with the reason under it. Pads dusted before it threw are kept. */
+    const val DUST_FAILED = "DUST FAILED."
     /**
      * The first tap on DUB when something is already at the destination
      * (September UAT, finding 18). [what] is the exact thing in the way, as

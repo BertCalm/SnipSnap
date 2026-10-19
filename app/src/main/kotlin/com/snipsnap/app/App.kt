@@ -202,6 +202,9 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
+/** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
+private const val DOCK_LINE_CHARS = 44
+
 /** The most a shared kit file may be before it is copied for the shelf: a whole backup fits, a video never needs to. */
 private const val LANDING_MAX_BYTES = 512L * 1024 * 1024
 /** CHOP ALL's own per-file cache-copy ceiling — sized for one WAV, not a whole kit/backup zip like [LANDING_MAX_BYTES] above (same 96 MB reasoning as MediaDecode's own MAX_WAV_BYTES). */
@@ -335,8 +338,10 @@ fun App(shelf: KitShelf) {
     // stranded under someone else's sentence — which is what the old two
     // vars (`toast`, `offered`) claimed and had to be compared to prove.
     // Nothing here is timed: the line stays until the next one, the door
-    // until it is taken.
-    val dock = rememberDock()
+    // until it is taken. A line is scoped to where it was said (stamped
+    // from `nav.location` at the write) and rests when the user moves to
+    // another place or stage; a door and its words survive the move.
+    val dock = rememberDock { nav.location }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond the dock's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
@@ -372,6 +377,14 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * SEND TO PADS' line: what it did, and which kit is on the grid now,
+     * when the two fit the dock's two lines of about 44; what it did alone
+     * when they do not.
+     */
+    fun sentAndOnTheGrid(sent: String, entry: KitShelf.Entry): String =
+        "$sent ${Copy.onTheGrid(entry.kit.name)}".takeIf { it.length <= 2 * DOCK_LINE_CHARS } ?: sent
+
+    /**
      * A landing: the screen changes and whatever hand-off state the landing
      * set rides along — a bank request for the KIT that follows, an armed
      * audition for GROOVE. This is what a bare `screen = AppScreen.X` used
@@ -380,6 +393,7 @@ fun App(shelf: KitShelf) {
      */
     fun landOn(target: AppScreen) {
         nav.goTo(locationOf(target))
+        dock.moved(nav.location)
     }
 
     /**
@@ -768,7 +782,7 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "landKit: project bookkeeping failed for ${entry.dir.name}", e)
-                dock.say(Copy.PROJECT_OPEN_FAILED)
+                dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
             }
             // Re-read after the await: only adopt the update if the user
@@ -851,6 +865,9 @@ fun App(shelf: KitShelf) {
         val (attempt, message) = lastSnipError ?: return@LaunchedEffect
         if (attempt != lastSnipErrorSeen) {
             lastSnipErrorSeen = attempt
+            // The optimistic line offered CUT; a failed commit has nothing
+            // to cut, and a line keeps its door, so the door goes first.
+            dock.clear()
             dock.say(message)
         }
     }
@@ -1555,7 +1572,7 @@ fun App(shelf: KitShelf) {
                 if (e is CancellationException) throw e
                 busy = null
                 partial?.let { if (open?.dir == source.dir) open = it }
-                dock.say("DUST FAILED: ${e.message ?: e.javaClass.simpleName}")
+                openNote(LandingNote.dustFailed(e.message ?: e.javaClass.simpleName))
                 return@launch
             }
             busy = null
@@ -2747,12 +2764,14 @@ fun App(shelf: KitShelf) {
     /** The place row: a place opens on the stage it was last on, benches closed. */
     fun goToPlace(place: Place) {
         nav.go(place)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
     /** The stage row: a stage of the current place, benches closed. */
     fun goToStage(stage: Stage) {
         nav.stage(stage)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
@@ -2760,6 +2779,7 @@ fun App(shelf: KitShelf) {
     fun takeDockDoor() {
         val door = dock.take() ?: return
         nav.take(door)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
@@ -2856,7 +2876,7 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "addKitToProject: failed", e)
-                dock.say(Copy.PROJECT_OPEN_FAILED)
+                dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
             }
             project = updated
@@ -2958,6 +2978,7 @@ fun App(shelf: KitShelf) {
         // over a pad sheet comes back to the pad sheet. Popping a stage or
         // a place is a departure, and abandons what a departure abandons.
         val to = nav.location
+        dock.moved(to)
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
@@ -3578,30 +3599,34 @@ fun App(shelf: KitShelf) {
                             teachEnabled = teachEnabled,
                             workshopOpen = workshopOpen,
                             onToast = { dock.say(it) },
-                            onSentToGrid = { newEntry ->
+                            onSentToGrid = { newEntry, sent ->
                                 landKit(newEntry)
-                                // The new kit is the grid's now (F4). The offer
-                                // just below replaces the whole line whenever
-                                // the kit has pads, so this shows only for an
-                                // empty one until the dock's lines are scoped
-                                // (the UX review's S1) and can carry both.
-                                dock.say(Copy.onTheGrid(newEntry.kit.name))
                                 // Step 3 → step 4 (J10), and only when the
                                 // kit has pads: a door onto an empty EXPORT
                                 // is a worse answer than no door.
                                 if (newEntry.kit.pads.isNotEmpty()) {
                                     offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR, AppScreen.EXPORT)
                                 }
+                                // What SEND did is the line and the offer is
+                                // the door: the offer replaces the whole
+                                // line, so the sentence is said after it, and
+                                // a line keeps the door. The new kit is the
+                                // grid's now (F4); its name rides along when
+                                // both fit the dock's two lines.
+                                dock.say(sentAndOnTheGrid(sent, newEntry))
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
-                            onLandedOnto = { updated, bank ->
+                            onLandedOnto = { updated, bank, landed ->
                                 landKit(updated)
                                 kitBankRequest = bank
                                 if (updated.kit.pads.isNotEmpty()) {
                                     offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR, AppScreen.EXPORT)
                                 }
+                                // The landing sentence, after the offer, for
+                                // the same reason SEND's is.
+                                dock.say(landed)
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
@@ -3905,8 +3930,10 @@ fun App(shelf: KitShelf) {
                         MicSessionService.snip(context)
                         // Optimistic — the real commit hasn't started yet, let
                         // alone resolved. The `lastSnipError` collector above
-                        // corrects this line if that commit fails.
-                        dock.say(Copy.SNIPPED)
+                        // corrects this line if that commit fails. The door
+                        // is CUT, one tap from the new snip; it is not drawn
+                        // when CUT is where the user already is.
+                        offer(Copy.SNIPPED, Places.DOOR_CUT, AppScreen.CHOP)
                     },
                     onEject = { MicSessionService.eject(context) },
                     onTakeDoor = ::takeDockDoor,
@@ -3970,7 +3997,26 @@ fun App(shelf: KitShelf) {
             }
             if (micPermissionDenied) {
                 val dismissDenied = { micPermissionDenied = false }
-                BlockedDialog(Copy.MIC_PERMISSION_DENIED, Copy.CAPTURE_BLOCKED_BUTTON, onDismiss = dismissDenied)
+                BlockedDialog(
+                    Copy.MIC_PERMISSION_DENIED,
+                    Copy.CAPTURE_BLOCKED_BUTTON,
+                    onDismiss = dismissDenied,
+                    // The words say where the switch is; the button takes
+                    // you there. A permission the system will not ask for
+                    // again can only be turned on in this app's own page.
+                    actionLabel = Places.OPEN_SETTINGS,
+                    onAction = {
+                        dismissDenied()
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "mic denied: the app's settings page would not open", e)
+                            dock.say(Copy.MIC_PERMISSION_DENIED)
+                        }
+                    },
+                )
                 BackHandler(onBack = dismissDenied)
             }
         }
@@ -3987,10 +4033,17 @@ fun App(shelf: KitShelf) {
  * scrim's dismiss doesn't fire through, rather than a Material
  * `AlertDialog` (TapeOS never uses Material's own chrome, see `Chrome.kt`'s
  * `TapeText` KDoc). [message] and [buttonLabel] are the only things that
- * differ between callers.
+ * differ between callers, and an optional [actionLabel] button above the
+ * dismiss when the refusal has somewhere to send the user.
  */
 @Composable
-private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () -> Unit) {
+private fun BlockedDialog(
+    message: String,
+    buttonLabel: String,
+    onDismiss: () -> Unit,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
+) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -4023,6 +4076,7 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
+            if (actionLabel != null) PrimaryAction(label = actionLabel, enabled = true, onClick = onAction)
             PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
         }
     }

@@ -36,8 +36,14 @@ object Places {
     const val DOOR_OUT = "OUT ▸"
 
     const val LISTEN = "LISTEN · MIC"
+
+    /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. The arrow: it opens that page. */
+    const val OPEN_SETTINGS = "OPEN SETTINGS ▸"
     const val SNIPPED = "SNIPPED"
     const val STOPPED = "■"
+
+    /** The live transport chip's face while the beat is stopped: what a tap does, where [STOPPED] read as the stop. */
+    const val PLAY_GLYPH = "▶"
 
     /** The dock's SNIP, shown while armed. No arrow: it takes the last 60 s, it opens nothing. */
     const val SNIP = "SNIP"
