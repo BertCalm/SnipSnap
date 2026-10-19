@@ -284,6 +284,9 @@ testkit/SnipSnap-Wick-Prototype-Kit.zip
 testkit/shoal-audition/
 testkit/shoal-audition-v1/
 
+# Focused Alloy voice/preset comparison audio is regenerated from source.
+testkit/alloy-contrast/
+
 # Relay musical bank and starter-pad performance renders.
 testkit/relay-performance-audition/
 
