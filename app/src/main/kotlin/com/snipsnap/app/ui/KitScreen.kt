@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
@@ -219,6 +220,7 @@ fun KitScreen(
     // chokes on this screen, and so a stolen or choked voice is stopped
     // rather than left ringing.
     val engineContext = LocalContext.current
+    val haptics = LocalHaptics.current
     val player = remember(entry.dir) { PadEngine(deviceSampleRate(engineContext)) }
     var engineUp by remember(entry.dir) { mutableStateOf(false) }
     DisposableEffect(entry.dir) {
@@ -635,7 +637,7 @@ fun KitScreen(
                             echo = glow[slot],
                             // A tap on a filled pad plays it AND selects it,
                             // so the strip below names what was just heard.
-                            onTap = { s, v -> hit(s, v); onSelectSlot(s) },
+                            onTap = { s, v -> hit(s, v); haptics.pad(v); onSelectSlot(s) },
                             onLongPress = onLongPress,
                             onEmptyLongPress = onEmptyLongPress,
                             // An empty pad is selectable too: its strip is

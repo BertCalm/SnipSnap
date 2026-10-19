@@ -210,6 +210,18 @@ class KitShelf(val root: File) {
         Names.freshStem(Names.sanitizeStem(base.uppercase())) { File(root, it).exists() }
 
     /**
+     * A name for a kit nobody named: one word rolled from
+     * [com.snipsnap.shell.Names], avoiding every folder the shelf already
+     * holds (kits and projects share the root), then run through
+     * [freshName] like any other base so a race with another writer still
+     * lands on a free folder. INSTANT KIT, BREED and SEND TO PADS take
+     * this; a starter keeps its own name, and a kit named for what it was
+     * made from (a photo, a chord, a texture) keeps that.
+     */
+    fun rolledName(): String =
+        freshName(com.snipsnap.shell.Names.roll(taken = root.list()?.toSet().orEmpty()))
+
+    /**
      * Render a starter onto the shelf — the FRESH TAPE menu's action.
      * Synchronous and seconds-long (the synth engines render offline);
      * the caller shows DUBBING… while it runs.
@@ -251,9 +263,9 @@ class KitShelf(val root: File) {
 
     /**
      * INSTANT KIT: [range] of [file] (a snip, or whatever TAPE was scrubbing)
-     * chopped with the defaults and landed on the shelf as a kit named after
-     * the file — CHOP's own result with nothing touched. Seconds-long; the
-     * caller shows a busy line.
+     * chopped with the defaults and landed on the shelf as a kit under a
+     * rolled name ([rolledName]) — CHOP's own result with nothing touched.
+     * Seconds-long; the caller shows a busy line.
      *
      * [file] is `tapeData.sourceFile` from TAPE, so [range] is only ever
      * valid against the capped view TAPE actually showed — reading through
@@ -265,7 +277,7 @@ class KitShelf(val root: File) {
     fun instantKit(file: File, range: IntRange, snipsDir: File): Pair<Entry, com.snipsnap.shell.InstantKit.Result> {
         val snip = com.snipsnap.shell.InstantKit.slice(WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip, range)
         root.mkdirs()
-        val name = freshName("${file.nameWithoutExtension} KIT")
+        val name = rolledName()
         // A snip off the SNIPS shelf is a tape the pads can go back to
         // (RE-TRIM); a kit sample TAPE fell back to is not.
         val tape = com.snipsnap.shell.ChopReviewModel.TapeRef.ofSnip(file, range.first, snipsDir)
@@ -289,16 +301,17 @@ class KitShelf(val root: File) {
      * BREED (XX2 wired in): [a]'s recipes crossed with [b]'s into a brand
      * new child kit beside [a] on the shelf — `:shell`'s tested
      * `Breed.breed`, unmodified; this only picks the destination. The
-     * default name `Breed.breed` itself would use (`"${a.name}_x_${b.name}"`,
-     * `BreedCommand`'s own CLI default) run through [freshName] so a second
-     * breed of the same pair never collides with the first (`Breed.breed`
-     * refuses a destination that already holds a `kit.json`). Both parents
+     * child is named by [rolledName], not by its parents (`Breed.breed`'s
+     * own default is `"${a.name}_x_${b.name}"`, `BreedCommand`'s CLI
+     * default): a rolled name is already free, so a second breed of the
+     * same pair never collides with the first (`Breed.breed` refuses a
+     * destination that already holds a `kit.json`). Both parents
      * stay untouched — `Breed`'s own contract, not this method's. Seconds-
      * long (every crossed pad renders offline); the caller shows a busy line.
      */
     fun breed(a: Entry, b: Entry, seed: Int): Pair<Entry, com.snipsnap.shell.Breed.Report> {
         root.mkdirs()
-        val name = freshName("${a.kit.name} X ${b.kit.name}")
+        val name = rolledName()
         val dir = File(root, name)
         val report = com.snipsnap.shell.Breed.breed(a.dir, b.dir, dir, name, seed)
         return Entry(dir, report.kit) to report

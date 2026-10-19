@@ -95,6 +95,9 @@ fun PropertiesScreen(
     onLook: (Look) -> Unit,
     teachEnabled: Boolean,
     onTeach: (Boolean) -> Unit,
+    /** HAPTICS: whether the motor ticks under pads, steppers and landings. ON by default; always silent while the mic is armed (`Haptics`). */
+    hapticsOn: Boolean,
+    onHaptics: (Boolean) -> Unit,
     exportFormatLabel: String?,
     filesWhere: String?,
     cardName: String?,
@@ -203,6 +206,39 @@ fun PropertiesScreen(
                 scheme.ink2.tape,
                 maxLines = 4,
             )
+        }
+
+        // HAPTICS: the same two-up toggle, its own closed group. The note says
+        // the one exception, because "why did it stop ticking" is a question
+        // a player would otherwise put to the switch.
+        var hapticsOpen by rememberSaveable { mutableStateOf(false) }
+        GroupBox(
+            legend = "HAPTICS",
+            summary = if (hapticsOn) "ON" else "OFF",
+            open = hapticsOpen,
+            onToggle = { hapticsOpen = !hapticsOpen },
+            scheme = scheme,
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                for (on in listOf(false, true)) {
+                    val selected = on == hapticsOn
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { this.selected = selected }
+                            .tapeClick(label = "HAPTICS ${if (on) "ON" else "OFF"}") { if (!selected) onHaptics(on) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(if (on) "ON" else "OFF", TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
+                    }
+                }
+            }
+            TapeText(Copy.SETUP_HAPTICS_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         }
 
         // ---- What the app already knew and never said (finding 23) ----

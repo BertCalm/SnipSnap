@@ -74,6 +74,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
+import com.snipsnap.app.LocalHaptics
+import com.snipsnap.shell.Names as NameRoll
 
 /** How long a first tap on EMPTY THE BIN NOW (rooms bin) stays armed before it disarms itself — `TakesBinScreen.kt`'s own constant, copied verbatim. */
 private const val EMPTY_ROOMS_BIN_ARM_MS = 3_000L
@@ -727,6 +729,7 @@ fun KitsScreen(
             val cancelRename = { renameTarget = null; armedKitDirs = armedKitDirs - target.dir.path }
             KitRenameDialog(
                 initialName = target.kit.name,
+                taken = kits.map { it.dir.name }.toSet(),
                 onCancel = cancelRename,
                 // Same reasoning as DELETE's onConfirm above — renaming to
                 // the kit's own current name is a same-dir no-op in
@@ -1149,10 +1152,16 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
  * RENAME is disabled while the typed name fails `Names.isMpcSafe` — the
  * same refusal `KitShelf.renameKit` would give, surfaced before the tap
  * instead of after.
+ *
+ * REROLL beside the field puts a word from `shell.Names` in it - the same
+ * roll a kit gets when nobody names it - avoiding every folder in [taken].
+ * It fills the field and nothing more: RENAME is still the tap that
+ * commits, so a roll can be taken back by CANCEL or rolled again.
  */
 @Composable
-private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
+private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
     val scheme = LocalScheme.current
+    val haptics = LocalHaptics.current
     var name by remember { mutableStateOf(initialName) }
     val safe = Names.isMpcSafe(name)
     Box(
@@ -1183,20 +1192,26 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText("RENAME KIT", TapeType.lcdSmall, scheme.ink.tape)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .sunkenField(scheme)
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-            ) {
-                BasicTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    textStyle = TapeType.marker.copy(color = scheme.ink.tape),
-                    cursorBrush = SolidColor(scheme.ink.tape),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .sunkenField(scheme)
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                ) {
+                    BasicTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        textStyle = TapeType.marker.copy(color = scheme.ink.tape),
+                        cursorBrush = SolidColor(scheme.ink.tape),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                ActionButton("REROLL", scheme, enabled = true, accessibilityLabel = "REROLL NAME", modifier = Modifier.width(92.dp)) {
+                    name = NameRoll.roll(taken = taken)
+                    haptics.tick()
+                }
             }
             if (!safe) {
                 TapeText(

@@ -135,6 +135,7 @@ import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Location
 import com.snipsnap.shell.Look
+import com.snipsnap.shell.Names
 import com.snipsnap.shell.Place
 import com.snipsnap.shell.ShelfModel
 import com.snipsnap.shell.Stage
@@ -186,6 +187,8 @@ private const val PREF_SCHEME = "scheme"
 /** LOOK (plan §3.7): CLASSIC or MODERN, beside the scheme. Defaults to the scheme's own look. */
 private const val PREF_LOOK = "look"
 private const val PREF_TEACH = "teach"
+/** HAPTICS (SETUP): the motor under pads, steppers and landings - ON unless the player turned it off. */
+private const val PREF_HAPTICS = "haptics"
 /** The WORKSHOP (`docs/WORKSHOP.md`): open once the knock on SETUP's title lands, remembered like the scheme until its own CLOSE. */
 private const val PREF_WORKSHOP = "workshop"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
@@ -342,6 +345,14 @@ fun App(shelf: KitShelf) {
     // from `nav.location` at the write) and rests when the user moves to
     // another place or stage; a door and its words survive the move.
     val dock = rememberDock { nav.location }
+    // HAPTICS (SETUP): the motor under a pad hit, the arm, a stepper and a
+    // landing. Remembered like the scheme, ON by default. The gate is read
+    // at each call: off by the switch, and off while the dock's capture
+    // light says ARMED - the phone's mic hears its own motor (Haptics' KDoc).
+    var hapticsOn by remember { mutableStateOf(prefs.getBoolean(PREF_HAPTICS, true)) }
+    val haptics = remember(context) {
+        Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
+    }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond the dock's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
@@ -984,6 +995,7 @@ fun App(shelf: KitShelf) {
                     projectionLauncher.launch(manager.createScreenCaptureIntent())
                 }
             } else {
+                haptics.arm()
                 MicSessionService.arm(context)
                 dock.say(Copy.SESSION_ARMED)
                 offerBubbleOnce()
@@ -2885,11 +2897,16 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    /** NEW PROJECT ▸: an empty project, opened on PADS with no kit, where the switcher offers the shelf. */
+    /**
+     * NEW PROJECT ▸: an empty project, opened on PADS with no kit, where the switcher offers the shelf.
+     * Its name is a roll ([Names.roll]) against the projects already on the shelf, not "New Project 2".
+     */
     fun newProject() {
         scope.launch {
             val p = try {
-                withContext(Dispatchers.IO) { shelfModel.newProject() }
+                withContext(Dispatchers.IO) {
+                    shelfModel.newProject(Names.roll(taken = shelfModel.projects().map { it.name }.toSet()))
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2982,7 +2999,7 @@ fun App(shelf: KitShelf) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme) {
+    TapeTheme(scheme, LocalHaptics provides haptics) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -3562,6 +3579,12 @@ fun App(shelf: KitShelf) {
                                 prefs.edit().putBoolean(PREF_TEACH, on).apply()
                                 dock.say(if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF)
                             },
+                            hapticsOn = hapticsOn,
+                            onHaptics = { on ->
+                                hapticsOn = on
+                                prefs.edit().putBoolean(PREF_HAPTICS, on).apply()
+                                if (on) haptics.tick()
+                            },
                             // Finding 23: three facts the app already kept and
                             // never showed. Read straight from the same prefs
                             // EXPORT writes - one owner each, no second copy.
@@ -3604,6 +3627,7 @@ fun App(shelf: KitShelf) {
                             workshopOpen = workshopOpen,
                             onToast = { dock.say(it) },
                             onSentToGrid = { newEntry, sent ->
+                                haptics.land()
                                 landKit(newEntry)
                                 // Step 3 → step 4 (J10), and only when the
                                 // kit has pads: a door onto an empty EXPORT
@@ -3623,6 +3647,7 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                             onLandedOnto = { updated, bank, landed ->
+                                haptics.land()
                                 landKit(updated)
                                 kitBankRequest = bank
                                 if (updated.kit.pads.isNotEmpty()) {

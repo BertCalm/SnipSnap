@@ -57,6 +57,7 @@ import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.ShareOut
 import com.snipsnap.app.deviceSampleRate
@@ -748,6 +749,7 @@ fun GrooveScreen(
     var preTake by remember(kitDir) { mutableStateOf<Mpc3Clip?>(preTake) }
     LaunchedEffect(preTake) { onPreTakeChange(preTake) }
     var recordBars by remember(kitDir) { mutableIntStateOf(LiveRecord.DEFAULT_BARS) }
+    val haptics = LocalHaptics.current
     var take by remember(kitDir) { mutableStateOf<LiveRecord.Take?>(null) }
 
     // Fix 2 (live-record follow-ups): the count-in previously said only
@@ -1687,6 +1689,7 @@ fun GrooveScreen(
             onToast(Copy.KIT_STILL_LOADING)
             return
         }
+        haptics.arm()
         clearJustLanded()
         val armedBase = base
         preTake = armedBase
@@ -2106,6 +2109,7 @@ fun GrooveScreen(
                         ) {
                             GrooveActionButton("◀", scheme, Modifier.weight(1f), enabled = !busy) {
                                 recordBars = LiveRecord.barsAfter(recordBars, -1)
+                                haptics.tick()
                             }
                             TapeText(
                                 if (recordBars == 1) "1 BAR" else "$recordBars BARS",
@@ -2115,6 +2119,7 @@ fun GrooveScreen(
                             )
                             GrooveActionButton("▶", scheme, Modifier.weight(1f), enabled = !busy) {
                                 recordBars = LiveRecord.barsAfter(recordBars, 1)
+                                haptics.tick()
                             }
                         }
                     }

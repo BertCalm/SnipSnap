@@ -2,6 +2,7 @@ package com.snipsnap.app.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -64,13 +65,20 @@ val Scheme.lcdInk2: Color get() = lcdInk.tape.copy(alpha = Schemes.LCD_INK2_ALPH
 
 val LocalScheme = staticCompositionLocalOf { Schemes.DEFAULT }
 
+/**
+ * The window's theme: the scheme, and any further locals the root wants
+ * every screen to read ([also] - App passes the motor, `LocalHaptics`, so
+ * no pad grid or stepper needs it as a parameter).
+ */
 @Composable
 fun TapeTheme(
     scheme: Scheme,
+    vararg also: ProvidedValue<*>,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
         LocalScheme provides scheme,
+        *also,
         content = content,
     )
 }
