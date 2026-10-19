@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f3ed">
-  <meta name="description" content="Listen to Prism, SnipSnap’s additive engine. Compare six voices, macro sweeps, interactions, and seamless held notes. Save your listening verdicts on this device.">
+  <meta name="description" content="Explore Prism’s 36 factory presets across six additive voices. Compare dry patches, macro sweeps, and held notes, and save listening verdicts on this device.">
   <title>Prism · SnipSnap Listening Room</title>
   <style>
     :root { color-scheme: light; --paper:#f5f3ed; --surface:#fffefa; --ink:#262a27; --muted:#62665e; --line:#deded3; --orange:#a74a22; --orange-light:#f9e7da; --violet:#655784; --violet-light:#eae5f2; --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace; --sans:Arial,Helvetica,sans-serif; }
@@ -38,6 +38,9 @@
     .hero-spec { display:flex; gap:17px; flex-wrap:wrap; margin-top:25px; color:var(--muted); font-size:9px; letter-spacing:.8px; }
     .hero-spec span+span::before { content:"/"; margin-right:17px; color:#a3a69c; }
     .revision-jump { display:inline-flex; align-items:center; gap:10px; margin-top:20px; color:var(--orange); text-decoration:none; font-size:11px; border-bottom:1px solid #d6a88c; padding-bottom:4px; }
+    .hero-links { display:flex; align-items:baseline; gap:18px; flex-wrap:wrap; margin-top:20px; }
+    .hero-links .revision-jump { margin-top:0; color:var(--muted); border-bottom-color:var(--line); font-size:10px; }
+    .bank-jump { display:inline-flex; align-items:center; gap:12px; color:var(--orange); text-decoration:none; font-size:11px; border-bottom:1px solid #d6a88c; padding-bottom:4px; }
     .spectral { margin:0; position:relative; border:1px solid var(--line); border-radius:2px; padding:23px 25px 15px; background:linear-gradient(145deg,#eeece6,var(--paper) 68%); }
     .spectral-top { display:flex; justify-content:space-between; color:var(--muted); font-size:9px; letter-spacing:.8px; }
     .spectral svg { width:100%; height:auto; display:block; margin:13px 0 6px; }
@@ -86,8 +89,10 @@
     .filter-field label { color:var(--muted); font-size:8px; letter-spacing:.8px; }
     .filter-field input,.filter-field select { border:1px solid var(--line); border-radius:3px; background:var(--surface); color:var(--ink); height:35px; padding:0 10px; font-size:11px; }
     .filter-field input { width:160px; }
-    .filter-field select { width:106px; }
+    .filter-field select { width:124px; }
     .list-meta { display:flex; justify-content:space-between; gap:20px; font-size:9px; color:var(--muted); margin-bottom:11px; letter-spacing:.4px; }
+    .factory-summary { display:flex; flex-wrap:wrap; gap:7px 18px; color:var(--muted); font-size:9px; letter-spacing:.4px; margin:0 0 17px; }
+    .factory-summary b { color:var(--orange); font-weight:400; margin-right:5px; }
     .clip-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; }
     .clip { border:1px solid var(--line); padding:18px 18px 14px; border-radius:3px; background:var(--surface); transition:border-color .15s,box-shadow .15s; }
     .clip.is-current { border-color:var(--orange); box-shadow:0 0 0 1px var(--orange); }
@@ -177,8 +182,8 @@
           <p class="eyebrow caption">Additive engine · 01</p>
           <h1 id="prism-title">PRISM</h1>
           <p class="hero-tagline">Familiar notes.<br><em>Different lifetimes.</em></p>
-          <p class="hero-copy">Keys, plucks, organs, and quiet textures. Built from harmonics that gather, separate, and fade in their own time. Listen to the dry engine, one note at a time.</p>
-          <a class="revision-jump" id="revision-jump" href="#glass-comparison" hidden>Listen to GLASS · original / softer revision <span aria-hidden="true">↗</span></a>
+          <p class="hero-copy">A full factory bank of keys, plucks, organs, basses, and sustained textures. Built from harmonics that gather, separate, and fade in their own time. Find a musical role, then listen to the dry patch.</p>
+          <div class="hero-links"><a class="bank-jump" id="factory-jump" href="#clip-panel">Explore <span id="factory-count">36 factory presets</span><span aria-hidden="true">↘</span></a><a class="revision-jump" id="revision-jump" href="#glass-comparison" hidden>GLASS · original / softer revision <span aria-hidden="true">↗</span></a></div>
           <div class="hero-spec caption"><span>32 partials</span><span>6 voices</span><span id="format-label">Mono / 44.1 kHz</span></div>
         </div>
         <figure class="spectral">
@@ -199,29 +204,30 @@
       </section>
       <section class="room" id="listening-room" aria-label="Prism listening room">
         <div class="room-top">
-          <p class="room-title"><span class="caption">01 / Listen & compare</span>Start with the voices.</p>
+          <p class="room-title"><span class="caption">01 / Listen & compare</span>Explore the factory bank.</p>
           <div class="level-control"><span class="caption level-label">Playback level</span><div class="segmented" role="group" aria-label="Playback level"><button type="button" id="matched-mode" data-mode="matched" aria-pressed="true">Level matched</button><button type="button" id="raw-mode" data-mode="raw" aria-pressed="false">Raw</button></div></div>
         </div>
         <p class="level-help" id="level-help">Level matched uses SnipSnap’s shared audition target: 0.03 RMS in the loudest 200 ms, so timbre is easier to compare. Raw reveals the engine’s original level. These are separate rendered clips; changing mode keeps the same note and play position.</p>
-        <details class="comparison" id="glass-comparison" open hidden>
+        <details class="comparison" id="glass-comparison" hidden>
           <summary class="comparison-summary"><span><span class="comparison-kicker caption" id="comparison-kicker">GLASS / Before & after</span><span class="comparison-heading">A softer harmonic revision.</span></span></summary>
           <div class="comparison-intro"><p id="comparison-intro">Compare the original R1 sound with the revised R2 sound at the same note and settings. Start level matched to judge the upper harmonics, then try Raw to hear the original output levels.</p><div class="filter-field comparison-select"><label class="caption" for="comparison-select">Choose a comparison</label><select id="comparison-select"></select></div></div>
           <div class="comparison-grid" id="comparison-grid" aria-label="GLASS original and revised clips"></div>
           <p class="comparison-review-note">Reviews follow each audio revision. Your earlier GLASS verdicts are kept separately; the new sound starts with a fresh verdict. Reviews for unchanged voices are retained. Export also includes saved reviews for earlier clips that are not shown here.</p>
         </details>
         <nav class="tabs" role="tablist" aria-label="Audition sections">
-          <button type="button" class="tab" id="tab-voices" data-section="voices" role="tab" aria-selected="true" aria-controls="clip-panel" tabindex="0">Voices <span class="tab-count" data-count="voices">—</span></button>
-          <button type="button" class="tab" id="tab-presets" data-section="presets" role="tab" aria-selected="false" aria-controls="clip-panel" tabindex="-1">Presets <span class="tab-count" data-count="presets">—</span></button>
+          <button type="button" class="tab" id="tab-voices" data-section="voices" role="tab" aria-selected="false" aria-controls="clip-panel" tabindex="-1">Voices <span class="tab-count" data-count="voices">—</span></button>
+          <button type="button" class="tab" id="tab-presets" data-section="presets" role="tab" aria-selected="true" aria-controls="clip-panel" tabindex="0">Presets <span class="tab-count" data-count="presets">—</span></button>
           <button type="button" class="tab" id="tab-sweeps" data-section="sweeps" role="tab" aria-selected="false" aria-controls="clip-panel" tabindex="-1">Macro sweeps <span class="tab-count" data-count="sweeps">—</span></button>
           <button type="button" class="tab" id="tab-interactions" data-section="interactions" role="tab" aria-selected="false" aria-controls="clip-panel" tabindex="-1">Interactions <span class="tab-count" data-count="interactions">—</span></button>
           <button type="button" class="tab" id="tab-extremes" data-section="extremes" role="tab" aria-selected="false" aria-controls="clip-panel" tabindex="-1">Extremes <span class="tab-count" data-count="extremes">—</span></button>
           <button type="button" class="tab" id="tab-hold" data-section="hold" role="tab" aria-selected="false" aria-controls="clip-panel" tabindex="-1">HOLD <span class="tab-count" data-count="hold">—</span></button>
         </nav>
-        <div id="clip-panel" role="tabpanel" aria-labelledby="tab-voices">
+        <div id="clip-panel" role="tabpanel" aria-labelledby="tab-presets">
           <div class="collection-top">
-            <div><div class="section-number caption" id="section-number">Study 01 / Voices</div><h2 id="section-title">Six voices. One harmonic engine.</h2><p class="collection-desc" id="section-description">Compare the fundamental characters across register and velocity. Listen for a stable pitched body and partials with their own lifetimes.</p></div>
+            <div><div class="section-number caption" id="section-number">Study 02 / Presets</div><h2 id="section-title">The full factory bank.</h2><p class="collection-desc" id="section-description">Dry patches for keys and plucks, organs, basses, sustained textures, and glass tones. Filter by voice or search for a name or musical role.</p></div>
             <div class="filters"><div class="filter-field"><label class="caption" for="voice-filter">Voice</label><select id="voice-filter"><option value="all">All voices</option><option value="KEY">Key</option><option value="PLUCK">Pluck</option><option value="ORGAN">Organ</option><option value="BASS">Bass</option><option value="GLASS">Glass</option><option value="VEIL">Veil</option></select></div><div class="filter-field"><label class="caption" for="search">Find a clip</label><input id="search" type="search" placeholder="Name, note, macro…" autocomplete="off"></div></div>
           </div>
+          <p class="factory-summary caption" id="factory-summary" aria-label="Factory bank categories" hidden></p>
           <div class="list-meta caption"><span id="clip-count" role="status">Loading rendered clips…</span><span>Dry · one note at a time</span></div>
           <div class="error" id="manifest-error" role="alert" hidden><p id="manifest-error-message"></p><button type="button" id="retry-manifest">Try loading again</button></div>
           <div class="clip-grid" id="clip-grid" aria-busy="true"><div class="empty"><strong>Opening the listening room…</strong>Loading the manifest and rendered audio references.</div></div>
@@ -253,14 +259,200 @@
     'use strict';
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => [...document.querySelectorAll(selector)];
-    const audio = new Audio();
-    audio.preload = 'auto';
+    // Decode each selected file once. A held note wraps inside the audio render
+    // graph; media-element restarts and UI timers never schedule its boundaries.
+    class BufferAudio extends EventTarget {
+      constructor() {
+        super();
+        this.context = null; this.gain = null; this.source = null;
+        this.buffer = null; this.cache = new Map(); this.controller = null; this.pending = null;
+        this.url = ''; this.offset = 0; this.startedAt = 0;
+        this.desiredPlaying = false; this.finished = false; this.looping = false;
+        this.level = 1; this.resourceVersion = 0; this.playVersion = 0;
+        this.frame = null; this.error = null; this.sampleRate = 44100;
+      }
+      emit(type) { this.dispatchEvent(new Event(type)); }
+      get paused() { return !this.desiredPlaying; }
+      get ended() { return this.finished; }
+      get duration() { return this.buffer ? this.buffer.duration : NaN; }
+      get src() { return this.url; }
+      set src(value) {
+        ++this.resourceVersion; ++this.playVersion;
+        this.controller?.abort(); this.controller = null; this.pending = null;
+        this.desiredPlaying = false; this.stopSource();
+        this.url = String(value); this.buffer = null; this.offset = 0;
+        this.finished = false; this.error = null;
+        this.emit('emptied');
+      }
+      get volume() { return this.level; }
+      set volume(value) {
+        this.level = Math.max(0,Math.min(1,Number(value) || 0));
+        if (this.gain) this.gain.gain.setValueAtTime(this.level,this.context.currentTime);
+      }
+      positionAt(now) {
+        const elapsed = this.source && this.desiredPlaying ? Math.max(0,now - this.startedAt) : 0;
+        const position = this.offset + elapsed;
+        if (!this.buffer) return position;
+        return this.looping ? position % this.duration : Math.min(position,this.duration);
+      }
+      get currentTime() { return this.positionAt(this.context?.currentTime || 0); }
+      set currentTime(value) {
+        if (!Number.isFinite(value)) return;
+        const active = !!this.source && this.desiredPlaying;
+        this.stopSource();
+        this.offset = Math.max(0,Number.isFinite(this.duration) ? Math.min(value,this.duration) : value);
+        if (this.looping && this.buffer) this.offset %= this.duration;
+        this.finished = !!this.buffer && !this.looping && this.offset >= this.duration;
+        if (this.finished) { this.desiredPlaying = false; ++this.playVersion; }
+        else if (active) this.startSource();
+        this.emit('timeupdate');
+        if (this.finished) this.emit('ended');
+      }
+      get loop() { return this.looping; }
+      set loop(value) {
+        const now = this.context?.currentTime || 0;
+        const position = this.positionAt(now);
+        this.looping = !!value;
+        this.offset = this.looping && this.buffer ? position % this.duration : position;
+        this.startedAt = now;
+        if (this.looping) this.finished = false;
+        if (this.source) this.source.loop = this.looping;
+        this.emit('timeupdate');
+      }
+      get seekable() {
+        const duration = this.duration;
+        return { length:Number.isFinite(duration) ? 1 : 0, start:() => 0, end:() => duration };
+      }
+      ensureContext() {
+        if (this.context && this.context.state !== 'closed') return this.context;
+        const Context = window.AudioContext || window.webkitAudioContext;
+        if (!Context) throw new Error('Web Audio is unavailable in this browser.');
+        try { this.context = new Context({ sampleRate:this.sampleRate }); }
+        catch { this.context = new Context(); }
+        this.gain = this.context.createGain();
+        this.gain.gain.value = this.level;
+        this.gain.connect(this.context.destination);
+        this.context.addEventListener('statechange', () => {
+          // Mobile interruptions freeze the audio clock. Pause explicitly so the
+          // next Play gesture can resume the context at the same sample position.
+          if (this.source && this.desiredPlaying && this.context.state !== 'running') this.pause();
+        });
+        return this.context;
+      }
+      remember(url,buffer) {
+        this.cache.delete(url); this.cache.set(url,buffer);
+        while (this.cache.size > 8) this.cache.delete(this.cache.keys().next().value);
+      }
+      getBuffer() {
+        if (this.buffer) return Promise.resolve(this.buffer);
+        if (this.pending) return this.pending;
+        const url = this.url, version = this.resourceVersion;
+        if (!url) return Promise.reject(new Error('No audio file is selected.'));
+        const context = this.ensureContext();
+        const cached = this.cache.get(url);
+        const controller = new AbortController();
+        this.controller = controller;
+        const pending = (async () => {
+          let buffer = cached;
+          if (!buffer) {
+            const response = await fetch(url,{ signal:controller.signal });
+            if (!response.ok) throw new Error('Audio returned HTTP ' + response.status + '.');
+            const bytes = await response.arrayBuffer();
+            if (controller.signal.aborted) throw new DOMException('Loading cancelled.','AbortError');
+            buffer = await context.decodeAudioData(bytes);
+          }
+          if (!buffer.length || !Number.isFinite(buffer.duration) || buffer.duration <= 0) throw new Error('The decoded audio is empty.');
+          this.remember(url,buffer);
+          if (version === this.resourceVersion) {
+            this.buffer = buffer;
+            this.emit('loadedmetadata'); this.emit('loadeddata'); this.emit('canplay'); this.emit('progress');
+          }
+          return buffer;
+        })();
+        this.pending = pending;
+        pending.finally(() => {
+          if (this.pending === pending) { this.pending = null; this.controller = null; }
+        }).catch(() => {});
+        return pending;
+      }
+      reportError(error) {
+        this.error = error; this.desiredPlaying = false; this.stopSource();
+        this.emit('error');
+      }
+      load() {
+        this.error = null;
+        const version = this.resourceVersion, play = this.playVersion;
+        try {
+          this.getBuffer().catch((error) => {
+            if (version === this.resourceVersion && play === this.playVersion && !this.desiredPlaying) this.reportError(error);
+          });
+        } catch (error) { this.reportError(error); }
+      }
+      async play() {
+        const version = this.resourceVersion, play = ++this.playVersion;
+        if (this.finished) this.offset = 0;
+        this.finished = false; this.error = null; this.desiredPlaying = true;
+        try {
+          const context = this.ensureContext();
+          // Invoke resume directly in the click handler, before fetch/decode awaits.
+          const resumed = context.state === 'running' ? Promise.resolve() : Promise.resolve(context.resume());
+          await Promise.all([resumed,this.getBuffer()]);
+          if (version !== this.resourceVersion || play !== this.playVersion || !this.desiredPlaying) return;
+          if (context.state !== 'running') throw new Error('Playback was interrupted. Press Play to resume.');
+          if (!this.source) this.startSource();
+        } catch (error) {
+          if (version === this.resourceVersion && play === this.playVersion && this.desiredPlaying) this.reportError(error);
+          throw error;
+        }
+      }
+      pause() {
+        this.offset = this.currentTime;
+        ++this.playVersion;
+        const active = this.desiredPlaying || !!this.source;
+        this.desiredPlaying = false; this.stopSource();
+        if (active) { this.emit('timeupdate'); this.emit('pause'); }
+      }
+      stopSource() {
+        if (this.frame !== null) cancelAnimationFrame(this.frame);
+        this.frame = null;
+        const source = this.source;
+        this.source = null;
+        if (source) { source.onended = null; try { source.stop(); } catch {} source.disconnect(); }
+      }
+      startSource() {
+        if (!this.buffer || !this.desiredPlaying) return;
+        const source = this.context.createBufferSource();
+        source.buffer = this.buffer;
+        source.loop = this.looping;
+        source.loopStart = 0;
+        source.loopEnd = this.buffer.duration;
+        source.connect(this.gain);
+        this.source = source;
+        this.startedAt = this.context.currentTime;
+        source.onended = () => {
+          if (this.source !== source || !this.desiredPlaying) return;
+          this.source = null; source.disconnect();
+          if (this.frame !== null) cancelAnimationFrame(this.frame);
+          this.frame = null; this.offset = this.duration;
+          this.desiredPlaying = false; this.finished = true;
+          this.emit('timeupdate'); this.emit('ended');
+        };
+        source.start(this.startedAt,this.offset);
+        this.emit('playing');
+        const tick = () => {
+          if (this.source !== source || !this.desiredPlaying) return;
+          this.emit('timeupdate'); this.frame = requestAnimationFrame(tick);
+        };
+        this.frame = requestAnimationFrame(tick);
+      }
+    }
+    const audio = new BufferAudio();
     audio.volume = 0.8;
     const storageKey = 'snipsnap.prism.verdicts.v1';
-    const state = { clips: [], comparisons: [], comparison: null, auditionRevision: null, section: 'voices', voice: 'all', search: '', mode: 'matched', current: null, reviews: {}, storageAvailable: true, loaded: false, request: 0, pendingPosition: null, loading: false };
+    const state = { clips: [], comparisons: [], comparison: null, factoryBank: null, auditionRevision: null, section: 'presets', voice: 'all', search: '', mode: 'matched', current: null, reviews: {}, storageAvailable: true, loaded: false, request: 0, pendingPosition: null, pendingFinished: false, loading: false };
     const sections = {
       voices: ['01', 'Voices', 'Six voices. One harmonic engine.', 'Compare the fundamental characters across register and velocity. Listen for a stable pitched body and partials with their own lifetimes.'],
-      presets: ['02', 'Presets', 'A small collection, carefully voiced.', 'Original dry patches for playable keys, rounded basses, clear plucks, and slowly separating textures. These are the curated starting points.'],
+      presets: ['02', 'Presets', 'The full factory bank.', 'Dry patches for keys and plucks, organs, basses, sustained textures, and glass tones. Filter by voice or search for a name or musical role.'],
       sweeps: ['03', 'Macro sweeps', 'One control. Five points of view.', 'Follow each macro from low to high while the other settings stay fixed. Listen for a change in character, development, or harmonic organization.'],
       interactions: ['04', 'Interactions', 'Where two controls meet.', 'Compare GRAIN × SHAPE, DRIFT × STRIKE, BODY × GRAIN, and DRIFT × SHAPE. The corners reveal how the controls work together.'],
       extremes: ['05', 'Extremes', 'At the edges of the spectrum.', 'Stress the masks and contours at their limits. Listen for a useful pitched result, controlled level, and a complete tail. Raw mode makes original gain differences easier to hear.'],
@@ -294,6 +486,7 @@
       return clip?.reviewKey || (clip?.voice === 'GLASS' && clip.revision !== 'r1' && state.auditionRevision === 'r2' ? 'prism-r2:' + id : id);
     };
     const getReview = (id) => state.reviews[reviewIdentity(id)] || {};
+    const categoryLabel = (id) => state.factoryBank?.categories?.find((category) => category.id === id)?.label || id || '';
     const revisionLabel = (clip) => clip.revision === 'r1' ? 'R1 · Original' : 'R2 · Softer harmonic revision';
     const announceStorage = (message) => { $('#storage-message').textContent = message; $('#storage-message').hidden = false; };
     try {
@@ -337,7 +530,7 @@
       const velocity = Number.isFinite(clip.velocity) ? Math.round(clip.velocity * 100) + '% vel' : '';
       return '<article class="clip' + (state.current?.id === clip.id ? ' is-current' : '') + '" data-id="' + escapeHtml(clip.id) + '" data-comparison="' + comparison + '">' +
         '<div class="clip-top"><button type="button" class="play clip-play" aria-label="' + (playing ? 'Pause ' : 'Play ') + escapeHtml(playbackLabel) + '">' + (playing ? pauseIcon : playIcon) + '</button><div class="clip-title"><h3>' + escapeHtml(title) + '</h3><div class="clip-caption caption"><span class="voice-tag">' + escapeHtml(clip.voice) + '</span><span>' + escapeHtml(clip.noteName || 'MIDI ' + clip.note) + '</span><span>' + velocity + '</span>' + (clip.revision && clip.voice === 'GLASS' && !comparison ? '<span class="revision-tag' + (clip.revision === 'r1' ? ' is-original' : '') + '">' + escapeHtml(clip.revision.toUpperCase()) + '</span>' : '') + (clip.loop ? '<span class="hold-tag">Loop</span>' : '') + (Number.isFinite(clip.seconds) ? '<span>' + clip.seconds.toFixed(1) + 's</span>' : '') + '</div></div></div>' +
-        '<p class="clip-desc">' + escapeHtml(clip.description) + '</p><div class="macro-strip" aria-label="Recorded macro settings">' + ['GRAIN','DRIFT','SHAPE','STRIKE','BODY'].map((macro) => {
+        '<p class="clip-desc">' + escapeHtml(clip.factoryRole || clip.description) + '</p><div class="macro-strip" aria-label="Recorded macro settings">' + ['GRAIN','DRIFT','SHAPE','STRIKE','BODY'].map((macro) => {
           const value = Number.isFinite(clip.macros?.[macro]) ? Math.max(0,Math.min(1,clip.macros[macro])) : 0;
           return '<div class="macro"><div class="macro-label"><span>' + macro + '</span><span class="macro-value">' + value.toFixed(2).replace(/^0/,'') + '</span></div><div class="macro-track" aria-hidden="true"><span style="width:' + (value * 100) + '%"></span></div></div>';
         }).join('') + '</div><div class="clip-footer"><div class="verdicts" role="group" aria-label="Listening verdict for ' + escapeHtml(clip.label) + '">' + [['yes','Yes'],['unsure','Unsure'],['no','No']].map(([value,label]) => '<button type="button" class="verdict" data-verdict="' + value + '" aria-pressed="' + (review.verdict === value) + '">' + label + '</button>').join('') + '</div>' + (url ? '<a class="download" href="' + escapeHtml(url) + '" download="' + escapeHtml(clip.id + '-' + state.mode + '.' + format.extension) + '" aria-label="Download ' + escapeHtml(clip.label) + ', ' + (state.mode === 'matched' ? 'level matched' : 'raw') + ' ' + format.label + '">' + downloadIcon + format.label + '</a>' : '<span class="metric-help">Audio unavailable</span>') + '</div>' +
@@ -364,7 +557,15 @@
       if (!state.loaded) return;
       renderComparison();
       const sectionClips = state.clips.filter((clip) => clip.section === state.section && !clip.comparisonOnly);
-      const filtered = sectionClips.filter((clip) => (state.voice === 'all' || clip.voice === state.voice) && (!state.search || [clip.label,clip.description,clip.voice,clip.noteName,clip.note,clip.macro, ...(clip.pair || [])].join(' ').toLowerCase().includes(state.search)));
+      const categories = state.section === 'presets' && Array.isArray(state.factoryBank?.categories) ? state.factoryBank.categories : [];
+      $('#factory-summary').hidden = !categories.length;
+      $('#factory-summary').innerHTML = categories.map((category) => '<span><b>' + escapeHtml(category.count) + '</b>' + escapeHtml(category.label) + '</span>').join('');
+      $('#search').placeholder = state.section === 'presets' ? 'Name, role, category…' : 'Name, note, macro…';
+      for (const option of $('#voice-filter').options) {
+        const label = option.value === 'all' ? 'All voices' : option.value.charAt(0) + option.value.slice(1).toLowerCase();
+        option.textContent = label + ' · ' + sectionClips.filter((clip) => option.value === 'all' || clip.voice === option.value).length;
+      }
+      const filtered = sectionClips.filter((clip) => (state.voice === 'all' || clip.voice === state.voice) && (!state.search || [clip.label,clip.description,clip.factoryRole,clip.factoryCategory,categoryLabel(clip.factoryCategory),clip.voice,clip.noteName,clip.note,clip.macro, ...(clip.pair || [])].join(' ').toLowerCase().includes(state.search)));
       $('#clip-count').textContent = filtered.length + ' of ' + sectionClips.length + ' clips' + (state.voice === 'all' ? '' : ' / ' + state.voice);
       $('#clip-grid').setAttribute('aria-busy', 'false');
       if (!filtered.length) { $('#clip-grid').innerHTML = '<div class="empty"><strong>No clips match these filters.</strong>Choose another voice or clear the search to keep listening.</div>'; return; }
@@ -391,8 +592,10 @@
       const request = ++state.request;
       $('#audio-error').hidden = true;
       state.loading = true;
+      if (position === null && state.pendingFinished) { state.pendingPosition = 0; state.pendingFinished = false; }
       if (position !== null) state.pendingPosition = position;
       if (audio.error) audio.load();
+      restorePendingPosition();
       updatePlayback();
       try { await audio.play(); if (request !== state.request) return; state.loading = false; updatePlayback(); }
       catch (error) {
@@ -410,6 +613,7 @@
       audio.pause();
       state.current = clip;
       state.pendingPosition = null;
+      state.pendingFinished = false;
       $('#player-title').textContent = (clip.comparisonGroup ? revisionLabel(clip) + ' / ' : '') + clip.label;
       $('#loop').disabled = !clip.loop;
       $('#loop').checked = false;
@@ -430,7 +634,8 @@
     const setMode = (mode) => {
       if (mode === state.mode) return;
       const wasPlaying = !audio.paused;
-      const position = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      const position = state.pendingPosition !== null ? state.pendingPosition : Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      const finished = state.pendingFinished || audio.ended;
       ++state.request;
       audio.pause();
       state.mode = mode;
@@ -439,6 +644,7 @@
         try {
           const url = clipPath(state.current);
           state.pendingPosition = position;
+          state.pendingFinished = finished;
           state.loading = wasPlaying;
           $('#seek').disabled = true;
           audio.src = url;
@@ -466,6 +672,9 @@
           clipPath(clip, 'raw'); clipPath(clip, 'matched');
         }
         state.clips = manifest.clips;
+        audio.sampleRate = Number.isFinite(manifest.sampleRate) ? manifest.sampleRate : 44100;
+        state.factoryBank = manifest.factoryBank || null;
+        $('#factory-count').textContent = state.clips.filter((clip) => clip.section === 'presets' && !clip.comparisonOnly).length + ' factory presets';
         state.auditionRevision = manifest.auditionRevision || null;
         const pairs = new Map();
         for (const clip of state.clips.filter((item) => item.comparisonGroup === 'glass-softening' && item.comparisonPair)) {
@@ -506,6 +715,7 @@
     $('#voice-filter').addEventListener('change', (event) => { state.voice = event.target.value; render(); });
     $('#search').addEventListener('input', (event) => { state.search = event.target.value.trim().toLowerCase(); render(); });
     $('#comparison-select').addEventListener('change', (event) => { state.comparison = event.target.value; renderComparison(); });
+    $('#factory-jump').addEventListener('click', () => { state.section = 'presets'; state.voice = 'all'; state.search = ''; $('#voice-filter').value = 'all'; $('#search').value = ''; render(); });
     $('#revision-jump').addEventListener('click', () => { $('#glass-comparison').open = true; });
     $('#retry-manifest').addEventListener('click', loadManifest);
     $('#listening-room').addEventListener('click', (event) => {
@@ -541,12 +751,13 @@
     });
     const restorePendingPosition = () => {
       if (state.pendingPosition === null || !Number.isFinite(audio.duration)) return;
-      const target = Math.min(state.pendingPosition, Math.max(0,audio.duration - 0.01));
+      const target = Math.min(state.pendingPosition,Math.max(0,audio.duration));
       let available = target === 0;
       for (let index = 0; index < audio.seekable.length; index++) if (target >= audio.seekable.start(index) && target <= audio.seekable.end(index)) available = true;
       if (!available) return;
       audio.currentTime = target;
       state.pendingPosition = null;
+      state.pendingFinished = false;
     };
     audio.addEventListener('loadedmetadata', () => {
       restorePendingPosition();

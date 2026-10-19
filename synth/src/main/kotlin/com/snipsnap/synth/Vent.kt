@@ -17,7 +17,7 @@ import kotlin.math.sqrt
 import kotlin.math.tanh
 import kotlin.random.Random
 
-enum class VentVoice { ROUND, WIRE, TEAR }
+enum class VentVoice { ROUND, WIRE, TEAR, PULSE, COIL, PLUME }
 
 /** A sparse trajectory record at playback time; these coordinates are the actual sound source. */
 data class VentTrace(val seconds: Double, val x: Double, val y: Double, val z: Double)
@@ -28,6 +28,10 @@ data class VentDiagnostics(
     val integrationFailures: Int, val leashResets: Int,
     val measuredOrbitPeriod: Double, val modelTimeStep: Double,
     val signalPath: String = "voice-shaped",
+    /** Model-time integral of the magnitude of added gesture force; excludes LEASH. */
+    val externalForceIntegral: Double = 0.0,
+    /** Distance traveled by the linear readout direction on its unit sphere. */
+    val projectionSpan: Double = 0.0,
 )
 
 /** Raw is 44.1 kHz, after antialias filtering and before the shared melodic level convention. */
@@ -84,17 +88,27 @@ object Vent {
     const val DEFAULT_MIDI = 60
     const val MODEL = 1
     const val MODEL_VERSION = MODEL
+    const val CLEAN_MODEL = 2
     private const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val MAX_STEP = .02
     private const val STATE_BOUND = 256.0
 
-    fun supportsModel(model: Int): Boolean = model == MODEL
+    fun supportsModel(model: Int): Boolean = model == MODEL || model == CLEAN_MODEL
+
+    /** Historical voices keep their original model; clean voices have separate saved recipes. */
+    fun defaultModelFor(voice: VentVoice): Int = when (voice) {
+        VentVoice.ROUND, VentVoice.WIRE, VentVoice.TEAR -> MODEL
+        VentVoice.PULSE, VentVoice.COIL, VentVoice.PLUME -> CLEAN_MODEL
+    }
+
+    fun supportsVoiceModel(voice: VentVoice, model: Int): Boolean = model == defaultModelFor(voice)
 
     fun macrosFor(voice: VentVoice): List<MacroSpec> {
         val d = when (voice) {
             VentVoice.ROUND -> floatArrayOf(.12f, .85f, .18f, .72f, .25f, .68f)
             VentVoice.WIRE -> floatArrayOf(.45f, .65f, .54f, .28f, .45f, .68f)
             VentVoice.TEAR -> floatArrayOf(.85f, .20f, .78f, .12f, .78f, .68f)
+            VentVoice.PULSE, VentVoice.COIL, VentVoice.PLUME -> floatArrayOf(.65f, .55f, .5f, .25f, .6f, .74f)
         }
         return listOf("CHAOS", "LEASH", "VIEW", "DAMP", "PUSH", "LENGTH")
             .mapIndexed { i, name -> MacroSpec(name, d[i], .35f) }
@@ -165,13 +179,18 @@ object Vent {
 
     fun render(
         voice: VentVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = 1f, seed: Int = 0, model: Int = MODEL,
+        velocity: Float = 1f, seed: Int = 0, model: Int = defaultModelFor(voice),
     ): Snip = renderDetailed(voice, macros, midi, velocity, seed, model).snip
 
     fun renderDetailed(
         voice: VentVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = 1f, seed: Int = 0, model: Int = MODEL,
-    ): VentRender = renderCore(voice, macros, midi, velocity, seed, model)
+        velocity: Float = 1f, seed: Int = 0, model: Int = defaultModelFor(voice),
+    ): VentRender {
+        require(supportsModel(model)) { "unsupported VENT model $model" }
+        require(supportsVoiceModel(voice, model)) { "VENT $voice does not support model $model" }
+        return if (model == CLEAN_MODEL) VentModel2.render(voice, settled(voice, macros), midi, velocity, seed)
+            else renderCore(voice, macros, midi, velocity, seed, model)
+    }
 
     /**
      * Controlled audition of the same orbit and X-only LEASH without voice coloring.
@@ -245,8 +264,14 @@ object Vent {
         val theta = PI*(view-.35)
         val readX = cos(theta)
         val readY = sin(theta)
-        val zWeight = when (voice) { VentVoice.ROUND -> .13; VentVoice.WIRE -> .62; VentVoice.TEAR -> 1.28 } * (.15+1.4*view)
-        val drive = when (voice) { VentVoice.ROUND -> .75; VentVoice.WIRE -> 1.7; VentVoice.TEAR -> 2.7 } * (.70+.40*vel)
+        val zWeight = when (voice) {
+            VentVoice.ROUND -> .13; VentVoice.WIRE -> .62; VentVoice.TEAR -> 1.28
+            else -> error("clean VENT voice requires model 2")
+        } * (.15+1.4*view)
+        val drive = when (voice) {
+            VentVoice.ROUND -> .75; VentVoice.WIRE -> 1.7; VentVoice.TEAR -> 2.7
+            else -> error("clean VENT voice requires model 2")
+        } * (.70+.40*vel)
         val zScale = ln(1.0+3.0*orbit.c)
         // Bound the endpoints before mapping, preserving DAMP activity at high notes.
         val lowCutoff = (hz*.85).coerceAtLeast(70.0)
@@ -264,7 +289,10 @@ object Vent {
         val trace = ArrayList<VentTrace>()
         val traceStride = INTERNAL_RATE/200
         val attack = if (isolation) VentIsolationSpec.ATTACK_SECONDS
-            else when (voice) { VentVoice.ROUND -> .006; VentVoice.WIRE -> .004; VentVoice.TEAR -> .003 }
+            else when (voice) {
+                VentVoice.ROUND -> .006; VentVoice.WIRE -> .004; VentVoice.TEAR -> .003
+                else -> error("clean VENT voice requires model 2")
+            }
         for (i in rawInternal.indices) {
             if (i % 2048 == 0) stopIfUnwanted()
             repeat(substeps) { orbit.step(dt) }

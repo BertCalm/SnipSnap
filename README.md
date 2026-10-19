@@ -164,6 +164,15 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CONFLUENCE's first recorded-source proof renders a small gathering from supplied
+vocal regions: one to eight persistent performers, complete phrase responses,
+staggered sustained vowels and a shared mono room. Run
+`./gradlew :synth:generateConfluenceAudition` for attributed human-source,
+raw/matched listening comparisons and portable prototype recipes. The
+[audition](https://confluence-snipsnap-audition.bertcalm.chatgpt.site) awaits the
+owner's listening verdict; [implementation notes](docs/CONFLUENCE.md) distinguish
+this finite renderer from the later phone editor, larger crowd and HOLD stages.
+
 THUMP, the analog-style drum voice engine — S1 of
 [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md), real. Eight voices (kick,
 snare, closed/open hat, clap, tom, cowbell, rim), every macro normalized 0..1
@@ -264,11 +273,12 @@ keep both layers on the requested
 note together with gentle tape wow/flutter. STRAIN shapes their journey,
 RETURN sets the swelling backward layer,
 IMPRINT leaves delayed traces in neighboring strips and SPLICE
-reorders short sections. Six dry presets, a sixteen-pad starter, the synth
+reorders short sections. Thirty-six dry presets, a sixteen-pad starter, the synth
 picker and CLI use the same serialized machine. HOLD loops an explicitly
 frozen imprint snapshot. Run `./gradlew :synth:generateSpoolAudition` for the
-first listening pack; [implementation notes](docs/SPOOL.md) explain its
-export semantics. The proposed 36-preset library awaits dry sonic approval.
+full preset and musical audition; [implementation notes](docs/SPOOL.md) explain its
+export semantics. The original six sounds have dry sonic approval; the expanded
+bank adds 30 recipes while preserving those originals and the starter kit.
 
 RELAY makes a compact timbral phrase inside one pitched note: a rounded
 pluck hands off to harmonic body, bell detail and soft tone, with accents
@@ -309,7 +319,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 31 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 33 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -335,14 +345,27 @@ preserved models 1 and 2 for comparison.
 LACQUER is a layered-tone engine for finished keys, glass, synthetic brass,
 bass, plucks and broad sustains. RELIEF separates independent body, edge and
 trail articulation; SHEEN, BODY, CONTOUR and GLUE shape their common finish.
-Eight provisional patches retain explicit layer models, MIDI root and velocity.
+Thirty-six recipes, six per voice, retain explicit layer models, MIDI root and
+velocity. The original eight remain unchanged as the reference bank.
 HOLD's top step supplies settled loop material, with periodic layer contours
 preserving RELIEF after the initial arrivals have passed. Run
 `./gradlew :synth:generateLacquerAudition` for native/matched samples, layer solos,
 macro sweeps and interaction grids. [Implementation notes](docs/LACQUER.md)
 describe the contracts. The [published audition](https://snipsnap-lacquer-audition.bertcalm.chatgpt.site)
-is private to the owner's account and includes the dry sixteen-pad MPC kit.
-Dry sonic approval precedes the full preset expansion.
+is private to the owner's account and includes three twelve-preset MPC bank
+programs plus the original dry sixteen-pad starter. The expanded recipes are
+available for listening review; physical device validation remains a bench step.
+
+WICK is a first listening prototype: one pitched complex source feeds three
+recovering low-pass gates, and actual releases ignite later articulations.
+PLUCK and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Nine provisional recipes stay outside
+the phone picker and factory roster pending listening. Run
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, BUBBLE
+tone comparisons, mechanism comparisons, control sweeps, held loops and causal traces. The
+[private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
+[implementation notes](docs/WICK.md) describe this first round; the remaining
+four proposed voices and full preset library follow the listening verdict.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -354,6 +377,31 @@ and capture/control diagnostics. The
 [private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
+
+OVERLAP is a second-listen six-delay resonator prototype: a finite strike rings
+through selectable self, three-cycle, reflected-pair or six-cycle routing.
+KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response; saved recipes
+retain MIDI root and velocity. Run `./gradlew :synth:generateOverlapAudition`
+for twelve dry raw/matched comparisons and their replayable recipes. Revision 2
+uses different cycle families, passive depth scattering and phase-gated excitation
+after the first listening verdict found the identities and breathing too similar. The
+[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site)
+awaits listening; [implementation notes](docs/OVERLAP.md) describe tuning limits
+and the prototype's scope before phone-picker or sustained-loop integration.
+
+FLOCK is a finite oscillator-flock listening proof: twenty-four oscillators
+scatter and respond through changing local neighborhoods around a played note.
+GATHER, RIBBON and SPLIT share SPREAD, PULL, FLOW, SCATTER, EDGE and HOLD;
+HOLD is two to six seconds, with no loop mode. Exact seeded patches, recipes,
+physical velocity and CLI auditions are implemented; its nine provisional
+presets stay outside the factory roster and phone picker pending listening.
+Run `./gradlew :synth:generateFlockAudition` for real raw/matched WAVs,
+fixed/independent comparisons and one-particle disturbance measurements.
+The [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site)
+and [implementation notes](docs/FLOCK.md) describe the proof and its limits.
+After the first listen, model 2 gives FLOW a slow-to-fast clock for the flock;
+original model-1 recipes and each voice's default sound remain exact. The
+audition includes five Previous/Revised FLOW pairs, with its other clips retained.
 
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
@@ -396,6 +444,14 @@ a SnipSnap working folder, native MPC 3 export and compatibility twin, with raw
 renders, recipes and checks. [Implementation notes](docs/OSPREY.md) describe the
 three models, audition and hardware handoff.
 
+OPENSKY adapts the XOpenSky concept into four stereo voices: ANTHEM, SOAR,
+HALO and CRYSTAL. RISE, WIDTH, GLOW and AIR shape the source and its octave
+room; eight accepted Round 3 recipes retain their complete timbre, root,
+velocity, gate and wet state when saved. The SYNTH picker, a sixteen-pad
+C minor pentatonic starter, CLI rendering and HALO held-instrument export
+share these production recipes. [Integration notes](docs/OPENSKY_AUDITION.md)
+record the audition baseline and the remaining phone listening checks.
+
 REVEL is a pitched circular ensemble: friction gestures, pressure-bent
 articulation, alternating rolls and broad pulses share a passive floor. One
 to three moving microphones hear the same performance through distinct
@@ -422,23 +478,35 @@ describe compatibility and export behavior. MUSETTE remains provisional.
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
 plucks, organs, basses, glass and sustained veils whose harmonics develop at
 different rates. GRAIN, DRIFT, SHAPE, STRIKE and BODY shape the dry note; HOLD
-exports settled periodic loops. Eight audition presets, a dry sixteen-pad kit,
+exports settled periodic loops. Thirty-six factory presets, a dry sixteen-pad kit,
 patch recipes, CLI and the phone picker share the Kotlin renderer. Run
 `./gradlew :synth:generatePrismAudition` for raw/matched voices, macro sweeps,
 interaction grids, velocity and loop probes. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-awaits the owner's dry listening verdict before expanding the preset roster.
+includes the complete factory bank and the original/revised GLASS comparisons.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
+
+SHOAL's first prototype offers GLASS and RIPPLE: harmonic energy gathers,
+migrates between partials and briefly strays before returning. DENSITY, CURRENT,
+COHESION, STRAY and GLOW shape the population; HOLD supplies a moving loop.
+ROOT and VELOCITY remain independent controls. Eight provisional dry recipes,
+saved patches, a sixteen-pad starter kit, CLI rendering and the phone picker
+support the first listen. Run `./gradlew :synth:generateShoalAudition` for the
+audition. The remaining four proposed voices and 36-preset expansion await
+later work. The first listen found the two voices too similar; model 2 revises
+their contrast and awaits another listen. Saved model-1 recipes retain their sound.
+[Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
 
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
 modulation port. BASS, KEY, PLUCK, BRASS, STRING and SOFT share MATERIAL, FUSE,
-EDGE, BODY, LENGTH, TUNE and HOLD. Twelve provisional presets, saved operator and
+EDGE, BODY, LENGTH, TUNE and HOLD. Thirty-six factory presets, saved operator and
 material recipes, native velocity and a dry sixteen-pad kit use the same renderer.
 Run `./gradlew :synth:generateAlloyAudition` for voice/register/velocity coverage,
 five-point sweeps, interactions, FUSE ablation and settled loop listening. The
-[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) awaits
-the owner's sonic verdict before expansion to the proposed 36 presets.
+[published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site) includes
+six presets per voice. The owner heard the initial twelve and authorized this
+expansion on the same engine tuning; the new presets await listening review.
 [Implementation notes](docs/ALLOY.md) describe the render and export contracts.
 
 CONTOUR is an original wavetable instrument: a stable body carries the note while
@@ -695,8 +763,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY and GRAINS round out the lineup —
-thirty-nine engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY and GRAINS round out the lineup —
+forty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -879,17 +947,19 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, plus GRAINS, SNAP and DRAW, which sit beside the
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR and OSPREY
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. VENT, a Rössler-attractor synth prototype (not the TapeOS
 scheme of that name), is in the module outside the picker and the preset
-roster: `snipsnap synth VENT` renders its three provisional recipes, and
+roster: `snipsnap synth VENT` renders six provisional recipes across two
+saved models: ROUND, WIRE and TEAR use model 1; PULSE, COIL and PLUME use the
+clean model 2. The voice selects its model, and
 `--midi`, `--velocity` and `--seed` set their note, strike energy and
 starting trajectory ([`docs/VENT.md`](docs/VENT.md)).
 Each file's own KDoc names its spec.
