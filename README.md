@@ -438,7 +438,9 @@ remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudit
 for paired R1/R3 renders and creature-muted body comparisons. The original
 46-clip study remains preserved. After the [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
 the owner said, “We are in a better spot audio wise.” R3 is the working audio
-baseline; final listening and phone/MPC acceptance remain open. Run
+baseline. The owner subsequently confirmed, “Sounds good in app, let's proceed.”
+In-app listening is confirmed; save/reopen, recipe replay and MPC playback checks
+remain open. The [MPC listening pass](docs/OSPREY_MPC_PASS.md) is next. Run
 `./gradlew :shell:generateOspreyHandoff` for the existing sixteen-pad starter as
 a SnipSnap working folder, native MPC 3 export and compatibility twin, with raw
 renders, recipes and checks. [Implementation notes](docs/OSPREY.md) describe the
@@ -767,6 +769,15 @@ the owner's listening review. Audition: `./gradlew :synth:generateCorollaAuditio
 Individual presets can also be rendered with
 `./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
 
+ORPHICA is a first-listen microsound-harp prototype: each tuned pluck disperses
+into grains of its own recent history. CLEAR, STUTTER, SCATTER, REVERSE and
+captured FREEZE are deterministic stereo renders, with dry attacks and no
+added reverb. Run `./gradlew :synth:generateOrphicaAudition` for the raw/matched
+listening pack. The owner gave the finite sound a positive first-listening verdict. The phone
+picker now provides material, mode, root and HOLD controls; MAKE INSTRUMENT
+exports attack-preserving stereo captured-sustain keygroups. Original finite
+recipes retain their sound. See [ORPHICA](docs/ORPHICA.md).
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -776,7 +787,7 @@ that doubles any kit onto pads 17–32 through seeded FX.
 
 VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN and GRAINS round out the lineup —
-forty-two engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+forty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -914,7 +925,12 @@ stretched head and REVERSE's flip included — sees the pitched sound), EQ
 (three
 plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
-hit's onset, on a pad that was never a synth), SQUASH
+hit's onset, on a pad that was never a synth), WAH (a resonant band-pass
+swept between a heel and a toe by three moves held as weights, TOUCH from the
+hit's own envelope, AUTO a sine with a flat top (it rests at the toe for 39
+percent of each cycle at AMT 100 and 14 percent at AMT 70) and ROCK one
+heel-toe-heel gesture, with SPEED and Q beside them; the first pedal on the board, in front of
+the compressor and the amp), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
 tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
 giving way under it on loud passages, TONE after the tube, CAB from no
@@ -949,7 +965,7 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → squash → valve → crunch → ring → dub → vinyl →
+spike → eq → contour → wah → squash → valve → crunch → ring → dub → vinyl →
 tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.

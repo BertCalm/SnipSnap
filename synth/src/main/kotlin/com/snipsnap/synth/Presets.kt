@@ -192,6 +192,10 @@ object Presets {
             val v = RelayVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             RelayPresets.forVoice(v)
         }
+        OrphicaPatch.ENGINE -> {
+            val material = OrphicaMaterial.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OrphicaPresets.forVoice(material)
+        }
         OpenSkyPatch.ENGINE -> {
             val v = OpenSkyVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             OpenSkyPresets.forVoice(v)
@@ -236,5 +240,5 @@ object Presets {
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + OvenPresets.all()
+            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + OrphicaPresets.all() + OvenPresets.all()
 }

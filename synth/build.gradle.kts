@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** First-listen microsound-harp prototype: dry attack, causal grains and captured tails. */
+tasks.register<JavaExec>("generateOrphicaAudition") {
+    group = "distribution"
+    description = "Render ORPHICA raw/matched WAVs, replayable patches, manifest and listening page under testkit/orphica-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OrphicaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/orphica-audition")
+}
+
 /** Finite OVERLAP proof: twelve real Kotlin renders, replayable recipes and the listening bench. */
 tasks.register<JavaExec>("generateOverlapAudition") {
     group = "distribution"
@@ -837,6 +848,16 @@ tasks.register<JavaExec>("generatePedalAudition") {
     mainClass.set("com.snipsnap.synth.PedalAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/pedal-audition")
+}
+
+/** Render the WAH section's gate clips and manifest under testkit/wah-audition/. See WahAuditionGenerator. */
+tasks.register<JavaExec>("generateWahAudition") {
+    group = "distribution"
+    description = "Render the WAH section's gate clips and manifest under testkit/wah-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WahAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/wah-audition")
 }
 
 tasks.register<JavaExec>("generateFlotillaKit") {

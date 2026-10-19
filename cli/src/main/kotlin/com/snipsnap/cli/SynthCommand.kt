@@ -9,6 +9,7 @@ import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
+import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.RegistersPadMaker
@@ -27,6 +28,8 @@ import com.snipsnap.synth.FlockPresets
 import com.snipsnap.synth.FlockVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.Orphica
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
@@ -99,15 +102,16 @@ import kotlin.random.Random
  * dry: an instrument is nine held zones and a drone a loop, each with its own
  * shape, and neither is a one-shot pad.
  *
- * `--instrument [--attack S] [--release S]` (RESIN; REGISTERS accepts release only) renders the preset
- * held down instead: a keys instrument that sounds while a key is held.
+ * `--instrument [--attack S] [--release S]` renders the preset as keys that
+ * sound while held. RESIN accepts attack and release; ORPHICA, REGISTERS and
+ * OPENSKY HALO keep their authored attack and accept release only.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT/FLOCK/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, ORPHICA and the VENT/FLOCK/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -121,6 +125,9 @@ import kotlin.random.Random
  * FLOCK GATHER/RIBBON/SPLIT also keep provisional recipes outside that roster;
  * `--seed N` accepts the full signed 64-bit range for their finite performances.
  * WICK likewise offers its nine provisional PLUCK/BUBBLE recipes without adding a phone engine.
+ * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
+ * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
+ * `--velocity` sets the string energy for both shapes.
  */
 object SynthCommand {
 
@@ -173,7 +180,7 @@ object SynthCommand {
         val drone = opts.has("--drone")
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine != OpenSkyPatch.ENGINE)) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
                 OvenPatch.ENGINE -> Oven.MIDI_MIN..Oven.MIDI_MAX
@@ -190,6 +197,7 @@ object SynthCommand {
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                OrphicaPatch.ENGINE -> Orphica.MIDI_MIN..Orphica.MIDI_MAX
                 OspreyPatch.ENGINE -> Osprey.MIDI_MIN..Osprey.MIDI_MAX
                 OpenSkyPatch.ENGINE -> OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
@@ -206,7 +214,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK and WICK, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK, WICK and ORPHICA, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -218,14 +226,17 @@ object SynthCommand {
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, OrphicaPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
         val flockSeedOverride = if (engine == FlockPatch.ENGINE) opts["--seed"]?.let { raw ->
             raw.toLongOrNull() ?: throw CliError("--seed for FLOCK wants a signed 64-bit integer, got '$raw'")
         } else null
-        val seedOverride = if (engine == FlockPatch.ENGINE) null else seedFlag("--seed")
+        val orphicaSeedOverride = if (engine == OrphicaPatch.ENGINE) opts["--seed"]?.let { raw ->
+            raw.toLongOrNull() ?: throw CliError("--seed wants a 64-bit integer seed, got '$raw'")
+        } else null
+        val seedOverride = if (engine in setOf(FlockPatch.ENGINE, OrphicaPatch.ENGINE)) null else seedFlag("--seed")
         val secondsOverride = opts["--seconds"]?.let { raw ->
             if (engine != OspreyPatch.ENGINE) throw CliError("--seconds is only supported by OSPREY, got $engine")
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .25f..Osprey.MAX_SECONDS }
@@ -241,8 +252,9 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE)) throw CliError("only RESIN, REGISTERS and OPENSKY HALO export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
+            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO and ORPHICA export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
             if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its speaking attack - use --release to shape the held instrument")
+            if (engine == OrphicaPatch.ENGINE && opts["--attack"] != null) throw CliError("ORPHICA keeps the pluck attack; --instrument accepts --release")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
             if (engine == OpenSkyPatch.ENGINE) {
                 if (!OpenSkyPadMaker.supports(OpenSkyVoice.valueOf(voice))) throw CliError("--instrument supports OPENSKY HALO; $voice is a finite sound")
@@ -310,6 +322,13 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OrphicaPatch -> patch.copy(
+                    config = patch.config.copy(
+                        midi = midiOverride ?: patch.config.midi,
+                        velocity = velocityOverride ?: patch.config.velocity,
+                    ),
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to .5f),
+                )
                 is OspreyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OpenSkyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RevelPatch -> patch.copy(
@@ -344,6 +363,8 @@ object SynthCommand {
                     name = "Scrambled ${withSeed.name}",
                     macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
                 )
+            } else if (withNote is OrphicaPatch && orphicaSeedOverride != null) {
+                withNote.copy(config = withNote.config.copy(seed = orphicaSeedOverride))
             } else if (withNote is OspreyPatch) withNote.copy(
                 seed = seedOverride ?: withNote.seed,
                 durationSeconds = secondsOverride ?: withNote.durationSeconds,
@@ -406,6 +427,23 @@ object SynthCommand {
         fun seconds(flag: String, default: Float): Float {
             val raw = opts[flag] ?: return default
             return raw.toFloatOrNull() ?: throw CliError("$flag wants seconds, got '$raw'")
+        }
+        if (patch is OrphicaPatch) {
+            val spec = try {
+                OrphicaPadMaker.Spec(patch.config, patch.macros, seconds("--release", OrphicaPadMaker.RELEASE.default))
+            } catch (e: IllegalArgumentException) {
+                throw CliError(e.message ?: "bad --release")
+            }
+            val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
+            val midis = OrphicaPadMaker.zoneMidis(spec)
+            val notes = midis.mapIndexed { i, midi ->
+                out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+                OrphicaPadMaker.renderZone(spec, midi)
+            }
+            OrphicaPadMaker.export(name, spec, notes, dir)
+            out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+            out.println("${midis.size} stereo zones, captured sustain - RELEASE ${OrphicaPadMaker.secondsLabel(spec.releaseSeconds)}")
+            return 0
         }
         if (patch is RegistersPatch) {
             val spec = try {
