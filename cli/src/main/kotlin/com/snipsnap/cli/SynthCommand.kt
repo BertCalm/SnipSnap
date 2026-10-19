@@ -129,7 +129,7 @@ import kotlin.random.Random
  * starting recipes are available here while remaining outside the factory roster.
  * FLOCK GATHER/RIBBON/SPLIT also keep provisional recipes outside that roster;
  * `--seed N` accepts the full signed 64-bit range for their finite performances.
- * WICK likewise offers its nine provisional PLUCK/BUBBLE recipes without adding a phone engine.
+ * WICK offers thirteen provisional PLUCK/WOOD/BUBBLE recipes without adding a phone engine.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
  * `--velocity` sets the string energy for both shapes.
