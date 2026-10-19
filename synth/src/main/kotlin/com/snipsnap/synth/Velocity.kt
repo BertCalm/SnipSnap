@@ -398,7 +398,7 @@ object Velocity {
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
         is MagnetPatch, is PluckPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
         is SnapPatch, is TerraPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
-        is VelvetPatch, is VoxPatch,
+        is VelvetPatch, is VoxPatch, is OnsetPatch,
         -> null
     }
 
