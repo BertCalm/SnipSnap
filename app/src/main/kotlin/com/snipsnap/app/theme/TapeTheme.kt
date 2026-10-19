@@ -2,6 +2,7 @@ package com.snipsnap.app.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -52,15 +53,32 @@ val BinRedOnLcd: Color @Composable get() = LocalScheme.current.binLcd.tape
  */
 val Scheme.amberOnChrome: Color @Composable get() = (if (look == Look.MODERN) accent else amber).tape
 
+/**
+ * The LCD's second tier of text: [Scheme.lcdInk] at [Schemes.LCD_INK2_ALPHA].
+ * `ink`, `ink2` and `ink3` are chrome inks - tuned against `gray`, and on a
+ * paper scheme (where the LCD is the dark surface) near-invisible on it - so
+ * a secondary line inside an LCD reads this, and emphasis there reads `amber`.
+ * Not a composable read, so the canvases that draw their own labels can use
+ * it too. `ContrastTest` holds it at AA over the LCD in every scheme.
+ */
+val Scheme.lcdInk2: Color get() = lcdInk.tape.copy(alpha = Schemes.LCD_INK2_ALPHA)
+
 val LocalScheme = staticCompositionLocalOf { Schemes.DEFAULT }
 
+/**
+ * The window's theme: the scheme, and any further locals the root wants
+ * every screen to read ([also] - App passes the motor, `LocalHaptics`, so
+ * no pad grid or stepper needs it as a parameter).
+ */
 @Composable
 fun TapeTheme(
     scheme: Scheme,
+    vararg also: ProvidedValue<*>,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
         LocalScheme provides scheme,
+        *also,
         content = content,
     )
 }

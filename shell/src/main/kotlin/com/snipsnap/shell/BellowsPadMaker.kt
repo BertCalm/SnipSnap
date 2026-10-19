@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.synth.Bellows
@@ -55,7 +56,7 @@ object BellowsPadMaker {
         val groups = roots.mapIndexed { zoneIndex, midi ->
             require(notes[zoneIndex].size == VELOCITIES.size) { "BELLOWS zone $midi needs three velocity layers" }
             val layers = notes[zoneIndex].mapIndexed { layerIndex, note ->
-                require(note.snip.channels == 1 && note.snip.sampleRate == 44_100) { "BELLOWS samples must be mono 44100 Hz" }
+                require(note.snip.channels == 1 && note.snip.sampleRate == WavWriter.MPC_SAMPLE_RATE) { "BELLOWS samples must be mono ${WavWriter.MPC_SAMPLE_RATE} Hz" }
                 require(note.loopStartFrame in 1 until note.snip.frameCount.toLong()) { "BELLOWS zone $midi must have an attack and sustain loop" }
                 val stem = Names.sanitizeStem("${name.replace(" ", "")}_${midi}_${layerIndex + 1}")
                 samples[stem] = note.snip

@@ -436,7 +436,7 @@ class RelayTest {
 
     @Test
     fun `velocity reaches raw excitation and changes articulation after level matching`() {
-        for (voice in listOf(RelayVoice.KEY, RelayVoice.BASS, RelayVoice.CHIME)) {
+        for (voice in RelayVoice.entries) {
             val phrase = compactPhrase(voice)
             val soft = Relay.inspect(voice, velocity = 0.25f, normalize = false, phrase = phrase)
             val hard = Relay.inspect(voice, velocity = 1f, normalize = false, phrase = phrase)

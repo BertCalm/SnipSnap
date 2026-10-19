@@ -39,12 +39,23 @@ object Inserts {
      * Never throws for want of a catalog number: a kit outside a crate
      * has none, both inserts say so by leaving it off, and that is an
      * ordinary kit rather than an error.
+     *
+     * [jCardPng] paints the J-Card: `(kit, kitDir, catalog) -> PNG bytes`.
+     * It defaults to the desktop (AWT) renderer, which is right for
+     * `:cli` and the tests and **crashes on Android** — `java.awt` does
+     * not exist there — so `:app` always passes its own
+     * `android.graphics` one (`AndroidJCard.png`).
      */
-    fun write(kit: Kit, kitDir: File, into: File): List<File> {
+    fun write(
+        kit: Kit,
+        kitDir: File,
+        into: File,
+        jCardPng: (Kit, File, String?) -> ByteArray = JCard::awtPng,
+    ): List<File> {
         val catalog = Label.forKit(kitDir)
         val jCard = File(into, J_CARD_NAME)
         jCard.parentFile?.mkdirs()
-        jCard.writeBytes(JCard.png(kit, kitDir, catalog = catalog))
+        jCard.writeBytes(jCardPng(kit, kitDir, catalog))
         val notes = LinerNotes.writeTo(kit, kitDir, File(into, LinerNotes.FILE_NAME), catalog)
         return listOf(jCard, notes)
     }

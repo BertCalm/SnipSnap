@@ -17,21 +17,34 @@ object Loudness {
     private const val HOP_SECONDS = 0.05f
     private const val LOW_CUT_HZ = 120f
 
-    fun of(snip: Snip): Float {
-        val mono = if (snip.channels == 1) snip.samples else Cleanup.toMono(snip).samples
+    fun of(snip: Snip): Float = of(snip.samples, snip.channels, snip.sampleRate)
+
+    /**
+     * [of] over raw interleaved [samples], so a caller holding a bare
+     * buffer (a synth voice mid-render, say) need not copy it into a
+     * [Snip] just to be measured. Non-finite samples read as silence:
+     * one NaN used to poison the low-cut's state and make the whole
+     * measurement NaN, which downstream gain math then spread across
+     * an entire render.
+     */
+    fun of(samples: FloatArray, channels: Int, sampleRate: Int): Float {
+        require(channels in 1..2) { "channels must be 1 or 2: $channels" }
+        require(sampleRate > 0) { "sampleRate must be positive: $sampleRate" }
+        val mono = if (channels == 1) samples else Cleanup.toMono(Snip(samples, channels, sampleRate)).samples
         if (mono.isEmpty()) return 0f
 
         // Gentle low cut: subtract a one-pole low-pass.
         val filtered = FloatArray(mono.size)
         var lp = 0f
-        val a = (1.0 - Math.exp(-2.0 * Math.PI * LOW_CUT_HZ / snip.sampleRate)).toFloat()
+        val a = (1.0 - Math.exp(-2.0 * Math.PI * LOW_CUT_HZ / sampleRate)).toFloat()
         for (i in mono.indices) {
-            lp += a * (mono[i] - lp)
-            filtered[i] = mono[i] - lp * 0.7f // keep some body; a full cut over-dims kicks
+            val x = if (mono[i].isFinite()) mono[i] else 0f
+            lp += a * (x - lp)
+            filtered[i] = x - lp * 0.7f // keep some body; a full cut over-dims kicks
         }
 
-        val window = (WINDOW_SECONDS * snip.sampleRate).toInt().coerceAtLeast(1)
-        val hop = (HOP_SECONDS * snip.sampleRate).toInt().coerceAtLeast(1)
+        val window = (WINDOW_SECONDS * sampleRate).toInt().coerceAtLeast(1)
+        val hop = (HOP_SECONDS * sampleRate).toInt().coerceAtLeast(1)
         var best = 0.0
         var start = 0
         while (start < filtered.size) {

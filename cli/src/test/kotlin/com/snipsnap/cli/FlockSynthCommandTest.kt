@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 
 class FlockSynthCommandTest {
     @Test
-    fun `provisional voices render their recipes with note energy and full Long seed`() {
+    fun `factory voices render their recipes with note energy and full Long seed`() {
         val directory = createTempDirectory("flock-cli").toFile()
         try {
             for (voice in FlockVoice.entries) {
@@ -43,7 +43,7 @@ class FlockSynthCommandTest {
                 }
                 assertTrue("${files.size} rendered into" in output.toString())
                 assertFalse("lands with" in output.toString())
-                assertTrue(Presets.forVoice(FlockPatch.ENGINE, voice.name).isEmpty(), "prototype recipes stay outside the factory roster")
+                assertEquals(FlockPresets.forVoice(voice), Presets.forVoice(FlockPatch.ENGINE, voice.name))
             }
         } finally {
             directory.deleteRecursively()

@@ -57,20 +57,23 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MediaDecode
 import com.snipsnap.app.MicSessionService
+import com.snipsnap.app.MixVoice
 import com.snipsnap.app.OutsideSession
 import com.snipsnap.app.ShareInbox
-import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.amberOnChrome
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -81,14 +84,17 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Outside
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.PadShape
 import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
+import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.ConfluenceWorkshop
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
@@ -132,6 +138,7 @@ import kotlinx.coroutines.withContext
  * this exists at all (every `KitBuilderModel.save()` archives a take).
  */
 private const val METADATA_SAVE_DEBOUNCE_MS = 1000L
+private const val WIDE_REMOVE_FIRST = "Remove WIDE before changing treatment"
 
 /**
  * PAD SHEET: the long-press pad inspector, wireframe 1d ("full-screen
@@ -225,6 +232,7 @@ fun PadSheetScreen(
     // not gated on `busy`) already moved the user to a different pad on
     // this same still-mounted sheet before the delete's confirmation lands.
     val liveSlot by rememberUpdatedState(slot)
+    val liveKitDir by rememberUpdatedState(entry.dir)
 
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
@@ -276,6 +284,25 @@ fun PadSheetScreen(
         return
     }
     val builtModel = model!!
+    val wideApplied = BoardSheet.read(pad.recipe)
+    // WIDE is staged: moving this dial never rewrites a WAV. A committed
+    // amount (including an undo or a pad change) resets the local edit.
+    var pendingWideAmount by remember(entry.dir, slot, pad.sampleFile, wideApplied?.amount) {
+        mutableFloatStateOf(wideApplied?.amount ?: BoardSheet.DEFAULT_AMOUNT)
+    }
+    var wideUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
+    var wideAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(model, slot, pad.recipe, pad.velocityLayers) {
+        wideUndoAvailable = withContext(Dispatchers.IO) {
+            KitWrites.mutex.withLock {
+                runCatching {
+                    val fresh = KitBuilderModel.open(entry.dir)
+                    fresh.kit.pad(slot)?.sampleFile == pad.sampleFile && BoardSheet.canUndo(fresh, slot)
+                }.getOrDefault(false)
+            }
+        }
+    }
 
     var busy by remember(model) { mutableStateOf(false) }
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
@@ -289,22 +316,28 @@ fun PadSheetScreen(
     // composition rather than behind a LaunchedEffect.
     val auditionSibling = remember(builtModel.kit, slot) { Audition.siblingsOf(builtModel.kit.pads, slot).minByOrNull { it.slot } }
 
-    var voice by remember(model) { mutableStateOf<TapeVoice?>(null) }
-    DisposableEffect(model) { onDispose { voice?.release() } }
+    // One voice for HIT, BEFORE and every bench preview: a new audition
+    // always releases the previous one. Mono is duplicated to LR; WIDE's
+    // stereo reaches the same output without a mono fold.
+    var voice by remember(model, slot) { mutableStateOf<MixVoice?>(null) }
+    // A backgrounded gathering preview must not begin later merely because the app returned.
+    var gatheringPreviewGeneration by remember(model) { mutableIntStateOf(0) }
+    DisposableEffect(model, slot) { onDispose { voice?.release() } }
     // Set by `applyTreatment`/`applySmear` when a treatment lands; read
     // (and cleared) by the effect under `audition` below, once the fresh
     // model's audio is decoded. Keyed on the slot, not the model, because
     // its whole job is to outlive the model swap those writes make.
-    var auditionOnRefresh by remember(slot) { mutableStateOf(false) }
+    var auditionOnRefresh by remember(entry.dir, slot) { mutableStateOf(false) }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
     // Keyed on `model` too: `voice` is `remember(model)`-keyed, so an
     // observer from before a treatment's model swap would close over the
     // old state and leave the fresh voice playing in the background.
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, model) {
+    DisposableEffect(lifecycleOwner, model, slot) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
+                gatheringPreviewGeneration++
                 voice?.release()
                 voice = null
             }
@@ -326,7 +359,10 @@ fun PadSheetScreen(
             // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
             // depth, not expected to ever bind.
-            val s = runCatching { Cleanup.toMono(WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip) }.getOrNull()
+            val s = runCatching {
+                val decoded = WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
+                if (BoardSheet.read(p.recipe) != null) decoded else Cleanup.toMono(decoded)
+            }.getOrNull()
             val binned = m.binContents()
                 .filter { it.originalName == p.sampleFile }
                 .maxByOrNull { it.binnedAtMillis }
@@ -354,28 +390,24 @@ fun PadSheetScreen(
      * plays `ShapeAudition`'s approximation, the same one `KitPreview`
      * renders; a preview must not claim the card will sound like the file.
      *
-     * Folded to mono at this door, whatever [target] arrived as. The
-     * voice is a `CHANNEL_OUT_MONO` track over a bare `FloatArray`, so
-     * interleaved stereo handed to it plays every frame twice: an octave
-     * down at half speed. The pad's own file is folded where it is read
-     * (`refreshPadAudio`, `playBefore`), but `Mutate.render` always
-     * returns two channels, and HEAR on the MUTATE card handed them
-     * straight here — the September wiring review's first finding. The
-     * fold lives here rather than at each caller so the next play path
-     * cannot forget it; it is a no-op on mono, which every other caller
-     * already sends.
+     * The stereo voice consumes interleaved LR frames. Mono is duplicated
+     * after shaping, so it has the same level in both channels; a WIDE
+     * result retains its image in HEAR and after KEEP.
      */
     fun audition(target: Snip, level: Float, shape: KitPad? = null) {
         // Release synchronously at the swap site — a composition-scoped
         // coroutine can't guarantee the previous voice actually stopped
         // before this one starts (ChopScreen's `audition()` comment).
         voice?.release()
-        val mono = Cleanup.toMono(target)
-        val rendered = shape?.let { ShapeAudition.render(mono, it) } ?: mono
-        val gained = if (level == 1f) rendered.samples else FloatArray(rendered.samples.size) { rendered.samples[it] * level }
-        val v = TapeVoice(gained, rendered.sampleRate)
+        val rendered = shape?.let { ShapeAudition.render(target, it) } ?: target
+        val gained = if (rendered.channels == 1) {
+            FloatArray(rendered.frameCount * 2) { rendered.samples[it / 2] * level }
+        } else {
+            FloatArray(rendered.samples.size) { rendered.samples[it] * level }
+        }
+        val v = MixVoice(gained, rendered.sampleRate)
         voice = v
-        v.start(0)
+        v.start()
     }
 
     // A treatment that just landed plays itself. `applyTreatment` and
@@ -731,6 +763,10 @@ fun PadSheetScreen(
      * same reason, as [applySmear]'s own KDoc above.
      */
     fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
+        if (BoardSheet.read(p.recipe) != null) {
+            onToast(WIDE_REMOVE_FIRST)
+            return
+        }
         // Which tape: the one asked for (DUST FROM ▸); else the one the pad
         // already dusts from, so moving AMT on a borrowed dust keeps the
         // borrowed tape — and when that tape has left the shelf, says so
@@ -863,6 +899,11 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
+        if (BoardSheet.read(p.recipe) != null) {
+            applyingSegment = null
+            onToast(WIDE_REMOVE_FIRST)
+            return
+        }
         val padName = p.displayName
         if (segment == PadSheet.SMEAR) {
             applySmear(m, p, amount, padName)
@@ -1002,10 +1043,15 @@ fun PadSheetScreen(
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
-                        val binned = f.binContents().map { it.originalName }.toSet()
-                        val answer = PadSheet.unTreatState(freshPad, binned)
-                        if (answer == PadSheet.UnTreat.READY) f.unEraPad(slot)
-                        state = answer
+                        if (BoardSheet.read(freshPad.recipe) != null) {
+                            BoardSheet.remove(f, slot)
+                            state = PadSheet.UnTreat.READY
+                        } else {
+                            val binned = f.binContents().map { it.originalName }.toSet()
+                            val answer = PadSheet.unTreatState(freshPad, binned)
+                            if (answer == PadSheet.UnTreat.READY) f.unEraPad(slot)
+                            state = answer
+                        }
                     }
                 }
                 model = fresh
@@ -1026,6 +1072,113 @@ fun PadSheetScreen(
                 if (e is CancellationException) throw e
                 failure("UNTREAT", e)
             } finally {
+                busy = false
+            }
+        }
+    }
+
+    // ---- WIDE: staged, editable stereo character over a preserved source ----
+    fun wideFailure(action: String, e: Exception) {
+        if (e is IllegalArgumentException || e is IllegalStateException || e is JsonException) {
+            onToast(e.message ?: "WIDE could not use this pad")
+        } else {
+            failure(action, e)
+        }
+    }
+
+    fun hearWide(original: Boolean) {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val targetSlot = slot
+        val kitDir = m.kitDir
+        val amountToHear = if (original) 0f else pendingWideAmount
+        applyingSegment = null
+        busy = true
+        wideAction = if (original) "HEAR ORIGINAL" else "HEAR WIDE"
+        voice?.release()
+        voice = null
+        scope.launch {
+            try {
+                val rendered = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val fresh = KitBuilderModel.open(kitDir)
+                        val current = fresh.kit.pad(targetSlot)
+                        check(current != null && current.sampleFile == p.sampleFile &&
+                            current.recipe == p.recipe && current.velocityLayers == p.velocityLayers) {
+                            "This pad changed. Open it again before hearing WIDE"
+                        }
+                        BoardSheet.preview(fresh, targetSlot, amountToHear)
+                    }
+                }
+                // The DSP may finish after pad navigation, a model reload or
+                // backgrounding. It must never start audio for the old pad.
+                if (scope.isActive && model === m && liveSlot == targetSlot && liveKitDir == kitDir &&
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                ) {
+                    audition(rendered, p.level, p)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                wideFailure("HEAR WIDE", e)
+            } finally {
+                wideAction = null
+                busy = false
+            }
+        }
+    }
+
+    fun commitWide(action: String) {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        val targetSlot = slot
+        val kitDir = m.kitDir
+        val amountToKeep = pendingWideAmount
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        applyingSegment = null
+        busy = true
+        wideAction = action
+        voice?.release()
+        voice = null
+        // Writes outlive leaving the sheet; preview does not. Opening,
+        // changing all zones and saving share the kit writers' lock.
+        appScope.launch {
+            try {
+                var applied = false
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val current = f.kit.pad(targetSlot)
+                    if (current != null && current.sampleFile == p.sampleFile &&
+                        current.recipe == p.recipe && current.velocityLayers == p.velocityLayers
+                    ) {
+                        when (action) {
+                            "KEEP" -> BoardSheet.apply(f, targetSlot, amountToKeep)
+                            "REMOVE" -> BoardSheet.remove(f, targetSlot)
+                            "UNDO" -> BoardSheet.undo(f, targetSlot)
+                            else -> error("Unknown WIDE action")
+                        }
+                        applied = true
+                    }
+                }
+                if (scope.isActive && liveKitDir == kitDir) {
+                    if (applied && liveSlot == targetSlot) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                }
+                onKitUpdated(fresh.kit)
+                onToast(
+                    if (!applied) Copy.BIN_ITEM_GONE else when (action) {
+                        "KEEP" -> if (amountToKeep == 0f) "Original kept on ${p.displayName}" else "WIDE kept on ${p.displayName}"
+                        "REMOVE" -> "WIDE removed from ${p.displayName}"
+                        else -> "WIDE change undone on ${p.displayName}"
+                    },
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                wideFailure("$action WIDE", e)
+            } finally {
+                wideAction = null
                 busy = false
             }
         }
@@ -1112,6 +1265,10 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
+        if (BoardSheet.read(p.recipe) != null) {
+            onToast(Copy.WIDE_REMOVE_BEFORE_SOFT_HITS)
+            return
+        }
         val enabling = p.velocityLayers.isEmpty()
         commitPadEditNow("SOFT HITS", onSuccess = { if (enabling) onToast(Copy.GHOSTS_ON) }) { mm ->
             if (enabling) mm.addGhostLayers(slot) else mm.clearGhostLayers(slot)
@@ -1663,6 +1820,10 @@ fun PadSheetScreen(
         if (busy || spreadOpening) return
         val currentSnip = snip ?: return
         val p = model?.kit?.pad(slot) ?: return
+        if (BoardSheet.read(p.recipe) != null) {
+            onToast(Copy.WIDE_REMOVE_BEFORE_SPREAD)
+            return
+        }
         // A chain's file is every take end to end; spreading it would tune
         // the whole run of takes as one note.
         if (p.chain != null) {
@@ -1955,6 +2116,140 @@ fun PadSheetScreen(
     var pendingDepth by remember(entry.dir) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
     var pendingBloom by remember(entry.dir) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
 
+    // A gathering is edited from its saved source recipe, never from this pad's treated WAV.
+    // Local controls survive a metadata refresh, but changing the source/slot opens a new draft.
+    val gatheringEligible = ConfluenceWorkshop.isGathering(pad)
+    val gatheringSource = pad.source
+    var gatheringEditor by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<ConfluenceWorkshop.Editor?>(null) }
+    var gatheringControls by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<ConfluenceWorkshop.Controls?>(null) }
+    var gatheringOpening by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf(false) }
+    var gatheringRefusal by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<String?>(null) }
+    var gatheringStatus by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<String?>(null) }
+    var gatheringPreviewVoice by remember(entry.dir, slot, pad.sampleFile, gatheringSource) { mutableStateOf<MixVoice?>(null) }
+
+    DisposableEffect(entry.dir, slot, pad.sampleFile, gatheringSource) {
+        onDispose {
+            gatheringPreviewVoice?.let { preview ->
+                preview.release()
+                if (voice === preview) voice = null
+            }
+        }
+    }
+    LaunchedEffect(model, slot, pad.sampleFile, gatheringSource) {
+        gatheringEditor = null
+        if (!gatheringEligible) return@LaunchedEffect
+        gatheringOpening = true
+        try {
+            val opened = withContext(Dispatchers.IO) { ConfluenceWorkshop.open(entry.dir, pad) }
+            gatheringEditor = opened
+            if (gatheringControls == null) gatheringControls = opened.initialControls
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            gatheringRefusal = e.message?.takeIf { it.isNotBlank() } ?: Copy.actionFailed("GATHERING")
+        } finally {
+            gatheringOpening = false
+        }
+    }
+
+    fun gatheringFailed(e: Exception, sourceSlot: Int, sourceModel: KitBuilderModel) {
+        Log.e("PadSheetScreen", "GATHERING: failed", e)
+        val line = e.message?.takeIf { it.isNotBlank() } ?: Copy.actionFailed("GATHERING")
+        if (scope.isActive && liveSlot == sourceSlot && liveKitDir == sourceModel.kitDir && model === sourceModel) gatheringRefusal = line
+        onToast(line)
+    }
+
+    fun hearGathering() {
+        if (busy) return
+        val editor = gatheringEditor ?: return
+        val controls = gatheringControls ?: return
+        val sourceModel = model ?: return
+        val sourceSlot = slot
+        val kitDir = entry.dir
+        val previewGeneration = gatheringPreviewGeneration
+        gatheringRefusal = null
+        gatheringStatus = "RENDERING THE PREVIEW…"
+        busy = true
+        scope.launch {
+            try {
+                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir &&
+                    model === sourceModel && gatheringEditor === editor &&
+                    gatheringPreviewGeneration == previewGeneration &&
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                ) {
+                    audition(prepared.arrangedPad.snip, prepared.previewLevel)
+                    gatheringPreviewVoice = voice
+                    gatheringStatus = "PREVIEW READY · ORIGINAL KEPT"
+                } else gatheringStatus = null
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                gatheringStatus = null
+                gatheringFailed(e, sourceSlot, sourceModel)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun makeGatheringVariation() {
+        if (busy) return
+        val editor = gatheringEditor ?: return
+        val controls = gatheringControls ?: return
+        val sourceModel = model ?: return
+        val sourceSlot = slot
+        val kitDir = entry.dir
+        val destination = ConfluenceWorkshop.firstEmptySlot(sourceModel)
+        if (destination == null) {
+            val line = "No empty pad. Make room before saving a variation."
+            gatheringRefusal = line
+            onToast(line)
+            return
+        }
+        val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
+        gatheringRefusal = null
+        gatheringStatus = "RENDERING A NEW GATHERING…"
+        busy = true
+        // Disk work outlives this sheet; navigation and preview do not.
+        appScope.launch {
+            try {
+                var firstEmpty: Int? = null
+                val (before, metadataSaved) = withFreshKit(kitDir) { fresh ->
+                    reapplyPendingMetadataFields(fresh, stalePads)
+                    firstEmpty = ConfluenceWorkshop.firstEmptySlot(fresh)
+                }
+                if (metadataSaved) onKitUpdated(before.kit)
+                if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir && model === sourceModel) {
+                    pendingMetadataSlots = emptySet()
+                }
+                check(firstEmpty == destination) {
+                    if (firstEmpty == null) "No empty pad. Make room before saving a variation."
+                    else "The first empty pad changed. Reopen this pad before making a variation."
+                }
+                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                gatheringStatus = "WRITING ${padTag(destination)}…"
+                var made: KitPad? = null
+                val (fresh, _) = withFreshKit(kitDir) { current ->
+                    // The editor rechecks the original source/audio and this exact target.
+                    made = editor.makeVariation(current, prepared, destination)
+                }
+                val result = checkNotNull(made)
+                onKitUpdated(fresh.kit)
+                onToast("GATHERING MADE ON ${padTag(result.slot)} · ORIGINAL KEPT")
+                if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir && model === sourceModel) {
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) onSlotChange(result.slot)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                gatheringFailed(e, sourceSlot, sourceModel)
+            } finally {
+                gatheringStatus = null
+                busy = false
+            }
+        }
+    }
+
     /**
      * MAKE PAD: the same door as MAKE INSTRUMENT (an instrument beside the
      * kits), but any pad qualifies — a drum lands as a drone. Seconds of
@@ -2238,7 +2533,7 @@ fun PadSheetScreen(
         dustAmount != null -> PadSheet.DUST
         else -> applied?.segment
     }
-    val isNoneState = smearAmount == null && dustAmount == null && applied == null
+    val isNoneState = wideApplied == null && smearAmount == null && dustAmount == null && applied == null
     // The phone ruling, whichever row: a treatment no segment draws is
     // named on the provenance line, never shown as NONE.
     val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
@@ -2351,6 +2646,10 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
+        if (BoardSheet.read(p.recipe) != null) {
+            onToast(WIDE_REMOVE_FIRST)
+            return
+        }
         applyingSegment = PadSheet.DUST
         applyDust(m, p, pendingAmt, p.displayName, from = tape)
     }
@@ -2384,7 +2683,11 @@ fun PadSheetScreen(
             onHit = { snip?.let { audition(it, pad.level, pad) } },
             // A/B: only while a treatment is on and the take before it is
             // still in the bin (`binDaysLeft` is that entry's countdown).
-            onBefore = if (!isNoneState && binDaysLeft != null) ({ playBefore(pad) }) else null,
+            onBefore = when {
+                wideApplied != null -> ({ hearWide(original = true) })
+                !isNoneState && binDaysLeft != null -> ({ playBefore(pad) })
+                else -> null
+            },
         )
 
         Column(
@@ -2478,6 +2781,26 @@ fun PadSheetScreen(
                 onToggle = { tapBox(PadSheetBoxes.Box.TREATMENT) },
                 scheme = scheme,
             ) {
+            WideCard(
+                amount = pendingWideAmount,
+                appliedAmount = wideApplied?.amount,
+                canUndo = wideUndoAvailable,
+                chainPad = pad.chain != null,
+                busy = busy,
+                action = wideAction.takeIf { busy },
+                color = classColor,
+                scheme = scheme,
+                onAmountChange = { f -> pendingWideAmount = (f * 20f).roundToInt() / 20f },
+                onHearOriginal = { hearWide(original = true) },
+                onHearWide = { hearWide(original = false) },
+                onKeep = { commitWide("KEEP") },
+                onRemove = {
+                    if (wideApplied == null) onToast("No WIDE to remove") else commitWide("REMOVE")
+                },
+                onUndo = {
+                    if (!wideUndoAvailable) onToast("No WIDE change to undo") else commitWide("UNDO")
+                },
+            )
             // Which segment the user just tapped, so the card can say what it
             // is working on (September UAT, finding 14). Read only while
             // `busy` is true - see `applying` below - so an applyTreatment
@@ -2569,7 +2892,7 @@ fun PadSheetScreen(
             TapeText(
                 clipboard?.let { "ON THE CLIPBOARD: ${it.word} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.ink2.tape,
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
@@ -2709,8 +3032,35 @@ fun PadSheetScreen(
                 onToggle = { tapBox(PadSheetBoxes.Box.MAKE) },
                 scheme = scheme,
             ) {
+            if (gatheringEligible) {
+                ConfluenceGatheringCard(
+                    controls = gatheringControls,
+                    foundationVoices = gatheringEditor?.foundationVoices.orEmpty(),
+                    seconds = gatheringEditor?.seconds,
+                    performers = gatheringEditor?.performers,
+                    destination = ConfluenceWorkshop.firstEmptySlot(builtModel)?.let(::padTag),
+                    loading = gatheringOpening,
+                    ready = gatheringEditor != null,
+                    busy = busy,
+                    status = gatheringStatus,
+                    refusal = gatheringRefusal,
+                    scheme = scheme,
+                    fillColor = classColor,
+                    onControlsChange = { updated ->
+                        gatheringPreviewVoice?.let { preview ->
+                            preview.release()
+                            if (voice === preview) voice = null
+                        }
+                        gatheringControls = updated
+                        gatheringRefusal = null
+                        gatheringStatus = null
+                    },
+                    onHear = ::hearGathering,
+                    onMake = ::makeGatheringVariation,
+                )
+            }
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("PAD FROM ANYTHING · HOLD IT FOREVER", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             StepperSlider(
                 label = "DEPTH",
                 fraction = pendingDepth,
@@ -2742,7 +3092,7 @@ fun PadSheetScreen(
 
         // DE-SAMPLE: the capture as a recipe - the nearest patch, distance told.
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("DE-SAMPLE · THE NEAREST PATCH", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             val away = pad.source["desampled"]
             TapeText(
                 if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
@@ -2882,7 +3232,7 @@ fun PadSheetScreen(
             // the only way to move — so the middle cell says where you are
             // rather than promising a gesture that doesn't exist (law 3).
             val position = (idx + 1).takeIf { idx >= 0 }?.let { "$it OF ${assignedSlots.size}" } ?: ""
-            TapeText(position, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText(position, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton(
                 nextSlot?.let { "${padTag(it)} ►" } ?: "►",
                 scheme,
@@ -3123,15 +3473,15 @@ private fun HeaderChip(
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree, so TalkBack finds ◀ BEFORE
             // (and ◄ KIT) during the same busy spell sighted users see it.
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, spoken = spokenBack(label), onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.4f))
     }
 }
 
@@ -3179,19 +3529,23 @@ internal fun StepperSlider(
     enabled: Boolean,
     onFractionChange: (Float) -> Unit,
     onFractionCommit: () -> Unit,
+    labelWidth: Dp = 44.dp,
 ) {
     // The gesture loop below runs once, keyed on Unit — rememberUpdatedState
     // is what keeps it calling this recomposition's callbacks instead of
     // whichever ones were captured the first time it started.
     val currentOnChange by rememberUpdatedState(onFractionChange)
     val currentOnCommit by rememberUpdatedState(onFractionCommit)
+    // A notch where the value is set - the release, or TalkBack's adjust - not
+    // along the drag, which would buzz continuously under a sliding finger.
+    val haptics = LocalHaptics.current
 
     Row(
         Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(44.dp))
+        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(labelWidth))
         Box(
             Modifier
                 .weight(1f)
@@ -3215,6 +3569,7 @@ internal fun StepperSlider(
                             val clamped = target.coerceIn(0f, 1f)
                             currentOnChange(clamped)
                             currentOnCommit()
+                            haptics.tick()
                             true
                         }
                     } else {
@@ -3234,6 +3589,7 @@ internal fun StepperSlider(
                                 if (!change.pressed) {
                                     currentOnChange(fractionAt(change.position.x))
                                     currentOnCommit()
+                                    haptics.tick()
                                     change.consume()
                                     break
                                 }
@@ -3411,6 +3767,81 @@ private fun HitLabelCard(
 }
 
 @Composable
+private fun WideCard(
+    amount: Float,
+    appliedAmount: Float?,
+    canUndo: Boolean,
+    chainPad: Boolean,
+    busy: Boolean,
+    action: String?,
+    color: Color,
+    scheme: Scheme,
+    onAmountChange: (Float) -> Unit,
+    onHearOriginal: () -> Unit,
+    onHearWide: () -> Unit,
+    onKeep: () -> Unit,
+    onRemove: () -> Unit,
+    onUndo: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(bottom = 12.dp).semantics {
+            contentDescription = "WIDE"
+            stateDescription = if (canUndo) "Undo available" else "No undo"
+        },
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        TapeText("WIDE · STEREO CHARACTER", TapeType.pixel, scheme.ink.tape, maxLines = 2)
+        TapeText(
+            when {
+                action != null -> "$action…"
+                chainPad -> "Undo round-robin before using WIDE"
+                appliedAmount != null -> "WIDE kept at ${(appliedAmount * 100).roundToInt()}%"
+                else -> "Hear a wider sound before keeping it"
+            },
+            TapeType.pixelSmall,
+            if (action != null) scheme.amber.tape else scheme.ink2.tape,
+            maxLines = 2,
+        )
+        StepperSlider(
+            label = "AMT",
+            fraction = amount,
+            valueText = "${(amount * 100).roundToInt()}%",
+            fillColor = color,
+            scheme = scheme,
+            enabled = !busy,
+            onFractionChange = onAmountChange,
+            // This card is staged. KEEP is the only amount commit.
+            onFractionCommit = {},
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ActionButton(
+                "HEAR ORIGINAL", scheme, enabled = !busy, dimmed = chainPad,
+                modifier = Modifier.weight(1f), onClick = onHearOriginal,
+            )
+            ActionButton(
+                "HEAR WIDE", scheme, enabled = !busy, dimmed = chainPad,
+                modifier = Modifier.weight(1f), onClick = onHearWide,
+            )
+        }
+        TapeText("Nothing changes until KEEP. Headphones reveal the width.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ActionButton(
+                "KEEP", scheme, enabled = !busy, dimmed = chainPad,
+                modifier = Modifier.weight(1f), onClick = onKeep,
+            )
+            ActionButton(
+                "REMOVE", scheme, enabled = !busy, dimmed = appliedAmount == null,
+                modifier = Modifier.weight(1f), onClick = onRemove,
+            )
+            ActionButton(
+                "UNDO", scheme, enabled = !busy, dimmed = !canUndo,
+                modifier = Modifier.weight(1f), onClick = onUndo,
+            )
+        }
+    }
+}
+
+@Composable
 private fun TreatmentCard(
     rows: List<List<String>>,
     noneSegment: String,
@@ -3544,7 +3975,7 @@ private fun DustFromRow(
             TapeText(
                 tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO TAPE YET",
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.ink2.tape,
                 Modifier.weight(1f),
                 maxLines = 1,
             )
@@ -3562,7 +3993,7 @@ private fun DustFromRow(
                 )
             }
             if (tapes.size > DUST_FROM_SHOWN) {
-                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
         }
     }
@@ -3604,7 +4035,7 @@ private fun ShapeCard(
             // What the line is for is the thing the legend cannot say -
             // that these four are metadata the hardware applies, not edits
             // to the audio on disk - so that is all it says now.
-            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -3690,7 +4121,7 @@ private fun MutateCard(
     val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
             ActionButton("UNDO", scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
@@ -3794,7 +4225,7 @@ private fun MutateCard(
         // The rooms on the shelf, two to a row (their names are words, not
         // tags); the row is absent until OUTSIDE has kept one.
         if (rooms.isNotEmpty()) {
-            TapeText("ROOMS ON THE SHELF · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("ROOMS ON THE SHELF · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
             for (row in rooms.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -3828,7 +4259,7 @@ private fun MutateCard(
         // then its pads (four to a row) - the shelf with intent, where
         // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
-            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             for (row in otherKits.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (k in row) {
@@ -3922,7 +4353,7 @@ private fun MutateCard(
             modifier = Modifier.fillMaxWidth(),
             onClick = onHear,
         )
-        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         // KEEP writes the move in place (no ▸, which means "goes
         // somewhere"); DRIFT beside it is the card's one-tap blend and save,
         // and says it saves. Each half row holds DRIFT's 20 characters.
@@ -3973,7 +4404,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {

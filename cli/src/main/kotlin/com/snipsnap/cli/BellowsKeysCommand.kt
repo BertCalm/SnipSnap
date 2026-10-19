@@ -1,5 +1,6 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.shell.BellowsPadMaker
@@ -74,7 +75,7 @@ object BellowsKeysCommand {
                 "format" to str("snipsnap-bellows-playtest-1"), "engineModel" to num(2),
                 "hardwareVerified" to JsonValue.Bool(false),
                 "dryListeningAccepted" to JsonValue.Bool(true),
-                "sampleRate" to num(44_100), "channels" to num(1),
+                "sampleRate" to num(WavWriter.MPC_SAMPLE_RATE), "channels" to num(1),
                 "velocityGain" to str("BellowsKeys.layer removes the source's velocity^0.60 scalar; the target player supplies velocity gain once"),
                 "releaseSeconds" to num(release), "programs" to JsonValue.Arr(programs),
                 "files" to JsonValue.Arr(files),
