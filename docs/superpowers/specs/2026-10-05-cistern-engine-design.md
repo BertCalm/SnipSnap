@@ -338,6 +338,17 @@ level-matched kit envelopes and tails are measured separately from waveform
 differences caused by changed landing phases. These measurements do not
 establish musical acceptance.
 
+The owner selected the midpoint tuning on 18 October 2026 after comparing it
+with revision 4 and the more harmonic pitch study. Audition revision
+`selected-midpoint-1` promotes that exact listening variant: dry upper ratios
+and the SKIN spacing factor sit halfway between the two versions in pitch
+cents. The root remains fixed. Radiation sits halfway in dB, with RECOVERY's
+upper radiation multiplied by 1.30 to retain separation from FIRST. The
+revision-4 losses, contact and release fields, wet loading, circulation clock,
+defaults and recipes are preserved. This selects the default voice character;
+the full control matrix, preset names and physical interpretation still have
+their separate measurement and listening limits.
+
 The material/release clock advances every 176 internal samples, approximately
 1002.27 Hz. A smoothed local modal-energy envelope acts on a decaying release
 field. Threshold crossings spend a slot once, bounded propagation reaches

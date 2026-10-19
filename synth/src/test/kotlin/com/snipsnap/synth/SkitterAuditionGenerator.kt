@@ -25,6 +25,8 @@ object SkitterAuditionGenerator {
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val neutral = mapOf("BUZZ" to .45f, "SKITTER" to .25f, "AGITATE" to .35f,
         "VENT" to .25f, "STATIC" to .15f, "HOLD" to 0f)
+    private val characterControls = mapOf("BUZZ" to .55f, "SKITTER" to .50f, "AGITATE" to .60f,
+        "VENT" to .35f, "STATIC" to .15f, "HOLD" to 0f)
     private val percussion = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
         DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
     private val comparisonKeys = SkitterVoice.entries.map { "DEFAULTS/${it.name.lowercase(Locale.ROOT)}" } +
@@ -33,25 +35,31 @@ object SkitterAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.count { !it.startsWith("--") } <= 1 && args.count { it.startsWith("--baseline=") } <= 1 &&
-            args.count { it.startsWith("--previous=") } <= 1 &&
-            args.all { !it.startsWith("--") || it == "--quick" || it.startsWith("--baseline=") || it.startsWith("--previous=") }) {
-            "supply one output directory, optional --quick, --baseline=<frozen R2 directory> and --previous=<frozen R1 directory>"
+            args.count { it.startsWith("--previous=") } <= 1 && args.count { it.startsWith("--original=") } <= 1 &&
+            args.all { !it.startsWith("--") || it == "--quick" || it.startsWith("--baseline=") || it.startsWith("--previous=") || it.startsWith("--original=") }) {
+            "supply one output directory, optional --quick, --baseline=<R3>, --previous=<R2> and --original=<R1> frozen directories"
         }
         val quick = "--quick" in args
         val baselinePath = args.firstOrNull { it.startsWith("--baseline=") }?.substringAfter('=')
         val previousPath = args.firstOrNull { it.startsWith("--previous=") }?.substringAfter('=')
-        require(previousPath == null || baselinePath != null) { "--previous needs --baseline so the historical after remains the frozen R2 recording" }
+        val originalPath = args.firstOrNull { it.startsWith("--original=") }?.substringAfter('=')
+        require(previousPath == null || baselinePath != null) { "--previous needs --baseline so the historical after remains the frozen R3 recording" }
+        require(originalPath == null || previousPath != null) { "--original needs --previous and --baseline to retain each historical after recording" }
         require(!quick || baselinePath == null) { "the nine revision comparisons need the full pack; omit --quick" }
         val baseline = baselinePath?.let {
-            require(it.isNotBlank()) { "--baseline needs a frozen R2 directory" }
-            loadBaseline(File(it), "R2")
+            require(it.isNotBlank()) { "--baseline needs a frozen R3 directory" }
+            loadBaseline(File(it), "R3")
         }
         val previous = previousPath?.let {
-            require(it.isNotBlank()) { "--previous needs a frozen R1 directory" }
+            require(it.isNotBlank()) { "--previous needs a frozen R2 directory" }
+            loadBaseline(File(it), "R2")
+        }
+        val original = originalPath?.let {
+            require(it.isNotBlank()) { "--original needs a frozen R1 directory" }
             loadBaseline(File(it), "R1")
         }
         val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/skitter-audition").also { it.mkdirs() }
-        for (snapshot in listOfNotNull(baseline, previous)) require(!root.canonicalFile.toPath().startsWith(snapshot.root.toPath()) &&
+        for (snapshot in listOfNotNull(baseline, previous, original)) require(!root.canonicalFile.toPath().startsWith(snapshot.root.toPath()) &&
             !snapshot.root.toPath().startsWith(root.canonicalFile.toPath())) { "output and frozen baselines must be separate directories" }
         val sections = mutableListOf<JsonValue>()
         val measurements = mutableListOf<JsonValue>()
@@ -167,6 +175,13 @@ object SkitterAuditionGenerator {
             sections += obj("id" to str(id), "title" to str(title), "description" to str(description), "groups" to arr(groups))
         }
 
+        section("VOICE_CHARACTER", "Six voices, one test patch",
+            "Identical controls expose the voice profiles: BUZZ .55, SKITTER .50, AGITATE .60, VENT .35, STATIC .15, HOLD 0. All C3 / MIDI 48, velocity 1, seed 0, dry, with shared matched-level targeting. Native and raw levels remain available.",
+            listOf(group("Common controls", SkitterVoice.entries.map { voice ->
+                clip("VOICE_CHARACTER", voice.name.lowercase(Locale.ROOT), voice.name, voiceDescription(voice), voice,
+                    characterControls, midi = 48, velocity = 1f, seed = 0)
+            })))
+
         section("DEFAULTS", "Six circuit personalities", "Dry voice defaults at C3 / MIDI 48, velocity 1. Start here, then compare the factory patches.",
             listOf(group("Defaults", SkitterVoice.entries.map { v -> clip("DEFAULTS", v.name.lowercase(), v.name, voiceDescription(v), v) })))
 
@@ -244,23 +259,31 @@ object SkitterAuditionGenerator {
 
         val frozenBaseline = baseline?.let { copySnapshot(root, it) }
         val frozenPrevious = previous?.let { copySnapshot(root, it) }
-        val comparison = frozenBaseline?.let { comparisons(it.clips, revisionClips(indexedClips(sections), "R3")) }
+        val frozenOriginal = original?.let { copySnapshot(root, it) }
+        val comparison = frozenBaseline?.let { comparisons(it.clips, revisionClips(indexedClips(sections), "R4")) }
         val previousComparison = frozenPrevious?.let { comparisons(it.clips, requireNotNull(frozenBaseline).clips) }
+        val originalComparison = frozenOriginal?.let { comparisons(it.clips, requireNotNull(frozenPrevious).clips) }
         val manifestFields = linkedMapOf("engine" to str("SKITTER"), "formatVersion" to num(1), "quick" to bool(quick),
-            "revision" to str("R3"), "variants" to num(count), "wavFiles" to num(wavCount), "presetCount" to num(presets.size),
-            "acceptance" to str("R3 candidate: owner listening verdict pending; R2 is the accepted baseline"), "sections" to arr(sections))
+            "revision" to str("R4"), "variants" to num(count), "wavFiles" to num(wavCount), "presetCount" to num(presets.size),
+            "acceptance" to str("R4 voice-character candidate: owner listening verdict pending; R2 remains the accepted baseline"), "sections" to arr(sections))
         if (comparison != null) {
             manifestFields["comparisons"] = arr(comparison)
             manifestFields["comparisonCount"] = num(comparison.size)
             manifestFields["comparisonWavFiles"] = num(requireNotNull(frozenBaseline).wavFiles)
             manifestFields["baseline"] = frozenBaseline.provenance
-            manifestFields["snapshotWavFiles"] = num(frozenBaseline.wavFiles + (frozenPrevious?.wavFiles ?: 0))
+            manifestFields["snapshotWavFiles"] = num(frozenBaseline.wavFiles + (frozenPrevious?.wavFiles ?: 0) + (frozenOriginal?.wavFiles ?: 0))
         }
         if (previousComparison != null) {
             manifestFields["previousComparisons"] = arr(previousComparison)
             manifestFields["previousComparisonCount"] = num(previousComparison.size)
             manifestFields["previousComparisonWavFiles"] = num(requireNotNull(frozenPrevious).wavFiles)
             manifestFields["previousBaseline"] = frozenPrevious.provenance
+        }
+        if (originalComparison != null) {
+            manifestFields["originalComparisons"] = arr(originalComparison)
+            manifestFields["originalComparisonCount"] = num(originalComparison.size)
+            manifestFields["originalComparisonWavFiles"] = num(requireNotNull(frozenOriginal).wavFiles)
+            manifestFields["originalBaseline"] = frozenOriginal.provenance
         }
         val manifest = Json.write(JsonValue.Obj(manifestFields))
         File(root, "manifest.json").writeText(manifest + "\n")
@@ -275,8 +298,9 @@ object SkitterAuditionGenerator {
         require(marker in template) { "missing page manifest marker" }
         File(root, "index.html").writeText(template.replace(marker, manifest.replace("<", "\\u003c")))
         println("wrote $count variants, $wavCount WAVs, patch JSON, mechanism traces, manifest, measurements and listening page under ${root.absolutePath}")
-        if (comparison != null) println("added ${comparison.size} R2/R3 pairs with ${frozenBaseline?.wavFiles} frozen R2 WAVs; current render counts stay separate")
-        if (previousComparison != null) println("retained ${previousComparison.size} historical R1/R2 pairs with ${frozenPrevious?.wavFiles} frozen R1 WAVs, reusing the same R2 snapshots")
+        if (comparison != null) println("added ${comparison.size} R3/R4 pairs with ${frozenBaseline?.wavFiles} frozen R3 WAVs; current render counts stay separate")
+        if (previousComparison != null) println("retained ${previousComparison.size} historical R2/R3 pairs with ${frozenPrevious?.wavFiles} frozen R2 WAVs, reusing the same R3 snapshots")
+        if (originalComparison != null) println("retained ${originalComparison.size} original R1/R2 pairs with ${frozenOriginal?.wavFiles} frozen R1 WAVs, reusing the same R2 snapshots")
         if (quick) println("quick development pack; run without --quick for the full acceptance matrix")
     }
 
@@ -435,12 +459,12 @@ object SkitterAuditionGenerator {
         return rate / (best + offset) to correlation[best].coerceIn(0.0, 1.0)
     }
     private fun voiceDescription(v: SkitterVoice) = when (v) {
-        SkitterVoice.BASS -> "Compact bass with a recovering edge."
-        SkitterVoice.LEAD -> "Sharp, briefly tearing melodic tone."
-        SkitterVoice.HOLLOW -> "Open intervals and nasal resonance."
-        SkitterVoice.FLUTTER -> "Repeated departures and filter movement."
-        SkitterVoice.CHIRP -> "Resonant chirps around a pitched sustain."
-        SkitterVoice.FRAY -> "Dense, noisy, agitated melodic texture."
+        SkitterVoice.BASS -> "Rounded weight with a compact, recovering edge."
+        SkitterVoice.LEAD -> "Reed-like bite and a sharp, tearing melodic edge."
+        SkitterVoice.HOLLOW -> "Hollow odd-harmonic color with open octave space."
+        SkitterVoice.FLUTTER -> "Bouncing band resonance with repeated departures."
+        SkitterVoice.CHIRP -> "A pointed resonant attack around a pitched sustain."
+        SkitterVoice.FRAY -> "Rough, dense edges around a persistent pitched body."
     }
     private fun macroDescription(macro: String) = when (macro) {
         "BUZZ" -> "Waveform edges and pulse-width character provoke the filter."

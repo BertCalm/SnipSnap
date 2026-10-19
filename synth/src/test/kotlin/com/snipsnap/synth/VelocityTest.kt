@@ -33,9 +33,9 @@ class VelocityTest {
         val reference = snipOf(0f, 0.8f, -0.8f)
         val candidate = snipOf(0f, 1e-10f, -1e-10f) // candPeak below the 1e-9f guard
         val result = Velocity.peakMatch(reference, candidate)
-        // Same object back, not a copy - Snip's data-class equals compares
-        // the FloatArray field by reference, so identity is the precise
-        // check here (and the guard clause literally `return candidate`).
+        // Same object back, not a copy - a copy() would share the FloatArray
+        // and so compare equal, so identity is the precise check here (and
+        // the guard clause literally `return candidate`).
         assertTrue(result === candidate, "candPeak ~= 0 must short-circuit, not divide by (near) zero")
     }
 

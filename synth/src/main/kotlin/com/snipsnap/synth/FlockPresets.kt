@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Nine finite listening recipes. Their seeds are part of the musical performance. */
+/** Nine finite factory recipes. Their seeds are part of the musical performance. */
 object FlockPresets {
     private fun p(voice: FlockVoice, name: String, seed: Long, vararg macros: Pair<String, Float>) =
         FlockPatch(name, voice, Flock.defaults(voice) + macros.toMap(), seed = seed)

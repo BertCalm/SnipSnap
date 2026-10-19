@@ -20,26 +20,29 @@ class WickSynthCommandTest {
     fun `WICK all auditions use the provisional roster and native note and velocity`() {
         val dir = kotlin.io.path.createTempDirectory("wick-cli-all").toFile()
         try {
-            assertTrue(Presets.forVoice("WICK", "PLUCK").isEmpty(), "CLI must find the provisional table directly")
-            val output = ByteArrayOutputStream()
-            assertEquals(0, SynthCommand.run(
-                listOf("WICK", "PLUCK", "--all", "--midi", "72", "--velocity", "0.35", "--out", dir.path),
-                PrintStream(output),
-            ))
-            val presets = WickPresets.forVoice(WickVoice.PLUCK)
-            val wavs = dir.listFiles { file -> file.extension == "wav" }!!.sortedBy { it.name }
-            assertEquals(presets.size, wavs.size, "--all exports each provisional PLUCK recipe")
-            val expected = presets.first().copy(midi = 72, velocity = .35f)
-            val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
-            assertContentEquals(encoded, wavs.first().readBytes(), "both flags reach the saved-recipe renderer")
-            for (wav in wavs) {
-                val snip = WavReader.read(wav)
-                assertEquals(1, snip.channels, "${wav.name} stays dry and mono")
-                assertEquals(WavWriter.MPC_SAMPLE_RATE, snip.sampleRate)
-                assertTrue(snip.samples.any { kotlin.math.abs(it) > 1e-4f }, "${wav.name} is audible")
+            for (voice in listOf(WickVoice.PLUCK, WickVoice.WOOD)) {
+                assertTrue(Presets.forVoice("WICK", voice.name).isEmpty(), "CLI must find the provisional table directly")
+                val output = ByteArrayOutputStream()
+                val voiceDir = File(dir, voice.name)
+                assertEquals(0, SynthCommand.run(
+                    listOf("WICK", voice.name, "--all", "--midi", "72", "--velocity", "0.35", "--out", voiceDir.path),
+                    PrintStream(output),
+                ))
+                val presets = WickPresets.forVoice(voice)
+                val wavs = voiceDir.listFiles { file -> file.extension == "wav" }!!.sortedBy { it.name }
+                assertEquals(presets.size, wavs.size, "--all exports each provisional $voice recipe")
+                val expected = presets.first().copy(midi = 72, velocity = .35f)
+                val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
+                assertContentEquals(encoded, wavs.first().readBytes(), "both flags reach the $voice saved-recipe renderer")
+                for (wav in wavs) {
+                    val snip = WavReader.read(wav)
+                    assertEquals(1, snip.channels, "${wav.name} stays dry and mono")
+                    assertEquals(WavWriter.MPC_SAMPLE_RATE, snip.sampleRate)
+                    assertTrue(snip.samples.any { kotlin.math.abs(it) > 1e-4f }, "${wav.name} is audible")
+                }
+                assertTrue("${presets.size} rendered" in output.toString())
+                assertFalse("lands with" in output.toString(), "the cascade comes from WICK itself")
             }
-            assertTrue("${presets.size} rendered" in output.toString())
-            assertFalse("lands with" in output.toString(), "the cascade comes from WICK itself")
         } finally {
             dir.deleteRecursively()
         }
