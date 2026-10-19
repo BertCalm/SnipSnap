@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.kit.KitAssembler
@@ -12,17 +13,19 @@ import com.snipsnap.mpc3.Mpc3Project
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.xpm.XpmWriter
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 
-/** Sample-only MPC listening kit; ONSET is not a registered editable recipe engine. */
+/** Dry MPC listening kit: exact delivered RAW WAVs with verified editable ONSET recipes. */
 object OnsetKitExport {
     private const val NAME = "SnipSnap ONSET Audition"
     private val blends = listOf(0f, .25f, .5f, 1f)
     private val voices = listOf(OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN)
+    private data class Source(val voice: OnsetVoice, val blend: Float, val raw: File, val recipe: PadRecipe)
 
     fun write(root: File, renders: Map<Pair<OnsetVoice, Float>, Snip>, settingsJsonFile: File): File {
         require(settingsJsonFile.isFile) { "write settings.json before exporting the MPC kit" }
@@ -39,14 +42,31 @@ object OnsetKitExport {
             check(decoded.channels == supplied.channels && decoded.sampleRate == supplied.sampleRate &&
                 decoded.samples.contentEquals(supplied.samples)) { "supplied PCM differs from RAW source: $voice/$blend" }
             check(hash(raw) == clip.getValue("sha256").obj().getValue("raw").str()) { "RAW source hash changed: $raw" }
-            Triple(voice, blend, raw)
+            // A gain-altered listening file cannot truthfully carry a bare patch recipe.
+            // The current dry voice pack needs no attenuation; refuse a future one that does.
+            require(clip.getValue("audition").obj().getValue("rawExportGain").num() == 1.0) {
+                "editable MPC kit requires unattenuated engine output: $voice/$blend"
+            }
+            val settings = clip.getValue("settings").obj()
+            require(settings.getValue("voice").str() == voice.name)
+            val patch = OnsetPatch(
+                "${voice.name} BLEND $blend", voice,
+                settings.getValue("macros").obj().mapValues { it.value.num().toFloat() },
+                settings.getValue("modelVersion").int(),
+            )
+            require(patch.macros.getValue("BLEND") == blend) { "clip and recipe disagree on BLEND" }
+            val recipe = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            val regenerated = ByteArrayOutputStream().also { WavWriter.write(it, recipe.render()) }.toByteArray()
+            check(regenerated.contentEquals(raw.readBytes())) { "recipe does not regenerate RAW WAV: $voice/$blend" }
+            Source(voice, blend, raw, recipe)
         } }
         val work = File(root, ".onset-mpc-work")
         check(!work.exists() || work.deleteRecursively()) { "could not clear $work" }
         try {
             val staging = File(work, "samples")
-            val arranged = selected.map { (voice, blend, raw) ->
+            val arranged = selected.map { (voice, blend, raw, recipe) ->
                 ArrangedPad(renders.getValue(voice to blend), DrumClass.valueOf(voice.name),
+                    recipe = recipe.toJsonValue(),
                     level = 1f, oneShot = true, displayName = "${voice.name} BLEND $blend",
                     source = mapOf("renderer" to "ONSET", "blend" to blend.toString(),
                         "auditionRaw" to raw.relativeTo(root.canonicalFile).invariantSeparatorsPath,
@@ -55,12 +75,12 @@ object OnsetKitExport {
             val kit = KitAssembler.assembleArranged(NAME, arranged, staging)
             check(kit.pads.size == 16)
             kit.pads.forEachIndexed { index, pad ->
-                val voice = selected[index].first
-                check(pad.slot == index + 1 && pad.level == 1f && pad.oneShot && pad.recipe == null)
+                val voice = selected[index].voice
+                check(pad.slot == index + 1 && pad.level == 1f && pad.oneShot && pad.recipe == selected[index].recipe.toJsonValue())
                 check(pad.muteGroup == if (voice == OnsetVoice.HAT_CLOSED || voice == OnsetVoice.HAT_OPEN) 1 else 0)
                 // Do not re-quantize decoded PCM: replace the assembler's temporary WAV
                 // with the exact already-delivered RAW file before native export.
-                selected[index].third.copyTo(File(staging, pad.sampleFile), overwrite = true)
+                selected[index].raw.copyTo(File(staging, pad.sampleFile), overwrite = true)
             }
             val destination = File(work, NAME).also { check(it.mkdirs()) }
             val dataDir = File(destination, Mpc3TrackWriter.trackDataDirName(NAME))
@@ -69,6 +89,7 @@ object OnsetKitExport {
             // XPM VolumeDecayType=true is end-relative; zero disables that final fade.
             val xpm = XpmWriter().writeTo(dataDir, program.copy(pads = program.pads.map { it?.copy(decay = 0f) }))
             KitStore.save(kit, dataDir)
+            check(KitStore.load(dataDir) == kit) { "exported kit lost its editable recipes" }
             settingsJsonFile.copyTo(File(destination, "settings.json"))
             File(destination, "README.txt").writeText(readme())
             File(destination, "raw-sources.tsv").writeText(buildString {
@@ -81,7 +102,7 @@ object OnsetKitExport {
                     append(raw.relativeTo(root.canonicalFile).invariantSeparatorsPath).append('\t').append(hash(raw)).append('\n')
                 }
             })
-            verifyPrograms(xtd, xpm, kit.pads.map { renders.getValue(selected[it.slot - 1].first to selected[it.slot - 1].second).frameCount.toLong() })
+            verifyPrograms(xtd, xpm, kit.pads.map { renders.getValue(selected[it.slot - 1].voice to selected[it.slot - 1].blend).frameCount.toLong() })
             val archive = File(root, "onset-mpc-kit.zip")
             ZipOutputStream(archive.outputStream().buffered()).use { zip ->
                 destination.walkTopDown().filter { it.isFile }
@@ -132,7 +153,7 @@ object OnsetKitExport {
         .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
 
     private fun readme() = """
-        ONSET RAW audition kit — 16 sample pads
+        ONSET RAW audition kit — 16 editable sample pads
 
         MPC 3: load "$NAME.xtd" beside its unchanged _[TrackData] folder.
         MPC 2: open that folder and load "$NAME.xpm" beside its samples.
@@ -150,8 +171,12 @@ object OnsetKitExport {
         sustain one and zero end-relative decay, keeping the complete sample tail.
 
         settings.json records the generator settings; raw-sources.tsv maps every
-        pad to its audition source and SHA-256. kit.json is a sample-kit sidecar,
-        with no editable ONSET recipe because ONSET is not registered in SnipSnap.
+        pad to its audition source and SHA-256. kit.json contains a typed ONSET
+        recipe per pad, including the six macros and saved renderer modelVersion.
+        Every serialized recipe is regenerated through the normal PCM24 WAV writer
+        and checked byte-for-byte against its source before this kit is packaged.
+        Reopen the kit in SnipSnap to edit a pad and regenerate its sample. MPC
+        playback uses the exported WAVs; MPC does not run the ONSET synth recipe.
         This kit has format, sample-byte, routing and envelope-field checks.
         Playback gain, envelope behavior and choke response need an MPC hardware listen.
     """.trimIndent() + "\n"

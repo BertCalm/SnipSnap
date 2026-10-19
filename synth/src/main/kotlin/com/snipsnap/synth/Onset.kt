@@ -7,8 +7,9 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.random.Random
 
-/** The bounded first listening experiment, independent of the Android engine picker. */
+/** The four voices in the accepted ONSET listening experiment. */
 enum class OnsetVoice { KICK, HAT_CLOSED, SNARE, HAT_OPEN }
 
 /** Resolved physical settings accompany every audition render for reproducibility. */
@@ -58,6 +59,17 @@ object Onset {
 
     fun defaults(voice: OnsetVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
+
+    /** Roll complete controls near a saved hit or an audition preset, like the other engines. */
+    fun scramble(voice: OnsetVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + OnsetPresets.forVoice(voice).random(random).macros
+        }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     fun settingsFor(voice: OnsetVoice, macros: Map<String, Float> = emptyMap(), modelVersion: Int = MODEL_VERSION): OnsetSettings {
         require(modelVersion in 1..MODEL_VERSION) { "unsupported ONSET model version: $modelVersion" }

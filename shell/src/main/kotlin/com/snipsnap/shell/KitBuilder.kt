@@ -502,7 +502,10 @@ class KitBuilderModel private constructor(
         require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
         moveToBin(pad.sampleFile)
         WavWriter.write(File(kitDir, pad.sampleFile), processed)
-        return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
+        // The imported audition's fingerprint describes the previous WAV.
+        // Keep its provenance, but never carry that current-file claim onto
+        // regenerated or treated audio; exporters fingerprint the new file.
+        return update(slot) { it.copy(recipe = recipe ?: it.recipe, source = it.source - "rawSha256") }
     }
 
     /**

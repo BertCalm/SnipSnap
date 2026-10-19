@@ -11,6 +11,7 @@ import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -386,6 +387,9 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is OnsetPatch) {
+            return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
+        }
         if (patch is SpoolPatch) {
             val m = patch.machine
             val roster = m.roster.joinToString(", ") {

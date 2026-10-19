@@ -1,4 +1,4 @@
-# ONSET — listening experiment
+# ONSET — four-voice percussion engine
 
 ONSET tests a continuous blend between two percussion sources. The current
 listening scope is KICK, SNARE, HAT_CLOSED and HAT_OPEN. Five positions per
@@ -77,9 +77,42 @@ Accepted kick, closed-hat and first-pass reference IDs retain their notes.
 The optional 16-pad MPC sample kit uses four blend rows (0%, 25%, 50%,
 100%) and four voice columns (kick, snare, closed hat, open hat). It includes
 a native XTD track, an XPM program twin and the resolved settings. The hat
-pads share a mute group. This is a sample kit; ONSET does not yet have a
-registered editable pad recipe in SnipSnap. Format checks do not establish
-hardware playback acceptance.
+pads share a mute group. Each sample also carries a typed ONSET recipe in
+`kit.json`: the voice, all six controls and the explicit renderer version.
+The exporter checks that the saved recipe regenerates the delivered raw
+PCM exactly. MPC plays the rendered WAVs; the controls are editable in
+SnipSnap. Format checks do not establish hardware playback acceptance.
+
+Standalone XTD and XPM exports preserve editable history for ordinary
+kits. Imports validate the adjacent sidecar's pad/sample mapping and
+available WAV hashes, while retaining the program's playback controls.
+Chained kits keep their existing program/sample export behavior and do
+not carry this sidecar: restoring their slice scheduling is separate work.
+
+## Editing a pad in SnipSnap
+
+ONSET is registered in SYNTH after SKIN. Choose KICK, SNARE, CLOSED HAT or
+OPEN HAT, then adjust TUNE, DECAY, BLEND, SNAP, BODY and EDGE. The twelve
+initial presets are the audition's dry endpoints and midpoint. SCRAMBLE
+moves near those settings without adding another voice family.
+
+SEND TO PAD writes the sound and its complete recipe. SAVE AS PRESET keeps
+an editable sound on the shelf. REOPEN PAD selects a recognized synth pad
+from the open kit and restores its engine, voice, controls and processing
+recipe. UPDATE PAD writes the edited sound back to that pad; SEND TO PAD
+can place a copy elsewhere. Loading a new preset starts a fresh recipe.
+
+The saved renderer version is required and remains unchanged during
+editing, including for the original two-voice models. Recipe controls own
+an immutable snapshot, so a later slider change cannot mutate a saved
+sound. The processing chain, treatment name, amount and explicit alias
+choice also survive reopening and regeneration.
+
+For the device acceptance pass, import the downloaded kit, reopen a
+midpoint pad for each voice, move BLEND, update the pad, reopen it again,
+and export the kit. On MPC, compare the raw samples at full velocity and
+check open-hat tails and closed/open-hat muting. Android compilation and
+JVM checks are separate from this listening pass.
 
 ## Reproduce the audition
 
@@ -113,9 +146,9 @@ source controls and the existing drum engines. Sonic acceptance belongs
 to the listening review: useful endpoints, a cohesive midpoint and
 audible control over the transition.
 
-This is a renderer and audition prototype. Android picker registration,
-typed pad recipes, the remaining voice families and live voice interaction
-remain subsequent integration work. Finished blends and motion rendered
-inside a hit can follow SnipSnap's sample export pipeline; interaction
-between separate rearrangeable voices requires a shared runtime or a
-rendered phrase.
+The initial integration covers the four existing voices, saved patch and
+pad recipes, the SYNTH picker and pad editing, and the sample export path.
+The remaining voice families and live voice interaction are subsequent
+work. Finished blends and motion rendered inside a hit follow SnipSnap's
+sample export pipeline; interaction between separate rearrangeable voices
+requires a shared runtime or a rendered phrase.

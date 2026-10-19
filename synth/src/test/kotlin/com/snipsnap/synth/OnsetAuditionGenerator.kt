@@ -134,7 +134,7 @@ object OnsetAuditionGenerator {
                 "description" to "A single gain per complete clip matches its loudest 200 ms window. Raw files preserve engine balance."),
             "download" to PACK_NAME,
             "kitDownload" to linkedMapOf("href" to KIT_PACK_NAME, "title" to "16-pad MPC kit",
-                "description" to "Four voices at BLEND 0, .25, .5 and 1. MPC 3 XTD plus MPC 2 XPM; hardware listening check pending."),
+                "description" to "Four voices at BLEND 0, .25, .5 and 1. MPC 3 XTD plus MPC 2 XPM, with editable SnipSnap recipes. Hardware listening check pending."),
             "clips" to clips,
             "referenceClips" to references.clips,
             "referenceSource" to references.source,
@@ -441,11 +441,14 @@ object OnsetAuditionGenerator {
 
     private fun rendererIdentity(): Map<String, Any?> {
         val paths = listOf("src/main/kotlin/com/snipsnap/synth/Onset.kt",
+            "src/main/kotlin/com/snipsnap/synth/OnsetPatch.kt",
+            "src/main/kotlin/com/snipsnap/synth/OnsetKits.kt",
             "src/main/kotlin/com/snipsnap/synth/Thump.kt", "src/main/kotlin/com/snipsnap/synth/Skin.kt",
             "src/main/kotlin/com/snipsnap/synth/Tines.kt",
             "src/main/kotlin/com/snipsnap/synth/Modes.kt",
             "src/main/kotlin/com/snipsnap/synth/Dsp.kt", "src/main/kotlin/com/snipsnap/synth/Punch.kt",
             "src/test/kotlin/com/snipsnap/synth/OnsetAuditionGenerator.kt",
+            "src/test/kotlin/com/snipsnap/synth/OnsetKitExport.kt",
             "src/test/kotlin/com/snipsnap/synth/AuditionLevel.kt")
         return linkedMapOf("name" to "ONSET audition model ${Onset.MODEL_VERSION}", "implementation" to "SnipSnap JVM renderer",
             "sources" to paths.associateWith { path -> File(path).takeIf { it.isFile }?.let(::sha256) })
@@ -514,8 +517,10 @@ object OnsetAuditionGenerator {
         An initial four-voice build also needs -PonsetReferenceDir=/path/to/model-2-audition.
         Later runs reuse the retained first-pass references already present in this folder.
         onset-mpc-kit.zip contains a separate 16-pad XTD/XPM sample kit (BLEND rows 0/.25/.5/1;
-        columns kick/snare/closed hat/open hat), the exact raw PCM and source settings. Hardware
-        listening is still pending. This export stores samples and does not claim live ONSET DSP.
+        columns kick/snare/closed hat/open hat), exact raw PCM, source settings and typed SnipSnap
+        recipes. Import the kit in SnipSnap, use SYNTH > REOPEN PAD, edit and UPDATE PAD, then
+        export again. Saved recipes retain all six controls and the renderer version. Hardware
+        listening is still pending. MPC plays the rendered samples rather than live ONSET DSP.
     """.trimIndent() + "\n"
 
     private fun json(value: Any?): JsonValue = when (value) {

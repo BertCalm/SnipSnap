@@ -204,11 +204,6 @@ object Mpc3Importer {
         if (File(destDir, KitStore.FILE_NAME).exists() && !overwrite) {
             throw IOException("kit already exists: $destDir (pass overwrite=true to replace it)")
         }
-        destDir.mkdirs()
-        for (file in referenced) {
-            SafePath.child(dataDir, file).copyTo(SafePath.child(destDir, file), overwrite = true)
-        }
-
         val pads = parsed.map { p ->
             val main = p.layers.last()
             KitPad(
@@ -235,7 +230,20 @@ object Mpc3Importer {
             )
         }
 
-        val kit = Kit(kitName, pads)
+        val sidecarFile = File(dataDir, KitStore.FILE_NAME)
+        val sidecarText = if (sidecarFile.exists()) {
+            require(sidecarFile.isFile) { "'$sidecarFile' is not a kit sidecar file" }
+            sidecarFile.inputStream().use {
+                com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar ${sidecarFile.name}")
+            }.toString(Charsets.UTF_8)
+        } else null
+        // Validate before writing the destination. The unchanged WAV copies
+        // below are the same files checked against any saved source hashes.
+        val kit = ImportSidecar.restore(Kit(kitName, pads), sidecarText, dataDir, sidecarFile.path)
+        destDir.mkdirs()
+        for (file in referenced) {
+            SafePath.child(dataDir, file).copyTo(SafePath.child(destDir, file), overwrite = true)
+        }
         KitStore.save(kit, destDir)
 
         // Total recall: the clips the track carries come home too.

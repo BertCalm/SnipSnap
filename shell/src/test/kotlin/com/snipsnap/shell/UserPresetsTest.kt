@@ -482,7 +482,13 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == StoopPatch.ENGINE) {
+            if (engine == "ONSET") {
+                // ONSET's promotion writes its constructor directly so the
+                // saved renderer version is explicit, independent of a helper.
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("OnsetPatch("))
+                assertTrue("modelVersion = " in UserPresets.rosterLine(patch))
+            } else if (engine == StoopPatch.ENGINE) {
                 assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
                     assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")

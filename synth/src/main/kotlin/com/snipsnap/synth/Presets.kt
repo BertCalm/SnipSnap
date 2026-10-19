@@ -18,6 +18,10 @@ object Presets {
             val v = ThumpVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThumpPresets.forVoice(v)
         }
+        OnsetPatch.ENGINE -> {
+            val v = OnsetVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OnsetPresets.forVoice(v)
+        }
         TinesPatch.ENGINE -> {
             val v = TinesVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TinesPresets.forVoice(v)
@@ -203,7 +207,7 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
+        ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +

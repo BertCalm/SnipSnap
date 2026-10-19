@@ -189,6 +189,10 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
+        // brightness axis. Its velocity layers keep the saved model and blend
+        // intact and use the existing soften fallback.
+        is OnsetPatch -> Onset.macrosFor(patch.voice)
         is ThumpPatch -> Thump.macrosFor(patch.voice).let { specs ->
             // SNARE's TONE stopped being a brightness macro when the snare
             // became a membrane-plus-wires voice - see [SNARE_TONE_EXCLUDED]

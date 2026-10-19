@@ -15,6 +15,7 @@ class PresetsTest {
     @Test
     fun `forVoice forwards every registered engine by name`() {
         assertEquals(ThumpPresets.forVoice(ThumpVoice.KICK), Presets.forVoice("THUMP", "KICK"))
+        for (voice in OnsetVoice.entries) assertEquals(OnsetPresets.forVoice(voice), Presets.forVoice("ONSET", voice.name))
         assertEquals(TinesPresets.forVoice(TinesVoice.BELL), Presets.forVoice("TINES", "BELL"))
         assertEquals(PluckPresets.forVoice(PluckVoice.HARP), Presets.forVoice("PLUCK", "HARP"))
         assertEquals(VelvetPresets.forVoice(VelvetVoice.BASS), Presets.forVoice("VELVET", "BASS"))
@@ -78,7 +79,7 @@ class PresetsTest {
 
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
-        val expected = ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() +
+        val expected = ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
