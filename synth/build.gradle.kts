@@ -1185,6 +1185,18 @@ tasks.register<JavaExec>("generateOpenSkyAudition") {
     args("${rootDir}/testkit/opensky-audition")
 }
 
+/** Musical preset, touch and starter-pad audition for Relay's playability pass. */
+tasks.register<JavaExec>("generateRelayPerformanceAudition") {
+    group = "distribution"
+    description = "Render RELAY's curated bank, musical phrases, velocity examples and sixteen starter pads."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RelayPerformanceAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/relay-performance-audition")
+    if (project.hasProperty("relayPerformanceQuick")) args("--quick")
+}
+
 /** OVEN's reproducible first dry listening gate, including actual velocity layers. */
 tasks.register<JavaExec>("generateOvenAudition") {
     group = "distribution"

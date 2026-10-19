@@ -284,12 +284,18 @@ RELAY makes a compact timbral phrase inside one pitched note: a rounded
 pluck hands off to harmonic body, bell detail and soft tone, with accents
 scheduled independently of the order. KEY, BASS, PLUCK, ORGAN, CHIME and FLOW
 share ORDER, PULSE, BLEND, COLOR, LENGTH and HOLD, plus the host's TUNE
-control. Six dry identity presets, complete phrase recipes, native velocity,
-a sixteen-pad kit, FRESH TAPE and the synth picker use the same renderer.
-Run `./gradlew :synth:generateRelayAudition` for raw/matched voices, sweeps,
-interaction corners and repeated loops under `testkit/relay-audition/`.
+control. Thirty-six dry recipes retain the six earlier seeds unchanged:
+eight KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW presets.
+The SYNTH panel exposes native VELOCITY and note names. Complete phrase recipes,
+sixteen distinct starter pads, FRESH TAPE and the synth picker use the same renderer;
+explicit kit selections keep the starter at sixteen pads as the bank grows.
+Run `./gradlew :synth:generateRelayPerformanceAudition` for the 76-clip page:
+the full bank, six musical performances, three velocities per voice and every
+starter pad, with raw/matched WAVs under `testkit/relay-performance-audition/`.
+The earlier `generateRelayAudition` engineering matrix remains available.
 [Implementation notes](docs/RELAY.md) explain its clock and loop behavior.
-The dry identities await the owner's sonic approval before preset expansion.
+The expanded bank is a listening and playability candidate; hands-on device
+verification and the owner's listening verdict remain open.
 
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with

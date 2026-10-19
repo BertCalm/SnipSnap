@@ -1063,13 +1063,12 @@ object SynthKits {
                 Relay.defaults(RelayVoice.KEY) + ("TUNE" to semitone / Relay.TUNE_SEMITONES.toFloat()),
             ).let(::arranged)
         }
-        val voices = RelayPresets.all().map(::arranged)
-        val held = listOf(RelayVoice.ORGAN, RelayVoice.FLOW).map { voice ->
-            RelayPatch(
-                if (voice == RelayVoice.ORGAN) "HELD HANDOFF" else "FOUR CORNERS",
-                voice, Relay.defaults(voice) + ("HOLD" to 1f),
-            ).let(::arranged)
-        }
+        fun selected(name: String) = RelayPresets.all().single { it.name == name }.let(::arranged)
+        // The first KEY seed duplicates Handoff 6 at C4. Use its authored contrast here,
+        // and select by name so a growing preset bank never expands this sixteen-pad kit.
+        val voices = listOf("AFTERIMAGE KEY", "POCKET RELAY", "MUTED PASSAGE",
+            "ORGAN AFTERGLOW", "BELL EXIT", "SOFT EXCHANGE").map(::selected)
+        val held = listOf("HELD HANDOFF", "FOUR CORNERS").map(::selected)
         return notes + voices + held
     }
 
