@@ -1,4 +1,4 @@
-# FACET — finite mirrorball prototype
+# FACET — mirrorball prototype
 
 Facet explores one pitched instrument illuminated by twelve synthetic beams.
 A rotating facet layout changes which spectral routes receive their energy;
@@ -6,10 +6,68 @@ shared resonance lets one reflection linger into the next. Few facets should
 produce broad blooms, and many should produce finer shimmer. These are design
 intentions awaiting the owner's listening verdict.
 
-The experiment implements **BLOOM** and **SHIMMER**. It is a dry,
+The experiment implements **BLOOM** and **SHIMMER**. SnipSnap's source is a dry,
 sample-free, deterministic offline mono renderer at 44.1 kHz, with 4× internal
-oversampling. It is a finite listening prototype, not the complete six-voice
-engine in the supplied engineering specification.
+oversampling. A separate browser instrument adapts the light study for live
+playing. These are listening prototypes, not the complete six-voice engine
+in the supplied engineering specification.
+
+## Playable light study
+
+After the reduced-noise Airy comparison received positive feedback, the next
+audition tests the textures as an instrument. The browser keyboard offers
+Glass glints and refined Airy with BLOOM/SHIMMER, a C2–C6 note range,
+brightness, reflection density, movement, attack and release. Notes are
+synthesized at their requested pitch; transposing a recording does not
+change the speed of the reflections. The previous twelve comparison clips
+and the earlier R1/R2 archive remain available as recordings.
+
+The live source uses `keyboard/engine.js` and an AudioWorklet wrapper.
+`generateFacetKeyboardGeometry` exports the Kotlin light study's exact
+five-level reflection routes and packet events for each voice at seed 17,
+with the existing voice defaults and noise seeds. The browser interpolates
+the hierarchy for density, preserves integrated rotor phase while movement
+changes, and retains resonator memories while controls move. Brightness is
+a new performance tilt with a neutral midpoint; it is separate from saved
+CHROMA or ELEVATION. Airy retains the refined .016 noise veil.
+
+The streaming adaptation replaces whole-file level matching and the fixed
+six-second envelope with fixed gain, causal filtering and a key envelope.
+Attack/release control playing gestures rather than glint packet timings.
+Keyboard, pointer and touch inputs track individual note identities, with
+bounded polyphony and release handling when focus is lost or Stop all is
+pressed. Playing a reference recording stops the instrument and vice versa.
+
+This browser instrument does not register a new SnipSnap source model or
+change saved recipes. A held live note generates new samples continuously;
+exporting a seamless HOLD loop still requires phase and resonator closure.
+Android instrument integration, keygroup export and additional voices remain
+later stages after the playable sound receives listening feedback.
+
+To add the instrument to the compact Airy audition distribution:
+
+```sh
+./gradlew :synth:generateFacetKeyboardGeometry -PfacetKeyboardOutput=/path/to/output
+cp -R synth/src/test/resources/audition/facet-audition/. /path/to/output/
+```
+
+Serve that directory through localhost or HTTPS. The live keyboard requires
+a secure browser context. `keyboard/geometry-report.json` identifies the
+exported geometry, source commit and renderer hashes. Browser source and
+verification scripts accompany the ordinary SnipSnap source snapshot.
+
+The live source passed nine focused Node checks, including deterministic
+block-independent rendering, audible control changes, released notes,
+phase continuity, four-note headroom, and comparison with eight actual
+published Kotlin PCM files. The existing 33 focused Kotlin checks also
+passed. The streaming reference mode aligns with the finite recordings
+at a 12-sample filter delay; live key envelopes and gain remain separate.
+Chromium passed 22 browser checks with actual AudioWorklet output at 44.1
+and 48 kHz, including a 32-second held note, multi-input chords, control
+changes, note cleanup, reference-player interoperation and responsive
+layouts. All 24 exports for the eight Glass/refined Airy references remain
+byte-identical. Physical Safari/mobile audio has not been verified.
+The full repository gate has not been rerun for this browser audition.
 
 ## Airy refinement
 

@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17131b">
-  <meta name="description" content="FACET Airy refinement: compare glass glints with the original airy wash and a version with less noise in a focused SnipSnap listening study.">
-  <title>FACET — Airy refinement</title>
+  <meta name="description" content="Play FACET with a live keyboard, shape Glass and Airy textures, and compare the saved SnipSnap listening studies.">
+  <title>FACET — Play the light</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='24' fill='%2317131b'/%3E%3Cpath d='M24 5 39 13 43 30 32 43 15 41 5 27 10 12Z' fill='%23c5bad8'/%3E%3Cpath d='M10 12 32 43M39 13 15 41M5 27 43 30M24 5 24 43' stroke='%235b4d68' fill='none'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
+  <script src="keyboard/ui.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#listening-room">Skip to the listening room</a>
+  <a class="skip-link" href="#play-facet">Skip to keyboard</a>
   <header class="masthead shell">
     <a class="wordmark" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap on GitHub">Snip<span>Snap</span><span class="wordmark-dot" aria-hidden="true"></span></a>
     <span class="masthead-note">Instrument studies <span class="slash">/</span> Light studies</span>
@@ -21,11 +22,11 @@
   <main>
     <section class="hero shell" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="status-light" aria-hidden="true"></span> Light studies <span class="hero-edition">/</span> Airy refinement</div>
+        <div class="eyebrow"><span class="status-light" aria-hidden="true"></span> Play the light <span class="hero-edition">/</span> A live instrument</div>
         <h1 id="hero-title">FACET<span class="title-period">.</span></h1>
         <p class="hero-tagline">A mirrorball<br>you can hear.</p>
-        <p class="hero-description">Keep the ringing light. Ease back the noise. Compare the original airy wash with a quieter veil, beside the same glass glints.</p>
-        <a class="hero-cta" href="#listening-room">Compare the airy wash <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></a>
+        <p class="hero-description">Play the reflections. Hold a chord, shift its brightness, and explore Glass and Airy with your own timing.</p>
+        <a class="hero-cta" href="#play-facet">Play FACET <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></a>
       </div>
       <div class="hero-art" aria-hidden="true">
         <div class="art-annotation annotation-top"><span>12 BEAMS</span><span>ONE SHARED PITCH</span></div>
@@ -90,6 +91,27 @@
       <div class="shell concept-inner"><span class="strip-label">The listening question</span><p>Which core feels<br class="desktop-break"> like reflected light?</p><span class="strip-symbol" aria-hidden="true">✧</span></div>
     </div>
 
+    <section class="live-instrument shell" id="play-facet" aria-labelledby="live-title">
+      <div class="live-heading"><div><div class="eyebrow section-kicker">At your fingertips</div><h2 id="live-title">Play the light.</h2></div><p>Choose a texture, hold a note, or catch a chord. Four voices, with room for the reflections to ring.</p></div>
+      <div class="instrument-panel">
+        <div class="instrument-topbar"><div class="live-presets"><label for="live-texture">Texture<select id="live-texture"><option value="glass">Glass</option><option value="air">Airy · refined</option></select></label><label for="live-voice">Voice<select id="live-voice"><option value="BLOOM">BLOOM</option><option value="SHIMMER">SHIMMER</option></select></label></div><div class="live-actions"><button id="live-enable" class="enable-audio" type="button">Enable audio <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></button><button id="live-stop" class="live-quiet-button" type="button">Stop all</button></div></div>
+        <div class="live-controls" aria-label="Shape the sound">
+          <label class="live-control" for="live-brightness"><span>Brightness<output id="live-brightness-value" for="live-brightness">0.50</output></span><input id="live-brightness" data-live-control="brightness" type="range" min="0" max="1" step="0.01" value="0.5"><small>Shade the ringing</small></label>
+          <label class="live-control" for="live-density"><span>Density<output id="live-density-value" for="live-density">0.25</output></span><input id="live-density" data-live-control="density" type="range" min="0" max="1" step="0.01" value="0.25"><small>Broad to fine reflections</small></label>
+          <label class="live-control" for="live-movement"><span>Movement<output id="live-movement-value" for="live-movement">0.15</output></span><input id="live-movement" data-live-control="movement" type="range" min="0" max="0.7" step="0.01" value="0.15"><small>Still to turning</small></label>
+          <label class="live-control" for="live-attack"><span>Attack<output id="live-attack-value" for="live-attack">0.20 s</output></span><input id="live-attack" data-live-control="attack" type="range" min="0.01" max="1" step="0.01" value="0.2"><small>How the note arrives</small></label>
+          <label class="live-control" for="live-release"><span>Release<output id="live-release-value" for="live-release">0.35 s</output></span><input id="live-release" data-live-control="release" type="range" min="0.03" max="2" step="0.01" value="0.35"><small>How the note leaves</small></label>
+          <label class="live-control" for="live-volume"><span>Volume<output id="live-volume-value" for="live-volume">60%</output></span><input id="live-volume" data-live-control="volume" type="range" min="0" max="1" step="0.01" value="0.6"><small>Your listening level</small></label>
+        </div>
+        <div class="keyboard-topline"><div class="octave-control" role="group" aria-label="Keyboard octave"><button id="live-octave-down" type="button" aria-label="Move keyboard one octave lower">−</button><span id="live-octave-range">C3 — C5</span><button id="live-octave-up" type="button" aria-label="Move keyboard one octave higher">+</button></div><span id="live-voice-count" class="live-voice-count">0 / 4 voices</span><button id="live-reset" class="live-quiet-button" type="button">Reset sound</button></div>
+        <div class="piano-keyboard" id="live-keys" role="group" aria-label="Playable piano keyboard"></div>
+        <div class="keyboard-foot"><p class="computer-hint">Computer keys <kbd>Z</kbd>–<kbd>M</kbd> and <kbd>Q</kbd>–<kbd>I</kbd> · hold several for chords.</p><p class="touch-hint">Touch and hold the keys. Use + / − to move through C2–C6.</p><span id="live-notes" class="live-notes" aria-live="polite">No notes held</span></div>
+        <div class="audio-status-row"><span class="status-light" aria-hidden="true"></span><p id="live-audio-status" role="status" aria-live="polite">Enable audio when you’re ready to play.</p></div>
+      </div>
+      <p class="live-reference-link">Continue with the <a href="#listening-room">reference recordings below <span aria-hidden="true">↓</span></a>.</p>
+      <noscript><p class="no-script">Enable JavaScript to play the keyboard. Reference recordings remain available in the listening study.</p></noscript>
+    </section>
+
     <section id="listening-room" class="listening-room shell" aria-labelledby="room-title">
       <div class="room-heading">
         <div><div class="eyebrow section-kicker">The listening room</div><h2 id="room-title">More ring. Less noise.</h2></div>
@@ -113,11 +135,11 @@
 
     <section class="about-section shell" id="about" aria-labelledby="about-title">
       <div class="about-intro"><div class="eyebrow section-kicker">Inside the instrument</div><h2 id="about-title">One note.<br>Many ways to catch it.</h2></div>
-      <div class="about-copy"><p>FACET imagines twelve beams striking a rotating mirrorball. Each beam carries a different shade of the same note. As reflections pass, the harmonic balance shifts and a small bank of resonances rings in response.</p><p>The light study moved closer to the intended shimmer, but the airy wash carried too much white noise. This refinement reduces that broad noise veil while keeping the pitched ringing, reflection geometry, and excitation timing. Glass glints stays as the reference.</p><p>The revised airy wash is a listening candidate. The original airy wash remains beside it, and the complete earlier R1/R2 study is available below with its original settings and provenance.</p><p class="prototype-note"><span class="status-light" aria-hidden="true"></span> A listening prototype for SnipSnap. These are finite BLOOM and SHIMMER renders; sustained HOLD playback and the expanded editor are future work.</p></div>
+      <div class="about-copy"><p>FACET imagines twelve beams striking a rotating mirrorball. Each beam carries a different shade of the same note. As reflections pass, the harmonic balance shifts and a small bank of resonances rings in response.</p><p>The light study moved closer to the intended shimmer, but the airy wash carried too much white noise. This refinement reduces that broad noise veil while keeping the pitched ringing, reflection geometry, and excitation timing. Glass glints stays as the reference.</p><p>The revised airy wash is a listening candidate. The original airy wash remains beside it, and the complete earlier R1/R2 study is available below with its original settings and provenance.</p><p class="prototype-note"><span class="status-light" aria-hidden="true"></span> A listening prototype for SnipSnap. The keyboard is a live adaptation of the source: notes follow your playing and controls. The saved recordings below remain the exact reference renders; the expanded editor is future work.</p></div>
     </section>
 
     <section class="methodology shell" aria-labelledby="methodology-title">
-      <details><summary id="methodology-title">Render notes &amp; downloads <span aria-hidden="true">+</span></summary><div class="methodology-content"><div><p>This pass responds to the airy wash sounding too much like white noise. The revised version reduces its broad noise component while preserving the pitched ringing, reflection geometry, and excitation timing. Glass glints and the original airy wash retain their earlier audio.</p><p>Each trio groups the same voice and note: Glass glints, Airy wash original, and Airy wash less noise. Use the source-switch buttons to compare the same moment. Full settings and recipes document the conditions for each render. The earlier 57-render R1/R2 study is preserved as a separate, collapsed listening archive.</p><p>Every player uses a deterministic rendered audio file. Level matching helps keep loudness from dominating the comparison; choose Native or Raw to inspect the other available files. Settings downloads include the source model and excitation options.</p><p>Only one clip plays at a time. The source-switch buttons keep the current position within each trio. Switching the playback level also preserves your position when the alternate file is available. No sound starts automatically.</p><p id="render-summary" class="render-summary"></p><p id="render-revision" class="render-revision"></p></div><div class="downloads" id="downloads"><a class="download-link" href="manifest.json" download>Audition manifest <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 14l6 6 6-6"/></svg></a><a class="download-link" href="https://github.com/BertCalm/SnipSnap">SnipSnap on GitHub <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></a></div></div></details>
+      <details><summary id="methodology-title">Render notes &amp; downloads <span aria-hidden="true">+</span></summary><div class="methodology-content"><div><p>The live keyboard adapts Glass glints and the refined airy source to four playable voices. Brightness is an added performance control: its middle setting keeps the modal balance neutral. Density and Movement start from the selected voice’s defaults. The saved audio comparisons remain exact reference renders.</p><p>This pass responds to the airy wash sounding too much like white noise. The revised version reduces its broad noise component while preserving the pitched ringing, reflection geometry, and excitation timing. Glass glints and the original airy wash retain their earlier audio.</p><p>Each trio groups the same voice and note: Glass glints, Airy wash original, and Airy wash less noise. Use the source-switch buttons to compare the same moment. Full settings and recipes document the conditions for each render. The earlier 57-render R1/R2 study is preserved as a separate, collapsed listening archive.</p><p>Every player uses a deterministic rendered audio file. Level matching helps keep loudness from dominating the comparison; choose Native or Raw to inspect the other available files. Settings downloads include the source model and excitation options.</p><p>Only one clip plays at a time. The source-switch buttons keep the current position within each trio. Switching the playback level also preserves your position when the alternate file is available. No sound starts automatically.</p><p id="render-summary" class="render-summary"></p><p id="render-revision" class="render-revision"></p></div><div class="downloads" id="downloads"><a class="download-link" href="keyboard/geometry-report.json" download>Keyboard geometry report <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 14l6 6 6-6"/></svg></a><a class="download-link" href="facet-keyboard-source.zip" download>Live keyboard source <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 14l6 6 6-6"/></svg></a><a class="download-link" href="manifest.json" download>Audition manifest <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 14l6 6 6-6"/></svg></a><a class="download-link" href="https://github.com/BertCalm/SnipSnap">SnipSnap on GitHub <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></a></div></div></details>
     </section>
   </main>
 

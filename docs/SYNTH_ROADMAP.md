@@ -50,7 +50,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ### FACET — mirrorball-driven spectral pads
 
-**Light study received positive feedback; Airy refinement in audition.** The
+**Refined light study received positive feedback; playable browser audition.** The
 owner heard R1 as lo-fi and dead while confirming its macro controls worked,
 then heard R2 as an Operation buzzer rather than light shimmer. R1's
 full repository gate passed 4,944 tests in approximately 86 minutes. R2 passed
@@ -70,6 +70,13 @@ the light study “way better,” but Airy wash too noise-heavy. A new
 `AIRY_RESONANCE` comparison lowers only its broad veil from .070 to .016,
 retaining the original resonances, movement and random source. Glass and the
 original Airy stay exact; no factory default changes.
+The next listening stage adapts Glass and refined Airy into a live browser
+keyboard with independent note pitch, reflection movement, density,
+brightness and attack/release. It uses exported Kotlin reflection geometry
+and a stateful browser source, with the published recordings retained for
+comparison. The live audition is separate from SnipSnap's offline patch
+renderer; production integration and seamless HOLD export follow musical
+feedback on the playable textures.
 BLOOM and
 SHIMMER explore twelve generated harmonic beams, a deterministic nested facet
 layout, moving spectral routes and shared resonance. ILLUMINATE, ELEVATION,

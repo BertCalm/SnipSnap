@@ -196,6 +196,22 @@ object FacetLightStudy {
         ), trace.toList())
     }
 
+    /** Copied coefficients for the browser performer; exporting never changes renderer state. */
+    internal data class PerformanceEvent(val phase: Double, val group: Int, val amplitude: Double, val polarity: Double)
+    internal data class PerformanceGeometry(val depth: Int, val facets: Int, val routes: List<List<Float>>, val events: List<PerformanceEvent>)
+
+    internal fun performanceGeometry(voice: FacetVoice, depth: Int, seed: Int = 17): PerformanceGeometry {
+        require(depth in counts.indices) { "Performance geometry depth must be 0..4" }
+        val m = Facet.defaults(voice)
+        val geometry = prepare(depth, m.getValue("ILLUMINATE").toDouble(), m.getValue("ELEVATION").toDouble(),
+            m.getValue("CHROMA").toDouble(), Dsp.seedFor("FACET", 1, voice, seed))
+        return PerformanceGeometry(depth, counts[depth], geometry.routes.map { it.toList() },
+            geometry.events.map { PerformanceEvent(it.phase, it.group, it.amplitude, it.polarity) }.sortedBy { it.phase })
+    }
+
+    internal fun performanceRatios(direction: FacetLightDirection): List<Double> =
+        (if (direction == FacetLightDirection.GLASS_GLINTS) glassRatios else airRatios).toList()
+
     private data class Tile(val z0: Double, val z1: Double, val a0: Double, val a1: Double, val material: Double, val normal: Double, val id: Int)
     private data class Event(val phase: Double, val group: Int, val amplitude: Double, val polarity: Double)
     private data class Geometry(val routes: Array<FloatArray>, val events: List<Event>)

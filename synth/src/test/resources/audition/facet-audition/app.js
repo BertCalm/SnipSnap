@@ -20,6 +20,17 @@
   let observer = null;
   const players = [];
 
+  window.addEventListener('facet:live-play', () => {
+    const groups = new Set();
+    players.forEach(record => {
+      ++record.transition;
+      if (record.comparisonGroup) groups.add(record.comparisonGroup);
+      record.audio.pause();
+    });
+    groups.forEach(group => ++group.request);
+    activePlayer = null;
+  });
+
   function node(tag, className, text) {
     const item = document.createElement(tag);
     if (className) item.className = className;
@@ -240,6 +251,7 @@
     players.push(record);
     updateVariantNote(record);
     audio.addEventListener('play', () => {
+      window.dispatchEvent(new CustomEvent('facet:reference-play'));
       if (activePlayer && activePlayer !== audio) activePlayer.pause();
       activePlayer = audio;
       article.classList.add('is-playing');

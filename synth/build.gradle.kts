@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Exact prepared Kotlin geometry and deterministic-noise references for the live keyboard. */
+tasks.register<JavaExec>("generateFacetKeyboardGeometry") {
+    group = "distribution"
+    description = "Export five FACET light-study geometry levels per voice and live-port reference coefficients."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FacetKeyboardGeometryGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("facetKeyboardOutput").orNull ?: "${rootDir}/testkit/facet-audition")
+}
+
 /** Four less-noisy airy candidates with eight immutable published references. */
 tasks.register<JavaExec>("generateFacetAirRevision") {
     group = "distribution"
