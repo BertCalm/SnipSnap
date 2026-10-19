@@ -56,6 +56,12 @@ roughly six-second loops at three FLOW settings, without changing the finite pre
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
 
+**Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
+first-listen prototype, complete room recipes, passive feedback model and
+playback limits. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+is published; the owner's listening verdict remains pending. The supplied [`engineering specification`](CHAMBER_SPEC.md)
+remains the unchanged proposal; sustained HOLD and the wider library are later work.
+
 **Orphica.** [`ORPHICA.md`](ORPHICA.md) records the microsound harp, approved
 finite listening audition, phone controls and captured-sustain instrument
 export. Phone and MPC listening checks remain open.

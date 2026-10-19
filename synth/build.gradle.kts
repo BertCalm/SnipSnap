@@ -2,6 +2,30 @@ plugins {
     kotlin("jvm")
 }
 
+/** First finite CHAMBER proof: a shared quartet, mixed boundaries and causal listening comparisons. */
+tasks.register<JavaExec>("generateChamberAudition") {
+    group = "distribution"
+    description = "Render CHAMBER raw/matched WAVs, complete room recipes and the first-listen audition page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberOutput").orNull ?: "${rootDir}/testkit/chamber-audition")
+}
+
+tasks.register<JavaExec>("replayChamberDiagnostic") {
+    group = "distribution"
+    description = "Replay an exact diagnostic room/stem recipe saved by the CHAMBER listening bench."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberDiagnosticReplay")
+    workingDir = projectDir
+    doFirst {
+        args(providers.gradleProperty("chamberRecipe").get(), providers.gradleProperty("chamberReplayOutput").get(),
+            providers.gradleProperty("chamberReplayMode").orNull ?: "matched")
+    }
+}
+
 /** Twelve approved model-two patches, three dry studies, and the downloadable starter kit. */
 tasks.register<JavaExec>("generateOverlapMusicalAudition") {
     group = "distribution"

@@ -17,6 +17,10 @@ import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.Chamber
+import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.ChamberPresets
+import com.snipsnap.synth.ChamberVoice
 import com.snipsnap.synth.ContourEngine
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourVoice
@@ -146,6 +150,8 @@ import kotlin.random.Random
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
  * `--velocity` sets the string energy for both shapes.
+ * CHAMBER offers finite HYBRID/AQUARIUM recipes, native note/velocity, full 64-bit
+ * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
  */
 object SynthCommand {
 
@@ -168,8 +174,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE)) {
-            throw CliError("--patch is only supported by OPENSKY and CONTOUR, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY, CONTOUR and CHAMBER, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -198,6 +204,7 @@ object SynthCommand {
                 if (Vent.defaultModelFor(it) == Vent.MODEL) VentPresets.forVoice(it) else Presets.forVoice(engine, voice)
             } ?: emptyList()
             WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
+            ChamberPatch.ENGINE -> ChamberVoice.entries.firstOrNull { it.name == voice }?.let { ChamberPresets.forVoice(it) } ?: emptyList()
             NacrePatch.ENGINE -> NacreVoice.entries.firstOrNull { it.name == voice }?.let { NacrePresets.forVoice(it) } ?: emptyList()
             else -> Presets.forVoice(engine, voice)
         }
@@ -259,6 +266,7 @@ object SynthCommand {
                 VentPatch.ENGINE -> Vent.MIDI_MIN..Vent.MIDI_MAX
                 FlockPatch.ENGINE -> Flock.MIN_MIDI..Flock.MAX_MIDI
                 WickPatch.ENGINE -> Wick.MIN_MIDI..Wick.MAX_MIDI
+                ChamberPatch.ENGINE -> Chamber.MIDI_MIN..Chamber.MIDI_MAX
                 NacrePatch.ENGINE -> Nacre.MIN_MIDI..Nacre.MAX_MIDI
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
@@ -268,7 +276,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA and NACRE, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE and CHAMBER, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -280,17 +288,17 @@ object SynthCommand {
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
-        val flockSeedOverride = if (engine == FlockPatch.ENGINE) opts["--seed"]?.let { raw ->
-            raw.toLongOrNull() ?: throw CliError("--seed for FLOCK wants a signed 64-bit integer, got '$raw'")
+        val longSeedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE)) opts["--seed"]?.let { raw ->
+            raw.toLongOrNull() ?: throw CliError("--seed for $engine wants a signed 64-bit integer, got '$raw'")
         } else null
         val orphicaSeedOverride = if (engine == OrphicaPatch.ENGINE) opts["--seed"]?.let { raw ->
             raw.toLongOrNull() ?: throw CliError("--seed wants a 64-bit integer seed, got '$raw'")
         } else null
-        val seedOverride = if (engine in setOf(FlockPatch.ENGINE, OrphicaPatch.ENGINE)) null else seedFlag("--seed")
+        val seedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE, OrphicaPatch.ENGINE)) null else seedFlag("--seed")
         val secondsOverride = opts["--seconds"]?.let { raw ->
             if (engine != OspreyPatch.ENGINE) throw CliError("--seconds is only supported by OSPREY, got $engine")
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .25f..Osprey.MAX_SECONDS }
@@ -365,6 +373,7 @@ object SynthCommand {
                 is TanglePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is CreasePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is WickPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ChamberPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is NacrePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ShoalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
@@ -440,7 +449,8 @@ object SynthCommand {
             ) else if (withNote is CreasePatch) withNote.copy(
                 model = modelOverride ?: withNote.model,
             ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
-            else if (withNote is FlockPatch && flockSeedOverride != null) withNote.copy(seed = flockSeedOverride)
+            else if (withNote is FlockPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
+            else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else withNote
         }
