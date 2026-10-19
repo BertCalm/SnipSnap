@@ -5,8 +5,6 @@ import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.mpc3.Mpc3Clip
-import java.awt.Color
-import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -29,6 +27,14 @@ import kotlin.math.min
  *
  * KitArt-family: same LCD surface, same pixel type, deterministic —
  * same kit, same bytes.
+ *
+ * [draw] is the card itself, expressed purely against [ArtCanvas] —
+ * nothing it calls touches `java.awt`/`javax.imageio`. Those enter only
+ * through [render]/[png]/[awtPng] below, the AWT adapter `:cli` and the
+ * tests use. `:app` calls [draw] with its own `android.graphics` canvas
+ * (`AndroidJCard`), because `java.awt` does not exist on Android at any
+ * API level: `Inserts.write` reaching [png] from the phone crashed WRITE
+ * KIT with `NoClassDefFoundError` on `BufferedImage`.
  */
 object JCard {
 
@@ -39,6 +45,46 @@ object JCard {
     private const val SPINE = 0.1475f
     private const val BACK = 0.64f
 
+    /** The card's pixel height for a given [width] — three panels stacked. */
+    fun heightFor(width: Int): Int {
+        require(width in 300..2400) { "width wants 300..2400, got $width" }
+        return (width * FRONT).toInt() + (width * SPINE).toInt() + (width * BACK).toInt()
+    }
+
+    /**
+     * The platform-agnostic half: paint the whole card onto [canvas], which
+     * must be [width] by [heightFor] pixels. Public, not internal — `:app`
+     * is a separate module and implements [ArtCanvas] against
+     * `android.graphics`.
+     */
+    fun draw(
+        canvas: ArtCanvas,
+        kit: Kit,
+        kitDir: File,
+        scheme: Scheme = Schemes.DEFAULT,
+        width: Int = DEFAULT_WIDTH,
+        /** The label's catalog number (`DF-001`), worn on the spine when set. */
+        catalog: String? = null,
+    ) {
+        val height = heightFor(width)
+        val frontH = (width * FRONT).toInt()
+        val spineH = (width * SPINE).toInt()
+        val backH = (width * BACK).toInt()
+        canvas.fillRect(0, 0, width, height, scheme.lcd)
+
+        val m = (width * 0.05f).toInt()
+        front(canvas, kit, kitDir, scheme, width, frontH, m)
+        spine(canvas, kit, scheme, width, frontH, spineH, m, catalog)
+        back(canvas, kit, kitDir, scheme, width, frontH + spineH, backH, m)
+
+        // Fold hairlines where the card creases.
+        val hairline = max(1, width / 400)
+        canvas.fillRect(0, frontH - hairline / 2, width, hairline, scheme.amber)
+        canvas.fillRect(0, frontH + spineH - hairline / 2, width, hairline, scheme.amber)
+    }
+
+    // ---- the AWT adapter — the only place in this file java.awt appears ----
+
     fun render(
         kit: Kit,
         kitDir: File,
@@ -47,28 +93,11 @@ object JCard {
         /** The label's catalog number (`DF-001`), worn on the spine when set. */
         catalog: String? = null,
     ): BufferedImage {
-        require(width in 300..2400) { "width wants 300..2400, got $width" }
-        val frontH = (width * FRONT).toInt()
-        val spineH = (width * SPINE).toInt()
-        val backH = (width * BACK).toInt()
-        val height = frontH + spineH + backH
-        val img = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+        val img = BufferedImage(width, heightFor(width), BufferedImage.TYPE_INT_RGB)
         val g = img.createGraphics()
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            g.color = rgb(scheme.lcd)
-            g.fillRect(0, 0, width, height)
-
-            val m = (width * 0.05f).toInt()
-            front(g, kit, kitDir, scheme, width, frontH, m)
-            spine(g, kit, scheme, width, frontH, spineH, m, catalog)
-            back(g, kit, kitDir, scheme, width, frontH + spineH, backH, m)
-
-            // Fold hairlines where the card creases.
-            g.color = rgb(scheme.amber)
-            val hairline = max(1, width / 400)
-            g.fillRect(0, frontH - hairline / 2, width, hairline)
-            g.fillRect(0, frontH + spineH - hairline / 2, width, hairline)
+            draw(KitArt.AwtCanvas(g), kit, kitDir, scheme, width, catalog)
         } finally {
             g.dispose()
         }
@@ -87,38 +116,44 @@ object JCard {
         return out.toByteArray()
     }
 
+    /**
+     * [png] in the shape `Inserts.write` takes its renderer in — the
+     * desktop default, so `Inserts` itself never names the AWT path.
+     */
+    fun awtPng(kit: Kit, kitDir: File, catalog: String?): ByteArray = png(kit, kitDir, catalog = catalog)
+
     // ---- panels ------------------------------------------------------------
 
-    private fun front(g: Graphics2D, kit: Kit, kitDir: File, scheme: Scheme, w: Int, h: Int, m: Int) {
+    private fun front(c: ArtCanvas, kit: Kit, kitDir: File, scheme: Scheme, w: Int, h: Int, m: Int) {
         val nameBand = (h * 0.22f).toInt()
-        KitArt.waveform(KitArt.AwtCanvas(g), KitArt.Box(m, m, w - 2 * m, h - 2 * m - nameBand), kit, kitDir)
+        KitArt.waveform(c, KitArt.Box(m, m, w - 2 * m, h - 2 * m - nameBand), kit, kitDir)
         val bandTop = h - m - nameBand + (nameBand * 0.1f).toInt()
         PixelType.draw(
-            g, kit.name.uppercase(), w / 2, bandTop, (nameBand * 0.55f).toInt(), rgb(scheme.lcdInk),
+            c, kit.name.uppercase(), w / 2, bandTop, (nameBand * 0.55f).toInt(), scheme.lcdInk,
             centered = true, maxWidthPx = w - 2 * m,
         )
         PixelType.draw(
-            g, keyTempoLine(kit), w / 2, bandTop + (nameBand * 0.62f).toInt(), (nameBand * 0.3f).toInt(),
-            rgb(scheme.amber), centered = true, maxWidthPx = w - 2 * m,
+            c, keyTempoLine(kit), w / 2, bandTop + (nameBand * 0.62f).toInt(), (nameBand * 0.3f).toInt(),
+            scheme.amber, centered = true, maxWidthPx = w - 2 * m,
         )
     }
 
-    private fun spine(g: Graphics2D, kit: Kit, scheme: Scheme, w: Int, top: Int, h: Int, m: Int, catalog: String?) {
+    private fun spine(c: ArtCanvas, kit: Kit, scheme: Scheme, w: Int, top: Int, h: Int, m: Int, catalog: String?) {
         // The catalog number leads the spine, the way real labels press it.
         val line = (catalog?.let { "$it  " } ?: "") +
             "${kit.name.uppercase()}  ${keyTempoLine(kit)}  ${mileageLine(kit)}"
         val px = (h * 0.4f).toInt()
         PixelType.draw(
-            g, line, w / 2, top + (h - min(px, PixelType.ROWS * (px / PixelType.ROWS))) / 2,
-            px, rgb(scheme.lcdInk), centered = true, maxWidthPx = w - 2 * m,
+            c, line, w / 2, top + (h - min(px, PixelType.ROWS * (px / PixelType.ROWS))) / 2,
+            px, scheme.lcdInk, centered = true, maxWidthPx = w - 2 * m,
         )
     }
 
-    private fun back(g: Graphics2D, kit: Kit, kitDir: File, scheme: Scheme, w: Int, top: Int, h: Int, m: Int) {
+    private fun back(c: ArtCanvas, kit: Kit, kitDir: File, scheme: Scheme, w: Int, top: Int, h: Int, m: Int) {
         val header = (h * 0.09f).toInt()
         PixelType.draw(
-            g, "SIDE A - ${kit.name.uppercase()}", m, top + m, (header * 0.8f).toInt(),
-            rgb(scheme.amber), maxWidthPx = w - 2 * m,
+            c, "SIDE A - ${kit.name.uppercase()}", m, top + m, (header * 0.8f).toInt(),
+            scheme.amber, maxWidthPx = w - 2 * m,
         )
 
         // The pad list: up to two columns of sixteen — a full 32-pad kit fits.
@@ -137,8 +172,7 @@ object JCard {
             val x = m + col * (colW + m)
             val y = listTop + row * rowH
             val chip = (rowH * 0.5f).toInt().coerceAtLeast(3)
-            g.color = rgb(Schemes.classColor(pad.drumClass))
-            g.fillRect(x, y + (rowH - chip) / 2, chip, chip)
+            c.fillRect(x, y + (rowH - chip) / 2, chip, chip, Schemes.classColor(pad.drumClass))
             val bank = 'A' + (pad.slot - 1) / 16
             val num = (pad.slot - 1) % 16 + 1
             val source = pad.source["title"] ?: pad.source["app"]
@@ -147,8 +181,8 @@ object JCard {
                 if (source != null) append("  ${source.uppercase()}")
             }
             PixelType.draw(
-                g, text, x + chip + chip / 2, y + (rowH - textPx) / 2, textPx,
-                rgb(scheme.lcdInk), maxWidthPx = colW - chip - chip / 2,
+                c, text, x + chip + chip / 2, y + (rowH - textPx) / 2, textPx,
+                scheme.lcdInk, maxWidthPx = colW - chip - chip / 2,
             )
         }
 
@@ -158,8 +192,8 @@ object JCard {
             ?: if (kit.pads.isNotEmpty()) KitPreview.defaultPattern(kit) else null
         val grooveTop = top + h - m - grooveBand
         PixelType.draw(
-            g, "GROOVE ${clip?.name?.uppercase() ?: "NONE"}", m, grooveTop, (grooveBand * 0.28f).toInt(),
-            rgb(scheme.amber), maxWidthPx = w - 2 * m,
+            c, "GROOVE ${clip?.name?.uppercase() ?: "NONE"}", m, grooveTop, (grooveBand * 0.28f).toInt(),
+            scheme.amber, maxWidthPx = w - 2 * m,
         )
         if (clip != null) {
             val steps = stepVelocities(clip)
@@ -170,12 +204,12 @@ object JCard {
             for (s in 0 until 16) {
                 val x = m + s * (stepW + gap)
                 val v = steps[s]
-                g.color = if (v > 0f) {
-                    blend(rgb(scheme.lcd), rgb(scheme.lcdInk), 0.35f + 0.65f * v)
+                val color = if (v > 0f) {
+                    blend(scheme.lcd, scheme.lcdInk, 0.35f + 0.65f * v)
                 } else {
-                    blend(rgb(scheme.lcd), rgb(scheme.lcdInk), 0.12f)
+                    blend(scheme.lcd, scheme.lcdInk, 0.12f)
                 }
-                g.fillRect(x, stripTop, stepW, stripH)
+                c.fillRect(x, stripTop, stepW, stripH, color)
             }
         }
     }
@@ -205,11 +239,13 @@ object JCard {
         return steps
     }
 
-    private fun rgb(packed: Int) = Color((packed shr 16) and 0xFF, (packed shr 8) and 0xFF, packed and 0xFF)
-
-    private fun blend(a: Color, b: Color, t: Float): Color = Color(
-        (a.red + (b.red - a.red) * t).toInt().coerceIn(0, 255),
-        (a.green + (b.green - a.green) * t).toInt().coerceIn(0, 255),
-        (a.blue + (b.blue - a.blue) * t).toInt().coerceIn(0, 255),
-    )
+    /** Packed 0xRRGGBB blend, truncating per channel as the AWT-era `Color` version did. */
+    private fun blend(a: Int, b: Int, t: Float): Int {
+        fun ch(shift: Int): Int {
+            val x = (a shr shift) and 0xFF
+            val y = (b shr shift) and 0xFF
+            return (x + (y - x) * t).toInt().coerceIn(0, 255)
+        }
+        return (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+    }
 }

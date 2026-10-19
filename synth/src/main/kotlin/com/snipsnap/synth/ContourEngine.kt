@@ -175,7 +175,10 @@ object ContourEngine {
         val s = settings[voice.ordinal]
         return listOf(MacroSpec("TUNE", .5f, .5f), MacroSpec("SCAN", s[0], .40f),
             MacroSpec("OFFSET", s[1], .25f), MacroSpec("MOTION", s[2], .20f),
-            MacroSpec("FILTER", s[3], .55f), MacroSpec("DRIVE", s[4], 0f), MacroSpec("HOLD", 0f, 0f))
+            MacroSpec("FILTER", s[3], .55f), MacroSpec("DRIVE", s[4], 0f), MacroSpec("HOLD", 0f, 0f),
+            MacroSpec("BODY", .5f, .5f), MacroSpec("EDGE", .5f, .5f),
+            MacroSpec("ATTACK", .5f, .5f), MacroSpec("DECAY", .5f, .5f),
+            MacroSpec("RATE", .5f, .5f), MacroSpec("RESO", .5f, .5f), MacroSpec("ENV", .5f, .5f))
     }
 
     fun defaults(voice: ContourVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
@@ -203,8 +206,46 @@ object ContourEngine {
 
     /** A smooth bounded coordinate: no reflected path or hard-clamp corners. */
     private fun coordinate(x: Double): Double = 1.0 / (1.0 + exp(-x))
-    private fun motionCycles(motion: Double, seconds: Double, config: ContourConfig): Int =
-        if (motion <= 0) 0 else ((.35 + 2.8 * motion) * seconds / config.motionSeconds).roundToInt().coerceIn(1, 16)
+    private fun rateScale(m: Map<String, Float>): Double =
+        2.0.pow(6 * (m.getValue("RATE").toDouble() - .5))
+
+    private fun motionCycles(motion: Double, seconds: Double, config: ContourConfig,
+        rate: Float = .5f): Int {
+        if (motion <= 0) return 0
+        val cycles = (.35 + 2.8 * motion) * seconds / config.motionSeconds
+        // Keep the original arithmetic at neutral; old recipes need no migration.
+        val paced = if (rate == .5f) cycles else cycles * 2.0.pow(6 * (rate.toDouble() - .5))
+        return paced.roundToInt().coerceIn(1, 16)
+    }
+
+    /** Derive bounded articulation from the stored recipe, never from an already scaled copy. */
+    private fun articulationConfig(c: ContourConfig, m: Map<String, Float>): ContourConfig {
+        val attack = m.getValue("ATTACK")
+        val decay = m.getValue("DECAY")
+        if (attack == .5f && decay == .5f) return c
+        val attackScale = 2.0.pow(6 * (attack.toDouble() - .5))
+        val decayScale = 2.0.pow(4 * (decay.toDouble() - .5))
+        fun scaled(value: Float, scale: Double, lo: Float, hi: Float): Float =
+            (value * scale).toFloat().coerceIn(lo, hi)
+        var ampAttack = scaled(c.ampAttack, attackScale, .001f, 1.5f)
+        var ampDecay = scaled(c.ampDecay, decayScale, .02f, 2f)
+        var ampRelease = scaled(c.ampRelease, decayScale, .03f, 2.5f)
+        if (ampAttack + ampDecay + c.sustainSeconds + ampRelease > 8f) {
+            // Preserve the authored sustain and all phase minima. The small margin
+            // prevents Float rounding from putting the fitted total above eight.
+            val remaining = 7.999 - c.sustainSeconds - .001 - .02 - .03
+            val variable = (ampAttack - .001) + (ampDecay - .02) + (ampRelease - .03)
+            val fit = remaining / variable
+            ampAttack = (.001 + (ampAttack - .001) * fit).toFloat()
+            ampDecay = (.02 + (ampDecay - .02) * fit).toFloat()
+            ampRelease = (.03 + (ampRelease - .03) * fit).toFloat()
+        }
+        return c.copy(ampAttack = ampAttack, ampDecay = ampDecay, ampRelease = ampRelease,
+            edgeAttack = scaled(c.edgeAttack, attackScale, .001f, 1.5f),
+            filterAttack = scaled(c.filterAttack, attackScale, .001f, 1f),
+            edgeDecay = scaled(c.edgeDecay, decayScale, .02f, 3f),
+            filterDecay = scaled(c.filterDecay, decayScale, .02f, 3f))
+    }
 
     /** Independent source-coordinate probe, before the filter and output gain. */
     internal fun scanCoordinates(voice: ContourVoice, macros: Map<String, Float>, timeSeconds: Double,
@@ -217,13 +258,14 @@ object ContourEngine {
         val scan = m.getValue("SCAN").toDouble()
         val offset = m.getValue("OFFSET").toDouble()
         val motion = m.getValue("MOTION").toDouble()
+        val rate = m.getValue("RATE")
         val base = (scan - .5) * 5.5
         val depth = 1.0 - exp(-motion / .28)
         val speed = .65 + 2.2 * motion
-        val duration = c.motionSeconds / speed
+        val duration = c.motionSeconds / (if (rate == .5f) speed else speed * rateScale(m))
         fun wave(at: Double): Double {
             if (held) {
-                val angle = TAU * motionCycles(motion, seconds, c) * at / seconds
+                val angle = TAU * motionCycles(motion, seconds, c, rate) * at / seconds
                 return sin(angle) * .82 + sin(2 * angle) * .18
             }
             // A lag approaches the beginning of a finite gesture smoothly;
@@ -237,7 +279,7 @@ object ContourEngine {
             }
         }
         val bodyWave = wave(t)
-        val delayed = wave(t - c.edgeLag * (if (held) seconds / max(1, motionCycles(motion, seconds, c)) else duration))
+        val delayed = wave(t - c.edgeLag * (if (held) seconds / max(1, motionCycles(motion, seconds, c, rate)) else duration))
         val related = when (c.relation) {
             ContourRelation.LAG -> delayed
             ContourRelation.OPPOSED -> -delayed
@@ -291,8 +333,9 @@ object ContourEngine {
     }
 
     private class Engine(private val voice: ContourVoice, private val m: Map<String, Float>,
-        private val velocity: Float, private val c: ContourConfig, private val held: Boolean,
+        private val velocity: Float, config: ContourConfig, private val held: Boolean,
         private val plan: LoopPlan?, private val diagnostic: ContourDiagnostic) {
+        private val c = articulationConfig(config, m)
         private val hz = plan?.actualHz ?: frequencyFor(voice, m.getValue("TUNE")).toDouble()
         private val ratio = plan?.edgeRatio ?: c.edgeRatio.toDouble()
         private val bodyLookup = ContourTables.lookup(c.bodyTable, hz)
@@ -309,10 +352,27 @@ object ContourEngine {
         private val drive = if (diagnostic == ContourDiagnostic.CLEAN) 0.0 else m.getValue("DRIVE").toDouble()
         private val driveGain = 1 + 10 * drive.pow(1.45)
         private val driveCompensation = 1 / sqrt(1 + 2.8 * drive)
-        private val mixScale = .64 / max(1.0, c.bodyLevel + c.edgeLevel + c.subLevel.toDouble())
+        private val bodyMacro = m.getValue("BODY").toDouble()
+        private val edgeMacro = m.getValue("EDGE").toDouble()
+        private val edgeLevel = when {
+            edgeMacro == .5 -> c.edgeLevel.toDouble()
+            edgeMacro < .5 -> c.edgeLevel * (2 * edgeMacro)
+            else -> c.edgeLevel + (.8 - c.edgeLevel) * (2 * edgeMacro - 1)
+        }
+        private val mixScale = if (edgeMacro == .5)
+            .64 / max(1.0, c.bodyLevel + c.edgeLevel + c.subLevel.toDouble()) else
+            .64 / max(1.0, c.bodyLevel + edgeLevel + c.subLevel)
         private val minCutoff = (hz * 1.75).coerceIn(50.0, 1800.0)
         private val baseCutoff = minCutoff * (15500 / minCutoff).pow(filterMacro.pow(.85))
-        private val damping = (1.8 - .65 * filterMacro).toFloat()
+        private val damping = (1.8 - .65 * filterMacro).let { original ->
+            val reso = m.getValue("RESO").toDouble()
+            when {
+                reso == .5 -> original
+                reso < .5 -> 2.5 + (original - 2.5) * (2 * reso)
+                else -> original + (.4 - original) * (2 * reso - 1)
+            }.toFloat()
+        }
+        private val envelopeMacro = m.getValue("ENV").toDouble()
         private val effectiveMacros = if (diagnostic == ContourDiagnostic.FROZEN) m + ("MOTION" to 0f) else m
         private var sample = 0L
         private var bodyScan = 0.0
@@ -329,7 +389,16 @@ object ContourEngine {
         private fun controls(t: Double): DoubleArray {
             val scans = scanAt(effectiveMacros, t, c, held, plan?.frames?.toDouble()?.div(RATE) ?: c.loopSeconds.toDouble())
             val env = if (held) 0.0 else (1 - exp(-t / c.filterAttack)) * exp(-t / c.filterDecay)
-            val cut = (baseCutoff * 2.0.pow(env * c.filterAmount * (1 - filterMacro) * (1.0 + 1.7 * velocity))).coerceIn(35.0, 18000.0)
+            val originalOctaves = c.filterAmount * (1 - filterMacro) * (1.0 + 1.7 * velocity)
+            val cut = if (envelopeMacro == .5) {
+                // Preserve operation order for archived model-1 renders.
+                (baseCutoff * 2.0.pow(env * c.filterAmount * (1 - filterMacro) * (1.0 + 1.7 * velocity)))
+                    .coerceIn(35.0, 18000.0)
+            } else {
+                val octaves = if (envelopeMacro < .5) originalOctaves * (2 * envelopeMacro) else
+                    originalOctaves + 2 * (2 * envelopeMacro - 1)
+                (baseCutoff * 2.0.pow(env * octaves)).coerceIn(35.0, 18000.0)
+            }
             // Velocity acts before the output level stage: brighter excitation
             // and a more pronounced filter gesture survive loudness matching.
             val emphasis = (velocity - .5) * .13
@@ -352,7 +421,13 @@ object ContourEngine {
             }
             val body = if (diagnostic == ContourDiagnostic.EDGE_ONLY) 0.0 else {
                 val wave = bodyLookup.sample(bodyPhase, bodyScan)
-                (if (c.bodyHarmonics == 1f) wave else {
+                (if (bodyMacro != .5) {
+                    val root = bodyLookup.root(bodyPhase)
+                    val partials = (wave - root) * c.bodyHarmonics
+                    val rootWeight = if (bodyMacro < .5) 1.5 - bodyMacro else 1 - 1.5 * (bodyMacro - .5)
+                    val partialWeight = if (bodyMacro < .5) .5 + bodyMacro else 1.0
+                    root * rootWeight + partials * partialWeight
+                } else if (c.bodyHarmonics == 1f) wave else {
                     val root = bodyLookup.root(bodyPhase)
                     root + (wave - root) * c.bodyHarmonics
                 }) * c.bodyLevel
@@ -362,7 +437,7 @@ object ContourEngine {
                 val colored = if (c.edgeRootLevel == 1f) wave else
                     wave - (1 - c.edgeRootLevel) * edgeLookup.root(edgePhase)
                 val projected = if (c.edgeSustain == 1f) colored else colored * edgeGain
-                projected * c.edgeLevel
+                projected * edgeLevel
             }
             val anchor = if (diagnostic == ContourDiagnostic.EDGE_ONLY || c.subLevel == 0f) 0.0 else
                 sin(TAU * anchorPhase) * c.subLevel
@@ -420,7 +495,8 @@ object ContourEngine {
             (if (diagnostic == ContourDiagnostic.FROZEN) mapOf("MOTION" to 0f) else emptyMap())
         val plan = planLoop(frequencyFor(voice, m.getValue("TUNE")).toDouble(), config)
         if (velocity == 0f) return LoopRender(FloatArray(plan.frames * 2), plan.frames,
-            plan.noteHz, plan.actualHz, motionCycles(m.getValue("MOTION").toDouble(), plan.frames.toDouble() / RATE, config), plan.edgeRatio)
+            plan.noteHz, plan.actualHz, motionCycles(m.getValue("MOTION").toDouble(), plan.frames.toDouble() / RATE, config,
+                m.getValue("RATE")), plan.edgeRatio)
         val engine = Engine(voice, m, velocity, config, true, plan, diagnostic)
         // Three full periods settle oscillator/filter states. A trailing period
         // protects the chosen region from the resampler's boundary extension.
@@ -465,7 +541,7 @@ object ContourEngine {
         stopIfUnwanted(cancelled)
         check(energy <= 1e-20 || Keys.seamError(out, plan.frames) < 1e-3) { "CONTOUR $voice loop seam failed" }
         return LoopRender(out, plan.frames, plan.noteHz, plan.actualHz,
-            motionCycles(m.getValue("MOTION").toDouble(), plan.frames.toDouble() / RATE, config), plan.edgeRatio,
+            motionCycles(m.getValue("MOTION").toDouble(), plan.frames.toDouble() / RATE, config, m.getValue("RATE")), plan.edgeRatio,
             seamBeforeBlend, periodicError, stateError)
     }
 
@@ -478,7 +554,7 @@ object ContourEngine {
         diagnostic: ContourDiagnostic = ContourDiagnostic.COMBINED): FloatArray {
         require(velocity.isFinite() && velocity in 0f..1f) { "CONTOUR velocity must be finite in 0..1" }
         val m = settled(voice, macros)
-        val frames = (duration(config, m.getValue("HOLD").toDouble()) * INTERNAL_RATE).roundToInt()
+        val frames = (duration(articulationConfig(config, m), m.getValue("HOLD").toDouble()) * INTERNAL_RATE).roundToInt()
         if (velocity == 0f) return FloatArray(frames)
         val engine = Engine(voice, m, velocity, config, false, null, diagnostic)
         return FloatArray(frames) { if (it % 8192 == 0) stopIfUnwanted(); engine.tick() }

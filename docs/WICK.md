@@ -7,8 +7,8 @@ excitation; repeated pulses deplete that availability, which recovers over
 time. This is an articulation model, not a claim of physical energy conservation.
 
 The supplied [engineering specification](WICK_SPEC.md) is preserved as the
-proposal. This first listening round implements **PLUCK and BUBBLE**, nine
-provisional recipes and a dry sixteen-pad kit. WOOD, BREATH, FLICKER, RATTLE
+proposal. This listening round implements **PLUCK, WOOD and BUBBLE**, thirteen
+provisional recipes and a dry sixteen-pad kit. BREATH, FLICKER, RATTLE
 and the proposed 36-preset library await the owner's listening verdict.
 Numerical checks do not establish that the cascade is musically convincing.
 
@@ -45,31 +45,49 @@ Diagnostic `legacyBubbleEnvelope=true` reproduces the response from source
 revision `140d951a72aaca5f3a42af6b33c484bf4b645d16` for those references. Its
 reference recipes save that option explicitly; the candidate uses a normal
 Wick patch. Short-window energy and requested-root measurements help compare
-the note's body after the attack. The listener still decides whether the tone
-comes through clearly.
+the note's body after the attack. The owner preferred this new BUBBLE direction,
+which remains the working baseline while WOOD is developed.
+
+WOOD aims for a dry pitched wooden knock with smaller answering rebounds. It
+uses the same causal gate network with its own source ratio, body harmonics,
+gate timing, darker opening response and stage balance. Its default is SPARK
+.60, FEED .15, CASCADE .40, TIMBRE .40, RECOVERY .40 and HOLD 0, rooted at MIDI 48.
+The four provisional recipes are **Dry Wood**, **Soft Body**, **Small Rebounds**
+and **Held Wood**. The wood character is a listening target rather than an
+acoustic-body simulation.
 
 `WickPresets` is deliberately outside the shared factory roster, Android picker
 and starter menu pending listening. The CLI, patch/recipe decoder and native
 velocity renderer support the prototype. `SynthKits.wick()` supplies sixteen
-dry pads with regenerable recipes.
+dry pads with regenerable recipes: each voice at C3/C4 plus ten other recipes.
+Every one of the thirteen library recipes is represented in the kit.
 
 ```sh
 ./gradlew --no-daemon :synth:generateWickAudition
 ./gradlew --no-daemon :synth:generateWickKit
 ./gradlew --no-daemon :cli:run --args='synth WICK BUBBLE --all --midi 48 --velocity .65 --out /tmp/wick'
+./gradlew --no-daemon :cli:run --args='synth WICK WOOD --all --midi 60 --velocity .75 --out /tmp/wood'
 ./gradlew --no-daemon test
 ```
 
 ## Listening evidence
 
 The audition renders the real Kotlin engine with an empty FX chain. It contains
-native and matched audio, the two starting voices, provisional recipes,
+native and matched audio, the three starting voices, provisional recipes,
 five-step macro sweeps, pitch/velocity probes, interactions and held examples.
 Mechanism comparisons disconnect the cascade, force constant availability, or
 replace correlated brightness/gain with gain-only gating. Diagnostic JSON
 records event parent stages, release and admission times, requested/admitted
 strengths, availability and bounded-state measurements. Ablation recipes retain
 their diagnostic options separately from normal production patch JSON.
+
+Four dry musical phrases use a two-bar score at 100 BPM: the same notes,
+onsets and velocities rendered separately by PLUCK, WOOD and BUBBLE, followed
+by one phrase sharing those events across the three voices. Each note is a
+fresh pad render; recovery state is internal to that note. One fixed assembly
+gain preserves differences in strike strength. Loudness matching applies to
+the completed phrase. Sequence recipes save the score and every note's exact
+patch so the arrangement can be regenerated.
 
 The [private listening page](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
 asks whether the spark starts an audible chain, feeding exposes depletion,

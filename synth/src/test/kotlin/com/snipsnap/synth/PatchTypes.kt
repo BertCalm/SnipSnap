@@ -22,9 +22,22 @@ internal object PatchTypes {
     /** The `ENGINE` tag a [type] writes into its JSON: the companion's `const val`, a static field on the class. */
     fun engineOf(type: Class<out Patch>): String = type.getField("ENGINE").get(null) as String
 
-    /** The names of every voice a [type] can be built with, from the enum its `voice` property holds. */
+    /** Every voice from an enum property, or a single fixed `VOICE` constant when there is no property. */
     fun voicesOf(type: Class<out Patch>): List<String> {
-        val enum = type.getMethod("getVoice").returnType
+        val getter = try {
+            type.getMethod("getVoice")
+        } catch (_: NoSuchMethodException) {
+            val field = type.getField("VOICE")
+            require(field.type == String::class.java &&
+                java.lang.reflect.Modifier.isStatic(field.modifiers) &&
+                java.lang.reflect.Modifier.isFinal(field.modifiers)) {
+                "${type.simpleName}.VOICE must be a constant String"
+            }
+            val voice = field.get(null) as String
+            require(voice.isNotBlank()) { "${type.simpleName}.VOICE must not be blank" }
+            return listOf(voice)
+        }
+        val enum = getter.returnType
         return requireNotNull(enum.enumConstants) { "${type.simpleName}.voice is not an enum" }.map { (it as Enum<*>).name }
     }
 
@@ -44,15 +57,17 @@ internal object PatchTypes {
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
-     * deliberately kept out of [Presets] until the owner's listening verdict. VENT's
-     * six provisional recipes span two models in [VentPresets] and render through the CLI;
-     * its factory roster and phone picker stay unchanged while it is a prototype.
-     * OVERLAP's first finite comparisons likewise stay in its audition generator.
-     * FLOCK's finite recipes have a dedicated audition generator and CLI access.
+     * deliberately kept out of [Presets] until the owner's listening verdict.
      * WICK keeps its provisional starting points in its own preset object and
      * renders through the CLI while awaiting that verdict.
+     * NACRE's finite PEARL duet likewise has provisional listening recipes only.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(VentPatch.ENGINE, OverlapPatch.ENGINE, FlockPatch.ENGINE, WickPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(WickPatch.ENGINE, NacrePatch.ENGINE)
+
+    /** Only these voices of an otherwise rostered engine remain CLI-only comparisons. */
+    val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(
+        VentPatch.ENGINE to setOf(VentVoice.ROUND.name, VentVoice.WIRE.name, VentVoice.TEAR.name),
+    )
 }

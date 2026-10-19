@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -44,6 +47,7 @@ import com.snipsnap.app.theme.BinRedGlow
 import androidx.compose.ui.platform.LocalContext
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
@@ -72,6 +76,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import com.snipsnap.kit.Names
+import com.snipsnap.app.LocalHaptics
+import com.snipsnap.shell.Names as NameRoll
 
 /** How long a first tap on EMPTY THE BIN NOW (rooms bin) stays armed before it disarms itself — `TakesBinScreen.kt`'s own constant, copied verbatim. */
 private const val EMPTY_ROOMS_BIN_ARM_MS = 3_000L
@@ -94,8 +100,16 @@ fun KitsScreen(
     /** The projects on the shelf, most recently edited first (`ShelfModel.projects`). */
     projects: List<ShelfModel.ProjectRow>,
     onOpenProject: (ShelfModel.ProjectRow) -> Unit,
+    /** The open project's folder name, so its row can say it is the one open; null while none is. */
+    openProjectName: String? = null,
     /** NEW PROJECT ▸: an empty project, opened. */
     onNewProject: () -> Unit,
+    /**
+     * CATCH YOUR FIRST SOUND ▸, the cold shelf's one filled button: arms the
+     * mic the way the dock's LISTEN · MIC does. No default, so a screen built
+     * without one fails the compile and not the first minute of a new user.
+     */
+    onCatchFirst: () -> Unit,
     busy: Boolean,
     onOpen: (KitShelf.Entry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
@@ -240,6 +254,23 @@ fun KitsScreen(
             dubStatuses[it.dir.path]
         }
 
+    // The footer's one filled button is the shelf's unit of work (SH1): once
+    // there are projects to open, that is NEW PROJECT ▸, and NEW KIT ▸
+    // STARTERS steps down to an outline row above the doors. Not mid-pick:
+    // a SNIPS → PAD, BREED or + FROM SHELF pick is choosing a kit, the
+    // projects section is not drawn, and EMPTY_SHELF_FOR_ASSIGN sends the
+    // user to NEW KIT below. And not on a shelf with no kits, where the
+    // project list is not drawn (the empty panel is) and a kit is what is
+    // missing.
+    val picking = assigningSnip || breedingFrom != null || addingTo != null
+    val projectFirst = projects.isNotEmpty() && kits.isNotEmpty() && !picking
+    // The first run — no project and no kit — has a button of its own: the
+    // way in that needs nothing made first is a sound, so CATCH YOUR FIRST
+    // SOUND ▸ is the filled button, and NEW KIT ▸ STARTERS (the other honest
+    // way in, a kit someone already composed) steps down to the outline row.
+    // Once the first SNIP lands the shelf has both, and this is gone for good.
+    val coldShelf = projects.isEmpty() && kits.isEmpty() && !picking
+
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
     // up regardless of how many rows are armed at once.
@@ -379,9 +410,9 @@ fun KitsScreen(
             // the shelf yet, the empty-state panel just below carries the
             // real instruction instead (Copy.EMPTY_SHELF_FOR_ASSIGN).
             if (assigningSnip && kits.isNotEmpty()) {
-                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             } else if (breedingFrom != null && kits.size > 1) {
-                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
 
             if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
@@ -434,7 +465,7 @@ fun KitsScreen(
                                 Copy.FIRST_RUN_PLACES_NOTE,
                                 TapeType.pixelSmall,
                                 scheme.lcdInk.tape,
-                                maxLines = 2,
+                                maxLines = 3,
                             )
                         }
                     }
@@ -456,22 +487,26 @@ fun KitsScreen(
                     // made one per kit before this screen read them.
                     if (!assigningSnip && breedingFrom == null && addingTo == null) {
                         item(key = "projects-header") {
-                            TapeText("PROJECTS · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                         }
                         items(projects, key = { "project:" + it.dir.name }) { row ->
-                            ProjectRow(row, busy, onOpenProject)
+                            ProjectRow(row, row.name == openProjectName, busy, onOpenProject)
                         }
-                        item(key = "projects-new") {
-                            ActionButton(
-                                "NEW PROJECT ▸",
-                                scheme,
-                                enabled = !busy,
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = onNewProject,
-                            )
+                        // The shelf never shows two: with projects to open the
+                        // button is the pinned primary below the list.
+                        if (!projectFirst) {
+                            item(key = "projects-new") {
+                                ActionButton(
+                                    "NEW PROJECT ▸",
+                                    scheme,
+                                    enabled = !busy,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = onNewProject,
+                                )
+                            }
                         }
                         item(key = "kits-header") {
-                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                     }
                     // A filter that empties the shelf must say so itself: a
@@ -510,28 +545,28 @@ fun KitsScreen(
                     // forgotten - and RENAME is the only place a kit is ever
                     // named by hand (September UAT, finding 17).
                     item(key = "kits-note") {
-                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                     // INSTRUMENTS left for MAKE ▸ INSTRUMENTS (plan §3.6): they are
                     // what MAKE made, and the list is where you find them.
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
-                            TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("ROOMS · OUTSIDE MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
                             RoomRow(room, busy, onForgetRoom, onShareRoom)
                         }
                         if (rooms.isNotEmpty()) {
                             item(key = "rooms-note") {
-                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                             }
                         }
                         // The bin's door on the phone: every forgotten room, its days
                         // left, and RESTORE - the same row TAKES + BIN draws for a pad.
                         if (binnedRooms.isNotEmpty()) {
                             item(key = "rooms-bin-header") {
-                                TapeText("IN THE BIN · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                                TapeText("IN THE BIN · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                             }
                             items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
                                 BinnedRoomRow(binned, busy) {
@@ -554,39 +589,54 @@ fun KitsScreen(
                 }
             }
 
-            // Renamed from "FRESH TAPE": on a cold open this reads as
-            // "start recording" (the persona walkthroughs' single most
-            // costly misread), when what it actually opens is a menu of
-            // starter kits — most of them pre-composed, only BLANK/START
-            // EMPTY genuinely empty. The label now predicts that.
-            PrimaryAction(
-                // 18 chars, deliberately: this sits in a single-line
-                // PrimaryAction whose longest proven-safe label is 22
-                // ("WRITING — DO NOT EJECT"), and at 200% font scale a
-                // longer one ellipsizes. "PICK A STARTER" was the honest
-                // subtitle but pushed it to 24 and would have truncated
-                // mid-word; the menu it opens says PICK A STARTER as its
-                // own heading, so the word isn't lost, just moved to where
-                // it always fits.
-                label = if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
-                enabled = !busy,
-                onClick = { menuOpen = true },
-            )
+            if (coldShelf || projectFirst) {
+                if (coldShelf) {
+                    PrimaryAction(
+                        label = Places.CATCH_FIRST,
+                        enabled = !busy,
+                        onClick = onCatchFirst,
+                    )
+                } else {
+                    PrimaryAction(
+                        label = "NEW PROJECT ▸",
+                        enabled = !busy,
+                        onClick = onNewProject,
+                    )
+                }
+                // Outline, one step down: a kit is made inside a project more
+                // often than the other way round, and the menu it opens still
+                // says PICK A STARTER as its own heading.
+                ActionButton(
+                    if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
+                    scheme,
+                    enabled = !busy,
+                    accessibilityLabel = "NEW KIT ▸ STARTERS",
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { menuOpen = true },
+                )
+            } else {
+                // Renamed from "FRESH TAPE": on a cold open this reads as
+                // "start recording" (the persona walkthroughs' single most
+                // costly misread), when what it actually opens is a menu of
+                // starter kits — most of them pre-composed, only BLANK/START
+                // EMPTY genuinely empty. The label now predicts that.
+                PrimaryAction(
+                    // 18 chars, deliberately: this sits in a single-line
+                    // PrimaryAction whose longest proven-safe label is 22
+                    // ("WRITING — DO NOT EJECT"), and at 200% font scale a
+                    // longer one ellipsizes. "PICK A STARTER" was the honest
+                    // subtitle but pushed it to 24 and would have truncated
+                    // mid-word; the menu it opens says PICK A STARTER as its
+                    // own heading, so the word isn't lost, just moved to where
+                    // it always fits.
+                    label = if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
+                    enabled = !busy,
+                    onClick = { menuOpen = true },
+                )
+            }
             // The capture pair (LISTEN / APP AUDIO, then SNIP / STOP) sat here
             // under NEW KIT until the dock took it (plan §1): capture state is
             // on every screen now, not only the shelf.
-            // SNIPS: always openable, even with zero snips yet (its own
-            // empty state says so) — unlike BACKUP (now behind TOOLS
-            // below), this isn't gated on the shelf holding anything. A
-            // sibling library reached for often, not a tool, so it stays
-            // top-level rather than moving behind the new door.
-            ActionButton(
-                "SNIPS ▸ EVERY CATCH, ONE LIST",
-                scheme,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onSnips,
-            )
             // LOOP: the six-track phasing grid, filled from SNIPS' own
             // → LOOP. Gated on a track actually holding something, the way
             // DELETED KITS below is gated on the bin — never a door onto an
@@ -603,7 +653,7 @@ fun KitsScreen(
             }
             // BIN: deleted kits and deleted snips, two lists on one bench (plan
             // §3.1). Gated on a bin actually holding something — unlike
-            // SNIPS/BACKUP above, this is never shown merely dimmed; a user who
+            // SNIPS/BACKUP below, this is never shown merely dimmed; a user who
             // has never deleted anything sees no door to an empty room at all
             // (locked behavior, Task 2 of the bin-restore plan).
             if (binnedCount > 0) {
@@ -615,19 +665,40 @@ fun KitsScreen(
                     onClick = onBin,
                 )
             }
-            // TOOLS (oilslick followups): BACKUP, CHOP ALL, X-RAY and
-            // DOUBLES nested behind one door — see [ToolsMenu]'s own KDoc.
-            // These four are the shelf's utility rows, not "make
-            // something"/library actions, so they're the ones that moved;
-            // NEW KIT/LISTEN/INSIDE/SNIPS and the conditional rows above
-            // all stay top-level per the owner's ruling.
-            ActionButton(
-                "TOOLS ▸ BACKUP, CHOP ALL, X-RAY, DOUBLES",
-                scheme,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { toolsMenuOpen = true },
-            )
+            // SNIPS and TOOLS, two chips in one row (SH1): two full-width rows
+            // for two doors that are each a word was 56 dp of the shelf for
+            // their descriptions. The row shows the word and its arrow; the
+            // accessible names say the door and what is behind it, without
+            // the arrow, which read aloud is noise.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // SNIPS: always openable, even with zero snips yet (its own
+                // empty state says so) — unlike BACKUP (now behind TOOLS),
+                // this isn't gated on the shelf holding anything. A sibling
+                // library reached for often, not a tool, so it stays
+                // top-level rather than moving behind the other door.
+                ActionButton(
+                    "SNIPS ▸",
+                    scheme,
+                    enabled = !busy,
+                    accessibilityLabel = "OPEN SNIPS, EVERY CATCH IN ONE LIST",
+                    modifier = Modifier.weight(1f),
+                    onClick = onSnips,
+                )
+                // TOOLS (oilslick followups): BACKUP, CHOP ALL, X-RAY and
+                // DOUBLES nested behind one door — see [ToolsMenu]'s own KDoc.
+                // These four are the shelf's utility rows, not "make
+                // something"/library actions, so they're the ones that moved;
+                // NEW KIT/LISTEN/INSIDE/SNIPS and the conditional rows above
+                // all stay top-level per the owner's ruling.
+                ActionButton(
+                    "TOOLS ▸",
+                    scheme,
+                    enabled = !busy,
+                    accessibilityLabel = "OPEN TOOLS, BACKUP, CHOP ALL, X-RAY, DOUBLES",
+                    modifier = Modifier.weight(1f),
+                    onClick = { toolsMenuOpen = true },
+                )
+            }
         }
 
         if (menuOpen) {
@@ -678,6 +749,7 @@ fun KitsScreen(
             val cancelRename = { renameTarget = null; armedKitDirs = armedKitDirs - target.dir.path }
             KitRenameDialog(
                 initialName = target.kit.name,
+                taken = kits.map { it.dir.name }.toSet(),
                 onCancel = cancelRename,
                 // Same reasoning as DELETE's onConfirm above — renaming to
                 // the kit's own current name is a same-dir no-op in
@@ -695,10 +767,13 @@ fun KitsScreen(
  * One project on the shelf (plan §3.1): its name, then `2 KITS · 94 BPM ·
  * EDITED 2 HR AGO` — the model's own subtitle plus the age the kit rows
  * already show, so the two lists read the same way. Tapping opens it;
- * `App` decides what opening means (the active kit onto PADS).
+ * `App` decides what opening means (the active kit onto PADS). The row of
+ * the project that is [isOpen] wears the selected convention - the
+ * accent border, and OPEN NOW where the rest say OPEN ▸ - so a list of
+ * sixteen that all read the same names the one you are in.
  */
 @Composable
-private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (ShelfModel.ProjectRow) -> Unit) {
+private fun ProjectRow(row: ShelfModel.ProjectRow, isOpen: Boolean, busy: Boolean, onOpen: (ShelfModel.ProjectRow) -> Unit) {
     val scheme = LocalScheme.current
     val age = Ages.agoOrNull(row.editedAtMillis, System.currentTimeMillis())
     val facts = listOfNotNull(row.subtitle, age?.let { "EDITED $it" }).joinToString("  ·  ")
@@ -706,7 +781,8 @@ private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (Shelf
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            .let { if (isOpen) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            .semantics { this.selected = isOpen }
             .tapeClick(label = "OPEN PROJECT ${row.name.uppercase(Locale.ROOT)}", enabled = !busy) { onOpen(row) }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -715,7 +791,7 @@ private fun ProjectRow(row: ShelfModel.ProjectRow, busy: Boolean, onOpen: (Shelf
             TapeText(row.name, TapeType.markerBig, scheme.ink.tape)
             TapeText(facts, TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText("OPEN ▸", TapeType.pixelSmall, scheme.ink2.tape)
+        TapeText(if (isOpen) "OPEN NOW" else "OPEN ▸", TapeType.pixelSmall, if (isOpen) scheme.ink.tape else scheme.ink2.tape)
     }
 }
 
@@ -842,7 +918,7 @@ private fun BinnedRoomRow(binned: Rooms.Binned, busy: Boolean, onRestore: (Rooms
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(binned.room.name, TapeType.marker, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(binned.room.name, TapeType.marker, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
         Box(
             Modifier
@@ -1096,10 +1172,16 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
  * RENAME is disabled while the typed name fails `Names.isMpcSafe` — the
  * same refusal `KitShelf.renameKit` would give, surfaced before the tap
  * instead of after.
+ *
+ * REROLL beside the field puts a word from `shell.Names` in it - the same
+ * roll a kit gets when nobody names it - avoiding every folder in [taken].
+ * It fills the field and nothing more: RENAME is still the tap that
+ * commits, so a roll can be taken back by CANCEL or rolled again.
  */
 @Composable
-private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
+private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: () -> Unit, onConfirm: (String) -> Unit) {
     val scheme = LocalScheme.current
+    val haptics = LocalHaptics.current
     var name by remember { mutableStateOf(initialName) }
     val safe = Names.isMpcSafe(name)
     Box(
@@ -1130,20 +1212,26 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText("RENAME KIT", TapeType.lcdSmall, scheme.ink.tape)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .sunkenField(scheme)
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-            ) {
-                BasicTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    textStyle = TapeType.marker.copy(color = scheme.ink.tape),
-                    cursorBrush = SolidColor(scheme.ink.tape),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .sunkenField(scheme)
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                ) {
+                    BasicTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        textStyle = TapeType.marker.copy(color = scheme.ink.tape),
+                        cursorBrush = SolidColor(scheme.ink.tape),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                ActionButton("REROLL", scheme, enabled = true, accessibilityLabel = "REROLL NAME", modifier = Modifier.width(92.dp)) {
+                    name = NameRoll.roll(taken = taken)
+                    haptics.tick()
+                }
             }
             if (!safe) {
                 TapeText(
@@ -1161,7 +1249,12 @@ private fun KitRenameDialog(initialName: String, onCancel: () -> Unit, onConfirm
     }
 }
 
-/** The primary action per the handoff: 52dp, rimmed, dark fill. */
+/**
+ * The primary action per the handoff: 52dp, rimmed, dark fill. Disabled it
+ * is not the same button dimmed: the accent rim and the dark fill are what
+ * say "tap me", so both go, and it draws as a disabled [ActionButton] does
+ * (the raised bevel, `ink3` text) at the primary's height.
+ */
 @Composable
 fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
     val scheme = LocalScheme.current
@@ -1175,8 +1268,13 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(Layout.PRIMARY_ACTION_H.dp)
-            .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
-            .then(rim)
+            .then(
+                if (enabled) {
+                    Modifier.background(scheme.lcd.tape, RoundedCornerShape(6.dp)).then(rim)
+                } else {
+                    Modifier.raisedBevel(scheme)
+                },
+            )
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -1186,14 +1284,17 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
     ) {
         TapeText(
             label,
-            TapeType.displayBig,
-            if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.5f),
+            // Past 22 characters (the longest label proven to fit one line at
+            // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
+            // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
+            if (label.length > 22) TapeType.display else TapeType.displayBig,
+            if (enabled) scheme.lcdInk.tape else scheme.ink3.tape,
         )
     }
 }
 
 @Composable
-private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> Unit) {
+internal fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> Unit) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -1218,19 +1319,13 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
                 // wrapping all of them. A bare gesture detector registers
                 // no semantics node at all (MessageBox.kt's pattern).
                 .pointerInput(Unit) { detectTapGestures { } }
-                .padding(10.dp),
+                .padding(10.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText("PICK A STARTER", TapeType.display, scheme.ink.tape)
-            // This Column does NOT scroll, so the roster has a ceiling
-            // rather than merely a length: a row past the bottom of the
-            // frame is a starter nobody can reach, with nothing on screen
-            // to say it is there. Measured when SKIN made it nine: a row
-            // is ~39dp with a one-line blurb and ~49dp with two, so nine
-            // rows plus the heading and padding come to ~554dp of
-            // Layout.FRAME_H's 844 at the worst case - about five rows of
-            // headroom left.
-            // Whoever spends them adds a verticalScroll here first.
+            // The viewport stays inside the screen; long rosters scroll so every
+            // starter remains reachable without moving the scrim or its dismiss area.
             for (starter in StarterKits.ALL) {
                 Column(
                     Modifier

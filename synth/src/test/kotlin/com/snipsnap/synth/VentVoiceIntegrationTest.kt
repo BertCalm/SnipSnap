@@ -98,11 +98,12 @@ class VentVoiceIntegrationTest {
     }
 
     @Test
-    fun `provisional clean voices remain outside the factory roster and leave old starts intact`() {
+    fun `clean starter recipes join the factory roster and leave controlled audition starts intact`() {
         val names = listOf("Round Orbit Prototype", "Wire Orbit Prototype", "Torn Orbit Prototype")
         for ((voice, name) in legacyVoices.zip(names)) {
             assertEquals(VentPatch(name, voice, Vent.defaultsFor(voice), model = Vent.MODEL),
                 VentPresets.forVoice(voice).single())
+            assertTrue(Presets.forVoice(VentPatch.ENGINE, voice.name).isEmpty())
         }
         for (voice in cleanVoices) {
             val preset = VentPresets.forVoice(voice).single()
@@ -111,9 +112,10 @@ class VentVoiceIntegrationTest {
             assertEquals(Vent.DEFAULT_MIDI, preset.midi)
             assertEquals(1f, preset.velocity)
             assertEquals(0, preset.seed)
-            assertTrue(Presets.forVoice(VentPatch.ENGINE, voice.name).isEmpty())
+            assertEquals(VentKitPresets.forVoice(voice), Presets.forVoice(VentPatch.ENGINE, voice.name))
+            assertEquals(4, Presets.forVoice(VentPatch.ENGINE, voice.name).size)
         }
         assertEquals(legacyVoices + cleanVoices, VentPresets.all().map { it.voice })
-        assertTrue(Presets.all().none { it.engine == VentPatch.ENGINE })
+        assertEquals(VentKitPresets.all(), Presets.all().filter { it.engine == VentPatch.ENGINE })
     }
 }
