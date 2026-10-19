@@ -28,6 +28,13 @@ fixture. Model version 1 identifies this response. Derived taps and runtime
 filter state remain internal. Macro edits and velocity rendering preserve
 the nonmacro configuration.
 
+An explicit EARLY/LATE/COIL profile replaces the voice's bend-location pattern;
+BEND still sets its severity. `perfectRetention` takes precedence over bend,
+absorption and endpoint loss. The seed fixes strand variation across macro
+edits. Near-axis route offsets are fitted to root periods across strands to
+support the requested note inside the launch budget; other path classes keep
+their fractional-period interference. This is a musical tuning choice.
+
 The provisional `FilamentPresets` roster stays outside shared factory
 presets, the phone picker and starter kits until listening. The CLI, patch
 decoder, native velocity renderer and `SynthKits.filament()` support the
@@ -53,6 +60,8 @@ depletion reviewable before output calibration. Native output and listening
 matches are separate files. A level match is a listening convenience, not
 evidence of conserved branch power. Diagnostic recipes keep collapsed-path,
 generic-spill and disabled-bend options separate from ordinary patch JSON.
+Native output uses a fixed gain of 1.20; raw/stem exports all use 0.25. Neither
+collector receives independent loudness makeup.
 
 HOLD fits the excitation and pulse schedule to a loop, populates delay
 history and settles the filters in a bounded search. Evidence must compare
@@ -80,6 +89,20 @@ compares straight and bent routes, early/late/distributed escape, arrival
 length, one/four strands, isolated collectors, mechanism substitutions,
 macro sweeps and held loops. Notes entered there stay in the listener's
 browser and can be downloaded.
+
+The first complete render contains 88 successful clips and twelve provisional
+presets. All 39 standard finite default/preset/register cases avoid percussion
+classes in a 1.2-second onset window. Six held clips include independently
+generated predecessor/current PCM evidence; their largest complete-cycle
+relative squared error is 5.31e-13 and largest PCM seam error is zero. Maximum
+scalar allocation error is 3.13e-16, and the highest raw mixed peak is 0.228.
+These are measurements of this listening matrix, not universal guarantees.
+
+Rendering used Temurin Java 17 on Linux/amd64 with four visible processors
+(AMD EPYC 9V74) and a 768 MiB maximum heap. Median preparation was 0.16 ms and
+median synthesis 657 ms; the 88-clip task took about 70 seconds including
+analysis/export. The manifest distinguishes observed heap use and final audio
+buffer size from a profiled peak. Java 17 matches the repository's CI runtime.
 
 The owner's listening verdict completes sonic acceptance: length should
 unfold arrivals, bends should deplete THROUGH while feeding SPILL, and the
