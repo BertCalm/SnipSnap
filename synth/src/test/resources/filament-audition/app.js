@@ -6,7 +6,7 @@
   audio.volume = 0.8;
   const state = {manifest: null, clips: [], groups: [], selected: null, group: 'all', voice: '', query: '', mode: 'native', track: 'mix', loadedUrl: '', notes: {}, generation: 0};
   const descriptions = {
-    native: 'Original engine output. Hear the fixed gain and intended instrument balance.',
+    native: 'Direct engine output. Hear the fixed gain and intended instrument balance.',
     raw: 'Fixed export gain across renders. Compare depletion and energy without leveling it away.',
     matched: 'Listening levels are matched. Compare the tone while reducing loudness differences.'
   };
@@ -20,10 +20,16 @@
   };
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
   const filePath = (file) => typeof file === 'string' ? file : file && (file.url || file.path) || '';
+  const clipModel = (clip) => Number(clip.model) || 1;
+  const modelName = (clip) => clipModel(clip) >= 2 ? 'REVISED' : 'ORIGINAL';
+  const modelLabel = (clip) => `${modelName(clip)} / MODEL ${clipModel(clip)}`;
+  const voiceIntents = {THREAD:'A focused root, with upper glass glints that shed quickly.',PULSE:'Articulated odd/even groups, with shifting accents.',CURL:'Upper harmonics bloom after the root, then release slowly.'};
+  const characterGroups = ['character','character-presets','character-context','character-sweep-bend','character-sweep-collect','character-mechanism'];
+  const groupPriority = (id) => { const index = characterGroups.indexOf(id); return index >= 0 ? index : String(id).startsWith('character') ? characterGroups.length : characterGroups.length + 1; };
   const urlFor = (path) => path ? new URL(path, new URL('./', location.href)).href : '';
   const files = () => state.selected?.files || {};
   const currentPath = () => filePath(files()[state.track === 'mix' ? state.mode : state.track]);
-  const visibleClips = () => state.clips.filter((clip) => (state.group === 'all' || clip.group === state.group) && (!state.voice || String(clip.voice) === state.voice) && (!state.query || [clip.title, clip.description, clip.voice, clip.kind, clip.id].join(' ').toLowerCase().includes(state.query)));
+  const visibleClips = () => state.clips.filter((clip) => (state.group === 'all' || clip.group === state.group) && (!state.voice || String(clip.voice) === state.voice) && (!state.query || [clip.title, clip.description, clip.voice, clip.kind, clip.id, modelLabel(clip)].join(' ').toLowerCase().includes(state.query)));
   const noteName = (midi) => Number.isFinite(Number(midi)) ? ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'][((Math.round(Number(midi)) % 12) + 12) % 12] + (Math.floor(Number(midi) / 12) - 1) : '—';
   const time = (seconds, fine = false) => {
     if (!Number.isFinite(seconds)) return fine ? '0:00.0' : '0:00';
@@ -38,20 +44,20 @@
   function loadNotes() { try { const saved = JSON.parse(localStorage.getItem('filament-listening-notes-v1') || '{}'); state.notes = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {}; } catch { state.notes = {}; } }
   function saveNote() {
     if (!state.selected) return;
-    if ($('notes').value.trim()) state.notes[state.selected.id] = {text: $('notes').value, title: state.selected.title, updatedAt: new Date().toISOString()};
+    if ($('notes').value.trim()) state.notes[state.selected.id] = {text: $('notes').value, title: state.selected.title, model:clipModel(state.selected), updatedAt: new Date().toISOString()};
     else delete state.notes[state.selected.id];
     try { localStorage.setItem('filament-listening-notes-v1', JSON.stringify(state.notes)); $('notes-status').textContent = 'Saved in this browser'; }
     catch { $('notes-status').textContent = 'Browser storage unavailable · export to keep'; }
   }
   function drawGroups() {
     const all = [{id:'all', title:'All renders'}, ...state.groups];
-    $('group-nav').innerHTML = all.map((group) => `<button type="button" class="group-button" data-group="${escapeHtml(group.id)}" aria-pressed="${state.group === group.id}">${escapeHtml(group.title)}<small>${group.id === 'all' ? state.clips.length : state.clips.filter((clip) => clip.group === group.id).length}</small></button>`).join('');
+    $('group-nav').innerHTML = all.map((group) => `<button type="button" class="group-button${String(group.id).startsWith('character') ? ' featured' : ''}" data-group="${escapeHtml(group.id)}" aria-pressed="${state.group === group.id}">${escapeHtml(group.title)}<small>${group.id === 'all' ? state.clips.length : state.clips.filter((clip) => clip.group === group.id).length}</small></button>`).join('');
   }
   function drawList() {
     const clips = visibleClips();
     $('visible-count').textContent = `${clips.length} ${clips.length === 1 ? 'render' : 'renders'}`;
     if (!clips.length) { $('clip-list').innerHTML = '<p class="clip-no-results">No renders match. Try another collection, voice, or search.</p>'; return; }
-    $('clip-list').innerHTML = clips.map((clip) => `<div class="clip-row${state.selected?.id === clip.id ? ' selected' : ''}" data-row="${escapeHtml(clip.id)}"><button type="button" class="clip-select" data-select="${escapeHtml(clip.id)}"${state.selected?.id === clip.id ? ' aria-current="true"' : ''}><span class="clip-row-title">${escapeHtml(clip.title)}</span><span class="clip-row-description">${escapeHtml(clip.description)}</span><span class="clip-row-meta">${escapeHtml(String(clip.voice || '').toUpperCase())} <span aria-hidden="true">·</span> ${escapeHtml(noteName(clip.midi))}${clip.loop ? ' · HELD' : ''}</span></button><button type="button" class="clip-play" data-play="${escapeHtml(clip.id)}" aria-label="Play ${escapeHtml(clip.title)}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 8 5-8 5Z" fill="currentColor"/></svg></button></div>`).join('');
+    $('clip-list').innerHTML = clips.map((clip) => `<div class="clip-row${state.selected?.id === clip.id ? ' selected' : ''}" data-row="${escapeHtml(clip.id)}"><button type="button" class="clip-select" data-select="${escapeHtml(clip.id)}"${state.selected?.id === clip.id ? ' aria-current="true"' : ''}><span class="clip-row-title">${escapeHtml(clip.title)}</span><span class="clip-row-description">${escapeHtml(clip.description)}</span><span class="clip-row-meta"><span class="row-model${clipModel(clip) >= 2 ? ' revised' : ''}">${escapeHtml(modelLabel(clip))}</span> <span aria-hidden="true">·</span> ${escapeHtml(String(clip.voice || '').toUpperCase())} <span aria-hidden="true">·</span> ${escapeHtml(noteName(clip.midi))}${clip.loop ? ' · HELD' : ''}</span></button><button type="button" class="clip-play" data-play="${escapeHtml(clip.id)}" aria-label="Play ${escapeHtml(clip.title)}, ${escapeHtml(modelLabel(clip))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 8 5-8 5Z" fill="currentColor"/></svg></button></div>`).join('');
     updateSteppers();
   }
   function updateSteppers() {
@@ -107,7 +113,15 @@
     const group = state.groups.find((item) => item.id === clip.group);
     $('clip-group').textContent = group?.title || clip.group || 'Render';
     $('clip-index').textContent = `${String(state.clips.indexOf(clip) + 1).padStart(2, '0')} / ${state.clips.length}`;
-    $('clip-tags').innerHTML = `<span class="clip-tag voice">${escapeHtml(String(clip.voice || 'FILAMENT').toUpperCase())}</span><span class="clip-tag">${escapeHtml(noteName(clip.midi))} · MIDI ${escapeHtml(clip.midi ?? '—')}</span><span class="clip-tag">VEL ${escapeHtml(number(clip.velocity))}</span>${clip.loop ? '<span class="clip-tag held">HELD / LOOPABLE</span>' : ''}`;
+    $('clip-tags').innerHTML = `<span class="clip-tag model ${clipModel(clip) >= 2 ? 'revised' : 'original'}">${escapeHtml(modelLabel(clip))}</span><span class="clip-tag voice">${escapeHtml(String(clip.voice || 'FILAMENT').toUpperCase())}</span><span class="clip-tag">${escapeHtml(noteName(clip.midi))} · MIDI ${escapeHtml(clip.midi ?? '—')}</span><span class="clip-tag">VEL ${escapeHtml(number(clip.velocity))}</span>${clip.loop ? '<span class="clip-tag held">HELD / LOOPABLE</span>' : ''}`;
+    const partner = state.clips.find((item) => item.id === clip.comparisonPartnerId);
+    $('revision-comparison').hidden = !partner;
+    $('compare-version').dataset.partnerId = partner?.id || '';
+    $('compare-version').firstChild.textContent = partner ? `Hear ${modelName(partner).toLowerCase()} ` : 'Compare version ';
+    $('compare-version').setAttribute('aria-label', partner ? `Hear ${modelName(partner).toLowerCase()}: ${partner.title}` : 'Compare version');
+    const intent = voiceIntents[String(clip.voice || '').toUpperCase()];
+    $('voice-intent').hidden = !intent || (clipModel(clip) < 2 && !partner);
+    $('voice-intent').textContent = intent ? `Listening intent · ${intent}` : '';
     const failures = Array.isArray(clip.failures) ? clip.failures : clip.failures ? [clip.failures] : [];
     const warn = failures.length ? `Render notes: ${failures.map((entry) => typeof entry === 'string' ? entry : JSON.stringify(entry)).join(' · ')}` : '';
     $('clip-warning').hidden = !warn;
@@ -227,6 +241,15 @@
   $('search').addEventListener('input', () => { state.query = $('search').value.trim().toLowerCase(); drawList(); });
   $('voice-filter').addEventListener('change', () => { state.voice = $('voice-filter').value; drawList(); });
   $('play').addEventListener('click', () => audio.paused ? playAudio() : audio.pause());
+  $('compare-version').addEventListener('click', () => {
+    const partner = state.clips.find((clip) => clip.id === $('compare-version').dataset.partnerId);
+    if (!partner) return;
+    if (!visibleClips().some((clip) => clip.id === partner.id)) {
+      state.group = partner.group || 'all'; state.voice = ''; state.query = '';
+      $('search').value = ''; $('voice-filter').value = ''; drawGroups();
+    }
+    selectClip(partner.id, true);
+  });
   $('previous').addEventListener('click', () => step(-1));
   $('next').addEventListener('click', () => step(1));
   $('seek').addEventListener('input', () => { if (Number.isFinite(audio.duration)) audio.currentTime = Number($('seek').value) / 1000 * audio.duration; updateTime(); });
@@ -262,19 +285,35 @@
       const manifest = await response.json();
       if (!Array.isArray(manifest.clips) || !manifest.clips.length) throw new Error('No audio clips were supplied in the render manifest.');
       state.manifest = manifest;
-      state.clips = manifest.clips;
+      state.clips = [...manifest.clips].sort((a, b) => {
+        const groupOrder = groupPriority(a.group) - groupPriority(b.group);
+        if (groupOrder) return groupOrder;
+        if (a.group === 'character' && b.group === 'character') {
+          const voices = ['THREAD','PULSE','CURL'];
+          return voices.indexOf(a.voice) - voices.indexOf(b.voice) || clipModel(b) - clipModel(a);
+        }
+        return 0;
+      });
       if (filePath(manifest.download)) document.querySelectorAll('[data-pack-download]').forEach((link) => { link.href = urlFor(filePath(manifest.download)); });
       if (manifest.packScope?.description) $('pack-description').textContent = manifest.packScope.description;
       state.groups = (Array.isArray(manifest.groups) ? manifest.groups : []).map((group) => typeof group === 'string' ? {id: group, title: group} : group);
       const known = new Set(state.groups.map((group) => group.id));
       for (const clip of state.clips) if (clip.group && !known.has(clip.group)) { state.groups.push({id:clip.group,title:clip.group}); known.add(clip.group); }
+      state.groups.sort((a, b) => groupPriority(a.id) - groupPriority(b.id));
       $('render-count').textContent = `${state.clips.length} RENDERED CLIPS`;
       const voices = [...new Set(state.clips.map((clip) => clip.voice).filter(Boolean))];
       $('voice-filter').innerHTML = '<option value="">All voices</option>' + voices.map((voice) => `<option value="${escapeHtml(voice)}">${escapeHtml(String(voice).toUpperCase())}</option>`).join('');
       drawGroups();
       let initialId = '';
       try { initialId = new URLSearchParams(location.hash.slice(1)).get('clip') || ''; } catch { /* Use the first render. */ }
-      selectClip(state.clips.find((clip) => clip.id === initialId)?.id || state.clips[0].id);
+      const initialClip = state.clips.find((clip) => clip.id === initialId)
+        || state.clips.find((clip) => clip.id === 'character_thread_revised')
+        || state.clips.find((clip) => clipModel(clip) === 2 && clip.group === 'character')
+        || state.clips.find((clip) => clipModel(clip) === 2)
+        || state.clips[0];
+      if (initialClip.group === 'character') state.group = 'character';
+      drawGroups();
+      selectClip(initialClip.id);
       $('workstation').setAttribute('aria-busy', 'false');
     } catch (error) {
       $('load-error').textContent = `The listening bench could not load: ${error.message} Reload to retry, or download the listening pack above.`;

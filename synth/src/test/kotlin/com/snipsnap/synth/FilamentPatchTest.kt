@@ -12,19 +12,33 @@ import kotlin.test.assertTrue
 class FilamentPatchTest {
     @Test
     fun `finite and held recipes replay every source and geometry setting through the dispatcher`() {
-        for ((index, voice) in FilamentVoice.entries.withIndex()) {
+        for (model in listOf(1, 2)) for ((index, voice) in FilamentVoice.entries.withIndex()) {
             val config = FilamentConfig(seed = 719 + index, profile = FilamentProfile.entries[index + 1],
                 perfectRetention = voice == FilamentVoice.THREAD)
             val macros = Filament.defaults(voice) + mapOf("INJECT" to .63f, "BEND" to .72f,
                 "HOLD" to if (voice == FilamentVoice.PULSE) 1f else 0f)
-            val original = FilamentPatch("Saved $voice", voice, macros, midi = 57, velocity = .65f, config = config)
+            val original = FilamentPatch("Saved $voice", voice, macros, midi = 57, velocity = .65f, config = config, model = model)
             val restored = FilamentPatch.fromJsonText(original.toJsonText())
             assertEquals(original, restored)
             assertEquals(original, Patches.fromJsonText(original.toJsonText()))
-            assertContentEquals(original.render().samples, restored.render().samples, "$voice recipe replay")
+            val replay = restored.render().samples
+            assertContentEquals(original.render().samples, replay, "$voice recipe replay")
+            assertContentEquals(Filament.render(voice, macros, midi = 57, velocity = .65f, config = config, model = model).samples,
+                replay, "$voice patch must pass its saved model to the engine")
             assertEquals(setOf("INJECT", "BEND", "LENGTH", "BUNDLE", "COLLECT", "HOLD"), restored.macros.keys)
             val editedMacros = macros + ("LENGTH" to .81f)
             assertEquals(original.copy(name = "Edited", macros = editedMacros), Patches.edited(original, "Edited", editedMacros))
+        }
+    }
+
+    @Test
+    fun `new direct patches select model two while both saved models remain supported`() {
+        val p = FilamentPatch("New", FilamentVoice.THREAD, Filament.defaults(FilamentVoice.THREAD))
+        assertEquals(2, p.model)
+        for (model in listOf(1, 2)) {
+            val saved = p.copy(model = model)
+            assertEquals(saved, FilamentPatch.fromJsonText(saved.toJsonText()))
+            assertEquals(model, (Patches.edited(saved, "Edited", saved.macros + ("BEND" to .4f)) as FilamentPatch).model)
         }
     }
 
@@ -86,12 +100,12 @@ class FilamentPatchTest {
 
     @Test
     fun `native velocity routing preserves the saved note and complete strand configuration`() {
-        for (voice in FilamentVoice.entries) {
+        for (model in listOf(1, 2)) for (voice in FilamentVoice.entries) {
             val patch = FilamentPatch("Velocity", voice, Filament.defaults(voice), midi = 67, velocity = .8f,
-                config = FilamentConfig(seed = 17, profile = FilamentProfile.LATE))
+                config = FilamentConfig(seed = 17, profile = FilamentProfile.LATE), model = model)
             val actual = Velocity.atVelocity(patch, .25f)
             assertContentEquals(patch.copy(velocity = .25f).render().samples, actual.samples,
-                "$voice native velocity ignored the saved deterministic configuration")
+                "$voice model$model native velocity ignored the saved deterministic configuration")
         }
     }
 
@@ -109,9 +123,44 @@ class FilamentPatchTest {
             assertTrue(Presets.forVoice(FilamentPatch.ENGINE, voice.name).isEmpty())
         }
         for (p in presets) {
+            assertEquals(2, p.model)
             assertEquals(Filament.defaults(p.voice).keys, p.macros.keys)
+            assertTrue(p.macros != Filament.defaults(p.voice), "${p.name} duplicates the voice defaults")
             assertEquals(p, Patches.fromJsonText(p.toJsonText()))
             assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(p.name), p.name)
         }
+        assertEquals(presets.size, presets.map { listOf(it.voice, it.macros, it.config) }.distinct().size)
+    }
+
+    @Test
+    fun `original recipes retain their exact first listening snapshots independently of new defaults`() {
+        val originals = FilamentPresets.original()
+        val macroNames = listOf("INJECT", "BEND", "LENGTH", "BUNDLE", "COLLECT", "HOLD")
+        // Frozen first-listen data, including names, control order, seed and profile.
+        val expected = """
+            THREAD|Glass Thread|0.25,0.15,0.25,0.0,0.2,0.0|0|VOICE
+            THREAD|Narrow Arrival|0.12,0.12,0.18,0.0,0.1,0.0|0|VOICE
+            THREAD|Four Routes|0.45,0.35,0.6,1.0,0.35,0.0|17|VOICE
+            THREAD|Held Thread|0.25,0.3,0.4,0.35,0.4,1.0|0|VOICE
+            PULSE|Pulse Passage|0.65,0.3,0.65,0.2,0.35,0.0|0|VOICE
+            PULSE|Long Passage|0.75,0.4,0.95,0.35,0.35,0.0|0|LATE
+            PULSE|Early Glints|0.65,0.7,0.65,0.25,0.8,0.0|0|EARLY
+            PULSE|Held Procession|0.55,0.45,0.7,0.5,0.55,1.0|0|VOICE
+            CURL|Loose Curl|0.45,0.65,0.45,0.15,0.5,0.0|0|VOICE
+            CURL|Bend Glow|0.5,0.85,0.55,0.45,0.75,0.0|0|COIL
+            CURL|Spilled Silver|0.75,0.9,0.8,0.9,0.9,0.0|29|LATE
+            CURL|Held Curl|0.45,0.65,0.6,0.65,0.65,1.0|0|VOICE
+        """.trimIndent().lines()
+        val actual = originals.map { p ->
+            assertEquals(1, p.model)
+            assertEquals(48, p.midi)
+            assertEquals(1f, p.velocity)
+            assertEquals(false, p.config.perfectRetention)
+            assertEquals(macroNames, p.macros.keys.toList())
+            assertEquals(p, FilamentPatch.fromJsonText(p.toJsonText()))
+            "${p.voice}|${p.name}|${macroNames.joinToString(",") { p.macros.getValue(it).toString() }}|${p.config.seed}|${p.config.profile}"
+        }
+        assertEquals(expected, actual)
+        assertEquals(originals.map { it.name }, FilamentPresets.all().map { it.name }, "names identify comparable recipes across models")
     }
 }

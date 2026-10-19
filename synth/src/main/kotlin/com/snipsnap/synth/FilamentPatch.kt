@@ -8,6 +8,7 @@ import com.snipsnap.json.JsonValue
  * A complete FILAMENT recipe. Geometry variation belongs to [config], so editing
  * a control or rendering another velocity does not replace the strand roster.
  * Prepared taps, delay history and resonator state are rebuilt on every render.
+ * The saved model preserves the original material when a recipe is edited.
  */
 data class FilamentPatch(
     override val name: String,
@@ -24,12 +25,12 @@ data class FilamentPatch(
             "FILAMENT midi out of ${Filament.MIN_MIDI}..${Filament.MAX_MIDI}: $midi"
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "FILAMENT velocity out of 0..1: $velocity" }
-        require(model == Filament.MODEL_VERSION) { "unsupported filament model $model" }
+        require(model == Filament.ORIGINAL_MODEL || model == Filament.MODEL_VERSION) { "unsupported filament model $model" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Filament.render(voice, macros, midi, velocity, config)
+    override fun render() = Filament.render(voice, macros, midi, velocity, config, model = model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(
@@ -48,14 +49,13 @@ data class FilamentPatch(
     companion object {
         const val ENGINE = "FILAMENT"
         const val VERSION = Patches.VERSION
-        private const val ORIGINAL_MODEL = 1
 
         fun fromJsonValue(value: JsonValue): Patch {
             val obj = value.obj()
             fun optional(key: String) = obj[key]?.takeUnless { it is JsonValue.Null }
             // Omitted model always names the original rendering contract.
-            val model = optional("model")?.int() ?: ORIGINAL_MODEL
-            if (model != Filament.MODEL_VERSION) throw JsonException("unsupported filament model $model")
+            val model = optional("model")?.int() ?: Filament.ORIGINAL_MODEL
+            if (model != Filament.ORIGINAL_MODEL && model != Filament.MODEL_VERSION) throw JsonException("unsupported filament model $model")
             val configObject = optional("config")?.obj()
             fun configuration(key: String) = configObject?.get(key)?.takeUnless { it is JsonValue.Null }
             val profileName = configuration("profile")?.str() ?: FilamentProfile.VOICE.name

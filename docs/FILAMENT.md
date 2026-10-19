@@ -1,4 +1,4 @@
-# FILAMENT — first listening prototype
+# FILAMENT — listening prototype
 
 Filament is a deterministic, sample-free pitched instrument for SnipSnap's
 offline renderer. One excitation enters a normalized set of guided paths.
@@ -24,7 +24,8 @@ HOLD selects sustained/repeating material at its top step.
 Requested MIDI root (36–84), velocity and deterministic configuration are
 saved separately from the six controls in `FilamentPatch`. The configuration
 records the seed, optional early/late/coil profile and ideal-retention
-fixture. Model version 1 identifies this response. Derived taps and runtime
+fixture. Model version 2 selects the revised voice character; model 1 retains
+the original response. JSON without a model still selects model 1. Derived taps and runtime
 filter state remain internal. Macro edits and velocity rendering preserve
 the nonmacro configuration.
 
@@ -39,6 +40,28 @@ The provisional `FilamentPresets` roster stays outside shared factory
 presets, the phone picker and starter kits until listening. The CLI, patch
 decoder, native velocity renderer and `SynthKits.filament()` support the
 prototype. All audition recipes use an empty external FX chain.
+
+## Revised voice character
+
+Model 2 gives the same three voices different overtone envelopes: THREAD
+sheds its upper glints, PULSE articulates changing harmonic groups, and CURL
+lets its upper colour bloom after the root. The requested fundamental remains
+part of that one bounded excitation. The source does not change when BEND,
+geometry profiles or diagnostic routing substitutions change.
+
+Static path colour and dispersion give the escaping branch a different
+response from the endpoint. Each voice has its own eight-mode halo. Its
+normalization bounds the combined modal response, allowing individual
+resonances to speak without independently making up the collectors' losses.
+These are internal synthesis changes, not an external effect chain.
+
+The revised HOLD material has a longer carrier-fitted recurrence period with
+periodic overtone motion. Its actual delay history and filter state must
+still settle, and predecessor/current audio must still recur independently.
+Model 1 keeps the shorter original period and its original audio exactly.
+`FilamentPresets.original()` retains those twelve original recipes; the
+current twelve recipes use model 2. The audition's character comparisons
+keep the note, velocity, controls and configuration fixed across models.
 
 ## Model and evidence
 
@@ -90,7 +113,7 @@ length, one/four strands, isolated collectors, mechanism substitutions,
 macro sweeps and held loops. Notes entered there stay in the listener's
 browser and can be downloaded.
 
-The first complete render contains 88 successful clips and twelve provisional
+The original model-1 corpus contains 88 successful clips and twelve provisional
 presets. All 39 standard finite default/preset/register cases avoid percussion
 classes in a 1.2-second onset window. Six held clips include independently
 generated predecessor/current PCM evidence; their largest complete-cycle
@@ -98,7 +121,7 @@ relative squared error is 5.31e-13 and largest PCM seam error is zero. Maximum
 scalar allocation error is 3.13e-16, and the highest raw mixed peak is 0.228.
 These are measurements of this listening matrix, not universal guarantees.
 
-Rendering used Temurin Java 17 on Linux/amd64 with four visible processors
+That original render used Temurin Java 17 on Linux/amd64 with four visible processors
 (AMD EPYC 9V74) and a 768 MiB maximum heap. Median preparation was 0.16 ms and
 median synthesis 657 ms; the 88-clip task took about 70 seconds including
 analysis/export. The manifest distinguishes observed heap use and final audio

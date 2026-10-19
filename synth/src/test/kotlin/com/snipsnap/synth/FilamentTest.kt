@@ -245,6 +245,10 @@ class FilamentTest {
             assertEquals(p.samples.size, previous.size)
             assertEquals(p.samples.size, d.periodFrames)
             assertTrue(d.seamError != null && d.seamError!! < Keys.MAX_SEAM_ERROR)
+            val stateError = assertNotNull(d.stateError, "$voice missing full propagation-state evidence")
+            assertTrue(stateError.isFinite() && stateError < 1e-3, "$voice propagation state did not recur: $stateError")
+            val cycleError = assertNotNull(d.fullCycleError, "$voice missing independently measured full-cycle evidence")
+            assertTrue(cycleError.isFinite() && cycleError < 1e-5, "$voice full-cycle diagnostic did not recur: $cycleError")
             val energy = previous.sumOf { it.toDouble() * it }
             val difference = previous.indices.sumOf { val delta = previous[it].toDouble() - p.samples[it]; delta * delta }
             assertTrue(energy > 0.0 && difference / energy < 1e-5,

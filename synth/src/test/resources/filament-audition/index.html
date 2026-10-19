@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111613">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 40%27%3E%3Cpath d=%27M4 20h10c9 0 7-11 16-11s6 22 15 22h15%27 fill=%27none%27 stroke=%27%23d0efb8%27 stroke-width=%274%27/%3E%3C/svg%3E">
-  <meta name="description" content="Listen to Filament, an experimental pitched engine for SnipSnap. Follow a note through a strand, around a bend, and into its escaping halo.">
+  <meta name="description" content="Filament iteration 02: richer excitation, more distinct strand colour, and a halo that answers the note. Compare revised and original SnipSnap voices.">
   <title>FILAMENT — SnipSnap listening bench</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="./app.js" defer></script>
@@ -20,10 +20,10 @@
   <main>
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot"></span> ENGINE PROTOTYPE <span class="small-divider">/</span> 01</p>
+        <p class="eyebrow"><span class="status-dot"></span> ENGINE PROTOTYPE <span class="small-divider">/</span> ITERATION 02</p>
         <h1 id="hero-title">FILAMENT<span class="title-dot">.</span></h1>
         <p class="hero-line">Contain <span>→</span> bend <span>→</span> spill.</p>
-        <p class="hero-description">A note travels through a strand. Every bend lets a little escape. Listen to where it goes.</p>
+        <p class="hero-description">A second pass with richer excitation, more distinct strand colour and a halo that answers the note.</p>
         <a class="jump-link" href="#bench">Open the listening bench <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="m3 3 10 10M4 13h9V4"/></svg></span></a>
       </div>
       <div class="filament-art" aria-hidden="true">
@@ -50,13 +50,14 @@
     <div class="spec-strip wrap"><span>DETERMINISTIC KOTLIN AUDIO</span><span>THREE VOICES</span><span>DRY SIGNAL · NO EXTERNAL FX</span><span id="render-count">LOADING RENDERS</span></div>
 
     <section id="bench" class="bench wrap" aria-labelledby="bench-title">
-      <div class="bench-heading"><div><p class="eyebrow section-index">01 / EXPLORE THE ENGINE</p><h2 id="bench-title">Listening bench</h2></div><p>One sound. Three ways to hear it.</p></div>
+      <div class="bench-heading"><div><p class="eyebrow section-index">01 / LISTEN TO THE REVISION</p><h2 id="bench-title">Listening bench</h2></div><p>More character. The original stays within reach.</p></div>
+      <p class="revision-guide"><span class="revision-key revised">REVISED / MODEL 2</span> The character pass. <span class="revision-key original">ORIGINAL / MODEL 1</span> The first prototype, kept for comparison.</p>
       <div id="load-error" class="notice error" role="alert" hidden></div>
       <div class="mode-bar">
         <div class="segmented" role="group" aria-label="Mix loudness mode">
           <button type="button" data-mode="native" aria-pressed="true">Native</button><button type="button" data-mode="raw" aria-pressed="false">Raw</button><button type="button" data-mode="matched" aria-pressed="false">Matched</button>
         </div>
-        <p id="mode-description">Original engine output. Hear the fixed gain and intended instrument balance.</p>
+        <p id="mode-description">Direct engine output. Hear the fixed gain and intended instrument balance.</p>
       </div>
 
       <div class="workstation" id="workstation" aria-busy="true">
@@ -73,6 +74,8 @@
             <div class="clip-topline"><span id="clip-group" class="eyebrow"></span><span id="clip-index" class="mono muted"></span></div>
             <h3 id="clip-title"></h3><p id="clip-description" class="clip-description"></p>
             <div id="clip-tags" class="clip-tags"></div>
+            <p id="voice-intent" class="voice-intent" hidden></p>
+            <div id="revision-comparison" class="revision-comparison" hidden><div><span class="eyebrow">ORIGINAL / REVISED</span><p>Switch versions. Your loudness mode stays selected.</p></div><button type="button" id="compare-version">Hear original <svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 5h11m-3-3 3 3-3 3M14 11H3m3-3-3 3 3 3"/></svg></button></div>
             <div id="clip-warning" class="notice" hidden></div>
 
             <div class="transport">
@@ -100,7 +103,7 @@
 
     <section class="method wrap" aria-labelledby="method-title">
       <div class="method-intro"><p class="eyebrow">02 / A USEFUL WAY TO LISTEN</p><h2 id="method-title">Trace the change.<br>Keep the note.</h2><p>Filament is a musical model of guided sound. Ordered delays and bend losses divide the excitation between a retained endpoint and a damped halo.</p></div>
-      <div class="method-body"><div class="method-row"><span class="method-number">01</span><div><h3>Compare the same excitation</h3><p>Start with the bend and routing collections. Switch between the collected mix and available stems to hear what leaves the strand, and when.</p></div></div><div class="method-row"><span class="method-number">02</span><div><h3>Choose your loudness reference</h3><p><strong>Native</strong> uses the engine’s output calibration. <strong>Raw</strong> keeps a fixed export gain for energy comparisons. <strong>Matched</strong> adjusts listening level so you can compare tone. Stem exports keep their supplied gain.</p></div></div><div class="method-row"><span class="method-number">03</span><div><h3>Inspect the evidence</h3><p>Every clip has a saved recipe and render diagnostics. Held clips can repeat with the loop switch; seam context is available when the collection includes it.</p></div></div><div class="prototype-note"><span class="eyebrow">PROTOTYPE SCOPE</span><p>THREAD, PULSE, and CURL · up to four strands · four path classes · four bend sites · eight halo modes. Audio is rendered by SnipSnap’s Kotlin engine. This page plays those files; its macro displays describe each saved render.</p><p id="pack-description">The listening pack contains selected audio and the saved render evidence. Individual files are available throughout the bench.</p></div></div>
+      <div class="method-body"><div class="method-row"><span class="method-number">01</span><div><h3>Find the voice in the revision</h3><p>Begin with the character comparisons. Use Hear original / Hear revised to switch models. These pairs compare the whole model change, including excitation. The original collections remain available.</p></div></div><div class="voice-prompts"><p class="eyebrow">LISTENING INTENTS</p><p><strong>THREAD</strong> A focused root, with upper glass glints that shed quickly.</p><p><strong>PULSE</strong> Articulated harmonic groups, with shifting accents.</p><p><strong>CURL</strong> Upper harmonics bloom after the root, then release slowly.</p></div><div class="method-row"><span class="method-number">02</span><div><h3>Choose your loudness reference</h3><p><strong>Native</strong> keeps the engine’s fixed output gain. <strong>Raw</strong> keeps a fixed export gain for energy comparisons. <strong>Matched</strong> adjusts listening level so you can compare tone. Stem exports keep their supplied gain.</p></div></div><div class="method-row"><span class="method-number">03</span><div><h3>Follow the sound and inspect the evidence</h3><p>Use the BEND, COLLECT and routing collections to trace what leaves the strand. Every clip has a saved recipe and render diagnostics. Held clips can repeat with the loop switch; seam context is available when supplied.</p></div></div><div class="prototype-note"><span class="eyebrow">PROTOTYPE SCOPE</span><p>THREAD, PULSE, and CURL · original and revised models. Audio is rendered by SnipSnap’s Kotlin engine without external effects. This page plays those files; its macro displays describe each saved render. Listening prompts describe the revision’s intent; musical acceptance remains open.</p><p id="pack-description">The listening pack contains selected audio and the saved render evidence. Individual files are available throughout the bench.</p></div></div>
     </section>
   </main>
   <footer class="footer wrap"><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 13 13 3M4 3h9v9"/></svg></span></a><span>FILAMENT / AN ENGINE IN PROGRESS</span><div><a href="./manifest.json" download>Render manifest ↓</a><a data-pack-download href="./filament-listening-pack.zip" download>Listening pack ↓</a></div></footer>
