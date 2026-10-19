@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1e9">
+  <meta name="description" content="Wordless recorded voices for Confluence in SnipSnap. Hear the parts, audition three starter presets, and download the wordless sample kit.">
+  <title>Confluence — A SnipSnap listening study</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#audition">Skip to the listening study</a>
+  <div class="page-shell">
+    <header class="masthead">
+      <a class="wordmark" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap on GitHub">SNIP<span>/</span>SNAP<span class="wordmark-period">.</span></a>
+      <span class="masthead-label">An open listening notebook</span>
+      <a class="text-link repository-link" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">View the project <span aria-hidden="true">→</span></a>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="status-dot"></span> CONFLUENCE / STUDY 003</p>
+          <h1 id="page-title">Wordless voices.<br>One gathering.</h1>
+          <p class="hero-deck">Low support, upper air and a clear vowel that answers. Real recorded voices, arranged into a wordless starter bank for SnipSnap.</p>
+          <a class="jump-link" href="#audition">Enter the listening study <span aria-hidden="true">↓</span></a>
+        </div>
+        <figure class="gathering-figure" aria-label="Three recorded vocal roles arranged as one gathering">
+          <div class="figure-label"><span>THE WORDLESS STUDY</span><span>THREE ROLES / ONE MIX</span></div>
+          <svg viewBox="0 0 440 240" role="img" aria-label="Three source roles join one gathering: low foundation, airy upper voices and a clear answer">
+            <defs><pattern id="paper-grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".7" fill="currentColor" opacity=".11"/></pattern></defs>
+            <rect width="440" height="240" fill="url(#paper-grid)"/>
+            <g class="voice-lines" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M90 56C200 56 190 42 296 42"/><path d="M90 56C200 56 190 68 340 68"/><path d="M90 56C200 56 190 98 294 98"/><path d="M90 120C200 120 190 122 359 122"/><path d="M90 120C200 120 190 150 301 150"/><path d="M90 120C200 120 190 182 345 182"/><path d="M90 184C200 184 190 205 295 205"/><path d="M90 184C200 184 190 221 252 221"/>
+            </g>
+            <g class="role-source-voices"><circle cx="90" cy="56" r="20" fill="#a34832"/><circle cx="90" cy="120" r="20" fill="#7f8567"/><circle cx="90" cy="184" r="20" fill="#262a27"/></g>
+            <g fill="none" stroke="#f4f1e9" stroke-width="2" stroke-linecap="round"><path d="M80 55v3m5-13v22m5-30v38m5-29v20m5-13v5"/><path d="M80 119v3m5-13v22m5-30v38m5-29v20m5-13v5"/><path d="M80 183v3m5-13v22m5-30v38m5-29v20m5-13v5"/></g>
+            <g class="role-gathered-voices"><circle cx="296" cy="42" r="15" fill="#a34832"/><circle cx="340" cy="68" r="14" fill="#a34832"/><circle cx="294" cy="98" r="17" fill="#a34832"/><circle cx="359" cy="122" r="15" fill="#7f8567"/><circle cx="301" cy="150" r="16" fill="#7f8567"/><circle cx="345" cy="182" r="13" fill="#7f8567"/><circle cx="295" cy="205" r="14" fill="#262a27"/><circle cx="252" cy="221" r="11" fill="#262a27"/></g>
+          </svg>
+          <figcaption><span>Recorded vowels. No lyrics.</span><span>Low support, upper air,<br>a wordless answer.</span></figcaption>
+        </figure>
+      </section>
+
+      <div class="study-question"><span class="eyebrow">THE QUESTION</span><p>What can these voices become?</p><span class="question-note">A wordless starter bank.<br>Your ears decide.</span></div>
+
+      <section id="audition" class="audition-section role-study" aria-labelledby="audition-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">01 / THE WORDLESS GATHERING</p><h2 id="audition-title">Hear the parts. Then the whole.</h2><p class="section-deck">A low /a/, breathy upper /a/ and clear /a/ answer. Listen in order.</p></div>
+          <fieldset class="level-switch"><legend>Listening level</legend><label><input type="radio" name="level" value="matched" checked><span>Matched</span></label><label><input type="radio" name="level" value="raw"><span>Raw</span></label></fieldset>
+        </div>
+        <p class="level-explanation" id="level-explanation">Each role study shares its own complete gathering’s matched gain; isolated parts stay quieter. Earlier crowd comparisons match each clip separately.</p>
+        <div id="load-status" class="load-status" role="status">Loading the recordings…</div>
+        <div id="role-clips" class="role-grid" aria-label="Three isolated wordless vocal roles followed by the complete gathering"></div>
+        <p id="roles-unavailable" class="empty-state" hidden>The wordless study is not available in this version. The earlier comparisons remain below.</p>
+        <div class="role-listen-note"><span aria-hidden="true">→</span><p>Keep the volume unchanged. Each part retains its level and timing in the complete mix, including rests. Some voices enter later.</p></div>
+      </section>
+
+      <section id="starter-bank" class="bank-section" aria-labelledby="bank-title" hidden>
+        <div class="section-heading"><div><p class="eyebrow">02 / THE WORDLESS STARTER BANK</p><h2 id="bank-title">Four colours. Three starting points.</h2><p class="section-deck">Low /a/, breathy /a/, clear /a/ and rounded /u/. Four recordings from two singers, arranged into three starter presets.</p></div></div>
+        <div id="bank-presets" class="bank-preset-list" aria-label="Wordless starter presets"></div>
+        <p class="app-availability">In the draft SnipSnap build, open the kit menu → <strong>CONFLUENCE</strong> for the wordless starter kit. Select a complete gathering pad, then open <strong>MAKE → GATHERING · A NEW VARIATION</strong>.</p>
+        <p class="app-availability">Choose LOW AH or ROUNDED OO, adjust individuality, room, answer gap and the low, air and answer levels. <strong>HEAR</strong> previews the variation; <strong>MAKE VARIATION</strong> writes it to the first empty pad. Your original audio edits and FX stay on the original. Performers, native pitches, whole phrases and the 24-second duration stay fixed.</p>
+      </section>
+
+      <section id="notebook" class="notebook" aria-labelledby="notebook-title" hidden>
+        <div class="notebook-heading"><div><p class="eyebrow">YOUR LISTENING NOTE</p><h2 id="notebook-title">Select a recording.</h2><p id="selected-description"></p></div><span id="note-save-state" class="save-state" role="status">Saved on this device</span></div>
+        <div class="notebook-controls"><fieldset class="verdicts"><legend>Your verdict</legend><label><input type="radio" name="verdict" value="keep"><span>Keep</span></label><label><input type="radio" name="verdict" value="revise"><span>Revise</span></label><label><input type="radio" name="verdict" value="pass"><span>Pass</span></label></fieldset><label class="note-label" for="listening-note">What did you hear?<textarea id="listening-note" rows="2" maxlength="5000" placeholder="Entrances, vowel character, pitch, endings…"></textarea></label></div>
+        <div class="selected-links" id="selected-links"></div>
+      </section>
+
+      <section id="crowd-proof" class="audition-section crowd-section" aria-labelledby="crowd-title">
+        <div class="section-heading"><div><p class="eyebrow">03 / THE EARLIER CROWD PROOF</p><h2 id="crowd-title">One voice. More performers.</h2><p class="section-deck">The earlier proof: the same source with 1, 2, 4, then 8 transformed performers.</p></div><a class="text-link" href="#audition">Back to the wordless study ↑</a></div>
+        <p class="crowd-level-note">Matched mode levels each of these crowd clips separately. Raw mode keeps the mix before loudness leveling.</p>
+        <div id="featured-clips" class="featured-grid" aria-label="Compare one, two, four and eight performers"></div>
+        <div class="listen-hint"><span aria-hidden="true">→</span><span>Listen for distinct entrances, a steady vowel and a natural ending. Headphones help.</span><button class="text-button source-jump" id="compare-source" type="button" hidden>Compare the original source →</button></div>
+      </section>
+
+      <section class="library-section" aria-labelledby="library-title">
+        <div class="section-heading"><div><p class="eyebrow">04 / SOURCES, PRESETS & EARLIER STUDIES</p><h2 id="library-title">The listening bench.</h2><p class="section-deck">Inspect the wordless bank and revisit the earlier comparisons.</p></div><button class="text-button" id="export-notes" type="button">Export your notes <span aria-hidden="true">→</span></button></div>
+        <p class="history-note">The earlier nursery-song recordings remain as demos. “Row, Row, Row Your Boat” is excluded from the wordless starter bank.</p>
+        <nav class="group-nav" id="group-nav" aria-label="Filter recordings"></nav>
+        <div class="library-columns" aria-hidden="true"><span>RECORDING</span><span>PERFORMERS / PROFILE</span><span>TIME</span></div>
+        <div id="clip-list" class="clip-list"></div>
+        <p id="empty-state" class="empty-state" hidden>No recordings in this group yet.</p>
+        <p id="notes-summary" class="notes-summary" role="status">Your notes stay in this browser until you export them.</p>
+      </section>
+
+      <section class="method-section" aria-labelledby="method-title">
+        <div><p class="eyebrow">05 / UNDER THE SURFACE</p><h2 id="method-title">A prototype, with<br>the seams showing.</h2><p class="method-intro">These are rendered audio files from a source-backed experiment. They are here to be judged, not to declare the sound solved.</p></div>
+        <div class="method-details"><article><span class="method-number">01</span><div><h3>The technique is in the recording.</h3><p>The wordless bank uses four recorded gestures from two singers. Low, breathy, clear and rounded describe the performed sources; the engine arranges their roles and entrances.</p></div></article><article><span class="method-number">02</span><div><h3>Small, inspectable transformations.</h3><p>Performers use conservative time-domain pitch-synchronous overlap-add (TD-PSOLA), repeatable identities and small timing and pitch differences. Listen for artifacts, repeated consonants and vowel changes.</p></div></article><article><span class="method-number">03</span><div><h3>A saved gathering you can vary.</h3><p>The draft app build adds a bounded editor for complete starter gatherings. It rebuilds their recorded arrangement into a new sample. Arbitrary source import and HOLD remain future work. The 44 recordings here remain the same listening study.</p></div></article></div>
+      </section>
+
+      <section class="downloads-section" id="downloads-section" aria-labelledby="downloads-title" hidden><div><p class="eyebrow">TAKE IT TO YOUR OWN LISTENING SPACE</p><h2 id="downloads-title">Keep the wordless kit.<br>Open the recipe.</h2><p class="section-deck">Rendered kits play without the bank. Keep the separate native bank ZIP for source-level replay; the physical source bank is not currently included in app kit merge or backup. The earlier nursery-song demo pack is labelled separately.</p></div><div class="artifact-links" id="artifact-links"></div></section>
+
+      <section class="credits-section" aria-labelledby="credits-title"><div><p class="eyebrow">THE PEOPLE BEHIND THE SOURCE</p><h2 id="credits-title">Recorded voices.<br>Credited properly.</h2></div><div class="credits-copy"><p>Source recordings from <a href="https://doi.org/10.5281/zenodo.1193957" target="_blank" rel="noopener">VocalSet: A Singing Voice Dataset</a> by Julia Wilkins, Prem Seetharaman, Alison Wahl and Bryan Pardo, used under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Excerpts were trimmed and given constant gain, then adapted through vocal processing. Full provenance and modifications are recorded in the manifest.</p><ul id="source-credits" class="source-credits"></ul><a class="text-link" href="manifest.json" download>Download the audition manifest <span aria-hidden="true">↓</span></a><p class="build-meta" id="build-meta"></p></div></section>
+    </main>
+
+    <footer class="page-footer"><a class="wordmark small" href="https://github.com/BertCalm/SnipSnap">SNIP<span>/</span>SNAP.</a><span>Confluence / a listening study</span><a class="text-link" href="#page-title">Back to the beginning ↑</a></footer>
+  </div>
+
+  <aside class="player-dock" id="player-dock" aria-label="Audio player" hidden>
+    <div class="player-inner"><button class="player-toggle" id="player-toggle" type="button" aria-label="Play selected recording"><svg id="play-symbol" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><svg id="pause-symbol" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg></button><div class="player-track"><span class="player-kicker" id="player-mode">MATCHED LEVEL</span><strong id="player-title">Select a recording</strong></div><div class="player-timeline"><label class="sr-only" for="player-seek">Playback position</label><input id="player-seek" type="range" min="0" max="1000" value="0" step="1"><div><span id="player-elapsed">0:00</span><span id="player-duration">0:00</span></div></div><button class="player-note-button" id="open-note" type="button" aria-label="Add a listening note">Add a note <span aria-hidden="true">→</span></button></div>
+    <audio id="audio" preload="metadata"></audio>
+    <span id="player-status" class="sr-only" role="status" aria-live="polite"></span>
+  </aside>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

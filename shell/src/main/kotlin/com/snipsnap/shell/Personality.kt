@@ -28,87 +28,74 @@ object Copy {
     const val EMPTY_SHELF = "NOTHING TAPED YET."
 
     /**
+     * The deck with no tape on it: the two ways in, named in the words the
+     * controls wear. LISTEN · MIC is the dock's ([Places.LISTEN]); SNIPS is
+     * the panel's one door. Replaces the transport, IN/OUT and ZOOM groups,
+     * which were live-looking over nothing.
+     */
+    const val NO_TAPE_YET = "NO TAPE YET. TAP LISTEN · MIC BELOW, OR OPEN A SNIP."
+
+    /**
      * The product loop, named once, on the only screen a new user is
      * guaranteed to see (September UAT, finding 3: capture -> trim -> grid
-     * -> export is never stated anywhere in the app, and `BOOT_LINES` had
-     * no caller outside HELP).
+     * -> export was never stated anywhere in the app). The shelf draws the
+     * four places above it ([Places.PLACES]) and this sentence under them.
      *
-     * **These are the menu tabs, not prose.** Learning the line teaches the
-     * navigation, because the words are the tabs - a `ConventionTest` law
-     * holds every stage here to a real `MenuItem` label, so a renamed tab
-     * fails the build rather than leaving the app's one explanation of
-     * itself pointing at a screen that no longer exists.
+     * Four verbs, then two places. The verbs say what you do at each stop:
+     * RECORD IT on TAPE, CUT IT on its CUT stage, KIT IT on PROJECT's
+     * PADS, WRITE IT on its OUT. What follows names two places rather
+     * than four tabs, because CUT is a stage of TAPE and WRITE is a stage
+     * of PROJECT (`docs/SCREEN_PLAN_2026_10.md` §3.1); `PlacesTest` holds
+     * the verbs and the two names, and the loop-names law in
+     * `ConventionTest` holds the names to real places.
      *
-     * A list rather than a written-out string for the same reason: the
-     * separator is applied once, in [FIRST_RUN_LOOP], and the law reads the
-     * stages without having to parse it back out.
-     */
-    val FIRST_RUN_LOOP_STAGES = listOf("TAPE", "CHOP", "KIT", "EXPORT")
-
-    /** [FIRST_RUN_LOOP_STAGES] as the shelf draws it. Furniture: a row of tab names, not a sentence. */
-    val FIRST_RUN_LOOP: String = FIRST_RUN_LOOP_STAGES.joinToString(" ▸ ")
-
-    /**
-     * What the four words mean, in verbs.
-     *
-     * The finding's complaint is that the *loop* is never stated - and four
-     * tab names alone are a map, not an explanation. This is the sentence
-     * that makes them one: it says what you do at each stop, in the order
-     * [FIRST_RUN_LOOP] lists them.
-     *
-     * No door is named here on purpose. NEW KIT sits directly under this
-     * panel as the screen's primary action, and TAPE is a tab on the row
-     * above it - a line pointing at either would be a third copy of a
-     * control already twice on screen.
-     *
-     * The verb for step three is KIT IT, not PLAY IT (J13). PLAY is a real
-     * tab six places along the menu row, and the app's only explanation of
-     * its own loop was glossing a different screen with its name - the
-     * exact failure `the first-run loop names real menu tabs` exists to
-     * stop, one line below where that law was looking. KIT IT is the
-     * app's own verb for the step already ([orbitBounced] says "TRIM IT,
-     * CHOP IT, KIT IT"), so the sentence now names the tab it means.
+     * The verb for step three is KIT IT, not PLAY IT (J13): PLAY was a
+     * tab, and the app's only explanation of its own loop glossed a
+     * different screen with its name. KIT IT is the app's own verb for
+     * the step already ([orbitBounced] says "TRIM IT, CHOP IT, KIT IT").
      *
      * **Step four is WRITE IT, not DUB IT** (persona review, P1.1). DUB is
-     * the app's word and it stays the app's word everywhere else - the
-     * dub is what EXPORT calls the write while it runs ("DUBBING…", "DUB
-     * COMPLETE") - but this is the one sentence whose whole job is to be
-     * understood by somebody who has not used the app yet, and a beginner
-     * does not arrive knowing it. The word it arrives at is the one on the
-     * button: EXPORT's primary action reads WRITE KIT. That is J13's own
-     * rule applied to the last step rather than the third - name what the
-     * screen names.
+     * the app's word everywhere else — the dub is what OUT calls the write
+     * while it runs — but this is the one sentence whose whole job is to
+     * be understood by somebody who has not used the app yet, and the word
+     * they arrive at is the one on the button: WRITE KIT.
      *
-     * **The last clause no longer claims the walk is compulsory** (P2.4,
-     * P3.2). Those two findings ask for a second entry point to be
-     * advertised here, and reading the screen says they are aimed slightly
-     * wrong: the second entry point is already the most prominent thing on
-     * it - NEW KIT ▸ STARTERS, directly below this panel - and the doors
-     * that skip the middle (INSTANT KIT, CATCH A HIT) are buttons on TAPE.
-     * Nothing is hidden. What was wrong is that this sentence ended "FOUR
-     * TABS, IN ORDER", which is stricter than the app: a starter kit
-     * begins at step three, and either TAPE shortcut lands sounds on pads
-     * without CHOP. Saying so costs a clause and keeps the note's own rule
-     * that it names no door - which is why a line pointing at STARTERS
-     * would have been a third copy of a control already twice on screen.
-     */
-    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. FOUR TABS, IN ORDER — OR START FURTHER IN."
-
-    /**
-     * The same sentence for the four-place shape (`docs/SCREEN_PLAN_2026_10.md`
-     * §3.1), written beside [FIRST_RUN_LOOP_NOTE] rather than over it: the
-     * app still draws the twelve tabs, and `ConventionTest`'s loop-names
-     * law reads the old note against them. The SDK session swaps the
-     * shelf to this one and retires the other with the tabs.
+     * **The middle clause does not claim the walk is compulsory** (P2.4,
+     * P3.2): a starter kit begins at step three, and INSTANT KIT and CATCH
+     * A HIT land sounds on pads without CUT. No door of this screen is named
+     * here on purpose: NEW KIT sits directly under this panel and TAPE is on
+     * the row above it, so a line pointing at either would be a third copy of
+     * a control already twice on screen. (On a cold shelf the primary is now
+     * CATCH YOUR FIRST SOUND ▸, with NEW KIT ▸ STARTERS an outline row under
+     * it; the note still names neither, for the same reason.)
      *
-     * The four verbs are unchanged. What follows them names two places,
-     * not four tabs, because CUT is a stage of TAPE and WRITE is a stage
-     * of PROJECT. [Places] holds the words the rows draw.
+     * **The last clause names the one door that is not on this screen**
+     * (the UX review's SH1): the loop starts with a recording, and the way to
+     * one is LISTEN · MIC in the dock, below, on every screen. The sentence
+     * used to describe the loop and point at nothing.
+     *
+     * Step three stays KIT IT, not PLAY IT: `ConventionTest` holds PLAY in
+     * its list of retired tab names, and a verb that reads as a place is
+     * what that law is for.
      */
-    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN."
+    const val FIRST_RUN_PLACES_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. TAPE, THEN PROJECT — OR START FURTHER IN. TAP LISTEN · MIC BELOW TO BEGIN."
 
     /** The dock's resting line, with no door beside it. */
     const val DOCK_READY = "READY WHEN YOU ARE."
+
+    /**
+     * Opening or starting a project failed on disk: its `project.json`
+     * would not read or write. Law 3's shape, like [KIT_DELETE_FAILED] —
+     * what happened, in the user's words, with the thing it happened to.
+     */
+    const val PROJECT_OPEN_FAILED = "COULDN'T OPEN THAT PROJECT."
+    /**
+     * A kit would not join the open project: the bookkeeping that records
+     * it (`landKit` after a chop lands, `+ FROM SHELF`) failed on disk. The
+     * kit itself is on the shelf; the project is what did not take it, and
+     * [PROJECT_OPEN_FAILED] said the wrong thing about that.
+     */
+    const val KIT_ADD_FAILED = "COULDN'T ADD THAT KIT TO THE PROJECT."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
@@ -118,19 +105,61 @@ object Copy {
      * (NEW KIT, right below this panel) rather than denying the snip exists.
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
-    const val EMPTY_KIT = "16 EMPTY PADS."
-    /** GROOVE with a kit open and nothing in it yet: the three ways in, named. TAPE's [EMPTY_SHELF] sent people to the wrong screen. */
-    const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
-    /** ORBIT from the menu row with no kit open. */
-    const val NO_KIT_FOR_ORBIT = "ORBIT PUTS A KIT ON RINGS. OPEN ONE FROM SHELF FIRST."
     /**
-     * EXPORT with no kit open — distinct from [EMPTY_SHELF], which this
+     * A kit with no pads in it: what is true, and the way in. "16 EMPTY
+     * PADS." said the first and left a person to guess the second (the UX
+     * review's minor list).
+     */
+    const val EMPTY_KIT = "NO PADS YET. HOLD A PAD TO CATCH A SOUND INTO IT, OR SEND A CUT FROM TAPE."
+
+    /**
+     * The PADS strip before any pad is tapped: tapping is how the strip
+     * gets its pad, and the hold on an empty one - which opens capture,
+     * and showed nowhere - gets its words here (UX review P1/P3).
+     */
+    const val PADS_RESTING_LINE = "TAP A PAD · IT PLAYS. HOLD AN EMPTY ONE TO CATCH A SOUND INTO IT."
+    /**
+     * GROOVE with a kit open and nothing in it yet: the way in that needs only
+     * the pads, named; the other ways (START YOURS, ORBIT, SONG, LOOP) are the
+     * buttons under it, so the sentence no longer lists them. TAPE's
+     * [EMPTY_SHELF] sent people to the wrong screen.
+     */
+    const val EMPTY_GROOVE = "NO BEAT YET. TAP RECORD AND PLAY PADS."
+    /**
+     * BEAT with a kit in the project but no pads in the kit: ADD A KIT would
+     * be the wrong ask, so it names the real blocker and the place that fixes
+     * it (PADS ▸ is the panel's door). Also the dock's play chip's answer.
+     */
+    const val BEAT_NEEDS_PADS = "THIS KIT HAS NO PADS YET. FILL SOME ON PADS FIRST."
+    /** The dock's play chip, tapped on BEAT with no notes in the beat: it would start a clock over nothing, so it says so instead of staying silent. */
+    const val NOTHING_TO_PLAY = "NOTHING TO PLAY YET. RECORD OR TAP STEPS IN."
+    /**
+     * PROJECT with no project open: the page has nothing to show, so it
+     * says so once and sends the user to the shelf, where a project is
+     * opened or started. Replaces the tab era's two empties (a switcher
+     * reading NO KITS YET above a deck that was never the point).
+     */
+    const val NO_PROJECT_OPEN = "NO PROJECT OPEN. OPEN ONE ON THE SHELF, OR START ONE."
+    /**
+     * PROJECT with a project open and no kit in it: the two ways to give it
+     * one, named, and both on the panel (+ FROM SHELF and TAPE ▸).
+     */
+    const val PROJECT_HAS_NO_KIT = "THIS PROJECT HAS NO KIT YET. ADD ONE FROM THE SHELF, OR RECORD IN TAPE."
+    /**
+     * The other places that need a kit (BEAT, OUT, ORBIT) in project words:
+     * the kit is added to the project, not "opened". Each is the one fact
+     * that place needs, said after the lead; with no project open at all
+     * they give way to [NO_PROJECT_OPEN].
+     */
+    const val NO_KIT_FOR_ORBIT = "ADD A KIT TO THIS PROJECT FIRST. ORBIT PUTS IT ON RINGS."
+    /**
+     * EXPORT with no kit in the project — distinct from [EMPTY_SHELF], which this
      * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
      * but EXPORT dubs a *kit*, and STARTERS makes one without taping
      * anything at all, so a user with kits and no tape was told nothing
      * existed. Same shape as [NO_KIT_FOR_ORBIT].
      */
-    const val NO_KIT_FOR_EXPORT = "EXPORT DUBS A KIT FOR THE MPC. OPEN ONE FROM SHELF FIRST."
+    const val NO_KIT_FOR_EXPORT = "ADD A KIT TO THIS PROJECT FIRST. EXPORT DUBS IT FOR THE MPC."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
     /**
@@ -179,8 +208,21 @@ object Copy {
      * a control the screen was not showing (September wiring review,
      * finding 14). [CHOP_AUTO_NONE] does not need the phrase: AUTO is in
      * the same box, so the box is open when that toast fires.
+     *
+     * No toast says it now: it fired on entering CUT and then sat in the
+     * dock on every other screen (the October UX review's S1), and CUT
+     * draws [CHOP_NO_HITS_FOUND] and TRY GRID ▸ itself. Kept for the law
+     * that pins its words (`PersonalityTest`), for a caller that has to
+     * say it from outside CUT.
      */
     const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CUT AND TRY GRID, OR TAPE SOMETHING ELSE."
+    /**
+     * CUT's page when the chop has no slices, in place of the pad preview:
+     * the sentence beside a TRY GRID ▸ button that makes the chop in place,
+     * so unlike [CHOP_NO_HITS] (a toast about a control that may be hidden
+     * in the closed CUT box) it needs no "OPEN CUT AND".
+     */
+    const val CHOP_NO_HITS_FOUND = "NO HITS FOUND."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 
@@ -194,6 +236,13 @@ object Copy {
      * exactly what was actually heard, up to that cap.
      */
     const val SNIPPED = "SNIP! KEPT WHAT IT'S HEARD SINCE LISTEN, UP TO 60s."
+
+    /**
+     * The first SNIP of a cold shelf, landed: App has made the project, the
+     * kit and A01 for it, and PADS is up with that pad selected and lit. Said
+     * after [SNIPPED], so the dock keeps SNIPPED's CUT door beside it.
+     */
+    const val FIRST_CATCH_LANDED = "YOUR FIRST SOUND IS ON A01. TAP IT."
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "STOPPED. TAPE IS KEPT."
     const val CAPTURE_BLOCKED =
@@ -332,9 +381,8 @@ object Copy {
      * `onCommit` puts the range in a `remember`ed `lastCommit` for CHOP to
      * pick up - nothing is taped, nothing is cut, nothing lands on a shelf
      * to be renamed, and the same selection can be kept again a second
-     * later. The line KEEP says now is [CAPTURE_OFFER], set by that same
-     * `onCommit`, which says what did happen and carries the door to the
-     * step that acts on it.
+     * later. KEEP says nothing now: it moves the stage to CUT, where the
+     * kept tape is on the table, which is the whole of what happened.
      */
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
     /** The deck glided onto an onset after a coast. */
@@ -364,43 +412,7 @@ object Copy {
      */
     const val TAPE_TOO_BIG = "THAT TAPE'S TOO BIG TO LOAD. TRY A SHORTER FILE."
 
-    // ---- KIT: teaching the one gesture that opens PAD SHEET ----
-    /**
-     * Shown on opening a kit until the user has actually held a pad, and
-     * never again after that. PAD SHEET is reachable ONLY by a long press on
-     * a filled pad — no button, no menu entry — and it holds every
-     * treatment, shape, tune and mutate control in the app.
-     *
-     * This used to stop after three showings, which meant three dismissals
-     * while busy with something else cost the user that half of the app for
-     * good (September UAT, finding 5). The cap is gone: only opening the
-     * sheet retires the hint, because that is the only event that proves
-     * they found it.
-     *
-     * It is no longer the only teacher either — [PAD_SHEET_LEGEND] sits
-     * under KIT's grid permanently (finding 4), so this is a nudge with a
-     * backstop rather than the single thread the feature hangs from.
-     *
-     * Says what to do and what it gets, in that order, and names the thing
-     * it opens so the toast and the screen agree.
-     */
-    const val PAD_SHEET_HINT = "HOLD A PAD TO OPEN ITS PAD SHEET — SHAPE, TUNE, TREAT."
-
-    /**
-     * The permanent legend under KIT's grid.
-     *
-     * The September UAT's findings 4 and 5: the 480 ms hold was PAD SHEET's
-     * only door, and [PAD_SHEET_HINT] — the toast that taught it — stopped
-     * after three showings. Dismiss it three times while learning something
-     * else and half the app's depth was gone for good.
-     *
-     * ROOMS already had the answer on its own list ("HOLD A ROOM TO FORGET
-     * IT · THE BIN KEEPS 30 DAYS"): one line, always on screen, naming the
-     * gesture and what it opens. A legend cannot be dismissed, so the
-     * feature behind it cannot be lost.
-     */
-    const val PAD_SHEET_LEGEND = "HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"
-
+    // ---- KIT: the legend under the grid ----
     /**
      * The second line under KIT's grid: where you tap a pad is how hard you
      * hit it (J37).
@@ -411,7 +423,7 @@ object Copy {
      * position supplies the velocity a tap on glass otherwise has none of.
      *
      * A gesture with no visible affordance needs a legend for the same
-     * reason the hold does ([PAD_SHEET_LEGEND]): nobody discovers a
+     * reason the hold does ([PADS_RESTING_LINE] says it): nobody discovers a
      * pressure-sensitive pad by looking at it, and a hint that can be
      * dismissed is a feature that can be lost. Says the direction rather
      * than the rule, because "lower is softer" is something a thumb can act
@@ -464,45 +476,22 @@ object Copy {
     }
 
     /**
-     * What CHOP is about to slice, when it is not what you just taped (J30).
+     * What CUT is about to slice (J30, then `docs/SCREEN_PLAN_2026_10.md`
+     * §3.2).
      *
-     * CHOP's load is a silent three-tier fallback: the last TAPE commit,
-     * else **the open kit's longest sample**, else nothing. So a player
-     * who opens CHOP without taping first is about to cut up whichever pad
-     * happens to be longest, and nothing on the screen said so - the
-     * filename was read, used to derive a kit name, and never shown.
+     * CUT's load is a three-tier fallback: the last TAPE commit, else
+     * **the open kit's longest sample**, else nothing. So a player who
+     * opens CUT without taping first is about to cut up whichever pad
+     * happens to be longest, and nothing on the screen used to say so -
+     * the filename was read, used to derive a kit name, and never shown.
      *
-     * Said only on the fallback, deliberately. Arriving from a COMMIT, you
-     * just chose the thing on the previous screen and being told again is
-     * noise; arriving on the fallback, the app picked for you.
+     * Said on every load now. J30 said it only on the fallback, because
+     * arriving from a COMMIT you had just chosen the thing on the previous
+     * screen. CUT is a stage of TAPE since the four-place shape, one
+     * row-tap away at any time, so the thing on the table may be a tape
+     * kept an hour ago; the header names it every time.
      */
     fun chopFromKit(name: String): String = "FROM $name"
-
-    /**
-     * The handoff at the end of a capture (J10).
-     *
-     * CHOP and EXPORT are steps 2 and 4 of the loop the app advertises and
-     * received **zero** programmatic navigations between them: the app
-     * automated the one join in the middle (CHOP → KIT) and left the two at
-     * the ends to the user. This is the first of the two.
-     *
-     * An offer, not a handoff: it names what just happened and what can be
-     * done with it, and going nowhere is a perfectly good answer. That is
-     * why it rides a toast rather than moving the screen — being moved
-     * without asking is the same complaint as a destructive control
-     * changing its own target.
-     *
-     * States rather than asks. Both of these were written as questions
-     * first and the full-stop law refused them — correctly: they were the
-     * only two question marks in the whole of [Copy]. The house voice does
-     * not ask, it says what happened and what to do next ("CLEAR SOFT HITS
-     * FIRST, THEN STACK."), and the door beside it is what makes it an
-     * offer rather than an instruction.
-     */
-    const val CAPTURE_OFFER = "THAT IS ON TAPE. CHOP IT INTO PADS."
-
-    /** The door out of [CAPTURE_OFFER]; "▸" because it opens another screen, the convention `KitsScreen.kt`'s `ArmControl` documents. */
-    const val CAPTURE_OFFER_DOOR = "CHOP ▸"
 
     /**
      * The handoff at the end of a kit (J10), the other end of the loop.
@@ -537,7 +526,7 @@ object Copy {
      *
      * Wording follows the row's own `onLongClickLabel` ("RENAME OR DELETE")
      * so the sighted legend and the TalkBack announcement say the same
-     * thing. No full stop: like ROOMS' legend and [PAD_SHEET_LEGEND], this is
+     * thing. No full stop: like ROOMS' legend and the grid's own, this is
      * furniture that stays on screen, not a line the app says once.
      */
     const val SHELF_LEGEND = "HOLD A KIT TO RENAME OR DELETE IT"
@@ -600,8 +589,8 @@ object Copy {
      *
      * The finding called provenance "good and half-hidden": good because
      * every door stamps it, half-hidden because reaching any of it meant
-     * holding a pad. Naming it in [PAD_SHEET_LEGEND] was looked at and
-     * rejected — that legend is a sample of what the sheet holds, not an
+     * holding a pad. Naming it in the pad sheet legend (since replaced by the strip's
+     * [PADS_RESTING_LINE]) was looked at and rejected — that legend was a sample of what the sheet holds, not an
      * inventory, and does not name layers or takes either — and a third
      * mark on the grid would crowd the treated dog-ear and the mini
      * waveform for a fact a mark cannot actually state.
@@ -665,35 +654,27 @@ object Copy {
     // ---- HELP: what the app is, said inside the app ----
 
     /**
-     * HELP's body, kept here rather than in the Composable that draws it.
+     * HELP's long list, kept here rather than in the Composable that drew it.
      *
      * The September UAT's finding 1: HELP was twenty hardcoded lines in
      * `StubScreen.kt` describing "the M0 skeleton" and promising that
      * capture "arrives with M1" — months after capture shipped. It was the
      * only in-app explanation of anything, and every line of it was false.
+     * It rotted because it lived where nothing could test it; here it is
+     * ordinary data in a module with tests.
      *
-     * It rotted because it lived where nothing could test it. Here it is
-     * ordinary data in a module with tests, and `PersonalityTest` holds it
-     * to the app as built: no milestone tags, and the four steps of the
-     * loop named in order. The next person to move a feature has to walk
-     * past a failing test to leave this stale.
+     * HELP draws [Places.HELP] now — one section per place and one for the
+     * dock (`docs/SCREEN_PLAN_2026_10.md` §3.7) — and the loop section that
+     * named four tabs went with the tabs. These twenty-one lines are the
+     * inventory the sections were distilled from; `PersonalityTest` and the
+     * ladder law still read them, and the copy sweep that follows the shape
+     * decides what of them [Places.HELP] still lacks.
+     *
+     * Drawn by nothing. It is kept for the one law whose subject Places.HELP
+     * does not have yet: `ConventionTest` holds the ZOOM ON CHOP line below to
+     * [Ladder.ROW_LABELS] (J42), and HELP's sections carry no ZOOM line to hold
+     * it to. Its header, WORTH KNOWING, was drawn by nothing either and went.
      */
-    const val HELP_LOOP_HEADER = "THE LOOP:"
-
-    val HELP_LOOP = listOf(
-        // RECORD, not CATCH (prior #27): CATCH is the name of a feature on
-        // this very screen - CATCH A HIT, seventeen lines below in
-        // HELP_MORE - so HELP's first line was using the app's own feature
-        // name as a generic verb for something else. RECORD is the verb
-        // FIRST_RUN_LOOP_NOTE already uses for this step.
-        "· TAPE — RECORD A SOUND. THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
-        "· CHOP — CUT IT ON THE HITS. THE MACHINE GUESSES; ARGUE WITH IT.",
-        "· KIT — 16 PADS. TAP TO HEAR, HOLD FOR THE PAD SHEET.",
-        "· EXPORT — ONTO THE CARD, EIGHT WAYS. THE MPC IS ONE OF THEM.",
-    )
-
-    const val HELP_MORE_HEADER = "WORTH KNOWING:"
-
     val HELP_MORE = listOf(
         "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
         "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
@@ -952,6 +933,10 @@ object Copy {
     // ---- Settings: what TEACH THE MACHINE actually sends (X4.4) ----
     const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
 
+    // ---- Settings: HAPTICS, the motor under pads, steppers and landings ----
+    /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
+    const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
+
     // ---- Settings: the WORKSHOP, the developer's tools behind a knock (docs/WORKSHOP.md) ----
     /** Under the WORKSHOP heading at the foot of SETUP, once the knock has opened it: what the section is, and what it is not. */
     const val WORKSHOP_NOTE = "TOOLS FOR THE BENCH, NOT FOR PLAYING. NOTHING HERE CHANGES HOW THE APP SOUNDS."
@@ -1166,7 +1151,7 @@ object Copy {
     // to it. See feelRolled/FEEL_RECENTRED below for its replacements.
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
     const val READ_GROOVE_BUSY = "LISTENING…"
-    const val READ_GROOVE_NEEDS_KIT = "OPEN A KIT FIRST. THE EAR NEEDS PADS TO PLAY ON."
+    const val READ_GROOVE_NEEDS_KIT = "ADD A KIT TO THIS PROJECT FIRST. THE EAR NEEDS PADS TO PLAY ON."
     /** The reading landed: how much was heard, and where it plays. */
     fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
         "HEARD ${countOf(hits, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")} AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
@@ -1325,6 +1310,16 @@ object Copy {
     }
     /** The chart is written but no app took it; [where] is the path under the app's own files, so it isn't lost. */
     fun chartKept(where: String): String = "CHART KEPT AT $where. $SHARE_NOWHERE"
+
+    // ---- GROOVE: SHARE ▸ — the pattern as two passes of audio, off to the share sheet ----
+    /** The dock's line while the render runs: a progress line, not a landing, so no full stop (like [CHART_BUSY]). */
+    const val BEAT_SHARE_BUSY = "RENDERING THE BEAT…"
+    /** The render threw - an empty kit, a pad file that would not read, no external storage to write to. */
+    const val BEAT_SHARE_FAILED = "COULDN'T RENDER THE BEAT."
+    /** The file is written and the chooser is up. [fileName] is the one the receiver sees, `<KIT> · BEAT.wav`. */
+    fun beatShared(fileName: String): String = "BEAT SHARED AS ${fileName.uppercase(java.util.Locale.ROOT)}."
+    /** The file is written but no app took it; [where] is the path under the app's own files, so it isn't lost. */
+    fun beatKept(where: String): String = "BEAT KEPT AT $where. $SHARE_NOWHERE"
 
     // ---- ARRANGE ----
     const val ARRANGE_NEEDS_GROOVE = "NO GROOVE TO ARRANGE. CHOP WITH A GROOVE, OR STEAL ONE, FIRST."
@@ -1622,6 +1617,10 @@ object Copy {
     const val REPLAY_NO_DOOR = "THIS RECIPE HAS NO DOOR HERE."
     fun copied(word: String, from: String): String = "$word COPIED FROM $from. PASTE IT ON ANY PAD."
     fun replayed(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL SLEEPS IN THE BIN."
+    fun replayedBoard(word: String, pad: String): String = "$word DONE AGAIN ON $pad. ORIGINAL KEPT."
+    const val WIDE_REMOVE_BEFORE_SOFT_HITS = "REMOVE WIDE BEFORE CHANGING SOFT HITS."
+    const val WIDE_REMOVE_BEFORE_STACK = "REMOVE WIDE BEFORE STACK THE TAKES."
+    const val WIDE_REMOVE_BEFORE_SPREAD = "REMOVE WIDE BEFORE SPREAD."
     /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
     fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
         "$word DONE AGAIN ON $pad, IN $key" +
@@ -1884,6 +1883,13 @@ object Copy {
     fun sentToPads(sliceCount: Int, chokeSet: Boolean): String =
         "${countOf(sliceCount, "SLICE", "SLICES")} ON THE PADS." + if (chokeSet) " CHOKE GROUP SET." else ""
     /**
+     * The kit switcher changed which kit the grid plays (F4): the one fact
+     * the header alone used to carry. Said once, as a landing line, when
+     * the pick takes effect; the switcher's sheet marks the active kit
+     * with `Places.kitRow`'s "ACTIVE", not this phrase.
+     */
+    fun onTheGrid(kitName: String): String = "ON THE GRID: ${kitName.uppercase(java.util.Locale.ROOT)}."
+    /**
      * INSTANT KIT: the one tap, what it chopped, then the same words SEND TO
      * PADS says.
      *
@@ -1986,6 +1992,8 @@ object Copy {
      * quoting Java at somebody.
      */
     const val DUB_FAILED = "DUB FAILED. CHECK YOUR STORAGE AND TRY AGAIN."
+    /** DUST threw mid-run: the box's title, with the reason under it. Pads dusted before it threw are kept. */
+    const val DUST_FAILED = "DUST FAILED."
     /**
      * The first tap on DUB when something is already at the destination
      * (September UAT, finding 18). [what] is the exact thing in the way, as
@@ -2070,11 +2078,25 @@ object Copy {
      * about to carry to the MPC.
      */
     const val DUB_DONE_CARD = "DUB DONE. IT'S ON THE CARD."
+    /**
+     * The title of the box a finished dub opens ([LandingNote.dubbed]) when
+     * the card has it: the same fact as [DUB_DONE_CARD], with the thing's
+     * name in it, because a box that stays until read is the one place the
+     * name has room.
+     */
+    fun dubOnCard(kit: String): String = "${kit.uppercase(java.util.Locale.ROOT)} IS ON THE CARD."
+    /** [dubOnCard] for a dub that is on the phone only, the fact [DUB_DONE] states. */
+    fun dubOnPhone(kit: String): String = "${kit.uppercase(java.util.Locale.ROOT)} IS SAVED ON THIS PHONE."
     /** The card picker came back with a folder the system would not grant lasting access to. */
     const val CARD_REFUSED = "THAT FOLDER WON'T HOLD STILL. PICK ANOTHER."
-    /** The CARD row's label when no card is picked — the dub goes to the phone. */
-    const val CARD_NONE = "CARD ▸ NONE — SAVING TO THIS PHONE"
-    /** The CARD row when one is picked; the destination's own name follows. */
+    /**
+     * The caption under the CARD row when no card is picked — the dub goes
+     * to the phone. A fact in the caption's weight, not a warning: no card
+     * is how most dubs go. A sentence now (the row above it is the door,
+     * [CARD_PICKED]), so it keeps its full stop.
+     */
+    const val CARD_NONE = "SAVES TO THIS PHONE. NO CARD."
+    /** The CARD row: the door to the card picker. The picked card's own name follows it, when there is one. */
     const val CARD_PICKED = "CARD ▸"
     /** Long-press the CARD row to go back to the phone. */
     const val CARD_FORGOTTEN = "CARD FORGOTTEN. DUBS GO TO THE PHONE."
@@ -2093,7 +2115,7 @@ object Copy {
      *
      * Wording follows the row's `onLongClickLabel` ("FORGET THIS CARD") so
      * the sighted legend and the TalkBack announcement say the same thing -
-     * the rule [SHELF_LEGEND] and [PAD_SHEET_LEGEND] already follow. No full
+     * the rule [SHELF_LEGEND] already follows. No full
      * stop: it stays on screen, so it is furniture, not a line said once.
      */
     const val EXPORT_CARD_LEGEND = "HOLD TO FORGET THIS CARD"
@@ -2130,18 +2152,6 @@ object Copy {
      * means saying what happened, not quoting Java at somebody.
      */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
-
-    /**
-     * `StatusBar`'s third cell (`Chrome.kt`) when no kit is open — its own
-     * resting label, not the empty string `open?.kit?.name.orEmpty()` used
-     * to leave there. An empty bordered box next to the populated `SHELF: n`
-     * cell read as a rendering gap, not a state: the same "is this broken
-     * or just empty" confusion [EMPTY_GROOVE]'s own KDoc names for a blank
-     * screen. No full stop, same register as [CARD_NONE]: this is a
-     * standing label the row wears until a kit opens, not a line the app
-     * says once.
-     */
-    const val NO_KIT_STATUS = "NO KIT OPEN"
 
     // ==================== Escaped strings, brought in (name-and-find follow-ups, Part C) ====================
     //
@@ -2674,8 +2684,36 @@ object Copy {
     const val NOTHING_DELETED = "NOTHING DELETED."
     /** SNIPS' own empty state. */
     const val SNIPS_EMPTY = "NO SNIPS YET."
-    /** KIT/PLAY with no tape ever committed to this kit - both screens' own empty deck. */
+    /**
+     * The deck with no tape committed. Reserved for the deck: PROJECT's cold
+     * page no longer borrows it (it speaks project words now,
+     * [NO_PROJECT_OPEN] and [PROJECT_HAS_NO_KIT]).
+     */
     const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM SHELF."
+    /**
+     * MAKE's header: what the place is, and where its sounds land. Every lab
+     * sends to the active kit, so the line says the one thing the four rows
+     * under it share.
+     */
+    const val MAKE_HEADER = "SOUND FROM NOTHING. EACH ONE LANDS ON THE ACTIVE KIT."
+    /**
+     * The line under MAKE's header when no kit is active, and the same
+     * project words the empty BEAT and OUT use for it ([NO_KIT_FOR_EXPORT]).
+     */
+    const val ADD_KIT_FIRST = "ADD A KIT TO THIS PROJECT FIRST."
+    /**
+     * What each MAKE row means, under its name: [Bench.SYNTH] and the three
+     * others the list draws. The words follow `Places.HELP`'s MAKE lines,
+     * shortened to fit under a name, so the two cannot disagree about what a
+     * lab is.
+     */
+    fun makeSub(bench: Bench): String = when (bench) {
+        Bench.SYNTH -> "TUNE AN ENGINE."
+        Bench.SNAP -> "A PICTURE INTO A SOUND."
+        Bench.SURFACE -> "PLAY A TOUCH SURFACE."
+        Bench.INSTRUMENTS -> "WHAT YOU MADE, ON 16 PADS."
+        else -> ""
+    }
     /** IN KEY's row when the kit holds no tonal pad at all. */
     const val NO_TONAL_PADS = "NO TONAL PADS. DRUMS LAND AS CAPTURED."
     /** SNIPS → PAD's own header hint once the shelf has a kit to tap - [EMPTY_SHELF_FOR_ASSIGN] carries the instruction when it doesn't. */

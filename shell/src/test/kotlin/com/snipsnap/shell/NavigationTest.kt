@@ -68,6 +68,28 @@ class NavigationTest {
     }
 
     @Test
+    fun `the gear's benches name where back goes, not BACK`() {
+        val nav = Navigation()
+        nav.open(Bench.SETUP)
+        assertEquals("◄ SHELF", nav.backChip, "the shelf has no stage: its place")
+        nav.closeBench()
+        nav.go(Place.PROJECT)
+        nav.stage(Stage.BEAT)
+        nav.open(Bench.HELP)
+        assertEquals("◄ BEAT", nav.backChip, "a stage is a more exact place")
+        nav.closeBench()
+        nav.open(Bench.PAD_SHEET)
+        nav.open(Bench.HELP)
+        assertEquals("◄ PROJECT", nav.backChip, "under a bench: the place, as a long bench name will not fit the chip")
+        nav.closeBench()
+        nav.closeBench()
+        nav.open(Bench.SETUP)
+        nav.open(Bench.HELP)
+        assertEquals("◄ SETUP", nav.backChip, "HELP from SETUP goes back to SETUP")
+        assertTrue(Bench.SETUP.backChip.startsWith("◄ ") && Bench.HELP.backChip.startsWith("◄ "), "the bench's own is still a back chip")
+    }
+
+    @Test
     fun `benches stack and a back chip closes the top one`() {
         val nav = Navigation()
         nav.go(Place.PROJECT)
@@ -105,6 +127,19 @@ class NavigationTest {
         assertEquals(Location(Place.PROJECT, Stage.OUT), nav.location)
         nav.back()
         assertEquals(Location(Place.TAPE, Stage.CUT), nav.location)
+    }
+
+    @Test
+    fun `a landing goes straight where it says, benches included, and is a normal step back`() {
+        val nav = Navigation()
+        assertFalse(nav.canGoBack, "a fresh session has nowhere to go back to")
+        nav.goTo(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.ORBIT)))
+        assertEquals(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.ORBIT)), nav.location)
+        assertTrue(nav.canGoBack)
+        assertTrue(nav.back())
+        assertEquals(Location(Place.SHELF), nav.location)
+        assertFalse(nav.canGoBack)
+        assertFalse(nav.back(), "nothing left to pop: the app's cue to leave")
     }
 
     @Test

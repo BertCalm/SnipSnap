@@ -57,6 +57,7 @@ import com.snipsnap.app.TapeCommit
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
@@ -107,9 +108,10 @@ fun ChopScreen(
     /** The WORKSHOP is open (docs/WORKSHOP.md, WS2): the BENCH row — CONFIRM ALL and the stars — shows above the slices. */
     workshopOpen: Boolean,
     onToast: (String) -> Unit,
-    onSentToGrid: (KitShelf.Entry) -> Unit,
-    /** ONTO <kit> · BANK X landed: the kit as it is now, and the bank (0-based) to open KIT on. */
-    onLandedOnto: (KitShelf.Entry, Int) -> Unit = { e, _ -> onSentToGrid(e) },
+    /** SEND TO PADS landed: the new kit, and the sentence that says what it did. The caller says it, after its own offer, so the offer does not replace it. */
+    onSentToGrid: (KitShelf.Entry, String) -> Unit,
+    /** ONTO <kit> · BANK X landed: the kit as it is now, the bank (0-based) to open KIT on, and the sentence that says what landed. */
+    onLandedOnto: (KitShelf.Entry, Int, String) -> Unit = { e, _, line -> onSentToGrid(e, line) },
     /** EMPTY_CHOP/CHOP_SOURCE_GONE's own "tape something" route. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateTape: () -> Unit,
     /** EMPTY_CHOP's own second route: a kit with samples already on it. No default, same reasoning as [onNavigateTape]. */
@@ -190,25 +192,18 @@ fun ChopScreen(
     // `ChopContent` draws a real header reading "0 SLICES — BY HITS" over
     // an empty list and an all-gray grid — fully drawn, saying nothing.
     //
-    // Said in a toast rather than swapped for an empty face, because
-    // GRID is a live way out and it lives *inside* ChopContent: the mode
+    // Said by ChopContent's own NO HITS FOUND panel rather than swapped for
+    // an empty face, because GRID is a live way out and it lives *inside*
+    // ChopContent: the mode
     // row's rechopTo(ChopMode.Grid(sliceCount.coerceIn(1, MAX_HITS)))
     // slices this same source into equal parts, and coerceIn floors the
     // zero at 1. An early return here would take the only door to it and
     // turn a merely-ugly screen into a dead end — the same escape
     // `Copy.CHOP_AUTO_NONE` already points AUTO's own no-onset case at.
-    LaunchedEffect(loadedModel) {
-        if (loadedModel.sliceCount == 0) onToast(Copy.CHOP_NO_HITS)
-    }
-
     ChopContent(
         entry = entry,
         shelf = shelf,
         sourceFile = file,
-        // J30: whether the app picked this source rather than the player.
-        // Computed here because this is where both halves are in scope;
-        // it is the same test the RE-TRIM reference makes above.
-        sourceFromKit = lastCommit?.sourceFile != file,
         initialModel = loadedModel,
         teachEnabled = teachEnabled,
         workshopOpen = workshopOpen,
@@ -362,14 +357,12 @@ private fun ChopContent(
     entry: KitShelf.Entry?,
     shelf: KitShelf,
     sourceFile: File,
-    /** J30: true when the source is the open kit's longest sample rather than a TAPE commit. */
-    sourceFromKit: Boolean,
     initialModel: ChopReviewModel,
     teachEnabled: Boolean,
     workshopOpen: Boolean,
     onToast: (String) -> Unit,
-    onSentToGrid: (KitShelf.Entry) -> Unit,
-    onLandedOnto: (KitShelf.Entry, Int) -> Unit,
+    onSentToGrid: (KitShelf.Entry, String) -> Unit,
+    onLandedOnto: (KitShelf.Entry, Int, String) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -514,6 +507,15 @@ private fun ChopContent(
                 rechopBusy = false
             }
         }
+    }
+
+    /**
+     * GRID: as many parts as hits the ear heard — on GHOSTS that is the hits
+     * underneath, not the spaces (a gated break has hits and no ghosts). The
+     * segment's tap and the empty page's TRY GRID ▸ are the same move.
+     */
+    fun toGrid() {
+        if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
     }
 
     /** HITS ◀ ▶: one fewer or one more than the chop has now, so the step is always visible when the tape allows it. */
@@ -806,22 +808,19 @@ private fun ChopContent(
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
                 )
-                // J30: name the source when the app picked it rather than
-                // the player. The load falls back to the open kit's
-                // LONGEST SAMPLE when there is no commit, so someone who
-                // opened CHOP without taping is about to slice a pad they
-                // never chose, untold - the filename was read, used to
-                // derive a kit name, and never shown. Only on the
-                // fallback: arriving from a COMMIT you chose the thing on
-                // the previous screen, and being told again is noise.
-                if (sourceFromKit) {
-                    TapeText(
-                        Copy.chopFromKit(sourceFile.nameWithoutExtension.uppercase(java.util.Locale.ROOT)),
-                        TapeType.lcdSmall,
-                        scheme.ink.tape,
-                        maxLines = 1,
-                    )
-                }
+                // The source, always (plan §3.2). J30 first named it only on
+                // the fallback — the open kit's LONGEST SAMPLE when there is
+                // no commit — because arriving from a COMMIT you had just
+                // chosen the thing on the previous screen. CUT is a stage of
+                // TAPE now, one row-tap from DECK at any time, so the thing
+                // on the table may be a tape kept an hour ago or a pad the
+                // app picked; the header says which, every time.
+                TapeText(
+                    Copy.chopFromKit(sourceFile.nameWithoutExtension.uppercase(java.util.Locale.ROOT)),
+                    TapeType.lcdSmall,
+                    scheme.lcdInk2,
+                    maxLines = 1,
+                )
             }
         }
 
@@ -843,11 +842,7 @@ private fun ChopContent(
                     rechopTo(ChopReviewModel.hitsOf(model.mode) ?: ChopReviewModel.ChopMode.ByHits(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
                 }
             },
-            onGrid = {
-                // As many parts as hits the ear heard — on GHOSTS that is the
-                // hits underneath, not the spaces (a gated break has hits and no ghosts).
-                if (model.mode !is ChopReviewModel.ChopMode.Grid) rechopTo(ChopReviewModel.ChopMode.Grid(model.hitsHeard.coerceIn(1, ChopReviewModel.MAX_HITS)))
-            },
+            onGrid = ::toGrid,
             onGhosts = {
                 // GHOST CHOP (docs/CHOP_CONTROLS.md §9): the spaces between
                 // the hits this chop makes (or would make, from a grid).
@@ -1050,17 +1045,38 @@ private fun ChopContent(
             }
         }
 
-        GridPreview(placed, scheme)
+        // Nothing to place: sixteen empty slabs and an AUTO-PLACE line for a
+        // chop that has no slices would be furniture describing nothing. One
+        // line says so and routes to GRID, the way out that always finds
+        // slices. (A ghost chop of a gated break has hits and no ghosts, so
+        // it keeps its own honest strip line instead — GRID is not its fix.)
+        val noHitsFound = model.sliceCount == 0 && !model.ghosts
+        if (noHitsFound) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Layout.LCD_HEADER_MAX_H.dp)
+                    .lcdPanel(scheme)
+                    .padding(horizontal = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TapeText(Copy.CHOP_NO_HITS_FOUND, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 2)
+                ActionButton("TRY GRID ▸", scheme, enabled = !rechopBusy && !sendBusy && !humming, onClick = ::toGrid)
+            }
+        } else {
+            GridPreview(placed, scheme)
 
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(Layout.LCD_HEADER_MAX_H.dp)
-                .lcdPanel(scheme)
-                .padding(horizontal = 10.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            TapeText(stripText, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(Layout.LCD_HEADER_MAX_H.dp)
+                    .lcdPanel(scheme)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                TapeText(stripText, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
+            }
         }
 
         // J31: what SEND TO PADS will call the kit, worked out before the
@@ -1071,13 +1087,14 @@ private fun ChopContent(
         // the asymmetry, not the omission: one of these two buttons was
         // already doing it.
         //
-        // `freshName` is a `File.exists()` walk - one stat, plus one more
-        // per kit already holding the name. It runs once per visit to
-        // this screen rather than per recomposition, which is also the
-        // honest granularity: a name that changed under a chip tap would
-        // be a readout, not a promise.
-        val base = "${sourceFile.nameWithoutExtension} CHOP"
-        val plannedName = remember(shelf, base) { shelf.freshName(base) }
+        // The name is a roll (`KitShelf.rolledName`: one word from
+        // `Names.WORDS` that no shelf folder holds), no longer the source's
+        // name with CHOP on it. It is a directory listing and a
+        // `File.exists()` walk, so it runs once per visit to this screen
+        // rather than per recomposition, which is also the honest
+        // granularity: a name that changed under a chip tap would be a
+        // readout, not a promise.
+        val plannedName = remember(shelf, sourceFile) { shelf.rolledName() }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             SecondaryButton(
@@ -1128,7 +1145,9 @@ private fun ChopContent(
             Box(Modifier.weight(2f)) {
                 PrimaryAction(
                     label = if (sendBusy) "…" else "SEND TO PADS",
-                    enabled = !sendBusy && !rechopBusy && !humming,
+                    // A chop with no slices has nothing to send: dimmed (with
+                    // its name kept) rather than the dark primary it was.
+                    enabled = !sendBusy && !rechopBusy && !humming && model.sliceCount > 0,
                 ) {
                     if (sendBusy || rechopBusy || humming) return@PrimaryAction
                     sendBusy = true
@@ -1159,7 +1178,7 @@ private fun ChopContent(
                                 // into somebody else's; showing the planned
                                 // name is not a licence to write over
                                 // whatever now holds it.
-                                val kitName = if (File(shelf.root, planned).exists()) shelf.freshName(base) else planned
+                                val kitName = if (File(shelf.root, planned).exists()) shelf.rolledName() else planned
                                 val kitDir = File(shelf.root, kitName)
                                 val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
                                 if (teachEnabled) {
@@ -1176,18 +1195,21 @@ private fun ChopContent(
                                 // THE BEAT YOU SANG (docs/CHOP_CONTROLS.md §10): a
                                 // hummed chop's own timing goes on as the new
                                 // kit's groove, on the CLASSIC layout SEND used.
-                                val sung = if (!isMelodic && !isFold) Hum.groove(current, base) else null
+                                val sung = if (!isMelodic && !isFold) Hum.groove(current, kitName) else null
                                 sung?.let { Hum.landGroove(kitDir, it) }
                                 KitShelf.Entry(kitDir, builder.kit) to sung?.bars
                             }
-                            onToast(
+                            // The sentence goes to the caller, not to `onToast`:
+                            // the caller's offer replaces the dock's line, so a
+                            // toast said here was gone before it was read.
+                            onSentToGrid(
+                                newEntry,
                                 when {
                                     sungBars != null -> Copy.sungGroove(sungBars)
                                     isFold -> Copy.foldedToPads(current.sliceCount, send.sliceCount, send.chokeSet)
                                     else -> Copy.sentToPads(send.sliceCount, send.chokeSet)
                                 },
                             )
-                            onSentToGrid(newEntry)
                         } catch (e: Exception) {
                             if (e is kotlinx.coroutines.CancellationException) throw e
                             Log.e("ChopScreen", "sendToGrid: failed", e)
@@ -1208,12 +1230,15 @@ private fun ChopContent(
         // carry its own destination because it is a full-width secondary
         // in smaller type - which is the whole reason this one needed a
         // line instead of the same treatment.
-        TapeText(
-            "LANDS AS $plannedName",
-            TapeType.pixelSmall,
-            scheme.ink2.tape,
-            maxLines = 1,
-        )
+        // Not at zero slices: it would name a kit the dimmed button cannot make.
+        if (model.sliceCount > 0) {
+            TapeText(
+                "LANDS AS $plannedName",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+        }
 
         // ONTO <kit> · BANK X (bank B round 2): the same arrangement, landed
         // on the open kit's first empty bank instead of into a new kit —
@@ -1227,7 +1252,7 @@ private fun ChopContent(
             SecondaryButton(
                 if (sendBusy) "…" else "ONTO ${entry.kit.name} · BANK ${PadBanks.letter(landBank)}",
                 modifier = Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
-                enabled = !sendBusy && !rechopBusy && !humming,
+                enabled = !sendBusy && !rechopBusy && !humming && model.sliceCount > 0,
             ) {
                 if (sendBusy || rechopBusy || humming) return@SecondaryButton
                 sendBusy = true
@@ -1267,13 +1292,16 @@ private fun ChopContent(
                             }
                         }
                         val left = send.arranged.drop(PadBanks.SIZE).count { it != null }
-                        onToast(
+                        // KIT opens on the bank it landed on, not A: the
+                        // pads that just arrived are the point of the tap.
+                        // The sentence rides along for the same reason
+                        // SEND's does: the caller's offer would replace it.
+                        onLandedOnto(
+                            updated,
+                            landBank,
                             if (isFold) Copy.foldedOnto(target.kit.name, PadBanks.letter(landBank), current.sliceCount, landed.size, left)
                             else Copy.landedOnto(target.kit.name, PadBanks.letter(landBank), landed.size, left),
                         )
-                        // KIT opens on the bank it landed on, not A: the
-                        // pads that just arrived are the point of the tap.
-                        onLandedOnto(updated, landBank)
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
                         onToast("LAND FAILED: ${e.message ?: e.javaClass.simpleName}")
@@ -1355,7 +1383,7 @@ private fun ClassPicker(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .background(
-                                if (picked) Schemes.classColor(dc).tape else scheme.ink3.tape.copy(alpha = 0.15f),
+                                if (picked) Schemes.classColor(dc).tape else scheme.lcdInk.tape.copy(alpha = 0.15f),
                                 RoundedCornerShape(4.dp),
                             )
                             .tapeClick(label = ChopReviewModel.chipName(dc), enabled = enabled, onClick = { onPick(dc) }),
@@ -1388,7 +1416,7 @@ private fun ClassPicker(
             TapeText(
                 "THE MACHINE SAID ${ChopReviewModel.chipName(machine)}",
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.lcdInk2,
                 maxLines = 1,
             )
         }
@@ -1553,13 +1581,13 @@ private fun CutBench(
             }
         }
         if (hits != null) {
-            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (ear in ChopReviewModel.Ear.entries) {
                     SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
-            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }
@@ -1778,6 +1806,10 @@ internal fun SegmentButton(
             .semantics { this.selected = active }
             .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(vertical = 4.dp),
+        // The two-line block is centred in the chip, not hung from its top:
+        // an unselected chip's second line is blank, and top-aligned that
+        // left a lone word riding high in a 48dp box (UX review ruling a).
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         TapeText(
@@ -1791,8 +1823,9 @@ internal fun SegmentButton(
         )
         // Same reason, and `pressedBevel` above is keyed on `active` alone:
         // blanking this while busy left the bevel saying selected and the
-        // caption saying nothing.
-        TapeText(if (active) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
+        // caption saying nothing. ink3: the border says it first, this
+        // only names it.
+        TapeText(if (active) "SELECTED" else "", TapeType.pixelSmall, scheme.ink3.tape)
     }
 }
 

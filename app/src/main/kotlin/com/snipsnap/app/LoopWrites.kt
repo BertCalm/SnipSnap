@@ -10,7 +10,7 @@ import kotlin.concurrent.withLock
  *
  * Two places write it and neither can see the other's work in flight: SNIPS'
  * own → LOOP (`App.sendSnipToLoop`, one coroutine per tap) and LOOP's
- * clear-a-track (`LoopActivity.persist`, on its own writer thread). Every
+ * clear-a-track (`LoopBench`'s `persist`, on its own writer thread). Every
  * write is read-modify-write — load the sidecar, decide, save it back — so
  * without a lock two quick taps both read the same session, both pick the same
  * empty track, and the second save silently drops the first snip while its
@@ -18,7 +18,7 @@ import kotlin.concurrent.withLock
  * the kit side; this is the same guarantee for the grid.
  *
  * A plain lock rather than `KitWrites`' `kotlinx.coroutines.sync.Mutex`
- * because one of the two callers is not a coroutine: `LoopActivity` writes
+ * because one of the two callers is not a coroutine: `LoopBench` writes
  * from an executor task. Both callers are already off the main thread, so
  * blocking is what they can afford and suspending is not what one of them can
  * do.
@@ -30,7 +30,7 @@ object LoopWrites {
      *
      * Here because this object already exists to be the one thing that knows
      * about that folder. It was written out as a literal in two files —
-     * `App.kt` and `LoopActivity.kt` — which is the same shape that had SNIPS
+     * `App.kt` and the old `LoopActivity.kt` — which is the same shape that had SNIPS
      * reading `<files>/Kits/snips` for five days: a path typed twice, with
      * nothing to notice when the copies stop agreeing. `ConventionTest`'s own
      * law over retyped paths is what keeps it single now.

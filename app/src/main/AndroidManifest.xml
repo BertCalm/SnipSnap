@@ -10,6 +10,10 @@
          foreground service to carry the mediaProjection type. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- HAPTICS (SETUP): the motor under pads, steppers and landings. A
+         normal permission - granted at install, never asked. Haptics.kt
+         keeps it silent while the mic is armed. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- The Bubble (Task 5): optional. Granted via
          ACTION_MANAGE_OVERLAY_PERMISSION, offered once from the ARM flow —
          never required, the notification's own SNIP action is the whole
@@ -93,17 +97,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/share_paths" />
         </provider>
-
-        <!-- The six-track phasing loop grid (plan-03). No launcher filter:
-             one front door, MainActivity's. Reached from the shelf's own
-             LOOP row once a snip has been sent to a track (App.kt's
-             loopLauncher); still startable in dev via
-             adb shell am start -n com.snipsnap.app/.LoopActivity, which is
-             why it says so in words when there is no session to draw. -->
-        <activity
-            android:name=".LoopActivity"
-            android:exported="true"
-            android:screenOrientation="landscape" />
 
         <!-- The always-listening ring's foreground session (retroactive-snip
              plan, Task 2). Never exported: only this app's own ARM buttons

@@ -45,6 +45,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.Bench
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiKeys
@@ -121,7 +122,7 @@ fun KeysScreen(
         }
     }
 
-    // ◄ SHELF's own path — shared by the chip and system Back so both
+    // ◄ MAKE's own path (the chip reads `Bench.KEYS.backChip`) — shared by the chip and system Back so both
     // silence the instrument before leaving.
     fun requestBack() {
         silence()
@@ -182,7 +183,7 @@ fun KeysScreen(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("◄ SHELF", scheme, enabled = true, onClick = ::requestBack)
+            ActionButton(Bench.KEYS.backChip, scheme, enabled = true, onClick = ::requestBack)
             ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { silence(); octave-- })
             ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { silence(); octave++ })
         }
@@ -227,7 +228,7 @@ fun KeysScreen(
         // nothing here rather than an invitation it cannot honour.
         if (midiSupported) {
             Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
-                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
         }
     }

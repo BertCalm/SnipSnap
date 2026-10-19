@@ -66,6 +66,7 @@ import com.snipsnap.app.PadEngine
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -1434,7 +1435,7 @@ private fun RingDetailPanel(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TapeText("PLAYS", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                TapeText("PLAYS", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
                 for (pad in kit.pads.sortedBy { it.slot }) {
                     PadChip(
                         label = padLabel(pad.slot),
@@ -1486,7 +1487,7 @@ private fun ArpPanel(
     TapeText(
         "THE CHORD IS WHATEVER PADS PLAY ON THIS RING — PICK THEM ON PLAYS, BELOW.",
         TapeType.pixelSmall,
-        scheme.ink3.tape,
+        scheme.ink2.tape,
         Modifier.fillMaxWidth(),
         maxLines = 2,
     )
@@ -1499,7 +1500,7 @@ private fun ArpPanel(
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        TapeText("OCTAVES", TapeType.pixelSmall, scheme.ink3.tape)
+        TapeText("OCTAVES", TapeType.pixelSmall, scheme.ink2.tape)
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (n in Arp.OCTAVE_CHOICES) {
                 SmallChip(n.toString(), scheme, accent = n == arpOctaves, enabled = arpShape != Arp.Shape.CHORD) { onOctavesChange(n) }
@@ -1507,7 +1508,7 @@ private fun ArpPanel(
         }
     }
     if (arpShape == Arp.Shape.CHORD) {
-        TapeText("CHORD PLAYS EVERY NOTE AT ONCE — OCTAVES DON'T APPLY.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth())
+        TapeText("CHORD PLAYS EVERY NOTE AT ONCE — OCTAVES DON'T APPLY.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "GATE SHORTER") { onGateChange((arpGate - ARP_GATE_STEP).coerceAtLeast(Arp.MIN_GATE)) }
@@ -1522,7 +1523,7 @@ private fun ArpPanel(
     TapeText(
         "EACH STEP GETS THE RUN'S NEXT NOTE, WRAPPING OR CUTTING SHORT TO FIT THE RING'S OWN STEPS. GATE SHORTENS EACH HIT INSTEAD OF LETTING IT RING OUT.",
         TapeType.pixelSmall,
-        scheme.ink3.tape,
+        scheme.ink2.tape,
         Modifier.fillMaxWidth(),
         maxLines = 3,
     )
@@ -1620,7 +1621,7 @@ private fun OutPanel(
         TapeText(
             "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
             TapeType.pixelSmall,
-            scheme.ink3.tape,
+            scheme.ink2.tape,
             Modifier.fillMaxWidth(),
             maxLines = 3,
         )
@@ -1638,7 +1639,7 @@ private fun OutPanel(
     TapeText(
         "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
         TapeType.pixelSmall,
-        scheme.ink3.tape,
+        scheme.ink2.tape,
         Modifier.fillMaxWidth(),
         maxLines = 3,
     )
@@ -1661,7 +1662,7 @@ private fun TheSetPanel(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TapeText("BAR", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+        TapeText("BAR", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
         for (n in OrbitSet.BAR_CHOICES) {
             SmallChip("$n · ${OrbitSet.meterLabel(n)}", scheme, accent = n == current.lapSteps, description = "BAR OF $n STEPS, ${OrbitSet.meterLabel(n)}") {
                 if (n != current.lapSteps) onCommit(current.copy(lapSteps = n))
@@ -1673,7 +1674,7 @@ private fun TheSetPanel(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TapeText("SWING", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+        TapeText("SWING", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
         for (n in OrbitSet.SWING_CHOICES) {
             SmallChip(if (n == OrbitSet.STRAIGHT_SWING) "50 · STRAIGHT" else "$n", scheme, accent = n == current.swing, description = "SWING $n") {
                 if (n != current.swing) onCommit(current.copy(swing = n))
@@ -1685,7 +1686,7 @@ private fun TheSetPanel(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TapeText("PLAN", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+        TapeText("PLAN", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
         SmallChip(
             if (current.sections.isEmpty()) "SECTIONS ▸" else "SECTIONS ▸ ${current.sections.size}",
             scheme,
@@ -1701,7 +1702,7 @@ private fun TheSetPanel(
                 "${OrbitClock.arrangementFrames(current) / OrbitClock.lapFrames(current)} BARS ROUND THE PLAN."
             },
             TapeType.pixelSmall,
-            scheme.ink3.tape,
+            scheme.ink2.tape,
             Modifier.weight(1f),
             maxLines = 2,
         )
@@ -1721,14 +1722,14 @@ private fun TheSetPanel(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TapeText("TAKE", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+            TapeText("TAKE", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
             SmallChip("ROLL · ${current.seed}", scheme, description = "ROLL A NEW TAKE OF THE SAME HITS") {
                 onCommit(current.copy(seed = current.seed + 1))
             }
             TapeText(
                 "THE SAME TAKE PLAYS, BOUNCES AND CLIPS THE SAME EVERY TIME. ROLL FOR A NEW ONE — NO HIT MOVES.",
                 TapeType.pixelSmall,
-                scheme.ink3.tape,
+                scheme.ink2.tape,
                 Modifier.weight(1f),
                 maxLines = 2,
             )
@@ -1737,7 +1738,7 @@ private fun TheSetPanel(
     TapeText(
         "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
         TapeType.pixelSmall,
-        scheme.ink3.tape,
+        scheme.ink2.tape,
         Modifier.fillMaxWidth(),
         maxLines = 4,
     )
@@ -1763,7 +1764,7 @@ private fun SectionsPanel(
         TapeText(
             "NO ARRANGEMENT — EVERY RING TURNS FOREVER. ADD A SECTION TO SAY \"THESE RINGS FOR EIGHT BARS, THEN THOSE\".",
             TapeType.pixelSmall,
-            scheme.ink3.tape,
+            scheme.ink2.tape,
             Modifier.fillMaxWidth(),
             maxLines = 3,
         )
@@ -1824,7 +1825,7 @@ private fun SectionsPanel(
         "A SECTION STARTS ITS RINGS OVER, SO IT REPEATS THE SAME EVERY TIME AND CLIPS AS ITS OWN SEQUENCE. " +
             "A SECTION WITH NO RINGS IS A BREAK, AND WRITES NO GROOVE. CLIP ▸ KIT WRITES ONE FOR EVERY OTHER — FLIP THEM ON THE MPC.",
         TapeType.pixelSmall,
-        scheme.ink3.tape,
+        scheme.ink2.tape,
         Modifier.fillMaxWidth(),
         maxLines = 4,
     )
@@ -1881,7 +1882,7 @@ private fun StepsPickerPanel(
             SmallChip(n.toString(), scheme, accent = n == ring.steps) { onSetSteps(n) }
         }
     }
-    TapeText("16 IS A BAR · 20 IS FIVE BEATS · 12 IS THREE · ODD NUMBERS DRIFT FURTHEST", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+    TapeText("16 IS A BAR · 20 IS FIVE BEATS · 12 IS THREE · ODD NUMBERS DRIFT FURTHEST", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 }
 
 @Composable
@@ -1905,7 +1906,7 @@ private fun SpanPickerPanel(
             }
         }
     }
-    TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS ½, 1, 2 OR 4 BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
+    TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS ½, 1, 2 OR 4 BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
 }
 
 @Composable
@@ -1927,7 +1928,7 @@ private fun SpreadPanel(
             SmallChip(k.toString(), scheme) { onSpread(k) }
         }
     }
-    TapeText("AS EVEN AS THE STEPS ALLOW: 3 ROUND 8 IS THE TRESILLO, 5 ROUND 8 THE CINQUILLO. ON THE RING'S FIRST PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+    TapeText("AS EVEN AS THE STEPS ALLOW: 3 ROUND 8 IS THE TRESILLO, 5 ROUND 8 THE CINQUILLO. ON THE RING'S FIRST PAD.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 }
 
 @Composable
@@ -2238,7 +2239,7 @@ private fun OrbitRingRail(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 SmallChip("SET ${offer.bpm.roundToInt()}", scheme, accent = true) { onAcceptTempo(offer) }
                 SmallChip("KEEP ${current.bpm.roundToInt()}", scheme) { onDismissTempoOffer() }
-                TapeText(Copy.ORBIT_SET_TEMPO_HINT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
+                TapeText(Copy.ORBIT_SET_TEMPO_HINT, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             }
         }
     }
@@ -2288,7 +2289,7 @@ private fun OrbitFooterRow(
     TapeText(
         Copy.orbitLegend(hasSnips = snips.isNotEmpty()),
         TapeType.pixelSmall,
-        scheme.ink3.tape,
+        scheme.ink2.tape,
         Modifier.fillMaxWidth(),
         maxLines = 8,
     )
@@ -2533,7 +2534,7 @@ private fun RingsCanvas(
                     textMeasurer = textMeasurer,
                     text = "${ring.name} · ${ring.steps}",
                     topLeft = Offset(labelAt.x + 6f * screenDensity, labelAt.y - 4f * screenDensity),
-                    style = labelStyle.copy(color = if (picked) amber else scheme.ink2.tape),
+                    style = labelStyle.copy(color = if (picked) amber else scheme.lcdInk2),
                 )
             }
             // The hub: a dot marking the shared centre every ring turns about.
@@ -2637,7 +2638,7 @@ private fun StripEditor(
                 // pair that isn't either of those (`PROG A · THE BREAK`,
                 // GrooveScreen.kt).
                 SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
-                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f), maxLines = 1)
             }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)
@@ -2867,11 +2868,11 @@ private fun HeaderChip(
     description: String? = null,
     onClick: () -> Unit,
 ) {
-    val ink = if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink.tape
+    val ink = if (!enabled) scheme.lcdInk.tape.copy(alpha = 0.4f) else if (accent) scheme.accent.tape else scheme.lcdInk.tape
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.lcdInk2, RoundedCornerShape(3.dp))
             .tapeClick(label = description ?: if (label == "▶") "PLAY" else if (label == "■") "STOP" else null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,

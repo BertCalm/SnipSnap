@@ -90,9 +90,16 @@ object Patches {
             LacquerPatch.ENGINE -> LacquerPatch.fromJsonValue(value)
             SkitterPatch.ENGINE -> SkitterPatch.fromJsonValue(value)
             TanglePatch.ENGINE -> TanglePatch.fromJsonValue(value)
+            OverlapPatch.ENGINE -> OverlapPatch.fromJsonValue(value)
+            FlockPatch.ENGINE -> FlockPatch.fromJsonValue(value)
+            ShoalPatch.ENGINE -> ShoalPatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
+            OrphicaPatch.ENGINE -> OrphicaPatch.fromJsonValue(value)
+            OpenSkyPatch.ENGINE -> OpenSkyPatch.fromJsonValue(value)
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
+            WickPatch.ENGINE -> WickPatch.fromJsonValue(value)
+            OvenPatch.ENGINE -> OvenPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

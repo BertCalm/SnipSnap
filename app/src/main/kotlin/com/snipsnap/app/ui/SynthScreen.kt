@@ -71,9 +71,16 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.LoopWrites
 import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.TapeVoice
+import com.snipsnap.shell.OrphicaPadMaker
+import com.snipsnap.synth.Orphica
+import com.snipsnap.synth.OrphicaConfig
+import com.snipsnap.synth.OrphicaMaterial
+import com.snipsnap.synth.OrphicaMode
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
@@ -96,6 +103,7 @@ import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
+import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -108,6 +116,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
@@ -177,9 +186,16 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.OpenSky
+import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OpenSkyPresets
+import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OspreyVoice
+import com.snipsnap.synth.Oven
+import com.snipsnap.synth.OvenPatch
+import com.snipsnap.synth.OvenVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -195,6 +211,9 @@ import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
+import com.snipsnap.synth.Shoal
+import com.snipsnap.synth.ShoalPatch
+import com.snipsnap.synth.ShoalVoice
 import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
@@ -268,6 +287,61 @@ private const val MACRO_DEBOUNCE_MS = 100L
  */
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
+// The keys SYNTH writes into its `settings` bag (docs/SCREEN_PLAN_2026_10.md
+// §3.6, the MAKE checklist's last item). The bag is the navigation model's
+// MakeState for this lab: it outlives the composable, so the player's work
+// survives leaving to hear a pad and coming back. Everything is a string —
+// enum NAMES, floats via toString, recipes as JSON — so the navigation
+// model never learns an engine.
+private const val SETTINGS_ENGINE = "engine"
+private const val SETTINGS_VOICE = "voice"
+private const val SETTINGS_MACRO_PREFIX = "macro."
+private const val SETTINGS_PRESET_PREFIX = "preset."
+private const val SETTINGS_ORPHICA_PREFIX = "patch.ORPHICA."
+
+private fun storedOrphicaPatch(settings: Map<String, String>, material: OrphicaMaterial): OrphicaPatch? =
+    settings["$SETTINGS_ORPHICA_PREFIX${material.name}"]?.let { json ->
+        runCatching { OrphicaPatch.fromJsonText(json) }.getOrNull()?.takeIf { it.config.material == material }
+    }
+
+private const val SETTINGS_OVEN_PATCH_PREFIX = "patch.OVEN."
+
+private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): String =
+    "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}.$macro"
+
+private fun presetSettingsKey(engine: Engine, voice: Enum<*>): String =
+    "$SETTINGS_PRESET_PREFIX${engine.name}.${voice.name}"
+
+/** A stale, invalid or differently tagged recipe in the lab bag falls back to the usual defaults. */
+private fun storedOvenPatches(settings: Map<String, String>): Map<Pair<Engine, Enum<*>>, OvenPatch> =
+    buildMap {
+        for (voice in OvenVoice.entries) {
+            val text = settings["$SETTINGS_OVEN_PATCH_PREFIX${voice.name}"] ?: continue
+            val patch = runCatching { Patches.fromJsonText(text) }.getOrNull() as? OvenPatch ?: continue
+            if (patch.voice == voice) put(Engine.OVEN to voice, patch)
+        }
+    }
+
+/**
+ * The highlighted-preset names the bag holds, by (engine, voice). A name the
+ * bag keeps for an engine or voice this build no longer has is simply not
+ * found here — a stale bag falls back to nothing highlighted, never throws.
+ */
+private fun storedPresetNames(settings: Map<String, String>): Map<Pair<Engine, Enum<*>>, String> {
+    if (settings.isEmpty()) return emptyMap()
+    val found = LinkedHashMap<Pair<Engine, Enum<*>>, String>()
+    for (e in Engine.entries) {
+        for (v in e.voices()) {
+            val name = settings[presetSettingsKey(e, v)]
+            if (!name.isNullOrEmpty()) found[e to v] = name
+        }
+    }
+    return found
+}
+
+/** A tapped preset, made editable — the one canonicalisation `loadPreset` and the restore below share. */
+private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) patch.forEditing() else patch
+
 /**
  * SYNTH — the drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
@@ -281,7 +355,7 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS and MURMUR, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, OVEN and MURMUR, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -291,6 +365,32 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * is semantically "a synth patch landed on this pad" — but a copy-
  * consolidation pass gave it its own line, `Copy.synthSent`, rather than
  * leaving it outside every law in `PersonalityTest`.
+ *
+ * [settings] is this lab's bag in the navigation model's MAKE state
+ * (`MakeState.settings`, §3.6): leaving to hear a pad and coming back used to
+ * reset the lab, and this is what keeps it. The lab stays the owner of its
+ * live state — it seeds its `remember`ed vars from the bag when it composes
+ * and writes them back as they change; the bag is not Compose state. It
+ * holds the player's work, as strings, under these keys:
+ *  - `engine` — the engine's name, e.g. `RESIN`.
+ *  - `voice` — the voice's name within that engine, e.g. `KICK`.
+ *  - `macro.<ENGINE>.<VOICE>.<MACRO>` — one macro slider's value (a float,
+ *    0..1) for every (engine, voice) the player has touched.
+ *  - `preset.<ENGINE>.<VOICE>` — the name of the preset (factory or YOURS)
+ *    last tapped on that voice and not edited since.
+ *  - `recipe.<ENGINE>.<VOICE>` — the loaded patch's complete recipe, kept
+ *    after edits clear its preset highlight. The macro keys above retain
+ *    the current slider values independently of that loaded recipe.
+ *  - `patch.ORPHICA.<MATERIAL>` — ORPHICA's complete editable recipe, keeping
+ *    its mode, root and capture with its macro values across navigation.
+ *  - `patch.OVEN.<VOICE>` — OVEN's complete current recipe, including the
+ *    saved root, strike velocity and model after the preset has been edited.
+ *    Where a `patch.` entry and a `recipe.` entry both exist for a voice,
+ *    the `patch.` one is the fresher and is adopted.
+ * The default is an empty map, so every other call site, and the device
+ * tests, compose the lab from factory defaults as before.
+ *
+ * The audition and sheets are not kept.
  */
 @Composable
 fun SynthScreen(
@@ -301,7 +401,7 @@ fun SynthScreen(
     shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
-    // MAKE INSTRUMENT (RESIN, SIREN, GLINT or REGISTERS, held) writes beside the kits; App's instrument
+    // MAKE INSTRUMENT writes beside the kits; App's instrument
     // list is not reactive to that folder, so this tells it to re-read -
     // PadSheetScreen's own parameter of the same name, for the same reason.
     onShelfAssetWritten: () -> Unit,
@@ -319,12 +419,26 @@ fun SynthScreen(
     // `rememberCoroutineScope()` for exactly this write, unlike every
     // sibling overlay).
     appScope: CoroutineScope,
+    // This lab's bag in the navigation model's MAKE state (see the KDoc).
+    settings: MutableMap<String, String> = mutableMapOf(),
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
-    var engine by remember { mutableStateOf(Engine.THUMP) }
-    var voice by remember { mutableStateOf<Enum<*>>(ThumpVoice.KICK) }
+    // Seeded from the bag (§3.6) with the factory start as the fallback: a
+    // name the bag holds that this build cannot resolve is ignored, and a
+    // voice the restored engine does not have falls back to its first.
+    var engine by remember {
+        mutableStateOf(Engine.entries.firstOrNull { it.name == settings[SETTINGS_ENGINE] } ?: Engine.THUMP)
+    }
+    var voice by remember {
+        mutableStateOf<Enum<*>>(
+            engine.voices().firstOrNull { it.name == settings[SETTINGS_VOICE] } ?: engine.voices().first(),
+        )
+    }
+    LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
+    LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
+    val seededOvenPatches = remember { storedOvenPatches(settings) }
     // Per-(engine, voice) macro state, seeded with factory defaults and kept
     // for the life of the screen: switching engine or voice (or coming back
     // to one) restores whatever was last touched on it, same as the
@@ -336,27 +450,91 @@ fun SynthScreen(
     val macrosByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
             for (e in Engine.entries) {
-                for (v in e.voices()) put(e to v, e.defaults(v))
+                for (v in e.voices()) {
+                    val orphica = if (e == Engine.ORPHICA) {
+                        storedOrphicaPatch(settings, v as OrphicaMaterial)
+                            ?: (Presets.forVoice(e.name, v.name).firstOrNull {
+                                it.name == settings[presetSettingsKey(e, v)]
+                            } as? OrphicaPatch)
+                    } else null
+                    val defaults = if (orphica != null) Orphica.macrosFrom(orphica.config) + orphica.macros
+                        else e.defaults(v)
+                    val recipe = seededOvenPatches[e to v]
+                    // The bag's value where it parses, the default where it
+                    // does not (§3.6): an unparseable or non-finite string
+                    // is a stale bag, never a crash.
+                    // A complete OVEN recipe is authoritative: its legacy
+                    // macro keys may predate an edit followed by a voice switch.
+                    put(e to v, when {
+                        recipe != null -> defaults + recipe.macros
+                        settings.isEmpty() || orphica != null -> defaults
+                        else -> defaults.mapValues { (name, fallback) ->
+                            settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
+                                ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
+                        }
+                    })
+                }
             }
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
+    // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
+    // (engine, voice), so this is the one place the bag needs to follow; the
+    // pairs the player left earlier already wrote theirs when they were open.
+    LaunchedEffect(engine, voice, macros) {
+        for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
+    }
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // REVEL also retains its microphones, phrase and seed configuration.
     // REGISTERS retains its synthesis model, saved pitch and velocity.
+    // OVEN likewise retains its saved root, strike velocity and material model.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
     // trajectory configuration, SPOOL its tape-machine configuration and
     // velocity, SKITTER its noise seed, RELAY its generated sources and phrase
     // schedules, EMBOUCHURE and BELLOWS their player gestures, and MURMUR its operator routing, formant
     // targets and envelope definitions. OSPREY retains its variation seed, finite duration
-    // and model version. Keep that state through preview, editing, saving and placing by
+    // and model version. OPENSKY retains its authored timbre, note,
+    // velocity, gate, effect mode and model. ORPHICA retains its material, mode,
+    // capture, seed and physical grain configuration. Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
-    val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
+    // A working recipe survives independently of its preset highlight:
+    // editing a slider must not discard saved pitch, velocity or model on
+    // a trip to the grid. Older bags fall back to their named factory
+    // preset; a YOURS preset is adopted when its shelf read lands below.
+    val seededPresets = remember { storedPresetNames(settings) }
+    val loadedPatchesByVoice = remember {
+        mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply {
+            for (patch in SynthDrafts.read(settings)) {
+                val e = Engine.entries.firstOrNull { it.name == patch.engine } ?: continue
+                val v = e.voices().firstOrNull { it.name == patch.voiceName } ?: continue
+                put(e to v, editablePreset(patch))
+            }
+            for ((pair, name) in seededPresets) {
+                if (containsKey(pair)) continue
+                val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
+                if (factory != null) put(pair, editablePreset(factory))
+            }
+            putAll(seededOvenPatches)
+            for (material in OrphicaMaterial.entries) {
+                storedOrphicaPatch(settings, material)?.let { put(Engine.ORPHICA to material, it) }
+            }
+        }
+    }
+    val loadedRecipes = loadedPatchesByVoice.toMap()
+    LaunchedEffect(loadedRecipes) {
+        SynthDrafts.write(settings, loadedRecipes.values)
+    }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
-        Patches.edited(it, name, macros)
+        if (it is OrphicaPatch) orphicaPatchForControls(it, name, macros)
+        else Patches.edited(it, name, macros)
     } ?: engine.buildPatch(name, voice, macros)
+    LaunchedEffect(engine, voice, loadedPatch, macros) {
+        if (engine == Engine.ORPHICA) {
+            settings["$SETTINGS_ORPHICA_PREFIX${voice.name}"] = buildCurrentPatch(engine.patchDisplayName(voice)).toJsonText()
+        }
+    }
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
     // "a starting point to wreck, not a locked sound", so this clears the
@@ -364,7 +542,30 @@ fun SynthScreen(
     // loaded, rather than keep highlighting a name that no longer
     // describes the sound. Not pre-seeded like [macrosByVoice] — nothing
     // is "loaded" until a tap picks one.
-    val currentPresetByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, String>() }
+    val currentPresetByVoice = remember {
+        mutableStateMapOf<Pair<Engine, Enum<*>>, String>().apply { putAll(seededPresets) }
+    }
+    // A preset can be cleared or set on a voice that is not showing (a FORGET
+    // on another voice's chip, a save), so the bag takes the whole map.
+    val presetNames = currentPresetByVoice.toMap()
+    LaunchedEffect(presetNames) {
+        settings.keys.removeAll { it.startsWith(SETTINGS_PRESET_PREFIX) }
+        for ((pair, name) in presetNames) settings[presetSettingsKey(pair.first, pair.second)] = name
+    }
+    // OVEN's relative TUNE alone cannot recover an edited root or strike.
+    // Keep its full recipe in this lab's existing bag, including voices left
+    // earlier in the visit. Other engines retain their established bag format.
+    val ovenRecipes = OvenVoice.entries.associate { ovenVoice ->
+        val pair = Engine.OVEN to ovenVoice
+        val controls = macrosByVoice.getValue(pair)
+        val patch = loadedPatchesByVoice[pair] as? OvenPatch
+            ?: OvenPatch(Engine.OVEN.patchDisplayName(ovenVoice), ovenVoice, controls)
+        ovenVoice to Patches.edited(patch, currentPresetByVoice[pair] ?: patch.name, controls).toJsonText()
+    }
+    LaunchedEffect(ovenRecipes) {
+        settings.keys.removeAll { it.startsWith(SETTINGS_OVEN_PATCH_PREFIX) }
+        for ((ovenVoice, recipe) in ovenRecipes) settings["$SETTINGS_OVEN_PATCH_PREFIX${ovenVoice.name}"] = recipe
+    }
     // The prototype gates its very first sound behind a "TAP TO POWER ON"
     // veil — a Web Audio autoplay-policy workaround, not part of the actual
     // interaction — and only *after* that makes every move retrigger. This
@@ -394,11 +595,17 @@ fun SynthScreen(
         // answering gesture, chord intervals and velocity.
         loadedPatchesByVoice[engine to voice] = patch.copy(midi = midi.coerceIn(Stoop.MIDI_MIN, Stoop.MIDI_MAX))
     }
+    fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        loadedPatchesByVoice[engine to voice] = patch.copy(config = change(patch.config))
+    }
     fun loadPreset(patch: Patch) {
         touched = true
         // Audition recipes can save an explicit root beside a different TUNE.
         // Canonicalize the sliders without changing that sound or its model.
-        val editable = if (patch is RegistersPatch) patch.forEditing() else patch
+        val editable = editablePreset(patch)
         loadedPatchesByVoice[engine to voice] = editable
         // Merged over the engine's own defaults, same as macrosByVoice's own
         // seeding above: a preset only has to name the macros it cares
@@ -407,10 +614,13 @@ fun SynthScreen(
         // that "no missing key" invariant - a bare `patch.macros` would
         // otherwise leave PUNCH's slider crashing on getValue the moment
         // someone loaded a pre-PUNCH preset.
-        // OSPREY's saved model selects its defaults too: filling a partial
-        // legacy recipe with the current model's values would change its sound.
-        val defaults = if (editable is OspreyPatch) Osprey.defaults(editable.voice, editable.modelVersion)
-            else engine.defaults(voice)
+        // Physical ORPHICA settings and OSPREY's saved model both select
+        // their displayed defaults; loading a partial recipe keeps its sound.
+        val defaults = when (editable) {
+            is OrphicaPatch -> Orphica.macrosFrom(editable.config)
+            is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
+            else -> engine.defaults(voice)
+        }
         macrosByVoice[engine to voice] = defaults + editable.macros
         currentPresetByVoice[engine to voice] = patch.name
     }
@@ -430,6 +640,26 @@ fun SynthScreen(
             val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
             userPresets = live
             binnedPresets = bin
+            // The YOURS presets the bag named (§3.6), now that the shelf has
+            // been read: re-adopt each whole, or drop the highlight when the
+            // preset was forgotten while the lab was away. Live state is
+            // re-read here, after the await: a preset tapped meanwhile wins.
+            for ((pair, name) in seededPresets) {
+                if (currentPresetByVoice[pair] != name) continue
+                if (loadedPatchesByVoice[pair] != null) {
+                    // OVEN can retain a full edited recipe after its YOURS
+                    // preset has left the shelf. Keep the sound, not a stale chip.
+                    if (pair.first == Engine.OVEN && Presets.byName(pair.first.name, pair.second.name, name) == null &&
+                        UserPresets.forVoice(live, pair.first.name, pair.second.name).none { it.name == name }) {
+                        currentPresetByVoice.remove(pair)
+                    }
+                    continue
+                }
+                val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
+                    .firstOrNull { it.patch.name == name }?.patch
+                if (mine != null) loadedPatchesByVoice[pair] = editablePreset(mine)
+                else currentPresetByVoice.remove(pair)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -560,8 +790,8 @@ fun SynthScreen(
         // (which does join, bounded) is reserved for ON_STOP and teardown,
         // where a one-time bounded wait is the documented intent.
         voicePlayer?.stop()
-        val mono = Cleanup.toMono(target)
-        val v = TapeVoice(mono.samples, mono.sampleRate)
+        val heard = if (engine == Engine.ORPHICA || engine == Engine.OPENSKY) target else Cleanup.toMono(target)
+        val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
         v.start(0)
     }
@@ -576,9 +806,16 @@ fun SynthScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
+            val previewJob = coroutineContext[Job]
             val rendered = runInterruptible(Dispatchers.Default) {
-                val dry = if (loadedPatch != null) buildCurrentPatch(engine.patchDisplayName(voice)).render()
-                    else engine.render(voice, macros)
+                val patch = if (loadedPatch != null || engine == Engine.OPENSKY) buildCurrentPatch(engine.patchDisplayName(voice)) else null
+                val dry = when {
+                    patch is OpenSkyPatch -> patch.render {
+                        previewJob?.isActive == false || Thread.currentThread().isInterrupted
+                    }
+                    patch != null -> patch.render()
+                    else -> engine.render(voice, macros)
+                }
                 // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
                 // STRINGS / DARK STRINGS) previews through the ENSEMBLE it will land
                 // with, so the audition is the pad and not the bare saw stack. Every
@@ -632,12 +869,18 @@ fun SynthScreen(
                 // (Presets.landingFor). Every other sound lands with no chain,
                 // exactly as before.
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
-                val padRecipe = PadRecipe(patch = patch, fx = fx)
-                val recipe = padRecipe.toJsonValue()
                 val cls = engine.drumClass(voice, macros)
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
+                        // A held Murmur source is seamless, but a one-shot pad stops
+                        // at its final frame. Save the delivery fade with that pad;
+                        // gated pads and SURFACE keep the unfaded loop source.
+                        val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true) &&
+                            patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f)
+                        ) 8f else null
+                        val padRecipe = PadRecipe(patch = patch, fx = fx, terminalFadeMs = terminalFade)
+                        val recipe = padRecipe.toJsonValue()
                         val rendered = padRecipe.render()
                         val alreadyThere = model.pad(slot) != null
                         if (alreadyThere) {
@@ -716,12 +959,13 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: RESIN, SIREN, GLINT and REGISTERS, held ----
+    // ---- MAKE INSTRUMENT: held synths and ORPHICA's captured sustain ----
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN),
     // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
     // (SIREN) and docs/superpowers/specs/2026-09-29-glint-paths-design.md §3
-    // (GLINT). Zones render off the main thread, in parallel, with a
-    // progress bar the whole way (the author's call: a slow phone shows
+    // (GLINT). Zones render off the main thread, with OPENSKY's larger
+    // wet-state renders serialized and the other makers in parallel. A
+    // progress bar stays live (the author's call: a slow phone shows
     // work, it does not drop zones); the package is written once every zone
     // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
@@ -735,6 +979,10 @@ fun SynthScreen(
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
+    val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS ||
+        (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice))
+    val heldInstrumentReady = engine != Engine.OPENSKY ||
+        OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
     val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
     val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
     LaunchedEffect(makingInstrument, holdBase) {
@@ -753,13 +1001,21 @@ fun SynthScreen(
     // orchestration below (identical for all) is written once: RESIN's
     // spec carries an ATTACK; SIREN's LOOP render has none to carry
     // (Keys.sirenPad's own KDoc) and neither does GLINT's (its onset and
-    // breath come from the patch), so [HeldSpec.Siren] and [HeldSpec.Glint]
-    // simply have none. REGISTERS keeps its authored attack in the sample,
-    // followed by the verified periodic sustain, with RELEASE alone to dial.
+    // breath come from the patch). OPENSKY HALO likewise keeps its authored
+    // onset; REGISTERS retains its speaking attack before the verified
+    // periodic sustain. These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, holdRelease))
+        Engine.ORPHICA -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrphicaPatch
+            HeldSpec.Orphica(OrphicaPadMaker.spec(patch.config, patch.macros, holdRelease))
+        }
+        Engine.OPENSKY -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch
+            if (OpenSkyPadMaker.supports(patch)) HeldSpec.OpenSky(OpenSkyPadMaker.spec(patch, holdRelease)) else null
+        }
         Engine.REGISTERS -> HeldSpec.Registers(RegistersPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, holdRelease,
         ))
@@ -801,15 +1057,29 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    midis.map { midi ->
-                        async(Dispatchers.Default) {
-                            // CANCEL cancels the scope; each zone asks and stops,
-                            // rather than all nine running on for seconds.
-                            val note = spec.renderZone(midi) { !isActive }
+                    if (spec is HeldSpec.OpenSky) {
+                        // Its settled wet state has a larger working buffer.
+                        // Render one zone at a time so phones never hold nine
+                        // independent oversampled states at once; CANCEL and
+                        // the same zone counter remain live between them.
+                        midis.map { midi ->
+                            val note = withContext(Dispatchers.Default) {
+                                spec.renderZone(midi) { !isActive }
+                            }
                             withContext(Dispatchers.Main) { holdDone += 1 }
                             note
                         }
-                    }.awaitAll()
+                    } else {
+                        midis.map { midi ->
+                            async(Dispatchers.Default) {
+                                // CANCEL cancels the scope; each zone asks and stops,
+                                // rather than all nine running on for seconds.
+                                val note = spec.renderZone(midi) { !isActive }
+                                withContext(Dispatchers.Main) { holdDone += 1 }
+                                note
+                            }
+                        }.awaitAll()
+                    }
                 }
                 // Past here the write lands even under CANCEL: a package half
                 // written is worse than a whole one the player can bin.
@@ -988,10 +1258,13 @@ fun SynthScreen(
         scope.launch {
             try {
                 val src = withContext(Dispatchers.Default) {
-                    val rendered = patch.render()
-                    // STOOP keeps an explicit root even when a chord, sub or
-                    // shadow makes the strongest detected partial another note.
-                    val midi = if (patch is StoopPatch) patch.midi.toFloat() else Spread.detect(rendered)
+                    val rendered = if (patch is OpenSkyPatch) patch.render { !isActive } else patch.render()
+                    // Authored roots survive chords, octave layers and upper
+                    // shimmer that can outweigh the fundamental in detection.
+                    val midi = when (patch) {
+                        is OrphicaPatch -> Orphica.configWithMacros(patch.config, patch.macros).midi.toFloat()
+                        else -> Spread.detect(rendered, patch)
+                    }
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
                 spreadPatch = patch
@@ -1165,6 +1438,36 @@ fun SynthScreen(
                         ) { updateStoopRoot(root + 12) }
                     }
                 }
+                if (engine == Engine.ORPHICA) {
+                    val config = (loadedPatch as? OrphicaPatch)?.config
+                        ?: OrphicaConfig(material = voice as OrphicaMaterial)
+                    OrphicaModePicker(config.mode, scheme) { mode ->
+                        updateOrphicaConfig { it.copy(mode = mode) }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ActionButton(
+                            "OCT −", scheme, enabled = config.midi - 12 >= Orphica.MIDI_MIN,
+                            accessibilityLabel = "ROOT OCTAVE DOWN", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi - 12) } }
+                        ActionButton(
+                            "−", scheme, enabled = config.midi > Orphica.MIDI_MIN,
+                            accessibilityLabel = "ROOT DOWN", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi - 1) } }
+                        TapeText("ROOT ${Scales.nameOf(config.midi)}", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.4f))
+                        ActionButton(
+                            "+", scheme, enabled = config.midi < Orphica.MIDI_MAX,
+                            accessibilityLabel = "ROOT UP", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi + 1) } }
+                        ActionButton(
+                            "OCT +", scheme, enabled = config.midi + 12 <= Orphica.MIDI_MAX,
+                            accessibilityLabel = "ROOT OCTAVE UP", modifier = Modifier.weight(1f),
+                        ) { updateOrphicaConfig { it.copy(midi = config.midi + 12) } }
+                    }
+                }
                 // MURMUR has five timbral controls and HOLD. Its requested root and
                 // gesture energy are independent patch fields, retained with the full
                 // operator/formant definition through preview, saving and placement.
@@ -1197,6 +1500,92 @@ fun SynthScreen(
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                }
+
+                // OVEN's root and hammer energy are saved beside its six macros.
+                // TUNE remains a relative ±12-semitone adjustment to this root.
+                if (engine == Engine.OVEN) {
+                    val ovenPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (ovenPatch.midi - Oven.MIDI_MIN).toFloat() / (Oven.MIDI_MAX - Oven.MIDI_MIN),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(ovenPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val midi = (Oven.MIDI_MIN + value * (Oven.MIDI_MAX - Oven.MIDI_MIN)).roundToInt()
+                                .coerceIn(Oven.MIDI_MIN, Oven.MIDI_MAX)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch).copy(midi = midi)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = ovenPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                }
+
+                // Shoal's root and excitation energy are independent of its six controls.
+                if (engine == Engine.SHOAL) {
+                    val shoalPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (shoalPatch.midi - Shoal.MIN_MIDI).toFloat() / (Shoal.MAX_MIDI - Shoal.MIN_MIDI),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(shoalPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            val midi = (Shoal.MIN_MIDI + value * (Shoal.MAX_MIDI - Shoal.MIN_MIDI)).roundToInt()
+                                .coerceIn(Shoal.MIN_MIDI, Shoal.MAX_MIDI)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch).copy(midi = midi)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = shoalPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                }
+
+                // Relay's touch changes excitation and brightness without replacing its
+                // saved sources, handoff schedules or phrase clock.
+                if (engine == Engine.RELAY) {
+                    val relayPatch = loadedPatch as? RelayPatch
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = relayPatch?.velocity ?: 1f,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as RelayPatch)
                                     .copy(velocity = value.coerceIn(0f, 1f))
                         },
                     )
@@ -1254,6 +1643,75 @@ fun SynthScreen(
                     )
                 }
 
+                // OPENSKY recipes keep their source design outside the four macros.
+                // Edit the full patch so note, energy, gate and effects never reset
+                // its accepted timbre or the saved renderer model.
+                if (engine == Engine.OPENSKY) {
+                    val openSkyPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch
+                    val midiSpan = (OpenSkyPatch.MIDI_MAX - OpenSkyPatch.MIDI_MIN).toFloat()
+                    val gateSpan = OpenSkyPatch.GATE_SECONDS_MAX - OpenSkyPatch.GATE_SECONDS_MIN
+                    MacroSlider(
+                        label = "NOTE",
+                        value = (openSkyPatch.midi - OpenSkyPatch.MIDI_MIN) / midiSpan,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(openSkyPatch.midi),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+                                    .copy(midi = (OpenSkyPatch.MIDI_MIN + value * midiSpan).roundToInt()
+                                        .coerceIn(OpenSkyPatch.MIDI_MIN, OpenSkyPatch.MIDI_MAX))
+                        },
+                    )
+                    MacroSlider(
+                        label = "VEL",
+                        value = openSkyPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    MacroSlider(
+                        label = "GATE",
+                        value = (openSkyPatch.gateSeconds - OpenSkyPatch.GATE_SECONDS_MIN) / gateSpan,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = String.format(java.util.Locale.ROOT, "%.2f s", openSkyPatch.gateSeconds),
+                        onValueChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
+                                    .copy(gateSeconds = (OpenSkyPatch.GATE_SECONDS_MIN + gateSpan * value)
+                                        .coerceIn(OpenSkyPatch.GATE_SECONDS_MIN, OpenSkyPatch.GATE_SECONDS_MAX))
+                        },
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (wet in listOf(false, true)) {
+                            ActionButton(
+                                if (wet) "WET" else "DRY",
+                                scheme,
+                                enabled = true,
+                                lit = openSkyPatch.wet == wet,
+                                modifier = Modifier.weight(1f).semantics { selected = openSkyPatch.wet == wet },
+                                accessibilityLabel = if (wet) "OPENSKY WET" else "OPENSKY DRY",
+                            ) {
+                                touched = true
+                                currentPresetByVoice.remove(engine to voice)
+                                loadedPatchesByVoice[engine to voice] =
+                                    (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch).copy(wet = wet)
+                            }
+                        }
+                    }
+                }
+
                 if (engine == Engine.REGISTERS) {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         val pipe = voice == RegistersVoice.PIPE
@@ -1296,6 +1754,7 @@ fun SynthScreen(
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
                             readout = when {
+                                engine == Engine.ORPHICA && spec.name == "HOLD" && Orphica.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1315,7 +1774,10 @@ fun SynthScreen(
                                 engine == Engine.LACQUER && spec.name == "HOLD" && Lacquer.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SKITTER && spec.name == "HOLD" && Skitter.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.SHOAL && spec.name == "HOLD" && Shoal.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.RELAY && spec.name == "HOLD" && Relay.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.RELAY && spec.name == "TUNE" ->
+                                    Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(spec.name)))
                                 engine == Engine.EMBOUCHURE && spec.name == "HOLD" && Embouchure.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.BELLOWS && spec.name == "HOLD" && Bellows.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -1347,6 +1809,9 @@ fun SynthScreen(
                                 Embouchure.scramble(voice as EmbouchureVoice, random, near = loadedPatch)
                             engine == Engine.BELLOWS && loadedPatch is BellowsPatch ->
                                 Bellows.scramble(voice as BellowsVoice, random, near = loadedPatch)
+                            engine == Engine.OVEN ->
+                                Oven.scramble(voice as OvenVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             else -> engine.scramble(voice, random)
                         }
                         macrosByVoice[engine to voice] = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
@@ -1400,21 +1865,31 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
-                // A sound as a keys instrument, using an engine-verified loop.
+                // RESIN, SIREN, GLINT or OPENSKY HALO, held: the sound as a
+                // keys instrument when its renderer closes its own loop.
                 // REGISTERS retains the authored attack before its held region.
+                // ORPHICA holds a captured sustain behind its own plucked onset.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
                 // always substitutes the loop-and-release envelope, the
                 // same way it ignores RESIN's one-shot DECAY.
-                if (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS) {
+                if (supportsHeldInstrument) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
-                        enabled = true,
+                        enabled = heldInstrumentReady,
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "MAKE INSTRUMENT",
                     ) {
                         makingInstrument = true
+                    }
+                    if (!heldInstrumentReady) {
+                        TapeText(
+                            "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}",
+                            TapeType.pixelSmall,
+                            scheme.ink2.tape,
+                            maxLines = 2,
+                        )
                     }
                 }
                 // RESIN or SIREN, droning: the sound as a loop-grid track,
@@ -1517,7 +1992,7 @@ fun SynthScreen(
             BackHandler(onBack = closeBin)
         }
 
-        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS)) {
+        if (makingInstrument && supportsHeldInstrument) {
             // Recomputed here rather than cached: cheap (a Spec is a data
             // class, no rendering), and it must reflect whatever the panel
             // holds right now, the same as every value below it.
@@ -1633,7 +2108,7 @@ private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Uni
 }
 
 /**
- * DELETED PRESETS: the bin's own listing, `DeletedKitsScreen`'s shape as an
+ * DELETED PRESETS: the bin's own listing, `DeletedKitsSection`'s shape as an
  * overlay of this screen (the `SlotChooserOverlay` frame): one row per
  * forgotten preset — its name, its engine and voice, when it went, the days
  * it has left (the last two in `warn`, as every bin counts down) — and
@@ -1709,11 +2184,11 @@ private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boole
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            TapeText(row.saved.name, TapeType.marker, scheme.ink.tape, maxLines = 1)
+            TapeText(row.saved.name, TapeType.marker, scheme.lcdInk.tape, maxLines = 1)
             TapeText(
                 "${row.saved.engine} · ${row.saved.voice.replace('_', ' ')} · ${Ages.ago(row.binnedAt, now)}",
                 TapeType.pixelSmall,
-                scheme.ink2.tape,
+                scheme.lcdInk2,
                 maxLines = 1,
             )
         }
@@ -1733,7 +2208,7 @@ private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boole
     }
 }
 
-// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsScreen.kt`'s
+// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsSection.kt`'s
 // own `BIN_RED_BORDER`, deliberately constant across every scheme so a
 // delete reads as "red" even in a scheme with no red anywhere else in it.
 private val BIN_RED_BORDER = Color(0xFF6A2020)
@@ -1832,7 +2307,7 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: RESIN, SIREN, GLINT and REGISTERS, held ----------
+// ---------- MAKE INSTRUMENT: held synths and captured sustain ----------
 
 /**
  * MAKE INSTRUMENT's engines behind one shape, so the render/export
@@ -1841,16 +2316,17 @@ private fun PresetNameDialog(
  * once. RESIN's spec carries an ATTACK the sheet draws a slider for;
  * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc) and
  * neither does GLINT's (`Keys.glintPad`: the onset and the breath come from
- * the patch), so [Siren.hasAttack] and [Glint.hasAttack] are false and their
- * slider never appears. REGISTERS likewise has no attack knob: its speaking
- * onset is already in the instrument sample, before the verified held cycle.
+ * the patch), nor OPENSKY HALO's authored onset. These expose only release,
+ * so their slider never appears. REGISTERS likewise has no attack knob: its
+ * speaking onset is in the instrument sample, before the verified held cycle.
+ * ORPHICA keeps its plucked onset, with the captured grain cycle supplying sustain.
  */
 private sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
     val instrumentNote: String? get() = null
 
-    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec], never the raw stepper fractions again. */
+    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec]/[RegistersPadMaker.Spec]/[OpenSkyPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
     fun renderZone(midi: Int, cancelled: () -> Boolean): KeyNote
     fun preview(cancelled: () -> Boolean): Snip
@@ -1885,6 +2361,24 @@ private sealed interface HeldSpec {
         override fun export(name: String, notes: List<KeyNote>, destRoot: File) = GlintPadMaker.export(name, spec, notes, destRoot)
     }
 
+    class Orphica(private val spec: OrphicaPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OrphicaPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "CAPTURED SUSTAIN · RELEASE ${OrphicaPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrphicaPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = OrphicaPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = OrphicaPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    class OpenSky(private val spec: OpenSkyPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OpenSkyPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${OpenSkyPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OpenSkyPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = OpenSkyPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = OpenSkyPadMaker.export(name, spec, notes, destRoot)
+    }
+
     class Registers(private val spec: RegistersPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = RegistersPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -1898,10 +2392,10 @@ private sealed interface HeldSpec {
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT or REGISTERS): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS or OPENSKY HALO): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
- * slider for an engine with none to dial (SIREN, GLINT); RELEASE always shows,
+ * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
  * and [knobLabel] spells out whichever of the two apply in seconds. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says
@@ -2164,6 +2658,13 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
     }
 }
 
+/** Keep untouched physical grain settings exact, including sub-frame Float values. */
+internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls: Map<String, Float>): OrphicaPatch {
+    val displayed = Orphica.macrosFrom(patch.config) + patch.macros
+    val overrides = controls.filter { (key, value) -> key in patch.macros || value != displayed[key] }
+    return patch.copy(name = name, macros = overrides)
+}
+
 // ---------- the engine adapter ----------
 
 /**
@@ -2182,7 +2683,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -2194,6 +2695,7 @@ private enum class Engine {
         VELVET -> VelvetVoice.entries
         VOX -> VoxVoice.entries
         PLUCK -> PluckVoice.entries
+        ORPHICA -> OrphicaMaterial.entries
         TONEWHEEL -> TonewheelVoice.entries
         REGISTERS -> RegistersVoice.entries
         FATHOM -> FathomVoice.entries
@@ -2217,6 +2719,7 @@ private enum class Engine {
         REVEL -> RevelVoice.entries
         MURMUR -> MurmurVoice.entries
         OSPREY -> OspreyVoice.entries
+        OPENSKY -> OpenSkyVoice.entries
         PRISM -> PrismVoice.entries
         CONTOUR -> ContourVoice.entries
         STOOP -> StoopVoice.entries
@@ -2224,9 +2727,11 @@ private enum class Engine {
         SPOOL -> SpoolVoice.entries
         SKITTER -> SkitterVoice.entries
         TANGLE -> TangleVoice.entries
+        SHOAL -> ShoalVoice.entries
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
+        OVEN -> OvenVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -2236,6 +2741,7 @@ private enum class Engine {
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
         VOX -> Vox.macrosFor(voice as VoxVoice)
         PLUCK -> Pluck.macrosFor(voice as PluckVoice)
+        ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
         REGISTERS -> Registers.macrosFor(voice as RegistersVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
@@ -2259,6 +2765,7 @@ private enum class Engine {
         REVEL -> Revel.macrosFor(voice as RevelVoice)
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
         OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
+        OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
         PRISM -> Prism.macrosFor(voice as PrismVoice)
         CONTOUR -> ContourEngine.macrosFor(voice as ContourVoice)
         STOOP -> Stoop.macrosFor(voice as StoopVoice)
@@ -2266,9 +2773,11 @@ private enum class Engine {
         SPOOL -> Spool.macrosFor(voice as SpoolVoice)
         SKITTER -> Skitter.macrosFor(voice as SkitterVoice)
         TANGLE -> Tangle.macrosFor(voice as TangleVoice)
+        SHOAL -> Shoal.macrosFor(voice as ShoalVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
+        OVEN -> Oven.macrosFor(voice as OvenVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -2278,6 +2787,7 @@ private enum class Engine {
         VELVET -> Velvet.defaults(voice as VelvetVoice)
         VOX -> Vox.defaults(voice as VoxVoice)
         PLUCK -> Pluck.defaults(voice as PluckVoice)
+        ORPHICA -> Orphica.defaults(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
         REGISTERS -> Registers.defaults(voice as RegistersVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
@@ -2301,6 +2811,7 @@ private enum class Engine {
         REVEL -> Revel.defaults(voice as RevelVoice)
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
         OSPREY -> Osprey.defaults(voice as OspreyVoice)
+        OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
         PRISM -> Prism.defaults(voice as PrismVoice)
         CONTOUR -> ContourEngine.defaults(voice as ContourVoice)
         STOOP -> Stoop.defaults(voice as StoopVoice)
@@ -2308,9 +2819,11 @@ private enum class Engine {
         SPOOL -> Spool.defaults(voice as SpoolVoice)
         SKITTER -> Skitter.defaults(voice as SkitterVoice)
         TANGLE -> Tangle.defaults(voice as TangleVoice)
+        SHOAL -> Shoal.defaults(voice as ShoalVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
+        OVEN -> Oven.defaults(voice as OvenVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -2320,6 +2833,9 @@ private enum class Engine {
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
         VOX -> Vox.scramble(voice as VoxVoice, random)
         PLUCK -> Pluck.scramble(voice as PluckVoice, random)
+        ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial).associate {
+            it.name to if (it.name == "HOLD") random.nextFloat() * .95f else random.nextFloat()
+        }
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
         REGISTERS -> Registers.scramble(voice as RegistersVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
@@ -2343,6 +2859,7 @@ private enum class Engine {
         REVEL -> Revel.scramble(voice as RevelVoice, random)
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
         OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
+        OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
         PRISM -> Prism.scramble(voice as PrismVoice, random)
         CONTOUR -> ContourEngine.scramble(voice as ContourVoice, random)
         STOOP -> Stoop.scramble(voice as StoopVoice, random)
@@ -2350,9 +2867,11 @@ private enum class Engine {
         SPOOL -> Spool.scramble(voice as SpoolVoice, random)
         SKITTER -> Skitter.scramble(voice as SkitterVoice, random)
         TANGLE -> Tangle.scramble(voice as TangleVoice, random)
+        SHOAL -> Shoal.scramble(voice as ShoalVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
+        OVEN -> Oven.scramble(voice as OvenVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -2367,6 +2886,7 @@ private enum class Engine {
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
         VOX -> Vox.render(voice as VoxVoice, macros)
         PLUCK -> Pluck.render(voice as PluckVoice, macros)
+        ORPHICA -> buildPatch(patchDisplayName(voice), voice, macros).render()
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
         REGISTERS -> Registers.render(voice as RegistersVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
@@ -2390,6 +2910,7 @@ private enum class Engine {
         REVEL -> Revel.render(voice as RevelVoice, macros)
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
         OSPREY -> Osprey.render(voice as OspreyVoice, macros)
+        OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
         PRISM -> Prism.render(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.render(voice as ContourVoice, macros)
         STOOP -> Stoop.render(voice as StoopVoice, macros)
@@ -2397,9 +2918,11 @@ private enum class Engine {
         SPOOL -> Spool.render(voice as SpoolVoice, macros)
         SKITTER -> Skitter.render(voice as SkitterVoice, macros)
         TANGLE -> Tangle.render(voice as TangleVoice, macros)
+        SHOAL -> Shoal.render(voice as ShoalVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
+        OVEN -> Oven.render(voice as OvenVoice, macros)
     }
 
     /**
@@ -2413,6 +2936,7 @@ private enum class Engine {
         VELVET -> (voice as VelvetVoice).drumClass
         VOX -> Vox.drumClassFor(voice as VoxVoice, macros)
         PLUCK -> (voice as PluckVoice).drumClass
+        ORPHICA -> if (Orphica.isLoop(macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
         FATHOM -> (voice as FathomVoice).drumClass
@@ -2438,6 +2962,7 @@ private enum class Engine {
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
+        OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)
         CONTOUR -> ContourEngine.drumClassFor(voice as ContourVoice, macros)
         STOOP -> Stoop.drumClassFor(voice as StoopVoice, macros)
@@ -2445,9 +2970,11 @@ private enum class Engine {
         SPOOL -> Spool.drumClassFor(voice as SpoolVoice, macros)
         SKITTER -> Skitter.drumClassFor(voice as SkitterVoice, macros)
         TANGLE -> Tangle.drumClassFor(voice as TangleVoice, macros)
+        SHOAL -> Shoal.drumClassFor(voice as ShoalVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
+        OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -2457,6 +2984,7 @@ private enum class Engine {
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
         VOX -> VoxPatch(name, voice as VoxVoice, macros)
         PLUCK -> PluckPatch(name, voice as PluckVoice, macros)
+        ORPHICA -> OrphicaPatch(name, OrphicaConfig(material = voice as OrphicaMaterial), macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
         REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
@@ -2480,6 +3008,7 @@ private enum class Engine {
         REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
         OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
+        OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)
         PRISM -> PrismPatch(name, voice as PrismVoice, macros)
         CONTOUR -> ContourPatch(name, voice as ContourVoice, macros)
         STOOP -> StoopPatch(name, voice as StoopVoice, macros)
@@ -2487,9 +3016,11 @@ private enum class Engine {
         SPOOL -> SpoolPatch(name, voice as SpoolVoice, macros)
         SKITTER -> SkitterPatch(name, voice as SkitterVoice, macros)
         TANGLE -> TanglePatch(name, voice as TangleVoice, macros)
+        SHOAL -> ShoalPatch(name, voice as ShoalVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
+        OVEN -> OvenPatch(name, voice as OvenVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -2701,6 +3232,34 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                         // doesn't grow only its own cell and leave the row
                         // jagged against its neighbours.
                         TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Ways the harp's own sustain unfolds, separate from its string material. */
+@Composable
+private fun OrphicaModePicker(current: OrphicaMode, scheme: Scheme, onSelect: (OrphicaMode) -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText("MODE", TapeType.pixelSmall, scheme.ink2.tape)
+        for (modes in OrphicaMode.entries.chunked(3)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (mode in modes) {
+                    val chosen = mode == current
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .let { if (chosen) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { selected = chosen }
+                            .tapeClick(label = "MODE ${mode.name}") { onSelect(mode) }
+                            .padding(horizontal = 2.dp, vertical = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        TapeText(mode.name, TapeType.pixelSmall, scheme.ink.tape, maxLines = 1)
+                        TapeText(if (chosen) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                 }
             }

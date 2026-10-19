@@ -9,10 +9,14 @@ import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OrphicaPatch
+import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
@@ -23,7 +27,9 @@ import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
+import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
@@ -338,17 +344,21 @@ object UserPresets {
     // ---- the desk: promotion into the roster ----
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
-    fun voiceEnum(engine: String): String = engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
+    fun voiceEnum(engine: String): String =
+        if (engine == OrphicaPatch.ENGINE) "OrphicaMaterial"
+        else if (engine == OpenSkyPatch.ENGINE) "OpenSkyVoice"
+        else engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Voice"
 
     /** The table a roster line pastes into, under [ROSTER_DIR]: `ThumpPresets.kt`. */
-    fun rosterFile(engine: String): String = engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
+    fun rosterFile(engine: String): String = if (engine == OpenSkyPatch.ENGINE) "OpenSkyPresets.kt"
+        else engine.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + "Presets.kt"
 
     /**
      * [patch] as the line its engine's table is written in, using its
      * `p` helper with every macro's exact value. STOOP's metadata table
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
-     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER and TANGLE also copy the saved
+     * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE and WICK also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL keeps its render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
      * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
@@ -361,9 +371,25 @@ object UserPresets {
      * the JSON constructor. SPOOL writes its complete machine constructor, including
      * recording roster and HOLD memory mode. RELAY retains its complete source and
      * phrase schedules. MURMUR keeps its root, velocity and complete
-     * operator/formant/envelope definition. Names and embedded JSON are escaped Kotlin string literals.
+     * operator/formant/envelope definition. FLOCK retains its note, velocity,
+     * model and exact 64-bit seed. OPENSKY retains its complete source
+     * timbre, pitch, velocity, gate, wet mode and render model through the JSON
+     * constructor. ORPHICA retains complete string, grain and captured-history state,
+     * including its exact 64-bit seed and HOLD. OVEN writes an explicit constructor
+     * with its root, velocity and model, because its table helper takes note
+     * arguments before the macros. Names and embedded JSON are escaped Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is OpenSkyPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "OpenSkyPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is OrphicaPatch) {
+            // Encode as a Kotlin string literal; the full config and 64-bit seed belong to this recipe.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OrphicaPatch.fromJsonText($recipe),"
+        }
         if (patch is LacquerPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
@@ -390,6 +416,14 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is OvenPatch) {
+            return "OvenPatch(\"$name\", OvenVoice.${patch.voice}, mapOf($macros), midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
+        if (patch is FlockPatch) {
+            val seed = if (patch.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${patch.seed}L"
+            return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
         if (patch is SpoolPatch) {
             val m = patch.machine
             val roster = m.roster.joinToString(", ") {
@@ -407,6 +441,8 @@ object UserPresets {
             is PitchwheelPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
+            is ShoalPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
@@ -480,7 +516,7 @@ object UserPresets {
         return "MurmurConfig(routing = MurmurRouting.${config.routing.name}, ratios = ${values(config.ratios)}, " +
             "trajectory = MurmurTrajectory.${config.trajectory.name}, direction = ${config.direction}, " +
             "referenceSeconds = ${config.referenceSeconds}, attack = ${config.attack}, decay = ${config.decay}, " +
-            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets)"
+            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets, model = ${config.model})"
     }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */

@@ -117,6 +117,8 @@ class PersonalityTest {
         // SEND TO PADS reports the real slice count.
         assertEquals("7 SLICES ON THE PADS. CHOKE GROUP SET.", Copy.sentToPads(7, chokeSet = true))
         assertEquals("3 SLICES ON THE PADS.", Copy.sentToPads(3, chokeSet = false))
+        // The kit switcher names the kit it put on the grid, in capitals.
+        assertEquals("ON THE GRID: FUNK ROOM.", Copy.onTheGrid("Funk Room"))
         // A single slice sent to the pads is singular too — sentToPads used
         // to say "1 SLICES" (and so did instantKit, which routes through it).
         assertEquals("1 SLICE ON THE PADS.", Copy.sentToPads(1, chokeSet = false))
@@ -151,22 +153,34 @@ class PersonalityTest {
      * failed as the app grew past it.
      *
      * These are the two ways it went wrong, now nailed down: a milestone
-     * tag anywhere in the text, and the loop not naming the four screens a
-     * user actually walks through. Moving or renaming one of those screens
-     * now breaks a test rather than quietly making HELP lie.
+     * tag anywhere in the text, and the sections not naming the places a
+     * user actually walks through. HELP draws `Places.HELP` since the
+     * four-place shape (one section per place and one for the dock, which
+     * `PlacesTest` holds to the rows); the long WORTH KNOWING list stays in
+     * `Copy` as the inventory those sections were distilled from. Moving or
+     * renaming a place now breaks a test rather than quietly making HELP lie.
      */
     @Test
     fun `help describes the app rather than a milestone`() {
-        val all = (Copy.HELP_LOOP + Copy.HELP_MORE + Copy.HELP_LOOP_HEADER + Copy.HELP_MORE_HEADER)
+        val all = (Places.HELP.values.flatten() + Places.HELP.keys + Copy.HELP_MORE)
             .joinToString(" ")
         for (tag in listOf("M0", "M1", "M2", "M3", "M4", "M5", "SKELETON", "ARRIVES WITH", "NOT RECORDED")) {
             assertFalse(all.contains(tag), "HELP still talks about the build, not the app: found \"$tag\"")
         }
-        // The loop, in the order a user walks it.
-        val steps = Copy.HELP_LOOP.map { it.removePrefix("· ").substringBefore(" ") }
-        assertEquals(listOf("TAPE", "CHOP", "KIT", "EXPORT"), steps)
+        // The places, in the order a user walks them, then the dock.
+        assertEquals(Places.PLACES + "THE DOCK", Places.HELP.keys.toList())
         // Every line is a line, not a paragraph: HELP renders on a phone.
-        for (line in Copy.HELP_LOOP + Copy.HELP_MORE) {
+        // Two limits, deliberately not one: the drawn sections are held to
+        // `Places.HELP_LINE_CHARS` (80), which `PlacesTest` pins and the
+        // sections were written to; the inventory keeps the 72 it was held
+        // to, since loosening a law to fit a list that is no longer drawn
+        // would be a relaxation. Which of the two the panel truly fits at
+        // `lcdSmall` on a 360 dp phone is a device question, open.
+        for (line in Places.HELP.values.flatten()) {
+            assertTrue(line.startsWith("· "), "HELP lines are bulleted: $line")
+            assertTrue(line.length <= Places.HELP_LINE_CHARS, "HELP line is too long for the panel (${line.length}): $line")
+        }
+        for (line in Copy.HELP_MORE) {
             assertTrue(line.startsWith("· "), "HELP lines are bulleted: $line")
             assertTrue(line.length <= 72, "HELP line is too long for the panel (${line.length}): $line")
         }
@@ -380,7 +394,7 @@ class PersonalityTest {
         // reflective law exempts it for exactly that reason.
         assertFalse(Copy.SHELF_LEGEND.endsWith("."), "a permanent label is not a sentence: ${Copy.SHELF_LEGEND}")
         // Two legends on two screens must not read as the same instruction.
-        assertTrue(Copy.SHELF_LEGEND != Copy.PAD_SHEET_LEGEND)
+        assertTrue(Copy.SHELF_LEGEND != Copy.PADS_RESTING_LINE)
     }
 
     /**
@@ -447,15 +461,15 @@ class PersonalityTest {
      * TAPE's own INSTANT KIT and CATCH A HIT land sounds on pads without
      * CHOP.
      *
-     * `ConventionTest`'s `the first-run loop names real menu tabs` already
-     * holds the harder half of this (no tab name but the four stages, so a
-     * verb cannot point a new user at the wrong screen). This holds what
+     * `ConventionTest`'s `the first-run note names real places` already
+     * holds the harder half of this (every place it names is a real one, so
+     * a verb cannot point a new user at the wrong screen). This holds what
      * that law cannot see: that the words are the ones the screens
      * actually use.
      */
     @Test
     fun `the first-run note uses the words the screens use`() {
-        val note = Copy.FIRST_RUN_LOOP_NOTE
+        val note = Copy.FIRST_RUN_PLACES_NOTE
 
         // One verb per stage, in the stage order, and step four is the
         // word on EXPORT's own button rather than the one on its progress
@@ -478,28 +492,35 @@ class PersonalityTest {
         )
         assertTrue(note.endsWith("."), "still a sentence the screen says: $note")
 
-        // It names no door, which is the rule its own KDoc sets: NEW KIT ▸
-        // STARTERS is already the primary action directly under this
-        // panel, and naming it here would be a third copy of a control
-        // twice on screen.
+        // It names no door of this screen, which is the rule its own KDoc
+        // sets: NEW KIT ▸ STARTERS is already the primary action directly
+        // under this panel, and naming it here would be a third copy of a
+        // control twice on screen. The one door it does name, LISTEN · MIC,
+        // is the dock's, and is checked below against the dock's own word.
         for (door in listOf("STARTERS", "NEW KIT", "INSTANT KIT", "CATCH")) {
             assertFalse(note.contains(door), "the note names a door it does not have to name: $note")
         }
+        // ...and the door it does name is the dock's, in the dock's own word:
+        // a note pointing at a LISTEN · MIC the dock had renamed would send
+        // a new user looking for a control that is not there.
+        assertTrue(Places.LISTEN in note, "the note does not name the dock's ${Places.LISTEN}: $note")
 
         // The doors it declines to name are named where the inventory
         // lives instead. CATCH has had a line since HELP was written;
         // INSTANT KIT was in no list at all, which is the half of P3.2
         // that was actually open.
-        val help = Copy.HELP_LOOP + Copy.HELP_MORE
+        val help = Places.HELP.values.flatten() + Copy.HELP_MORE
         assertTrue(help.any { it.contains("INSTANT KIT") }, "INSTANT KIT is in no HELP list")
         assertTrue(help.any { it.contains("CATCH ON TAPE") }, "CATCH is in no HELP list")
     }
 
     @Test
-    fun `the pad sheet legend names the gesture`() {
-        assertTrue(Copy.PAD_SHEET_LEGEND.contains("HOLD"), Copy.PAD_SHEET_LEGEND)
-        assertTrue(Copy.PAD_SHEET_LEGEND.contains("PAD"), Copy.PAD_SHEET_LEGEND)
-        assertTrue(Copy.PAD_SHEET_LEGEND.length <= 52, "one line under the grid: ${Copy.PAD_SHEET_LEGEND.length}")
+    fun `the pads strip's resting line names the gesture`() {
+        // Was the pad sheet legend under the grid, one line of 52. The strip
+        // above the grid replaced it and draws its resting line on up to two.
+        assertTrue(Copy.PADS_RESTING_LINE.contains("HOLD"), Copy.PADS_RESTING_LINE)
+        assertTrue(Copy.PADS_RESTING_LINE.contains("PAD"), Copy.PADS_RESTING_LINE)
+        assertTrue(Copy.PADS_RESTING_LINE.length <= 2 * 52, "two lines on the strip: ${Copy.PADS_RESTING_LINE.length}")
     }
 
     /**
@@ -517,7 +538,7 @@ class PersonalityTest {
     private val notASentence = setOf(
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
         "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
-        "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BREEDING_BUSY",
+        "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",
         // SNIPS' SHARE, while the snip is copied into the share cache under
         // a readable name — like every other *_BUSY here, an overlay line
         // rather than a landing.
@@ -562,7 +583,7 @@ class PersonalityTest {
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
-        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
+        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
         // BREED's button label (glyph sweep): now a constant destination
         // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
@@ -585,22 +606,20 @@ class PersonalityTest {
         // says to you once and takes away, so it does not end in a full stop
         // - and every legend must be added here when it is written, or the
         // shouting law will ask it to become a sentence.
-        // PAD_VELOCITY_LEGEND rides with PAD_SHEET_LEGEND: it is the second
-        // line of the same furniture under KIT's grid, on screen
+        // PAD_VELOCITY_LEGEND is furniture under KIT's grid, on screen
         // permanently, not a sentence the app says once.
-        // The two J10 door labels are buttons, not sentences - "CHOP ▸"
-        // carries its own arrow the way every other door label does.
-        "CAPTURE_OFFER_DOOR", "KIT_OFFER_DOOR",
+        // The J10 door label is a button, not a sentence - "EXPORT ▸"
+        // carries its own arrow the way every other door label does. (Its
+        // twin, CAPTURE_OFFER_DOOR, retired when KEEP became a stage switch.)
+        "KIT_OFFER_DOOR",
         // GROOVE's and ORBIT's BOUNCE buttons, moved out of inline
         // literals so one law can hold all three bounces to one
         // destination word (prior #25). Labels on buttons, not sentences.
         "GROOVE_BOUNCE_BUTTON", "ORBIT_BOUNCE_BUTTON",
-        "PAD_SHEET_LEGEND", "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
-        // The empty shelf's loop line (finding 3) is a row of tab names,
-        // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
-        // FIRST_RUN_LOOP_NOTE, the sentence under it that says what the
-        // four words mean, is NOT here: it keeps its full stop.
-        "FIRST_RUN_LOOP",
+        "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "ROOMS_LEGEND",
+        // The empty shelf's row of places is `Places.PLACES`, not Copy, so it
+        // needs no exemption here; FIRST_RUN_PLACES_NOTE, the sentence under
+        // it that says what the four verbs mean, keeps its full stop.
         // EXPORT's DESTINATION legend joins them (finding 21): same rule,
         // same register - a line that stays under the row it explains.
         "EXPORT_CARD_LEGEND",
@@ -626,9 +645,6 @@ class PersonalityTest {
         // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
-        // The status bar's third cell resting label with no kit open - a
-        // standing chip value like CARD_NONE above, not a toast said once.
-        "NO_KIT_STATUS",
     )
 
     /**

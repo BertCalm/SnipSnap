@@ -42,17 +42,37 @@ object WavWriter {
         depth: BitDepth = BitDepth.PCM_24,
         allowNonMpcRate: Boolean = false,
         smpl: SmplChunk? = null,
+        truePeakCeiling: Float? = null,
     ): File {
         require(allowNonMpcRate || snip.sampleRate == MPC_SAMPLE_RATE) {
             "sample rate ${snip.sampleRate} is not MPC-native ($MPC_SAMPLE_RATE); " +
                 "capture at 44.1 kHz or pass allowNonMpcRate"
         }
         file.parentFile?.mkdirs()
-        BufferedOutputStream(file.outputStream()).use { write(it, snip, depth, smpl) }
+        BufferedOutputStream(file.outputStream()).use { write(it, snip, depth, smpl, truePeakCeiling) }
         return file
     }
 
-    fun write(out: OutputStream, snip: Snip, depth: BitDepth = BitDepth.PCM_24, smpl: SmplChunk? = null) {
+    /**
+     * [truePeakCeiling], when given, first scales the snip down (only
+     * down) so its inter-sample peak sits at that ceiling — see
+     * [TruePeak]. Null, the default, writes exactly the bytes this
+     * writer has always written: enabling it moves exported loudness,
+     * which is a kit-level decision a caller makes explicitly, in dB
+     * terms it can state, rather than a silent change to every kit.
+     */
+    fun write(
+        out: OutputStream,
+        snip: Snip,
+        depth: BitDepth = BitDepth.PCM_24,
+        smpl: SmplChunk? = null,
+        truePeakCeiling: Float? = null,
+    ) {
+        val toWrite = if (truePeakCeiling == null) snip else TruePeak.limit(snip, truePeakCeiling)
+        writeEncoded(out, toWrite, depth, smpl)
+    }
+
+    private fun writeEncoded(out: OutputStream, snip: Snip, depth: BitDepth, smpl: SmplChunk?) {
         smpl?.requireInside(snip.frameCount)
         val bytesPerSample = depth.bytesPerSample
         val blockAlign = snip.channels * bytesPerSample
@@ -87,10 +107,30 @@ object WavWriter {
         out.writeTag("data")
         out.writeLeInt(dataBytes)
 
+        // Samples go out a chunk at a time rather than a byte at a time: one
+        // write per byte is a call per byte even through a buffered stream,
+        // and an unbuffered caller's stream would make each one a syscall.
+        // The buffer is local, so concurrent writes never share it. Its size
+        // is a whole number of both 16- and 24-bit samples, so a sample never
+        // straddles a flush. Same bytes, same order.
+        val chunk = ByteArray(SAMPLE_CHUNK_BYTES)
+        var pos = 0
         when (depth) {
-            BitDepth.PCM_16 -> for (s in snip.samples) out.writeLeShort(toPcm16(s))
-            BitDepth.PCM_24 -> for (s in snip.samples) out.writeLe24(toPcm24(s))
+            BitDepth.PCM_16 -> for (s in snip.samples) {
+                val v = toPcm16(s)
+                chunk[pos++] = v.toByte()
+                chunk[pos++] = (v ushr 8).toByte()
+                if (pos == chunk.size) { out.write(chunk, 0, pos); pos = 0 }
+            }
+            BitDepth.PCM_24 -> for (s in snip.samples) {
+                val v = toPcm24(s)
+                chunk[pos++] = v.toByte()
+                chunk[pos++] = (v ushr 8).toByte()
+                chunk[pos++] = (v ushr 16).toByte()
+                if (pos == chunk.size) { out.write(chunk, 0, pos); pos = 0 }
+            }
         }
+        if (pos > 0) out.write(chunk, 0, pos)
 
         // The pad byte the RIFF size above already counted.
         if (dataPad == 1L) out.write(0)
@@ -161,9 +201,6 @@ object WavWriter {
         write((v ushr 8) and 0xFF)
     }
 
-    private fun OutputStream.writeLe24(v: Int) {
-        write(v and 0xFF)
-        write((v ushr 8) and 0xFF)
-        write((v ushr 16) and 0xFF)
-    }
+    /** Bytes of encoded samples per write: 8190 is a multiple of both 2 and 3. */
+    private const val SAMPLE_CHUNK_BYTES = 8190
 }

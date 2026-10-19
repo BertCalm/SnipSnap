@@ -73,11 +73,21 @@ object Cli {
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        render factory presets to wav, to hear them
         |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY: --midi N --velocity 0..1)
+        |                        (WICK: provisional PLUCK/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (CONTOUR: --patch recipe.json replays a complete sound;
+        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
         |                        (REGISTERS: PIPE/MUSETTE; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
         |                        (OSPREY SWELL: --seed N --seconds .25..12 --model 1|2|3;
         |                        HOLD extends a finite sea gesture)
+        |                        (FLOCK prototype: GATHER/RIBBON/SPLIT; --all,
+        |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
+        |                        HOLD extends a finite flock performance)
+        |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N
+        |                        --velocity 0..1 --gate S --dry|--wet;
+        |                        --patch recipe.json loads a complete sound;
+        |                        HALO --instrument [--release S] makes keys)
         |                        (RESIN: --instrument holds a note; --drone
         |                        [--root A1 --motion 0..1 --rate 1|2|4
         |                        --bpm N --bars N --loop N] loops one)

@@ -32,6 +32,7 @@ import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Cleanup
@@ -252,7 +253,7 @@ fun StackTakesScreen(
         TapeText(
             "PICK UP TO THREE PRIOR TAKES AS SOFT ZONES UNDER LIVE. FIRST PICKED IS SOFTEST; ▲ MOVES ONE SOFTER.",
             TapeType.pixelSmall,
-            scheme.ink3.tape,
+            scheme.ink2.tape,
             Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             maxLines = 3,
         )
@@ -264,7 +265,7 @@ fun StackTakesScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText("LIVE", TapeType.pixelSmall, scheme.amber.tape, Modifier.width(52.dp), maxLines = 1)
-            TapeText(liveRow.factsText(), TapeType.pixelSmall, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText(liveRow.factsText(), TapeType.pixelSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("▶", scheme, enabled = !busy && liveRow.facts != null, accessibilityLabel = "PREVIEW LIVE", modifier = Modifier.width(48.dp), onClick = { preview(liveRow) })
         }
         LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -278,8 +279,8 @@ fun StackTakesScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        TapeText(c.ageLabel(), TapeType.pixelSmall, scheme.ink.tape, maxLines = 1)
-                        TapeText(c.factsText(), TapeType.pixelSmall, if (c.facts == null) scheme.warn.tape else scheme.ink3.tape, maxLines = 1)
+                        TapeText(c.ageLabel(), TapeType.pixelSmall, scheme.lcdInk.tape, maxLines = 1)
+                        TapeText(c.factsText(), TapeType.pixelSmall, if (c.facts == null) scheme.warn.tape else scheme.lcdInk2, maxLines = 1)
                     }
                     ActionButton("▶", scheme, enabled = !busy && c.facts != null, accessibilityLabel = "PREVIEW THIS TAKE", modifier = Modifier.width(48.dp), onClick = { preview(c) })
                     ActionButton("▲", scheme, enabled = !busy && index > 0, dimmed = index <= 0, accessibilityLabel = "MOVE SOFTER", modifier = Modifier.width(48.dp), onClick = { moveEarlier(c) })
@@ -297,15 +298,15 @@ fun StackTakesScreen(
                     val c = byEntry[picked[i]]
                     val over = if (livePeak != null && c?.facts != null) StackTakes.overLiveDb(c.facts.peak, livePeak) else null
                     val line = "${zoneNames[i]} · ${c?.factsText() ?: "?"}"
-                    TapeText(line, TapeType.pixelSmall, if (over != null) scheme.warn.tape else scheme.ink.tape, maxLines = 1)
+                    TapeText(line, TapeType.pixelSmall, if (over != null) scheme.warn.tape else scheme.lcdInk.tape, maxLines = 1)
                     if (over != null) {
                         TapeText(Copy.stackOverLive(zoneNames[i], over), TapeType.pixelSmall, scheme.warn.tape, maxLines = 2)
                     }
                 }
             }
         }
-        TapeText(Copy.STACK_NO_GAIN, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
-        TapeText(Copy.STACK_LOCKS, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 3)
+        TapeText(Copy.STACK_NO_GAIN, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
+        TapeText(Copy.STACK_LOCKS, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 3)
         ActionButton(
             // Batch 3, Task 4: no ▸ — this button commits the picked takes
             // in place; it doesn't navigate anywhere or open a panel, so it

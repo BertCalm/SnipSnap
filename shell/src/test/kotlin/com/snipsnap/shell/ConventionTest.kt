@@ -351,19 +351,21 @@ class ConventionTest {
             file = "App.kt",
             args = normalizeSpan(
                 """
-                enabled = !anyOverlayOpen && screenHistory.isNotEmpty() &&
-                    screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
+                enabled = !anyOverlayOpen && nav.canGoBack &&
+                    location.top != Bench.KEYS &&
                     note == null && !captureBlocked && !micPermissionDenied,
                 """,
             ),
             justification = "the app-level ROOT handler, not a busy-guard: its entire job is to defer. " +
-                "anyOverlayOpen, SPLIT, and KEYS each already have their own unconditional handler or their own " +
-                "back door (the KDoc directly above this call enumerates them); the remaining case is an EMPTY " +
-                "screenHistory, which is the true root of the session - falling through to Activity.finish() " +
-                "there is the correct, intended Android behavior, not an accident. This used to read " +
-                "`screen != AppScreen.KITS` and said the same thing a weaker way (J11): with a back stack, being " +
-                "the root is a property of having nowhere to go back to, not of being one particular tab, and a " +
-                "non-empty history always has somewhere to pop to. This is the one site that is SUPPOSED to read " +
+                "anyOverlayOpen and KEYS each already have their own unconditional handler or their own " +
+                "back door (the KDoc directly above this call enumerates them); the remaining case is a " +
+                "Navigation with nothing to pop (`nav.canGoBack` false), which is the true root of the session - " +
+                "falling through to Activity.finish() there is the correct, intended Android behavior, not an " +
+                "accident. This used to read `screen != AppScreen.KITS` and said the same thing a weaker way " +
+                "(J11): with a back stack, being the root is a property of having nowhere to go back to, not of " +
+                "being one particular tab, and a non-empty history always has somewhere to pop to. SPLIT left " +
+                "the exclusions with the four-place shape: as a bench it pops like any other, where before Back " +
+                "on it fell through to finishing the Activity. This is the one site that is SUPPOSED to read " +
                 "as a fallback, never as a mid-operation guard.",
         ),
         BackHandlerAllow(
@@ -1232,65 +1234,52 @@ class ConventionTest {
             .replace(Regex("""//[^\n]*"""), " ")
             .replace(Regex(""""(?:[^"\\\n]|\\.)*""""), "\"\"")
 
-    // ---- Law: the app's one explanation of itself names real screens ----
+    // ---- Law: the app's one explanation of itself names real places ----
 
     /**
-     * September UAT, finding 3. The empty shelf states the product loop as
-     * the four tabs it runs through, which is the whole reason the line
-     * works: learn it and you have learned the navigation.
+     * September UAT, finding 3. The empty shelf states the product loop
+     * under the row of places it runs through, which is the whole reason
+     * the line works: learn it and you have learned the navigation.
      *
-     * That only holds while the words ARE the tabs. Rename a tab and the
-     * app's single explanation of itself would point at a screen that no
-     * longer exists — and nothing else in the build would notice, because
-     * `Copy` and `MenuRow` live in different modules and neither reads the
-     * other.
+     * That only holds while the words ARE the places. This law used to read
+     * the thirteen tab labels out of `Chrome.kt` by source and hold the
+     * note's four stage names to them; the four-place shape
+     * (`docs/SCREEN_PLAN_2026_10.md` §1) puts the row's words in `:shell`
+     * — `Place.entries` draws it, `Places.PLACES` is its words — so the law
+     * reads the model, not a file. Two things hold:
      *
-     * So this reads the tab labels out of `Chrome.kt` by source, the same
-     * way the roster law above reads prose, and holds every stage to it.
-     * It matches `MenuItem("...")` rather than any one declaration, which
-     * is why J12 could regroup the row into `MENU_GROUPS` underneath it
-     * without this law noticing or needing to be told.
+     * 1. The words `Places` lists are the places `Navigation` has. The row
+     *    and the model are one roster; a place renamed in one and not the
+     *    other is the defect shape this repo keeps finding.
+     * 2. Every place the first-run note names is a real one, and it names
+     *    the two the plan says it does (TAPE, then PROJECT). A note that
+     *    said "THEN KIT" would be J13 again: a word that reads as a place
+     *    and lands nowhere.
      */
     @Test
-    fun `the first-run loop names real menu tabs`() {
-        val chrome = File("../app/src/main/kotlin/com/snipsnap/app/ui/Chrome.kt")
-        assertTrue(chrome.isFile, "expected to find ${chrome.absolutePath} to read the menu tabs from")
-        val labels = Regex("""MenuItem\("([^"]+)"""")
-            .findAll(chrome.readText(Charsets.UTF_8))
-            .map { it.groupValues[1] }
-            .toSet()
-        assertTrue(
-            labels.size >= 5,
-            "only found $labels in Chrome.kt — the MenuItem pattern this law reads must have changed, " +
-                "which would make it pass by checking nothing. Fix the pattern, do not lower this bound.",
-        )
-        for (stage in Copy.FIRST_RUN_LOOP_STAGES) {
+    fun `the first-run note names real places`() {
+        assertEquals(Place.entries.map { it.label }, Places.PLACES, "the place row's words and the navigation model's places disagree")
+        val places = Places.PLACES.toSet()
+        assertTrue(places.size >= 4, "only $places places — the shape has four, and a shorter roster makes this law pass by checking nothing")
+
+        val words = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value }.toList()
+        for (expected in listOf("TAPE", "PROJECT")) {
             assertTrue(
-                stage in labels,
-                "Copy.FIRST_RUN_LOOP_STAGES names '$stage', which is not a menu tab. The empty shelf is " +
-                    "the app's only statement of its own loop and it works by naming the tabs — a stage " +
-                    "that is not one sends a new user looking for a screen that does not exist. " +
-                    "Tabs are: ${labels.sorted()}",
+                expected in words,
+                "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") no longer names $expected. The note's job is " +
+                    "to say where the loop starts and where it lands; the plan's §3.1 names those two places.",
             )
         }
-
-        // ...and the sentence under those four words is held to the same
-        // rule, which is where J13 got in: the law above passed while
-        // FIRST_RUN_LOOP_NOTE glossed step three, KIT, as "PLAY IT" — and
-        // PLAY is a real tab six places along the same menu row. A tab name
-        // in the note is a promise about where to tap, so the only tab
-        // names allowed in it are the four stages it is explaining.
-        val strays = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_LOOP_NOTE)
-            .map { it.value }
-            .filter { it in labels && it !in Copy.FIRST_RUN_LOOP_STAGES }
-            .toSet()
+        // The old tab names that are no longer anywhere on the row. A note
+        // that still said one of them would point a new user at a screen
+        // that does not exist as a destination any more.
+        val retiredTabs = setOf("CHOP", "EXPORT", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP", "SETUP", "HELP", "PLAY")
+        val strays = words.filter { it in retiredTabs }
         assertTrue(
             strays.isEmpty(),
-            "Copy.FIRST_RUN_LOOP_NOTE (\"${Copy.FIRST_RUN_LOOP_NOTE}\") names ${strays.sorted()}, " +
-                "which ${if (strays.size == 1) "is a menu tab" else "are menu tabs"} but not one of the four " +
-                "stages it explains (${Copy.FIRST_RUN_LOOP_STAGES}). The note sits directly under the stage " +
-                "row and reads as a gloss of it, so a tab name in it points a new user at a screen that is " +
-                "not the step being described. Use a verb that is not a tab, or the stage's own name.",
+            "Copy.FIRST_RUN_PLACES_NOTE names ${strays.sorted()}, which were tabs and are not places. The note sits " +
+                "under the place row and reads as a gloss of it; a tab name in it points a new user at a screen " +
+                "that is not a place. Use a verb that is not a tab, or the place's own name.",
         )
     }
 
@@ -1333,39 +1322,46 @@ class ConventionTest {
         }
     }
 
-    // ==================== Law: a toast's door belongs to that toast ====================
+    // ==================== Law: the line and its door are one value, the dock's ====================
 
     /**
-     * An offer is a toast with a door (J10). The first cut of it held the
+     * An offer is a line with a door (J10). The first cut of it held the
      * message in `toast` and the door in `toastDoor` and wrote them
      * independently, so a plain `onToast` landing afterwards — TAPE's KEEP
      * fired one on the very next line — swapped the sentence and left the
      * door under someone else's words, on the offer's longer dwell. The
      * comment beside the two vars claimed a door "can never outlive its
-     * message"; nothing made that true.
+     * message"; nothing made that true. A second cut derived the door from
+     * the sentence and held that by law.
      *
-     * It is true now because `toastDoor` is derived: `offered` carries the
-     * sentence it was made with, and the door shows only while the toast on
-     * screen is that sentence. This law keeps it derived — the moment
-     * anything assigns `toastDoor` again, the two can disagree again.
+     * The four-place shape (`docs/SCREEN_PLAN_2026_10.md` §1) moves both
+     * into the dock: `DockModel.Now` is the text and the door as one value,
+     * `DockModelTest` pins that a `say` keeps the door and an `offer`
+     * replaces it, and nothing is timed. So the law here is now about
+     * routing, not derivation: `App.kt` keeps no line of its own — no toast
+     * var to drift from the dock's, no `ToastOverlay` to draw it twice —
+     * and every offer goes through the one `offer(...)` helper that calls
+     * `dock.offer`.
      */
     @Test
-    fun `the toast door is derived from the toast, never assigned beside it`() {
+    fun `the dock holds the line and its door, and App keeps no toast of its own`() {
         val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
         assertTrue(app.isFile, "expected to find ${app.absolutePath}")
         val src = codeOnly(app.readText(Charsets.UTF_8))
-        assertTrue(
-            "val toastDoor" in src,
-            "App.kt no longer declares `val toastDoor`. The door has to be computed from the toast on " +
-                "screen, not stored beside it — see J10/J44.",
+        assertFalse(
+            Regex("""\bvar\s+toast\b""").containsMatchIn(src),
+            "App.kt declares a `toast` var again. The line lives in the dock (`dock.say`); a second copy " +
+                "here is the two-vars bug J10/J44 found, waiting to recur.",
         )
-        val assigned = Regex("""\btoastDoor\s*=(?!=)""").findAll(src).count()
-        assertEquals(
-            0,
-            assigned,
-            "App.kt assigns `toastDoor` $assigned time(s). A door held in its own var can outlive the " +
-                "sentence it was offered with: any plain `toast = ...` replaces the words and leaves the " +
-                "button. Set `offered` instead and let `toastDoor` be derived from it.",
+        assertFalse(
+            "ToastOverlay(" in src,
+            "App.kt draws a ToastOverlay. The dock's Now region is where the line lands; a toast beside it " +
+                "is the same sentence in two places.",
+        )
+        assertTrue(
+            Regex("""fun offer\([^)]*\)\s*\{[^}]*dock\.offer\(""").containsMatchIn(src),
+            "App.kt's `offer(...)` no longer calls `dock.offer`. The door has to stand in the dock until " +
+                "taken — see `DockModel.offer`.",
         )
     }
 
@@ -2732,36 +2728,48 @@ class ConventionTest {
      * 4 of the loop the app advertises: the app automated the one join in
      * the middle (CHOP → KIT) and left the two at the ends to the user.
      *
-     * Counts both forms, because the screen is reached both ways: a direct
-     * `screen = AppScreen.X` and the `goToScreen(AppScreen.X)` helper. A
-     * law that knew only the form the review happened to grep for would go
-     * green on a navigation that does not exist, or red on one that does.
+     * Counts every form, because the screen is reached more than one way:
+     * a landing (`landOn(AppScreen.X)`, what a bare `screen = AppScreen.X`
+     * used to be), the `goToScreen(AppScreen.X)` departure, and a dock door
+     * offered onto it (`offer(..., AppScreen.X)`). A law that knew only the
+     * form the review happened to grep for would go green on a navigation
+     * that does not exist, or red on one that does.
      */
     @Test
     fun `law - every step of the advertised loop can be reached from the one before it`() {
         val src = appKt.readText(Charsets.UTF_8)
         fun navigationsTo(screen: String): Int =
-            Regex("""(screen\s*=\s*AppScreen\.$screen\b|goToScreen\(AppScreen\.$screen\))""")
+            Regex("""((landOn|goToScreen)\(AppScreen\.$screen\)|offer\([^)]*,\s*AppScreen\.$screen\))""")
                 .findAll(src).count()
 
         for (step in listOf("CHOP", "EXPORT")) {
             assertTrue(
                 navigationsTo(step) > 0,
                 "$step is step ${if (step == "CHOP") 2 else 4} of the loop the app advertises and nothing in " +
-                    "App.kt ever navigates to it. Finishing a capture has to offer CHOP; finishing a kit has " +
-                    "to offer EXPORT. Without it the app automates the one join in the middle and leaves both " +
+                    "App.kt ever navigates to it. Finishing a capture has to show CUT; finishing a kit has " +
+                    "to offer OUT. Without it the app automates the one join in the middle and leaves both " +
                     "ends to a user who has to already know the loop exists.",
             )
         }
 
-        // The offers are offers. A door the player can ignore, not a screen
-        // that moves under them — being moved without asking is the same
-        // complaint as a control that changes its own target.
+        // The two ends are two different kinds of step, by the shape's own
+        // rule (`docs/SCREEN_PLAN_2026_10.md` §3.2). KEEP → CUT is a stage
+        // switch inside TAPE: CUT is the tape's own second stage, so a kept
+        // tape is shown cut and DECK is one row-tap back — no offer, since
+        // nothing moves the user out of the place they are in. CUT → OUT
+        // crosses into PROJECT, so that one stays an offer: a door the
+        // player can ignore, not a screen that moves under them — being
+        // moved without asking is the same complaint as a control that
+        // changes its own target. The door is the dock's and names its
+        // target by screen; it stands until taken.
         assertTrue(
-            Regex("""offer\(Copy\.CAPTURE_OFFER,\s*Copy\.CAPTURE_OFFER_DOOR\)""").containsMatchIn(src) &&
-                Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR\)""").containsMatchIn(src),
-            "both handoffs should go through `offer(...)`, which puts a door on a toast and leaves the screen " +
-                "where it is. Navigating outright would be a stronger handoff and the wrong one.",
+            Regex("""landOn\(AppScreen\.CHOP\)""").containsMatchIn(src),
+            "KEEP should land on CUT with `landOn(AppScreen.CHOP)` — the stage switch the plan describes.",
+        )
+        assertTrue(
+            Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR,\s*AppScreen\.EXPORT\)""").containsMatchIn(src),
+            "the kit → OUT handoff should go through `offer(...)`, which puts a door in the dock and leaves " +
+                "the screen where it is. Navigating outright would be a stronger handoff and the wrong one.",
         )
         // The guard has to be ON the offer, not merely somewhere in the
         // file. `containsMatchIn` passed with the guard deleted, because
@@ -3116,26 +3124,27 @@ class ConventionTest {
     }
 
 
-    // ==================== Law: every pad sheet door retires its own hint ====================
+    // ==================== Law: every pad sheet door is the one door ====================
 
     /**
-     * PAD SHEET has three doors — KIT's long press, DOUBLES' `GO`, and the
+     * PAD SHEET had three doors — KIT's long press, DOUBLES' `GO`, and the
      * RE-TRIM return — and its discovery hint was retired inside exactly
      * one of them (J16). A user who found the sheet either of the other
      * two ways was told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit
-     * open, forever.
-     *
-     * `Copy.PAD_SHEET_HINT`'s own KDoc says opening the sheet is "the only
-     * event that proves they found it". That was true of the intent and
-     * false of the code, which is the shape this wave keeps finding: a
+     * open, forever. The retired `Copy.PAD_SHEET_HINT`'s own KDoc said opening the sheet
+     * is "the only event that proves they found it" — true of the intent
+     * and false of the code, which is the shape this wave keeps finding: a
      * comment asserting a behaviour the code does not have.
      *
-     * `openPadSheet` is the one door now. Opening is assigning a slot;
-     * closing is assigning null, and closing has nothing to retire — so
-     * this refuses a non-null assignment made anywhere else.
+     * The hint retired with the pad strip (`docs/SCREEN_PLAN_2026_10.md`
+     * §3.3): a permanent OPEN ▸ under the grid is a fourth door and needs
+     * no nudge toward the hold. What stays is the discipline the hint
+     * taught: `openPadSheet` is the one door, so whatever a door has to do
+     * next is done once. Opening is assigning a slot; closing is assigning
+     * null — so this refuses a non-null assignment made anywhere else.
      */
     @Test
-    fun `every pad sheet door retires its own hint`() {
+    fun `every pad sheet door is the one door`() {
         val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
         assertTrue(app.isFile, "expected to find ${app.absolutePath}")
         val src = codeOnly(app.readText(Charsets.UTF_8))
@@ -3143,14 +3152,9 @@ class ConventionTest {
         assertTrue(
             "fun openPadSheet(" in src,
             "App.kt no longer declares `openPadSheet`. Every door onto PAD SHEET has to go through one " +
-                "function, or the hint gets retired by some of them and not others — see J16.",
+                "function, or what a door does on the way in is done by some of them and not others — see J16.",
         )
         val opener = src.substringAfter("fun openPadSheet(")
-        assertTrue(
-            "PAD_SHEET_FOUND" in opener.take(400),
-            "`openPadSheet` no longer retires the hint (PAD_SHEET_FOUND). It is the one place that does; " +
-                "without it every door nags forever.",
-        )
 
         // Assigning a slot is opening. Assigning null is closing, and a
         // close has no hint to retire.
@@ -3177,9 +3181,131 @@ class ConventionTest {
             emptyList(),
             bad,
             "App.kt opens PAD SHEET by assigning `padSheetSlot` directly, outside `openPadSheet`: $bad. " +
-                "That is how J16 happened — the hint is retired in one place and the other doors walk " +
-                "past it. Call openPadSheet(slot) instead.",
+                "That is how J16 happened — one door did the work and the other doors walked past it. " +
+                "Call openPadSheet(slot) instead.",
         )
+    }
+
+    // ---- Law: nothing the phone runs reaches java.awt ----
+
+    /**
+     * 2026-10-18, the second time. WRITE KIT with the default EXPANSION
+     * format crashed on the phone with `NoClassDefFoundError:
+     * java.awt.image.BufferedImage` at `JCard.render`, reached through
+     * `Inserts.write`. The first time (PR #299) it was `KitArt`: the tile
+     * was drawn with `java.awt`/`javax.imageio`, which exist on the desktop
+     * JVM `:cli` runs on and **do not exist on Android at any API level**,
+     * so only the emulator, never a unit test, could see it. #299 fixed the
+     * one file; the J-Card sat two calls further down the same write path
+     * with the same shape, and nothing said the shape was banned.
+     *
+     * The rule: drawing goes through `ArtCanvas`, and AWT enters only
+     * through the named desktop adapters. Four things hold, each of which
+     * is how the next one would sneak in:
+     *
+     * 1. Of `:shell`'s main sources, only the `awtFiles` below import or
+     *    spell out `java.awt`/`javax.imageio`. A new renderer that wants
+     *    AWT draws through `ArtCanvas` and gets an adapter, or earns an
+     *    entry here with a reason.
+     * 2. `:app` never names them at all, and never calls an AWT entry
+     *    point (`JCard.png`, `KitArt.png`, `Lineage`, ...).
+     * 3. `Inserts.kt` and `ExportWizard.kt` — the write path the phone
+     *    runs — never call `JCard.png`/`JCard.render`/`KitArt.png`/
+     *    `KitArt.render` directly; the renderer is passed in.
+     * 4. Every `ExportWizardModel(` `:app` builds passes both renderers,
+     *    because the defaults are the AWT ones.
+     */
+    @Test
+    fun `law - nothing the phone runs reaches java awt, the renderers are handed in`() {
+        val shellMain = File("src/main/kotlin")
+        val appMain = File("../app/src/main/kotlin")
+        assertTrue(
+            shellMain.isDirectory && appMain.isDirectory,
+            "cannot find ${shellMain.absolutePath} / ${appMain.absolutePath}",
+        )
+        val awt = Regex("""\b(?:java\.awt|javax\.imageio)\b""")
+        fun ktFiles(root: File) = root.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+
+        // 1. :shell main — only the desktop adapters.
+        val awtFiles = mapOf(
+            "KitArt.kt" to "the cover-art AWT adapter (render/png, AwtCanvas) :cli uses",
+            "JCard.kt" to "the J-card AWT adapter (render/png/awtPng) :cli uses",
+            "Lineage.kt" to "the lineage card, drawn with java.awt.Font; desktop-only, no :app caller (checked below)",
+        )
+        val shellFiles = ktFiles(shellMain)
+        assertTrue(shellFiles.isNotEmpty(), "scan found no :shell sources, so it is broken rather than the code being clean")
+        val strayShell = shellFiles
+            .filter { it.name !in awtFiles && awt.containsMatchIn(stripCommentsAndStrings(it.readText())) }
+            .map { it.name }
+        assertEquals(
+            emptyList(),
+            strayShell,
+            "these :shell files name java.awt/javax.imageio: $strayShell. Neither exists on Android at any API " +
+                "level, so the phone dies with NoClassDefFoundError the moment one runs (KitArt in PR #299, " +
+                "JCard on 2026-10-18). Draw through ArtCanvas; AWT belongs only in ${awtFiles.keys}.",
+        )
+        for (name in awtFiles.keys) {
+            assertTrue(
+                shellFiles.any { it.name == name && awt.containsMatchIn(stripCommentsAndStrings(it.readText())) },
+                "$name no longer uses AWT — drop it from this law's allowlist so the allowlist stays exact.",
+            )
+        }
+
+        // 2. :app main — no AWT, no direct call to an AWT entry point.
+        val appFiles = ktFiles(appMain)
+        assertTrue(appFiles.isNotEmpty(), "scan found no :app sources, so it is broken rather than the code being clean")
+        val awtEntry = Regex("""\b(?:JCard\.(?:png|render|awtPng)|KitArt\.(?:png|render)|Lineage\.\w+)\b|\bJCard::awtPng\b""")
+        val strayApp = mutableListOf<String>()
+        for (f in appFiles) {
+            val code = stripCommentsAndStrings(f.readText())
+            awt.find(code)?.let { strayApp += "${f.name}: ${it.value}" }
+            awtEntry.find(code)?.let { strayApp += "${f.name}: ${it.value}" }
+        }
+        assertEquals(
+            emptyList(),
+            strayApp,
+            "the app reaches an AWT path: $strayApp. Use AndroidKitArt.png / AndroidJCard.png.",
+        )
+
+        // 3. The write path takes its renderers; it does not pick the AWT one.
+        val direct = Regex("""\b(?:JCard|KitArt)\.(?:png|render)\b""")
+        for (name in listOf("Inserts.kt", "ExportWizard.kt")) {
+            val f = shellFiles.single { it.name == name }
+            val hit = direct.find(stripCommentsAndStrings(f.readText()))
+            assertTrue(
+                hit == null,
+                "$name calls ${hit?.value} directly. It runs on the phone, where AWT does not exist: take the " +
+                    "renderer as a parameter (jCardPng / artRenderer) and let :cli and the tests default it.",
+            )
+        }
+
+        // 4. Every ExportWizardModel the app builds hands in both renderers, because the defaults are AWT.
+        var built = 0
+        for (f in appFiles) {
+            val code = stripCommentsAndStrings(f.readText())
+            var from = 0
+            while (true) {
+                val at = code.indexOf("ExportWizardModel(", from)
+                if (at < 0) break
+                from = at + 1
+                if (code.substring(maxOf(0, at - 6), at).endsWith("class ")) continue
+                val close = matchingParen(code, at + "ExportWizardModel(".length)
+                    ?: fail("unbalanced ExportWizardModel( in ${f.name}")
+                val args = code.substring(at, close)
+                built++
+                assertTrue(
+                    "artRenderer" in args && "jCardRenderer" in args,
+                    "${f.name} builds an ExportWizardModel without both renderers. The defaults are the AWT ones, " +
+                        "which crash on the phone: pass artRenderer = AndroidKitArt.png and " +
+                        "jCardRenderer = AndroidJCard.png.",
+                )
+            }
+        }
+        assertTrue(built > 0, "found no ExportWizardModel( in :app, so this scan is broken rather than the code being clean")
+        val insertCalls = appFiles.count {
+            Regex("""\bInserts\.write\(""").containsMatchIn(stripCommentsAndStrings(it.readText()))
+        }
+        assertEquals(0, insertCalls, "the app calls Inserts.write directly; go through ExportWizardModel, which hands the renderer in")
     }
 
 }

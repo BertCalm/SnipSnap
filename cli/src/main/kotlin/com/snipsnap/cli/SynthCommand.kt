@@ -9,6 +9,8 @@ import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
+import com.snipsnap.shell.OrphicaPadMaker
+import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.RegistersPadMaker
 import com.snipsnap.synth.Alloy
@@ -20,10 +22,17 @@ import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
+import com.snipsnap.synth.Flock
+import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.FlockPresets
+import com.snipsnap.synth.FlockVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.Orphica
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.Patches
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -35,8 +44,12 @@ import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.Oven
+import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -53,6 +66,8 @@ import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.SpoolVoice
 import com.snipsnap.synth.Revel
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.Shoal
+import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.Tessera
@@ -64,6 +79,10 @@ import com.snipsnap.synth.Vent
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.VentPresets
 import com.snipsnap.synth.VentVoice
+import com.snipsnap.synth.Wick
+import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.WickPresets
+import com.snipsnap.synth.WickVoice
 import java.io.File
 import java.io.FileOutputStream
 import java.io.PrintStream
@@ -84,30 +103,47 @@ import kotlin.random.Random
  * dry: an instrument is nine held zones and a drone a loop, each with its own
  * shape, and neither is a one-shot pad.
  *
- * `--instrument [--attack S] [--release S]` (RESIN; REGISTERS accepts release only) renders the preset
- * held down instead: a keys instrument that sounds while a key is held.
+ * `--instrument [--attack S] [--release S]` renders the preset as keys that
+ * sound while held. RESIN accepts attack and release; ORPHICA, REGISTERS and
+ * OPENSKY HALO keep their authored attack and accept release only.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and the VENT prototype) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, ORPHICA and the VENT/FLOCK/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
  * repeatable macro variation around the selected preset.
+ * OPENSKY also accepts a saved `--patch <json>`, `--gate S`, and `--dry` /
+ * `--wet`. The complete source timbre survives those overrides; OPENSKY HALO
+ * can become a held instrument with `--instrument [--release S]`.
+ * CONTOUR accepts a saved `--patch <json>` and `--macros BODY=.2,EDGE=.8`.
+ * Macro names are case-insensitive and values are finite 0..1. Complete saved
+ * table/envelope configurations survive macro, note and velocity overrides.
+ * TUNE in --macros cannot combine with --midi; choose one pitch control.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
- * VENT accepts `--seed N` for its initial trajectory. Its three provisional
+ * VENT accepts `--seed N` for its initial trajectory. Its provisional
  * starting recipes are available here while remaining outside the factory roster.
+ * FLOCK GATHER/RIBBON/SPLIT also keep provisional recipes outside that roster;
+ * `--seed N` accepts the full signed 64-bit range for their finite performances.
+ * WICK likewise offers its nine provisional PLUCK/BUBBLE recipes without adding a phone engine.
+ * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
+ * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
+ * `--velocity` sets the string energy for both shapes.
  */
 object SynthCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
+        if (args.count { it.substringBefore('=') == "--macros" } > 1) {
+            throw CliError("--macros supplies one comma-separated list; supply it only once")
+        }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop"),
-            boolean = setOf("--all", "--instrument", "--drone"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros"),
+            boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
             ?: throw CliError("synth wants an engine and a voice: snipsnap synth TINES BELL --all --out <dir>")
@@ -115,35 +151,92 @@ object SynthCommand {
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
 
-        val presets = if (engine == VentPatch.ENGINE) {
-            VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
-        } else Presets.forVoice(engine, voice)
+        val skyFlags = listOf("--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
+        if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
+            throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
+        }
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY and CONTOUR, got $engine")
+        }
+        if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
+        val gateOverride = opts["--gate"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in OpenSkyPatch.GATE_SECONDS_MIN..OpenSkyPatch.GATE_SECONDS_MAX }
+                ?: throw CliError("--gate wants finite seconds in ${OpenSkyPatch.GATE_SECONDS_MIN}..${OpenSkyPatch.GATE_SECONDS_MAX}, got '$raw'")
+        }
+        val wetOverride: Boolean? = when {
+            opts.has("--dry") -> false
+            opts.has("--wet") -> true
+            else -> null
+        }
+        val savedPatch = opts["--patch"]?.let { path ->
+            if (opts.has("--all") || opts["--preset"] != null) throw CliError("--patch supplies one sound - cannot combine with --preset or --all")
+            val patch = try {
+                Patches.fromJsonText(File(path).readText())
+            } catch (e: Exception) {
+                throw CliError("could not read --patch '$path': ${e.message ?: "invalid $engine patch"}")
+            }
+            if (patch.engine != engine) throw CliError("--patch records ${patch.engine}, requested $engine")
+            if (patch.voiceName != voice) throw CliError("--patch records $engine ${patch.voiceName}, requested $voice")
+            patch
+        }
+
+        val presets = when (engine) {
+            VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let { VentPresets.forVoice(it) } ?: emptyList()
+            FlockPatch.ENGINE -> FlockVoice.entries.firstOrNull { it.name == voice }?.let { FlockPresets.forVoice(it) } ?: emptyList()
+            WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
+            else -> Presets.forVoice(engine, voice)
+        }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
+        val contourMacros = opts["--macros"]?.let { raw ->
+            if (engine != ContourPatch.ENGINE) throw CliError("--macros is only supported by CONTOUR, got $engine")
+            val names = ContourEngine.macrosFor(ContourVoice.valueOf(voice)).map { it.name }.toSet()
+            val overrides = linkedMapOf<String, Float>()
+            for (entry in raw.split(',')) {
+                val fields = entry.split('=')
+                if (fields.size != 2) throw CliError("--macros wants NAME=VALUE pairs separated by commas, got '$entry'")
+                val name = fields[0].trim().uppercase(Locale.ROOT)
+                if (name !in names) throw CliError("--macros unknown CONTOUR control '$name'; choose ${names.joinToString()}")
+                if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
+                val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
+                    ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
+                overrides[name] = value
+            }
+            if ("TUNE" in overrides && opts["--midi"] != null) {
+                throw CliError("--macros TUNE and --midi both set pitch; choose one")
+            }
+            overrides
+        } ?: emptyMap()
 
         val instrument = opts.has("--instrument")
         val drone = opts.has("--drone")
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (instrument || drone) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
+                OvenPatch.ENGINE -> Oven.MIDI_MIN..Oven.MIDI_MAX
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
                 RegistersPatch.ENGINE -> 24..96
                 TanglePatch.ENGINE -> Tangle.MIN_MIDI..Tangle.MAX_MIDI
+                ShoalPatch.ENGINE -> Shoal.MIN_MIDI..Shoal.MAX_MIDI
                 LacquerPatch.ENGINE -> Lacquer.MIDI_MIN..Lacquer.MIDI_MAX
                 StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                OrphicaPatch.ENGINE -> Orphica.MIDI_MIN..Orphica.MIDI_MAX
                 OspreyPatch.ENGINE -> Osprey.MIDI_MIN..Osprey.MIDI_MAX
+                OpenSkyPatch.ENGINE -> OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX
                 RevelPatch.ENGINE -> Revel.ROOT_MIDI..(Revel.ROOT_MIDI + Revel.TUNE_SEMITONES)
                 RelayPatch.ENGINE -> Relay.rootMidi(RelayVoice.valueOf(voice)).let { it..(it + Relay.TUNE_SEMITONES) }
                 SkitterPatch.ENGINE -> Skitter.MIDI_MIN..Skitter.MIDI_MAX
                 VentPatch.ENGINE -> Vent.MIDI_MIN..Vent.MIDI_MAX
+                FlockPatch.ENGINE -> Flock.MIN_MIDI..Flock.MAX_MIDI
+                WickPatch.ENGINE -> Wick.MIN_MIDI..Wick.MAX_MIDI
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
                     val root = Prism.rootMidi(prismVoice)
@@ -152,7 +245,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and VENT, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, VENT, FLOCK, WICK and ORPHICA, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -164,11 +257,17 @@ object SynthCommand {
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, OrphicaPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
-        val seedOverride = seedFlag("--seed")
+        val flockSeedOverride = if (engine == FlockPatch.ENGINE) opts["--seed"]?.let { raw ->
+            raw.toLongOrNull() ?: throw CliError("--seed for FLOCK wants a signed 64-bit integer, got '$raw'")
+        } else null
+        val orphicaSeedOverride = if (engine == OrphicaPatch.ENGINE) opts["--seed"]?.let { raw ->
+            raw.toLongOrNull() ?: throw CliError("--seed wants a 64-bit integer seed, got '$raw'")
+        } else null
+        val seedOverride = if (engine in setOf(FlockPatch.ENGINE, OrphicaPatch.ENGINE)) null else seedFlag("--seed")
         val secondsOverride = opts["--seconds"]?.let { raw ->
             if (engine != OspreyPatch.ENGINE) throw CliError("--seconds is only supported by OSPREY, got $engine")
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .25f..Osprey.MAX_SECONDS }
@@ -184,10 +283,20 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE)) throw CliError("only RESIN and REGISTERS export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
+            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO and ORPHICA export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
             if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its speaking attack - use --release to shape the held instrument")
+            if (engine == OrphicaPatch.ENGINE && opts["--attack"] != null) throw CliError("ORPHICA keeps the pluck attack; --instrument accepts --release")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
+            if (engine == OpenSkyPatch.ENGINE) {
+                if (!OpenSkyPadMaker.supports(OpenSkyVoice.valueOf(voice))) throw CliError("--instrument supports OPENSKY HALO; $voice is a finite sound")
+                if (opts["--attack"] != null) throw CliError("--attack is RESIN only; OPENSKY HALO keeps the patch's authored arrival")
+                if (gateOverride != null) throw CliError("--gate shapes a finite OPENSKY sound - cannot combine with --instrument")
+            }
         }
+        val skyInstrumentRelease = if (instrument && engine == OpenSkyPatch.ENGINE) opts["--release"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in OpenSkyPadMaker.RELEASE_MIN_SECONDS..OpenSkyPadMaker.RELEASE_MAX_SECONDS }
+                ?: throw CliError("--release wants finite seconds in ${OpenSkyPadMaker.RELEASE_MIN_SECONDS}..${OpenSkyPadMaker.RELEASE_MAX_SECONDS}, got '$raw'")
+        } else null
         val droneFlags = listOf("--root", "--motion", "--rate", "--bpm", "--bars", "--loop").filter { opts[it] != null }
         if (!drone && droneFlags.isNotEmpty()) {
             throw CliError("${droneFlags.joinToString()} shape a drone - add --drone")
@@ -200,9 +309,9 @@ object SynthCommand {
 
         val dirArg = opts["--out"] ?: throw CliError("--out wants a folder to write the wavs into")
         val dir = File(dirArg)
-        if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
 
         val chosen: List<Patch> = (when {
+            savedPatch != null -> listOf(savedPatch)
             opts.has("--all") -> presets
             opts["--preset"] != null -> {
                 val n = opts["--preset"]!!.toIntOrNull()
@@ -214,6 +323,7 @@ object SynthCommand {
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
                 is AlloyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OvenPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
@@ -227,6 +337,8 @@ object SynthCommand {
                     velocity = velocityOverride ?: patch.velocity,
                 )
                 is TanglePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is WickPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ShoalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Relay.rootMidi(patch.voice)) / Relay.TUNE_SEMITONES.toFloat()),
@@ -241,7 +353,15 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OrphicaPatch -> patch.copy(
+                    config = patch.config.copy(
+                        midi = midiOverride ?: patch.config.midi,
+                        velocity = velocityOverride ?: patch.config.velocity,
+                    ),
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to .5f),
+                )
                 is OspreyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OpenSkyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RevelPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
                         ("TUNE" to (midiOverride - Revel.ROOT_MIDI) / Revel.TUNE_SEMITONES.toFloat()),
@@ -260,24 +380,40 @@ object SynthCommand {
                 )
                 is SkitterPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is VentPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is FlockPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TesseraPatch -> if (midiOverride == null) patch else patch.copy(
                     macros = patch.macros + ("TUNE" to (midiOverride - Tessera.ROOT_MIDI) / Tessera.TUNE_SEMITONES.toFloat()),
                 )
                 else -> patch
             }
-            if (withNote is SkitterPatch) {
+            if (withNote is OpenSkyPatch) {
+                withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
+            } else if (withNote is ContourPatch && contourMacros.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + contourMacros)
+            } else if (withNote is SkitterPatch) {
                 val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
                 if (scrambleRandom == null) withSeed else withSeed.copy(
                     name = "Scrambled ${withSeed.name}",
                     macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
                 )
+            } else if (withNote is OrphicaPatch && orphicaSeedOverride != null) {
+                withNote.copy(config = withNote.config.copy(seed = orphicaSeedOverride))
             } else if (withNote is OspreyPatch) withNote.copy(
                 seed = seedOverride ?: withNote.seed,
                 durationSeconds = secondsOverride ?: withNote.durationSeconds,
                 modelVersion = modelOverride ?: withNote.modelVersion,
-            ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride) else withNote
+            ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
+            else if (withNote is FlockPatch && flockSeedOverride != null) withNote.copy(seed = flockSeedOverride)
+            else withNote
         }
 
+        val skyInstrumentSpec = if (instrument && engine == OpenSkyPatch.ENGINE) try {
+            OpenSkyPadMaker.Spec(chosen.single() as OpenSkyPatch, releaseSeconds = skyInstrumentRelease ?: OpenSkyPadMaker.RELEASE.default)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("--instrument / --midi: ${e.message ?: "invalid OPENSKY instrument"}")
+        } else null
+        if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
+        if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
         if (drone) return makeDrone(voice, chosen.single(), opts, dir, out)
 
@@ -290,10 +426,29 @@ object SynthCommand {
             } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
-            FileOutputStream(file).use { WavWriter.write(it, snip) }
-            out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s" + if (landing == null) "" else "  (lands with ENSEMBLE, stereo)")
+            FileOutputStream(file).buffered().use { WavWriter.write(it, snip) }
+            val mode = when {
+                patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
+                landing != null -> "  (lands with ENSEMBLE, stereo)"
+                else -> ""
+            }
+            out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s$mode")
         }
         out.println("${chosen.size} rendered into ${dir.path}")
+        return 0
+    }
+
+    private fun makeOpenSkyInstrument(spec: OpenSkyPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val patch = spec.patch
+        val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
+        val midis = OpenSkyPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            OpenSkyPadMaker.renderZone(spec, midi)
+        }
+        OpenSkyPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} zones, each holds - RELEASE ${OpenSkyPadMaker.secondsLabel(spec.releaseSeconds)}, stereo")
         return 0
     }
 
@@ -305,6 +460,23 @@ object SynthCommand {
         fun seconds(flag: String, default: Float): Float {
             val raw = opts[flag] ?: return default
             return raw.toFloatOrNull() ?: throw CliError("$flag wants seconds, got '$raw'")
+        }
+        if (patch is OrphicaPatch) {
+            val spec = try {
+                OrphicaPadMaker.Spec(patch.config, patch.macros, seconds("--release", OrphicaPadMaker.RELEASE.default))
+            } catch (e: IllegalArgumentException) {
+                throw CliError(e.message ?: "bad --release")
+            }
+            val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
+            val midis = OrphicaPadMaker.zoneMidis(spec)
+            val notes = midis.mapIndexed { i, midi ->
+                out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+                OrphicaPadMaker.renderZone(spec, midi)
+            }
+            OrphicaPadMaker.export(name, spec, notes, dir)
+            out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+            out.println("${midis.size} stereo zones, captured sustain - RELEASE ${OrphicaPadMaker.secondsLabel(spec.releaseSeconds)}")
+            return 0
         }
         if (patch is RegistersPatch) {
             val spec = try {
@@ -384,7 +556,7 @@ object SynthCommand {
         val all = FloatArray(once.size * loops) { once[it % once.size] }
         val name = Names.sanitizeStem("${patch.name}_DRONE_${Scales.nameOf(root)}")
         val file = File(dir, "$name.wav")
-        FileOutputStream(file).use { WavWriter.write(it, Snip(all, channels = 1, sampleRate = session.sampleRate)) }
+        FileOutputStream(file).buffered().use { WavWriter.write(it, Snip(all, channels = 1, sampleRate = session.sampleRate)) }
         // ASCII, like every other line this CLI prints: a terminal that
         // isn't UTF-8 shows the app's middle dots and cent signs as '?'.
         val span = DroneMaker.span(root, session)

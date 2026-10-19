@@ -23,6 +23,7 @@ import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.EmbouchureVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LacquerPresets
 import com.snipsnap.synth.LacquerVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
@@ -155,18 +156,31 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
-                // Every starter fills bank A; the A/B dip fills bank B with a twin of each.
-                val slots = if (starter.id == "lucky-dip-ab") 32 else 16
+                if (starter.id != StarterKits.CONFLUENCE_ID) {
+                    assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
+                }
+                // Most starters fill bank A. The wordless source bank has eight pads;
+                // the A/B dip fills bank B with a twin of each.
+                val slots = when (starter.id) {
+                    "lucky-dip-ab" -> 32
+                    StarterKits.CONFLUENCE_ID -> 8
+                    else -> 16
+                }
                 assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
                 // Every recipe a starter writes reads back through the typed layer.
                 for (pad in kit.pads) {
                     if (pad.recipe != null) assertNotNull(Breed.recipeOf(pad.recipe), "${starter.id} ${pad.displayName}: its recipe does not parse")
                 }
                 // CLOUD's grain clouds (A07-A16) are render-only: GRAINS has no Patch type.
-                // Every other pad of every starter carries its recipe.
+                // CONFLUENCE carries source-bank provenance instead of typed Patch recipes.
+                // Every remaining pad of every starter carries its recipe.
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
-                assertEquals(if (starter.id == "cloud") (7..16).toList() else emptyList(), renderOnly, "${starter.id}: pads with no recipe")
+                val expectedRenderOnly = when (starter.id) {
+                    "cloud" -> (7..16).toList()
+                    StarterKits.CONFLUENCE_ID -> (1..8).toList()
+                    else -> emptyList()
+                }
+                assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
             }
             oneEngineStarters[starter.id]?.let { engine ->
                 val model = KitBuilderModel.open(dir)
@@ -275,6 +289,7 @@ class StarterKitsTest {
                     patch
                 }
                 assertEquals(LacquerVoice.entries.toSet(), patches.map { it.voice }.toSet())
+                assertEquals(LacquerPresets.references(), patches.drop(8), "the sixteen-pad starter preserves its original eight reference recipes")
                 assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
                 assertEquals(1, model.kit.pads.count { it.drumClass == DrumClass.LOOP })
                 val source = model.kit.pads.first()
@@ -455,7 +470,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "embouchure", "bellows", "murmur", "osprey", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!

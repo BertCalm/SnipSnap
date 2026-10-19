@@ -52,4 +52,39 @@ class DspResampleTest {
             assertEquals(out.samples[f * 2], out.samples[f * 2 + 1], "channels diverged at frame $f")
         }
     }
+
+    @Test
+    fun `cubic interpolation tracks a high sine far closer than linear`() {
+        // A sine at a quarter of the sample rate, read at half speed:
+        // linear interpolation's triangle kernel droops and images
+        // there, the Catmull-Rom cubic should stay near the analytic
+        // waveform. Errors measured against the true sine, interior only.
+        val rate = 44_100
+        val hz = 11_025.0
+        val src = Snip(FloatArray(4_410) { (0.8 * kotlin.math.sin(2.0 * kotlin.math.PI * hz * it / rate)).toFloat() }, 1, rate)
+        fun err(cubic: Boolean): Double {
+            val out = Dsp.readAt(src, 4_000, cubic = cubic) { k -> k * 0.5 to 1f }
+            var sum = 0.0
+            var n = 0
+            for (k in 100 until 3_900) {
+                val want = 0.8 * kotlin.math.sin(2.0 * kotlin.math.PI * hz * (k * 0.5) / rate)
+                val d = out.samples[k] - want
+                sum += d * d
+                n++
+            }
+            return kotlin.math.sqrt(sum / n)
+        }
+        val linear = err(cubic = false)
+        val cubic = err(cubic = true)
+        assertTrue(cubic < linear / 2.0, "cubic RMS error $cubic vs linear $linear")
+    }
+
+    @Test
+    fun `cubic read at identity is still the source`() {
+        val out = Dsp.readAt(ramp, ramp.frameCount, cubic = true) { k -> k.toDouble() to 1f }
+        for (i in 0 until ramp.frameCount - 1) {
+            assertTrue(abs(out.samples[i] - ramp.samples[i]) < 1e-5f, "frame $i moved")
+        }
+    }
+
 }

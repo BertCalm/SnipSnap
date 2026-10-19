@@ -106,8 +106,8 @@ class KitArtTest {
         val img = java.awt.image.BufferedImage(600, 40, java.awt.image.BufferedImage.TYPE_INT_RGB)
         val g = img.createGraphics()
         PixelType.draw(
-            g, "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-_.'&é", 0, 0, 14,
-            java.awt.Color.WHITE, maxWidthPx = 600,
+            KitArt.AwtCanvas(g), "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-_.'&é", 0, 0, 14,
+            0xFFFFFF, maxWidthPx = 600,
         )
         g.dispose()
 

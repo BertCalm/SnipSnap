@@ -36,6 +36,7 @@ class AlloyKitTest {
             assertTrue(patches.take(8).all { it.voice == AlloyVoice.KEY })
             assertEquals(AlloyVoice.entries.toSet(), patches.drop(8).take(6).map { it.voice }.toSet())
             assertEquals(listOf(AlloyVoice.STRING, AlloyVoice.SOFT), patches.takeLast(2).map { it.voice })
+            assertEquals(listOf("Held Filament", "Endless Ember"), patches.takeLast(2).map { it.name })
             val kitDir = File(dir, "kit")
             val kit = KitAssembler.assembleArranged("Alloy Audition", pads, kitDir)
             assertTrue(!Preflight.check(kit, kitDir).blocked())
