@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Tessera · proposed material comparison</title>
+  <style>
+    :root { --paper:#f4eee4; --panel:#fcf8f0; --ink:#302d27; --muted:#70685d; --line:#d5cabb; --accent:#76513b; --focus:#256a73; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input { font:inherit; }
+    button,a,input { touch-action:manipulation; }
+    a { color:var(--accent); text-underline-offset:.2em; }
+    a:hover { text-decoration-thickness:2px; }
+    button { min-height:44px; padding:.6rem 1rem; border:1px solid var(--accent); border-radius:.35rem; color:var(--panel); background:var(--accent); cursor:pointer; font-weight:650; }
+    button:hover:not(:disabled) { background:#60402e; }
+    button:disabled { border-color:var(--line); color:var(--muted); background:#e9e1d5; cursor:default; }
+    input { accent-color:var(--accent); }
+    :focus-visible { outline:3px solid var(--focus); outline-offset:4px; }
+    [hidden] { display:none!important; }
+    .shell { width:min(1120px,100%); margin-inline:auto; padding-inline:clamp(1rem,4vw,3rem); }
+    .hero { padding-block:2.5rem 1.75rem; }
+    .eyebrow { margin:0 0 .65rem; color:var(--accent); font-size:.75rem; font-weight:750; letter-spacing:.15em; text-transform:uppercase; }
+    h1,h2,h3,h4 { font-family:Georgia,"Times New Roman",serif; font-weight:500; line-height:1.2; }
+    h1 { max-width:850px; margin:0; font-size:clamp(2.6rem,6vw,4.6rem); letter-spacing:-.045em; }
+    .intro { max-width:740px; margin:1rem 0; font-size:1.06rem; }
+    .acceptance { max-width:780px; margin:1.1rem 0 0; padding:.8rem 1rem; border-left:3px solid var(--accent); background:#eae0d1; }
+    .acceptance strong { display:block; font-weight:650; }
+    .acceptance span { display:block; color:var(--muted); margin-top:.2rem; }
+    .transport { position:sticky; top:0; z-index:10; padding-block:.85rem; background:var(--panel); border-block:1px solid var(--line); box-shadow:0 4px 18px #45331e0b; }
+    .transport-main { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem 1.5rem; }
+    .enable { display:flex; align-items:center; gap:.6rem; min-height:44px; cursor:pointer; font-weight:650; }
+    .enable input { width:1.15rem; height:1.15rem; margin:0; }
+    .volume { display:flex; align-items:center; flex-wrap:wrap; gap:.6rem; }
+    .volume input { width:120px; min-height:44px; }
+    .volume output { min-width:3ch; color:var(--muted); font-variant-numeric:tabular-nums; }
+    #playback-status { margin:.45rem 0 0; min-height:1.55em; color:var(--muted); font-size:.9rem; }
+    .reading-order { max-width:800px; margin:1.75rem 0 0; color:var(--muted); }
+    .comparison-section { margin-top:2.5rem; padding-top:1.8rem; border-top:1px solid var(--line); }
+    .comparison-section > h2 { margin:0 0 1.4rem; font-size:clamp(1.8rem,4vw,2.5rem); letter-spacing:-.025em; }
+    .comparison-section:not(#endpoints) > h2 { font-size:clamp(1.6rem,3vw,2rem); }
+    .pair { margin-bottom:2rem; }
+    .pair > h3 { margin:0 0 .55rem; font-size:1.5rem; }
+    .description { max-width:850px; margin:.4rem 0 .65rem; }
+    .macro-line { margin:.4rem 0 1rem; color:var(--muted); font:.82rem/1.8 ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .pair-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .clip { min-width:0; padding:1.25rem; border:1px solid var(--line); border-radius:.5rem; background:var(--panel); }
+    .clip[data-version="after"] { border-top:3px solid var(--accent); padding-top:calc(1.25rem - 2px); }
+    .clip.playing { outline:2px solid var(--accent); outline-offset:2px; }
+    .clip h4 { margin:0 0 .75rem; font-size:1.3rem; }
+    .badges,.clip-badges { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.7rem; }
+    .badges span,.clip-badges span { display:inline-block; padding:.05rem .5rem; border:1px solid var(--line); border-radius:1rem; color:var(--muted); font-size:.73rem; }
+    .clip-meta { margin:.5rem 0 .9rem; color:var(--muted); font-size:.85rem; font-variant-numeric:tabular-nums; }
+    .clip-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; }
+    .play { min-width:110px; }
+    .download { display:inline-flex; align-items:center; min-height:44px; margin-left:.75rem; font-size:.9rem; }
+    .clip-actions .download { margin-left:0; }
+    progress { display:block; width:100%; height:.3rem; margin:1rem 0 .7rem; accent-color:var(--accent); }
+    details { font-size:.85rem; }
+    summary { min-height:36px; padding:.3rem 0; color:var(--muted); cursor:pointer; }
+    .evidence { overflow-wrap:anywhere; }
+    dl { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.3rem .7rem; font-variant-numeric:tabular-nums; }
+    dd { margin:0; text-align:right; }
+    audio { display:block; width:100%; margin:.6rem 0; }
+    .native-hint { color:var(--muted); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    noscript p { padding:.8rem 1rem; background:var(--panel); border:1px solid var(--line); }
+    footer { margin-top:3rem; padding-block:1.5rem 2.5rem; border-top:1px solid var(--line); color:var(--muted); font-size:.9rem; }
+    footer p { max-width:800px; margin:.4rem 0; }
+    @media(max-width:650px) {
+      .hero { padding-top:1.75rem; }
+      .pair-grid { grid-template-columns:1fr; }
+      .transport-main { gap:.4rem 1rem; }
+      .volume { width:100%; }
+      .volume input { flex:1; max-width:180px; }
+      .clip { padding:1rem; }
+      .clip[data-version="after"] { padding-top:calc(1rem - 2px); }
+    }
+    @media(forced-colors:active) { .clip.playing { outline-color:Highlight; } }
+  </style>
+</head>
+<body>
+  <header class="shell hero">
+    <p class="eyebrow">Tessera / before &amp; after</p>
+    <h1>A closer listen to the materials.</h1>
+    <p class="intro">Compare the published material sound with a proposed revision. Start with the wood and metal endpoints and the paired-string midpoint, then use the other registers and isolated sources to hear what changed.</p>
+    <p class="acceptance"><strong>Proposed material revision; listening acceptance pending</strong><span>Hardware downloads remain the published baseline.</span></p>
+  </header>
+  <div class="transport">
+    <div class="shell">
+      <div class="transport-main">
+        <label class="enable"><input id="audio-enabled" type="checkbox"> Audio enabled</label>
+        <button id="stop-all" type="button">Stop all <span aria-hidden="true">· Esc</span></button>
+        <div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="100" value="85"><output id="volume-value" for="volume">85%</output></div>
+      </div>
+      <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Audio off. Choose Play to enable audio and listen.</p>
+    </div>
+  </div>
+  <main class="shell">
+    <p class="reading-order">The material endpoints and paired-string midpoint come first. Compare Before and After within each pair; the remaining registers and isolated sources provide supporting detail. Choose Play to enable audio and listen. Nothing plays automatically.</p>
+    <noscript><p>Open Native audio controls under a clip to listen without JavaScript. Play one clip at a time. Global volume, comparison buttons and Stop all require JavaScript.</p></noscript>
+    <!-- TESSERA_MATERIAL_CARDS -->
+  </main>
+  <footer class="shell">
+    <p>These dry listening comparisons describe a proposal. The owner's listening verdict is still pending; hardware downloads remain the published baseline.</p>
+    <p><a href="../index.html">Back to the full audition and baseline downloads</a> · <a href="README.md">Comparison notes</a> · <a href="manifest.json" download>Download comparison manifest</a></p>
+  </footer>
+  <!-- TESSERA_MATERIAL_MANIFEST -->
+  <script>
+  (() => {
+    'use strict';
+    const enabled = document.getElementById('audio-enabled');
+    const volume = document.getElementById('volume');
+    const volumeValue = document.getElementById('volume-value');
+    const status = document.getElementById('playback-status');
+    const page = new URL(location.href);
+    if (/^https?:$/.test(page.protocol) && !page.pathname.endsWith('/')
+        && !page.pathname.split('/').pop().includes('.')) page.pathname += '/';
+    const assetBase = new URL('.', page);
+    // Directory routes remain correct even when the host removes their trailing slash.
+    document.querySelectorAll('audio[src], a[href]').forEach(element => {
+      const attribute = element.tagName === 'AUDIO' ? 'src' : 'href';
+      const relative = element.getAttribute(attribute);
+      if (relative && !relative.startsWith('#')) element.setAttribute(attribute, new URL(relative, assetBase).href);
+    });
+    const clips = Array.from(document.querySelectorAll('.clip')).map(card => ({
+      card, audio:card.querySelector('audio'), button:card.querySelector('.play'),
+      progress:card.querySelector('progress'), hint:card.querySelector('.native-hint'),
+      title:[card.closest('.pair').querySelector('h3').textContent, card.querySelector('h4').textContent].join(' · '),
+      offset:0, buffer:null, source:null, gain:null, startedAt:0, nativeOnly:false, pendingNative:null,
+    }));
+    const buffers = new Map();
+    let context = null, master = null, active = null, epoch = 0;
+    const announce = message => { status.textContent = message; };
+    const current = (clip, ticket) => enabled.checked && active?.clip === clip && active.ticket === ticket;
+    const phase = clip => clip.source
+      ? Math.min(clip.buffer.duration, clip.offset + Math.max(0, context.currentTime - clip.startedAt)) : clip.offset;
+    enabled.checked = false;
+    volume.value = '85';
+    volumeValue.value = '85%';
+
+    function update(clip) {
+      const loading = active?.clip === clip && active.backend === 'loading';
+      const playing = !!clip.source || (!clip.audio.paused && !clip.audio.ended);
+      const paused = clip.offset > 0 || (clip.audio.currentTime > 0 && !clip.audio.ended);
+      const verb = loading ? 'Loading…' : playing ? 'Pause' : paused ? 'Resume' : 'Play';
+      clip.button.textContent = verb;
+      clip.button.setAttribute('aria-label', `${loading ? 'Cancel loading' : verb} ${clip.title}`);
+      clip.button.setAttribute('aria-pressed', String(playing));
+      clip.card.classList.toggle('playing', playing);
+      clip.progress.value = clip.source ? phase(clip) : clip.offset || clip.audio.currentTime || 0;
+    }
+    function audioContext() {
+      if (context && context.state !== 'closed') return context;
+      const Constructor = window.AudioContext || window.webkitAudioContext;
+      if (!Constructor) throw new Error('Audio buffers unavailable');
+      context = new Constructor();
+      master = context.createGain();
+      master.gain.value = Number(volume.value) / 100;
+      master.connect(context.destination);
+      return context;
+    }
+    function stop(clip, reset = true, keepNative = false) {
+      if (clip.pendingNative && !keepNative) clip.pendingNative.cancelled = true;
+      if (clip.source) {
+        clip.offset = reset ? 0 : phase(clip);
+        const source = clip.source, gain = clip.gain;
+        clip.source = null; clip.gain = null;
+        source.onended = null;
+        try { source.stop(); } catch (_) { /* Already ended. */ }
+        source.disconnect(); gain.disconnect();
+      } else if (reset) clip.offset = 0;
+      if (!keepNative) {
+        clip.audio.pause();
+        if (reset) try { clip.audio.currentTime = 0; } catch (_) { /* No metadata yet. */ }
+      }
+      update(clip);
+    }
+    function stopOthers(clip) { clips.forEach(other => { if (other !== clip) stop(other); }); }
+    function stopAll(message = 'All clips stopped.') {
+      ++epoch; active = null;
+      clips.forEach(clip => stop(clip));
+      announce(message);
+    }
+    function syncEnabled() {
+      clips.forEach(clip => {
+        // Explicit Play is itself permission to enable playback.
+        clip.button.disabled = false;
+        clip.audio.controls = enabled.checked;
+        clip.audio.hidden = !enabled.checked;
+        if (clip.hint) {
+          clip.hint.textContent = 'Choose Play above, or enable audio to use native controls.';
+          clip.hint.hidden = enabled.checked;
+        }
+      });
+    }
+    function loadBuffer(clip, ctx) {
+      const path = clip.audio.src;
+      if (!buffers.has(path)) {
+        const loading = fetch(path, {credentials:'same-origin'}).then(response => {
+          if (!response.ok) throw new Error('Audio unavailable');
+          return response.arrayBuffer();
+        }).then(bytes => ctx.decodeAudioData(bytes));
+        buffers.set(path, loading);
+        loading.catch(() => { if (buffers.get(path) === loading) buffers.delete(path); });
+      }
+      return buffers.get(path);
+    }
+    async function nativePlay(clip, ticket) {
+      if (!current(clip, ticket)) return;
+      clip.nativeOnly = true;
+      if (clip.offset > 0) try { clip.audio.currentTime = clip.offset; } catch (_) { /* Native seek after metadata. */ }
+      clip.offset = 0;
+      if (clip.audio.ended) clip.audio.currentTime = 0;
+      active = {clip, ticket, backend:'native'};
+      clip.card.dataset.playback = 'native';
+      const pending = {ticket, cancelled:false};
+      clip.pendingNative = pending;
+      try {
+        await clip.audio.play();
+        if ((pending.cancelled || !current(clip, ticket)) && clip.pendingNative === pending) clip.audio.pause();
+      }
+      catch (_) {
+        if (current(clip, ticket)) {
+          active = null;
+          clip.card.querySelector('.native').open = true;
+          announce(`Use the native Play control for ${clip.title}, or download its WAV.`);
+        }
+      }
+      if (clip.pendingNative === pending) clip.pendingNative = null;
+      update(clip);
+    }
+    async function start(clip) {
+      const ticket = ++epoch;
+      enabled.checked = true; syncEnabled();
+      // Resume in the click's synchronous call stack, before fetching or decoding.
+      let ctx = null, resumed = null;
+      if (/^https?:$/.test(location.protocol) && !clip.nativeOnly && typeof fetch === 'function') {
+        try { ctx = audioContext(); resumed = ctx.resume(); } catch (_) { ctx = null; }
+      }
+      active = {clip, ticket, backend:'loading'};
+      stopOthers(clip);
+      update(clip); announce(`Loading ${clip.title}…`);
+      if (!ctx) { await nativePlay(clip, ticket); return; }
+      try {
+        await resumed;
+        const buffer = await loadBuffer(clip, ctx);
+        if (!current(clip, ticket)) return;
+        clip.buffer = buffer;
+        if (clip.offset >= buffer.duration) clip.offset = 0;
+        const source = ctx.createBufferSource(), gain = ctx.createGain();
+        source.buffer = buffer;
+        source.connect(gain).connect(master);
+        clip.source = source; clip.gain = gain;
+        clip.startedAt = ctx.currentTime + .005;
+        gain.gain.setValueAtTime(0, clip.startedAt);
+        gain.gain.linearRampToValueAtTime(1, clip.startedAt + .01);
+        source.onended = () => {
+          source.disconnect(); gain.disconnect();
+          if (clip.source !== source) return;
+          clip.source = null; clip.gain = null; clip.offset = 0;
+          if (current(clip, ticket)) { active = null; announce(`Finished ${clip.title}.`); }
+          update(clip); clip.progress.value = buffer.duration;
+        };
+        active = {clip, ticket, backend:'buffer'};
+        clip.card.dataset.playback = 'buffer';
+        clip.progress.max = buffer.duration;
+        source.start(clip.startedAt, clip.offset);
+        update(clip); announce(`Playing ${clip.title}.`);
+      } catch (_) {
+        if (!current(clip, ticket)) return;
+        if (clip.source) stop(clip, false);
+        await nativePlay(clip, ticket);
+      }
+    }
+    clips.forEach(clip => {
+      clip.audio.autoplay = false; clip.audio.volume = .85;
+      clip.button.addEventListener('click', () => {
+        if (active?.clip === clip && active.backend === 'loading') {
+          ++epoch; active = null; stop(clip); announce('Playback cancelled.');
+        } else if (clip.source || (!clip.audio.paused && !clip.audio.ended)) {
+          ++epoch; active = null; stop(clip, false); announce(`Paused ${clip.title}.`);
+        } else start(clip);
+      });
+      clip.audio.addEventListener('play', () => {
+        if (clip.audio.paused || clip.audio.ended) return;
+        const pending = clip.pendingNative;
+        if (!enabled.checked || (pending && (pending.cancelled || !current(clip, pending.ticket)))) { clip.audio.pause(); return; }
+        if (active?.clip !== clip || active.backend !== 'native') {
+          const ticket = ++epoch;
+          stopOthers(clip); stop(clip, true, true);
+          active = {clip, ticket, backend:'native'};
+          clip.nativeOnly = true; clip.card.dataset.playback = 'native';
+        }
+        update(clip); announce(`Playing ${clip.title}.`);
+      });
+      clip.audio.addEventListener('pause', () => {
+        update(clip);
+        if (active?.clip === clip && active.backend === 'native' && !clip.audio.ended) announce(`Paused ${clip.title}.`);
+      });
+      clip.audio.addEventListener('ended', () => {
+        if (active?.clip === clip && active.backend === 'native') { active = null; announce(`Finished ${clip.title}.`); }
+        update(clip);
+      });
+      clip.audio.addEventListener('error', () => {
+        if (active?.clip === clip && active.backend === 'native') {
+          active = null; announce(`Use the WAV download for ${clip.title}.`);
+        }
+        update(clip);
+      });
+      ['timeupdate','loadedmetadata','seeked'].forEach(event => clip.audio.addEventListener(event, () => update(clip)));
+      update(clip);
+    });
+    function progress() {
+      if (active?.backend === 'buffer') active.clip.progress.value = phase(active.clip);
+      requestAnimationFrame(progress);
+    }
+    requestAnimationFrame(progress);
+    enabled.addEventListener('change', () => {
+      if (!enabled.checked) stopAll('Audio off. Choose Play when ready.');
+      else announce('Audio enabled. Choose Before or After to listen.');
+      syncEnabled();
+    });
+    volume.addEventListener('input', () => {
+      const value = Number(volume.value) / 100;
+      volumeValue.value = `${volume.value}%`;
+      clips.forEach(clip => { clip.audio.volume = value; });
+      if (master) master.gain.setTargetAtTime(value, context.currentTime, .01);
+    });
+    document.getElementById('stop-all').addEventListener('click', () => stopAll());
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') stopAll(); });
+    syncEnabled();
+  })();
+  </script>
+</body>
+</html>

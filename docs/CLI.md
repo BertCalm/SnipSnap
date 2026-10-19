@@ -158,6 +158,7 @@ threshold by.
 ```
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
+snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
 snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
@@ -167,18 +168,24 @@ Renders the voice's factory presets to WAV (`Presets.forVoice`). `--all`
 writes every preset; `--preset N` writes one, counting from 1; with
 neither, the first preset. A string-machine preset that lands with
 ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
-`--instrument` is RESIN or REGISTERS: a held nine-zone instrument (`.xty`
-plus the `.xpm` twin). REGISTERS keeps its speaking attack, so it takes
-`--release` and refuses `--attack`. `--drone` is RESIN only: one loop-grid
-drone. SIREN and GLINT hold on the phone's MAKE INSTRUMENT; this command
-refuses them. An engine with a roster and no picker entry (BORE, ARCO,
-MERCURY, TREMOR, AEROSTAT) still renders here. VENT, a prototype outside
-both the roster and the picker, renders its three provisional recipes
-(`VentPresets`, one each for ROUND, WIRE and TEAR); see [VENT](VENT.md).
+`--instrument` supports RESIN, REGISTERS and OPENSKY HALO: a held nine-zone
+instrument (`.xty` plus the `.xpm` twin). REGISTERS and OPENSKY keep their
+speaking attack, so they take `--release` and refuse `--attack`. `--drone`
+is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
+MAKE INSTRUMENT; this command refuses them. An engine with a roster and
+no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
+VENT, a prototype outside
+both the roster and the picker, renders six provisional recipes
+(`VentPresets`, one per voice):
+ROUND, WIRE and TEAR use model 1; the clean PULSE, COIL and PLUME voices use
+model 2. The voice selects its saved model; see [VENT](VENT.md).
+WICK follows the same provisional path with four PLUCK and four BUBBLE recipes,
+including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
-`--instrument` or `--drone`. The ranges are `SynthCommand`'s note-range
+`--instrument` or `--drone` except OPENSKY HALO instrument roots and authoring
+velocity. The ranges are `SynthCommand`'s note-range
 table; a `--midi` outside the voice's range is refused with the range in
 the message.
 
@@ -198,12 +205,15 @@ the message.
 | SPOOL | 48–72 |
 | SKITTER | 24–84 |
 | TANGLE | 24–84 |
+| SHOAL | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
 | BELLOWS | 48–72 |
 | MURMUR | 36–96 |
 | OSPREY | 36–84 |
+| OPENSKY | 0–127 finite; HALO instrument root 36–96 |
 | VENT | 36–84 |
+| WICK | 24–84 |
 
 ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE and BELLOWS
@@ -217,8 +227,22 @@ of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
 is supported by SKITTER, OSPREY and VENT; `--scramble` by SKITTER only;
 `--seconds` and `--model` by OSPREY only. Other engines refuse these options.
 
-LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK in its initial
-eight-preset audition bank. `--midi` and `--velocity 0..1` override
+OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
+their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and
+`--dry` / `--wet` explicitly select its room path. `--patch recipe.json` loads
+a complete saved OPENSKY recipe for the requested voice, exclusive with
+`--preset` and `--all`. HALO `--instrument [--release S]` packages nine stereo
+attack/sustain zones; release is 0.1–1.5 seconds, applied by the sample player.
+That mode rejects `--gate` and `--attack`; its attack comes from the saved source.
+
+```sh
+snipsnap synth OPENSKY SOAR --preset 2 --midi 60 --velocity 0.7 --gate 0.4 --dry --out lead
+snipsnap synth OPENSKY HALO --preset 2 --instrument --release 1.2 --out keys
+```
+
+LACQUER exposes KEY, GLASS, BRASS, BASS, PLUCK and SILK with six recipes per
+voice. `--all` exports those six recipes; the original first preset for each
+voice remains the default. `--midi` and `--velocity 0..1` override
 the stored root and strike energy, while TUNE remains the saved ±12-semitone
 offset. For example:
 
@@ -228,8 +252,9 @@ snipsnap synth LACQUER GLASS --all --midi 60 --velocity 0.7 --out <dir>
 
 HOLD presets render settled loop material. The wider listening matrix and
 native/matched comparison page come from `:synth:generateLacquerAudition`;
-`:synth:generateLacquerKit` exports the dry starter pads as an MPC 3 track
-with an MPC 2 twin. These remain provisional sounds pending the owner's audition.
+`:synth:generateLacquerKit` exports the original dry starter plus three
+twelve-preset bank programs, each as an MPC 3 track with an MPC 2 twin.
+The expanded recipes are available for the owner's audition.
 
 RELAY auditions use the complete saved phrase at the requested root (each
 voice's `--midi` range is in the table above).

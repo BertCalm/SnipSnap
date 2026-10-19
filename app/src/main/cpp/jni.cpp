@@ -209,6 +209,17 @@ Java_com_snipsnap_app_NativeSurface_printState(JNIEnv*, jobject, jlong handle) {
 }
 
 /**
+ * Ask the print to stop and return at once, without waiting for the
+ * callback to make its last write. The Kotlin wrapper waits for Done
+ * outside its lock, polling printState, so the main thread's per-frame
+ * calls are not held up while a print lands; stopPrint then takes it.
+ */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_requestStopPrint(JNIEnv*, jobject, jlong handle) {
+    engine(handle)->requestStopPrint();
+}
+
+/**
  * Stop the print and hand back the mono bus that was captured, or null
  * when nothing was. See `stopPrinting` for what the wait is for.
  */
@@ -460,6 +471,12 @@ Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong handle, jint m
 JNIEXPORT jint JNICALL
 Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong handle) {
     return static_cast<jint>(pads(handle)->printState());
+}
+
+/** See NativeSurface_requestStopPrint. */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativePads_requestStopPrint(JNIEnv*, jobject, jlong handle) {
+    pads(handle)->requestStopPrint();
 }
 
 /**

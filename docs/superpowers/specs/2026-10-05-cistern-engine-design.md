@@ -326,6 +326,18 @@ circulation clock remain the same. The root-balance screen requires at least
 existing body and pairwise-contrast floors still apply. The before/after audition
 uses the prior `voice-contrast-2` audio; listening remains the acceptance check.
 
+The owner heard revisions 2 and 3 as identical. Audition revision
+`musicality-4` therefore changes the physical decay: the root loses energy
+more slowly in every surface, while upper modes lose energy sooner.
+Surface-specific radiation retains the onset body of FIRST, DRIP, POOL and
+RECOVERY, and emphasizes the root in CASCADE and RIPPLE. Modal ratios,
+contact and release fields, wet loading and the circulation clock are
+preserved. The existing contrast, pitch, conservation and HOLD checks still
+apply. The hosted comparison uses the published `musicality-3` clips;
+level-matched kit envelopes and tails are measured separately from waveform
+differences caused by changed landing phases. These measurements do not
+establish musical acceptance.
+
 The material/release clock advances every 176 internal samples, approximately
 1002.27 Hz. A smoothed local modal-energy envelope acts on a decaying release
 field. Threshold crossings spend a slot once, bounded propagation reaches

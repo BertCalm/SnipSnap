@@ -94,26 +94,33 @@ class AlloyPatchTest {
     }
 
     @Test
-    fun `twelve provisional presets cover every voice and expose dry pitched routing`() {
+    fun `thirty six factory presets cover every voice and expose dry pitched routing`() {
         val presets = AlloyPresets.all()
-        assertEquals(12, presets.size, "owner approval precedes expansion")
-        assertEquals(12, presets.map { it.name }.distinct().size)
+        assertEquals(36, presets.size)
+        assertEquals(36, presets.map { it.name }.distinct().size)
         assertTrue(Presets.all().containsAll(presets))
         for (voice in AlloyVoice.entries) {
             val group = AlloyPresets.forVoice(voice)
-            assertEquals(2, group.size)
+            assertEquals(6, group.size)
             assertEquals(group, Presets.forVoice("ALLOY", voice.name))
             for (preset in group) {
                 assertEquals(preset, Presets.byName("ALLOY", voice.name, preset.name))
                 assertTrue(preset.name.length <= 14, "${preset.name} does not fit the preset strip")
                 assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(preset.name))
+                assertEquals(Alloy.macrosFor(voice).map { it.name }.toSet(), preset.macros.keys,
+                    "${preset.name} must store a complete macro vector")
+                assertEquals(.5f, preset.macros.getValue("TUNE"), "${preset.name} moves the neutral root")
                 assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
                 assertNull(Presets.landingFor("ALLOY", voice.name, preset.macros))
                 val expected = if (Alloy.isLoop(preset.macros.getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
                 assertEquals(expected, Alloy.drumClassFor(voice, preset.macros))
             }
-            assertTrue(PresetTestSupport.rmsDistance(group[0].macros, group[1].macros) >= .10f,
-                "$voice candidates need a useful contrast")
+            for (i in group.indices) for (j in i + 1 until group.size) {
+                assertTrue(PresetTestSupport.rmsDistance(group[i].macros, group[j].macros) >= .10f,
+                    "$voice ${group[i].name} / ${group[j].name} need a useful contrast")
+            }
+            assertEquals(1, group.count { Alloy.isLoop(it.macros.getValue("HOLD")) },
+                "$voice needs one distinct settled held starting point")
         }
         assertTrue(Presets.forVoice("ALLOY", "UNKNOWN").isEmpty())
     }

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f1e7">
+  <meta name="description" content="Meet Flock, an experimental SnipSnap voice. Listen to real rendered gestures and compare a flock of interacting oscillators with fixed detuning and independent motion.">
+  <title>Flock — A SnipSnap audition</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#gestures">Skip to the sounds</a>
+  <header class="header wrap">
+    <a class="brand" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap on GitHub"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 8h10v16H3zM19 8h10v16H19z"/><path class="cut" d="m3 19 10-6m6 6 10-6"/></svg>SnipSnap<span class="brand-divider">/</span><span class="brand-room">the audition room</span></a>
+    <a class="header-link" href="#comparison">Listen & compare <span aria-hidden="true">→</span></a>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> An experimental voice for SnipSnap</p>
+        <h1 id="title">Flock<span>.</span></h1>
+        <p class="tagline">A little disorder.<br> A shared direction.</p>
+        <p class="hero-description">Strike a note. Twenty-four voices scatter, respond to their neighbors, and find their way back together.</p>
+        <div class="hero-actions"><button class="primary-button" id="first-listen" type="button" disabled><span class="play-triangle" aria-hidden="true"></span> Hear it gather <span class="button-time" id="first-duration"></span></button><a class="quiet-link" href="#comparison">Then, hear the difference <span aria-hidden="true">→</span></a></div>
+        <a class="flow-notice" id="flow-notice" href="#flow-revision" hidden><span>FLOW revised</span> Hear slow to fast <span aria-hidden="true">→</span></a>
+      </div>
+      <figure class="flock-window">
+        <div class="window-heading"><span><span class="signal-dot" aria-hidden="true"></span> A movement in twenty-four parts</span><span>01—24</span></div>
+        <div class="flock-stage"><canvas id="flock-canvas" aria-label="Recorded pitch trajectories for the selected gesture"></canvas><div class="trace-loading" id="trace-loading">Opening the recorded traces…</div><span class="stage-axis stage-axis-top">PITCH +</span><span class="stage-axis stage-axis-bottom">PITCH −</span></div>
+        <figcaption><span><span class="trace-key" aria-hidden="true"></span> Actual recorded pitch trajectories</span><span id="hero-trace-name">GATHER / C4</span></figcaption>
+      </figure>
+      <div class="hero-foot"><span>Made to become a sample.</span><span>24 voices <span class="foot-dot">·</span> 3 finite gestures <span class="foot-dot">·</span> One shared motion</span><a id="pack-link" class="quiet-link" href="flock-audition.zip" download>Take the listening pack <span aria-hidden="true">↓</span></a></div>
+    </section>
+
+    <div class="load-message wrap" id="library-status" role="status">Opening the audition library…</div>
+    <div class="load-error wrap" id="library-error" hidden role="alert"><strong>The sounds could not be loaded.</strong><p id="library-error-message">Check your connection and try again.</p><button class="text-button" id="retry-load" type="button">Try again ↻</button></div>
+
+    <section class="flow-revision wrap" id="flow-revision" aria-labelledby="flow-title" hidden>
+      <div class="flow-heading"><div><p class="eyebrow section-number">FLOW / Revised for review</p><h2 id="flow-title">Give FLOW another listen.</h2></div><p id="flow-description">FLOW now changes the speed of the collective motion. Compare the revised mapping with the previous version at each setting.</p></div>
+      <div class="flow-steps" id="flow-steps" role="group" aria-label="Compare previous and revised FLOW at five settings"></div>
+      <p class="flow-footnote" id="flow-footnote">The other sounds remain from the original audition.</p>
+    </section>
+
+    <section class="gesture-section wrap" id="gestures" aria-labelledby="gestures-title">
+      <div class="section-top"><div><p class="eyebrow section-number">01 / Meet the gestures</p><h2 id="gestures-title">Same flock. Three ways to move.</h2></div><p class="section-aside">Each sound is a complete, finite render.<br>Choose a gesture and follow its change.</p></div>
+      <div class="gesture-grid" id="gesture-grid">
+        <article class="gesture-card" data-gesture="GATHER"><div class="gesture-top"><span class="card-number">01</span><span class="duration-label" data-duration="GATHER">—</span></div><svg class="gesture-glyph" viewBox="0 0 120 64" aria-hidden="true"><path d="M4 4Q50 14 114 32M4 18Q54 23 114 32M4 32H114M4 46Q54 41 114 32M4 60Q50 50 114 32"/><circle cx="114" cy="32" r="4"/></svg><h3>Gather</h3><p>A scattered opening draws into focus. Listen for the note finding its center.</p><button class="gesture-play" type="button" data-play-gesture="GATHER" disabled>Listen to Gather <span aria-hidden="true">→</span></button></article>
+        <article class="gesture-card" data-gesture="RIBBON"><div class="gesture-top"><span class="card-number">02</span><span class="duration-label" data-duration="RIBBON">—</span></div><svg class="gesture-glyph" viewBox="0 0 120 64" aria-hidden="true"><path d="M4 24C34-20 64 84 116 23M4 32C34-12 64 92 116 31M4 40C34-4 64 100 116 39"/><circle cx="116" cy="31" r="4"/></svg><h3>Ribbon</h3><p>A turn travels through the group. Listen for the shimmer passing from voice to voice.</p><button class="gesture-play" type="button" data-play-gesture="RIBBON" disabled>Listen to Ribbon <span aria-hidden="true">→</span></button></article>
+        <article class="gesture-card" data-gesture="SPLIT"><div class="gesture-top"><span class="card-number">03</span><span class="duration-label" data-duration="SPLIT">—</span></div><svg class="gesture-glyph" viewBox="0 0 120 64" aria-hidden="true"><path d="M4 32C34 32 25 8 62 8H116M4 32H116M4 32C34 32 25 56 62 56H116"/><circle cx="116" cy="8" r="3"/><circle cx="116" cy="32" r="3"/><circle cx="116" cy="56" r="3"/></svg><h3>Split</h3><p>Harmonic groups move around root, fifth, and octave. Listen for the space between them.</p><button class="gesture-play" type="button" data-play-gesture="SPLIT" disabled>Listen to Split <span aria-hidden="true">→</span></button></article>
+      </div>
+    </section>
+
+    <section class="comparison wrap" id="comparison" aria-labelledby="compare-title">
+      <div class="comparison-intro"><div><p class="eyebrow section-number">02 / The listening test</p><h2 id="compare-title">Can you hear<br>the neighbors?</h2></div><p>One Ribbon gesture, three kinds of motion. Compare the interacting flock with fixed detuning and with voices that wander independently.</p></div>
+      <div class="comparison-options" id="comparison-options" role="group" aria-label="Compare three types of oscillator motion"></div>
+      <div class="comparison-bottom"><p><span class="small-star" aria-hidden="true">✳</span> Listen for a response moving through the group, beyond a wider or louder sound.</p><div class="level-control"><span>Playback level</span><div class="segmented" role="group" aria-label="Playback loudness"><button type="button" data-level="matched" aria-pressed="true">Matched</button><button type="button" data-level="raw" aria-pressed="false">Raw</button></div></div></div>
+      <p class="level-explanation" id="level-explanation">Matched playback uses a fixed gain per render to make differences easier to judge. Raw preserves the engine's output level.</p>
+    </section>
+
+    <section class="causal-section wrap" aria-labelledby="causal-title">
+      <div class="section-top"><div><p class="eyebrow section-number">03 / A closer listen</p><h2 id="causal-title">One voice turns.<br>Who follows?</h2></div><p class="section-aside">A small impulse reaches one particle mid-note.<br>Compare the same render with and without it.</p></div>
+      <div class="causal-layout"><div class="causal-copy"><p>In a flock, a change can reach the neighbors. In independent motion, the other voices have no reason to respond.</p><div id="causal-options" class="causal-options"></div><p class="small-note">The plot shows the measured difference between paired renders. The impulse is a controlled test of interaction.</p></div><figure class="causal-chart"><div class="chart-header"><span>Response beyond the disturbed voice</span><span id="causal-chart-mode">FLOCK</span></div><canvas id="causal-canvas" aria-label="Measured neighbor pitch response after a one-particle impulse"></canvas><div class="chart-legend"><span><i class="legend-direct"></i> First neighbors at the impulse</span><span><i class="legend-other"></i> Other voices</span></div><figcaption><span id="causal-chart-caption">Loading paired simulation measurements…</span><span>time →</span></figcaption></figure></div>
+    </section>
+
+    <section class="explore-section wrap" aria-labelledby="explore-title"><div class="section-top"><div><p class="eyebrow section-number">04 / Keep exploring</p><h2 id="explore-title">Get to know its range.</h2></div><p class="section-aside">More notes, softer strikes, and one control at a time.<br>Open a study to hear the details.</p></div><div class="study-list" id="study-list"></div></section>
+
+    <section class="closing wrap"><div><p class="eyebrow">A voice in progress</p><h2>Does the movement<br>earn its place?</h2></div><div class="closing-copy"><p>This audition asks whether neighbor interaction makes a useful musical gesture. Each clip comes from the SnipSnap Kotlin engine, rendered ahead of time and played back here.</p><p>The flock moves inside the saved sound. These are finite gestures; sustained looping is a later question.</p><a class="quiet-link" id="closing-pack-link" href="flock-audition.zip" download>Download the audio & recipes <span aria-hidden="true">↓</span></a></div></section>
+
+    <details class="provenance wrap"><summary>Rendering notes & source <span aria-hidden="true">+</span></summary><div class="provenance-content"><p id="render-notes">Mono PCM WAV renders from the Flock engine. No effects are added by this page. The drawings above the gesture names are illustrative; the large trajectory view and response plot use recorded data.</p><p id="source-notes"></p><div class="provenance-links"><a href="manifest.json" download>Audition manifest ↓</a><a id="raw-pack-link" href="flock-raw.zip" download>Raw listening pack ↓</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">SnipSnap source →</a><a href="https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/xoceanic_design_spec.md" target="_blank" rel="noopener">Original concept →</a></div></div></details>
+  </main>
+
+  <footer class="footer wrap"><a class="footer-wordmark" href="#title">Flock<span>.</span></a><p>A SnipSnap experiment.<br>Made for listening.</p><span class="footer-edition">AUDITION / 01</span></footer>
+
+  <aside class="player-shell" aria-label="Shared audio player"><div class="player-inner"><div class="player-info"><span class="player-kicker" id="player-kicker">FLOCK / MATCHED</span><strong id="player-title">Gather</strong><span id="player-detail">Choose a sound to begin.</span></div><div class="player-controls"><button class="transport-play" id="play-button" type="button" aria-label="Play selected sound" disabled><svg id="play-symbol" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg><svg id="pause-symbol" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button><button class="transport-stop" id="stop-button" type="button" aria-label="Stop and return to the beginning" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg></button></div><div class="player-progress"><div class="wave-container"><canvas id="wave-canvas" aria-hidden="true"></canvas><div class="wave-progress" id="wave-progress"></div><input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Playback position" disabled></div><div class="progress-caption"><span id="playback-status" role="status" aria-live="polite">Ready when you are</span><span><span id="current-time">0:00.0</span> <span class="time-slash">/</span> <span id="total-time">0:00.0</span></span></div></div><a class="player-download" id="clip-download" href="#" download aria-label="Download selected WAV">WAV <span aria-hidden="true">↓</span></a></div><p class="player-error" id="player-error" hidden role="alert"></p></aside>
+  <noscript><p class="noscript">This player needs JavaScript. You can download the <a href="flock-audition.zip">listening pack</a> to hear the WAV files.</p></noscript>
+</body>
+</html>
