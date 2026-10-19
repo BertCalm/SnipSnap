@@ -290,6 +290,14 @@ testkit/SnipSnap-Wick-Prototype-Kit.zip
 testkit/shoal-audition/
 testkit/shoal-audition-v1/
 
+# Provisional OVERLAP musical bank, native/matched audio and replayable studies.
+testkit/overlap-musical-audition/
+
+# OVERLAP native MPC kit and reproducible source-kit export.
+testkit/.overlap-work/
+testkit/SnipSnap Overlap Kit/
+testkit/SnipSnap-Overlap-Kit.zip
+
 # Focused Alloy voice/preset comparison audio is regenerated from source.
 testkit/alloy-contrast/
 

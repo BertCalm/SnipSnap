@@ -992,6 +992,33 @@ object SynthKits {
     }
 
     /**
+     * OVERLAP's dry sixteen-pad starter: the approved twelve musical recipes
+     * retain their order, followed by octave-lower copies of its four plucks.
+     * Every sample plays once; HOLD supplies finite excitation, not a loop.
+     */
+    fun overlap(): List<ArrangedPad?> {
+        val bank = OverlapMusicalBank.all()
+        require(bank.size == 12) { "OVERLAP's approved musical bank has twelve entries" }
+        fun sound(entry: OverlapBankEntry, patch: OverlapPatch = entry.patch, transpose: Int = 0): ArrangedPad =
+            pad(patch, DrumClass.TONAL).copy(
+                displayName = patch.name, oneShot = true,
+                source = mapOf(
+                    "presetId" to (entry.id + if (transpose == 0) "" else "-low"),
+                    "basePresetId" to entry.id,
+                    "presetFamily" to entry.family.name,
+                    "referenceMidi" to patch.midi.toString(),
+                    "referenceNote" to Scales.nameOf(patch.midi),
+                    "transposeSemitones" to transpose.toString(),
+                    "model" to patch.model.toString(),
+                ),
+            )
+        val lowNames = listOf("LOW THREAD", "LOW PIN", "LOW CUP", "LOW SEED")
+        return bank.map { sound(it) } + bank.take(4).mapIndexed { index, entry ->
+            sound(entry, entry.patch.copy(name = lowNames[index], midi = entry.patch.midi - 12), -12)
+        }
+    }
+
+    /**
      * The dry COROLLA kit. A01–A08 walk TONGUE up the C minor pentatonic from C3; the top half
      * contrasts opening, contact, field and enclosure, ending with two held textures. Finite
      * gestures land as TONAL so IN KEY can retune them; HOLD alone selects LOOP and settled
