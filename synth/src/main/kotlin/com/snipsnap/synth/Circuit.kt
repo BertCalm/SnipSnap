@@ -127,6 +127,10 @@ object Circuit {
     internal fun inspect(voice: CircuitVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
                          probe: Probe = Probe()): Report = perform(voice, macros, velocity, true, probe)
 
+    /** Offline performance audition: one continuous state, with the approved short ROOT clock. */
+    internal fun inspectCeremony(): Report =
+        perform(CircuitVoice.ROOT, emptyMap(), 1f, false, Probe(recordPaths = true), ceremony = true)
+
     /** Per-player refractory interval. Replies may never become cues for more replies. */
     internal fun refractorySeconds(paceHz: Double) = .35 + .45 / paceHz
 
@@ -183,10 +187,12 @@ object Circuit {
     }
 
     private fun events(voice: CircuitVoice, m: Map<String, Float>, p: Plan, g: Geometry,
-                       phrase: CircuitPhrase, velocity: Double, probe: Probe): List<Event> {
+                       phrase: CircuitPhrase, velocity: Double, probe: Probe, ceremony: Boolean): List<Event> {
         val cutoff = min(p.phraseSeconds - if (p.held) 0.0 else CircuitPhrase.RELEASE_PAD,
             probe.inputOffSeconds ?: Double.POSITIVE_INFINITY)
-        val base = phrase.targets(velocity).filter { it.timeSeconds < cutoff }
+        val base = phrase.targets(velocity).filter {
+            it.timeSeconds < cutoff && (!ceremony || CircuitCeremony.permits(it))
+        }
         if (!probe.responses || velocity == 0.0) return base
         val canyon = m.getValue("CANYON").toDouble()
         if (canyon < .015) return base
@@ -209,7 +215,8 @@ object Circuit {
         // only the first cells and leave an otherwise identical closing half mute.
         val stride = ceil(phrase.cellCount.toDouble() / MAX_REPLIES).toInt()
         for (target in phrase.responseTargets()) {
-            if (target.cell % stride != 0 || target.timeSeconds >= cutoff) continue
+            if ((if (ceremony) !CircuitCeremony.replyCell(target.cell) else target.cell % stride != 0) ||
+                target.timeSeconds >= cutoff) continue
             val cueReason = if (target.cueSource == 4) "opening-wood" else "answer-invitation"
             val cues = base.filter { it.source == target.cueSource && it.reason == cueReason }
             val cue = (cues.lastOrNull { it.timeSeconds <= target.timeSeconds }
@@ -221,8 +228,11 @@ object Circuit {
             val window = min(4.0, max(.60, .60 * phrase.cellSeconds))
             if (target.timeSeconds < earliest || target.timeSeconds > earliest + window) continue
             val travel = (arrived - emitted) * SPEED_OF_SOUND
-            val strength = cue.energy * (.035 + .43 * canyon) / (1 + .035 * travel)
-            if (strength < (if (voice == CircuitVoice.ANSWER) .018 else .025) * velocity) continue
+            val sharedDrive = if (ceremony) CircuitCeremony.gain(emitted) else 1.0
+            val strength = cue.energy * (.035 + .43 * canyon) / (1 + .035 * travel) * sharedDrive
+            // Like velocity, the ceremony's common effort lowers both the cue
+            // and the ensemble's reference level. Quiet cells still listen.
+            if (strength < (if (voice == CircuitVoice.ANSWER) .018 else .025) * velocity * sharedDrive) continue
             val energy = velocity * (.28 + .16 * canyon) *
                 (if (voice == CircuitVoice.ANSWER) 1.15 else 1.0) * (.45 + strength) *
                 (.5 + .5 * phrase.effort(target.timeSeconds))
@@ -316,20 +326,28 @@ object Circuit {
     }
 
     private fun perform(voice: CircuitVoice, macros: Map<String, Float>, velocity: Float,
-                        normalize: Boolean, probe: Probe): Report {
+                        normalize: Boolean, probe: Probe, ceremony: Boolean = false): Report {
         require(velocity.isFinite() && velocity in 0f..1f) { "CIRCUIT velocity must be finite and in 0..1" }
         stopIfUnwanted()
         val m = settled(voice, macros)
-        val p = plan(m)
+        val ordinaryPlan = plan(m)
+        val p = if (ceremony) ordinaryPlan.copy(
+            frames = (CircuitCeremony.seconds * Dsp.RATE).roundToInt(),
+            phraseSeconds = CircuitCeremony.phraseSeconds,
+            rates = ordinaryPlan.rates.copy(paceHz = CircuitCeremony.paceHz,
+                requestedPaceHz = CircuitCeremony.paceHz, loopSeconds = 0.0),
+            frequency = frequencyFor(m.getValue("TUNE")).toDouble(), held = false,
+        ) else ordinaryPlan
         val geometry = Geometry(m, voice, p.rates)
         val breath = m.getValue("BREATH").toDouble()
         val phrase = CircuitPhrase(voice, p.phraseSeconds, p.rates.loopSeconds,
-            if (p.held) p.rates.paceHz else p.rates.requestedPaceHz, p.held, breath)
-        val schedule = events(voice, m, p, geometry, phrase, velocity.toDouble(), probe)
+            if (p.held) p.rates.paceHz else p.rates.requestedPaceHz, p.held, breath,
+            repeatCellArch = ceremony)
+        val schedule = events(voice, m, p, geometry, phrase, velocity.toDouble(), probe, ceremony)
         val n = p.frames * Dsp.OVERSAMPLE
         val canyon = m.getValue("CANYON").toDouble()
         val cycles = if (p.held) 3 else 1
-        val observed = observe(voice, p, geometry, phrase, schedule, n, breath, canyon, cycles, velocity, probe)
+        val observed = observe(voice, p, geometry, phrase, schedule, n, breath, canyon, cycles, velocity, probe, ceremony)
         val rawInternal = observed.raw
         val pathFrames = observed.paths
         val convergenceDifference = observed.convergenceDifference
@@ -393,7 +411,8 @@ object Circuit {
      * returns, before the canyon pass and the decimation allocate.
      */
     private fun observe(voice: CircuitVoice, p: Plan, geometry: Geometry, phrase: CircuitPhrase, schedule: List<Event>,
-                        n: Int, breath: Double, canyon: Double, cycles: Int, velocity: Float, probe: Probe): Observed {
+                        n: Int, breath: Double, canyon: Double, cycles: Int, velocity: Float, probe: Probe,
+                        ceremony: Boolean): Observed {
         val sources = Array(7) { FloatArray(n) }
         val tubes = Array(3) { Tube(p.frequency, it, breath, voice) }
         val radiation = DoubleArray(3)
@@ -415,7 +434,8 @@ object Circuit {
                     attack * end
                 }
                 val effort = phrase.effort(t)
-                val pressure = velocity * envelope * (.20 + .60 * breath) * (.15 + .85 * effort)
+                val pressure = velocity * envelope * (.20 + .60 * breath) * (.15 + .85 * effort) *
+                    (if (ceremony) CircuitCeremony.gain(t) else 1.0)
                 for (role in 0..2) prior[role] = radiation[role]
                 while (accentIndex + 1 < accents.size && accents[accentIndex + 1].timeSeconds <= t) accentIndex++
                 // Add overlapping smooth pressure gestures. A new accent must not
@@ -470,7 +490,10 @@ object Circuit {
                 poweredSeconds = probe.inputOffSeconds?.let { max(0.0, it - event.timeSeconds) },
                 // Materials borrow the ongoing breath at the force input. Their
                 // passive modes and tract keep decaying after that force settles.
-                excitationAtSeconds = { age -> .65 + .35 * phrase.effort(event.timeSeconds + age) },
+                excitationAtSeconds = { age ->
+                    val time = event.timeSeconds + age
+                    (.65 + .35 * phrase.effort(time)) * (if (ceremony) CircuitCeremony.gain(time) else 1.0)
+                },
                 buffers = gestureBuffers)
             val start = (event.timeSeconds * INTERNAL_RATE).roundToInt()
             for (k in wave.indices) {
