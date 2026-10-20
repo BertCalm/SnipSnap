@@ -18,6 +18,7 @@ import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OvenPatch
@@ -406,6 +407,11 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is OrigamiPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "OrigamiPatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is ChamberPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
