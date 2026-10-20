@@ -4,19 +4,26 @@
   const $ = (id) => document.getElementById(id);
   const localFiles = location.protocol === 'file:';
   const sectionDefinitions = {
+    alloy: { number: '03', title: 'Alloy, with more room', description: 'The preferred Alloy is the reference. Bloom and Deep keep that direction and give its companion resonances longer to unfold.' },
     depth: { number: '02', title: 'Depth & character', description: 'One geometry, three new directions. Compare the original with a fuller body, a hollow reed character, and a brighter alloy voice.' },
     first: { number: '01', title: 'Start at the source', description: 'The dry source is the reference. Listen for what the reflected paths and resonant body add as you move through the study.' },
     positions: { number: '02', title: 'Source × focus', description: 'Each group holds the source still and moves the pickup. Compare the same focus across source groups, then listen along a group for the bloom.' },
     mechanism: { number: '03', title: 'What makes it sing?', description: 'Compare the full model with the controls at the same source and focus. Use level matching to judge the change in tone, then shared gain to hear its strength.' },
     range: { number: '04', title: 'Register & touch', description: 'Does the character survive a change in note or velocity? Listen for pitch, attack, and body across these fixed-position renders.' }
   };
-  const state = { manifest: null, clips: [], mode: 'matched', active: null, context: null, gain: null, source: null, media: null, buffer: null, duration: 0, offset: 0, startedAt: 0, playing: false, loading: false, seeking: false, request: 0, repeat: false, volume: .65, cache: new Map(), notes: {}, storageModels: [], cards: new Map(), depthMidi: 60, depthButtons: [] };
-  const characters = [
+  const state = { manifest: null, clips: [], family: 'depth', mode: 'matched', active: null, context: null, gain: null, source: null, media: null, buffer: null, duration: 0, offset: 0, startedAt: 0, playing: false, loading: false, seeking: false, request: 0, repeat: false, volume: .65, cache: new Map(), notes: {}, storageModels: [], cards: new Map(), depthMidi: 60, depthButtons: [] };
+  const depthCharacters = [
     { name: 'Original', letter: 'A', cue: 'The first reflected vessel.', detail: 'The reference. Keep its attack and body in mind.' },
     { name: 'Body', letter: 'B', cue: 'Low mids. Slower bloom.', detail: 'Listen for fullness and close sympathetic pairs.' },
     { name: 'Reed', letter: 'C', cue: 'Hollow tone. Breathing attack.', detail: 'Listen for odd harmonics and vocal beating.' },
     { name: 'Alloy', letter: 'D', cue: 'Bright rings. Longer decay.', detail: 'Listen for the slightly inharmonic upper body.' }
   ];
+  const alloyCharacters = [
+    { name: 'Preferred Alloy', key: 'preferred', letter: 'A', cue: 'Your preferred character. Preserved.', detail: 'The unchanged Alloy reference from the depth study.' },
+    { name: 'Bloom', key: 'bloom', letter: 'B', cue: 'A little longer to unfold.', detail: 'Compare the attack, then follow the companion ring.' },
+    { name: 'Deep', key: 'deep', letter: 'C', cue: 'The longest companion bloom.', detail: 'Listen for what the extra tail adds to the Alloy body.' }
+  ];
+  let characters = depthCharacters;
   let toastTimer;
 
   function node(tag, className, text) {
@@ -27,6 +34,7 @@
   }
   function canonicalSection(section) {
     const key = String(section || '').toLowerCase().replaceAll('_', '-');
+    if (/alloy|bloom/.test(key)) return 'alloy';
     if (/depth|character/.test(key)) return 'depth';
     if (/first|^source$|anchor|baseline|comparison/.test(key)) return 'first';
     if (/mechanism|control|ablation/.test(key)) return 'mechanism';
@@ -141,7 +149,7 @@
     if (clip.focus !== undefined) addMetadata(metadata, `FOCUS ${numeric(clip.focus, 3)}`);
     if (clip.midi !== undefined) addMetadata(metadata, midiName(clip.midi));
     if (clip.velocity !== undefined) addMetadata(metadata, `VEL ${numeric(clip.velocity)}`);
-    if (canonicalSection(clip.section) === 'depth') addMetadata(metadata, `${pretty(clip.profile || '')} · M${clipModel(clip)}`);
+    if (['depth', 'alloy'].includes(canonicalSection(clip.section))) addMetadata(metadata, `${pretty(clip.profile || '')} · M${clipModel(clip)}`);
     const bottom = node('div', 'card-bottom');
     const links = node('div', 'card-links');
     const wav = node('a', 'card-wav', 'WAV →');
@@ -160,6 +168,11 @@
   }
 
   function comparisonClip(profile, midi) {
+    if (state.family === 'alloy') {
+      const register = { 36: 'c2', 60: 'c4', 84: 'c6' }[midi];
+      const prefix = { 'Preferred Alloy': 'depth-alloy', Bloom: 'alloy-bloom', Deep: 'alloy-deep' }[profile];
+      return state.clips.find(clip => clip.id === `${prefix}-${register}`);
+    }
     if (profile === 'Original') {
       const reference = { 36: 'register-low', 60: 'mechanism-full', 84: 'register-high' }[midi];
       return state.clips.find(clip => clip.id === reference) || state.clips.find(clip => Number(clip.midi) === midi && clipModel(clip) === '1' && clip.variant === 'FULL');
@@ -190,10 +203,10 @@
   }
   function createDepthComparator() {
     const panel = node('div', 'depth-comparator');
-    panel.id = 'depth-comparison';
+    panel.id = state.family === 'alloy' ? 'alloy-comparison' : 'depth-comparison';
     const top = node('div', 'depth-controls');
     const copy = node('div');
-    copy.append(node('p', 'depth-eyebrow', 'SAME NOTE. SAME POSITION. SWITCH THE BODY.'));
+    copy.append(node('p', 'depth-eyebrow', state.family === 'alloy' ? 'SAME ALLOY. SAME NOTE. FOLLOW THE BLOOM.' : 'SAME NOTE. SAME POSITION. SWITCH THE BODY.'));
     const mode = node('p', 'depth-mode'); mode.id = 'depth-mode'; copy.append(mode);
     const registers = node('div', 'register-tabs'); registers.setAttribute('role', 'group'); registers.setAttribute('aria-label', 'Comparison register');
     [36, 60, 84].forEach(midi => {
@@ -208,10 +221,10 @@
       registers.append(button);
     });
     top.append(copy, registers);
-    const grid = node('div', 'depth-profile-grid');
+    const grid = node('div', `depth-profile-grid${characters.length === 3 ? ' three-profiles' : ''}`);
     state.depthButtons = [];
     characters.forEach(character => {
-      const wrapper = node('div', `depth-profile-wrap profile-${character.name.toLowerCase()}`);
+      const wrapper = node('div', `depth-profile-wrap profile-${character.key || character.name.toLowerCase()}`);
       const button = node('button', 'depth-profile'); button.type = 'button';
       const upper = node('span', 'profile-upper');
       upper.append(node('span', 'profile-letter', character.letter), node('span', 'profile-signal'));
@@ -238,7 +251,7 @@
       wrapper.append(button, clipLink); grid.append(wrapper);
       state.depthButtons.push({ button, character, name, caption, clipLink });
     });
-    const hint = node('p', 'depth-hint', 'Click another character to compare at the current playhead. Turn off “Keep playhead” to hear each attack from the beginning. Changing register starts a new note.');
+    const hint = node('p', 'depth-hint', state.family === 'alloy' ? 'Switch at the current playhead to compare the ring, or turn off “Keep playhead” to hear each attack. Preferred Alloy lasts 6.5 seconds; Bloom and Deep last 8 seconds. Changing register starts a new note.' : 'Click another character to compare at the current playhead. Turn off “Keep playhead” to hear each attack from the beginning. Changing register starts a new note.');
     panel.append(top, grid, hint);
     return panel;
   }
@@ -253,24 +266,33 @@
     const order = [...Object.keys(sectionDefinitions).filter(key => groups.has(key)), ...[...groups.keys()].filter(key => !sectionDefinitions[key])];
     const fragment = document.createDocumentFragment();
     state.cards.clear();
-    const hasDepth = groups.has('depth');
+    const leadKey = groups.has('alloy') ? 'alloy' : groups.has('depth') ? 'depth' : 'first';
+    const hasDepth = leadKey !== 'first';
     let archive;
     if (hasDepth) {
       archive = node('details', 'archive-study'); archive.id = 'original-study';
       const summary = node('summary');
-      const originalCount = state.clips.filter(clip => canonicalSection(clip.section) !== 'depth').length;
-      summary.append(node('span', '', state.manifest.summary?.originalClipsOmitted ? 'Original references' : 'The original listening study'), node('span', 'archive-count', `${originalCount} preserved renders`), node('span', 'archive-plus', '+'));
+      const originalCount = state.clips.filter(clip => canonicalSection(clip.section) !== leadKey).length;
+      const compact = state.manifest.summary?.originalClipsOmitted;
+      const archiveTitle = leadKey === 'alloy' ? compact ? 'Preferred Alloy references' : 'The previous listening studies' : compact ? 'Original references' : 'The original listening study';
+      summary.append(node('span', '', archiveTitle), node('span', 'archive-count', `${originalCount} preserved renders`), node('span', 'archive-plus', '+'));
       archive.append(summary);
       const intro = node('div', 'archive-intro');
-      intro.append(node('p', '', state.manifest.summary?.originalClipsOmitted ? 'This compact pack includes three original register references for comparing the new characters. The complete source/focus study and mechanism controls remain in the original audition archive.' : 'The original recordings, recipes, and listening notes are preserved. Open the source/focus study and mechanism controls to trace where the character began.'));
-      if (state.manifest.downloads?.original) { const link = node('a', 'text-link', 'Download the original study →'); link.href = state.manifest.downloads.original; link.download = ''; intro.append(link); }
+      intro.append(node('p', '', leadKey === 'alloy' ? compact ? 'This compact pack includes four unchanged Alloy references: C2, C4, C6, and the sparse focus position. Earlier full studies remain in their original archives.' : 'The preferred Alloy and all earlier recordings, recipes, and notes stay preserved. Revisit Body, Reed, Alloy, the source/focus scans, and the mechanism controls here.' : compact ? 'This compact pack includes three original register references for comparing the new characters. The complete source/focus study and mechanism controls remain in the original audition archive.' : 'The original recordings, recipes, and listening notes are preserved. Open the source/focus study and mechanism controls to trace where the character began.'));
+      const archiveDownloads = node('div', 'archive-downloads');
+      for (const [key, label] of [['depth', 'Download the depth study →'], ['original', 'Download the original study →']]) {
+        if (state.manifest.downloads?.[key]) { const link = node('a', 'text-link', label); link.href = state.manifest.downloads[key]; link.download = ''; archiveDownloads.append(link); }
+      }
+      if (archiveDownloads.childElementCount) intro.append(archiveDownloads);
       archive.append(intro);
     }
     $('section-filter').replaceChildren(new Option('All studies', 'all'));
     order.forEach((key, sectionIndex) => {
       const clips = groups.get(key);
       const baseDefinition = sectionDefinitions[key] || { number: String(sectionIndex + 1).padStart(2, '0'), title: pretty(key), description: '' };
-      const definition = state.manifest.summary?.originalClipsOmitted && ['mechanism', 'range'].includes(key) ? {
+      const definition = state.manifest.summary?.originalClipsOmitted && leadKey === 'alloy' && key === 'depth' ? {
+        ...baseDefinition, title: 'Preferred Alloy · preserved references', description: 'The unchanged Alloy recordings selected from the depth study. Compare these with Bloom and Deep at the same note and focus.'
+      } : state.manifest.summary?.originalClipsOmitted && ['mechanism', 'range'].includes(key) ? {
         ...baseDefinition,
         title: key === 'mechanism' ? 'Original reference · C4' : 'Original references · C2 & C6',
         description: 'The original model at the same position, note, and effort as the new characters. Use these recordings as references for the depth comparison.'
@@ -287,8 +309,8 @@
       copy.append(h, node('p', '', definition.description));
       heading.append(copy, node('span', 'section-quantity', `${clips.length} ${clips.length === 1 ? 'render' : 'renders'}`));
       section.append(heading);
-      if (key === 'depth') section.append(createDepthComparator());
-      if (key === (hasDepth ? 'depth' : 'first')) {
+      if (hasDepth && key === leadKey) section.append(createDepthComparator());
+      if (key === leadKey) {
         const recommended = state.clips.filter(clip => Number.isFinite(clip.recommendedOrder)).sort((a, b) => a.recommendedOrder - b.recommendedOrder);
         if (recommended.length) {
           const route = node('div', 'listening-route');
@@ -318,7 +340,7 @@
         members.forEach(clip => grid.append(createCard(clip, state.clips.indexOf(clip))));
         group.append(grid); section.append(group);
       });
-      if (hasDepth && key !== 'depth') archive.append(section); else fragment.append(section);
+      if (hasDepth && key !== leadKey) archive.append(section); else fragment.append(section);
     });
     if (archive) fragment.append(archive);
     $('studies').replaceChildren(fragment);
@@ -344,6 +366,8 @@
       });
       state.manifest = manifest;
       state.clips = manifest.clips;
+      state.family = state.clips.some(clip => canonicalSection(clip.section) === 'alloy') ? 'alloy' : 'depth';
+      characters = state.family === 'alloy' ? alloyCharacters : depthCharacters;
       storageRead();
       $('raw-mode-label').textContent = rawModeLabel();
       renderStudies();
@@ -547,7 +571,7 @@
     state.request++;
     state.loading = false;
     state.mode = input.value;
-    $('gain-explanation').textContent = state.mode === 'matched' ? 'Level matched reduces loudness differences so changes in tone are easier to hear.' : state.storageModels.length > 1 ? 'Raw WAVs share one gain within each revision. Original and depth export gains can differ; use Level matched for cross-revision tone comparisons.' : 'Shared gain applies the same export gain to every clip, preserving differences in bloom strength.';
+    $('gain-explanation').textContent = state.mode === 'matched' ? 'Level matched reduces loudness differences so changes in tone are easier to hear.' : state.storageModels.length > 1 ? 'Raw WAVs share one gain within each revision. Export gains can differ across revisions; use Level matched for tone comparisons.' : 'Shared gain applies the same export gain to every clip, preserving differences in bloom strength.';
     if (localFiles) $('gain-explanation').textContent += ' Local playback uses the browser’s media player; serve over HTTP for decoded, gapless replay.';
     state.cards.forEach(({ wav }, id) => {
       const clip = state.clips.find(item => item.id === id);
@@ -560,8 +584,8 @@
     document.querySelectorAll('.study-section').forEach(section => { section.hidden = event.target.value !== 'all' && section.dataset.section !== event.target.value; });
     const archive = $('original-study');
     if (archive) {
-      archive.hidden = event.target.value === 'depth';
-      if (event.target.value !== 'all' && event.target.value !== 'depth') archive.open = true;
+      archive.hidden = event.target.value === state.family;
+      if (event.target.value !== 'all' && event.target.value !== state.family) archive.open = true;
     }
   });
   $('player-toggle').addEventListener('click', () => { if (!state.active) return; if (state.playing || state.loading) pause(); else playClip(state.active); });

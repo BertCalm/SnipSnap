@@ -1,11 +1,12 @@
 # Caustic: circular listening prototype
 
 Caustic tests whether an ordinary harmonic tone acquires a position-dependent
-singing body through reflected paths. The second listening pass adds three
-material characters while preserving the complete first audition for
-comparison. This milestone is a finite Kotlin renderer and portable listening
-study, awaiting the owner's sonic verdict. It is not the complete proposed
-engine. The working name has not been checked for release.
+singing body through reflected paths. The listening studies develop its
+material character while preserving earlier recordings for comparison. Alloy is
+the preferred direction; the latest pass explores two strengths of its
+companion bloom. This milestone is a finite Kotlin renderer and portable
+listening study, awaiting the owner's sonic verdict. It is not the complete
+proposed engine. The working name has not been checked for release.
 
 ## Listen and reproduce
 
@@ -20,13 +21,13 @@ controls, register/velocity probes and local notes.
 ./gradlew --no-daemon test
 ```
 
-The generator writes `testkit/caustic-audition/`: finite notes, shared-gain and
-independently matched PCM24 WAVs, complete JSON recipes, measurements and
-source fingerprints. The original 24 recordings retain their IDs and bytes.
-Separate original and depth-study ZIPs keep each download compact. Use a local
-server or published page for decoded Web Audio playback. The downloaded pack
-also supports local media playback. Repeat replays a finite recording; it is
-not a HOLD or seam test.
+The generator writes `testkit/caustic-audition/`: 44 finite notes, shared-gain
+and independently matched PCM24 WAVs, complete JSON recipes, measurements and
+source fingerprints. All 36 recordings from the first two studies retain their
+IDs and bytes. Separate original, depth and Alloy-bloom ZIPs keep each download
+compact. Use a local server or published page for decoded Web Audio playback.
+The downloaded pack also supports local media playback. Repeat replays a finite
+recording; it is not a HOLD or seam test.
 
 Use **Level matched** to compare tone and **Shared gain** to hear collection
 strength and velocity. One native export gain applies within each renderer
@@ -89,6 +90,23 @@ The first comparison holds note, effort, SOURCE and FOCUS constant against the
 original. Register and pickup probes test whether each character carries beyond
 one favourable note. Use matched playback for colour, and shared gain to assess
 native balance. No external effects or room reverb create the added body.
+
+## Alloy listening direction
+
+Alloy was selected as the strongest direction in the second audition. Its
+model-2 recordings remain the reference for the next pass, alongside the other
+original recordings and their listening notes.
+
+The Alloy bloom pass keeps the excitation, tuning, root balance and primary
+resonances fixed. Model 3 adds one explicit `bloom` value: it lengthens the
+companion resonances for partials 2–7 by up to 1.7 times their original T60. At
+zero bloom it reproduces model 2 exactly. Half and full bloom provide two
+controlled comparisons at C2, C4, C6 and a sparse pickup position. The new
+notes run for eight seconds so the added ring can be heard.
+
+This pass explores a longer metallic body while preserving the preferred
+attack. The existing source and pickup controls still determine the coherent
+excitation. It adds no output reverb or extra oscillators.
 
 ## Comparisons and verification
 

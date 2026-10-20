@@ -23,7 +23,7 @@ import kotlin.math.sqrt
  * coefficients, rather than tracing paths or approximating their envelope at audio rate.
  */
 object Caustic {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val RATE = WavWriter.MPC_SAMPLE_RATE
     private const val INTERNAL_RATE = RATE * 4
     private const val SOURCE_DECAY = 1.10
@@ -49,6 +49,7 @@ object Caustic {
         val rayCount: Int = 256,
         val model: Int = 1,
         val character: Character = Character.BODY,
+        val bloom: Double = 0.0,
     ) {
         init {
             require(source.isFinite() && source in 0.0..1.0) { "CAUSTIC source must be in 0..1" }
@@ -61,6 +62,9 @@ object Caustic {
             require(rayCount in 64..4096) { "CAUSTIC rayCount must be in 64..4096" }
             require(model in 1..MODEL_VERSION) { "unsupported CAUSTIC model $model" }
             require(model != 1 || character == Character.BODY) { "CAUSTIC model1 has no selectable character" }
+            require(bloom.isFinite() && bloom in 0.0..1.0) { "CAUSTIC bloom must be in 0..1" }
+            require(model >= 3 || bloom == 0.0) { "CAUSTIC legacy models require bloom0" }
+            require(model != 3 || character == Character.ALLOY) { "CAUSTIC model3 requires ALLOY" }
         }
     }
 
@@ -176,7 +180,7 @@ object Caustic {
         Snip(inspect(config, mode, cancelled).samples, channels = 1, sampleRate = RATE)
 
     fun inspect(config: Config = Config(), mode: Mode = Mode.FULL, cancelled: () -> Boolean = { false }): Rendered {
-        if (config.model == 2) return inspectRich(config, mode, cancelled)
+        if (config.model >= 2) return inspectRich(config, mode, cancelled)
         stopIfUnwanted(cancelled)
         val started = System.nanoTime()
         val hz = noteHz(config)
@@ -300,6 +304,7 @@ object Caustic {
         val force: Double,
         val edgeForce: Double,
         val output: Double,
+        val bloom: Double = 0.0,
     ) {
         val slow = 1.0 / decay
         val fast = slow + 1.0 / attack
@@ -317,11 +322,13 @@ object Caustic {
         }
         fun t60(m: Int): Double {
             val h = m % 12 + 1
-            return when (character) {
+            val base = when (character) {
                 Character.BODY -> (if (m < 12) 4.8 else 4.2) / (1.0 + .095 * (h - 1))
                 Character.REED -> (if (h % 2 == 1) 3.7 else 1.3) / (1.0 + .030 * (h - 1))
                 Character.ALLOY -> (if (h == 1) 2.7 else 5.0) / (1.0 + .025 * (h - 1))
             }
+            // Longer sympathetic storage, with every primary mode and the attack left intact.
+            return if (bloom == 0.0 || m < 12 || h !in 2..7) base else base * (1.0 + .7 * bloom)
         }
         fun gain(m: Int): Double {
             val h = m % 12 + 1
@@ -381,7 +388,7 @@ object Caustic {
     private fun profile(c: Config): RichProfile = when (c.character) {
         Character.BODY -> RichProfile(c.character, 1.55, .045, .11, .008, 65.0, 45.0, .72)
         Character.REED -> RichProfile(c.character, 1.25, .016, .080, .004, 78.0, 125.0, .78)
-        Character.ALLOY -> RichProfile(c.character, .64, .006, .006, .0005, 70.0, 1_500.0, .68)
+        Character.ALLOY -> RichProfile(c.character, .64, .006, .006, .0005, 70.0, 1_500.0, .68, c.bloom)
     }
 
     /** Two independently delayed source envelopes, each represented exactly by two exponentials. */
@@ -510,7 +517,7 @@ object Caustic {
         for (m in energy.indices) energy[m] *= scalar * scalar
         val d = Diagnostics(hz, peak, sqrt(sum / raw.size.coerceAtLeast(1)), geometry.densities.sum(), geometry.paths.size,
             geometry.paths.maxOfOrNull { it.delayR * config.delayCycles / hz } ?: 0.0, frequencies,
-            "model2 ${config.character.name}; exact delayed tonal and transient envelopes; 24 sympathetic modes")
+            "model${config.model} ${config.character.name}; exact delayed tonal and transient envelopes; 24 sympathetic modes")
         return Rendered(raw, raw.copyOf(), geometry.densities.copyOf(), modalPeak, energy, prepareMillis,
             (System.nanoTime() - renderStarted) / 1e6, d)
     }
@@ -553,7 +560,7 @@ object Caustic {
     internal data class TransferProbe(val exact: DoubleArray, val compressed: DoubleArray)
     internal fun transferProbe(config: Config, times: DoubleArray, mode: Mode = Mode.FULL): TransferProbe {
         require(mode == Mode.FULL || mode == Mode.PHASE_DISABLED)
-        if (config.model == 2) return richTransferProbe(config, times, mode)
+        if (config.model >= 2) return richTransferProbe(config, times, mode)
         val hz = noteHz(config)
         val geometry = CausticGeometry.prepare(config.source, config.focus, config.rayCount, config.aperture)
         val events = geometry.paths.map {

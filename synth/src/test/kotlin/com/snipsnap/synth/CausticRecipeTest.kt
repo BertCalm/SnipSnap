@@ -58,6 +58,31 @@ class CausticRecipeTest {
         }
     }
 
+    @Test fun `model three explicitly saves bloom and zero preserves preferred Alloy`() {
+        val baseline = Caustic.Config(model = 2, character = Caustic.Character.ALLOY, seconds = .12)
+        for (bloom in listOf(0.0, .5, 1.0)) {
+            val recipe = CausticRecipe(baseline.copy(model = 3, bloom = bloom))
+            val restored = CausticRecipe.fromJsonText(recipe.toJsonText())
+            assertEquals(recipe, restored)
+            assertEquals(3, recipe.toJsonValue().entries.getValue("version").int())
+            assertEquals(bloom, recipe.toJsonValue().entries.getValue("configuration").obj().getValue("bloom").num())
+            assertContentEquals(recipe.inspect().raw, restored.inspect().raw)
+            if (bloom == 0.0) assertContentEquals(CausticRecipe(baseline).inspect().raw, recipe.inspect().raw)
+        }
+        for (model in listOf(1, 2)) {
+            val value = CausticRecipe(Caustic.Config(model = model)).toJsonValue()
+            assertEquals(model, value.entries.getValue("version").int())
+            assertEquals(false, "bloom" in value.entries.getValue("configuration").obj())
+        }
+        val value = CausticRecipe(baseline.copy(model = 3, bloom = .5)).toJsonValue()
+        val withoutBloom = JsonValue.Obj(LinkedHashMap(value.entries).also {
+            it["configuration"] = JsonValue.Obj(value.entries.getValue("configuration").obj() - "bloom")
+        })
+        assertFailsWith<JsonException> { CausticRecipe.fromJsonValue(withoutBloom) }
+        assertFailsWith<IllegalArgumentException> { CausticRecipe(baseline.copy(bloom = .5)) }
+        assertFailsWith<IllegalArgumentException> { CausticRecipe(baseline.copy(model = 3, character = Caustic.Character.REED)) }
+    }
+
     @Test fun `model one JSON shape remains backward compatible and version fields stay explicit`() {
         val recipe = CausticRecipe(Caustic.Config(model = 1))
         val value = recipe.toJsonValue()

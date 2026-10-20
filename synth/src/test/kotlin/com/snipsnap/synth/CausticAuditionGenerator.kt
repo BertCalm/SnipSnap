@@ -54,16 +54,21 @@ object CausticAuditionGenerator {
         output.parentFile.mkdirs()
         val originalFiles = snapshotOriginalFiles(output)
         val staging = Files.createTempDirectory(output.parentFile.toPath(), ".caustic-audition-building-").toFile()
-        File(output, "audition.zip").takeIf { it.isFile }?.copyTo(File(staging, "audition.zip"))
+        for (name in listOf("audition.zip", "depth-audition.zip")) {
+            File(output, name).takeIf { it.isFile }?.let { archive ->
+                archive.copyTo(File(staging, name))
+                check(sha256(archive.readBytes()) == sha256(File(staging, name).readBytes())) { "published archive copy changed: $name" }
+            }
+        }
         // A failed rerender must not leave a previous run's success manifest or pack.
-        for (name in listOf("manifest.json", "manifest.js", "diagnostics.json", "depth-audition.zip")) {
+        for (name in listOf("manifest.json", "manifest.js", "diagnostics.json", "alloy-bloom.zip")) {
             File(output, name).delete()
         }
         try {
             generate(repo, staging, originalFiles)
             if (output.exists()) check(output.deleteRecursively()) { "could not replace generated audition directory $output" }
             Files.move(staging.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            println("CAUSTIC: 24 preserved original clips, 12 depth revision clips and separate portable packs written to $output")
+            println("CAUSTIC: 36 preserved clips, 8 Alloy bloom candidates and separate portable packs written to $output")
         } finally {
             if (staging.exists()) staging.deleteRecursively()
         }
@@ -71,8 +76,8 @@ object CausticAuditionGenerator {
 
     private fun generate(repo: File, root: File, originalFiles: Map<String, String>) {
         val sourceRevision = revision(repo)
-        val cases = cases() + depthCases()
-        check(cases.size == 36 && cases.map { it.id }.toSet().size == cases.size)
+        val cases = cases() + depthCases() + alloyCases()
+        check(cases.size == 44 && cases.map { it.id }.toSet().size == cases.size)
         val heard = cases.mapIndexed { index, case ->
             println("CAUSTIC ${index + 1}/${cases.size}: ${case.id}")
             val rendered = case.recipe.inspect()
@@ -80,7 +85,7 @@ object CausticAuditionGenerator {
             // Saved files, not hidden generator options, are sufficient to replay a clip.
             val restored = CausticRecipe.fromJsonText(case.recipe.toJsonText())
             check(restored == case.recipe) { "${case.id}: recipe lost render inputs" }
-            if (case.id == "mechanism-full" || case.recipe.config.model == 2 && case.recipe.config.midi == 60) {
+            if (case.id == "mechanism-full" || case.recipe.config.model >= 2 && case.recipe.config.midi == 60) {
                 val replay = restored.inspect()
                 check(rendered.raw.contentEquals(replay.raw)) { "${case.id}: portable recipe replay changed raw samples" }
             }
@@ -100,9 +105,10 @@ object CausticAuditionGenerator {
         // one revision gain; individual positions are never peak-normalized.
         val maximumRawPeak = heard.maxOf { peak(it.rendered.raw) }
         val rawGain = minOf(1.0, .90 / heard.filter { it.case.recipe.config.model == 2 }.maxOf { peak(it.rendered.raw) })
+        val alloyGain = minOf(1.0, .90 / heard.filter { it.case.recipe.config.model == 3 }.maxOf { peak(it.rendered.raw) })
         val records = heard.map { clip ->
             val case = clip.case
-            val clipGain = if (case.recipe.config.model == 1) 1.0 else rawGain
+            val clipGain = when (case.recipe.config.model) { 1 -> 1.0; 2 -> rawGain; else -> alloyGain }
             val native = Snip(FloatArray(clip.rendered.raw.size) { (clip.rendered.raw[it] * clipGain).toFloat() }, 1, RATE)
             val matched = AuditionLevel.level(Snip(clip.rendered.raw.copyOf(), 1, RATE))
             check(native.samples.all { it.isFinite() && abs(it) < 1f }) { "${case.id}: native PCM would clip" }
@@ -118,8 +124,13 @@ object CausticAuditionGenerator {
                 "section" to case.section, "group" to case.group, "comparison" to case.comparison,
                 "recommendedOrder" to case.recommendedOrder,
                 "model" to case.recipe.config.model,
-                "profile" to if (case.recipe.config.model == 1) "Original" else case.recipe.config.character.name.lowercase().replaceFirstChar { it.uppercase() },
-                "revision" to if (case.recipe.config.model == 1) "static-1" else "depth-2",
+                "profile" to when (case.recipe.config.model) {
+                    1 -> "Original"
+                    3 -> if (case.recipe.config.bloom == .5) "Alloy Bloom" else "Alloy Deep"
+                    else -> case.recipe.config.character.name.lowercase().replaceFirstChar { it.uppercase() }
+                },
+                "revision" to when (case.recipe.config.model) { 1 -> "static-1"; 2 -> "depth-2"; else -> "alloy-bloom-3" },
+                "bloom" to case.recipe.config.bloom,
                 "rawExportGain" to clipGain,
                 "midi" to case.recipe.config.midi, "velocity" to case.recipe.config.velocity,
                 "source" to case.recipe.config.source, "focus" to case.recipe.config.focus,
@@ -128,11 +139,22 @@ object CausticAuditionGenerator {
                 "rawSha256" to sha256(File(root, rawPath).readBytes()),
                 "matchedSha256" to sha256(File(root, matchedPath).readBytes()),
                 "recipeSha256" to sha256(File(root, recipePath).readBytes()),
-                "metrics" to if (case.recipe.config.model == 1) clip.metrics else clip.metrics +
-                    ("normalizedBandDistanceFromOriginal" to bandDistance(clip.metrics, heard.first {
+                "metrics" to when (case.recipe.config.model) {
+                    1 -> clip.metrics
+                    2 -> clip.metrics + ("normalizedBandDistanceFromOriginal" to bandDistance(clip.metrics, heard.first {
                         it.case.id == if (case.recipe.config.focus == .85) "source-050-focus-0850"
                             else when (case.recipe.config.midi) { 36 -> "register-low"; 84 -> "register-high"; else -> "mechanism-full" }
-                    }.metrics)),
+                    }.metrics))
+                    else -> {
+                        val preferred = heard.first { it.case.id == alloyReference(case.recipe.config.midi, case.recipe.config.focus) }.metrics
+                        clip.metrics + mapOf(
+                            "normalizedBandDistanceFromAlloy" to bandDistance(clip.metrics, preferred),
+                            "earlyEnergyDbFromAlloy" to 20 * log10((clip.metrics.getValue("earlyRms") as Number).toDouble() / (preferred.getValue("earlyRms") as Number).toDouble()),
+                            "lateEnergyDbFromAlloy" to 20 * log10((clip.metrics.getValue("lateRms") as Number).toDouble() / (preferred.getValue("lateRms") as Number).toDouble()),
+                            "reference" to alloyReference(case.recipe.config.midi, case.recipe.config.focus),
+                        )
+                    }
+                },
             )
         }
         for ((path, expected) in originalFiles) {
@@ -148,9 +170,11 @@ object CausticAuditionGenerator {
             "modeCount" to heard.first { it.case.recipe.variant == Caustic.Mode.FULL }.rendered.modalEnergy.size,
             "depthModeCount" to heard.first { it.case.recipe.config.model == 2 }.rendered.modalEnergy.size,
             "rawExportGain" to 1.0,
-            "rawExportGains" to linkedMapOf("original" to 1.0, "depth" to rawGain),
-            "originalClipCount" to 24, "revisionClipCount" to 12,
+            "rawExportGains" to linkedMapOf("original" to 1.0, "depth" to rawGain, "alloy" to alloyGain),
+            "originalClipCount" to 24, "revisionClipCount" to 12, "alloyClipCount" to 8,
+            "previousClipCount" to 36,
             "originalFilesVerified" to originalFiles.size,
+            "publishedFilesVerified" to originalFiles.size,
             "maximumRawPeak" to maximumRawPeak,
             "maximumModalPeak" to heard.maxOf { it.rendered.modalPeak },
             "maximumAbsoluteDc" to heard.maxOf { abs((it.metrics.getValue("dc") as Number).toDouble()) },
@@ -160,23 +184,23 @@ object CausticAuditionGenerator {
             "pitchToleranceCents" to ROOT_TOLERANCE_CENTS,
             "totalPreparationMillis" to heard.sumOf { it.rendered.prepareMillis },
             "totalRenderMillis" to heard.sumOf { it.rendered.renderMillis },
-            "portableRecipeReplay" to "Original full-control and all three C4 characters replayed sample for sample; every recipe round-tripped exactly.",
-            "leveling" to "Native: original release gain 1 unchanged; the depth revision shares one recorded gain. Matched: existing AuditionLevel loudest-200-ms rule applied separately to each clip.",
+            "portableRecipeReplay" to "Original full-control and all C4 depth/bloom candidates replayed sample for sample; every recipe round-tripped exactly.",
+            "leveling" to "Native: original release gain 1 unchanged; depth and Alloy bloom revisions each share their own recorded gain. Matched: existing AuditionLevel loudest-200-ms rule applied separately to each clip.",
             "checks" to listOf("finite raw/output/modal diagnostics", "raw and modal peaks below prototype ceiling 8", "no exported clipping", "FFT root and broadband pitch estimate within 20 cents with periodicity confidence at least .3", "raw full/short-window classifier avoids drum classes", "exact recipe round trips and representative sample replay"),
             "limits" to listOf("Static circular geometry only", "No ORBIT, deformation, SCATTER or HOLD", "Finite notes; no seamless-loop claim", "No phone picker or factory-preset integration", "Geometry density maxima do not guarantee phase-coherent audio maxima", "Pitch and spectra are measurements, not listening acceptance"),
         )
         val manifest = linkedMapOf<String, Any?>(
-            "title" to "CAUSTIC · depth and character",
-            "description" to "Compare the original static vessel with three deeper character candidates at the same geometry. Body, Reed and Alloy change excitation and resonant material while reflected paths retain their coherent phase. All 24 original clips remain available unchanged.",
-            "model" to 2, "generatedAt" to Instant.now().toString(),
-            "downloads" to linkedMapOf("full" to "depth-audition.zip", "original" to "audition.zip"),
+            "title" to "CAUSTIC · Alloy bloom",
+            "description" to "Alloy was preferred. This narrow comparison keeps its source, attack, pitch and geometry, extending only the decay of selected companion resonances. Compare Preferred Alloy, Bloom and Deep at the same notes and pickup positions. All 36 earlier clips remain unchanged.",
+            "model" to 3, "generatedAt" to Instant.now().toString(),
+            "downloads" to linkedMapOf("full" to "alloy-bloom.zip", "depth" to "depth-audition.zip", "original" to "audition.zip"),
             "sourceRevision" to sourceRevision, "summary" to summary, "clips" to records,
         )
         val manifestText = Json.write(json(manifest))
         File(root, "manifest.json").writeText(manifestText + "\n")
         File(root, "manifest.js").writeText("window.CAUSTIC_MANIFEST = $manifestText;\n")
         val diagnostics = linkedMapOf<String, Any?>(
-            "model" to 2, "sourceRevision" to sourceRevision, "summary" to summary,
+            "model" to 3, "sourceRevision" to sourceRevision, "summary" to summary,
             "clips" to heard.map { clip -> linkedMapOf(
                 "id" to clip.case.id, "recipe" to clip.case.recipe.toJsonValue(), "metrics" to clip.metrics,
                 "pickupDensities" to clip.rendered.densities,
@@ -190,10 +214,10 @@ object CausticAuditionGenerator {
         check(File(assets, "index.html").isFile) { "CAUSTIC listening page assets are missing: $assets" }
         assets.copyRecursively(root, overwrite = true)
         File(root, "README.txt").writeText(
-            "CAUSTIC static prototype, original model 1 and depth model 2.\n\nOpen index.html locally; manifest.js makes the pack work without a server.\n" +
+            "CAUSTIC static prototype, original model 1, depth model 2 and Alloy bloom model 3.\n\nOpen index.html locally; manifest.js makes the pack work without a server.\n" +
                 "Each recipes/*.json is a complete CausticRecipe accepted by CausticRecipe.fromJsonText.\n" +
                 "Rebuild this pack: ./gradlew :synth:generateCausticAudition\n" +
-                "Original WAVs retain their published gain 1. Depth WAVs share a separate common gain. Matched WAVs use the project's AuditionLevel rule.\n" +
+                "Every revision retains its recorded common gain. Matched WAVs use the project's AuditionLevel rule.\n" +
                 "SHA-256 hashes, source revision/fingerprints and measurements are in manifest.json and diagnostics.json.\n" +
                 "This is static geometry only, with finite notes and no phone or HOLD implementation.\n",
         )
@@ -203,10 +227,15 @@ object CausticAuditionGenerator {
         if (!File(root, "audition.zip").isFile) {
             writePack(root, "audition.zip", manifest, diagnostics, records.filter { it["model"] == 1 }, "CAUSTIC · original static listen", 1)
         }
-        val depthIds = setOf("mechanism-full", "register-low", "register-high")
-        writePack(root, "depth-audition.zip", manifest, diagnostics,
-            records.filter { it["model"] == 2 || it["id"] in depthIds }, "CAUSTIC · depth and character", 2)
-        check(File(root, "depth-audition.zip").length() < 25L * 1024 * 1024) { "depth pack exceeds 25 MiB" }
+        if (!File(root, "depth-audition.zip").isFile) {
+            val depthIds = setOf("mechanism-full", "register-low", "register-high")
+            writePack(root, "depth-audition.zip", manifest, diagnostics,
+                records.filter { it["model"] == 2 || it["id"] in depthIds }, "CAUSTIC · depth and character", 2)
+        }
+        val preferredIds = setOf("depth-alloy-c2", "depth-alloy-c4", "depth-alloy-c6", "depth-alloy-sparse")
+        writePack(root, "alloy-bloom.zip", manifest, diagnostics,
+            records.filter { it["model"] == 3 || it["id"] in preferredIds }, "CAUSTIC · Alloy bloom", 3)
+        check(File(root, "alloy-bloom.zip").length() < 25L * 1024 * 1024) { "Alloy bloom pack exceeds 25 MiB" }
     }
 
     private fun cases(): List<Case> {
@@ -280,6 +309,23 @@ object CausticAuditionGenerator {
         return main + sparse
     }
 
+    private fun alloyReference(midi: Int, focus: Double): String = if (focus == .85) "depth-alloy-sparse"
+        else "depth-alloy-" + when (midi) { 36 -> "c2"; 84 -> "c6"; else -> "c4" }
+
+    private fun alloyCases(): List<Case> = listOf(60 to .19, 36 to .19, 84 to .19, 60 to .85).flatMapIndexed { locationIndex, (midi, focus) ->
+        listOf(.5 to "bloom", 1.0 to "deep").mapIndexed { candidateIndex, (bloom, candidate) ->
+            val position = if (focus == .85) "sparse" else when (midi) { 36 -> "c2"; 84 -> "c6"; else -> "c4" }
+            val label = candidate.replaceFirstChar { it.uppercase() }
+            Case("alloy-$candidate-$position", "$label · ${if (position == "sparse") "sparse pickup" else position.uppercase()}",
+                "Preferred Alloy's source, attack, pitch, gains and geometry are retained. BLOOM $bloom extends only the decay of companion resonances on harmonics 2–7. " +
+                    "SOURCE .50, FOCUS ${if (focus == .85) ".850" else ".190"}, velocity .75. New clip 8 seconds; the unchanged preferred reference is 6.5 seconds.",
+                "alloy", "alloy-$position",
+                CausticRecipe(Caustic.Config(source = .5, focus = focus, midi = midi, velocity = .75,
+                    seconds = 8.0, model = 3, character = Caustic.Character.ALLOY, bloom = bloom)),
+                comparison = alloyReference(midi, focus), recommendedOrder = 1 + locationIndex * 2 + candidateIndex)
+        }
+    }
+
     private fun validate(case: Case, r: Caustic.Rendered) {
         val expectedFrames = (case.recipe.config.seconds * RATE).roundToInt()
         check(r.raw.size == expectedFrames && r.samples.size == expectedFrames) { "${case.id}: unexpected output duration" }
@@ -303,6 +349,7 @@ object CausticAuditionGenerator {
         val measuredRoot = FineTuning.measuredHz(raw, hz.toFloat(), fromSec = .3f, bodySeconds = .75f)
         val earlyRms = windowRms(r.raw, .05, .45)
         val lateRms = windowRms(r.raw, 2.5, 3.5)
+        val endRms = windowRms(r.raw, recipe.config.seconds - .40, recipe.config.seconds - .05)
         return linkedMapOf(
             "rawPeak" to peak(r.raw), "rawRms" to rms(r.raw), "dc" to r.raw.map { it.toDouble() }.average(),
             "pitchHz" to estimate?.hz, "pitchConfidence" to estimate?.confidence,
@@ -316,6 +363,8 @@ object CausticAuditionGenerator {
             "prepareMillis" to r.prepareMillis, "renderMillis" to r.renderMillis,
             "earlyRms" to earlyRms, "lateRms" to lateRms,
             "lateToEarlyDb" to 20 * log10((lateRms / earlyRms.coerceAtLeast(1e-30)).coerceAtLeast(1e-12)),
+            "naturalEndRms" to endRms,
+            "naturalEndDbFromPeak" to 20 * log10((endRms / peak(r.raw).coerceAtLeast(1e-30)).coerceAtLeast(1e-12)),
             "bandsDb" to bands(r.raw),
         )
     }
@@ -397,7 +446,7 @@ object CausticAuditionGenerator {
         val file = File(root, "manifest.json")
         if (!file.isFile) return emptyMap()
         val manifest = Json.parse(file.readText()).obj()
-        val originalIds = cases().map { it.id }.toSet()
+        val originalIds = (cases() + depthCases()).map { it.id }.toSet()
         val out = linkedMapOf<String, String>()
         for (item in manifest.getValue("clips").arr()) {
             val clip = item.obj()
@@ -409,7 +458,7 @@ object CausticAuditionGenerator {
                 out[path] = actual
             }
         }
-        check(out.size == 72) { "expected 72 published original audio/recipe files; found ${out.size}" }
+        check(out.size == 108) { "expected 108 published audio/recipe files; found ${out.size}" }
         return out
     }
 
@@ -438,6 +487,8 @@ object CausticAuditionGenerator {
                 mapOf("clipCount" to selected.size, "portableSubset" to true,
                     "originalClipCount" to selected.count { it["model"] == 1 },
                     "revisionClipCount" to selected.count { it["model"] == 2 },
+                    "alloyClipCount" to selected.count { it["model"] == 3 },
+                    "previousClipCount" to selected.count { (it["model"] as Int) < 3 },
                     "originalClipsOmitted" to (selected.count { it["model"] == 1 } < 24))
             val subset = LinkedHashMap(manifest).apply {
                 put("title", title); put("model", model); put("clips", selected); put("summary", summary)

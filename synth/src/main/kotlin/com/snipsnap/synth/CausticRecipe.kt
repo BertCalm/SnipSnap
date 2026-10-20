@@ -20,6 +20,8 @@ data class CausticRecipe(
         require(config.model != 1 || config.character == Caustic.Character.BODY) {
             "CAUSTIC model 1 has no selectable character"
         }
+        require(config.model >= 3 || config.bloom == 0.0) { "CAUSTIC older models have no BLOOM control" }
+        require(config.model != 3 || config.character == Caustic.Character.ALLOY) { "CAUSTIC model 3 requires ALLOY" }
     }
 
     fun inspect(cancelled: () -> Boolean = { false }): Caustic.Rendered =
@@ -27,7 +29,7 @@ data class CausticRecipe(
 
     fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
         "format" to JsonValue.Str(FORMAT),
-        "version" to JsonValue.Num(if (config.model == 1) 1.0 else VERSION.toDouble()),
+        "version" to JsonValue.Num(config.model.toDouble()),
         "model" to JsonValue.Num(config.model.toDouble()),
         "variant" to JsonValue.Str(variant.name),
         "configuration" to JsonValue.Obj(linkedMapOf<String, JsonValue>(
@@ -39,14 +41,17 @@ data class CausticRecipe(
             "aperture" to JsonValue.Num(config.aperture),
             "delayCycles" to JsonValue.Num(config.delayCycles),
             "rayCount" to JsonValue.Num(config.rayCount.toDouble()),
-        ).also { if (config.model >= 2) it["character"] = JsonValue.Str(config.character.name) }),
+        ).also {
+            if (config.model >= 2) it["character"] = JsonValue.Str(config.character.name)
+            if (config.model >= 3) it["bloom"] = JsonValue.Num(config.bloom)
+        }),
     ))
 
     fun toJsonText(): String = Json.write(toJsonValue())
 
     companion object {
         const val FORMAT = "snipsnap.caustic.static-prototype"
-        const val VERSION = 2
+        const val VERSION = 3
 
         fun fromJsonText(text: String): CausticRecipe = fromJsonValue(Json.parse(text))
 
@@ -61,8 +66,10 @@ data class CausticRecipe(
             val variant = Caustic.Mode.entries.firstOrNull { it.name == variantName }
                 ?: throw JsonException("unknown CAUSTIC diagnostic variant $variantName")
             val c = root.getValue("configuration").obj()
-            requireKeys(c, setOf("source", "focus", "midi", "velocity", "seconds", "aperture", "delayCycles", "rayCount") +
-                if (model >= 2) setOf("character") else emptySet(), "configuration")
+            val configurationKeys = mutableSetOf("source", "focus", "midi", "velocity", "seconds", "aperture", "delayCycles", "rayCount")
+            if (model >= 2) configurationKeys += "character"
+            if (model >= 3) configurationKeys += "bloom"
+            requireKeys(c, configurationKeys, "configuration")
             val character = if (model >= 2) {
                 val name = c.getValue("character").str()
                 Caustic.Character.entries.firstOrNull { it.name == name }
@@ -79,6 +86,7 @@ data class CausticRecipe(
                 rayCount = c.getValue("rayCount").int(),
                 model = model,
                 character = character,
+                bloom = if (model >= 3) c.getValue("bloom").num() else 0.0,
             ), variant)
         }
 

@@ -234,6 +234,60 @@ class CausticTest {
         assertTrue(abs(cents) < 20, "Alloy C2 virtual pitch drift $cents cents")
     }
 
+    @Test
+    fun `Alloy bloom zero exactly preserves the preferred model2 in every diagnostic`() {
+        val c = Caustic.Config(model = 2, character = Caustic.Character.ALLOY, seconds = .65)
+        for (mode in Caustic.Mode.entries) {
+            val old = Caustic.inspect(c, mode)
+            val bloomZero = Caustic.inspect(c.copy(model = 3), mode)
+            assertContentEquals(old.raw, bloomZero.raw, "$mode bloom0 changed preferred Alloy")
+            assertContentEquals(old.modalEnergy, bloomZero.modalEnergy)
+        }
+        for (bad in listOf<() -> Caustic.Config>(
+            { c.copy(bloom = .5) }, { c.copy(model = 3, character = Caustic.Character.BODY) },
+            { c.copy(model = 3, bloom = Double.NaN) }, { c.copy(model = 3, bloom = 1.01) },
+        )) assertFailsWith<IllegalArgumentException> { bad() }
+    }
+
+    @Test
+    fun `Alloy bloom extends sympathetic body while preserving attack and geometry`() {
+        val c = Caustic.Config(model = 3, character = Caustic.Character.ALLOY,
+            source = .5, focus = .19, seconds = 4.5)
+        val old = Caustic.inspect(c)
+        val soft = Caustic.inspect(c.copy(bloom = .5))
+        val strong = Caustic.inspect(c.copy(bloom = 1.0))
+        fun rms(x: FloatArray, start: Double, end: Double): Double {
+            val from = (start * Caustic.RATE).toInt(); val to = (end * Caustic.RATE).toInt()
+            return sqrt((from until to).sumOf { x[it].toDouble() * x[it] } / (to - from))
+        }
+        fun tailRatio(x: FloatArray) = rms(x, 2.5, 4.0) / rms(x, .2, .8)
+        assertTrue(tailRatio(soft.raw) > tailRatio(old.raw) * 1.05, "soft bloom must extend the actual body")
+        assertTrue(tailRatio(strong.raw) > tailRatio(old.raw) * 1.15, "strong bloom must extend the actual body")
+        val attack = rms(strong.raw, .02, .12) / rms(old.raw, .02, .12)
+        assertTrue(abs(attack - 1.0) < .08, "bloom changed attack level ($attack)")
+        assertContentEquals(strong.raw, Caustic.inspect(c.copy(bloom = 1.0)).raw)
+        assertTrue(strong.diagnostics.rawPeak < .99)
+        val sparse = Caustic.inspect(c.copy(bloom = 1.0, focus = .85))
+        val a = harmonics(strong.raw, strong.diagnostics.noteHz)
+        val b = harmonics(sparse.raw, sparse.diagnostics.noteHz)
+        assertTrue(a.indices.sumOf { abs(a[it] - b[it]) } > .08, "bloom lost geometric coloration")
+        assertTrue(Caustic.inspect(c.copy(bloom = 1.0, seconds = .4, velocity = 0.0)).raw.all { it == 0f })
+    }
+
+    @Test
+    fun `Alloy strong bloom keeps bass middle and treble pitch and fixed headroom`() {
+        for (midi in listOf(36, 60, 84)) {
+            val r = Caustic.inspect(Caustic.Config(model = 3, character = Caustic.Character.ALLOY,
+                bloom = 1.0, midi = midi, source = .5, focus = .19, velocity = 1.0, seconds = 1.2))
+            assertTrue(r.raw.all { it.isFinite() })
+            assertTrue(r.diagnostics.rawPeak in .001.. .99, "MIDI$midi bloom peak ${r.diagnostics.rawPeak}")
+            val pitch = assertNotNull(Pitch.detect(Snip(r.raw, 1, Caustic.RATE), fromSec = .5f, windowSec = .35f))
+            assertTrue(pitch.confidence >= .3)
+            val cents = 1200 * kotlin.math.ln(pitch.hz / r.diagnostics.noteHz) / kotlin.math.ln(2.0)
+            assertTrue(abs(cents) < 20, "MIDI$midi bloom virtual pitch drift $cents cents")
+        }
+    }
+
     private fun relativeDifference(a: DoubleArray, b: DoubleArray): Double =
         sqrt(a.indices.sumOf { val d = a[it] - b[it]; d * d } / a.sumOf { it * it }.coerceAtLeast(1e-30))
 

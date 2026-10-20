@@ -2159,3 +2159,45 @@ body.has-player footer {
   .archive-intro {padding:18px 0 22px;}
   .archive-intro p {font-size:10px;}
 }
+
+.depth-profile-grid.three-profiles {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.profile-preferred {
+  --profile-accent:#e8c59a;
+}
+.profile-bloom {
+  --profile-accent:#d0ef97;
+}
+.profile-deep {
+  --profile-accent:#8edbcb;
+}
+.profile-preferred .profile-name {
+  font-size:26px;
+}
+.archive-downloads {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-items:flex-start;
+}
+@media(max-width:560px) {
+  .depth-profile-grid.three-profiles {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .three-profiles .profile-preferred {
+    grid-column:1/-1;
+  }
+  .three-profiles .profile-preferred .depth-profile {
+    min-height:180px;
+  }
+  .three-profiles .profile-preferred .profile-upper {
+    margin-bottom:12px;
+  }
+  .profile-preferred .profile-name {
+    font-size:25px;
+  }
+  .archive-downloads {
+    margin-top:13px;
+  }
+}
