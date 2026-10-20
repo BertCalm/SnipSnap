@@ -71,6 +71,8 @@ import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RelayVoice
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.ScannedChain
+import com.snipsnap.synth.ScannedChainPatch
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Spool
@@ -100,6 +102,7 @@ import com.snipsnap.synth.VentPresets
 import com.snipsnap.synth.VentVoice
 import com.snipsnap.synth.Wick
 import com.snipsnap.synth.WickPatch
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.WickPresets
 import com.snipsnap.synth.WickVoice
 import java.io.File
@@ -131,7 +134,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -161,8 +164,9 @@ import kotlin.random.Random
  * CHAMBER offers finite HYBRID/AQUARIUM recipes, native note/velocity, full 64-bit
  * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
  * TIDAL offers finite PAIR/STREAM encounter prototypes with native note/velocity,
- * exact 64-bit --seed, model 1, and complete --patch replay. HOLD reconstruction is deferred.
+ * exact 64-bit --seed, versioned models, and complete --patch replay. HOLD reconstruction is deferred.
  * TRIO accepts `--tempo 60..200 --beats 1..4`; the finite gesture must fit within two seconds.
+ * OHM STRING offers five finite family encounters, with --midi 48..72, --velocity and --seed.
  */
 object SynthCommand {
 
@@ -270,6 +274,7 @@ object SynthCommand {
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                ScannedChainPatch.ENGINE -> ScannedChain.MIDI_MIN..ScannedChain.MIDI_MAX
                 ObbligatoPatch.ENGINE -> Obbligato.MIDI_MIN..Obbligato.MIDI_MAX
                 OrphicaPatch.ENGINE -> Orphica.MIDI_MIN..Orphica.MIDI_MAX
                 OspreyPatch.ENGINE -> Osprey.MIDI_MIN..Osprey.MIDI_MAX
@@ -283,6 +288,7 @@ object SynthCommand {
                 ChamberPatch.ENGINE -> Chamber.MIDI_MIN..Chamber.MIDI_MAX
                 TidalPatch.ENGINE -> Tidal.MIN_MIDI..Tidal.MAX_MIDI
                 NacrePatch.ENGINE -> Nacre.MIN_MIDI..Nacre.MAX_MIDI
+                OhmPatch.ENGINE -> 48..72
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
                     val root = Prism.rootMidi(prismVoice)
@@ -291,7 +297,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL and TRIO, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO and OHM, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -315,7 +321,7 @@ object SynthCommand {
                 ?: throw CliError("--beats for TRIO is 1..4, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE, OhmPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
@@ -406,6 +412,7 @@ object SynthCommand {
                 is ChamberPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TidalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is NacrePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is OhmPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ShoalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
                     macros = if (midiOverride == null) patch.macros else patch.macros +
@@ -421,6 +428,7 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ScannedChainPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ObbligatoPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OrphicaPatch -> patch.copy(
                     config = patch.config.copy(
@@ -493,6 +501,7 @@ object SynthCommand {
             else if (withNote is FlockPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
+            else if (withNote is OhmPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else withNote
         }
 

@@ -262,12 +262,14 @@ object Velocity {
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
+        is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
-        is TidalPatch -> Tidal.macrosFor(patch.voice)
+        is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
         is NacrePatch -> Nacre.macrosFor(patch.voice)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
+        is OhmPatch -> Ohm.MACROS
     }
 
     /**
@@ -407,12 +409,14 @@ object Velocity {
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
+        is ScannedChainPatch -> patch.copy(velocity = v).render()
         is ChamberPatch -> patch.copy(velocity = v).render()
         is TidalPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
+        is OhmPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()

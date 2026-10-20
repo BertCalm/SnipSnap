@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>SnipSnap — Scanned chain listening pass</title>
+  <style>
+    :root { --bg:#101612; --panel:#19231b; --line:#354b39; --ink:#e4efdf; --muted:#a7b6a2; --green:#b5ec97; --amber:#f3bd72; --chrome:#c2c8bc; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 Verdana, sans-serif; }
+    button, select, textarea, a { -webkit-tap-highlight-color:transparent; }
+    button, select, textarea { font:inherit; }
+    button, select { min-height:44px; }
+    button { cursor:pointer; }
+    button:disabled { cursor:default; opacity:.55; }
+    button, select, textarea { border:1px solid var(--line); border-radius:2px; background:#101a13; color:var(--ink); }
+    button:hover, select:hover { border-color:var(--green); }
+    :focus-visible { outline:3px solid var(--amber); outline-offset:4px; }
+    a { color:var(--green); text-underline-offset:3px; }
+    h1, h2, h3, p { margin:0; }
+    h1 { font-size:clamp(27px,4vw,40px); line-height:1.18; letter-spacing:-1px; max-width:800px; }
+    h2 { font-size:21px; line-height:1.3; }
+    h3 { font-size:15px; }
+    .window { max-width:1160px; margin:24px auto 50px; border:1px solid #536650; }
+    .titlebar { display:flex; justify-content:space-between; gap:12px; background:var(--chrome); color:#182217; padding:10px 20px; font:12px/1.3 monospace; letter-spacing:.06em; }
+    .masthead { padding:32px; border-bottom:1px solid var(--line); background:radial-gradient(ellipse at top right,#253523 0,transparent 65%); }
+    .eyebrow { color:var(--amber); font:12px/1.4 monospace; text-transform:uppercase; letter-spacing:.13em; margin-bottom:13px; }
+    .intro { max-width:800px; margin-top:17px; color:var(--muted); }
+    .intro strong { color:var(--ink); font-weight:normal; }
+    .instruction { margin-top:18px; padding:13px 16px; border-left:2px solid var(--amber); background:#141d16; font-size:13px; color:var(--muted); }
+    .view-tabs { display:flex; gap:8px; padding:14px 22px; border-bottom:1px solid var(--line); background:#131b15; }
+    .view-tab { padding:11px 16px; font-size:13px; font-weight:bold; }
+    .view-tab[aria-selected="true"] { color:#172013; background:var(--green); border-color:var(--green); }
+    .layout { display:grid; grid-template-columns:minmax(240px,330px) minmax(0,1fr); }
+    .library { padding:26px 22px; border-right:1px solid var(--line); background:#131b15; }
+    .section-label { color:var(--muted); font:12px/1.4 monospace; text-transform:uppercase; letter-spacing:.1em; }
+    .library-header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:15px; }
+    .pair-list { display:grid; gap:9px; }
+    .pair { display:block; padding:13px 14px; width:100%; min-width:0; text-align:left; background:#172019; }
+    .pair[aria-pressed="true"] { border-color:var(--green); background:#243222; box-shadow:inset 3px 0 var(--green); }
+    .pair-title { display:block; font-size:13px; font-weight:bold; line-height:1.5; }
+    .pair-sub { display:block; color:var(--muted); font:11px/1.6 monospace; margin-top:4px; }
+    .pair-reviewed::after { content:" · noted"; color:var(--amber); }
+    .advanced { margin-top:16px; padding-top:12px; }
+    .advanced summary { min-height:44px; }
+    .listener { padding:26px 32px 32px; min-width:0; }
+    .badge { display:inline-block; color:var(--amber); font:11px/1.5 monospace; border:1px solid #64523a; padding:3px 7px; margin-bottom:10px; }
+    .description { color:var(--muted); margin-top:10px; font-size:13px; }
+    .caveat { color:var(--amber); font-size:12px; margin-top:9px; }
+    .setting-panel { margin-top:22px; padding:17px; background:#202c21; border:1px solid #63775a; }
+    .setting-head { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; }
+    .setting-value { color:var(--green); font:bold 19px/1.4 monospace; overflow-wrap:anywhere; }
+    .setting-reference { color:var(--muted); font:11px/1.5 monospace; margin-top:8px; }
+    .setting-range { display:block; width:100%; height:44px; margin:8px 0 3px; cursor:pointer; accent-color:var(--green); }
+    .detents { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin-top:8px; }
+    .detents.shapes { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .detent { padding:9px 5px; min-width:0; font:12px/1.4 monospace; overflow-wrap:anywhere; }
+    .detent[aria-pressed="true"] { border-color:var(--green); color:var(--green); background:#2c3d29; box-shadow:inset 0 -2px var(--green); }
+    .detent[data-reference="true"]::after { display:block; content:"REF"; color:var(--amber); font-size:9px; margin-top:3px; }
+    .detent[data-default="true"][data-reference="false"]::after { display:block; content:"DEFAULT"; color:var(--amber); font-size:8px; white-space:nowrap; margin-top:3px; }
+    .exploring .shape svg { height:94px; }
+    .source-label { margin-top:13px; font:12px/1.5 monospace; color:var(--muted); }
+    .shape { margin:20px 0 21px; border:1px solid var(--line); background:#0c140e; }
+    .shape svg { display:block; width:100%; height:132px; }
+    .shape figcaption { margin:0; padding:7px 11px; border-top:1px solid #243426; color:var(--muted); font:11px/1.5 monospace; }
+    .comparison-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .level-label { display:flex; align-items:center; gap:9px; color:var(--muted); font-size:12px; }
+    select { padding:7px 27px 7px 10px; max-width:100%; }
+    .ab { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .version { padding:13px; text-align:left; background:#202c21; border:1px solid #63775a; }
+    .version[aria-pressed="true"] { background:#b5ec97; color:#172013; border-color:#b5ec97; }
+    .version-name { display:block; font:bold 17px/1.4 monospace; }
+    .version-hint { display:block; font-size:11px; margin-top:3px; opacity:.8; }
+    .transport { display:flex; flex-wrap:wrap; gap:8px; margin:11px 0 13px; }
+    .transport button { padding:7px 12px; font-size:12px; }
+    audio { display:block; width:100%; height:46px; }
+    .play-status { min-height:23px; margin-top:9px; color:var(--amber); font:12px/1.6 monospace; }
+    .level-explanation { color:var(--muted); font-size:11px; margin-top:3px; }
+    .notes { border-top:1px solid var(--line); padding-top:23px; margin-top:24px; }
+    .notes label { display:block; margin:13px 0 7px; font-size:12px; color:var(--muted); }
+    .notes select { width:100%; }
+    textarea { width:100%; min-height:112px; padding:11px; resize:vertical; line-height:1.55; font-size:13px; }
+    textarea::placeholder { color:#84917f; }
+    .notes-footer { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .notes-footer button { padding:7px 12px; font-size:12px; }
+    .save-status { color:var(--muted); font-size:11px; max-width:320px; }
+    details { border-top:1px solid var(--line); margin-top:24px; padding-top:14px; color:var(--muted); font-size:12px; }
+    summary { cursor:pointer; min-height:44px; }
+    .metrics { width:100%; border-collapse:collapse; margin-top:8px; font:11px/1.5 monospace; }
+    .metrics th, .metrics td { padding:7px 5px; border-bottom:1px solid #29392c; text-align:left; }
+    .metrics th { color:var(--ink); font-weight:normal; }
+    .provenance { white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.6 monospace; margin:12px 0 0; }
+    footer { border-top:1px solid var(--line); padding:16px 24px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; font:11px/1.6 monospace; color:var(--muted); }
+    .empty { color:var(--amber); padding:24px; }
+    [hidden] { display:none !important; }
+    @media (max-width:720px) {
+      .window { margin:0; border-left:0; border-right:0; }
+      .titlebar { padding:10px 16px; }
+      .masthead { padding:25px 20px; }
+      .layout { grid-template-columns:1fr; }
+      .library { border-right:0; border-bottom:1px solid var(--line); padding:20px; }
+      .pair-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .pair { padding:11px; }
+      .listener { padding:23px 20px 28px; }
+      .shape svg { height:112px; }
+      .view-tabs { padding:12px 20px; }
+    }
+    @media (max-width:380px) {
+      .masthead, .library, .listener { padding-left:14px; padding-right:14px; }
+      .titlebar { font-size:10px; padding-left:14px; padding-right:14px; }
+      .comparison-head { align-items:start; flex-direction:column; gap:8px; }
+      .level-label { width:100%; justify-content:space-between; }
+      .version { padding:11px; }
+      .version-name { font-size:15px; }
+      .view-tabs { padding-left:14px; padding-right:14px; gap:6px; }
+      .view-tab { flex:1; padding:10px 8px; font-size:12px; }
+      .setting-panel { padding:13px; }
+      .detents { gap:4px; }
+      .detent { font-size:11px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="window">
+    <div class="titlebar"><span>SNIPSNAP / LISTENING ROOM</span><span>SCANNED CHAIN</span></div>
+    <header class="masthead">
+      <p class="eyebrow">Scanned chain · first listening pass</p>
+      <h1 id="pageHeading">Does moving physics add useful character?</h1>
+      <p id="pageIntro" class="intro"><strong>One shape. Two versions. The same note and envelope.</strong> Frozen holds the initial shape still. Moving lets the mass-and-spring chain evolve while the scanner reads it at musical pitch. These are finite prototype sounds, awaiting a listening verdict.</p>
+      <p id="pageInstruction" class="instruction">Pick a pair, then compare A and B. Switching keeps your place; <strong>Restart attack</strong> returns to the beginning. Start with matched levels, then check raw output.</p>
+    </header>
+    <div class="view-tabs" role="tablist" aria-label="Listening views">
+      <button id="exploreTab" class="view-tab" role="tab" aria-controls="layout" aria-selected="false" tabindex="-1" type="button">Explore parameters</button>
+      <button id="compareTab" class="view-tab" role="tab" aria-controls="layout" aria-selected="true" type="button">Frozen / moving</button>
+    </div>
+    <div id="empty" class="empty" hidden></div>
+    <div id="layout" class="layout" role="tabpanel" aria-labelledby="compareTab">
+      <aside id="library" class="library" aria-label="Listening pairs">
+        <div class="library-header"><h2 id="libraryLabel" class="section-label">Choose a pair</h2><span id="pairCount" class="section-label"></span></div>
+        <div id="pairList" class="pair-list"></div>
+        <div id="controlList" class="pair-list" hidden></div>
+        <details id="advancedControls" class="advanced" hidden><summary>More parameters</summary><div id="advancedControlList" class="pair-list"></div></details>
+      </aside>
+      <section class="listener" aria-labelledby="pairTitle">
+        <span id="sourceKind" class="badge"></span>
+        <h2 id="pairTitle"></h2>
+        <p id="description" class="description"></p>
+        <p id="expectedChange" class="description" hidden></p>
+        <p id="controlCaveat" class="caveat" hidden></p>
+        <p id="sourceLabel" class="source-label"></p>
+        <p id="imprintNote" class="description" hidden>A source-derived shape is a timbral imprint of a short window. It does not reconstruct speech or replay the recording.</p>
+        <section id="settingPanel" class="setting-panel" aria-labelledby="settingLabel" hidden>
+          <div class="setting-head"><h3 id="settingLabel">Selected setting</h3><output id="settingValue" class="setting-value" for="settingRange"></output></div>
+          <label class="section-label" id="rangeLabel" for="settingRange">Five rendered settings</label>
+          <input id="settingRange" class="setting-range" type="range" min="0" max="4" step="1" value="2" aria-describedby="settingReference">
+          <div id="detents" class="detents" role="group" aria-label="Five rendered settings"></div>
+          <p id="settingReference" class="setting-reference"></p>
+        </section>
+        <figure class="shape">
+          <svg viewBox="0 0 640 150" role="img" aria-labelledby="shapeTitle shapeDescription">
+            <title id="shapeTitle">Initial chain shape</title>
+            <desc id="shapeDescription">The same starting displacement profile is used by the frozen and moving versions.</desc>
+            <path d="M0 37.5H640 M0 75H640 M0 112.5H640 M160 0V150 M320 0V150 M480 0V150" stroke="#223727" stroke-width="1" fill="none"/>
+            <path id="shapePath" fill="none" stroke="#b5ec97" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+          <figcaption id="shapeCaption">INITIAL SHAPE / SHARED BY A AND B</figcaption>
+        </figure>
+        <div class="comparison-head">
+          <h3>Listen and compare</h3>
+          <label class="level-label" for="level">Levels <select id="level"><option value="matched">Matched</option><option value="raw">Raw</option></select></label>
+        </div>
+        <div id="abGroup" class="ab" role="group" aria-label="Compare frozen and moving physics">
+          <button id="frozen" class="version" type="button" aria-pressed="false"><span id="referenceName" class="version-name">A / FROZEN</span><span id="referenceHint" class="version-hint">Initial shape held still</span></button>
+          <button id="moving" class="version" type="button" aria-pressed="false"><span id="selectedName" class="version-name">B / MOVING</span><span id="selectedHint" class="version-hint">Physical shape evolves</span></button>
+        </div>
+        <div class="transport">
+          <button id="restart" type="button">Restart attack</button>
+          <button id="stop" type="button">Stop</button>
+          <button id="previewSource" type="button" hidden>Hear source</button>
+        </div>
+        <audio id="player" controls preload="metadata" aria-label="Selected audition audio"></audio>
+        <p id="playStatus" class="play-status" aria-live="polite">Choose A or B to begin.</p>
+        <p id="levelExplanation" class="level-explanation">Matched uses one fixed gain per clip to align overall RMS. It keeps the dynamics inside each clip.</p>
+        <div class="notes">
+          <h3>Your listening verdict</h3>
+          <label id="verdictQuestion" for="verdict">Does moving physics add useful character to this pair?</label>
+          <select id="verdict"><option value="">Choose after listening…</option><option value="useful">Yes — useful character</option><option value="subtle">Some change, but too subtle</option><option value="prefer_frozen">I prefer the frozen version</option><option value="unsure">Unsure — listen again</option></select>
+          <label id="noteQuestion" for="note">What changed? Which version would you put on a pad?</label>
+          <textarea id="note" placeholder="Attack, movement, body, pitch, or an unwanted edge…"></textarea>
+          <div class="notes-footer"><span id="saveStatus" class="save-status">Notes stay in this browser. Download them to keep a copy.</span><button id="exportNotes" type="button">Download notes</button></div>
+        </div>
+        <details><summary>Render details</summary><table class="metrics"><thead><tr><th id="metricHeading" scope="col">Matched output</th><th id="referenceMetricLabel" scope="col">A / Frozen</th><th id="selectedMetricLabel" scope="col">B / Moving</th></tr></thead><tbody id="metrics"></tbody></table><pre id="provenance" class="provenance"></pre></details>
+      </section>
+    </div>
+    <footer><span id="packInfo">Finite audio audition · no autoplay · no sustain loops</span><a id="downloadPack" hidden download>Download full audition</a></footer>
+  </main>
+  <script id="auditionManifest" type="application/json">__SCANNED_CHAIN_MANIFEST__</script>
+  <script>
+  (() => {
+    'use strict';
+    const el = id => document.getElementById(id);
+    let manifest;
+    try { manifest = JSON.parse(el('auditionManifest').textContent); }
+    catch (_) { el('empty').hidden = false; el('empty').textContent = 'This is the listening-page template. Generate the audition pack to hear its WAVs.'; el('layout').hidden = true; return; }
+    const pairs = Array.isArray(manifest.pairs) ? manifest.pairs : [];
+    const sweeps = manifest.sweeps || manifest.parameterSweeps || {};
+    const controls = (Array.isArray(sweeps) ? sweeps : sweeps.controls || []).filter(c => Array.isArray(c.steps) && c.steps.length === 5);
+    if (!pairs.length && !controls.length) { el('empty').hidden = false; el('empty').textContent = 'The manifest contains no listening material.'; el('layout').hidden = true; return; }
+    const player = el('player');
+    const kindNames = {FACTORY:'Factory shape', DRAWN:'Drawn shape', CAPTURE:'Recording-derived shape', SYNTHESIZED:'Synth source-derived shape'};
+    const legacyStorageKey = 'snipsnap-scanned-chain-notes-' + String(manifest.modelVersion || 'prototype');
+    const storageKey = legacyStorageKey + '-v2';
+    let notes = {};
+    let parameterNotes = {};
+    let storageWorks = true;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+      if (saved?.schemaVersion === 2) {
+        notes = saved.pairNotes || {};
+        parameterNotes = saved.parameterNotes || {};
+      } else {
+        const legacy = JSON.parse(localStorage.getItem(legacyStorageKey) || '{}');
+        if (legacy && typeof legacy === 'object' && !Array.isArray(legacy)) notes = legacy;
+      }
+    } catch (_) { storageWorks = false; }
+    let selected = pairs[0];
+    let view = controls.length ? 'explore' : 'compare';
+    let selectedControl = controls[0];
+    let stepIndex = 0;
+    let variant = null;
+    let loadedClip = null;
+    let revision = 0;
+    let pendingSeek = null;
+    const buttons = new Map();
+    const controlButtons = new Map();
+    const metricRows = [['RMS','rms'],['Peak','peak'],['DC','dc'],['Pitch Hz','pitchHz']];
+    const text = (id, value) => { el(id).textContent = value == null ? '' : String(value); };
+    const hasNote = id => !!(notes[id] && (notes[id].verdict || notes[id].note));
+    const defaultIndex = control => {
+      let index = control.steps.findIndex(s => s.isDefault);
+      if (index < 0) index = control.steps.findIndex(s => String(s.value) === String(control.defaultValue));
+      return index < 0 ? 2 : index;
+    };
+    const referenceIndex = control => {
+      let index = -1;
+      if (control.referenceValue != null) index = control.steps.findIndex(s => String(s.value) === String(control.referenceValue));
+      if (index < 0 && control.referenceStepId != null) index = control.steps.findIndex(s => s.id === control.referenceStepId);
+      if (index < 0) index = control.steps.findIndex(s => s.isReference);
+      return index < 0 ? defaultIndex(control) : index;
+    };
+    const activeStep = () => selectedControl.steps[stepIndex];
+    const referenceStep = () => selectedControl.steps[referenceIndex(selectedControl)];
+    const referenceName = () => String(selectedControl.referenceLabel || 'REFERENCE').toUpperCase();
+    const controlName = control => String(control.label || control.id).toUpperCase();
+    const parameterKey = () => selectedControl.id + '::' + String(activeStep().id ?? activeStep().value ?? stepIndex);
+    const unitLabels = {motion:'×', damp:'s⁻¹', bend:'', drive:'', midi:'MIDI', attack:'s', release:'s', rest:'', driveHz:'Hz'};
+    function actualValue(step, control = selectedControl) {
+      const value = step.actualParameterValue ?? step.value;
+      const unit = control.unit ?? unitLabels[control.parameter] ?? '';
+      if (value == null) return String(step.label || '');
+      const formatted = typeof value === 'number' && Number.isFinite(value) ? String(Number(value.toPrecision(6))) : String(value);
+      if (control.parameter === 'initialShape' || controlName(control) === 'SHAPE') return String(step.label || formatted);
+      if (control.parameter === 'midi') return noteName(value) + ' (MIDI ' + formatted + ')';
+      const shownUnit = {ratio:'×', seconds:'s', 's^-1':'s⁻¹', coefficient:'', fraction:'', 'force amount':''}[unit] ?? unit;
+      return formatted + (shownUnit ? ' ' + shownUnit : '');
+    }
+    const stepLabel = step => String(step.label ?? actualValue(step));
+    function clipData(which) {
+      if (view === 'explore') return which === 'frozen' ? referenceStep() : activeStep();
+      return selected[which];
+    }
+    const clipPath = which => which === 'source' ? selected?.sourcePreview : clipData(which)?.[el('level').value === 'raw' ? 'rawFile' : 'matchedFile'];
+    const clipLabel = () => variant === 'source' ? 'SOURCE PREVIEW' : (variant === 'frozen' ? (view === 'explore' ? 'A / ' + referenceName() : 'A / FROZEN') : (view === 'explore' ? 'B / SELECTED' : 'B / MOVING')) + ' · ' + el('level').value.toUpperCase();
+    const saveStatus = () => text('saveStatus', storageWorks ? 'Saved in this browser. Download notes to keep a copy.' : 'Notes kept for this session. Download them to save a copy.');
+    function saveNotes() {
+      const entry = {verdict:el('verdict').value, note:el('note').value, updatedAt:new Date().toISOString()};
+      if (view === 'explore') {
+        parameterNotes[parameterKey()] = {...entry, control:selectedControl.id, step:activeStep().id ?? stepIndex, value:activeStep().value, actualParameterValue:activeStep().actualParameterValue};
+      } else {
+        notes[selected.id] = entry;
+        buttons.get(selected.id)?.querySelector('.pair-sub').classList.toggle('pair-reviewed', hasNote(selected.id));
+      }
+      try { localStorage.setItem(storageKey, JSON.stringify({schemaVersion:2, pairNotes:notes, parameterNotes})); } catch (_) { storageWorks = false; }
+      saveStatus();
+    }
+    function restoreNotes() {
+      const entry = view === 'explore' ? parameterNotes[parameterKey()] : notes[selected.id];
+      el('verdict').options[1].textContent = view === 'explore' ? 'Yes — useful variation' : 'Yes — useful character';
+      el('verdict').options[2].textContent = 'Some change, but too subtle';
+      el('verdict').options[3].value = view === 'explore' ? 'prefer_reference' : 'prefer_frozen';
+      el('verdict').options[3].textContent = view === 'explore' ? 'I prefer the reference' : 'I prefer the frozen version';
+      el('verdict').value = entry?.verdict || '';
+      el('note').value = entry?.note || '';
+      if (entry?.verdict || entry?.note || !storageWorks) saveStatus();
+      else text('saveStatus', 'Notes stay in this browser. Download them to keep a copy.');
+    }
+    function setPressed() {
+      ['frozen','moving'].forEach(which => el(which).setAttribute('aria-pressed', String(which === variant)));
+    }
+    function resetPlayer() {
+      revision++;
+      player.pause();
+      player.removeAttribute('src');
+      player.load();
+      variant = null;
+      loadedClip = null;
+      pendingSeek = null;
+      setPressed();
+    }
+    function loadClip(which, shouldPlay, preservePosition) {
+      const file = clipPath(which);
+      if (!file) { text('playStatus', 'This version has no WAV in the pack.'); return; }
+      const elapsed = preservePosition && variant !== 'source' && which !== 'source' ? (pendingSeek?.elapsed ?? player.currentTime) : 0;
+      const serial = ++revision;
+      player.pause();
+      variant = which;
+      setPressed();
+      text('playStatus', 'Loading ' + clipLabel() + '…');
+      loadedClip = file;
+      pendingSeek = {serial, elapsed, shouldPlay};
+      player.src = file;
+      player.load();
+    }
+    player.addEventListener('canplay', () => {
+      const pending = pendingSeek;
+      if (!pending || pending.serial !== revision) return;
+      pendingSeek = null;
+      const duration = Number.isFinite(player.duration) ? player.duration : Infinity;
+      player.currentTime = Math.max(0, Math.min(pending.elapsed || 0, Math.max(0, duration - .01)));
+      text('playStatus', clipLabel() + (player.paused ? ' · READY' : ' · PLAYING'));
+      if (pending.shouldPlay) player.play().catch(() => {
+        if (pending.serial === revision) text('playStatus', clipLabel() + ' · press Play below to begin.');
+      });
+    });
+    player.addEventListener('play', () => { if (variant) text('playStatus', clipLabel() + ' · PLAYING'); });
+    player.addEventListener('pause', () => { if (variant && !pendingSeek && !player.ended) text('playStatus', clipLabel() + ' · PAUSED'); });
+    player.addEventListener('ended', () => { if (variant) text('playStatus', clipLabel() + ' · FINISHED'); });
+    player.addEventListener('error', () => { if (loadedClip) text('playStatus', 'Could not load this audio. Keep index.html beside the pack’s audio files.'); });
+    function renderMetrics() {
+      const matched = el('level').value === 'matched';
+      text('metricHeading', matched ? 'Matched output' : 'Raw audio output');
+      el('metrics').replaceChildren();
+      for (const [label, key] of metricRows) {
+        const row = document.createElement('tr');
+        const heading = document.createElement('th'); heading.scope = 'row'; heading.textContent = label; row.append(heading);
+        for (const which of ['frozen','moving']) {
+          const cell = document.createElement('td');
+          const measurement = matched ? clipData(which)?.matchedMetrics : clipData(which)?.rawExportMetrics;
+          const value = measurement?.[key];
+          cell.textContent = typeof value === 'number' && Number.isFinite(value) ? value.toPrecision(5) : '—'; row.append(cell);
+        }
+        el('metrics').append(row);
+      }
+    }
+    function renderLevelExplanation() {
+      const matched = el('level').value === 'matched';
+      text('levelExplanation', matched ? 'Matched uses one fixed gain per clip to align overall RMS. It keeps the dynamics inside each clip.' : view === 'explore' ? 'Raw preserves relative levels within this parameter. All five settings share any attenuation needed to keep audio in range.' : 'Raw preserves relative levels. Any attenuation needed to keep audio in range is shared across the original pack.');
+    }
+    function drawShape(shape) {
+      const points = Array.isArray(shape) ? shape.map(Number) : [];
+      const peak = Math.max(.000001, ...points.filter(Number.isFinite).map(Math.abs));
+      el('shapePath').setAttribute('d', points.map((v,i) => (i ? 'L' : 'M') + (i * 640 / Math.max(1, points.length - 1)).toFixed(2) + ',' + (75 - (Number.isFinite(v) ? v : 0) / peak * 59).toFixed(2)).join(' '));
+    }
+    function selectPair(pair) {
+      resetPlayer();
+      selected = pair;
+      for (const [id, button] of buttons) button.setAttribute('aria-pressed', String(id === pair.id));
+      text('pairTitle', pair.title || pair.id);
+      text('description', pair.description);
+      text('sourceKind', kindNames[pair.sourceKind] || 'Starting shape');
+      el('expectedChange').hidden = true;
+      el('controlCaveat').hidden = true;
+      text('sourceLabel', pair.sourceLabel ? 'SOURCE / ' + pair.sourceLabel : '');
+      el('imprintNote').hidden = !['CAPTURE','SYNTHESIZED'].includes(pair.sourceKind);
+      el('previewSource').hidden = !pair.sourcePreview;
+      ['frozen','moving'].forEach(which => { el(which).disabled = !clipPath(which); });
+      drawShape(pair.shape);
+      restoreNotes();
+      renderMetrics();
+      const config = pair.config || {};
+      const provenance = {modelVersion:manifest.modelVersion, sampleRate:manifest.sampleRate, durationSeconds:manifest.durationSeconds, config};
+      if (pair.frozen?.diagnostics || pair.moving?.diagnostics) provenance.diagnostics = {frozen:pair.frozen?.diagnostics, moving:pair.moving?.diagnostics};
+      if (pair.frozen?.sha256 || pair.moving?.sha256) provenance.sha256 = {frozen:pair.frozen?.sha256, moving:pair.moving?.sha256};
+      text('provenance', JSON.stringify(provenance, null, 2));
+      text('playStatus', 'Choose A or B to begin.');
+    }
+    function renderSetting() {
+      const step = activeStep();
+      const isShape = controlName(selectedControl) === 'SHAPE' || selectedControl.parameter === 'shape';
+      const baseline = referenceStep();
+      text('settingValue', actualValue(step));
+      text('rangeLabel', isShape ? 'Five rendered shapes' : 'Five rendered settings');
+      el('settingRange').hidden = isShape;
+      el('settingRange').value = stepIndex;
+      el('settingRange').setAttribute('aria-label', controlName(selectedControl) + ' setting');
+      el('settingRange').setAttribute('aria-valuetext', stepLabel(step) + ', ' + actualValue(step) + ', setting ' + (stepIndex + 1) + ' of five');
+      el('detents').classList.toggle('shapes', isShape);
+      const focusedDetent = el('detents').contains(document.activeElement) ? document.activeElement.dataset.index : null;
+      el('detents').replaceChildren();
+      selectedControl.steps.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'detent'; button.textContent = stepLabel(option);
+        button.setAttribute('aria-pressed', String(index === stepIndex));
+        button.dataset.index = index;
+        button.dataset.reference = String(index === referenceIndex(selectedControl));
+        button.dataset.default = String(index === defaultIndex(selectedControl));
+        button.setAttribute('aria-label', stepLabel(option) + ', ' + actualValue(option) + (index === referenceIndex(selectedControl) ? ', reference setting' : '') + (index === defaultIndex(selectedControl) ? ', default setting' : ''));
+        button.addEventListener('click', () => selectStep(index));
+        el('detents').append(button);
+      });
+      if (focusedDetent != null) el('detents').children[focusedDetent]?.focus({preventScroll:true});
+      const namedReference = selectedControl.referenceLabel ? selectedControl.referenceLabel + ' (' + stepLabel(baseline) + ')' : stepLabel(baseline);
+      text('settingReference', 'Reference: ' + namedReference + '. ' + (stepIndex === referenceIndex(selectedControl) ? 'This is the reference setting; choose another value to compare.' : 'Compare A with this selected setting in B.') + (selectedControl.referenceExplanation ? ' ' + selectedControl.referenceExplanation : ''));
+      text('referenceName', 'A / ' + referenceName());
+      text('referenceMetricLabel', 'A / ' + (selectedControl.referenceLabel || 'Reference'));
+      text('selectedHint', controlName(selectedControl) + ' / ' + actualValue(step));
+      text('referenceHint', (selectedControl.referenceLabel || controlName(selectedControl)) + ' / ' + actualValue(baseline));
+      drawShape(step.shape || selectedControl.shape);
+      restoreNotes();
+      renderMetrics();
+      text('provenance', JSON.stringify({modelVersion:sweeps.modelVersion || manifest.modelVersion, control:selectedControl.id, selectedSetting:step.value, actualParameterValue:step.actualParameterValue, config:step.config, referenceConfig:baseline.config, configDifferences:step.configDifferences, diagnostics:step.diagnostics, rawSha256:step.rawSha256, matchedSha256:step.matchedSha256}, null, 2));
+    }
+    function selectStep(index) {
+      index = Math.max(0, Math.min(4, Number(index)));
+      if (index === stepIndex) return;
+      const wasPlaying = !!variant && (!player.paused || !!pendingSeek?.shouldPlay);
+      const hadClip = !!variant;
+      stepIndex = index;
+      renderSetting();
+      if (hadClip) loadClip('moving', wasPlaying, wasPlaying);
+      else text('playStatus', 'Setting selected. Choose A or B to begin.');
+    }
+    function noteName(midi) {
+      const note = Number(midi);
+      if (!Number.isFinite(note)) return 'the authored note';
+      const names = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+      return names[((Math.round(note) % 12) + 12) % 12] + (Math.floor(note / 12) - 1);
+    }
+    function selectControl(control) {
+      resetPlayer();
+      selectedControl = control;
+      stepIndex = defaultIndex(control);
+      for (const [id, button] of controlButtons) button.setAttribute('aria-pressed', String(id === control.id));
+      text('sourceKind', 'ONE PARAMETER / FIVE SETTINGS');
+      text('pairTitle', controlName(control));
+      text('description', control.explanation || 'Hear how this parameter changes the sound.');
+      text('expectedChange', control.expectedChange);
+      el('expectedChange').hidden = !control.expectedChange || control.expectedChange === control.explanation;
+      text('controlCaveat', control.caveat);
+      el('controlCaveat').hidden = !control.caveat;
+      const fixed = control.fixedConfig || referenceStep().config || {};
+      text('sourceLabel', control.context || ('REFERENCE / ' + noteName(fixed.midi) + ' · other settings held fixed'));
+      el('imprintNote').hidden = true;
+      el('previewSource').hidden = true;
+      renderSetting();
+      ['frozen','moving'].forEach(which => { el(which).disabled = !clipPath(which); });
+      text('playStatus', 'Choose A or B to begin.');
+    }
+    function setView(next) {
+      if (next === 'explore' && !controls.length || next === 'compare' && !pairs.length) return;
+      resetPlayer();
+      view = next;
+      const exploring = view === 'explore';
+      document.querySelector('.window').classList.toggle('exploring', exploring);
+      for (const [id, name] of [['exploreTab','explore'], ['compareTab','compare']]) {
+        el(id).setAttribute('aria-selected', String(name === view));
+        el(id).tabIndex = name === view ? 0 : -1;
+      }
+      el('layout').setAttribute('aria-labelledby', exploring ? 'exploreTab' : 'compareTab');
+      el('library').setAttribute('aria-label', exploring ? 'Parameters to explore' : 'Listening pairs');
+      el('pairList').hidden = exploring;
+      el('controlList').hidden = !exploring;
+      el('advancedControls').hidden = !exploring || !el('advancedControlList').children.length;
+      el('settingPanel').hidden = !exploring;
+      text('libraryLabel', exploring ? 'Choose a parameter' : 'Choose a pair');
+      text('pairCount', exploring ? controls.length + ' CONTROLS' : pairs.length + ' PAIRS');
+      text('pageHeading', exploring ? 'Find the character you want.' : 'Does moving physics add useful character?');
+      text('pageIntro', exploring ? 'Explore one parameter at a time. Each has five authored, measured settings rendered as finite audio. The slider selects those five recordings; it does not run a live synthesizer.' : 'One shape. Two versions. The same note and envelope. Frozen holds the initial shape still. Moving lets the mass-and-spring chain evolve while the scanner reads it at musical pitch. These are finite prototype sounds, awaiting a listening verdict.');
+      text('pageInstruction', exploring ? 'Choose a parameter and a setting. Compare A / Reference with B / Selected. Settings switch at the same point while playing; Restart attack returns to the beginning. Start with matched levels.' : 'Pick a pair, then compare A and B. Switching keeps your place; Restart attack returns to the beginning. Start with matched levels, then check raw output.');
+      text('referenceName', exploring ? 'A / REFERENCE' : 'A / FROZEN');
+      text('selectedName', exploring ? 'B / SELECTED' : 'B / MOVING');
+      text('referenceMetricLabel', exploring ? 'A / Reference' : 'A / Frozen');
+      text('selectedMetricLabel', exploring ? 'B / Selected' : 'B / Moving');
+      el('abGroup').setAttribute('aria-label', exploring ? 'Compare reference and selected parameter setting' : 'Compare frozen and moving physics');
+      text('verdictQuestion', exploring ? 'Would you use this setting instead of the reference?' : 'Does moving physics add useful character to this pair?');
+      text('noteQuestion', exploring ? 'What changes at this setting? Would you put it on a pad?' : 'What changed? Which version would you put on a pad?');
+      text('shapeCaption', exploring ? 'INITIAL SHAPE / SELECTED SETTING' : 'INITIAL SHAPE / SHARED BY A AND B');
+      text('shapeDescription', exploring ? 'Starting displacement profile for the selected parameter setting.' : 'The same starting displacement profile is used by the frozen and moving versions.');
+      renderLevelExplanation();
+      if (exploring) selectControl(selectedControl);
+      else {
+        text('referenceHint', 'Initial shape held still');
+        text('selectedHint', 'Physical shape evolves');
+        selectPair(selected);
+      }
+    }
+    for (const pair of pairs) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'pair'; button.setAttribute('aria-pressed','false');
+      const title = document.createElement('span'); title.className = 'pair-title'; title.textContent = pair.title || pair.id;
+      const sub = document.createElement('span'); sub.className = 'pair-sub'; sub.classList.toggle('pair-reviewed', hasNote(pair.id));
+      sub.textContent = kindNames[pair.sourceKind] || 'Starting shape';
+      button.append(title,sub); button.addEventListener('click', () => selectPair(pair));
+      buttons.set(pair.id,button); el('pairList').append(button);
+    }
+    const mainControls = new Set(['SHAPE','MOTION','DAMP','BEND','BLOOM']);
+    for (const control of controls) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'pair control'; button.setAttribute('aria-pressed','false');
+      button.dataset.control = control.id;
+      const title = document.createElement('span'); title.className = 'pair-title'; title.textContent = controlName(control);
+      const sub = document.createElement('span'); sub.className = 'pair-sub'; sub.textContent = control.shortDescription || 'Five settings · one parameter';
+      button.append(title,sub); button.addEventListener('click', () => selectControl(control));
+      controlButtons.set(control.id,button);
+      (mainControls.has(controlName(control)) ? el('controlList') : el('advancedControlList')).append(button);
+    }
+    el('exploreTab').disabled = !controls.length;
+    el('compareTab').disabled = !pairs.length;
+    el('exploreTab').addEventListener('click', () => setView('explore'));
+    el('compareTab').addEventListener('click', () => setView('compare'));
+    for (const id of ['exploreTab','compareTab']) el(id).addEventListener('keydown', event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 'explore' : event.key === 'End' ? 'compare' : view === 'explore' ? 'compare' : 'explore';
+      const tab = el(next === 'explore' ? 'exploreTab' : 'compareTab');
+      if (!tab.disabled) { setView(next); tab.focus(); }
+    });
+    el('settingRange').addEventListener('input', event => selectStep(event.target.value));
+    ['frozen','moving'].forEach(which => el(which).addEventListener('click', () => {
+      if (variant === which && loadedClip === clipPath(which)) {
+        if (player.ended) player.currentTime = 0;
+        player.play().catch(() => text('playStatus', clipLabel() + ' · press Play below to begin.'));
+      } else loadClip(which, true, !!variant);
+    }));
+    el('level').addEventListener('change', () => {
+      renderLevelExplanation();
+      renderMetrics();
+      ['frozen','moving'].forEach(which => { el(which).disabled = !clipPath(which); });
+      if (variant && variant !== 'source') loadClip(variant, !player.paused || !!pendingSeek?.shouldPlay, true);
+    });
+    el('restart').addEventListener('click', () => {
+      if (!variant) { loadClip('frozen', true, false); return; }
+      if (pendingSeek) { pendingSeek.elapsed = 0; pendingSeek.shouldPlay = true; return; }
+      player.currentTime = 0;
+      player.play().catch(() => text('playStatus', clipLabel() + ' · press Play below to begin.'));
+    });
+    el('stop').addEventListener('click', () => {
+      if (pendingSeek) { pendingSeek.elapsed = 0; pendingSeek.shouldPlay = false; }
+      player.pause();
+      if (player.readyState > 0) player.currentTime = 0;
+      text('playStatus', variant ? clipLabel() + ' · STOPPED' : 'Choose A or B to begin.');
+    });
+    el('previewSource').addEventListener('click', () => loadClip('source', true, false));
+    el('verdict').addEventListener('change', saveNotes);
+    el('note').addEventListener('input', saveNotes);
+    el('exportNotes').addEventListener('click', () => {
+      const payload = {schemaVersion:2, audition:'scanned-chain', modelVersion:manifest.modelVersion, sweepModelVersion:sweeps.modelVersion, generatedAt:manifest.generatedAt, exportedAt:new Date().toISOString(), notes, parameterNotes};
+      const url = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2) + '\n'], {type:'application/json'}));
+      const link = document.createElement('a'); link.href = url; link.download = 'snipsnap-scanned-chain-notes.json'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    if (typeof manifest.packFile === 'string' && manifest.packFile) { el('downloadPack').href = manifest.packFile; el('downloadPack').hidden = false; }
+    setView(view);
+  })();
+  </script>
+</body>
+</html>
