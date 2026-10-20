@@ -3279,7 +3279,7 @@ private enum class Engine {
         CISTERN -> Cistern.render(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
         OBBLIGATO -> Obbligato.render(macros)
-        ALLOY -> Alloy.render(voice as AlloyVoice, macros)
+        ALLOY -> Alloy.render(voice as AlloyVoice, macros, config = Alloy.defaultConfigFor(voice))
         MURK -> Murk.render(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.render(voice as NimbusVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)

@@ -12,7 +12,7 @@ data class AlloyPatch(
     val midi: Int = Alloy.DEFAULT_MIDI,
     val velocity: Float = 1f,
     val model: Int = Alloy.MODEL_VERSION,
-    val config: AlloyConfig = Alloy.configFor(voice),
+    val config: AlloyConfig = Alloy.defaultConfigFor(voice),
 ) : Patch {
     init {
         Patches.validateMacros(this, Alloy.macrosFor(voice))
@@ -50,6 +50,8 @@ data class AlloyPatch(
                 if (midi !in Alloy.MIDI_MIN..Alloy.MIDI_MAX) throw JsonException("ALLOY midi out of ${Alloy.MIDI_MIN}..${Alloy.MIDI_MAX}: $midi")
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
                 if (!velocity.isFinite() || velocity !in 0f..1f) throw JsonException("ALLOY velocity out of 0..1: $velocity")
+                // Missing configuration belongs to the original model-1 recipe,
+                // even after a different voice is selected for newly made patches.
                 val config = obj["config"]?.takeUnless { it is JsonValue.Null }?.let { AlloyConfig.fromJsonValue(it) }
                     ?: Alloy.configFor(voice)
                 AlloyPatch(name, voice, macros, midi, velocity, model, config)
