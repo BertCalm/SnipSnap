@@ -21,16 +21,21 @@ import kotlin.math.sin
  * reuses one set of weights for every output instead, 3-9x faster per render
  * and identical to the bit.
  *
- * The kernel's half-width is a fixed 16 taps measured in SOURCE samples, so
- * its effective bandwidth (and quality) shrinks as the rate ratio moves away
- * from unity: downsampling packs more source samples per output sample, and
- * the same 16-tap window covers a narrower slice of a lower-rate output's
- * bandwidth. Measured flat to 18 kHz converting 48k -> 44.1k; already
- * -5.0 dB at 3.8 kHz with only -13 dB stopband rejection converting
- * 44.1k -> 8k. Ratios within roughly 0.5x-2x of unity (the range this class
- * is actually used for — device output rates around the MPC's 44.1 kHz) stay
- * well within the flat, well-rejected regime; treat conversions far outside
- * that band as lower fidelity.
+ * The kernel's half-width is 16 taps measured in SOURCE samples at ratios
+ * of 0.5x and above, so conversions in the range this class is mostly used
+ * for (device output rates around the MPC's 44.1 kHz, and [Dsp.decimate]'s
+ * cascaded 2:1 steps in `:synth`) are bit-for-bit what they have always
+ * been. Below 0.5x the window widens in proportion (see [halfTapsFor]):
+ * downsampling packs more source samples per output sample, so a fixed
+ * 16-tap window covers a narrower slice of the output's bandwidth and the
+ * passband droops — measured -2.2 dB at 3 kHz and -5.0 dB at 3.8 kHz
+ * converting 44.1k -> 8k before the widening; flat to 3.4 kHz and
+ * -1.9 dB at 3.8 kHz (95% of the new Nyquist, where any windowed kernel
+ * is already in its transition band) after it, with a 6 kHz alias probe
+ * down at 3e-5 of full level (ResamplerTest's far-downsample cases).
+ * The widening holds the kernel's support constant in OUTPUT samples,
+ * which is the quantity the ear judges; its cost is bounded because the
+ * output shrinks by the same factor the kernel grows.
  */
 object Resampler {
 
@@ -95,17 +100,18 @@ object Resampler {
         // so work them out once per output frame and reuse them for every
         // channel: half the trig on stereo. Same weights, summed in the same
         // order, so every sample comes out to the bit as before.
-        val weights = DoubleArray(2 * HALF_TAPS)
+        val half = halfTapsFor(cutoff)
+        val weights = DoubleArray(2 * half)
         for (o in 0 until dstFrames) {
             val srcPos = o / ratio
             val centre = floor(srcPos).toInt()
-            val lo = centre - HALF_TAPS + 1
+            val lo = centre - half + 1
 
             var norm = 0.0
             for (k in weights.indices) {
                 val n = lo + k
                 if (n < 0 || n >= srcFrames) continue
-                val w = kernel(srcPos - n, cutoff)
+                val w = kernel(srcPos - n, cutoff, half)
                 weights[k] = w
                 norm += w
             }
@@ -122,6 +128,29 @@ object Resampler {
         return Snip(out, channels, targetRate)
     }
 
+    /**
+     * Kernel half-width in source samples for a downsample [cutoff]
+     * (the rate ratio, 0..1). At 0.5x and above this is the historical
+     * [HALF_TAPS], so every conversion in that regime — including both
+     * of `Dsp.decimate`'s 2:1 steps — keeps its exact weights. From
+     * 0.5x down to 0.25x the width grows as `HALF_TAPS * 0.5 / cutoff`,
+     * holding the support at the 8 output samples 0.5x already had;
+     * below 0.25x it grows as `HALF_TAPS / cutoff` (16 output samples),
+     * because a 4:1-or-greater conversion is a deliberate offline
+     * quality conversion, not a device-rate shim, and can pay for the
+     * sharper transition. Both joins are continuous. Capped so an
+     * absurd ratio (a corrupt header's 44.1k -> 100 Hz) cannot make
+     * one output sample cost thousands of taps; at the cap the
+     * conversion is merely back to the old droop, never wrong.
+     */
+    internal fun halfTapsFor(cutoff: Double): Int {
+        if (cutoff >= 0.5) return HALF_TAPS
+        return (if (cutoff >= 0.25) HALF_TAPS * 0.5 / cutoff else HALF_TAPS / cutoff).toInt().coerceIn(HALF_TAPS, MAX_HALF_TAPS)
+    }
+
+    /** Widest kernel the far-ratio widening may reach, in source taps either side. */
+    private const val MAX_HALF_TAPS = 512
+
     /** Whether [from] -> [to] is a whole power-of-two step down, the case [resample]'s fast path takes. */
     internal fun isPowerOfTwoDown(from: Int, to: Int): Boolean {
         if (to <= 0 || from <= to || from % to != 0) return false
@@ -132,7 +161,7 @@ object Resampler {
     /**
      * [resample]'s loop for a whole power-of-two [step] down. Output `o` sits
      * at source sample `o * step` exactly (1 / step is exact in a double), so
-     * the tap at `lo + k` is always `HALF_TAPS - 1 - k` source samples away:
+     * the tap at `lo + k` is always `half - 1 - k` source samples away:
      * the same [kernel] argument, hence the same weight, as the general loop
      * computes each time. Edge taps outside the buffer are skipped and the
      * weights renormalised exactly as there.
@@ -141,9 +170,10 @@ object Resampler {
         val channels = snip.channels
         val srcFrames = snip.frameCount
         val samples = snip.samples
-        val weights = DoubleArray(2 * HALF_TAPS) { k -> kernel((HALF_TAPS - 1 - k).toDouble(), cutoff) }
+        val half = halfTapsFor(cutoff)
+        val weights = DoubleArray(2 * half) { k -> kernel((half - 1 - k).toDouble(), cutoff, half) }
         for (o in 0 until dstFrames) {
-            val lo = o * step - HALF_TAPS + 1
+            val lo = o * step - half + 1
             for (c in 0 until channels) {
                 var acc = 0.0
                 var norm = 0.0
@@ -165,11 +195,11 @@ object Resampler {
      * Normalising by the summed weights at the call site keeps DC gain at unity
      * even where the window is truncated at the buffer edges.
      */
-    private fun kernel(x: Double, cutoff: Double): Double {
+    private fun kernel(x: Double, cutoff: Double, half: Int = HALF_TAPS): Double {
         val ax = abs(x)
-        if (ax >= HALF_TAPS) return 0.0
+        if (ax >= half) return 0.0
         val sinc = if (ax < 1e-9) cutoff else sin(PI * cutoff * x) / (PI * x)
-        val t = (x + HALF_TAPS) / (2.0 * HALF_TAPS)
+        val t = (x + half) / (2.0 * half)
         val window = 0.42 - 0.5 * cos(2 * PI * t) + 0.08 * cos(4 * PI * t)
         return sinc * window
     }

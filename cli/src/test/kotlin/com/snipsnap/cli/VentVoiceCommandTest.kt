@@ -2,6 +2,7 @@ package com.snipsnap.cli
 
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.synth.Vent
+import com.snipsnap.synth.VentKitPresets
 import com.snipsnap.synth.VentPresets
 import com.snipsnap.synth.VentVoice
 import java.io.ByteArrayOutputStream
@@ -13,6 +14,26 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class VentVoiceCommandTest {
+    @Test
+    fun `legacy VENT voices keep their original CLI-only recipes`() {
+        val dir = createTempDirectory("vent-legacy-cli").toFile()
+        try {
+            for (voice in listOf(VentVoice.ROUND, VentVoice.WIRE, VentVoice.TEAR)) {
+                val destination = dir.resolve(voice.name)
+                val errors = ByteArrayOutputStream()
+                assertEquals(0, Cli.run(arrayOf("synth", "VENT", voice.name, "--out", destination.path),
+                    PrintStream(ByteArrayOutputStream()), PrintStream(errors)), errors.toString())
+                val wav = destination.listFiles { file -> file.extension == "wav" }!!.single()
+                val preset = VentPresets.forVoice(voice).single()
+                assertEquals(Vent.MODEL, preset.model)
+                val expected = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }.toByteArray()
+                assertContentEquals(expected, wav.readBytes(), "$voice's historical starting point changed")
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     @Test
     fun `clean VENT CLI voices export the chosen note velocity and negative trajectory seed`() {
         val dir = createTempDirectory("vent-clean-cli").toFile()
@@ -28,7 +49,7 @@ class VentVoiceCommandTest {
                         PrintStream(output), PrintStream(errors),
                     ), errors.toString())
                 val wav = destination.listFiles { file -> file.extension == "wav" }!!.single()
-                val preset = VentPresets.forVoice(voice).single().copy(midi = 65, velocity = .4f, seed = Int.MIN_VALUE)
+                val preset = VentKitPresets.forVoice(voice).first().copy(midi = 65, velocity = .4f, seed = Int.MIN_VALUE)
                 assertEquals(Vent.CLEAN_MODEL, preset.model)
                 val expected = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }.toByteArray()
                 assertContentEquals(expected, wav.readBytes(), "$voice CLI overrides must reach the deterministic render")

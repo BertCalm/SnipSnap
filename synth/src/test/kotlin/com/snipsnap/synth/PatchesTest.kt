@@ -36,7 +36,8 @@ class PatchesTest {
     /**
      * One saved sound of every engine: its first factory preset, or for the engines with no roster
      * ([PatchTypes.ROSTERLESS]) one built here, so each carries the fields its own engine requires.
-     * A prototype held outside [Presets] ([PatchTypes.PROTOTYPES]) sends its first provisional recipe.
+     * A prototype held outside [Presets] ([PatchTypes.PROTOTYPES]) sends its first provisional recipe;
+     * VENT also sends a legacy model-1 comparison beside its model-2 factory entry.
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
@@ -46,8 +47,9 @@ class PatchesTest {
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),
-        FlockPresets.all().first(),
         WickPresets.all().first(),
+        NacrePresets.all().first(),
+        ChamberPresets.all().first(),
     )
 
     @Test
@@ -56,11 +58,15 @@ class PatchesTest {
         assertEquals(PatchTypes.engines, patches.map { it.engine }.toSet(), "every engine sends one saved sound through the door")
         for (patch in patches) {
             val fields = patch.toJsonValue().entries
-            if (patch is OpenSkyPatch) {
-                // OPENSKY saves a complete model-3 control snapshot rather
-                // than inheriting voice defaults when a field is missing.
-                assertFailsWith<JsonException>("OPENSKY requires its complete saved macro snapshot") {
-                    Patches.fromJsonValue(JsonValue.Obj(fields - "macros"))
+            assertEquals(patch.macros, Patches.fromJsonValue(JsonValue.Obj(fields)).macros,
+                "${patch.engine}: complete saved controls survive the dispatcher")
+            if (patch is OpenSkyPatch || patch is OnsetPatch) {
+                // These formats pin complete control snapshots instead of
+                // inheriting newer voice defaults when a field is missing.
+                for (incomplete in listOf(fields - "macros", fields + ("macros" to JsonValue.Null))) {
+                    assertFailsWith<JsonException>("${patch.engine} requires its complete saved macro snapshot") {
+                        Patches.fromJsonValue(JsonValue.Obj(incomplete))
+                    }
                 }
             } else {
                 val absent = Patches.fromJsonValue(JsonValue.Obj(fields - "macros"))

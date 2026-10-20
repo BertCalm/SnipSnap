@@ -2,8 +2,9 @@
 
 Murmur is an original pitched FM/formant engine with six musical roles: BASS,
 KEY, PLUCK, LEAD, CHOIR and METAL. This implementation follows the supplied
-[engineering proposal](MURMUR_SPEC.md). The twelve dry presets are first-listen
-proposals. Their sonic identity needs owner review before expanding to 36.
+[engineering proposal](MURMUR_SPEC.md). The owner approved all six dry voices after
+the CHOIR air trim; the accepted DSP is frozen at `bb2b9c9a`. The factory bank now
+contains 36 presets, including 24 additions that await owner listening.
 
 The panel exposes MOUTH, EDGE, BREATH, MOTION, BODY and HOLD. Requested root
 (MIDI 36–96) and excitation velocity (0–1) are separate saved patch fields.
@@ -38,11 +39,14 @@ bounded, coefficients interpolate at the internal sample rate, and DC is removed
 High notes have fewer harmonics under the formants, so vowel realism is a listening
 limitation even when the requested musical root remains intact.
 
-`MurmurPatch` saves the routing, four ratios, spectral-target roster, trajectory,
-direction, reference duration, amplitude-envelope values, macros, root and velocity.
-JSON edits and `PadRecipe` replay retain all of them. Seeds are derived with
-`Dsp.seedFor`; there is no shared state between pads. This is a resonant-bank
-simplification, not an FS1R emulation, and uses no hardware assets or sampled vowels.
+`MurmurPatch` saves the render model, routing, four ratios, spectral-target roster,
+trajectory, direction, reference duration, amplitude-envelope values, macros, root
+and velocity. New patches and presets use model 2, the six-voice identity revision.
+Saved configurations without a `model` field decode as model 1 so earlier recipes
+retain their original rendering behavior. JSON edits and `PadRecipe` replay retain
+the selected model and complete configuration. Seeds are derived with `Dsp.seedFor`;
+there is no shared state between pads. This is a resonant-bank simplification, not
+an FS1R emulation, and uses no hardware assets or sampled vowels.
 
 ## HOLD and exports
 
@@ -56,8 +60,53 @@ simulated adjacent periods using `Keys.seamError`.
 
 `SynthKits.murmur()` supplies sixteen dry pads with regenerable recipes: a key
 scale and eight contrasting pads covering all voices and one held choir. The MPC
-drum program plays complete samples once, including the held buffer; the audition
-page repeats that buffer with Web Audio for seam listening.
+drum program plays complete samples once, including the held buffer. Its A16
+delivery recipe adds an 8 ms terminal fade to avoid a hard stop at the buffer's
+non-zero final sample. SEND TO PAD applies the same saved fade to held Murmur
+sources placed on one-shot pads. Gated pads and SURFACE retain the unfaded source.
+The approved preset and raw HOLD loop remain unchanged; the audition page repeats
+that seamless buffer with Web Audio for seam listening.
+
+The phone's NEW KIT starter chooser scrolls so the complete roster, including
+MURMUR, remains reachable at phone height. Automated Android checks cover this
+reachability and the menu's outside-tap dismissal. Physical phone and MPC listening
+remain a separate handoff check.
+
+## Factory presets and voice comparisons
+
+The audition page opens on the 36-preset bank with this voice allocation:
+
+| Voice | Presets | Intended role |
+|---|---:|---|
+| BASS | 8 | Rounded talking bass |
+| KEY | 4 | Vocal color behind a key strike |
+| PLUCK | 4 | Short articulated spectral gesture |
+| LEAD | 8 | Nasal/open expressive tone |
+| CHOIR | 6 | Restrained humming sustain |
+| METAL | 6 | FM bite softened by mouth shape |
+
+The original twelve preset recipes remain, with 24 new recipes completing the bank.
+The six-voice engine approval is recorded separately from preset review: the 24
+additions still need owner listening before the entire bank can be called approved.
+
+The six dry defaults remain available at the same C4 root (MIDI 60) and velocity 1.
+Each voice retains its own defaults; this comparison assesses the complete voice
+recipe. Use matched level to compare timbre and articulation, then native level
+to hear excitation energy. Listen through the full gesture, including the onset,
+developing contour and release.
+
+The explicit before/after cases compare model 1 with model 2 for every voice at
+C4 and velocity 1. Review both complete finite gestures and settled HOLD buffers.
+Repeat held material through several wraps to compare sustained character and
+seams; those buffers omit the original onset, so they cannot establish attack
+differences. The saved recipe identifies the model and settings behind each clip.
+These comparisons retain the evidence behind the accepted voices; measured
+differences alone do not establish useful audible separation.
+
+Before the six-voice approval, CHOIR's model-2 unvoiced-source gain was reduced
+from 4.8 to 3.3 (31.25%), retaining the voiced source, spectral targets and BREATH
+mapping. Model 1 and the other five model-2 voices retain their existing rendering
+behavior.
 
 ## Reproduce the evidence
 
@@ -69,14 +118,22 @@ page repeats that buffer with Web Audio for seam listening.
 ```
 
 The audition task writes `testkit/murmur-audition/`: raw and level-matched WAVs,
-recipes, measurements and an accessible listening page. Full mode contains 195
-cases and 390 WAVs. It covers all voices at low/middle/high roots and velocities,
+recipes, measurements and an accessible listening page. The current case list
+produces 243 cases and 486 WAVs in full mode, or 199 cases and 398 WAVs in compact
+mode. Those totals include 24 explicit model 1/model 2 comparison cases: six voices,
+two models, and both finite and settled held material. Counts describe generated
+coverage, not acceptance limits; the generated manifest records the actual count,
+source revision and clip settings. The preceding 219 full-mode cases retain their
+IDs and settings; the 24 new presets extend that evidence set.
+
+The wider matrix covers all voices at low/middle/high roots and velocities,
 five-point BODY and MOTION sweeps on every voice, KEY sweeps for MOUTH, EDGE and
 BREATH, the four required interaction grids, all-high cases and held loops. Tests
 also compare level-independent harmonic profiles and developing spectral contours
 through useful note frames, rather than only checking endpoint sample differences.
-Metrics are mechanical evidence; useful dry identity and audible loop quality still
-require listening.
+Metrics are mechanical evidence; useful dry identity and audible loop quality
+require listening. Owner approval covers the six dry voices after the CHOIR trim.
+The 24 added presets remain pending owner listening.
 
 The kit task writes `testkit/SnipSnap Murmur Kit/`, including the native XPM,
 sixteen mono 24-bit WAVs and the recipe-bearing `kit.json` sidecar. Generated audio

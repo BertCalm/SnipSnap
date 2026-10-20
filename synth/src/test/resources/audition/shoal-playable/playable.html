@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <meta name="description" content="Play Shoal model 3 materials across two motions, two roots and three velocities. Compare native dynamics with matched loudness and download production patches.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23734c37%27/%3E%3Cpath d=%27M7 9h18v3H7zm0 6h13v3H7zm0 6h8v3H7z%27 fill=%27%23ece7d4%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="playable.css">
+  <title>Playable materials — Shoal / SnipSnap</title>
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead"><a class="brand" href="index.html">SnipSnap <span>/ Shoal</span></a><nav aria-label="Resources"><a href="materials.html">Earlier material study ↗</a><a id="manifest-link" href="playable/manifest.json" download>Manifest ↓</a></nav></header>
+    <main>
+      <section class="hero"><div class="eyebrow"><span class="dot"></span> Shoal model 3 / playable materials</div><h1>Material.<br> Motion.<br> <em>Touch.</em></h1><p class="deck">Four materials. Two kinds of movement.<br> Play softly, then lean in. Velocity changes the contact, brightness and level of these production Shoal sounds.</p><p class="status">Native SnipSnap patches · Model 3 · Finite notes · No rack effects</p></section>
+      <section class="listen" aria-labelledby="listen-title">
+        <div class="section-heading"><div><h2 id="listen-title">Choose what rings.</h2><p>Choose motion, root and touch. Native velocity preserves the instrument’s dynamics; Matched loudness lets you compare changes in color.</p></div><div class="condition-controls"><label>Motion <select id="motion" disabled><option>Loading…</option></select></label><label>Root <select id="midi" disabled><option>Loading…</option></select></label><label>Touch <select id="velocity" disabled><option>Loading…</option></select></label></div></div>
+        <div class="comparison-toolbar"><div class="levels" role="group" aria-label="Listening level"><button id="native-mode" aria-pressed="true">Native velocity</button><button id="matched" aria-pressed="false">Matched loudness</button></div><p id="condition-description">Loading the production renders…</p><button id="blind" class="blind" aria-pressed="false" disabled>Hide labels</button></div>
+        <div class="candidates" id="candidates" aria-live="polite"><p class="loading">Loading the playable materials…</p></div>
+        <p class="question">Does the material keep its character as you change the touch? Which version invites another note, if any?</p>
+      </section>
+      <section class="touch-comparison" aria-labelledby="touch-title"><div><h2 id="touch-title">Play the touch.</h2><p>Keep the material, motion and root. Compare soft, medium and hard contact directly.</p></div><div class="touch-tools"><label>Material <select id="touch-material" disabled><option>Loading…</option></select></label><div id="touch-buttons" class="touch-buttons"></div></div></section>
+      <section class="method" aria-labelledby="method-title"><div class="method-copy"><div class="eyebrow">What you hear is what the patch renders</div><h2 id="method-title">A material you can play.<br> A recipe you can keep.</h2><p id="method-description">Every audio file comes from the production ShoalPatch renderer. Material, movement, root and velocity are saved together in the downloadable patch.</p><div class="condition-facts" id="condition-facts"></div><p class="method-limit" id="method-limit"></p></div><figure class="trace-panel"><div class="trace-heading"><span class="eyebrow" id="trace-heading">Production energy</span><span id="trace-tag">Select a condition</span></div><canvas id="trace" role="img" aria-label="Actual production controller or material radiation energy across the selected note"></canvas><div class="trace-labels"><span>↑ Upper partial slots</span><span id="trace-time">Time →</span></div><figcaption id="trace-caption">Actual controller or material radiation state, labeled separately. This is not an audio spectrogram.</figcaption></figure></section>
+      <details class="study-evidence"><summary>Production evidence, recipes & listening notes</summary><p id="scope"></p><p id="provenance"></p><p id="measurement-note"></p><p>Notes stay in this browser and follow this audition revision and the native WAV fingerprint. Previous voice and material-study notes remain separate.</p><div class="evidence-actions"><button id="export-notes" disabled>Export listening notes ↓</button><a id="pack-link" hidden download>Download playable pack ↓</a><a id="source-download" hidden download>Source ↓</a><a id="readme-download" hidden download>Reproduction notes ↓</a><a id="validation-download" hidden download>Validation report ↓</a><a href="index.html">Earlier voice comparisons ↗</a></div></details>
+    </main>
+    <footer><span>SHOAL / PLAYABLE MATERIALS<br>MATERIAL · MOTION · TOUCH</span><span id="footer-revision">MODEL 3 / PRODUCTION PATCH RENDERS</span></footer>
+    <noscript><p>Enable JavaScript for the player, or download <a href="playable/manifest.json">the playable manifest</a> and its WAV files.</p></noscript>
+  </div>
+  <aside class="player" aria-label="Playable material player"><div class="player-inner"><div class="now"><div id="now-status">Ready to play / native velocity</div><div id="now-title">Choose a material or touch above.</div></div><div class="transport"><button id="previous" aria-label="Previous candidate" disabled>‹</button><button id="toggle" class="toggle" aria-label="Play" disabled>▶</button><button id="replay" aria-label="Replay from the start" disabled>↺</button><button id="stop" aria-label="Stop" disabled>■</button><button id="next" aria-label="Next candidate" disabled>›</button></div><label class="volume">Vol <input id="volume" type="range" min="0" max="1" step=".01" value=".9" aria-label="Playback volume"></label></div><div class="progress"><span id="elapsed">0:00</span><input id="seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Playback position" disabled><span id="duration">0:00</span></div><div id="fallback" class="fallback" hidden><audio id="native" controls preload="none"></audio><p>Media-player fallback. WAV downloads remain available in each candidate's evidence panel.</p></div><div class="sr-only" id="announcement" role="status" aria-live="polite"></div></aside>
+  <script src="playable.js" defer></script>
+</body>
+</html>

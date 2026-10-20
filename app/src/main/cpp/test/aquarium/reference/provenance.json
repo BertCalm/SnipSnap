@@ -1,0 +1,39 @@
+{
+  "frozen_on": "2026-10-18",
+  "purpose": "Frozen accepted-audition reference for host tests; never include from production code.",
+  "accepted_source_directory": "/workspace/aquarium-audition/native",
+  "upstream": {
+    "repository": "https://github.com/BertCalm/XO_OX-XOmnibus",
+    "commit": "a9bdc7803d899f0b1688fe0c0abc4ce481a76c3e",
+    "license": "MIT",
+    "files": {
+      "LICENSE": "0ca569d7651d81c18baeea0981e999d351a6e6187fa91c119dd2c13356523f55",
+      "Source/DSP/Effects/AquaticFXSuite.h": "506e53605b2182861cccdc0fee66567f368a710f2e586dd46bd197d480bd212d",
+      "Source/DSP/Effects/MultibandCompressor.h": "294a292ce6c9a22e73b630929fee373c9ababafe504469c45d9fbcfcf0b18844",
+      "Source/DSP/FastMath.h": "084f8df65d82cc3cfe11b0f3d9efc22ae3dbf4c356d5877ae75fce54929a8008"
+    }
+  },
+  "transformation": "Replace every xoceanus token with accepted_audition in the four headers; preserve all remaining bytes. LICENSE is copied unchanged.",
+  "files": {
+    "Presets.h": {
+      "accepted_source_sha256": "254c23976f8234a7c2e712edb0b4727406b3b76f5e0100e7c6141470e30d5b1f",
+      "fixture_sha256": "2f838540ac6a7b6191df063962d1c0a93c1d1c9b123b0a86708d79170375148a"
+    },
+    "src/DSP/Effects/AquaticFXSuite.h": {
+      "accepted_source_sha256": "43de603e5427ba7ee1cb541750306e3e85af78a124b18bcbaced8d5eb561a042",
+      "fixture_sha256": "4d97381cd6e012be1df3c4afb69513bebbe3a388a8d4ed27b0d484ff05697b52"
+    },
+    "src/DSP/Effects/MultibandCompressor.h": {
+      "accepted_source_sha256": "9d336d8c253f65a9c197e35381076586a57cec452f812b29b46caf212141aa21",
+      "fixture_sha256": "f15a051aed50035b61d9b9b2a7b327be4c222867d8db038eab574fb85378b690"
+    },
+    "src/DSP/FastMath.h": {
+      "accepted_source_sha256": "3e5530e4caebcabb1ddb225b05d72048945e1c1985f4fbc8ce43dbf1f7b092a5",
+      "fixture_sha256": "f796e6a030f5307e70b456ca28f6b4f4a05238f6362809d0ad44f8e59e10f342"
+    },
+    "LICENSE": {
+      "accepted_source_sha256": "0ca569d7651d81c18baeea0981e999d351a6e6187fa91c119dd2c13356523f55",
+      "fixture_sha256": "0ca569d7651d81c18baeea0981e999d351a6e6187fa91c119dd2c13356523f55"
+    }
+  }
+}
