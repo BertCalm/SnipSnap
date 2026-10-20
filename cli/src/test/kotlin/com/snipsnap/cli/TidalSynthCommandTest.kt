@@ -25,7 +25,7 @@ class TidalSynthCommandTest {
         try {
             val output = ByteArrayOutputStream()
             assertEquals(0, SynthCommand.run(listOf("TIDAL", "PAIR", "--preset", "1", "--midi", "63",
-                "--velocity", ".35", "--seed", Long.MIN_VALUE.toString(), "--model", "1", "--out", directory.path),
+                "--velocity", ".35", "--seed", Long.MIN_VALUE.toString(), "--model", Tidal.MODEL_VERSION.toString(), "--out", directory.path),
                 PrintStream(output)))
             val expected = TidalPresets.forVoice(TidalVoice.PAIR).first().copy(midi = 63, velocity = .35f, seed = Long.MIN_VALUE)
             val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
@@ -43,17 +43,19 @@ class TidalSynthCommandTest {
     fun `saved encounter replay preserves controls and exact seed while overriding performance`() {
         val directory = createTempDirectory("tidal-cli-patch").toFile()
         try {
-            val patch = TidalPatch("Authored encounter", TidalVoice.STREAM,
-                Tidal.defaults(TidalVoice.STREAM) + mapOf("BIND" to .68f, "TILT" to .82f),
-                midi = 57, velocity = .42f, seed = 9_007_199_254_740_993L)
-            val source = File(directory, "encounter.json").also { it.writeText(patch.toJsonText()) }
-            val destination = File(directory, "wavs")
-            assertEquals(0, SynthCommand.run(listOf("TIDAL", "STREAM", "--patch", source.path,
-                "--midi", "67", "--velocity", ".6", "--out", destination.path), PrintStream(ByteArrayOutputStream())))
-            val expected = patch.copy(midi = 67, velocity = .6f)
-            assertEquals(expected, TidalPatch.fromJsonText(requireNotNull(destination.listFiles { it.extension == "patch" }).single().readText()))
-            val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
-            assertContentEquals(encoded, requireNotNull(destination.listFiles { it.extension == "wav" }).single().readBytes())
+            for (model in listOf(1, Tidal.MODEL_VERSION)) {
+                val patch = TidalPatch("Authored encounter", TidalVoice.STREAM,
+                    Tidal.defaults(TidalVoice.STREAM, model) + mapOf("BIND" to .68f, "TILT" to .82f),
+                    midi = 57, velocity = .42f, seed = 9_007_199_254_740_993L, model = model)
+                val source = File(directory, "encounter-$model.json").also { it.writeText(patch.toJsonText()) }
+                val destination = File(directory, "wavs-$model")
+                assertEquals(0, SynthCommand.run(listOf("TIDAL", "STREAM", "--patch", source.path,
+                    "--midi", "67", "--velocity", ".6", "--out", destination.path), PrintStream(ByteArrayOutputStream())))
+                val expected = patch.copy(midi = 67, velocity = .6f)
+                assertEquals(expected, TidalPatch.fromJsonText(requireNotNull(destination.listFiles { it.extension == "patch" }).single().readText()))
+                val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
+                assertContentEquals(encoded, requireNotNull(destination.listFiles { it.extension == "wav" }).single().readBytes())
+            }
         } finally {
             directory.deleteRecursively()
         }
@@ -69,7 +71,7 @@ class TidalSynthCommandTest {
                 arrayOf("--velocity", "NaN"), arrayOf("--velocity", "1.01"), arrayOf("--velocity", "-.01"),
                 arrayOf("--seed", "1.5"), arrayOf("--seed", "9223372036854775808"),
                 arrayOf("--instrument"), arrayOf("--drone"), arrayOf("--scramble", "3"),
-                arrayOf("--model", "0"), arrayOf("--model", "2"), arrayOf("--seconds", "2"),
+                arrayOf("--model", "0"), arrayOf("--model", (Tidal.MODEL_VERSION + 1).toString()), arrayOf("--seconds", "2"),
                 arrayOf("--wet"), arrayOf("--dry"), arrayOf("--patch", "missing.json"),
             )) {
                 val errors = ByteArrayOutputStream()
