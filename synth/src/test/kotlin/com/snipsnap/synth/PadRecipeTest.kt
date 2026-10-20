@@ -73,8 +73,6 @@ class PadRecipeTest {
         // FLOCK also exercises a saved root, velocity and exact seed beyond its factory defaults.
         FlockPatch("Flock Test", FlockVoice.RIBBON, mapOf("FLOW" to 0.65f, "HOLD" to 0f), midi = 55, velocity = 0.6f, seed = 7),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
-        FilamentPatch("Guide Test", FilamentVoice.THREAD, mapOf("BEND" to .6f), midi = 55, velocity = .6f,
-            config = FilamentConfig(seed = 7, profile = FilamentProfile.LATE)),
         NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
         // CHAMBER is a finite prototype too; its patch carries a saved note, velocity and exact seed.
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),

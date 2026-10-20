@@ -230,6 +230,15 @@ roadmap's free bonus is cashed: `SynthKits.chip()` renders VELVET squares
 and THUMP/TINES drums through one CRUNCH converter — the chip kit, maximum
 kitsch, zero new DSP.
 
+FILAMENT guides one pitched excitation through bent paths, dividing it into
+endpoint sound and a shared escaped halo. THREAD sheds bright glints, PULSE
+opens and relaxes related routes, and CURL lets its upper colour bloom.
+Twelve approved dry presets, the phone SYNTH picker and a sixteen-pad starter
+share the same saved recipes. ROOT and native VELOCITY sit alongside INJECT,
+BEND, LENGTH, BUNDLE, COLLECT and HOLD. Earlier saved models retain their sound;
+held exports contain sustain cycles. The [private audition](https://filament-snipsnap-audition.bertcalm.chatgpt.site)
+and [implementation notes](docs/FILAMENT.md) document the sound and its limits.
+
 FATHOM is the bass engine, and it exists for the three things VELVET
 structurally can't do: GLIDE, a pitch envelope travelling between notes and
 available on every voice because a slide is a gesture rather than a timbre;

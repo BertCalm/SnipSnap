@@ -1,4 +1,4 @@
-# FILAMENT — listening prototype
+# FILAMENT — guided paths
 
 Filament is a deterministic, sample-free pitched instrument for SnipSnap's
 offline renderer. One excitation enters a normalized set of guided paths.
@@ -7,7 +7,7 @@ endpoint, escaped sound and absorption. The escaped sound alone feeds a
 shared, damped halo. The gesture is **contain → bend → spill**.
 
 The supplied [engineering specification](superpowers/specs/2026-10-19-filament-engine-engineering-spec.md)
-is preserved as the proposal. This first round implements THREAD, PULSE and
+is preserved as the proposal. The approved instrument implements THREAD, PULSE and
 CURL with four path classes, four loss sections per strand, up to four
 persistent strands and eight halo modes. BRAID, HALO, FRAY and the proposed
 36-preset library remain later work. The reduced bend model is a musical
@@ -37,10 +37,23 @@ edits. Near-axis route offsets are fitted to root periods across strands to
 support the requested note inside the launch budget; other path classes keep
 their fractional-period interference. This is a musical tuning choice.
 
-The provisional `FilamentPresets` roster stays outside shared factory
-presets, the phone picker and starter kits until listening. The CLI, patch
-decoder, native velocity renderer and `SynthKits.filament()` support the
-prototype. All audition recipes use an empty external FX chain.
+The owner approved the model-3 direction after the third listening revision.
+The twelve approved `FilamentPresets` recipes now belong to the shared factory
+library, CLI and phone SYNTH picker: three finite sounds and one held sound
+per voice. Their controls, geometry, roots, velocities and model versions are
+unchanged from the published audition. All factory and audition recipes are dry.
+
+On the phone, choose FILAMENT, then THREAD, PULSE or CURL. ROOT selects MIDI
+36–84 and VELOCITY changes the native excitation. Loading a preset, editing,
+SCRAMBLE, navigating away, saving to YOURS and reopening a pad retain the
+complete recipe, including older model versions. SCRAMBLE varies the six
+controls near the current patch and returns HOLD to a finite gesture.
+
+The FILAMENT starter places four C-minor-pentatonic notes from Glass Thread
+before the twelve factory recipes. Every pad carries its full dry recipe for
+replay and native velocity layers. Held pads contain a settled sustain cycle
+and retain the starter's one-shot playback setting; playing them once does
+not add an attack or automatically repeat the sample.
 
 ## Revised voice character
 
@@ -163,7 +176,7 @@ history and settles the filters in a bounded search. Evidence must compare
 genuinely synthesized successive cycles before wrap treatment, including
 exported PCM. Individual path delays need not divide the loop period.
 A held pad is sustain-only material; a separate attack-plus-loop keygroup
-adapter and phone/MPC hardware acceptance are later work.
+adapter and physical phone/MPC hardware acceptance are later work.
 
 ## Reproduction and listening
 

@@ -1248,13 +1248,17 @@ object SynthKits {
             ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
     }
 
-    /** Four THREAD scale notes followed by twelve dry, fully replayable first-listen recipes. */
+    /** Four notes from the approved THREAD recipe followed by all twelve dry factory recipes. */
     fun filament(): List<ArrangedPad?> {
-        fun arranged(patch: FilamentPatch) = pad(patch, Filament.drumClassFor(patch.voice, patch.macros))
+        fun arranged(patch: FilamentPatch) = pad(patch, Filament.drumClassFor(patch.voice, patch.macros)).copy(
+            displayName = patch.name,
+            source = mapOf("rootMidi" to patch.midi.toString(), "rootNote" to Scales.nameOf(patch.midi), "rootOrigin" to "authored"),
+        )
+        val thread = FilamentPresets.forVoice(FilamentVoice.THREAD).first()
         val notes = PENTATONIC.take(4).mapIndexed { index, semitone ->
-            FilamentPatch(
-                "Filament ${index + 1}", FilamentVoice.THREAD, Filament.defaults(FilamentVoice.THREAD),
-                midi = Filament.rootMidi(FilamentVoice.THREAD) + semitone,
+            thread.copy(
+                name = "Filament ${index + 1}",
+                midi = thread.midi + semitone,
             ).let(::arranged)
         }
         return notes + FilamentPresets.all().map(::arranged)

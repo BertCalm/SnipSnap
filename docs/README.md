@@ -32,10 +32,10 @@ recipe contracts, musical phrases, held-loop strategy and private audition. The 
 the remaining voices and full preset library await listening.
 
 **Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
-strand-routing prototype, saved recipes, branch allocation, dry listening
-comparisons and held-loop evidence. The supplied engineering specification
-is preserved as a proposal; the full voice roster and sonic acceptance
-await listening.
+approved strand-routing instrument, factory and phone integration, saved
+recipes, branch allocation, dry listening comparisons and held-loop evidence.
+The supplied engineering specification is preserved as a proposal; its larger
+voice roster and attack-plus-loop keygroup adapter remain later work.
 
 **Oven.** [`OVEN.md`](OVEN.md) records the approved ten-preset sonic baseline,
 the phone synth integration and finite per-note resonance. Keyboard velocity

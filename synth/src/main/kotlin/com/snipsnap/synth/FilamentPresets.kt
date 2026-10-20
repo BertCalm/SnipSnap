@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Dry provisional routing voices plus the unchanged first and second listening recipes. */
+/** Approved dry factory voices plus the unchanged first and second listening recipes. */
 object FilamentPresets {
     private fun p(
         voice: FilamentVoice,

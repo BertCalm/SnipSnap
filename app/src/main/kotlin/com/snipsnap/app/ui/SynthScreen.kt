@@ -133,6 +133,9 @@ import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
 import com.snipsnap.synth.FathomPatch
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.Filament
+import com.snipsnap.synth.FilamentPatch
+import com.snipsnap.synth.FilamentVoice
 import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockVoice
@@ -462,6 +465,7 @@ private fun editableMacros(editable: Patch): Map<String, Float> =
  *  - `recipe.<ENGINE>.<VOICE>` — the loaded patch's complete recipe, kept
  *    after edits clear its preset highlight. The macro keys above retain
  *    the current slider values independently of that loaded recipe.
+ *    FILAMENT also updates its complete draft with every macro edit.
  *  - `patch.ORIGAMI.<VOICE>` — ORIGAMI's complete edited recipe, including
  *    its model, source seed, absolute note and velocity. Like the `patch.`
  *    entries below, it is fresher than a `recipe.` entry and is adopted.
@@ -534,6 +538,8 @@ fun SynthScreen(
     LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
     LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
     val seededOvenPatches = remember { storedOvenPatches(settings) }
+    val seededDrafts = remember { SynthDrafts.read(settings) }
+    val seededFilamentPatches = remember { seededDrafts.filterIsInstance<FilamentPatch>().associateBy { it.voice } }
     // Per-(engine, voice) macro state, seeded with factory defaults and kept
     // for the life of the screen: switching engine or voice (or coming back
     // to one) restores whatever was last touched on it, same as the
@@ -554,17 +560,23 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
+                    val filamentFactory = if (e == Engine.FILAMENT) {
+                        Presets.forVoice(e.name, v.name).firstOrNull {
+                            it.name == settings[presetSettingsKey(e, v)]
+                        }
+                    } else null
                     val defaults = when {
                         origami != null -> origamiEditingMacros(origami)
                         orphica != null -> Orphica.macrosFrom(orphica.config) + orphica.macros
-                        else -> e.defaults(v)
+                        else -> e.defaults(v) + filamentFactory?.macros.orEmpty()
                     }
                     val recipe = seededOvenPatches[e to v]
+                        ?: if (e == Engine.FILAMENT) seededFilamentPatches[v as FilamentVoice] else null
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
                     // A reopened pad's working recipe is the freshest statement of
-                    // its macros; a complete OVEN recipe is next: its legacy
+                    // its macros; a complete OVEN or FILAMENT recipe is next: its legacy
                     // macro keys may predate an edit followed by a voice switch.
                     val workingPatch = seededWork[e to v]?.recipe?.patch?.let(::editablePreset)
                     put(e to v, when {
@@ -597,6 +609,7 @@ fun SynthScreen(
     // velocity, gate, effect mode and model. ORPHICA retains its material, mode,
     // capture, seed and physical grain configuration. TRIO retains its seeded performance
     // and model. ORIGAMI retains its model, seed, absolute MIDI override and velocity.
+    // FILAMENT retains its strand configuration, frozen model, root and velocity.
     // Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
     // A working recipe survives independently of its preset highlight:
@@ -606,7 +619,7 @@ fun SynthScreen(
     val seededPresets = remember { storedPresetNames(settings) }
     val loadedPatchesByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply {
-            for (patch in SynthDrafts.read(settings)) {
+            for (patch in seededDrafts) {
                 val e = Engine.entries.firstOrNull { it.name == patch.engine } ?: continue
                 val v = e.voices().firstOrNull { it.name == patch.voiceName } ?: continue
                 put(e to v, editablePreset(patch))
@@ -663,9 +676,14 @@ fun SynthScreen(
     LaunchedEffect(engine, voice, macros) {
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
-    val loadedRecipes = loadedPatchesByVoice.toMap()
+    fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
+        // FILAMENT keeps a complete recipe in the existing draft format, so
+        // even a last-frame macro edit restores with its note and strand roster.
+        if (patch is FilamentPatch) patch.withMacros(macrosByVoice.getValue(pair)) else patch
+    }
+    val loadedRecipes = currentDrafts()
     LaunchedEffect(loadedRecipes) {
-        SynthDrafts.write(settings, loadedRecipes.values)
+        SynthDrafts.write(settings, loadedRecipes)
     }
     // Reopened pads retain the whole processing recipe, including its explicit
     // alias flag and named treatment. Loading a preset starts a new recipe.
@@ -698,7 +716,12 @@ fun SynthScreen(
     LaunchedEffect(recipesSnapshot, patchesSnapshot, macroSnapshot, sourcesSnapshot) { persistReopenedWork() }
     // A navigation tap can dispose the bench before the state effect runs.
     // These maps remain the live session maps, so flush the final edit here.
-    DisposableEffect(Unit) { onDispose { persistReopenedWork() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            SynthDrafts.write(settings, currentDrafts())
+            persistReopenedWork()
+        }
+    }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
     val loadedRecipe = loadedRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
@@ -775,11 +798,22 @@ fun SynthScreen(
             else -> 0f..1f
         }
     }
+    fun ensureFilamentDraft() {
+        val pair = engine to voice
+        // A first macro edit or SCRAMBLE may start from defaults. Materialize
+        // that edited recipe so onDispose can flush it before navigation.
+        if (engine == Engine.FILAMENT && pair !in loadedPatchesByVoice) {
+            loadedPatchesByVoice[pair] = FilamentPatch(
+                engine.patchDisplayName(voice), voice as FilamentVoice, macrosByVoice.getValue(pair),
+            )
+        }
+    }
     fun updateMacro(name: String, value: Float) {
         touched = true
         currentPresetByVoice.remove(engine to voice)
         val bounded = value.coerceIn(macroRange(name))
         macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to bounded)
+        ensureFilamentDraft()
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
         val origami = loadedPatch as? OrigamiPatch
@@ -800,6 +834,15 @@ fun SynthScreen(
         touched = true
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
+    }
+    fun updateFilamentPatch(change: (FilamentPatch) -> FilamentPatch) {
+        val pair = engine to voice
+        val controls = macrosByVoice.getValue(pair)
+        val patch = (loadedPatchesByVoice[pair] as? FilamentPatch)?.withMacros(controls)
+            ?: FilamentPatch(engine.patchDisplayName(voice), voice as FilamentVoice, controls)
+        touched = true
+        currentPresetByVoice.remove(pair)
+        loadedPatchesByVoice[pair] = change(patch)
     }
     fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
@@ -867,6 +910,7 @@ fun SynthScreen(
                     val editable = editablePreset(mine)
                     loadedPatchesByVoice[pair] = editable
                     if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
+                    if (editable is FilamentPatch) macrosByVoice[pair] = Filament.defaults(editable.voice) + editable.macros
                     // The named preset is being restored whole. A partial legacy
                     // OVERLAP recipe must fill its sliders from its saved model.
                     if (mine is OverlapPatch) {
@@ -1117,14 +1161,17 @@ fun SynthScreen(
                 // exactly as before.
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
                 val cls = engine.drumClass(voice, macros)
-                // ORIGAMI authors its pitch. Detecting the folded upper bank
-                // can invent a cent offset and retune a correctly played note.
-                val authoredMidi = (patch as? OrigamiPatch)?.let {
-                    it.midi ?: Origami.midiFor(it.voice, it.resolvedMacros().getValue("TUNE"))
+                // These engines author their pitch. Detection can invent a cent
+                // offset and retune an already equal-tempered note.
+                val authoredMidi = when (patch) {
+                    is OrigamiPatch -> patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
+                    is FilamentPatch -> patch.midi
+                    else -> null
                 }
-                val origamiSource = authoredMidi?.let {
+                val authoredSource = authoredMidi?.let {
                     mapOf("from" to "SYNTH", "rootMidi" to it.toString(), "rootNote" to Scales.nameOf(it), "rootOrigin" to "authored")
                 }
+                val tonalRoot = authoredMidi?.takeIf { cls == DrumClass.TONAL }
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
@@ -1143,6 +1190,8 @@ fun SynthScreen(
                         val rendered = padRecipe.render()
                         val alreadyThere = model.pad(slot) != null
                         if (alreadyThere) {
+                            val previousFilament = model.pad(slot)?.let { Breed.recipeOf(it)?.patch as? FilamentPatch }
+                            val filamentRootChanged = patch is FilamentPatch && previousFilament?.midi != patch.midi
                             // REPLACE: `replaceAudio` only rewrites the sample +
                             // recipe of a pad that already exists — it leaves
                             // displayName/drumClass/colorHex/muteGroup exactly as
@@ -1151,10 +1200,15 @@ fun SynthScreen(
                             // with) whatever it was before, while sounding like
                             // the new voice.
                             model.replaceAudio(slot, recipe) { _ -> rendered }
-                            // A reopened pad keeps its identity; an ORIGAMI pad still
-                            // restates its authored root, tuning and finite one-shot
-                            // flag, because the replaced audio may sound a new note.
-                            val knownTune = authoredMidi?.let { model.tuningForKnownRoot(it) }
+                            // FILAMENT's reopened pad keeps deliberate pad tuning
+                            // and playback settings. ROOT changes its native pitch
+                            // and source tags; the player's tune offsets stay put.
+                            // ORIGAMI retains its existing finite-note behavior.
+                            val knownTune = when {
+                                patch is FilamentPatch && reopenedHere -> null
+                                patch is FilamentPatch && cls == DrumClass.LOOP -> 0 to 0
+                                else -> tonalRoot?.let { model.tuningForKnownRoot(it) }
+                            }
                             if (!reopenedHere || authoredMidi != null) {
                                 model.update(slot) { p ->
                                     val identified = if (reopenedHere) p else p.copy(
@@ -1166,8 +1220,12 @@ fun SynthScreen(
                                     identified.copy(
                                         tuneCoarse = knownTune?.first ?: identified.tuneCoarse,
                                         tuneFine = knownTune?.second ?: identified.tuneFine,
-                                        oneShot = if (authoredMidi != null) true else identified.oneShot,
-                                        source = origamiSource ?: identified.source,
+                                        oneShot = if (patch is OrigamiPatch) true else identified.oneShot,
+                                        source = when {
+                                            patch is FilamentPatch && reopenedHere ->
+                                                if (filamentRootChanged) identified.source + authoredSource.orEmpty() else identified.source
+                                            else -> authoredSource ?: identified.source
+                                        },
                                     )
                                 }
                             }
@@ -1179,8 +1237,8 @@ fun SynthScreen(
                             // recipe-only edit; slot/sampleFile stay put).
                             model.assign(
                                 slot, rendered, cls, name,
-                                source = origamiSource ?: emptyMap(),
-                                knownRootMidi = authoredMidi,
+                                source = authoredSource ?: emptyMap(),
+                                knownRootMidi = tonalRoot,
                             )
                             model.update(slot) { p -> p.copy(recipe = recipe) }
                         }
@@ -1902,6 +1960,33 @@ fun SynthScreen(
                     )
                 }
 
+                // FILAMENT's note and playing energy are separate from its six controls.
+                // Copy the complete recipe so edits keep its strand roster and model.
+                if (engine == Engine.FILAMENT) {
+                    val filamentPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (filamentPatch.midi - Filament.MIN_MIDI).toFloat() / (Filament.MAX_MIDI - Filament.MIN_MIDI),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(filamentPatch.midi),
+                        onValueChange = { value ->
+                            val midi = (Filament.MIN_MIDI + value * (Filament.MAX_MIDI - Filament.MIN_MIDI)).roundToInt()
+                                .coerceIn(Filament.MIN_MIDI, Filament.MAX_MIDI)
+                            updateFilamentPatch { it.copy(midi = midi) }
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY",
+                        value = filamentPatch.velocity,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onValueChange = { value ->
+                            updateFilamentPatch { it.copy(velocity = value.coerceIn(0f, 1f)) }
+                        },
+                    )
+                }
+
                 // Shoal's root and excitation energy are independent of its six controls.
                 if (engine == Engine.SHOAL) {
                     val shoalPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
@@ -2355,6 +2440,7 @@ fun SynthScreen(
                                 engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.PITCHWHEEL && spec.name == "HOLD" && Pitchwheel.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.FILAMENT && spec.name == "HOLD" && Filament.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.MURMUR && spec.name == "HOLD" && Murmur.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.PRISM && spec.name == "HOLD" && Prism.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CONTOUR && spec.name == "HOLD" && ContourEngine.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -2407,6 +2493,9 @@ fun SynthScreen(
                             engine == Engine.OVEN ->
                                 Oven.scramble(voice as OvenVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
+                            engine == Engine.FILAMENT ->
+                                Filament.scramble(voice as FilamentVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             else -> engine.scramble(voice, random)
                         }
                         val next = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
@@ -2415,6 +2504,7 @@ fun SynthScreen(
                         macrosByVoice[engine to voice] = if (engine == Engine.ORIGAMI) {
                             next + ("TUNE" to macros.getValue("TUNE"))
                         } else next
+                        ensureFilamentDraft()
                     }
                     // Between SCRAMBLE and SEND TO PAD: the sound is kept
                     // before it is placed. No kit is needed — a preset is
@@ -3327,7 +3417,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI;
+    THUMP, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, FILAMENT;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -3384,6 +3474,7 @@ private enum class Engine {
         BELLOWS -> BellowsVoice.entries
         OVEN -> OvenVoice.entries
         ORIGAMI -> OrigamiVoice.entries
+        FILAMENT -> FilamentVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -3438,6 +3529,7 @@ private enum class Engine {
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
         OVEN -> Oven.macrosFor(voice as OvenVoice)
         ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
+        FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -3492,6 +3584,7 @@ private enum class Engine {
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
         OVEN -> Oven.defaults(voice as OvenVoice)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
+        FILAMENT -> Filament.defaults(voice as FilamentVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -3550,6 +3643,7 @@ private enum class Engine {
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice).mapValues { (_, value) ->
             (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
         }
+        FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -3609,6 +3703,7 @@ private enum class Engine {
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
         OVEN -> Oven.render(voice as OvenVoice, macros)
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
+        FILAMENT -> Filament.render(voice as FilamentVoice, macros)
     }
 
     /**
@@ -3670,6 +3765,7 @@ private enum class Engine {
         OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
+        FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -3724,6 +3820,7 @@ private enum class Engine {
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
         OVEN -> OvenPatch(name, voice as OvenVoice, macros)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
+        FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

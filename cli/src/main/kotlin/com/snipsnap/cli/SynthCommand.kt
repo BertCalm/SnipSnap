@@ -34,8 +34,6 @@ import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.Filament
 import com.snipsnap.synth.FilamentPatch
-import com.snipsnap.synth.FilamentPresets
-import com.snipsnap.synth.FilamentVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.Orphica
@@ -131,7 +129,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK/FILAMENT prototypes) override
+ * `--midi N` and `--velocity 0..1` (ORIGAMI, FILAMENT, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -155,7 +153,7 @@ import kotlin.random.Random
  * for their finite performances.
  * WICK offers thirteen provisional PLUCK/WOOD/BUBBLE recipes without adding a phone engine.
  * NACRE likewise auditions six provisional finite PEARL duets with native note and velocity.
- * FILAMENT exposes twelve provisional THREAD/PULSE/CURL recipes with saved geometry and note/velocity overrides.
+ * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
  * `--velocity` sets the string energy for both shapes.
@@ -214,7 +212,6 @@ object SynthCommand {
                 if (Vent.defaultModelFor(it) == Vent.MODEL) VentPresets.forVoice(it) else Presets.forVoice(engine, voice)
             } ?: emptyList()
             WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
-            FilamentPatch.ENGINE -> FilamentVoice.entries.firstOrNull { it.name == voice }?.let { FilamentPresets.forVoice(it) } ?: emptyList()
             ChamberPatch.ENGINE -> ChamberVoice.entries.firstOrNull { it.name == voice }?.let { ChamberPresets.forVoice(it) } ?: emptyList()
             NacrePatch.ENGINE -> NacreVoice.entries.firstOrNull { it.name == voice }?.let { NacrePresets.forVoice(it) } ?: emptyList()
             else -> Presets.forVoice(engine, voice)

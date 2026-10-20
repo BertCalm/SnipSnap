@@ -112,29 +112,6 @@ class FilamentPatchTest {
     }
 
     @Test
-    fun `provisional dry library remains reproducible and outside factory routing`() {
-        val presets = FilamentPresets.all()
-        assertEquals(12, presets.size)
-        assertEquals(presets.size, presets.map { it.name }.distinct().size)
-        assertTrue(Presets.all().none { it.engine == FilamentPatch.ENGINE })
-        for (voice in FilamentVoice.entries) {
-            val group = FilamentPresets.forVoice(voice)
-            assertEquals(4, group.size)
-            assertEquals(presets.filter { it.voice == voice }, group)
-            assertTrue(group.any { Filament.isLoop(it.macros.getValue("HOLD")) }, "$voice has no held recipe")
-            assertTrue(Presets.forVoice(FilamentPatch.ENGINE, voice.name).isEmpty())
-        }
-        for (p in presets) {
-            assertEquals(3, p.model)
-            assertEquals(Filament.defaults(p.voice).keys, p.macros.keys)
-            assertTrue(p.macros != Filament.defaults(p.voice), "${p.name} duplicates the voice defaults")
-            assertEquals(p, Patches.fromJsonText(p.toJsonText()))
-            assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(p.name), p.name)
-        }
-        assertEquals(presets.size, presets.map { listOf(it.voice, it.macros, it.config) }.distinct().size)
-    }
-
-    @Test
     fun `original recipes retain their exact first listening snapshots independently of new defaults`() {
         val originals = FilamentPresets.original()
         // Frozen first-listen data, including names, control order, seed and profile.

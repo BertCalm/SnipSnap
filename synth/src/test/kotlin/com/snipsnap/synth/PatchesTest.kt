@@ -48,7 +48,6 @@ class PatchesTest {
         VentPresets.all().first(),
         OverlapPresets.all().first(),
         WickPresets.all().first(),
-        FilamentPresets.all().first(),
         NacrePresets.all().first(),
         ChamberPresets.all().first(),
     )

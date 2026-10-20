@@ -16,15 +16,15 @@ import kotlin.test.assertTrue
 
 class FilamentSynthCommandTest {
     @Test
-    fun `all exposes provisional thread recipes without adding factory presets`() {
+    fun `all renders the approved factory thread recipes dry`() {
         val dir = kotlin.io.path.createTempDirectory("filament-cli-all").toFile()
         try {
-            assertTrue(Presets.forVoice("FILAMENT", "THREAD").isEmpty())
+            assertEquals(FilamentPresets.forVoice(FilamentVoice.THREAD), Presets.forVoice("FILAMENT", "THREAD"))
             val output = ByteArrayOutputStream()
             assertEquals(0, SynthCommand.run(
                 listOf("FILAMENT", "THREAD", "--all", "--out", dir.path), PrintStream(output),
             ))
-            val presets = FilamentPresets.forVoice(FilamentVoice.THREAD)
+            val presets = Presets.forVoice("FILAMENT", "THREAD")
             val wavs = dir.listFiles { file -> file.extension == "wav" }!!.sortedBy { it.name }
             assertEquals(presets.size, wavs.size)
             val expected = ByteArrayOutputStream().also { WavWriter.write(it, presets.first().render()) }.toByteArray()
