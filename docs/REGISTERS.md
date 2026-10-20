@@ -1,21 +1,23 @@
-# REGISTERS — organ/reed audition
+# REGISTERS — organ, reed and transistor audition
 
 REGISTERS adapts the organ/reed family idea in the
 [XOctave architecture](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/octave-engine-architecture.md)
-to SnipSnap's deterministic offline renderer. This first pass contains PIPE
-and MUSETTE. The owner selected model-3 PIPE as the working baseline after
-listening to the stronger chiff and sustained airflow. MUSETTE remains provisional.
+to SnipSnap's deterministic offline renderer. PIPE and MUSETTE form the working
+audition baseline. The owner selected model-3 PIPE after listening to the stronger
+chiff and sustained airflow. Model 4 adds a third voice, TRANSISTOR, for listening
+review; the existing PIPE/MUSETTE synthesis and six model-3 presets are preserved.
 
 PIPE uses twelve harmonic partials with registration-inspired dark/principal
 weighting, staggered speech, a brief chiff and a seeded wind field. MUSETTE
 combines three odd-harmonic reeds with symmetric frequency offsets, a finite
 bellows swell and excitation-dependent saturation. These are original musical
 approximations, not measured historical instruments or physical free-reed models.
-Neither uses external samples or a room effect.
+All three voices are dry and use no external samples or room effect.
 
 The [published audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site)
-opens with Current / With airflow comparisons and retains the earlier
-Original / More chiff comparisons. The first listening verdict
+opens with First listen across all three voices and a direct TRANSISTOR entry.
+The Current / With airflow and earlier Original / More chiff comparisons remain
+available in their own tabs. The first listening verdict
 asked for more PIPE chiff. Renderer model 2 adds a separate short speaking burst
 to finite PIPE notes. A seeded noise source feeds a note-relative presence band
 and broad air band, with a 2 ms rise and smooth ending. EDGE sets its strength;
@@ -54,7 +56,7 @@ filter state through preroll and independently synthesized candidate cycles.
 The noise must recur with the carrier and modulation before export. The manifest
 records aligned airflow/body RMS taps and their analysis bounds.
 
-The current audition opens with twelve Current R2 / With airflow R3 pairs,
+The airflow comparison tab retains twelve Current R2 / With airflow R3 pairs,
 including two held notes. The earlier R1/R2 chiff comparison remains available
 with its archived WAVs. All three review histories retain their sound identity;
 new feedback stays in the R3 namespace. The original models replay their earlier
@@ -70,6 +72,33 @@ AIR setting, measured added airflow is approximately 27.96 dB below the settled
 body. These checks verify the addition and its boundaries; the listener decides
 whether its level and character suit PIPE.
 
+## TRANSISTOR — R4
+
+TRANSISTOR is a Farfisa-inspired electronic combo-organ voice. It uses a separate
+bandlimited square-wave rank renderer, octave registration, fast keying, a short
+electronic key-click, vibrato and transistor saturation. It is a musical
+approximation, not a measured emulation of a particular instrument.
+
+| Control | TRANSISTOR meaning |
+| --- | --- |
+| COLOR | Blend fundamental and octave ranks |
+| AIR | Brief electronic key-click on a finite note |
+| EDGE | Transistor drive |
+| SPREAD | Subtle detuning between ranks |
+| MOTION | Vibrato depth around a 5.5 Hz rate |
+| TUNE / HOLD | Shared pitch and finite-length/held-loop controls |
+
+Three new C4 starting points are Compact Keys, Clean Combo and Garage Buzz.
+TRANSISTOR recipes explicitly use renderer model 4 and reject models 1–3.
+PIPE/MUSETTE still replay all earlier models; their six presets remain pinned
+to model 3. Missing model metadata continues to mean legacy model 1.
+
+Run `./gradlew :synth:generateRegistersTransistorAudition` to extend a preserved
+R3 pack with new TRANSISTOR identities, control sweeps, velocity examples,
+interaction studies, presets and held tones. The R4 pack preserves earlier WAVs,
+recipes, comparison pairs and review scopes. Old browser notes remain attached
+to the sound they describe; edits save under the new revision.
+
 ## Playing and saving
 
 The shared controls are COLOR, AIR, EDGE, SPREAD and MOTION, plus TUNE and HOLD.
@@ -80,8 +109,8 @@ note is supplied. An explicit MIDI note overrides TUNE.
 
 `RegistersPatch` implements the shared patch contract and also reads the original
 audition recipes. It stores the voice, complete macro values, note, velocity and
-renderer model. REGISTERS appears in the phone's SYNTH source picker with PIPE
-and MUSETTE, six presets, saved patches and the shared SEND TO PAD workflow.
+renderer model. REGISTERS appears in the phone's SYNTH source picker with PIPE,
+MUSETTE and TRANSISTOR, nine presets, saved patches and the shared SEND TO PAD workflow.
 TUNE edits change the explicit note; other edits preserve its note, velocity and
 model. Imported audition notes align the slider without changing the sound.
 
@@ -96,7 +125,7 @@ key-up fade. The original onset-free audition WAVs remain unchanged.
 The CLI can render saved presets or write the same instrument package:
 
 ```text
-./gradlew :cli:run --args="synth REGISTERS PIPE --preset 1 --out /tmp/registers"
+./gradlew :cli:run --args="synth REGISTERS TRANSISTOR --preset 1 --out /tmp/registers"
 ./gradlew :cli:run --args="synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out /tmp/registers"
 ```
 

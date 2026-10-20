@@ -15,7 +15,8 @@
   const PAGE_SIZE = 12;
   const audio = $('audio');
   const canvas = $('waveform');
-  const state = { manifest: null, clips: [], selected: null, voice: 'ALL', collection: 'presets', group: 'all', query: '', limit: PAGE_SIZE, mode: 'production', waveform: [], waveformToken: 0, frame: 0, notes: {}, storageAvailable: true, sweeps: new Map(), baselines: new Map(), audioContext: null, comparisonClip: null, selectionVersion: 0, models: new Set() };
+  const PRESET_FILTERS = ['role', 'bankId', 'reviewStatus', 'gesture', 'held'];
+  const state = { manifest: null, clips: [], selected: null, voice: 'ALL', collection: 'presets', group: 'all', role: 'all', bankId: 'all', reviewStatus: 'all', gesture: 'all', held: 'all', query: '', limit: PAGE_SIZE, mode: 'production', waveform: [], waveformToken: 0, frame: 0, notes: {}, storageAvailable: true, sweeps: new Map(), baselines: new Map(), audioContext: null, comparisonClip: null, selectionVersion: 0, models: new Set() };
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -39,6 +40,13 @@
     const revised = clip?.comparison?.revisedId && state.clips.find((item) => item.id === clip.comparison.revisedId);
     return original && revised ? { original, revised } : null;
   }
+  function velocityFamily(clip) {
+    const comparison = clip?.velocityComparison;
+    const preset = state.clips.find((item) => item.id === (clip?.presetId || clip?.id) && isPreset(item));
+    const soft = comparison && state.clips.find((item) => item.id === comparison.softId);
+    const forte = comparison && state.clips.find((item) => item.id === comparison.forteId);
+    return preset && soft && forte && [preset, soft, forte].every((item) => voiceModelKey(item) === voiceModelKey(clip)) ? { preset, soft, forte } : null;
+  }
   function pretty(text) { return String(text || '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase()); }
   function noteName(clip) { return clip.note || (clip.midi !== undefined ? `MIDI ${clip.midi}` : ''); }
   function velocityLabel(value) { const n = numeric(value); return n <= 1 ? n.toFixed(2) : String(Math.round(n)); }
@@ -55,6 +63,8 @@
     return detailed ? 'raw level' : 'Raw';
   }
   function groupName(id) { return state.manifest?.groups?.find((group) => group.id === id)?.title || pretty(id); }
+  function reviewLabel(value) { return value === 'retained-original' || value === 'accepted-identity' ? 'Original starter' : value === 'listening-pending' ? 'Awaiting listen' : pretty(value); }
+  function roleAddsContext(clip) { return clip.role && pretty(clip.role) !== pretty(clip.voice); }
   function downloadable(data, filename) {
     const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -67,8 +77,12 @@
       if (state.voice !== 'ALL' && voiceName(clip.voice) !== state.voice) return false;
       if (state.collection === 'presets' ? !isPreset(clip) : isPreset(clip)) return false;
       if (state.collection === 'probes' && state.group !== 'all' && clip.group !== state.group) return false;
+      if (state.collection === 'presets') {
+        if (PRESET_FILTERS.filter((field) => field !== 'held').some((field) => state[field] !== 'all' && clip[field] !== state[field])) return false;
+        if (state.held === 'held' && !clip.loop || state.held === 'finite' && clip.loop) return false;
+      }
       if (state.query) {
-        const haystack = [clipName(clip), clip.id, clip.voice, clip.preset, clip.description, clip.group, clip.gesture, clip.driver, clip.note, clip.midi, clip.sweep?.macro].join(' ').toLowerCase();
+        const haystack = [clipName(clip), clip.id, clip.voice, clip.preset, clip.description, clip.role, clip.bankName, clip.category, reviewLabel(clip.reviewStatus), clip.group, clip.gesture, clip.driver, clip.note, clip.midi, clip.loop ? 'held hold loop' : 'finite', clip.sweep?.macro].join(' ').toLowerCase();
         if (!state.query.split(/\s+/).every((term) => haystack.includes(term))) return false;
       }
       return true;
@@ -85,12 +99,57 @@
       button.addEventListener('click', () => {
         state.voice = voice; state.limit = PAGE_SIZE; renderVoiceFilters(); renderLibrary();
         if (voice !== 'ALL' && voiceName(state.selected?.voice) !== voice) {
-          const next = state.clips.find((clip) => isPreset(clip) && voiceName(clip.voice) === voice) || state.baselines.get(`${voice}:${modelOf(state.selected)}`) || state.clips.find((clip) => voiceName(clip.voice) === voice);
+          const next = filteredClips()[0];
           if (next) selectClip(next);
         }
       });
       filters.append(button);
     });
+  }
+
+  function initializePresetFilters() {
+    const presets = state.clips.filter(isPreset);
+    PRESET_FILTERS.filter((field) => field !== 'held').forEach((field) => {
+      const values = [...new Set(presets.map((clip) => clip[field]).filter(Boolean))].sort();
+      $(field + '-filter-control').hidden = !values.length || field === 'role' && !presets.some(roleAddsContext);
+      values.forEach((value) => {
+        const title = field === 'bankId' ? presets.find((clip) => clip.bankId === value)?.bankName || pretty(value) : field === 'role' ? presets.find((clip) => clip.role === value)?.roleLabel || pretty(value) : field === 'reviewStatus' ? reviewLabel(value) : pretty(value);
+        const option = element('option', '', title); option.value = value; $(field + '-filter').append(option);
+      });
+    });
+    $('held-filter-control').hidden = !presets.some((clip) => clip.loop);
+  }
+
+  function renderDownloads() {
+    const bundles = Array.isArray(state.manifest.bundles) ? state.manifest.bundles.filter((bundle) => bundle.path) : state.manifest.bundlePath ? [{ path: state.manifest.bundlePath, title: 'Download curated pack', description: state.manifest.bundleDescription }] : [];
+    const nativeKitsOnly = state.manifest.hosting?.packaging === 'deduplicated-audio-native-kits';
+    const kits = Array.isArray(state.manifest.kits) ? state.manifest.kits : state.manifest.kit ? [state.manifest.kit] : [];
+    const target = $('kit-downloads'); target.replaceChildren();
+    if (kits.length) target.append(element('p', 'kit-download-note', `${nativeKitsOnly ? 'Complete MPC kits' : 'Complete packs'} include the programs, sample folders and recipes. Keep each program with its matching sample folders; an MPC program file alone does not contain the audio.`));
+    kits.forEach((kit) => {
+      const paths = [['mpc3Path', 'MPC 3 program'], ['mpc2Path', 'MPC 2 program'], ['recipePath', 'Kit recipes']].filter(([key]) => kit[key]);
+      if (!paths.length) return;
+      const row = element('div', 'kit-download-row'); if (kit.id) row.dataset.kitId = kit.id;
+      row.append(element('span', 'kit-download-name', `${kit.name || 'Embouchure kit'} / ${kit.pads || 16} PADS`));
+      if (kit.description) row.append(element('p', 'kit-download-description', kit.description));
+      const links = element('div', 'kit-download-links');
+      const bundlePath = kit.bundlePath || bundles.find((bundle) => bundle.kitIds?.includes(kit.id))?.path || (kits.length === 1 && bundles.length === 1 ? bundles[0].path : null);
+      const nativeBundle = nativeKitsOnly || bundles.some((bundle) => bundle.path === bundlePath && bundle.kind === 'mpc-kit');
+      if (bundlePath) { const complete = element('a', 'kit-bundle-link', nativeBundle ? 'Complete MPC kit ZIP ↓' : 'Complete pack ZIP ↓'); complete.href = bundlePath; complete.download = ''; row.append(complete); }
+      paths.forEach(([key, title]) => { const link = element('a', '', `${title} ↓`); link.href = kit[key]; link.download = ''; links.append(link); });
+      row.append(links); target.append(row);
+    });
+    target.hidden = !target.children.length;
+    const bundleTarget = $('bundle-downloads'); const first = $('download-bundle');
+    bundles.forEach((bundle, index) => {
+      const link = index === 0 ? first : element('a');
+      link.textContent = `${bundle.title || `Curated pack ${index + 1}`} ↓`; link.href = bundle.path; link.download = ''; link.hidden = false;
+      if (bundle.id) link.dataset.bundleId = bundle.id;
+      if (bundle.description) link.title = bundle.description;
+      if (index > 0) bundleTarget.append(link);
+    });
+    bundleTarget.hidden = !bundles.length;
+    return bundles;
   }
 
   function renderLibrary() {
@@ -102,6 +161,10 @@
     $('presets-tab').setAttribute('aria-pressed', String(state.collection === 'presets'));
     $('probes-tab').setAttribute('aria-pressed', String(state.collection === 'probes'));
     $('group-control').hidden = state.collection !== 'probes';
+    $('preset-browse').hidden = state.collection !== 'presets' || [...$('preset-browse').querySelectorAll('label')].every((label) => label.hidden);
+    const refinements = PRESET_FILTERS.filter((field) => state[field] !== 'all').length;
+    $('preset-browse-label').textContent = `Refine presets${refinements ? ` · ${refinements} active` : ''}`;
+    $('clear-preset-filters').hidden = !refinements;
     clips.slice(0, state.limit).forEach((clip, index) => {
       const selected = state.selected?.id === clip.id;
       const button = element('button', `clip-row${selected ? ' active' : ''}`);
@@ -109,10 +172,11 @@
       const copy = element('span', 'clip-row-copy');
       copy.append(element('span', 'clip-row-name', clipName(clip)));
       copy.append(element('span', 'clip-row-meta', [voiceName(clip.voice), noteName(clip), clip.loop ? 'HOLD' : `${duration(clip).toFixed(1)}s`].filter(Boolean).join(' / ')));
+      if (isPreset(clip) && (clip.bankId || roleAddsContext(clip))) copy.append(element('span', 'clip-row-meta clip-row-role', [roleAddsContext(clip) ? clip.roleLabel || pretty(clip.role) : '', pretty(clip.gesture), clip.reviewStatus ? reviewLabel(clip.reviewStatus) : ''].filter(Boolean).join(' / ')));
       button.append(element('span', 'clip-number', String(index + 1).padStart(2, '0')), copy, element('span', 'clip-row-arrow', '→'));
       button.addEventListener('click', () => selectClip(clip)); list.append(button);
     });
-    if (!clips.length) list.append(element('p', 'empty-state', state.query ? 'No renders match this search. Try another voice or a broader term.' : 'No renders in this group for this voice. Choose All voices or another group.'));
+    if (!clips.length) list.append(element('p', 'empty-state', state.collection === 'presets' && refinements ? 'No presets match these refinements. Clear them or choose another voice.' : state.query ? 'No renders match this search. Try another voice or a broader term.' : 'No renders in this group for this voice. Choose All voices or another group.'));
     $('load-more').hidden = clips.length <= state.limit;
     $('load-more').textContent = `Show ${Math.min(PAGE_SIZE, clips.length - state.limit)} more clips ↓`;
   }
@@ -169,7 +233,7 @@
     $('clip-subtitle').textContent = [noteName(clip), clip.velocity !== undefined ? `velocity ${velocityLabel(clip.velocity)}` : '', clip.loop ? 'HOLD render' : 'finite gesture', state.mode === 'production' ? 'host normalized' : state.mode === 'raw' ? rawModeLabel(clip, true) : 'equal audition loudness'].filter(Boolean).join(' · ');
     const path = pathFor(clip);
     $('download-wav').href = path;
-    $('download-wav').download = path.split('/').pop();
+    $('download-wav').download = `${clip.id}${state.mode === 'production' ? '' : `-${state.mode}`}.wav`;
     $('download-wav').setAttribute('aria-disabled', 'false');
     $('play-button').disabled = false; $('seek').disabled = false; $('download-recipe').disabled = false;
     $('duration').textContent = time(duration(clip)); $('current-time').textContent = '0:00'; $('seek').value = '0';
@@ -189,6 +253,15 @@
       const target = pair?.[button.dataset.modelSide];
       const active = Boolean(target && target.id === clip.id);
       button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); button.disabled = !target;
+    });
+    const velocity = velocityFamily(clip);
+    $('velocity-comparison').hidden = !velocity;
+    $('velocity-comparison').querySelectorAll('button').forEach((button) => {
+      const side = button.dataset.velocitySide; const target = velocity?.[side];
+      const active = Boolean(target && target.id === clip.id);
+      button.textContent = side === 'preset' ? 'Preset' : `${pretty(side)} ${velocityLabel(target?.velocity)}`;
+      button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); button.disabled = !target;
+      if (target) button.title = `Replay ${side === 'preset' ? 'the preset' : side} at velocity ${velocityLabel(target.velocity)} from the start.`;
     });
     audio.src = path; audio.load();
     state.waveform = state.mode === 'production' && Array.isArray(clip.waveform) ? clip.waveform.map((n) => Math.abs(numeric(n))) : [];
@@ -289,6 +362,8 @@
     $('probes-tab').addEventListener('click', () => { state.collection = 'probes'; state.limit = PAGE_SIZE; renderLibrary(); });
     $('clip-search').addEventListener('input', (event) => { state.query = event.target.value.trim().toLowerCase(); state.limit = PAGE_SIZE; renderLibrary(); });
     $('group-select').addEventListener('change', (event) => { state.group = event.target.value; state.limit = PAGE_SIZE; renderLibrary(); });
+    PRESET_FILTERS.forEach((field) => $(field + '-filter').addEventListener('change', (event) => { state[field] = event.target.value; state.limit = PAGE_SIZE; renderLibrary(); }));
+    $('clear-preset-filters').addEventListener('click', () => { PRESET_FILTERS.forEach((field) => { state[field] = 'all'; $(field + '-filter').value = 'all'; }); state.limit = PAGE_SIZE; renderLibrary(); });
     $('load-more').addEventListener('click', () => { state.limit += PAGE_SIZE; renderLibrary(); });
     $('play-button').addEventListener('click', togglePlayback);
     $('seek').addEventListener('input', (event) => { if (audio.duration > 0) { audio.currentTime = numeric(event.target.value) / 1000 * audio.duration; updatePlayback(); } });
@@ -298,6 +373,7 @@
     $('reset-voice').addEventListener('click', playBaseline);
     $('replay-sweep').addEventListener('click', playComparison);
     $('model-comparison').querySelectorAll('button').forEach((button) => button.addEventListener('click', () => { const target = modelPair(state.selected)?.[button.dataset.modelSide]; if (target) selectClip(target, { autoplay: true }); }));
+    $('velocity-comparison').querySelectorAll('button').forEach((button) => button.addEventListener('click', () => { const target = velocityFamily(state.selected)?.[button.dataset.velocitySide]; if (target) selectClip(target, { autoplay: true }); }));
     $('diagnostic-mode').querySelectorAll('button').forEach((button) => button.addEventListener('click', () => { state.mode = button.dataset.audioMode; selectClip(state.selected, { preserveMode: true, preserveComparison: true }); }));
     $('download-recipe').addEventListener('click', () => {
       if (!state.selected) return;
@@ -358,35 +434,34 @@
         const baseline = state.clips.find((item) => item.id === clip.sweep.baseId && voiceModelKey(item) === voiceModelKey(clip));
         if (baseline && !state.baselines.has(voiceModelKey(clip))) state.baselines.set(voiceModelKey(clip), baseline);
       });
-      state.clips.filter(isPreset).forEach((clip) => { const key = voiceModelKey(clip); if (!state.baselines.has(key)) state.baselines.set(key, clip); });
       const groups = state.manifest.groups || [...new Set(state.clips.map((clip) => clip.group))].map((id) => ({ id, title: pretty(id) }));
       groups.filter((group) => String(group.id).toUpperCase() !== 'PRESETS').forEach((group) => { const option = element('option', '', group.title || pretty(group.id)); option.value = group.id; $('group-select').append(option); });
-      $('bench-count').textContent = `${state.clips.filter(isPreset).length} presets / ${state.clips.length} dry renders`;
+      const presets = state.clips.filter(isPreset); const pending = presets.filter((clip) => clip.reviewStatus === 'listening-pending').length;
+      $('bench-count').textContent = `${presets.length} presets / ${state.clips.length} dry renders`;
+      document.querySelector('.edition').textContent = `PRESET BANK / ${presets.length}`;
+      document.querySelector('.hero-detail').textContent = `The voices and controls are accepted. Explore ${presets.length} dry presets in this collection, then leave a listening verdict on each render.`;
+      $('approval-copy').textContent = `The six voices and their controls have owner approval. This collection contains ${presets.length} presets.${pending ? ` ${pending} new presets await a separate listening verdict.` : ' The original starter presets are retained for comparison.'} WHISTLE remains a simplified air/reed-derived clear-tone approximation.`;
+      document.querySelector('meta[name="description"]').content = `Review this ${presets.length}-preset Embouchure collection for SnipSnap. Browse voices, roles and gestures, compare rendered controls, and leave listening notes.`;
+      if (presets.length && presets.every((clip) => ['retained-original', 'accepted-identity'].includes(clip.reviewStatus))) document.querySelector('.status-tag').replaceChildren(element('span', 'small-dot'), document.createTextNode('VOICES & CONTROLS ACCEPTED · ORIGINAL STARTER'));
       if (state.manifest.sourceUrl) document.querySelectorAll('a[href^="https://github.com/BertCalm/SnipSnap"]').forEach((link) => { link.href = state.manifest.sourceUrl; });
-      if (state.manifest.bundlePath) { $('download-bundle').href = state.manifest.bundlePath; $('download-bundle').hidden = false; }
+      const bundles = renderDownloads();
       if (state.manifest.curated) {
-        document.querySelector('.hero-detail').textContent = 'Listen to Embouchure’s first dry port into SnipSnap. This curated pack contains voices and selected probes; leave a listening verdict.';
+        document.querySelector('.hero-detail').textContent = `The voices and controls are accepted. This curated collection contains ${presets.length} presets and selected listening renders; leave a verdict on each render.`;
         $('controls-title').textContent = 'The rendered settings.';
         document.querySelector('.panel-description').textContent = 'The values at left describe this render. Sweep points are disabled in this curated download; the full five-point control matrix is on the published listening bench.';
       } else if (state.manifest.completeMatrix === false) {
         document.querySelector('.panel-description').textContent = 'Preset values are shown at left. This pack includes selected listening renders; points without a rendered sweep are disabled. The full control matrix is on the published listening bench.';
       }
-      if (state.manifest.kit) {
-        const kit = state.manifest.kit; const links = $('kit-downloads');
-        links.append(element('span', '', `${kit.name || 'Embouchure kit'} / ${kit.pads || 16} PADS`));
-        [['mpc3Path', 'MPC 3 kit'], ['mpc2Path', 'MPC 2 kit'], ['recipePath', 'Kit recipes']].forEach(([key, title]) => {
-          if (!kit[key]) return; const link = element('a', '', `${title} ↓`); link.href = kit[key]; link.download = ''; links.append(link);
-        });
-        links.hidden = false;
-      }
       const details = $('render-details'); details.replaceChildren();
       details.append(element('p', '', `${state.manifest.engine || 'Embouchure'} · ${numeric(state.manifest.sampleRate, 44100).toLocaleString()} Hz · ${state.manifest.channels || 1} channel · ${state.manifest.format || 'PCM WAV'}. ${state.manifest.acceptance || 'Owner listening verdict pending.'}`));
+      if (state.manifest.curated && state.manifest.packDescription) details.append(element('p', '', state.manifest.packDescription));
       if (state.manifest.caveats?.length) { const list = element('ul'); state.manifest.caveats.forEach((caveat) => list.append(element('li', '', typeof caveat === 'string' ? caveat : JSON.stringify(caveat)))); details.append(list); }
       const rawGain = state.clips.find((clip) => clip.rawExportGain !== undefined)?.rawExportGain;
       if (rawGain > 0 && rawGain !== 1) details.append(element('p', '', `Every raw diagnostic WAV uses the same fixed ${(20 * Math.log10(rawGain)).toFixed(2)} dB export gain (${rawGain}), preserving relative source amplitudes. Recipe downloads include this gain, untouched source metrics, and exported raw metrics. The gain is identical for every clip.`));
-      if (state.manifest.bundlePath) details.append(element('p', '', 'The curated download contains a smaller listening collection and a 16-pad MPC kit. The full probe and sweep matrix stays on this page.'));
+      bundles.forEach((bundle) => { if (bundle.description) details.append(element('p', '', `${bundle.title || 'Curated pack'}: ${bundle.description}`)); });
+      if (bundles.length) details.append(element('p', '', state.manifest.hosting?.packaging === 'deduplicated-audio-native-kits' || bundles.every((bundle) => bundle.kind === 'mpc-kit') ? 'The complete MPC kit downloads contain programs, matching sample folders and recipes. The full listening collection and control matrix are available on this page.' : 'Curated packs include selected listening renders and the listed kit files. Each download has its own manifest and offline listening page. The full probe and sweep matrix stays on this page.'));
       details.append(element('p', '', 'Production audio is host normalized with expressive velocity gain. Raw and equal-audition-loudness modes appear only where diagnostic companion renders exist. Waveforms show actual rendered audio, scaled visually to the clip peak. HOLD looping repeats the supplied loop file; the page adds no synthesis, effects, or crossfade.'));
-      renderVoiceFilters(); renderLibrary();
+      initializePresetFilters(); renderVoiceFilters(); renderLibrary();
       const requested = new URLSearchParams(location.search).get('clip');
       const first = state.clips.find((clip) => clip.id === requested) || state.clips.find(isPreset) || state.clips[0];
       if (!isPreset(first)) {

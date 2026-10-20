@@ -145,6 +145,10 @@ object ExportReadBack {
 
     /** The one file X-Ray reads for this outcome: the program itself, or the expansion's `Programs/` entry. */
     private fun programFile(outcome: ExportOutcome): File? = when (outcome.format) {
+        ExportFormat.PROGRAM_FOLDER -> if (outcome.primary.isDirectory) {
+            outcome.primary.listFiles { f -> f.isFile && f.name.endsWith(".xpm", ignoreCase = true) }
+                .orEmpty().singleOrNull()
+        } else outcome.primary.takeIf { it.isFile }
         ExportFormat.EXPANSION -> {
             val xpms = File(outcome.primary, "Programs")
                 .listFiles { f -> f.isFile && f.name.endsWith(".xpm", ignoreCase = true) }

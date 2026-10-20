@@ -52,18 +52,15 @@ class InstrumentPlayer(context: Context) {
             if (!running) running = NativePads.start(handle)
             NativePads.beginBank(handle)
         }
-        for (zone in instrument.zones) {
-            if (zone.sample in index) continue
-            // `zone.sample` is a kit pad sample, produced only by
-            // KitBuilderModel.assign from an already-bounded Snip — readCapped's
-            // 600s ceiling is defense in depth, not expected to ever bind.
-            val snip = runCatching { WavReader.readCapped(File(dir, zone.sample), TAPE_LOAD_MAX_SEC).snip }.getOrNull() ?: continue
+        for (file in instrument.sampleFiles) {
+            // Load every velocity layer once; a missing soft sample must not silently play the hard one.
+            val snip = runCatching { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }.getOrNull() ?: continue
             val i = synchronized(this) {
                 if (!open) return
                 NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
             }
-            index[zone.sample] = i
-            frames[zone.sample] = snip.frameCount.toLong()
+            index[file] = i
+            frames[file] = snip.frameCount.toLong()
         }
         synchronized(this) {
             if (!open) return

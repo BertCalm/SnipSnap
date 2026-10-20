@@ -178,15 +178,43 @@ object Thump {
 
     private fun frames(seconds: Float, rate: Int) = (seconds * rate).toInt().coerceAtLeast(64)
 
-    private fun kick(m: Map<String, Float>, rate: Int): FloatArray {
+    /** Unfinished source for ONSET; the stock render path keeps its original mappings. */
+    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, edge: Float, rate: Int): FloatArray =
+        kick(defaults(ThumpVoice.KICK) + mapOf("CLICK" to 0f, "DRIVE" to edge * 0.25f),
+            rate, rootHz, t60Seconds, 1f + snap * 1.5f)
+
+    /** Hats share transposition with SKIN, whose resonances have a different natural base. */
+    internal fun onsetHat(baseHz: Float, t60Seconds: Float, edge: Float, rate: Int, open: Boolean = false): FloatArray =
+        hat(defaults(ThumpVoice.HAT_CLOSED) + mapOf("METAL" to edge),
+            open = open, rate = rate, rootHz = baseHz, decaySeconds = t60Seconds)
+
+    /** THUMP's membrane family without wires or finishing, for ONSET's common wire layer. */
+    internal fun onsetSnareBody(rootHz: Float, t60Seconds: Float, edge: Float, rate: Int, count: Int): FloatArray {
+        val position = Dsp.lin(edge, 0.40f, 0.16f)
+        val modes = Modes.atPosition(Modes.tableFor(Modes.Material.MEMBRANE), position).map { mode ->
+            // Correct the two-pole impulse response's 1/sin(theta) gain analytically.
+            // This keeps the source level physical across root/rate without per-hit
+            // peak normalization or the ~250x resonant-gain problem of a bare bank.
+            val theta = 2.0 * PI * rootHz * mode.ratio / rate
+            mode.copy(gain = mode.gain * sin(theta).toFloat(), t60 = t60Seconds * (mode.t60 / 1.2f))
+        }
+        val strike = FloatArray(count)
+        strike[0] = 1f
+        return Modes.ring(strike, rootHz, modes, rate)
+    }
+
+    private fun kick(
+        m: Map<String, Float>, rate: Int,
+        rootHz: Float? = null, decaySeconds: Float? = null, sweepMultiplier: Float? = null,
+    ): FloatArray {
         // Ranges stay in kick territory on purpose: the playability contract
         // says a scrambled kick still reads as a kick, and spectral centroid
         // is merciless - a whisper of broadband click outweighs a wall of
         // 46 Hz fundamental. Hence the low-passed thump-click and the fast
         // sweep, both tuned against the classifier.
-        val base = Dsp.expMap(m.getValue("TUNE"), 34f, 62f)
-        val sweepMult = Dsp.lin(m.getValue("SWEEP"), 1.2f, 4f)
-        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.85f)
+        val base = rootHz ?: Dsp.expMap(m.getValue("TUNE"), 34f, 62f)
+        val sweepMult = sweepMultiplier ?: Dsp.lin(m.getValue("SWEEP"), 1.2f, 4f)
+        val t60 = decaySeconds ?: Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.85f)
         val click = m.getValue("CLICK")
         val driveAmt = m.getValue("DRIVE")
         // BEND: how fast the pitch falls onto the base, as a rate in 1/s.
@@ -516,9 +544,12 @@ object Thump {
      * The classic metallic recipe: a cluster of six inharmonic squares,
      * high-passed hard so only the shimmer survives.
      */
-    private fun hat(m: Map<String, Float>, open: Boolean, rate: Int): FloatArray {
-        val base = Dsp.expMap(m.getValue("TUNE"), 320f, 620f)
-        val t60 = if (open) Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.0f)
+    private fun hat(
+        m: Map<String, Float>, open: Boolean, rate: Int,
+        rootHz: Float? = null, decaySeconds: Float? = null,
+    ): FloatArray {
+        val base = rootHz ?: Dsp.expMap(m.getValue("TUNE"), 320f, 620f)
+        val t60 = decaySeconds ?: if (open) Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.0f)
         else Dsp.expMap(m.getValue("DECAY"), 0.04f, 0.16f)
         val metal = m.getValue("METAL")
         // NOISE: white noise crossfaded in under the square cluster, before

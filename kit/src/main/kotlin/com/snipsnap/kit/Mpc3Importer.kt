@@ -230,7 +230,16 @@ object Mpc3Importer {
             )
         }
 
-        val kit = Kit(kitName, pads)
+        val sidecarFile = File(dataDir, KitStore.FILE_NAME)
+        val sidecarText = if (sidecarFile.exists()) {
+            require(sidecarFile.isFile) { "'$sidecarFile' is not a kit sidecar file" }
+            sidecarFile.inputStream().use {
+                com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar ${sidecarFile.name}")
+            }.toString(Charsets.UTF_8)
+        } else null
+        // Validate before writing the destination. The unchanged WAV copies
+        // below are the same files checked against any saved source hashes.
+        val kit = ImportSidecar.restore(Kit(kitName, pads), sidecarText, dataDir, sidecarFile.path)
         // Total recall: the clips the track carries come home too.
         val clips = parseClips(track)
 
