@@ -50,7 +50,11 @@ python scripts/review-confluence-audio.py --fixtures-only \
 
 Use `--fixtures /path/to/fixtures` to override the fixture directory. Ordinary
 audition review checks the copied manifest and recordings in `AUDITION/sources`.
-Run `python scripts/test_confluence_fixture_boundaries.py` for the three
+Run `python scripts/test_confluence_fixture_boundaries.py` for the held-vowel
 regressions: current vowels pass, the retired male1 crop fails both amplitude
 and pitch checks, and a stale selected end marker fails even if the complete
 canonical file has a quiet tail.
+
+The longer breathy arpeggio uses an amplitude-only `tailBoundaryGuard`. Its
+native melody is allowed to change pitch. A fourth regression checks its quiet
+ending and rejects a replacement tail taken from the loud body of the phrase.

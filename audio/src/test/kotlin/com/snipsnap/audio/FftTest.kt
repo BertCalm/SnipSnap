@@ -110,4 +110,45 @@ class FftTest {
         assertEquals(4096, Fft.floorPowerOfTwo(4096))
         assertEquals(4096, Fft.floorPowerOfTwo(8191))
     }
+
+    @Test
+    fun `matches a naive double DFT closely at 4096 points`() {
+        // The accuracy contract the Double twiddle recurrence buys: a
+        // Float recurrence measured ~2e-5 relative here against the
+        // same naive DFT, before the fix.
+        val n = 4096
+        var seed = 42L
+        fun rnd(): Double {
+            seed = seed * 6364136223846793005L + 1442695040888963407L
+            return ((seed ushr 40) and 0xFFFFFF) / 8388608.0 - 1.0
+        }
+        val x = DoubleArray(n) { rnd() }
+        val re = FloatArray(n) { x[it].toFloat() }
+        val im = FloatArray(n)
+        Fft.forward(re, im)
+        var maxErr = 0.0
+        var maxMag = 0.0
+        for (k in 0 until n step 37) {
+            var dr = 0.0
+            var di = 0.0
+            for (t in 0 until n) {
+                val a = -2.0 * PI * k * t / n
+                dr += x[t] * kotlin.math.cos(a)
+                di += x[t] * kotlin.math.sin(a)
+            }
+            val err = kotlin.math.sqrt((re[k] - dr) * (re[k] - dr) + (im[k] - di) * (im[k] - di))
+            if (err > maxErr) maxErr = err
+            val mag = kotlin.math.sqrt(dr * dr + di * di)
+            if (mag > maxMag) maxMag = mag
+        }
+        assertTrue(maxErr / maxMag < 1e-5, "relative DFT error ${maxErr / maxMag}")
+    }
+
+    @Test
+    fun `magnitude spectrum of a single sample does not divide by zero`() {
+        val spectrum = Fft.magnitudeSpectrum(floatArrayOf(0.5f), 1)
+        assertEquals(1, spectrum.size)
+        assertTrue(spectrum[0].isFinite() && spectrum[0] > 0f, "got ${spectrum[0]}")
+    }
+
 }

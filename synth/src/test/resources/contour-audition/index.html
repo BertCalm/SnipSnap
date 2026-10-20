@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f5f1e9">
-  <meta name="description" content="Listen to CONTOUR for SnipSnap: original wavetable voices, a stable body and a moving digital edge. Compare dry WAVs and save your listening verdicts.">
+  <meta name="description" content="Listen to CONTOUR for SnipSnap. Explore seven independent sound-shaping controls, compare dry WAVs, and save your listening verdicts.">
   <title>CONTOUR — SnipSnap audition</title>
   <style>
     :root{color-scheme:light;--paper:#f5f1e9;--card:#fffdf8;--ink:#22291f;--muted:#687063;--line:#dedfd4;--green:#254f3a;--lime:#d9eeac;--edge:#a9482f;--warm:#f4e8dc;--radius:18px}
@@ -13,8 +13,10 @@
     @media(max-width:650px){body{font-size:14px}.wrap{padding:0 18px}.topline{padding-top:19px;font-size:10px}.edition{font-size:9px;letter-spacing:.06em}.hero{grid-template-columns:1fr;gap:20px;padding:33px 0 25px}h1{font-size:82px}.intro{font-size:16px}.hero-art{min-height:225px;padding:18px}.hero-art svg{height:135px}.facts{gap:14px;grid-template-columns:repeat(2,1fr);padding:19px 0;margin-bottom:25px}.fact strong{font-size:22px}.fact span{font-size:9px}.policy{grid-template-columns:1fr;gap:10px}.sectionline{align-items:start;flex-direction:column;gap:10px}.sectionline h2{font-size:33px}.save small{font-size:10px}.toolbar{gap:10px}.category-heading{align-items:start}.category-heading span{padding-top:5px}.grid{grid-template-columns:1fr}.clip{padding:20px}.clip p.description{min-height:0}.group-feedback .formline{grid-template-columns:1fr;gap:10px}.compare{bottom:8px;width:calc(100% - 16px);padding:11px;gap:8px;border-radius:12px}.slot{gap:6px;align-items:start;flex-direction:column}.slot span{font-size:10px;max-width:100%;-webkit-line-clamp:1}.slot button{font-size:10px;padding:8px 10px;min-width:59px}.compare .stop{padding:8px;font-size:10px}.footer{flex-direction:column;gap:6px;padding-bottom:130px}.group-label span{display:none}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.clip{transition:none}}
     .grid.revision-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.group-label .load-pair{font-size:11px;padding:8px 12px}
-    #voicingTargetText{white-space:normal}
-    @media(max-width:650px){.grid.revision-grid{grid-template-columns:1fr}}
+    [hidden]{display:none!important}.range-controls{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:19px 0 0;border-top:1px solid var(--line)}.range-controls .range-hint{grid-column:1/-1;font-size:12px;color:var(--muted);margin:0 0 4px}.toolbar.control-mode{grid-template-columns:minmax(0,300px);border-top:0;padding-top:12px}.grid.control-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.control-step{display:inline-block;color:var(--green);font-size:11px;font-weight:750;letter-spacing:.04em;margin-bottom:7px}.download-pair{display:flex;gap:12px;align-items:center}.download-pair button{padding:0;background:transparent;border:0;border-radius:0;color:var(--green);font-size:12px;border-bottom:1px solid var(--green)}.clip-foot{flex-wrap:wrap;gap:8px}.settings-list{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:11px;margin:12px 0}.settings-list dt{color:var(--muted)}.settings-list dd{margin:0;font-variant-numeric:tabular-nums}.patch-hint{font-size:10px;color:var(--muted);margin:10px 0!important}.group-label .control-reference{font-size:11px;white-space:normal}.range-steps{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0 0}.range-steps button{font-size:11px;padding:8px 12px}
+    @media(max-width:1050px){.grid.control-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.control-grid .clip{padding:18px}.control-grid .actions .play{flex-basis:100%}}
+    @media(max-width:750px){.grid.control-grid{grid-template-columns:1fr}.control-grid .actions .play{flex-basis:auto}.range-controls{grid-template-columns:1fr}.toolbar.control-mode{grid-template-columns:1fr}}
+    @media(max-width:650px){.grid.revision-grid{grid-template-columns:1fr}.control-panel .category-heading{display:block}.control-panel .category-heading>span{display:block;margin-top:10px}}
   </style>
 </head>
 <body>
@@ -22,17 +24,18 @@
 <div class="wrap">
   <header class="topline"><a class="brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">SnipSnap / instruments</a><span class="edition"><span class="dot" aria-hidden="true"></span><span id="editionRound">Engineering audition</span></span></header>
   <section class="hero" aria-labelledby="title">
-    <div><div class="eyebrow">Original wavetable instrument</div><h1 id="title">Contour</h1><p class="intro">A solid body.<br>A moving digital edge.</p><p class="muted">Six voices built from related table pairs. Listen dry, compare at a common level, and decide which characters belong in SnipSnap.</p><div class="pillrow"><span class="pill">Original tables</span><span class="pill">Mono · 44.1 kHz · 16-bit audition</span><span class="pill">No rack effects</span><span class="pill">Provisional recipes</span></div><div class="quicklinks"><button type="button" data-jump="presets">Hear the presets ↗</button><button type="button" data-jump="voices">Meet the six voices ↗</button><button type="button" data-jump="diagnostics">Follow body + edge ↗</button></div></div>
+    <div><div class="eyebrow">Original wavetable instrument</div><h1 id="title">Contour</h1><p class="intro">A solid body.<br>A moving digital edge.</p><p class="muted">Six voices built from related table pairs. Seven new controls reach into body, edge, envelopes and filter shape. Hear their range, then compare the saved recipes.</p><div class="pillrow"><span class="pill">Original tables</span><span class="pill">Mono · 44.1 kHz · 16-bit audition</span><span class="pill">No rack effects</span><span class="pill">Provisional recipes</span></div><div class="quicklinks"><button type="button" data-jump="controls">Hear the control range ↗</button><button type="button" data-jump="revision">Compare the revisions ↗</button><button type="button" data-jump="presets">Hear the presets ↗</button></div></div>
     <div class="hero-art"><div class="art-label"><span>01 / body</span><span style="color:var(--edge)">02 / edge</span></div><svg viewBox="0 0 540 185" role="img" aria-label="A stable rounded body waveform alongside an evolving edge waveform; an illustration of the two related layers"><g fill="none" stroke="#ccd5bf" stroke-width="1"><path d="M0 45H540M0 92H540M0 140H540"/><path d="M45 0V185M135 0V185M225 0V185M315 0V185M405 0V185M495 0V185"/></g><path d="M0 63C22 63 22 17 45 17S68 108 90 108S113 17 135 17S158 108 180 108S203 17 225 17S248 108 270 108S293 17 315 17S338 108 360 108S383 17 405 17S428 108 450 108S473 17 495 17S518 63 540 63" fill="none" stroke="#345b3c" stroke-width="3"/><path d="M0 141C8 124 17 153 26 133S36 111 45 132S52 165 62 143S76 100 85 137S93 166 102 144S111 118 120 133S130 172 140 142S151 99 160 127S171 165 180 143S190 112 200 139S209 166 220 137S232 104 242 144S252 167 260 137S273 110 282 134S293 172 304 143S315 99 324 132S334 164 345 137S357 109 366 142S379 171 389 136S400 101 409 136S420 166 432 138S444 104 453 135S465 172 477 141S489 109 499 136S520 160 540 141" fill="none" stroke="#bc593c" stroke-width="2.5"/></svg><div class="art-footer"><span>Recognizable root</span><span>Related spectral travel</span></div></div>
   </section>
-  <div class="facts" aria-label="Audition overview"><div class="fact"><strong>09</strong><span>Dry preset recipes</span></div><div class="fact"><strong>06</strong><span>Voice identities</span></div><div class="fact"><strong>05</strong><span>Timbral controls</span></div><div class="fact"><strong id="clipTotal">—</strong><span>Listening cases</span></div></div>
-  <div class="policy"><div><div class="eyebrow">What to listen for</div><p>The body should keep the note recognizable as the edge takes a different path through its overtones. SCAN chooses a place, OFFSET separates the layers, and MOTION travels between spectral positions.</p><p>Start with the saved presets. Then compare Combined, Body only and Edge only in the Body + edge section. Add any two clips to A and B below.</p></div><div><div class="notes"><strong>Matched level is the default.</strong> Gain only: loudness target 0.12, peak ceiling 0.90. Some clips may stay below the target because of their peak. Begin with your listening volume low.</div><details><summary>Level policy, original tables and the filter</summary><p id="levelPolicy">Loading the render's level policy…</p><p>These are generated, band-limited harmonic tables with related body and edge scans. The shared low-pass is a generic chosen model with bounded drive on an oversampled path. There are no imported factory waves or circuit emulation claims.</p><p>HOLD contains the settled sustain, without its original attack. The main Play buttons use sample-accurate buffer looping. Native browser controls are available as a fallback; the four-cycle WAV gives an exact repeated-loop listening check.</p></details></div></div>
+  <div class="facts" aria-label="Audition overview"><div class="fact"><strong>09</strong><span>Dry preset recipes</span></div><div class="fact"><strong>06</strong><span>Voice identities</span></div><div class="fact"><strong>12</strong><span>Timbral controls</span></div><div class="fact"><strong id="clipTotal">—</strong><span>Listening cases</span></div></div>
+  <div class="policy"><div><div class="eyebrow">What to listen for</div><p>Start with Control range. Compare three recorded settings of one control on the same reference sound, note and velocity. Listen for the body shape, edge balance, attack, tail, movement speed and filter response.</p><p>The five original controls remain: SCAN, OFFSET, MOTION, FILTER and DRIVE. Add any two clips to A and B below, or use Revision A/B to compare the saved recipes with the previous round.</p></div><div><div class="notes"><strong>Matched level is the default.</strong> Gain only: loudness target 0.12, peak ceiling 0.90. Some clips may stay below the target because of their peak. Begin with your listening volume low.</div><details><summary>Level policy, original tables and the filter</summary><p id="levelPolicy">Loading the render's level policy…</p><p>These are generated, band-limited harmonic tables with related body and edge scans. The shared low-pass is a generic chosen model with bounded drive on an oversampled path. There are no imported factory waves or circuit emulation claims.</p><p>HOLD contains the settled sustain, without its original attack. The main Play buttons use sample-accurate buffer looping. Native browser controls are available as a fallback; the two-cycle WAV gives an exact repeated-loop listening check.</p></details></div></div>
   <main id="listen" tabindex="-1">
     <div class="sectionline"><h2>The listening room</h2><div class="save"><small>Feedback stays in this browser.</small><button id="exportVerdicts" type="button">Export verdicts ↓</button></div></div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Listening sections"></nav>
-    <div class="toolbar"><label class="control">Search clips<input type="search" id="search" placeholder="Name, note or control…"></label><label class="control">Voice<select id="voice"><option value="">Every voice</option></select></label><label class="control">Comparison group<select id="group"><option value="">Every group</option></select></label><label class="control">Playback level<select id="level"><option value="matched">Matched · default</option><option value="raw">Raw synthesis</option><option value="normalized">Host normalized · references</option></select></label></div>
+    <div class="range-controls" id="rangeControls" hidden><label class="control" for="rangeControl">Choose a control<select id="rangeControl"></select></label><label class="control" for="rangeContext">Reference sound<select id="rangeContext"></select></label><p class="range-hint">Choose native synth recordings at 0, 0.5 and 1. The middle step preserves the saved configuration's amount for this control; the other added controls stay at 0.5.</p></div>
+    <div class="toolbar" id="listeningToolbar"><label class="control matrix-filter">Search clips<input type="search" id="search" placeholder="Name, note or control…"></label><label class="control matrix-filter">Voice<select id="voice"><option value="">Every voice</option></select></label><label class="control matrix-filter">Comparison group<select id="group"><option value="">Every group</option></select></label><label class="control">Playback level<select id="level"><option value="matched">Matched · default</option><option value="raw">Raw synthesis</option><option value="normalized">Host normalized · references</option></select></label></div>
     <div id="status" class="status" role="status" aria-live="polite"></div>
-    <section id="panel" role="tabpanel" aria-labelledby="tab-presets"><div class="category-heading"><div><h3 id="categoryTitle">Start here</h3><p id="categoryDescription">Loading the listening matrix…</p><p id="voicingTarget" style="margin-top:8px" hidden><span class="eyebrow">Preset voicing target</span><br><span id="voicingTargetText"></span></p></div><span id="count"></span></div><div id="clips"><p class="loading">Loading manifest.json…</p></div><div class="more" id="more" hidden><button id="showMore" type="button">Show more clips</button></div><div class="group-feedback"><h3 id="groupFeedbackTitle">Your verdict on this section</h3><div class="formline"><div class="feedback"><label for="groupVerdict">Overall verdict</label><select id="groupVerdict"><option value="">Not reviewed</option><option value="useful">Useful — keep developing</option><option value="needs-work">Needs work</option><option value="approved">Approved for this round</option></select></div><div class="feedback"><label for="groupNotes">What should change, or stay?</label><textarea id="groupNotes" placeholder="Tone, root clarity, control range, loop wraps…"></textarea></div></div></div></section>
+    <section id="panel" role="tabpanel" aria-labelledby="tab-controls"><div class="category-heading"><div><h3 id="categoryTitle">Control range</h3><p id="categoryDescription">Loading the listening matrix…</p><div class="range-steps" id="rangeSteps" hidden aria-label="Play recorded control steps"></div></div><span id="count"></span></div><div id="clips"><p class="loading">Loading manifest.json…</p></div><div class="more" id="more" hidden><button id="showMore" type="button">Show more clips</button></div><div class="group-feedback"><h3 id="groupFeedbackTitle">Your verdict on this section</h3><div class="formline"><div class="feedback"><label for="groupVerdict">Overall verdict</label><select id="groupVerdict"><option value="">Not reviewed</option><option value="useful">Useful — keep developing</option><option value="needs-work">Needs work</option><option value="approved">Approved for this round</option></select></div><div class="feedback"><label for="groupNotes">What should change, or stay?</label><textarea id="groupNotes" placeholder="Tone, root clarity, control range, loop wraps…"></textarea></div></div></div></section>
   </main>
   <footer class="footer"><p>CONTOUR for SnipSnap. The nine recipes are provisional; owner listening approval precedes expansion. Passing measurements support engineering checks and do not establish sonic acceptance.</p><p id="round">Render provenance loading…</p></footer>
 </div>
@@ -43,10 +46,17 @@
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const fixed = (value, places = 3) => Number.isFinite(value) ? Number(value).toFixed(places) : '—';
-  let manifest, category = 'presets', visibleLimit = 18, feedback = {clips:{},groups:{}}, storageKey = '', pendingJump = null;
+  let manifest, category = 'controls', visibleLimit = 18, feedback = {clips:{},groups:{}}, storageKey = '', pendingJump = null;
   let context, source, sourceGain, activeClip = null, activePath = '', startedAt = 0, progressFrame, requestId = 0;
   const buffers = new Map(), repeatPreferences = new Map(), slots = {A:null,B:null};
+  const originalControls = ['SCAN','OFFSET','MOTION','FILTER','DRIVE'];
+  const controlLabels = {TUNE:'Tune',SCAN:'Scan',OFFSET:'Layer offset',MOTION:'Movement depth',FILTER:'Filter cutoff',DRIVE:'Drive',HOLD:'Hold',BODY:'Body',EDGE:'Edge blend',ATTACK:'Attack',DECAY:'Tail',RATE:'Movement rate',RESO:'Filter resonance',ENV:'Filter contour'};
+  const rangeLabels = {BODY:'Round / full body',EDGE:'Edge blend',ATTACK:'Attack',DECAY:'Tail',RATE:'Movement rate',RESO:'Filter resonance',ENV:'Filter contour'};
+  const rangeStepLabels = {BODY:['Rounder body','Recipe body balance','Fuller partials'],EDGE:['Body only','Recipe edge blend','More edge'],ATTACK:['Fast entrance','Recipe attack','Slow entrance'],DECAY:['Short tail','Recipe tail','Long tail'],RATE:['Slow movement','Recipe movement rate','Fast movement'],RESO:['Soft filter','Recipe resonance','More resonance'],ENV:['Steady cutoff','Recipe filter contour','Deeper filter contour']};
   let storageAvailable = true;
+  function controlDefinition(name) { return manifest.controls?.find(control => control.name === name); }
+  function stepLabel(clip) { return rangeStepLabels[clip.control]?.[clip.controlValue === 0 ? 0 : clip.controlValue === 1 ? 2 : 1] || clip.controlEndpoint || (clip.controlValue === .5 ? 'Recipe setting' : 'Recorded setting'); }
+  function shortRound(round) { return round?.match(/^contour-(r\d+)-/i)?.[1].toUpperCase() || 'previous round'; }
   function announce(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
   function versionedPath(clip, level) {
     const path = clip[level + 'Path'];
@@ -74,17 +84,19 @@
         patch: clip.patch, audioSha256: clip.audioSha256, rawSha256: clip.rawSha256,
         comparisonRevision: clip.comparisonRevision || clip.comparisonVersion,
         baselineRound: clip.baselineRound || (clip.category === 'revision' ? manifest.comparisonBaseline?.listeningRound : undefined),
+        control: clip.control, controlValue: clip.controlValue, controlBase: clip.controlBase,
       }];
     }));
     return {...feedback, clips};
   }
-  function groupKey() { return category + ' / ' + ($('group').value || 'all') + ' / ' + ($('voice').value || 'all voices'); }
+  function groupKey() { return category === 'controls' ? 'controls / ' + $('rangeControl').value + ' / ' + $('rangeContext').value : category + ' / ' + ($('group').value || 'all') + ' / ' + ($('voice').value || 'all voices'); }
   function groupFeedback() {
     const saved = feedback.groups[groupKey()] || {};
     $('groupVerdict').value = saved.verdict || ''; $('groupNotes').value = saved.notes || '';
-    $('groupFeedbackTitle').textContent = 'Your verdict · ' + ($('group').value || manifest.categories.find(item => item.id === category).title) + ($('voice').value ? ' · ' + $('voice').value : '');
+    $('groupFeedbackTitle').textContent = category === 'controls' ? 'Your verdict · ' + $('rangeControl').selectedOptions[0]?.textContent + ' · ' + $('rangeContext').selectedOptions[0]?.textContent : 'Your verdict · ' + ($('group').value || manifest.categories.find(item => item.id === category).title) + ($('voice').value ? ' · ' + $('voice').value : '');
   }
   function filtered() {
+    if (category === 'controls') return manifest.clips.filter(clip => clip.category === 'controls' && clip.control === $('rangeControl').value && clip.controlBase === $('rangeContext').value).sort((a,b) => a.controlValue - b.controlValue);
     const query = $('search').value.trim().toLowerCase();
     const revisionOrder = new Map([...new Set(manifest.clips.filter(clip => clip.category === 'revision').map(clip => clip.group))].map((group,index) => [group,index]));
     return manifest.clips.filter(clip => (category === 'presets' ? (clip.category === 'presets' || (clip.category === 'voices' && clip.featured) || (clip.voice === 'KEY' && ['BODY_ONLY','EDGE_ONLY','COMBINED'].includes(clip.diagnostic))) : clip.category === category) && (!$('voice').value || clip.voice === $('voice').value) && (!$('group').value || clip.group === $('group').value) && (!query || [clip.title,clip.description,clip.group,clip.voice,clip.note].join(' ').toLowerCase().includes(query)) && ($('level').value !== 'normalized' || clip.normalizedPath)).sort((a,b) => category === 'revision' ? (revisionOrder.get(a.group) - revisionOrder.get(b.group) || Number(a.id.startsWith('revised_')) - Number(b.id.startsWith('revised_'))) : category === 'presets' ? ({presets:0,voices:1,diagnostics:2}[a.category] - {presets:0,voices:1,diagnostics:2}[b.category]) : 0);
@@ -95,37 +107,53 @@
     $('group').innerHTML = '<option value="">Every group</option>' + groups.map(group => '<option value="' + esc(group) + '">' + esc(group) + '</option>').join('');
     if (groups.includes(prior)) $('group').value = prior;
   }
+  function fillControlContexts() {
+    const prior = $('rangeContext').value, contexts = new Map();
+    manifest.clips.filter(clip => clip.category === 'controls' && clip.control === $('rangeControl').value).forEach(clip => contexts.set(clip.controlBase,(clip.controlBaseLabel || clip.controlBase) + ' · ' + clip.voice + ' · ' + clip.note));
+    $('rangeContext').innerHTML = [...contexts].map(([id,label]) => '<option value="' + esc(id) + '">' + esc(label) + '</option>').join('');
+    if (contexts.has(prior)) $('rangeContext').value = prior;
+  }
+  function downloadPatch(clip) {
+    if (!clip.patch) { announce('This recording has no saved patch.',true); return; }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(clip.patch,null,2) + '\n'],{type:'application/json'}));
+    const link = document.createElement('a'); link.href = url; link.download = clip.id + '-' + shortRound(clip.provenance?.listeningRound || manifest.listeningRound).toLowerCase() + '-patch.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
+    announce('Exact rendered patch downloaded · ' + clip.title + '.');
+  }
   function clipCard(clip, number) {
     const repeats = repeatPreferences.get(clip.id) ?? true;
     const level = chosenLevel(clip), data = clip[level + 'Metrics'] || clip.matchedMetrics, saved = feedback.clips[clip.id] || {};
-    const macroLine = Object.entries(clip.macros).filter(([key]) => key !== 'TUNE' && key !== 'HOLD').map(([key,value]) => '<span>' + esc(key) + ' ' + fixed(value,2) + '</span>').join('');
+    const macroLine = clip.category === 'controls' ? '<span>' + esc(clip.control) + ' ' + fixed(clip.controlValue,1) + '</span><span>Velocity ' + fixed(clip.velocity,2) + '</span><span>Other new controls 0.5</span>' : Object.entries(clip.macros).filter(([key]) => originalControls.includes(key)).map(([key,value]) => '<span>' + esc(key) + ' ' + fixed(value,2) + '</span>').join('');
+    const settings = Object.entries(clip.macros).map(([key,value]) => '<dt>' + esc(controlLabels[key] || key) + ' <small>(' + esc(key) + ')</small></dt><dd>' + fixed(value,2) + '</dd>').join('');
     return '<article class="clip' + (activeClip?.id === clip.id ? ' playing' : '') + '" id="clip-' + clip.id + '" data-id="' + clip.id + '" aria-labelledby="title-' + clip.id + '">' +
       '<div class="clip-top"><span class="voice">' + esc(clip.voice) + (clip.loop ? ' / HOLD' : '') + '</span><span class="clip-number">' + String(number).padStart(2,'0') + ' · ' + esc(clip.note) + '</span></div>' +
-      '<h3 id="title-' + clip.id + '">' + esc(clip.title) + '</h3><p class="description">' + esc(clip.description) + '</p><div class="recipe" aria-label="Control settings">' + macroLine + '</div>' +
+      (clip.category === 'controls' ? '<span class="control-step">' + esc(clip.control) + ' · ' + fixed(clip.controlValue,1) + '</span>' : '') + '<h3 id="title-' + clip.id + '">' + esc(clip.category === 'controls' ? stepLabel(clip) : clip.title) + '</h3><p class="description">' + esc(clip.category === 'controls' ? clip.controlEndpoint : clip.description) + '</p><div class="recipe" aria-label="Control settings">' + macroLine + '</div>' +
       '<div class="actions"><button type="button" class="primary play" data-action="play" aria-pressed="' + (activeClip?.id === clip.id) + '" aria-label="Play ' + esc(clip.title) + '">' + (activeClip?.id === clip.id ? 'Stop ■' : 'Play ▶') + '</button><button type="button" class="assign" data-action="A" aria-label="Add ' + esc(clip.title) + ' to comparison A">+ A</button><button type="button" class="assign" data-action="B" aria-label="Add ' + esc(clip.title) + ' to comparison B">+ B</button></div>' +
       '<div class="playhead"><progress max="' + clip.durationSeconds + '" value="0" aria-label="Playback progress for ' + esc(clip.title) + '"></progress><span>' + fixed(clip.durationSeconds,1) + ' s</span></div>' +
-      '<div class="clip-foot"><span>' + esc(level) + ' level</span>' + (clip.loop ? '<label class="repeat"><input type="checkbox" data-action="repeat"' + (repeats ? ' checked' : '') + '> Repeat</label>' : '') + '<a class="download" href="' + esc(chosenPath(clip)) + '" download aria-label="Download ' + esc(clip.title) + ' WAV">WAV ↓</a></div>' +
+      '<div class="clip-foot"><span>' + esc(level) + ' level</span>' + (clip.loop ? '<label class="repeat"><input type="checkbox" data-action="repeat"' + (repeats ? ' checked' : '') + '> Repeat</label>' : '') + '<span class="download-pair">' + (clip.patch ? '<button type="button" data-action="patch" aria-label="Download exact patch JSON for ' + esc(clip.title) + '">Patch JSON ↓</button>' : '') + '<a class="download" href="' + esc(chosenPath(clip)) + '" download aria-label="Download ' + esc(clip.title) + ' WAV">WAV ↓</a></span></div>' +
+      '<details class="settings"><summary>All control settings</summary><dl class="settings-list">' + settings + '</dl><p class="patch-hint">The patch JSON contains the exact stored controls and configuration for this recording. Source round: ' + esc(shortRound(clip.provenance?.listeningRound || manifest.listeningRound)) + '.</p></details>' +
       '<details><summary>Measurements + listening notes</summary><dl class="metrics"><dt>Peak / RMS</dt><dd>' + fixed(data.peak) + ' / ' + fixed(data.rms) + '</dd><dt>Measured loudness</dt><dd>' + fixed(data.loudness) + '</dd><dt>DC mean</dt><dd>' + fixed(data.dc,5) + '</dd>' + (clip.loop ? '<dt>Loop seam error</dt><dd>' + Number(clip.seamError).toExponential(2) + '</dd>' : '') + (level === 'raw' && clip.rawExportGain < 1 ? '<dt>Raw PCM export gain</dt><dd>' + fixed(clip.rawExportGain) + '</dd>' : '') + '</dl>' +
-      (clip.repeatPath ? '<a class="download" href="' + esc(versionedPath(clip,'repeat')) + '" download>Exact four-cycle WAV ↓</a>' : '') +
+      (clip.repeatPath ? '<a class="download" href="' + esc(versionedPath(clip,'repeat')) + '" download>Exact ' + esc(clip.repeatCycles ?? 2) + '-cycle WAV ↓</a>' : '') +
       '<div class="feedback"><label for="verdict-' + clip.id + '">Clip verdict</label><select id="verdict-' + clip.id + '" data-feedback="verdict"><option value="">Not reviewed</option>' + [['useful','Useful'],['needs-work','Needs work'],['approved','Approved for this round']].map(([value,label]) => '<option value="' + value + '"' + (saved.verdict === value ? ' selected' : '') + '>' + label + '</option>').join('') + '</select><label for="notes-' + clip.id + '">Listening notes</label><textarea id="notes-' + clip.id + '" data-feedback="notes" placeholder="What do you hear?">' + esc(saved.notes || '') + '</textarea></div></details>' +
       '<details class="native"><summary>Native audio controls</summary><p class="native-hint">Browser repeat may add a gap. Main Play uses sample-accurate loops.</p><audio controls preload="none"' + (clip.loop && repeats ? ' loop' : '') + ' src="' + esc(chosenPath(clip)) + '" aria-label="Native controls for ' + esc(clip.title) + '"></audio></details></article>';
   }
   function render() {
     if (!manifest) return;
     const section = manifest.categories.find(item => item.id === category), clips = filtered(), shown = clips.slice(0,visibleLimit);
-    const previousVoicing = manifest.comparisonBaseline?.listeningRound.startsWith('contour-r03-') ? 'rounded R03, the last published voicing' : 'the last published voicing';
-    $('categoryTitle').textContent = section.title; $('categoryDescription').textContent = category === 'revision' ? 'Same note and velocity, dry sound, same level policy. Previous is ' + previousVoicing + '. Both versions preserve the rendered attack. Compare Previous and New.' : category === 'presets' ? 'Nine saved recipes, six center-note voice references, and the defining body + edge comparison. Start with these matched clips, then explore the complete matrix.' : section.description;
-    $('voicingTarget').hidden = !(['revision','presets'].includes(category) && manifest.voicingTarget);
-    $('voicingTargetText').textContent = manifest.voicingTarget || '';
+    const control = controlDefinition($('rangeControl').value);
+    $('categoryTitle').textContent = category === 'controls' && control ? (rangeLabels[control.name] || control.label) + ' · ' + control.name : section.title;
+    $('categoryDescription').textContent = category === 'controls' && control ? control.description + ' Only this control changes.' : category === 'revision' ? 'Same note and velocity, dry sound, same level policy. Previous is ' + shortRound(manifest.comparisonBaseline?.listeningRound) + ', the last published voicing. New is ' + shortRound(manifest.listeningRound) + '. Both versions preserve the rendered attack.' : category === 'presets' ? 'Nine saved recipes, six center-note voice references, and the defining body + edge comparison. Explore the full control range in the first tab.' : section.description;
+    $('rangeSteps').hidden = category !== 'controls';
+    $('rangeSteps').innerHTML = category === 'controls' ? shown.map(clip => '<button type="button" data-control-step="' + esc(clip.id) + '" aria-label="Play ' + esc(clip.control) + ' ' + fixed(clip.controlValue,1) + ' · ' + esc(stepLabel(clip)) + '">Play ' + fixed(clip.controlValue,1) + ' ▶</button>').join('') : '';
     $('panel').setAttribute('aria-labelledby','tab-' + category);
-    $('count').textContent = clips.length + ' cases';
+    $('panel').classList.toggle('control-panel',category === 'controls');
+    $('count').textContent = clips.length + (category === 'controls' ? ' recorded steps' : ' cases');
     let previousGroup = '', html = '';
     for (let index = 0; index < shown.length; index++) {
       const clip = shown[index];
-      const displayGroup = category === 'presets' && clip.category === 'voices' ? 'Six voice references' : clip.group;
+      const displayGroup = category === 'controls' ? (clip.controlBaseLabel || clip.controlBase) + ' · ' + clip.note + ' · velocity ' + fixed(clip.velocity,2) : category === 'presets' && clip.category === 'voices' ? 'Six voice references' : clip.group;
       if (previousGroup !== displayGroup) {
         if (index) html += '</div>';
-        html += '<div class="group-label"><h3>' + esc(displayGroup) + '</h3>' + (category === 'revision' ? '<button type="button" class="load-pair" data-comparison-group="' + esc(displayGroup) + '" aria-label="Load Previous and New ' + esc(displayGroup) + ' into A and B">Load A / B</button>' : '<span>Compare at matched level · add two clips to A / B</span>') + '</div><div class="grid' + (category === 'revision' ? ' revision-grid' : '') + '">'; previousGroup = displayGroup;
+        html += '<div class="group-label"><h3>' + esc(displayGroup) + '</h3>' + (category === 'revision' ? '<button type="button" class="load-pair" data-comparison-group="' + esc(displayGroup) + '" aria-label="Load Previous and New ' + esc(displayGroup) + ' into A and B">Load A / B</button>' : '<span>Compare at matched level · add two clips to A / B</span>') + '</div><div class="grid' + (category === 'revision' ? ' revision-grid' : category === 'controls' ? ' control-grid' : '') + '">'; previousGroup = displayGroup;
       }
       html += clipCard(clip,index + 1);
     }
@@ -139,11 +167,14 @@
     if (!manifest) { pendingJump = id; return; }
     category = id; visibleLimit = 18; $('group').value = ''; $('search').value = '';
     const previousLevel = $('level').value;
-    const normalizedAvailable = category !== 'revision' || manifest.clips.filter(clip => clip.category === 'revision').every(clip => clip.normalizedPath);
+    const normalizedAvailable = ['presets','voices'].includes(category);
     $('level').querySelector('[value="normalized"]').disabled = !normalizedAvailable;
     if (!normalizedAvailable && $('level').value === 'normalized') $('level').value = 'matched';
     if ($('level').value === 'normalized' && !['presets','voices'].includes(category)) $('level').value = 'matched';
     if ($('level').value !== previousLevel) { stopPlayback(); pauseNative(); announce('Playback level: ' + $('level').value + '.'); }
+    $('rangeControls').hidden = category !== 'controls';
+    $('listeningToolbar').classList.toggle('control-mode',category === 'controls');
+    document.querySelectorAll('.matrix-filter').forEach(label => { label.hidden = category === 'controls'; });
     for (const tab of $('tabs').children) { const selected = tab.dataset.category === id; tab.setAttribute('aria-selected',String(selected)); tab.tabIndex = selected ? 0 : -1; }
     fillGroups(); render();
   }
@@ -155,6 +186,7 @@
       if (!active) card.querySelector('progress').value = 0;
     });
     for (const slot of ['A','B']) { const active = Boolean(slots[slot] && slots[slot].id === activeClip?.id); $('play' + slot).classList.toggle('selected',active); $('play' + slot).setAttribute('aria-pressed',String(active)); $('play' + slot).textContent = (active ? 'Stop ' : 'Play ') + slot; }
+    document.querySelectorAll('[data-control-step]').forEach(button => { const clip = byId(button.dataset.controlStep), active = activeClip?.id === clip.id; button.classList.toggle('active',active); button.setAttribute('aria-pressed',String(active)); button.textContent = (active ? 'Stop ' : 'Play ') + fixed(clip.controlValue,1) + (active ? ' ■' : ' ▶'); });
   }
   function stopPlayback(invalidate = true) {
     if (invalidate) requestId++;
@@ -212,6 +244,7 @@
     const button = event.target.closest('button[data-action]'); if (!button) return;
     const clip = byId(button.closest('.clip').dataset.id), action = button.dataset.action;
     if (action === 'play') play(clip);
+    else if (action === 'patch') downloadPatch(clip);
     else if (action === 'A' || action === 'B') { slots[action] = clip; $('slot' + action).textContent = clip.title; $('play' + action).disabled = false; updateActiveUI(); announce(clip.title + ' added to ' + action + '.'); }
   });
   $('clips').addEventListener('input', event => {
@@ -227,6 +260,9 @@
   document.addEventListener('play', event => { if (event.target.tagName === 'AUDIO') { stopPlayback(); pauseNative(event.target); announce('Playing with native audio controls.'); } },true);
   $('playA').addEventListener('click',() => play(slots.A)); $('playB').addEventListener('click',() => play(slots.B));
   $('stop').addEventListener('click',() => { stopPlayback(); pauseNative(); announce('Playback stopped.'); });
+  $('rangeControl').addEventListener('change',() => { fillControlContexts(); render(); });
+  $('rangeContext').addEventListener('change',() => render());
+  $('rangeSteps').addEventListener('click',event => { const button = event.target.closest('[data-control-step]'); if (button) play(byId(button.dataset.controlStep)); });
   $('search').addEventListener('input',() => { visibleLimit = 18; render(); });
   $('voice').addEventListener('change',() => { visibleLimit = 18; fillGroups(); render(); });
   $('group').addEventListener('change',() => { visibleLimit = 18; render(); });
@@ -235,7 +271,7 @@
   for (const id of ['groupVerdict','groupNotes']) $(id).addEventListener('input',() => { feedback.groups[groupKey()] = {verdict:$('groupVerdict').value,notes:$('groupNotes').value,playbackLevel:$('level').value,updatedAt:new Date().toISOString()}; saveFeedback(); });
   $('exportVerdicts').addEventListener('click',() => {
     if (!manifest) return;
-    const verdict = {schemaVersion:1,engine:'CONTOUR',listeningRound:manifest.listeningRound,sourceSha256:manifest.sourceSha256,sourceFiles:manifest.sourceFiles,recipeSha256:manifest.recipeSha256,comparisonBaseline:manifest.comparisonBaseline,voicingTarget:manifest.voicingTarget,voicingMethodology:manifest.voicingMethodology,exportedAt:new Date().toISOString(),levelPolicy:manifest.levelPolicy,feedback:feedbackForExport()};
+    const verdict = {schemaVersion:1,engine:'CONTOUR',listeningRound:manifest.listeningRound,sourceSha256:manifest.sourceSha256,sourceFiles:manifest.sourceFiles,recipeSha256:manifest.recipeSha256,comparisonBaseline:manifest.comparisonBaseline,controls:manifest.controls,exportedAt:new Date().toISOString(),levelPolicy:manifest.levelPolicy,feedback:feedbackForExport()};
     const url = URL.createObjectURL(new Blob([JSON.stringify(verdict,null,2)],{type:'application/json'})); const link = document.createElement('a'); link.href = url; link.download = manifest.listeningRound + '-verdicts.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000); announce('Verdicts exported. Browser answers remain saved.');
   });
   document.querySelectorAll('[data-jump]').forEach(button => button.addEventListener('click',() => { selectCategory(button.dataset.jump); $('listen').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'}); }));
@@ -255,10 +291,13 @@
     $('levelPolicy').textContent = manifest.levelPolicy.measurement + ' ' + manifest.levelPolicy.matched + ' Raw: ' + manifest.levelPolicy.raw + ' Host normalized: ' + manifest.levelPolicy.normalized;
     $('round').textContent = 'Round ' + manifest.listeningRound + ' · ' + (manifest.full ? 'Full matrix' : 'Development smoke pack');
     $('voice').innerHTML += [...new Set(manifest.clips.map(clip => clip.voice))].map(voice => '<option value="' + esc(voice) + '">' + esc(voice) + '</option>').join('');
-    const categories = [...manifest.categories].sort((a,b) => (a.id === 'revision' ? -1 : b.id === 'revision' ? 1 : 0));
+    $('rangeControl').innerHTML = (manifest.controls || []).map(control => '<option value="' + esc(control.name) + '">' + esc(rangeLabels[control.name] || control.label) + ' · ' + esc(control.name) + '</option>').join('');
+    fillControlContexts();
+    const categoryOrder = {controls:0,revision:1};
+    const categories = [...manifest.categories].sort((a,b) => (categoryOrder[a.id] ?? 2) - (categoryOrder[b.id] ?? 2));
     $('tabs').innerHTML = categories.map(section => '<button type="button" role="tab" id="tab-' + section.id + '" aria-controls="panel" aria-selected="false" tabindex="-1" data-category="' + section.id + '">' + esc(section.title) + '</button>').join('');
     $('tabs').addEventListener('click',event => { const tab = event.target.closest('[data-category]'); if (tab) selectCategory(tab.dataset.category); });
-    selectCategory(pendingJump || (manifest.categories.some(section => section.id === 'revision') ? 'revision' : 'presets'));
+    selectCategory(pendingJump || (manifest.categories.some(section => section.id === 'controls') ? 'controls' : manifest.categories.some(section => section.id === 'revision') ? 'revision' : 'presets'));
     if (!storageAvailable) announce('Browser storage is unavailable. Export verdicts to keep your answers.',true);
   }).catch(error => { $('clips').innerHTML = '<div class="empty">The listening pack could not load. Serve this folder over HTTP and keep manifest.json beside index.html.</div>'; announce(error.message,true); });
 })();

@@ -172,4 +172,34 @@ class ResamplerTest {
             }
         }
     }
+
+    @Test
+    fun `kernel half width is historical at half rate and widens below it`() {
+        assertEquals(16, Resampler.halfTapsFor(1.0))
+        assertEquals(16, Resampler.halfTapsFor(0.5))
+        assertEquals(32, Resampler.halfTapsFor(0.25))
+        assertEquals(128, Resampler.halfTapsFor(0.125))
+        assertEquals(88, Resampler.halfTapsFor(8_000.0 / 44_100.0))
+    }
+
+    @Test
+    fun `far downsampling keeps its passband instead of drooping`() {
+        // 44.1k -> 8k is a 0.18x ratio: with the old fixed 16-source-tap
+        // kernel this measured -2.2 dB at 3 kHz and -5.0 dB at 3.8 kHz.
+        for ((hz, floor) in listOf(3_000.0 to 0.95f, 3_400.0 to 0.95f, 3_800.0 to 0.75f)) {
+            val input = sine(44_100, hz = hz, rate = 44_100, amplitude = 0.9f)
+            val output = Resampler.resample(input, 8_000)
+            val ratio = rms(output) / rms(input)
+            assertTrue(ratio > floor, "$hz Hz passband ratio $ratio (was ~0.56 at 3.8 kHz before the widening)")
+        }
+    }
+
+    @Test
+    fun `far downsampling still rejects what must alias`() {
+        // 6 kHz has no home at an 8 kHz rate (it would fold to 2 kHz).
+        val input = sine(44_100, hz = 6_000.0, rate = 44_100, amplitude = 0.9f)
+        val output = Resampler.resample(input, 8_000)
+        assertTrue(rms(output) / rms(input) < 0.05f, "aliased residue ${rms(output) / rms(input)}")
+    }
+
 }

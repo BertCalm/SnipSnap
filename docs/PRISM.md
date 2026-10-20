@@ -16,6 +16,10 @@ raw and matched versions, then explore macro sweeps and the interaction grids.
 Repeat HOLD clips for several cycles. Listening notes stay on the current
 device and can be exported as JSON.
 
+The listening room decodes each selected clip into a Web Audio buffer. With
+Loop enabled, HOLD clips repeat on the audio clock without restarting the file
+between cycles. Downloads retain the original engine WAVs.
+
 ```text
 ./gradlew --no-daemon test
 ./gradlew --no-daemon :synth:generatePrismAudition

@@ -47,6 +47,7 @@ import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.TiltSource
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.AxesProjector
@@ -694,7 +695,7 @@ private fun GrainFieldCanvas(
                 false
             }
             drawCircle(
-                color = if (lit) scheme.accent.tape else scheme.ink2.tape,
+                color = if (lit) scheme.accent.tape else scheme.lcdInk2,
                 radius = dotRadiusPx,
                 center = center,
             )
@@ -755,11 +756,11 @@ private fun HeaderChip(
                     Modifier
                 },
             )
-            .border(1.dp, if (engaged) scheme.accent.tape else scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = accessibilityLabel ?: label, onClick = onClick)
+            .border(1.dp, if (engaged) scheme.accent.tape else scheme.lcdInk2, RoundedCornerShape(3.dp))
+            .tapeClick(label = accessibilityLabel ?: label, spoken = if (accessibilityLabel == null) spokenBack(label) else null, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (engaged) scheme.lcd.tape else scheme.ink.tape)
+        TapeText(label, TapeType.pixel, if (engaged) scheme.lcd.tape else scheme.lcdInk.tape)
     }
 }

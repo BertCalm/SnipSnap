@@ -24,10 +24,10 @@ class BellowsIntegrationTest {
         assertFalse(starter.seeded)
         assertEquals(KeySpec.parse("Cminpent"), starter.key)
         val presets = BellowsPresets.all()
-        assertEquals(8, presets.size)
+        assertEquals(24, presets.size)
         assertEquals(BellowsVoice.entries.toSet(), presets.map { it.voice }.toSet())
         for (voice in BellowsVoice.entries) {
-            assertEquals(2, Presets.forVoice(BellowsPatch.ENGINE, voice.name).size)
+            assertEquals(6, Presets.forVoice(BellowsPatch.ENGINE, voice.name).size)
         }
         // The all-starters suite renders the complete kit. Exercise its recipe
         // and shelf dispatch here without regenerating sixteen audio buffers.
