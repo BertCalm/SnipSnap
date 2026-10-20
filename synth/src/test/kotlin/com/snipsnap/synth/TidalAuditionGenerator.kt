@@ -36,6 +36,7 @@ object TidalAuditionGenerator {
         val midi: Int = MIDI, val velocity: Float = .75f,
         val options: Tidal.Options = Tidal.Options(), val component: String = "mix",
         val comparisonGroup: String = id, val referenceId: String = id,
+        val model: Int = Tidal.MODEL_VERSION,
         val sweep: String? = null, val step: Float? = null,
     )
 
@@ -61,17 +62,19 @@ object TidalAuditionGenerator {
         require(requests.map { it.id }.distinct().size == requests.size)
         val started = System.nanoTime()
         val rendered = mutableListOf<Rendered>()
-        val baselines = mutableMapOf<TidalVoice, Tidal.Probe>()
+        val baselines = mutableMapOf<Pair<TidalVoice, Int>, Tidal.Probe>()
+        val legacyChecks = mutableMapOf<String, Boolean>()
         val replayChecks = mutableMapOf<String, Boolean>()
         for ((index, request) in requests.withIndex()) {
             val begin = System.nanoTime()
-            val useBaseline = request.options == Tidal.Options() && request.macros == Tidal.defaults(request.voice) &&
+            val baselineKey = request.voice to request.model
+            val useBaseline = request.options == Tidal.Options() && request.macros == Tidal.defaults(request.voice, request.model) &&
                 request.midi == MIDI && request.velocity == .75f
-            val probe = if (useBaseline && request.voice in baselines) baselines.getValue(request.voice) else
+            val probe = if (useBaseline && baselineKey in baselines) baselines.getValue(baselineKey) else
                 Tidal.probe(request.voice, request.macros, request.midi, request.velocity, SEED,
-                    Tidal.MODEL_VERSION, request.options)
-            if (request.id.endsWith("-default")) {
-                baselines[request.voice] = probe
+                    request.model, request.options)
+            if (useBaseline) baselines[baselineKey] = probe
+            if (request.component == "mix" && request.options == Tidal.Options()) {
                 val patch = patch(request)
                 val restored = TidalPatch.fromJsonText(patch.toJsonText())
                 check(restored == patch) { "${request.id}: patch round-trip changes the recipe." }
@@ -83,6 +86,12 @@ object TidalAuditionGenerator {
                         abs(probe.rawMix[i] - (probe.populationA[i] + probe.populationB[i])) < 2e-6f
                 }) { "${request.id}: the prelevel stems do not sum to the full mix." }
                 replayChecks[request.id] = true
+            }
+            if (request.model == 1 && request.id in legacyHashes) {
+                check(samplesHash(probe.rawMix) == legacyHashes.getValue(request.id)) {
+                    "${request.id}: model-1 reference differs from the first published audition."
+                }
+                legacyChecks[request.id] = true
             }
             val selected = select(probe, request.component)
             check(selected.isNotEmpty() && selected.all { it.isFinite() }) { "${request.id}: invalid audio." }
@@ -123,13 +132,27 @@ object TidalAuditionGenerator {
 
         val byId = rendered.associateBy { it.request.id }
         val rawGain = minOf(1f, CEILING / rendered.maxOf { peak(it.samples) }.coerceAtLeast(1e-9f))
-        val gains = rendered.groupBy { it.request.comparisonGroup }.mapValues { (_, family) ->
+        val families = rendered.groupBy { it.request.comparisonGroup }
+        val requestedGains = families.mapValues { (_, family) ->
             val reference = byId.getValue(family.first().request.referenceId)
-            require(family.all { it.request.referenceId == reference.request.id }) { "Inconsistent comparison reference." }
+            require(family.all { it.request.referenceId == reference.request.id && it.request.voice == reference.request.voice }) {
+                "Inconsistent comparison reference or voice."
+            }
             val referenceLoudness = Loudness.of(snip(reference.samples))
-            val targetGain = if (referenceLoudness <= 1e-6f) 1f else Dsp.MELODIC_LOUDNESS_TARGET / referenceLoudness
-            val familyPeak = maxOf(peak(reference.samples), family.maxOf { peak(it.samples) })
-            minOf(targetGain, CEILING / familyPeak.coerceAtLeast(1e-9f))
+            if (referenceLoudness <= 1e-6f) 1f else Dsp.MELODIC_LOUDNESS_TARGET / referenceLoudness
+        }
+        // Full-mix old/new references each target the same perceptual loudness. One common
+        // headroom factor per voice then guards every related family, preserving that match.
+        // Stems and ablations inherit their full-mix reference; a quiet tap is never boosted.
+        val voiceHeadroom = TidalVoice.entries.associateWith { voice ->
+            families.filterValues { it.first().request.voice == voice }.minOf { (group, family) ->
+                val reference = byId.getValue(family.first().request.referenceId)
+                val familyPeak = maxOf(peak(reference.samples), family.maxOf { peak(it.samples) })
+                minOf(1f, CEILING / (familyPeak * requestedGains.getValue(group)).coerceAtLeast(1e-9f))
+            }
+        }
+        val gains = families.mapValues { (group, family) ->
+            requestedGains.getValue(group) * voiceHeadroom.getValue(family.first().request.voice)
         }
         val clips = rendered.map { writeClip(root, it, gains.getValue(it.request.comparisonGroup), rawGain) }
         val source = sourceSnapshot(repo, root)
@@ -140,25 +163,29 @@ object TidalAuditionGenerator {
         }
         val manifest = linkedMapOf<String, Any?>(
             "format" to "snipsnap-tidal-audition", "version" to 1,
-            "title" to "Tidal / First audition", "engine" to "TIDAL", "model" to Tidal.MODEL_VERSION,
-            "description" to "Two pitched populations gather, encounter and leave evolving harmonic strands.",
+            "title" to "Tidal / Second audition: source character", "engine" to "TIDAL", "model" to Tidal.MODEL_VERSION,
+            "description" to "A second source pass with model-1 references and unchanged STREAM encounter geometry.",
+            "models" to listOf(1, Tidal.MODEL_VERSION),
+            "suggestedComparison" to mapOf("a" to "stream-default", "b" to "legacy-stream"),
+            "archive" to mapOf("path" to "legacy/index.html", "title" to "First audition / 58 original comparisons"),
             "seed" to SEED.toString(), "sampleRate" to RATE, "channels" to 1, "bitDepth" to 16,
             "clipCount" to clips.size, "generatedAt" to Instant.now().toString(), "hold" to false,
             "scope" to listOf("Finite PAIR and STREAM voices", "2,048 particles reduced to 32 persistent cohorts",
-                "Dry mono synthesis; no samples or finishing effects", "HOLD is zero; repeat replays the complete encounter",
+                "Dry mono synthesis; no samples or finishing effects", "Model 1 remains replayable; model 2 changes the source and PAIR starting encounter", "HOLD is zero; repeat replays the complete encounter",
                 "Provisional recipes; factory roster and phone editor are not integrated", "Owner listening verdict remains open"),
             "gainPolicy" to linkedMapOf("rawGain" to rawGain,
                 "raw" to "One common safe gain across every prelevel clip; original amplitude differences are retained.",
-                "matched" to "Each comparison family shares its declared reference gain. The whole family sets peak headroom. Stems and no-tail controls are never normalized independently.",
+                "matched" to "Old/new full-mix references independently target the same perceptual loudness, then share one headroom factor per voice. Stems, force controls and tail endpoints retain the new full-mix reference gain; quiet taps are never independently normalized.",
+                "voiceHeadroom" to voiceHeadroom.mapKeys { it.key.name },
                 "targetLoudness" to Dsp.MELODIC_LOUDNESS_TARGET, "peakCeiling" to CEILING,
                 "native" to "Audition exports use prelevel engine taps. A production TidalPatch uses the normal shared output leveler."),
             "sections" to sections(), "clips" to clips, "source" to source,
             "downloads" to listOf(
-                mapOf("path" to "starter.zip", "title" to "Starter listening pack", "description" to "Ten matched WAVs and their complete recipes"),
+                mapOf("path" to "starter.zip", "title" to "Starter listening pack", "description" to "Ten current/reference WAVs and their complete recipes"),
                 mapOf("path" to "source-recipes.zip", "title" to "Source and recipes", "description" to "Source snapshots, every production/diagnostic recipe and measurements"),
                 mapOf("path" to "metrics.csv", "title" to "Measurements", "description" to "Per-clip audio and encounter diagnostics"),
             ),
-            "verification" to linkedMapOf("baselineRecipeReplayVerified" to replayChecks,
+            "verification" to linkedMapOf("baselineRecipeReplayVerified" to replayChecks, "legacyFirstAuditionSamplesVerified" to legacyChecks,
                 "finiteAudio" to true, "additiveStemsVerified" to true,
                 "generationSeconds" to (System.nanoTime() - started) / 1e9,
                 "scopeNote" to "These are real JVM renderer outputs. Numeric checks do not establish musical acceptance, phone latency or HOLD behavior.",
@@ -169,8 +196,8 @@ object TidalAuditionGenerator {
         File(root, "manifest.json").writeText(Json.write(json(manifest)) + "\n")
         writeMetrics(root, clips)
         File(root, "README.txt").writeText(readme(rawGain))
-        val starterIds = setOf("pair-default", "stream-default", "pair-population-a", "pair-population-b", "stream-core",
-            "stream-tail", "encounter-close-diffuse", "encounter-distant-compact", "mechanism-no-tides", "mechanism-fixed-envelope")
+        val starterIds = setOf("pair-default", "stream-default", "legacy-pair", "legacy-stream", "pair-source-only",
+            "stream-population-a", "stream-population-b", "stream-tail", "mechanism-no-tides", "mechanism-fixed-envelope")
         val starterFiles = clips.filter { it["id"] in starterIds }.flatMap { clip ->
             val paths = clip.getValue("paths") as Map<*, *>
             listOf(paths["matched"].toString(), paths["recipe"].toString(), paths["diagnosticRecipe"].toString())
@@ -182,95 +209,73 @@ object TidalAuditionGenerator {
         println("TIDAL wrote ${clips.size} finite PCM16 raw/matched clips, recipes, traces and two download packs to $root")
     }
 
+    // Exact prelevel Float32 identities from the first published audition (seed 41, C3, velocity .75).
+    // These are source hashes, so revising export/matched gain cannot conceal a changed legacy render.
+    private val legacyHashes = mapOf(
+        "legacy-stream" to "96c4fe54ed29e0453a09f0e9d5fe5acf0bdc304706a68173a8abeb980dc2d7a2",
+        "legacy-pair" to "e1d06a18be54bed9b546d9cf6765f1f987cb7ad1e725d03cb84494e8c0766f63",
+    )
+
     private fun requests(): List<Request> = buildList {
-        val stream = Tidal.defaults(TidalVoice.STREAM)
         fun addCase(id: String, title: String, section: String, description: String, question: String,
-            voice: TidalVoice = TidalVoice.STREAM, macros: Map<String, Float> = Tidal.defaults(voice),
-            midi: Int = MIDI, velocity: Float = .75f, options: Tidal.Options = Tidal.Options(), component: String = "mix",
-            group: String = id, reference: String = id, sweep: String? = null, step: Float? = null) {
-            add(Request(id, title, section, description, question, voice, macros, midi, velocity, options, component, group, reference, sweep, step))
+            voice: TidalVoice = TidalVoice.STREAM, model: Int = Tidal.MODEL_VERSION,
+            macros: Map<String, Float> = Tidal.defaults(voice, model),
+            options: Tidal.Options = Tidal.Options(), component: String = "mix",
+            group: String = voice.name.lowercase(Locale.ROOT), reference: String = "$group-default",
+            sweep: String? = null, step: Float? = null) {
+            add(Request(id = id, title = title, section = section, description = description, question = question,
+                voice = voice, macros = macros, options = options, component = component,
+                comparisonGroup = group, referenceId = reference, model = model, sweep = sweep, step = step))
         }
-        for (voice in TidalVoice.entries) {
+        addCase("stream-default", "Stream / second source pass", "defaults",
+            "Model 2 at C3, velocity .75, seed $SEED. STREAM keeps the original encounter controls so the source change can be heard directly.",
+            "Does the source have enough character to carry the movement?")
+        addCase("pair-default", "Pair / closer meeting", "defaults",
+            "Model 2 sources and a closer, less tightly bound starting encounter. Both sound generation and PAIR defaults changed; use the source-only comparison to separate them.",
+            "Do the two populations now read as distinct material through the encounter?", voice = TidalVoice.PAIR)
+        addCase("legacy-stream", "Stream / first audition", "revision",
+            "The original model-1 source with its original STREAM controls. Prelevel samples are checked against the first published audition; its full mix is loudness-matched to the new STREAM with common per-voice headroom.",
+            "Switch A/B with the new STREAM: what changed in the source while the encounter stayed fixed?", model = 1, group = "legacy-stream", reference = "legacy-stream")
+        addCase("legacy-pair", "Pair / first audition", "revision",
+            "The original model-1 PAIR source and distant, compact encounter. Its extended tap was effectively silent. Prelevel samples are checked against the first published audition.",
+            "How much of the original simple-synth impression came from its source and distant encounter?", voice = TidalVoice.PAIR, model = 1, group = "legacy-pair", reference = "legacy-pair")
+        addCase("pair-source-only", "Pair / new source, original encounter", "revision",
+            "Model 2 source with all original model-1 PAIR controls, pitch, velocity and seed. The original distant geometry is retained to isolate the source revision.",
+            "Compare with Pair / first audition to hear the source change alone.", voice = TidalVoice.PAIR,
+            macros = Tidal.defaults(TidalVoice.PAIR, 1), group = "pair-source-only", reference = "pair-source-only")
+        for (voice in listOf(TidalVoice.STREAM, TidalVoice.PAIR)) {
             val slug = voice.name.lowercase(Locale.ROOT)
-            val baseline = "$slug-default"
-            addCase(baseline, if (voice == TidalVoice.PAIR) "Pair / two bodies" else "Stream / exposed strands", "defaults",
-                "${voice.name} defaults at C3, velocity .75, seed $SEED. The complete finite encounter and passive release.",
-                "Can you hear two source identities and an evolving afterstructure?", voice = voice, group = slug, reference = baseline)
-            for ((component, label) in listOf("population-a" to "Population A / rounded", "population-b" to "Population B / brighter",
-                "core" to "Surviving cores", "tail" to "Extended streams")) {
+            for ((component, label) in listOf("population-a" to "Population A", "population-b" to "Population B")) {
                 addCase("$slug-$component", "${voice.name.lowercase().replaceFirstChar { it.uppercase() }} / $label", "anatomy",
-                    "The $component tap from the complete $slug performance. Original full-mix gain is retained; this stem may be quiet.",
-                    "Does this component remain recognizable inside the complete gesture?", voice = voice,
-                    component = component, group = slug, reference = baseline)
+                    "The complete $component tap from model 2, including its core and extended contribution. The full performance's gain is retained.",
+                    "Does this population keep a recognizable character within the complete sound?", voice = voice, component = component)
             }
         }
-        val roles = mapOf("APPROACH" to "Initial relative encounter speed; the simulation clock stays common.",
-            "PASSAGE" to "Target closest-approach distance; larger values bring the centers closer.",
-            "TILT" to "Actual disk inclination and spin orientation, changing the trajectories.",
-            "BIND" to "Disk compactness with compatible circular speeds in the same potential.",
-            "TAIL" to "Pickup allocation from compact cores toward actual extended structure.")
-        for (macro in controls) for (value in listOf(0f, .25f, .5f, .75f, 1f)) {
-            val slug = macro.lowercase(Locale.ROOT)
-            addCase("sweep-$slug-${tag(value)}", "$macro / ${fmt(value)}", "controls",
-                "${roles.getValue(macro)} Other STREAM controls, pitch and seed stay fixed. All five values share the .50 reference gain.",
-                "Is the low-to-middle change audible, and does the high end remain useful?", macros = stream + (macro to value),
-                group = "sweep-$slug", reference = "sweep-$slug-050", sweep = macro, step = value)
+        for ((component, label) in listOf("core" to "Surviving cores", "tail" to "Extended streams")) {
+            addCase("stream-$component", "Stream / $label", "anatomy",
+                "The $component tap from the new complete STREAM performance, at its full-mix reference gain.",
+                "What source character survives in this part of the encounter?", component = component)
         }
-        val encounterCases = listOf(
-            Triple("close-diffuse", "Close / diffuse disks", mapOf("PASSAGE" to .9f, "BIND" to .15f, "TILT" to .1f)),
-            Triple("close-compact", "Close / compact disks", mapOf("PASSAGE" to .9f, "BIND" to .9f, "TILT" to .1f)),
-            Triple("distant-diffuse", "Distant / diffuse disks", mapOf("PASSAGE" to .05f, "BIND" to .15f, "TILT" to .1f)),
-            Triple("distant-compact", "Distant / compact disks", mapOf("PASSAGE" to .05f, "BIND" to .9f, "TILT" to .1f)),
-            Triple("close-inclined", "Close / inclined disks", mapOf("PASSAGE" to .9f, "BIND" to .15f, "TILT" to .65f)),
-            Triple("close-retrograde", "Close / contrasting spin", mapOf("PASSAGE" to .9f, "BIND" to .15f, "TILT" to 1f)),
-        )
-        for ((id, title, overrides) in encounterCases) addCase("encounter-$id", title, "encounters",
-            "PASSAGE ${fmt(overrides.getValue("PASSAGE"))}, BIND ${fmt(overrides.getValue("BIND"))}, TILT ${fmt(overrides.getValue("TILT"))}. The same clock, source profiles and high tail pickup are retained.",
-            "Does close passage and disk structure change the material left ringing?", macros = stream + overrides + ("TAIL" to .8f),
-            group = "encounters", reference = "encounter-close-diffuse")
-        val mechanismOptions = listOf(
-            Triple("no-tides", "Differential tidal force removed", Tidal.Options(noTidalGradient = true)),
-            Triple("fixed-envelope", "Fixed decay replaces evolving tails", Tidal.Options(fixedTailEnvelope = true)),
-            Triple("single-descriptor", "Cohorts collapsed to one descriptor", Tidal.Options(singleDescriptor = true)),
-            Triple("reassigned-identity", "Identity follows current center", Tidal.Options(reassignedIdentity = true)),
-        )
-        for ((id, title, options) in mechanismOptions) addCase("mechanism-$id", title, "mechanisms",
-            when (id) {
-                "no-tides" -> "The centers follow the same encounter. Each disk receives its original center's uniform companion acceleration, while the spatial tidal gradient is removed. This avoids artificial stripping from a center accelerating away."
-                "fixed-envelope" -> "A fixed envelope replaces evolving tail controls. Source phase, encounter schedule and common gain remain comparable. This is a deliberate simplified musical control."
-                "single-descriptor" -> "Cohort control differences are collapsed. Original source profiles remain, but the disk no longer reveals independent strands."
-                else -> "A deliberate incorrect-identity control assigns the current center's fingerprint rather than retaining the original population identity."
-            }, "Does the complete STREAM default reveal a structural difference from this simplification?",
-            options = options, group = "stream", reference = "stream-default")
+        addCase("mechanism-no-tides", "Stream / tidal gradient removed", "mechanisms",
+            "The model-2 source and center motion remain. Each original disk receives uniform companion acceleration while the differential force is removed.",
+            "Does the encounter still contribute an audible structure beyond the source itself?", options = Tidal.Options(noTidalGradient = true))
         addCase("mechanism-no-tides-tail", "No tidal gradient / tail tap", "mechanisms",
-            "The quiet extended tap from the compensated no-tidal-gradient control. It retains the complete STREAM reference gain.",
-            "Does the tail remain quiet when the model supplies no extension?", options = Tidal.Options(noTidalGradient = true),
-            component = "tail", group = "stream", reference = "stream-default")
+            "The extended tap from the compensated no-gradient control, using the full STREAM reference gain. A quiet result is preserved.",
+            "Does the tail remain quiet without genuine extension?", options = Tidal.Options(noTidalGradient = true), component = "tail")
+        addCase("mechanism-fixed-envelope", "Stream / fixed tail envelope", "mechanisms",
+            "A fixed decay replaces evolving tail descriptors while the revised source and encounter schedule remain comparable.",
+            "Does the actual extension produce a useful difference from a fixed decay?", options = Tidal.Options(fixedTailEnvelope = true))
         addCase("mechanism-fixed-envelope-tail", "Fixed envelope / tail tap", "mechanisms",
-            "The tail tap with fixed decay replacing evolving controls, at the complete STREAM reference gain.",
-            "Does the genuine tail carry detail beyond a generic decay?", options = Tidal.Options(fixedTailEnvelope = true),
-            component = "tail", group = "stream", reference = "stream-default")
-        addCase("mechanism-no-tides-population-b", "No tidal gradient / bright population", "mechanisms",
-            "Population B from the no-tidal-gradient run, at the complete STREAM reference gain.",
-            "Is the pitched source still present when deformation is removed?", options = Tidal.Options(noTidalGradient = true),
-            component = "population-b", group = "stream", reference = "stream-default")
-        for (voice in TidalVoice.entries) {
-            val slug = voice.name.lowercase(Locale.ROOT)
-            for (midi in listOf(36, 72)) addCase("$slug-note-$midi", "${voice.name} / ${if (midi == 36) "C2" else "C5"}", "registers",
-                "The same dimensionless encounter at MIDI $midi, velocity .75. Pitch changes the synthesis while encounter preparation is reused.",
-                "Does the pitched body and population contrast survive this register?", voice = voice, midi = midi)
-            for (velocity in listOf(.25f, 1f)) addCase("$slug-velocity-${tag(velocity)}", "${voice.name} / velocity ${fmt(velocity)}", "registers",
-                "Velocity changes excitation and spectral effort while the encounter stays fixed. These clips share the default's gain, preserving playing-energy differences.",
-                "Does the softer or harder performance change articulation as well as level?", voice = voice, velocity = velocity,
-                group = slug, reference = "$slug-default")
-        }
-        addCase("all-high", "All five controls high", "extremes",
-            "APPROACH, PASSAGE, TILT, BIND and TAIL are one; HOLD remains zero. This combines a fast close pass, compact contrasting-spin disks and extended pickup.",
-            "Does the extreme remain finite and pitched without inventing a stream?", macros = stream + controls.associateWith { 1f })
-        addCase("weak-tail", "Distant compact disks / tail pickup", "extremes",
-            "A distant compact encounter with TAIL one. This structural quiet-tail fixture uses the close encounter's gain and is not independently normalized.",
-            "Does the instrument preserve the truth of a weak afterstructure?", macros = stream + mapOf("PASSAGE" to 0f, "BIND" to 1f, "TAIL" to 1f),
-            group = "encounters", reference = "encounter-close-diffuse")
+            "The isolated fixed-envelope tail at the full STREAM reference gain.",
+            "Compare with the genuine STREAM tail: can its evolving strands be heard?", options = Tidal.Options(fixedTailEnvelope = true), component = "tail")
+        for (value in listOf(0f, 1f)) addCase("sweep-tail-${tag(value)}", "TAIL / ${fmt(value)}", "controls",
+            "The new STREAM source with only TAIL changed. Both endpoints retain the default STREAM's reference gain.",
+            "Does shifting from the cores toward extended material reveal a different source character?",
+            macros = Tidal.defaults(TidalVoice.STREAM) + ("TAIL" to value), sweep = "TAIL", step = value)
+        addCase("pair-no-tides", "Pair / tidal gradient removed", "mechanisms",
+            "The revised PAIR starting encounter with the differential tidal force removed. Sources and center motion remain.",
+            "Does PAIR's closer encounter make a meaningful difference?", voice = TidalVoice.PAIR,
+            options = Tidal.Options(noTidalGradient = true))
     }
 
     private fun writeClip(root: File, rendered: Rendered, matchedGain: Float, rawGain: Float): Map<String, Any?> {
@@ -299,7 +304,7 @@ object TidalAuditionGenerator {
             "matchedGain" to matchedGain, "rawGain" to rawGain))
         return linkedMapOf("id" to request.id, "title" to request.title, "section" to request.section,
             "description" to request.description, "question" to request.question, "voice" to request.voice.name,
-            "midi" to request.midi, "velocity" to request.velocity, "macros" to request.macros,
+            "midi" to request.midi, "velocity" to request.velocity, "macros" to request.macros, "model" to request.model,
             "component" to request.component, "comparisonGroup" to request.comparisonGroup, "referenceId" to request.referenceId,
             "sweep" to request.sweep, "step" to request.step, "paths" to paths,
             "durationSeconds" to matched.size.toDouble() / RATE, "matchedGain" to matchedGain, "rawGain" to rawGain,
@@ -333,7 +338,7 @@ object TidalAuditionGenerator {
         println("TIDAL replayed $mode ${obj.getValue("component").str()} to ${args[1]}")
     }
 
-    private fun patch(request: Request) = TidalPatch(request.title, request.voice, request.macros, request.midi, request.velocity, SEED, Tidal.MODEL_VERSION)
+    private fun patch(request: Request) = TidalPatch(request.title, request.voice, request.macros, request.midi, request.velocity, SEED, request.model)
     private fun select(probe: Tidal.Probe, component: String) = when (component) {
         "mix" -> probe.rawMix; "core" -> probe.core; "tail" -> probe.tail
         "population-a" -> probe.populationA; "population-b" -> probe.populationB
@@ -344,13 +349,11 @@ object TidalAuditionGenerator {
         "singleDescriptor" to options.singleDescriptor, "reassignedIdentity" to options.reassignedIdentity,
         "normalize" to false, "oversample" to options.oversample, "particleCount" to options.particleCount, "step" to options.step)
     private fun sections() = listOf(
-        Triple("defaults", "Two first voices", "Start with the complete finite PAIR and STREAM gestures."),
-        Triple("anatomy", "Inside the encounter", "Population and core/tail taps retain the full performance's gain. Quiet components stay quiet."),
-        Triple("controls", "Five controls", "Five positions per macro, with one shared midpoint-reference gain per sweep. HOLD stays zero."),
-        Triple("encounters", "What survives the pass?", "Close and distant encounters, compact and diffuse disks, and real inclination/spin differences."),
-        Triple("mechanisms", "What does the model contribute?", "Compensated force removal and simplified tail, cohort and identity comparisons against STREAM defaults."),
-        Triple("registers", "Pitch and playing effort", "The same prepared movement at lower/higher notes and softer/harder excitation."),
-        Triple("extremes", "Boundary conditions", "All-high controls and an intentionally weak-tail encounter."),
+        Triple("defaults", "Second source pass", "The new complete finite STREAM and PAIR gestures."),
+        Triple("revision", "Before / after", "Model-1 originals, the revised sources and a PAIR comparison that retains its original encounter controls."),
+        Triple("anatomy", "Inside the sound", "Population and core/tail taps retain their full performance's reference gain."),
+        Triple("mechanisms", "Movement or source?", "Compensated force removal and fixed tail envelopes keep the source revision in context."),
+        Triple("controls", "Tail pickup", "Two endpoints retain the default STREAM reference gain. HOLD remains zero."),
     ).map { (id, title, description) -> mapOf("id" to id, "title" to title, "description" to description) }
     private fun meters(samples: FloatArray): Map<String, Any?> = linkedMapOf("peak" to peak(samples),
         "rms" to sqrt(samples.sumOf { it.toDouble() * it } / samples.size),
@@ -407,16 +410,19 @@ object TidalAuditionGenerator {
         })
     }
     private fun readme(rawGain: Float) = """
-        TIDAL / First audition
+        TIDAL / Second audition: source character
         ======================
         Finite PAIR and STREAM, mono 44.1 kHz PCM16. Two restricted particle disks
-        drive 32 persistent source cohorts, two harmonic profiles and stable tail modes.
+        drive 32 persistent source cohorts and stable tail modes. Model 2 revises source
+        character. Model 1 remains replayable, and its two reference samples are checked
+        against the first published audition before export.
         HOLD stays zero. A Repeat button replays the full finite encounter.
         Factory expansion, phone picker, sustained HOLD and hardware acceptance are later work.
         No owner listening verdict or astrophysical accuracy claim is asserted.
 
-        Matched audio uses one reference gain per comparison family and a family peak guard.
-        Stems, ablations, velocity comparisons and weak-tail fixtures retain that reference gain.
+        Matched old/new full mixes each target the same perceptual loudness and share a
+        common per-voice headroom factor. Model-2 stems, ablations and TAIL endpoints
+        retain their complete model-2 performance reference gain. Quiet taps remain quiet.
         Raw audio uses one common gain of $rawGain throughout. Quiet diagnostic tails remain quiet.
         Production patch playback applies its normal shared melodic leveler.
 
@@ -439,7 +445,10 @@ object TidalAuditionGenerator {
         source/ snapshots the renderer, patch, numerical solver, tests, generator, frontend and local dependencies.
         SHA-256 hashes identify the exact files at generation; this source snapshot is not a full standalone checkout.
         Recreate from the SnipSnap repository with ./gradlew --no-daemon :synth:generateTidalAudition.
-        starter.zip contains ten representative matched WAVs, recipes and this readme.
+        starter.zip contains ten current/reference matched WAVs, recipes and this readme.
+        The hosted page links to legacy/index.html for all 58 first-audition comparisons.
+        STREAM keeps its original encounter controls; revised PAIR changes both source
+        and starting encounter. pair-source-only keeps PAIR model-1 controls for isolation.
         source-recipes.zip contains the source snapshot, all recipes and summary measurements.
         Every raw/matched clip is also individually downloadable from the listening page.
     """.trimIndent() + "\n"

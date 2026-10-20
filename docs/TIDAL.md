@@ -1,4 +1,4 @@
-# TIDAL — first finite listening prototype
+# TIDAL — finite listening prototype, second source pass
 
 TIDAL turns a restricted two-center encounter into a pitched sound. Two original
 populations retain different harmonic fingerprints as their disks deform into
@@ -12,10 +12,18 @@ The remaining proposed voices, 36-preset bank, phone picker, and HOLD
 reconstruction remain later work. Listening acceptance is still open.
 
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
-contains 58 cases with raw/matched WAVs, A/B listening, replayable recipes,
-descriptor traces, and a ten-clip starter download. Start with STREAM for the
-developed afterstructure; PAIR is a distant compact-core reference whose tail
-tap is effectively silent at the delivered PCM16 level.
+opens with 18 focused comparisons for the second source pass. The original
+58-case audition is retained under `legacy/`. Both provide raw/matched WAVs,
+A/B listening, replayable recipes, descriptor traces, and download packs.
+The second pass responds to listening feedback: STREAM's movement was distinct,
+but both voices' source sound was too plain. Musical acceptance remains open.
+
+Model 2 gives the original populations more distinct excitation and spectral
+roles, with a rough string character and stretched metallic resonance. It reduces
+the separate steady root reinforcement. PAIR now starts with a closer encounter;
+a source-only comparison also keeps PAIR's original encounter settings so the
+source change can be heard separately. The original distant PAIR reference is
+still available in model 1 and the archived audition.
 
 ## Playing and saving
 
@@ -41,7 +49,9 @@ must preserve that quiet result rather than normalize noise into a stream.
 
 `TidalPatch` saves voice, all controls, requested note, velocity, exact signed
 64-bit seed, and rendering model. The seed is canonical decimal text in JSON.
-Model 1 fixes the dynamics, reduction, source, and finite-window policies.
+Models 1 and 2 fix their dynamics, reduction, source, and finite-window policies.
+New recipes use model 2; saved model-1 recipes keep their original defaults and
+rendering. Published model-1 baseline sample hashes are checked during generation.
 Derived particles, descriptor curves, oscillator phases, and resonator states
 are rebuilt. Macro and name edits retain the saved note, velocity, seed, and
 model. Provisional recipes remain outside the shared factory roster and phone
@@ -75,7 +85,7 @@ capture or escape. The prototype does not claim a complete physical bridge
 classifier; its exposed afterstructure is driven by extension and evolving
 cohort excitation.
 
-The audio stage interpolates prepared controls, drives two contrasting harmonic
+The audio stage interpolates prepared controls, drives two contrasting pitched
 populations at one requested root, and feeds stable damped tail modes. Displacement
 does not become unrestricted musical pitch. Output is deterministic mono 44.1 kHz,
 with standard 4× internal rendering, band limiting, decimation, DC control, and
@@ -90,11 +100,13 @@ not retain rendered audio.
 
 ## Listening evidence
 
-The audition contains native raw and matched WAVs, population/core/tail taps,
-macro sweeps, encounter interactions, note/velocity comparisons, and mechanism
-controls. Related diagnostic branches share the reference gain; isolated quiet
-tails are not individually amplified. Complete recipes, descriptor traces,
-source hashes, and measured diagnostics accompany the audio.
+The second audition focuses on old/new source comparisons, population/core/tail
+taps, and mechanism controls. Full old/new mixes target the same perceptual
+loudness, with shared headroom per voice. Related diagnostic branches inherit
+their full-mix reference gain; isolated quiet tails are not individually amplified.
+The original macro sweeps, encounter interactions, and note/velocity comparisons
+remain in the archived audition. Complete recipes, descriptor traces, source
+hashes, and measured diagnostics accompany the audio.
 
 The compensated **no tidal gradient** comparison preserves center motion and the
 companion's uniform acceleration at each original center, while removing its

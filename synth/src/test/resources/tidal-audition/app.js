@@ -10,12 +10,13 @@
   };
   const audio = $('audio-player');
   const sectionNames = {
-    defaults: 'First listen', anatomy: 'Inside the sound', controls: 'Five controls',
+    defaults: 'First listen', revision: 'Before & after', anatomy: 'Inside the sound', controls: 'Tail pickup',
     encounters: 'Encounter studies', mechanisms: 'Mechanism checks', registers: 'Notes & velocity', extremes: 'At the edges',
   };
   const sectionDescriptions = {
+    revision: 'Compare the first source with this revision. STREAM keeps its encounter settings; PAIR also has a source-only comparison at its original settings.',
     anatomy: 'Hear the original populations, compact bodies, and extended pickup separately. Stems retain their reference gain.',
-    controls: 'One control at a time, from 0 to 1. Assign low and high steps to A and B, then compare the middle.',
+    controls: 'Move TAIL from compact bodies toward extended pickup. Both endpoints keep the full STREAM reference gain.',
     encounters: 'Change the encounter geometry and disk compactness. Listen for different amounts and kinds of afterstructure.',
     mechanisms: 'Keep the listening conditions while simplifying one mechanism. Does the evolving structure make an audible difference?',
     registers: 'The same instrument across roots and playing strengths. The requested root remains separate from encounter controls.',
@@ -28,11 +29,12 @@
     BIND: 'Diffuse material to compact, attached cores. Listen for core survival.',
     TAIL: 'Compact bodies to extended harmonic streams. Listen beyond the passage.',
   };
-  const state = { manifest: null, clips: [], byId: new Map(), mode: 'matched', section: 'anatomy', query: '', current: null, slots: { a: null, b: null }, generation: 0 };
+  const state = { manifest: null, clips: [], byId: new Map(), mode: 'matched', section: 'revision', query: '', current: null, slots: { a: null, b: null }, generation: 0 };
   const cardElements = new Map();
   const plotElements = new Set();
   const traceCache = new Map();
 
+  function modelOf(clip) { return Number(clip.model ?? state.manifest?.model ?? 1); }
   function noteName(midi) {
     const n = Number(midi);
     if (!Number.isFinite(n)) return 'Root —';
@@ -79,7 +81,7 @@
     const current = state.current;
     $('player-title').textContent = current ? current.title : 'Choose a clip to listen';
     $('player-kicker').textContent = current ? (audio.paused ? 'PAUSED / ' : 'NOW PLAYING / ') + state.mode.toUpperCase() : 'READY WHEN YOU ARE';
-    $('player-subtitle').textContent = current ? `${current.voice || 'TIDAL'} · ${noteName(current.midi)} · finite performance` : 'Finite encounter / no autoplay';
+    $('player-subtitle').textContent = current ? `${current.voice || 'TIDAL'} · ${noteName(current.midi)} · model ${modelOf(current)} · finite` : 'Finite encounter / no autoplay';
     const total = Number.isFinite(audio.duration) ? audio.duration : Number(current?.durationSeconds) || 0;
     $('player-time').textContent = `${clock(audio.currentTime)} / ${clock(total)}`;
     for (const [id, entries] of cardElements) for (const entry of entries) {
@@ -166,7 +168,7 @@
       if (value === undefined || value === null) return;
       const row = make('div'); row.append(make('dt', '', label), make('dd', '', visibleValue(value, digits))); dl.append(row);
     };
-    add('Requested root', `${noteName(clip.midi)} / MIDI ${clip.midi}`); add('Velocity', clip.velocity, 2);
+    add('Rendering model', modelOf(clip)); add('Requested root', `${noteName(clip.midi)} / MIDI ${clip.midi}`); add('Velocity', clip.velocity, 2);
     add('Render length', `${durationOf(clip).toFixed(2)} s`); add('Component', clip.component || 'mix');
     add('Raw export gain', clip.rawGain, 4); add('Matched gain', clip.matchedGain, 4);
     const metrics = clip.metrics || {}, raw = clip.rawMetrics || {}, d = clip.diagnostics || {};
@@ -247,7 +249,7 @@
     if (compact) { card.append(play); actions.append(a, b); }
     else {
       actions.append(play, a, b);
-      const wav = linkedFile('Matched WAV ↗', pathOf(clip, 'matched') || pathOf(clip, 'raw'), 'file-link'); if (wav) actions.append(wav);
+      const wav = linkedFile('Matched WAV >', pathOf(clip, 'matched') || pathOf(clip, 'raw'), 'file-link'); if (wav) actions.append(wav);
     }
     card.append(actions);
     if (!cardElements.has(clip.id)) cardElements.set(clip.id, new Set());
@@ -256,12 +258,10 @@
   function makeCard(clip, featured = false, index = 0) {
     const card = make('article', `${featured ? 'featured-card' : 'study-card'} voice-${String(clip.voice || '').toLowerCase()}`);
     const headingId = `title-${featured ? 'featured-' : ''}${clip.id}`; card.setAttribute('aria-labelledby', headingId);
-    const top = make('div', 'card-topline'); top.append(make('span', 'voice-tag', clip.voice || 'TIDAL'), make('span', 'clip-index', `${featured ? 'FIRST LISTEN ' : ''}${String(index + 1).padStart(2, '0')}`));
+    const top = make('div', 'card-topline'); top.append(make('span', 'voice-tag', clip.voice || 'TIDAL'), make('span', 'clip-index', `${featured ? 'CURRENT ' : ''}${String(index + 1).padStart(2, '0')}`));
     const h3 = make('h3', '', clip.title); h3.id = headingId; card.append(top, h3);
     if (clip.description) card.append(make('p', 'clip-description', clip.description));
-    if (clip.id === 'pair-default') card.append(make('p', 'clip-question', 'A distant, compact-core reference. Use STREAM to hear the exposed afterstructure.'));
-    if (clip.id === 'pair-tail') card.append(make('p', 'clip-question', 'Effectively silent in this distant encounter. This quiet result is preserved at the complete performance’s gain.'));
-    const meta = make('div', 'clip-meta'); meta.append(make('span', '', noteName(clip.midi)), make('span', '', `${durationOf(clip).toFixed(1)} s`), make('span', '', `Velocity ${visibleValue(clip.velocity, 2)}`)); card.append(meta);
+    const meta = make('div', 'clip-meta'); meta.append(make('span', '', noteName(clip.midi)), make('span', '', `${durationOf(clip).toFixed(1)} s`), make('span', '', `Velocity ${visibleValue(clip.velocity, 2)}`), make('span', '', `Model ${modelOf(clip)}`)); card.append(meta);
     if (clip.question) card.append(make('p', 'clip-question', clip.question));
     cardControls(clip, card); card.append(evidence(clip));
     return card;
@@ -285,7 +285,7 @@
       if (!entries.size) cardElements.delete(id);
     }
     for (const plot of plotElements) if (!plot.canvas.isConnected) plotElements.delete(plot);
-    const searchable = (clip) => [clip.title, clip.description, clip.question, clip.voice, clip.sweep, noteName(clip.midi)].join(' ').toLowerCase();
+    const searchable = (clip) => [clip.title, clip.description, clip.question, clip.voice, clip.sweep, noteName(clip.midi), `model ${modelOf(clip)}`].join(' ').toLowerCase();
     const clips = state.clips.filter(c => c.section !== 'defaults' && (state.section === 'all' || c.section === state.section) && (!state.query || searchable(c).includes(state.query)));
     $('clip-count').textContent = `${clips.length} ${clips.length === 1 ? 'clip' : 'clips'}`;
     $('study-description').textContent = state.section === 'all' ? 'All comparisons. Select a study to listen with one question in mind.' : sectionMetadata(state.section)?.description || sectionDescriptions[state.section] || '';
@@ -315,7 +315,7 @@
   function setupSections() {
     const host = $('study-tabs');
     const present = new Set(state.clips.map(c => c.section));
-    const ordered = ['anatomy', 'controls', 'encounters', 'mechanisms', 'registers', 'extremes'].filter(s => present.has(s));
+    const ordered = ['revision', 'anatomy', 'controls', 'mechanisms', 'encounters', 'registers', 'extremes'].filter(s => present.has(s));
     for (const id of present) if (id !== 'defaults' && !ordered.includes(id)) ordered.push(id);
     ordered.push('all');
     for (const id of ordered) {
@@ -330,7 +330,7 @@
       const url = fileUrl(download.path); if (!url) continue;
       const link = make('a', 'download-link'); link.href = url; link.setAttribute('download', '');
       const text = make('span'); text.append(make('strong', '', download.title || download.path)); if (download.description) text.append(make('small', '', download.description));
-      link.append(text, make('span', '', '↓')); host.append(link);
+      link.append(text, make('span', '', 'v')); host.append(link);
     }
     if (!host.childElementCount) host.append(make('p', 'loading-copy', 'Use the WAV and recipe links on each clip.'));
   }
@@ -346,12 +346,15 @@
       if (!featured.length) featured.push(...state.clips.filter(c => c.section === 'defaults').slice(0, 2));
       if (!featured.length) featured.push(...state.clips.slice(0, 2));
       $('featured-clips').replaceChildren(...featured.map((clip, i) => makeCard(clip, true, i)));
-      state.slots.a = featured[0] || null; state.slots.b = featured[1] || null;
+      state.slots.a = state.byId.get(manifest.suggestedComparison?.a) || featured[0] || null;
+      state.slots.b = state.byId.get(manifest.suggestedComparison?.b) || state.byId.get('legacy-stream') || featured[1] || null;
       setupSections(); renderDownloads(); updatePlayer();
       const verified = manifest.verification?.baselineRecipeReplayVerified;
-      $('render-summary').textContent = `${manifest.clipCount || state.clips.length} rendered clips · model ${manifest.model || 1}${verified ? ' · recipe replay verified' : ''} · listening verdict pending`;
+      const referenceModels = [...new Set(state.clips.map(modelOf))].filter(model => model !== Number(manifest.model || 1)).sort();
+      const modelLabel = `model ${manifest.model || 1}${referenceModels.length ? ' + model ' + referenceModels.join('/') + ' references' : ''}`;
+      $('render-summary').textContent = `${manifest.clipCount || state.clips.length} rendered clips · ${modelLabel}${verified ? ' · recipe replay verified' : ''} · listening verdict pending`;
       if (manifest.gainPolicy?.raw || manifest.gainPolicy?.matched) {
-        $('gain-explanation').textContent = 'Matched uses the supplied reference gain within each comparison; stems and weak tails retain their relative level. Raw uses one common export gain.';
+        $('gain-explanation').textContent = 'Matched equalizes old/new full-mix loudness with common headroom per voice. Stems and mechanism checks retain the new full-mix gain. Raw uses one common export gain.';
       }
     } catch (e) {
       const message = location.protocol === 'file:' ? 'Open this listening pack through a local HTTP server so the manifest can load. All WAVs and recipes are also available in its folders.' : 'The listening manifest could not load. Refresh the page or use the audition downloads.';

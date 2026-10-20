@@ -61,7 +61,7 @@ class TidalPatchTest {
         for (bad in listOf("9223372036854775808", "1.5", "-01", "+1", " 1")) {
             assertFailsWith<JsonException> { TidalPatch.fromJsonValue(changed("seed", JsonValue.Str(bad))) }
         }
-        for (bad in listOf(0.0, 1.5, 2.0)) {
+        for (bad in listOf(0.0, 1.5, 3.0)) {
             assertFailsWith<JsonException> { TidalPatch.fromJsonValue(changed("model", JsonValue.Num(bad))) }
         }
         assertFailsWith<JsonException> { TidalPatch.fromJsonValue(changed("seed", JsonValue.Num(1.0))) }
@@ -71,6 +71,18 @@ class TidalPatchTest {
         assertFailsWith<JsonException> {
             TidalPatch.fromJsonValue(changed("macros", JsonValue.Obj(mapOf("HOLD" to JsonValue.Num(1e-100)))))
         }
+    }
+
+    @Test
+    fun `saved source models remain explicit and partial legacy macros keep legacy defaults`() {
+        val legacy = TidalPatch("Original pair", TidalVoice.PAIR, emptyMap(), model = 1)
+        val current = legacy.copy(name = "Contact pair", model = 2)
+        assertEquals(2, Tidal.MODEL_VERSION)
+        assertTrue(Tidal.supportsModel(1) && Tidal.supportsModel(2))
+        assertEquals(legacy, TidalPatch.fromJsonText(legacy.toJsonText()))
+        assertEquals(current, TidalPatch.fromJsonText(current.toJsonText()))
+        assertEquals(1, (Patches.edited(legacy, "Edited", legacy.macros) as TidalPatch).model)
+        assertContentEquals(Tidal.render(TidalVoice.PAIR, model = 1).samples, legacy.render().samples)
     }
 
     @Test

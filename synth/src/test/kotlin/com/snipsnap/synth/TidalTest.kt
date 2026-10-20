@@ -5,6 +5,9 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import java.util.concurrent.CancellationException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.sqrt
@@ -32,10 +35,52 @@ class TidalTest {
             assertFailsWith<IllegalArgumentException> { Tidal.probe(voice, mapOf("HOLD" to .01f), options = diagnostic) }
         }
         assertFailsWith<IllegalArgumentException> { Tidal.probe(TidalVoice.PAIR, midi = 35, options = diagnostic) }
-        assertFailsWith<IllegalArgumentException> { Tidal.probe(TidalVoice.PAIR, model = 2, options = diagnostic) }
+        assertFailsWith<IllegalArgumentException> { Tidal.probe(TidalVoice.PAIR, model = 3, options = diagnostic) }
         assertFailsWith<IllegalArgumentException> { Tidal.probe(TidalVoice.PAIR, velocity = Float.NaN, options = diagnostic) }
         assertFailsWith<IllegalArgumentException> { Tidal.probe(TidalVoice.PAIR, mapOf("TAIL" to -1f), options = diagnostic) }
         assertFailsWith<IllegalArgumentException> { Tidal.probe(TidalVoice.PAIR, mapOf("TUNE" to .5f), options = diagnostic) }
+    }
+
+    @Test
+    fun `model one retains the published samples and its original defaults`() {
+        fun hash(samples: FloatArray): String {
+            val buffer = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+            for (sample in samples) buffer.putFloat(sample)
+            return MessageDigest.getInstance("SHA-256").digest(buffer.array()).joinToString("") { "%02x".format(it.toInt() and 255) }
+        }
+        for ((voice, expected) in listOf(
+            TidalVoice.PAIR to "e1d06a18be54bed9b546d9cf6765f1f987cb7ad1e725d03cb84494e8c0766f63",
+            TidalVoice.STREAM to "96c4fe54ed29e0453a09f0e9d5fe5acf0bdc304706a68173a8abeb980dc2d7a2",
+        )) {
+            val original = Tidal.probe(voice, midi = 48, seed = 41L, model = 1)
+            assertEquals(expected, hash(original.rawMix), "$voice model1 changed the published source")
+            val explicit = Tidal.probe(voice, Tidal.defaults(voice, 1), midi = 48, seed = 41L, model = 1)
+            assertContentEquals(original.rawMix, explicit.rawMix)
+        }
+        assertEquals(.35f, Tidal.defaults(TidalVoice.PAIR, 1).getValue("PASSAGE"))
+        assertEquals(.78f, Tidal.defaults(TidalVoice.PAIR, 2).getValue("PASSAGE"))
+    }
+
+    @Test
+    fun `new sources keep distinct evolving spectra even without a tidal encounter`() {
+        // The musical listening verdict stays outside this check. This prevents the
+        // replacement from collapsing back to the original steady eight-partial tone.
+        val opts = diagnostic.copy(noTidalGradient = true)
+        val current = Tidal.probe(TidalVoice.STREAM, midi = 48, options = opts)
+        val original = Tidal.probe(TidalVoice.STREAM, midi = 48, model = 1, options = opts)
+        assertTrue(distance(current.rawMix, original.rawMix) > .003)
+        assertTrue(current.diagnostics.maxFrequencyHz > original.diagnostics.maxFrequencyHz * 1.8)
+        assertEquals(32, current.trace.first().modeAmplitudes.size)
+        assertEquals(16, original.trace.first().modeAmplitudes.size)
+        fun energy(samples: FloatArray, start: Double, end: Double): Double =
+            ((start * Dsp.RATE).toInt() until (end * Dsp.RATE).toInt()).sumOf { samples[it].toDouble().let { x -> x * x } }
+        val earlyA = energy(current.populationA, .15, .40)
+        val lateA = energy(current.populationA, 1.4, 1.65)
+        val earlyB = energy(current.populationB, .15, .40)
+        val lateB = energy(current.populationB, 1.4, 1.65)
+        assertTrue(earlyB / lateB > earlyA / lateA * 1.5,
+            "metal strike and dragged string lost their different source time structures")
+        assertTrue(current.diagnostics.tailRms < 1e-8, "new contact source invented a tail without tidal extension")
     }
 
     @Test

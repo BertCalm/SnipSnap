@@ -4,7 +4,7 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 
-/** A replayable finite encounter. Model 1 fixes its preparation and render-window policies. */
+/** A replayable finite encounter. The saved model pins its source, preparation and window. */
 data class TidalPatch(
     override val name: String,
     val voice: TidalVoice,
@@ -15,10 +15,10 @@ data class TidalPatch(
     val model: Int = Tidal.MODEL_VERSION,
 ) : Patch {
     init {
-        Patches.validateMacros(this, Tidal.macrosFor(voice))
+        Patches.validateMacros(this, Tidal.macrosFor(voice, model))
         require(midi in Tidal.MIN_MIDI..Tidal.MAX_MIDI) { "TIDAL midi must be ${Tidal.MIN_MIDI}..${Tidal.MAX_MIDI}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "TIDAL velocity must be 0..1" }
-        require(model == Tidal.MODEL_VERSION) { "unsupported tidal model $model" }
+        require(Tidal.supportsModel(model)) { "unsupported tidal model $model" }
         require((macros["HOLD"] ?: 0f) == 0f) { "TIDAL first-listen prototype supports finite encounters only; HOLD must be 0" }
     }
 
@@ -46,7 +46,7 @@ data class TidalPatch(
             fun required(key: String): JsonValue = obj[key]?.takeUnless { it is JsonValue.Null }
                 ?: throw JsonException("TIDAL patch has no $key")
             val model = required("model").int()
-            if (model != Tidal.MODEL_VERSION) throw JsonException("unsupported tidal model $model")
+            if (!Tidal.supportsModel(model)) throw JsonException("unsupported tidal model $model")
             val midi = required("midi").int()
             val velocity = required("velocity").num()
             if (!velocity.isFinite() || velocity !in 0.0..1.0) throw JsonException("TIDAL velocity must be 0..1")
