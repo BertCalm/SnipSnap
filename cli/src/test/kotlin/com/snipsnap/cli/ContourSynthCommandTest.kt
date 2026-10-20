@@ -3,8 +3,12 @@ package com.snipsnap.cli
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.synth.ContourEngine
+import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourPresets
+import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
+import com.snipsnap.synth.OpenSkyPresets
+import com.snipsnap.synth.OpenSkyVoice
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -15,6 +19,74 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ContourSynthCommandTest {
+    @Test
+    fun `downloaded Contour recipes replay exactly and retain their structure through overrides`() {
+        val root = kotlin.io.path.createTempDirectory("contour-cli-patch").toFile()
+        try {
+            val preset = ContourPresets.forVoice(ContourVoice.KEY).first()
+            val patch = preset.copy(
+                name = "MY SOURCE",
+                macros = preset.macros + mapOf("BODY" to .3f, "EDGE" to .65f, "RESO" to .6f),
+                config = preset.config.copy(
+                    bodyTable = ContourTable.FORMANT, edgeTable = ContourTable.ODD_EVEN,
+                    edgeRatio = 1.5f, bodyLevel = .62f, edgeLevel = .48f,
+                    ampAttack = .12f, ampDecay = .22f, ampSustain = .35f,
+                    ampRelease = .4f, sustainSeconds = .2f,
+                ),
+                velocity = .6f,
+            )
+            val recipe = File(root, "patch.json").also { it.writeText(patch.toJsonText()) }
+            val exact = File(root, "exact")
+            assertEquals(0, SynthCommand.run(
+                listOf("CONTOUR", "KEY", "--patch", recipe.path, "--out", exact.path),
+                PrintStream(ByteArrayOutputStream()),
+            ))
+            assertRenderedPatch(patch, exact)
+
+            val edited = File(root, "edited")
+            assertEquals(0, SynthCommand.run(
+                listOf("CONTOUR", "KEY", "--patch", recipe.path, "--midi", "72", "--velocity", ".3",
+                    "--macros", " body = .2, EDGE=.8,ATTACK=.25,DECAY=.7,RATE=.75,ENV=.65 ", "--out", edited.path),
+                PrintStream(ByteArrayOutputStream()),
+            ))
+            assertRenderedPatch(patch.copy(
+                macros = patch.macros + mapOf("TUNE" to .75f, "BODY" to .2f, "EDGE" to .8f,
+                    "ATTACK" to .25f, "DECAY" to .7f, "RATE" to .75f, "ENV" to .65f),
+                velocity = .3f,
+            ), edited)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Contour macro overrides apply to selected and all complete factory recipes`() {
+        val root = kotlin.io.path.createTempDirectory("contour-cli-macros").toFile()
+        try {
+            val presets = ContourPresets.forVoice(ContourVoice.KEY)
+            for ((label, selection, expected) in listOf(
+                Triple("one", listOf("--preset", "2"), listOf(presets[1])),
+                Triple("all", listOf("--all"), presets),
+            )) {
+                val dir = File(root, label)
+                assertEquals(0, SynthCommand.run(
+                    listOf("CONTOUR", "KEY") + selection + listOf("--macros=TUNE=.75,BODY=.2,EDGE=.8,RESO=.65", "--out", dir.path),
+                    PrintStream(ByteArrayOutputStream()),
+                ))
+                val wavs = requireNotNull(dir.listFiles { it.extension == "wav" }).sortedBy { it.name }
+                assertEquals(expected.size, wavs.size)
+                for ((patch, wav) in expected.zip(wavs)) {
+                    val edited = patch.copy(macros = patch.macros +
+                        mapOf("TUNE" to .75f, "BODY" to .2f, "EDGE" to .8f, "RESO" to .65f))
+                    val bytes = ByteArrayOutputStream().also { WavWriter.write(it, edited.render()) }
+                    assertContentEquals(bytes.toByteArray(), wav.readBytes(), "$label: ${patch.name}")
+                }
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
     @Test
     fun `Contour auditions retain structural presets and excitation velocity at the requested note`() {
         val dir = kotlin.io.path.createTempDirectory("contour-cli").toFile()
@@ -66,5 +138,75 @@ class ContourSynthCommandTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    @Test
+    fun `Contour macro errors and ambiguous pitch are rejected before creating output`() {
+        val root = kotlin.io.path.createTempDirectory("contour-cli-macro-refusals").toFile()
+        val dir = File(root, "not-created")
+        try {
+            for (flags in listOf(
+                listOf("--macros", ""), listOf("--macros", "BODY"), listOf("--macros", "BODY=.2=3"),
+                listOf("--macros", "BODY=.2,"), listOf("--macros", ",BODY=.2"),
+                listOf("--macros", "BODY=.2,body=.8"), listOf("--macros", "NOT_A_CONTROL=.5"),
+                listOf("--macros", "BODY=NaN"), listOf("--macros", "EDGE=Infinity"),
+                listOf("--macros", "ATTACK=-.01"), listOf("--macros", "DECAY=1.01"),
+                listOf("--macros", "RATE="), listOf("--macros", "RESO=loud"),
+                listOf("--macros", "ENV=.2", "--macros=BODY=.8"),
+                listOf("--macros", "TUNE=.75", "--midi", "72"),
+            )) {
+                val errors = ByteArrayOutputStream()
+                val args = listOf("synth", "CONTOUR", "KEY") + flags + listOf("--out", dir.path)
+                assertEquals(2, Cli.run(args.toTypedArray(), PrintStream(ByteArrayOutputStream()), PrintStream(errors)), "$flags: $errors")
+                assertTrue("--macros" in errors.toString(), "$flags: $errors")
+                assertFalse("Exception" in errors.toString(), "$flags: $errors")
+            }
+            val errors = ByteArrayOutputStream()
+            assertEquals(2, Cli.run(arrayOf("synth", "OPENSKY", "HALO", "--macros", "BODY=.2", "--out", dir.path),
+                PrintStream(ByteArrayOutputStream()), PrintStream(errors)))
+            assertTrue("--macros" in errors.toString())
+            assertFalse(dir.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Contour patch identity selection and malformed files are rejected before creating output`() {
+        val root = kotlin.io.path.createTempDirectory("contour-cli-patch-refusals").toFile()
+        val dir = File(root, "not-created")
+        try {
+            val recipe = File(root, "contour.json").also {
+                it.writeText(ContourPresets.forVoice(ContourVoice.KEY).first().toJsonText())
+            }
+            val skyRecipe = File(root, "opensky.json").also {
+                it.writeText(OpenSkyPresets.forVoice(OpenSkyVoice.HALO).first().toJsonText())
+            }
+            val malformed = File(root, "broken.json").also { it.writeText("{broken") }
+            for (args in listOf(
+                listOf("CONTOUR", "BASS", "--patch", recipe.path),
+                listOf("CONTOUR", "KEY", "--patch", recipe.path, "--all"),
+                listOf("CONTOUR", "KEY", "--patch", recipe.path, "--preset", "1"),
+                listOf("CONTOUR", "KEY", "--patch", skyRecipe.path),
+                listOf("OPENSKY", "HALO", "--patch", recipe.path),
+                listOf("CONTOUR", "KEY", "--patch", malformed.path),
+                listOf("CONTOUR", "KEY", "--patch", File(root, "missing.json").path),
+            )) {
+                val errors = ByteArrayOutputStream()
+                assertEquals(2, Cli.run((listOf("synth") + args + listOf("--out", dir.path)).toTypedArray(),
+                    PrintStream(ByteArrayOutputStream()), PrintStream(errors)), "$args: $errors")
+                assertTrue("--patch" in errors.toString(), "$args: $errors")
+                assertFalse("Exception" in errors.toString(), "$args: $errors")
+            }
+            assertFalse(dir.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    private fun assertRenderedPatch(patch: ContourPatch, dir: File) {
+        val wav = requireNotNull(dir.listFiles { it.extension == "wav" }).single()
+        val expected = ByteArrayOutputStream().also { WavWriter.write(it, patch.render()) }
+        assertContentEquals(expected.toByteArray(), wav.readBytes(), "complete saved source must survive CLI playback")
     }
 }

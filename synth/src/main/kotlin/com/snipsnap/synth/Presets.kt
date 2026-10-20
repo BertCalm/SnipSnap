@@ -10,8 +10,8 @@ package com.snipsnap.synth
  * An unregistered engine name (or a future one with no roster yet)
  * returns an empty list rather than throwing, so the UI can ask before
  * checking what exists.
- * Provisional VENT and WICK recipes stay in their own tables and are
- * auditioned through the CLI before joining this factory roster.
+ * VENT's clean model-2 starters are factory recipes; its original model-1
+ * comparisons and WICK's provisional recipes stay in their CLI-only tables.
  */
 object Presets {
 
@@ -20,9 +20,17 @@ object Presets {
             val v = ScannedChainVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ScannedChainPresets.forVoice(v)
         }
+        TrioPatch.ENGINE -> {
+            val v = TrioVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TrioPresets.forVoice(v)
+        }
         ThumpPatch.ENGINE -> {
             val v = ThumpVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThumpPresets.forVoice(v)
+        }
+        OnsetPatch.ENGINE -> {
+            val v = OnsetVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OnsetPresets.forVoice(v)
         }
         TinesPatch.ENGINE -> {
             val v = TinesVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
@@ -76,6 +84,7 @@ object Presets {
             val v = BoreVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             BorePresets.forVoice(v)
         }
+        ObbligatoPatch.ENGINE -> if (voice == ObbligatoPatch.VOICE) ObbligatoPresets.all() else emptyList()
         ArcoPatch.ENGINE -> {
             val v = ArcoVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ArcoPresets.forVoice(v)
@@ -164,6 +173,10 @@ object Presets {
             val v = PrismVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             PrismPresets.forVoice(v)
         }
+        OrigamiPatch.ENGINE -> {
+            val v = OrigamiVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OrigamiPresets.forVoice(v)
+        }
         AlloyPatch.ENGINE -> {
             val v = AlloyVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             AlloyPresets.forVoice(v)
@@ -188,6 +201,14 @@ object Presets {
             val v = TangleVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TanglePresets.forVoice(v)
         }
+        FlockPatch.ENGINE -> {
+            val v = FlockVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            FlockPresets.forVoice(v)
+        }
+        OverlapPatch.ENGINE -> {
+            val v = OverlapTopology.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OverlapFactoryPresets.forVoice(v)
+        }
         ShoalPatch.ENGINE -> {
             val v = ShoalVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ShoalPresets.forVoice(v)
@@ -207,6 +228,18 @@ object Presets {
         RegistersPatch.ENGINE -> {
             val v = RegistersVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             RegistersPresets.forVoice(v)
+        }
+        VentPatch.ENGINE -> {
+            val v = VentVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            VentKitPresets.forVoice(v)
+        }
+        OvenPatch.ENGINE -> {
+            val v = OvenVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OvenPresets.forVoice(v)
+        }
+        CreasePatch.ENGINE -> {
+            val v = CreaseVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CreasePresets.patchesForVoice(v)
         }
         else -> emptyList()
     }
@@ -233,12 +266,12 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
+        ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
+            BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
             AerostatPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
-            RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all()
+            RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all()
 }

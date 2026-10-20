@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -120,14 +121,14 @@ fun DoublesScreen(
                 TapeText(
                     idx?.let { "${Copy.countOf(it.entries.size, "PAD", "PADS")} MEASURED" } ?: Copy.DOUBLES_BUSY,
                     TapeType.pixelSmall,
-                    scheme.ink3.tape,
+                    scheme.lcdInk2,
                     maxLines = 1,
                 )
             }
             TapeText("${clusters.size} ${if (clusters.size == 1) "GROUP" else "GROUPS"}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
         }
 
-        TapeText(Copy.DOUBLES_RULE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
+        TapeText(Copy.DOUBLES_RULE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
 
         // The ring, as a dial you read: three steps, the current one lit,
         // regrouped in memory - the measuring never runs again.
@@ -180,7 +181,7 @@ fun DoublesScreen(
             }
         }
 
-        TapeText(Copy.DOUBLES_TRIM_CAVEAT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
+        TapeText(Copy.DOUBLES_TRIM_CAVEAT, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
     }
 }
 
@@ -207,7 +208,7 @@ private fun MemberRow(e: Crate.Entry, onShelf: Boolean, scheme: Scheme, onGo: ()
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        TapeText(Doubles.memberLine(e), TapeType.pixelSmall, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(Doubles.memberLine(e), TapeType.pixelSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
         ActionButton(
             "GO ▸",
             scheme,
@@ -232,14 +233,14 @@ private fun HeaderChip(
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree instead of silently
             // vanishing from it (accessibility audit finding 12).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, spoken = spokenBack(label), onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.lcdInk.tape else scheme.lcdInk.tape.copy(alpha = 0.4f))
     }
 }

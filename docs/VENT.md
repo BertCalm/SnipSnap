@@ -5,9 +5,10 @@ from an evolving Rössler trajectory. The idea comes from
 [OUROBOROS](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/ouroboros_guide.md).
 VENT starts with one topology. The original model-1 audition explores three
 intended characters, and a separate model-2 audition develops three clean
-gestures from the isolation experiment. Its recipes remain outside the factory
-preset roster while the owner listens. No musical acceptance is implied by the
-implementation or its numerical checks.
+gestures from the isolation experiment. After hearing those differences, the
+owner authorized a playable kit: twelve model-2 recipes now form the VENT starter
+roster. The earlier model-1 recipes remain separate. Numerical checks alone do
+not establish musical acceptance of the new kit.
 
 ## The sound source
 
@@ -318,3 +319,99 @@ power-weighted spectral centroids and descriptive PUSH comparison distances.
 The state force integral excludes LEASH; it describes the gesture, not
 physical work. These measurements support listening and reproducibility,
 without proving useful character, alias freedom or musical quality.
+
+
+## Playable kit and two grooves
+
+After hearing the distinction between the clean voices, the owner authorized the
+next musical step: a twelve-pad kit and two short grooves. The source engine is
+unchanged. `VentKitPresets` supplies four saved roles per voice in stable pad order:
+PULSE occupies A01–A04, COIL A05–A08 and PLUME A09–A12. Each row contains Bass,
+Short note, Percussive hit and Long texture. The named pitches use a C-minor
+pentatonic reference; the freer hits and textures do not promise exact pitch lock.
+The basses and short notes use stronger LEASH and quieter orbit settings; textures
+are finite 3.6–4.8-second passages. These new musical choices still await listening.
+
+`SynthKits.vent()` is the source of the app kit and exported kit. Its ordinary dry
+`PadRecipe` objects preserve model, all six controls, MIDI note, fixed synthesis
+velocity and seed. Saved pad mix levels are .72 for bass, .54 for short notes,
+.60 for hits and .22 for textures, leaving space for the moving bed. All twelve
+pads are finite one-shots. VENT appears in the engine picker and offers these
+three clean voices; the legacy ROUND/WIRE/TEAR experiment remains available
+separately through its saved recipes and the prototype CLI path.
+
+Generate the kit and listening pack:
+
+```text
+./gradlew :synth:generateVentKitAudition
+```
+
+An optional `-PventKitOutput=/absolute/directory` sets the output directory. The
+default `testkit/vent-kit-audition/` contains twelve dry pad clips, twelve explicit
+effects counterparts, and two grooves in both forms. Every passage has Native
+and Matched versions: 56 browser WAVs total. Pad audio is mono, groove audio is
+stereo, all at 44.1 kHz PCM24. Twenty-four ordinary pad recipes save both forms;
+no browser synthesizer supplies the sound.
+
+The Effects switch adds existing SnipSnap rack sections after VENT. Bass gets
+light Tape (`WOBBLE .05, DRIVE .12, AGE .14`). Notes add Echo (`TIME .42, REPEAT
+.21, TONE .40, MIX .19`); hits add Spring (`SIZE .24, TONE .48, MIX .14`).
+Textures combine the same Tape with Echo MIX .12 and Spring MIX .10. The complete
+actual chain is saved in each effects recipe, including all parameter values.
+These are optional treatments, not changes to VENT's clean linear readout.
+
+| Groove | Tempo | Length | Musical roles |
+| --- | ---: | ---: | --- |
+| Gravity | 92 BPM | 2 bars | PULSE roots and accents, a COIL ribbon, PLUME replies |
+| Filament | 124 BPM | 4 bars | Alternating COIL/PLUME roots, COIL ticks, early moving texture beds |
+
+Together the two patterns trigger every pad. Dry and Effects versions use the
+same exact `Mpc3Clip` note events, microtiming, velocities and saved pad levels.
+`SessionMixdown` and `KitPreview` render the actual PCM24 source-kit WAVs, rather
+than a separate demonstration synthesizer. Pattern velocity uses the sampler's
+`.35 + .65*velocity` gain law; each pad's synthesis velocity stays fixed in its
+recipe. This pack has no native per-hit attractor rerender or velocity layers.
+The sampler preview includes its standard .95 peak guard and at least 600 ms
+ring-out; a finite texture or effects tail can extend beyond the written bars.
+
+Matched playback shares one scalar gain within each Dry/Effects pair. It meters
+the louder member's loudest 200 ms RMS against .03 and applies a shared .99 peak
+guard. This preserves each pair's relative gain, waveform and internal dynamics;
+it does not flatten individual events. Native pad playback uses the engine's
+normal melodic level convention or its saved FX output. Native groove playback
+uses the source kit's saved mixer levels and standard sampler preview behavior.
+
+`kit.zip` is a self-contained native kit bundle. `Source Kits/VENT Dry` and
+`Source Kits/VENT Effects` contain real `kit.json`, `groove.json`, recipes and
+referenced PCM24 WAVs. `MPC Programs/` holds two native MPC 3 `.xtd` programs
+with both embedded clips and MPC 2 `.xpm` twins inside their matching
+`_[TrackData]` sample folders. The MPC 2 twin carries pads, not embedded MPC 3
+patterns. Standalone tracks do not set the hardware's master tempo. `MPC
+Sessions/` supplies four `.xpj` projects, one for each groove and Dry/Effects
+form, with the correct 92/124 BPM master tempo and self-contained
+`_[ProjectData]` folders. Keep every native file beside its matching data folder.
+MPC files do not preserve SnipSnap recipes, so the source kits remain included.
+
+`audition.zip` contains the 28 Matched WAVs, all 24 standalone recipes and both
+measurement JSON files. Native WAVs remain directly downloadable from the page
+and the source kits. Generated archives exclude earlier archives and temporary
+verification imports.
+
+The generator compares the actual app starter-kit source with its direct VENT
+renders. It checks raw/native recipe replay, JSON roundtrips, deterministic FX,
+finite unclipped audio, DC below .02 and no emergency integration resets. Source
+kits retain exact recipes; their PCM24 samples agree within quantization error.
+Native tracks are imported back to check sample bytes, pad mixer settings and
+both clips. Each session's sample kit is imported back, and its actual project
+sequence timeline is decoded independently to verify tempo, meter, bounds and
+all note events against the source pattern. That decoded pattern must replay
+with the imported samples to the same floating-point mix. The current project
+importer restores drum sample kits, not project timeline grooves; editable
+source kits separately preserve both patterns in `groove.json`. Expected mixer
+infrastructure tracks are checked by name/type and recorded as skipped, rather
+than mistaken for missing instruments. Diagnostics label these checks
+`projectTimelineReadback` and `samplerMixReplay`. The MPC 2 twin is structurally
+read back as twelve pads.
+SHA-256 hashes, source-file hashes, Git HEAD and a dirty-tree flag accompany the
+pack. These checks establish repeatability and export coherence, not hardware
+listening approval or musical quality.

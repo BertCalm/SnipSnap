@@ -79,9 +79,13 @@ class RegistersTest {
     }
 
     @Test
-    fun `every timbral control changes the signal before and after gain removal`() {
+    fun `sustained timbral controls change the signal after gain removal`() {
         for (voice in RegistersVoice.entries) {
             for (name in listOf("COLOR", "AIR", "EDGE", "SPREAD", "MOTION")) {
+                // An electronic key-click is a brief additive transient, not a sustained
+                // timbre change. RegistersTransistorTest checks its 12ms difference RMS,
+                // unchanged duration, exact settled tail and absence from held loops.
+                if (voice == RegistersVoice.TRANSISTOR && name == "AIR") continue
                 val low = Registers.probe(voice, mapOf(name to 0f), midi = 60).samples
                 val high = Registers.probe(voice, mapOf(name to 1f), midi = 60).samples
                 val difference = unitDifference(low, high)
@@ -99,7 +103,7 @@ class RegistersTest {
     }
 
     @Test
-    fun `silent velocity is silent and low velocity changes reed excitation`() {
+    fun `silent velocity is silent and low velocity changes voice excitation`() {
         for (voice in RegistersVoice.entries) {
             for (hold in listOf(.35f, 1f)) {
                 val silent = Registers.probe(voice, mapOf("HOLD" to hold), 60, 0f)
@@ -248,7 +252,7 @@ class RegistersTest {
 
     @Test
     fun `model two leaves musette and held pipe bit identical and saves explicit model`() {
-        for (voice in RegistersVoice.entries) for (hold in listOf(.35f, 1f)) {
+        for (voice in listOf(RegistersVoice.PIPE, RegistersVoice.MUSETTE)) for (hold in listOf(.35f, 1f)) {
             if (voice == RegistersVoice.PIPE && hold < Registers.LOOP_THRESHOLD) continue
             val macros = mapOf("AIR" to .8f, "EDGE" to .9f, "SPREAD" to .8f, "MOTION" to .7f, "HOLD" to hold)
             assertContentEquals(Registers.probe(voice, macros, model = 1).samples,
@@ -269,6 +273,7 @@ class RegistersTest {
         assertTrue(Registers.supportsModel(1))
         assertTrue(Registers.supportsModel(2))
         assertTrue(Registers.supportsModel(3))
+        assertTrue(Registers.supportsModel(4))
         assertFalse(Registers.supportsModel(999))
         assertFailsWith<IllegalArgumentException> { Registers.probe(RegistersVoice.PIPE, model = 999) }
     }

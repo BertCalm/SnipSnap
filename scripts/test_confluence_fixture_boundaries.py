@@ -41,6 +41,19 @@ class FixtureBoundaryRegression(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertGreater(result["tailToSustainRmsRatio"], .15)
 
+    def test_melodic_breathy_phrase_retains_its_quiet_end_and_rejects_a_hot_cut(self):
+        source = next(s for s in MANIFEST['sources'] if s['id'] == MANIFEST['primaryAiryId'])
+        rate, canonical = review.read(FIXTURES / source['path'])
+        self.assertTrue(review.fixture_tail_boundary(source, rate, canonical)['passed'])
+        window = source['tailBoundaryGuard']['tailWindowFrames']
+        center = int(np.argmax(np.abs(canonical)))
+        start = min(max(0, center-window//2), len(canonical)-window)
+        hot = canonical.copy()
+        hot[-window:] = canonical[start:start+window]
+        result = review.fixture_tail_boundary(source, rate, hot)
+        self.assertFalse(result['passed'])
+        self.assertIn('high-energy', result['failures'][0])
+
 
 if __name__ == "__main__":
     unittest.main()

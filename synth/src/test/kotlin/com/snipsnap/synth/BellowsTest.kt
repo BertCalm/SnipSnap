@@ -202,11 +202,11 @@ class BellowsTest {
     }
 
     @Test
-    fun `eight dry presets are discoverable and complete with versioned player gestures`() {
+    fun `twenty four dry presets are discoverable and complete with versioned player gestures`() {
         val presets = BellowsPresets.all()
-        assertEquals(8, presets.size)
+        assertEquals(24, presets.size)
         assertEquals(BellowsVoice.entries.toSet(), presets.map { it.voice }.toSet())
-        assertEquals(8, presets.map { it.voice to it.name }.toSet().size)
+        assertEquals(24, presets.map { it.voice to it.name }.toSet().size)
         assertTrue(Presets.all().containsAll(presets))
         for (patch in presets) {
             assertEquals(Bellows.macrosFor(patch.voice).map { it.name }.toSet(), patch.macros.keys, patch.name)
