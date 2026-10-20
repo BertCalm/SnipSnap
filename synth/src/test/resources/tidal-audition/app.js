@@ -259,6 +259,8 @@
     const top = make('div', 'card-topline'); top.append(make('span', 'voice-tag', clip.voice || 'TIDAL'), make('span', 'clip-index', `${featured ? 'FIRST LISTEN ' : ''}${String(index + 1).padStart(2, '0')}`));
     const h3 = make('h3', '', clip.title); h3.id = headingId; card.append(top, h3);
     if (clip.description) card.append(make('p', 'clip-description', clip.description));
+    if (clip.id === 'pair-default') card.append(make('p', 'clip-question', 'A distant, compact-core reference. Use STREAM to hear the exposed afterstructure.'));
+    if (clip.id === 'pair-tail') card.append(make('p', 'clip-question', 'Effectively silent in this distant encounter. This quiet result is preserved at the complete performance’s gain.'));
     const meta = make('div', 'clip-meta'); meta.append(make('span', '', noteName(clip.midi)), make('span', '', `${durationOf(clip).toFixed(1)} s`), make('span', '', `Velocity ${visibleValue(clip.velocity, 2)}`)); card.append(meta);
     if (clip.question) card.append(make('p', 'clip-question', clip.question));
     cardControls(clip, card); card.append(evidence(clip));
@@ -340,7 +342,7 @@
       state.manifest = manifest;
       state.clips = manifest.clips.filter(c => c && typeof c.id === 'string' && typeof c.title === 'string');
       state.byId = new Map(state.clips.map(c => [c.id, c]));
-      const featured = ['pair-default', 'stream-default'].map(id => state.byId.get(id)).filter(Boolean);
+      const featured = ['stream-default', 'pair-default'].map(id => state.byId.get(id)).filter(Boolean);
       if (!featured.length) featured.push(...state.clips.filter(c => c.section === 'defaults').slice(0, 2));
       if (!featured.length) featured.push(...state.clips.slice(0, 2));
       $('featured-clips').replaceChildren(...featured.map((clip, i) => makeCard(clip, true, i)));
