@@ -13,7 +13,9 @@ replayable recipes, a dry listening matrix with mechanism comparisons, and a
 prototype kit outside the factory roster and phone picker. HOLD remains zero;
 reconstruction, the other voices, and factory expansion follow listening review.
 See [TIDAL.md](TIDAL.md) for model limits, reproducibility, and the listening gate.
-The owner's listening verdict remains pending.
+The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
+contains 58 raw/matched cases and a ten-clip starter download. The owner's
+listening verdict remains pending.
 
 **Chamber first-listen prototype (2026-10-18).** HYBRID and AQUARIUM place a
 simultaneously struck membrane, bar, cowbell and triangle in a rectangular room

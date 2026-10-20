@@ -11,6 +11,12 @@ softened restricted gravitational model, not a calibrated galaxy prediction.
 The remaining proposed voices, 36-preset bank, phone picker, and HOLD
 reconstruction remain later work. Listening acceptance is still open.
 
+The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
+contains 58 cases with raw/matched WAVs, A/B listening, replayable recipes,
+descriptor traces, and a ten-clip starter download. Start with STREAM for the
+developed afterstructure; PAIR is a distant compact-core reference whose tail
+tap is effectively silent at the delivered PCM16 level.
+
 ## Playing and saving
 
 ROOT requests MIDI 36–84. VELOCITY changes source excitation independently of the
