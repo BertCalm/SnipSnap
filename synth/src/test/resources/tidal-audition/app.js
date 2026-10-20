@@ -247,7 +247,7 @@
     if (compact) { card.append(play); actions.append(a, b); }
     else {
       actions.append(play, a, b);
-      const wav = linkedFile('WAV ↗', pathOf(clip, 'matched') || pathOf(clip, 'raw'), 'file-link'); if (wav) actions.append(wav);
+      const wav = linkedFile('Matched WAV ↗', pathOf(clip, 'matched') || pathOf(clip, 'raw'), 'file-link'); if (wav) actions.append(wav);
     }
     card.append(actions);
     if (!cardElements.has(clip.id)) cardElements.set(clip.id, new Set());
@@ -285,7 +285,7 @@
       if (!entries.size) cardElements.delete(id);
     }
     for (const plot of plotElements) if (!plot.canvas.isConnected) plotElements.delete(plot);
-    const searchable = (clip) => [clip.title, clip.description, clip.question, clip.voice, clip.sweep, noteName(clip.midi), ...Object.keys(clip.macros || {})].join(' ').toLowerCase();
+    const searchable = (clip) => [clip.title, clip.description, clip.question, clip.voice, clip.sweep, noteName(clip.midi)].join(' ').toLowerCase();
     const clips = state.clips.filter(c => c.section !== 'defaults' && (state.section === 'all' || c.section === state.section) && (!state.query || searchable(c).includes(state.query)));
     $('clip-count').textContent = `${clips.length} ${clips.length === 1 ? 'clip' : 'clips'}`;
     $('study-description').textContent = state.section === 'all' ? 'All comparisons. Select a study to listen with one question in mind.' : sectionMetadata(state.section)?.description || sectionDescriptions[state.section] || '';
