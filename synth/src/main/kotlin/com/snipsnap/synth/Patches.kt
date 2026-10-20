@@ -106,6 +106,7 @@ object Patches {
             NacrePatch.ENGINE -> NacrePatch.fromJsonValue(value)
             OvenPatch.ENGINE -> OvenPatch.fromJsonValue(value)
             CreasePatch.ENGINE -> CreasePatch.fromJsonValue(value)
+            TrioPatch.ENGINE -> TrioPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

@@ -88,6 +88,8 @@ import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Velocity
+import com.snipsnap.synth.Trio
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.Vent
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.VentPresets
@@ -125,7 +127,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA and the VENT/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -154,6 +156,7 @@ import kotlin.random.Random
  * `--velocity` sets the string energy for both shapes.
  * CHAMBER offers finite HYBRID/AQUARIUM recipes, native note/velocity, full 64-bit
  * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
+ * TRIO accepts `--tempo 60..200 --beats 1..4`; the finite gesture must fit within two seconds.
  */
 object SynthCommand {
 
@@ -163,7 +166,7 @@ object SynthCommand {
         }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--tempo", "--beats"),
             boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -243,6 +246,7 @@ object SynthCommand {
             if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
+                TrioPatch.ENGINE -> Trio.MIN_MIDI..Trio.MAX_MIDI
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
                 OvenPatch.ENGINE -> Oven.MIDI_MIN..Oven.MIDI_MAX
                 CisternPatch.ENGINE -> Cistern.MIDI_MIN..Cistern.MIDI_MAX
@@ -279,7 +283,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE and CHAMBER, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER and TRIO, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -289,6 +293,18 @@ object SynthCommand {
         val velocityOverride = opts["--velocity"]?.let { raw ->
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                 ?: throw CliError("--velocity wants a finite value in 0..1, got '$raw'")
+        }
+        val phraseFlags = listOf("--tempo", "--beats").filter { opts[it] != null }
+        if (phraseFlags.isNotEmpty() && (engine != TrioPatch.ENGINE || instrument || drone)) {
+            throw CliError("${phraseFlags.joinToString()} shape a finite TRIO pad audition")
+        }
+        val tempoOverride = opts["--tempo"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 60f..200f }
+                ?: throw CliError("--tempo for TRIO is 60..200 BPM, got '$raw'")
+        }
+        val beatsOverride = opts["--beats"]?.let { raw ->
+            raw.toIntOrNull()?.takeIf { it in 1..4 }
+                ?: throw CliError("--beats for TRIO is 1..4, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
             val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
@@ -360,6 +376,7 @@ object SynthCommand {
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
                 is OrigamiPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is TrioPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is AlloyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OvenPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
@@ -444,6 +461,13 @@ object SynthCommand {
                     name = "Scrambled ${withSeed.name}",
                     macros = Skitter.scramble(withSeed.voice, scrambleRandom, near = withSeed),
                 )
+            } else if (withNote is TrioPatch && phraseFlags.isNotEmpty()) {
+                val tempo = tempoOverride ?: withNote.config.tempoBpm
+                val beats = beatsOverride ?: withNote.config.beats
+                if (beats * 60f / tempo > 2f) {
+                    throw CliError("TRIO's $beats beats at $tempo BPM exceed the two-second gesture window; raise --tempo or lower --beats")
+                }
+                withNote.copy(config = withNote.config.copy(tempoBpm = tempo, beats = beats))
             } else if (withNote is OrphicaPatch && orphicaSeedOverride != null) {
                 withNote.copy(config = withNote.config.copy(seed = orphicaSeedOverride))
             } else if (withNote is OspreyPatch) withNote.copy(

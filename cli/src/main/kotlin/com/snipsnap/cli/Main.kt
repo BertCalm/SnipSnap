@@ -73,6 +73,8 @@ object Cli {
         |  bellows-keys         four model-2 BELLOWS keygroups + fixed C3 bed
         |                        (--out DIR, --release .1..1.5, --overwrite)
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
+        |                        (TRIO: TRES/BERIMBAU/CHARANGO/ENSEMBLE; --midi 48..84
+        |                        --velocity 0..1 --tempo 60..200 --beats 1..4; gesture <=2s)
         |                        render factory presets to wav, to hear them
         |                        (ORIGAMI/ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO: --midi N --velocity 0..1)
         |                        (CREASE: ROUND/PINCH/RUBBER; --model 1|2|3;

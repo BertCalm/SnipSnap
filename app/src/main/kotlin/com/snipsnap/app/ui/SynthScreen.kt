@@ -197,6 +197,9 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.Trio
+import com.snipsnap.synth.TrioPatch
+import com.snipsnap.synth.TrioVoice
 import com.snipsnap.synth.OpenSky
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OpenSkyPresets
@@ -430,7 +433,7 @@ private fun editableMacros(editable: Patch): Map<String, Float> =
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, OVEN, MURMUR and ORIGAMI, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, OVEN, MURMUR, TRIO and ORIGAMI, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -592,8 +595,9 @@ fun SynthScreen(
     // FLOCK retains its explicit note, velocity, full-width
     // variation seed and finite renderer model. OPENSKY retains its authored timbre, note,
     // velocity, gate, effect mode and model. ORPHICA retains its material, mode,
-    // capture, seed and physical grain configuration. ORIGAMI retains its model,
-    // seed, absolute MIDI override and velocity. Keep that state through preview, editing, saving and placing by
+    // capture, seed and physical grain configuration. TRIO retains its seeded performance
+    // and model. ORIGAMI retains its model, seed, absolute MIDI override and velocity.
+    // Keep that state through preview, editing, saving and placing by
     // editing the loaded patch rather than constructing anew.
     // A working recipe survives independently of its preset highlight:
     // editing a slider must not discard saved pitch, velocity or model on
@@ -790,6 +794,12 @@ fun SynthScreen(
         // Copy the current recipe so transposition retains its source,
         // answering gesture, chord intervals and velocity.
         loadedPatchesByVoice[engine to voice] = patch.copy(midi = midi.coerceIn(Stoop.MIDI_MIN, Stoop.MIDI_MAX))
+    }
+    fun updateTrioPatch(change: (TrioPatch) -> TrioPatch) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? TrioPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        loadedPatchesByVoice[engine to voice] = change(patch)
     }
     fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
@@ -2205,6 +2215,60 @@ fun SynthScreen(
                     }
                 }
 
+                if (engine == Engine.TRIO) {
+                    val trioPatch = (loadedPatch as? TrioPatch)
+                        ?: (buildCurrentPatch(engine.patchDisplayName(voice)) as TrioPatch)
+                    val config = trioPatch.config
+                    TapeText(
+                        if (voice == TrioVoice.ENSEMBLE)
+                            "DRAMA BRINGS ANSWERS TOGETHER · SIDES PICKS THE OUTSIDER · MOTION MOVES THE ALLIANCE"
+                        else "SOLO PERFORMER · DRAMA, SIDES AND MOTION SHAPE THE ENSEMBLE",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4,
+                    )
+                    MacroSlider(
+                        label = "ROOT",
+                        value = (trioPatch.midi - Trio.MIN_MIDI).toFloat() / (Trio.MAX_MIDI - Trio.MIN_MIDI),
+                        fillColor = classColor,
+                        scheme = scheme,
+                        readout = Scales.nameOf(trioPatch.midi),
+                        onValueChange = { value ->
+                            val root = (Trio.MIN_MIDI + value * (Trio.MAX_MIDI - Trio.MIN_MIDI)).roundToInt()
+                                .coerceIn(Trio.MIN_MIDI, Trio.MAX_MIDI)
+                            updateTrioPatch { it.copy(midi = root) }
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY", value = trioPatch.velocity,
+                        fillColor = classColor, scheme = scheme,
+                        onValueChange = { value -> updateTrioPatch { it.copy(velocity = value.coerceIn(0f, 1f)) } },
+                    )
+                    // The gesture stays within its two-second playing window;
+                    // changing tempo retains the selected number of beats.
+                    val minimumTempo = maxOf(60, config.beats * 30)
+                    MacroSlider(
+                        label = "TEMPO",
+                        value = (config.tempoBpm - minimumTempo) / (200f - minimumTempo),
+                        fillColor = classColor, scheme = scheme,
+                        readout = "${config.tempoBpm.roundToInt()} BPM",
+                        onValueChange = { value ->
+                            val bpm = (minimumTempo + value * (200f - minimumTempo)).roundToInt()
+                                .coerceIn(minimumTempo, 200).toFloat()
+                            updateTrioPatch { it.copy(config = it.config.copy(tempoBpm = bpm)) }
+                        },
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (beats in 1..4) {
+                            ActionButton(
+                                "$beats ${if (beats == 1) "BEAT" else "BEATS"}", scheme,
+                                enabled = beats * 60f / config.tempoBpm <= 2f,
+                                lit = config.beats == beats,
+                                accessibilityLabel = "PHRASE $beats ${if (beats == 1) "BEAT" else "BEATS"}",
+                                modifier = Modifier.weight(1f).semantics { selected = config.beats == beats },
+                            ) { updateTrioPatch { it.copy(config = it.config.copy(beats = beats)) } }
+                        }
+                    }
+                }
+
                 if (engine == Engine.OBBLIGATO) {
                     val duet = loadedPatch as? ObbligatoPatch
                     val midi = duet?.midi ?: Obbligato.DEFAULT_MIDI
@@ -3263,7 +3327,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, ORIGAMI;
+    THUMP, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -3300,6 +3364,7 @@ private enum class Engine {
         PITCHWHEEL -> PitchwheelVoice.entries
         REVEL -> RevelVoice.entries
         MURMUR -> MurmurVoice.entries
+        TRIO -> TrioVoice.entries
         OSPREY -> OspreyVoice.entries
         FLOCK -> FlockVoice.entries
         OPENSKY -> OpenSkyVoice.entries
@@ -3353,6 +3418,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.macrosFor(voice as PitchwheelVoice)
         REVEL -> Revel.macrosFor(voice as RevelVoice)
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
+        TRIO -> Trio.macrosFor(voice as TrioVoice)
         OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
         FLOCK -> Flock.macrosFor(voice as FlockVoice)
         OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
@@ -3406,6 +3472,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.defaults(voice as PitchwheelVoice)
         REVEL -> Revel.defaults(voice as RevelVoice)
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
+        TRIO -> Trio.defaults(voice as TrioVoice)
         OSPREY -> Osprey.defaults(voice as OspreyVoice)
         FLOCK -> Flock.defaults(voice as FlockVoice)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
@@ -3461,6 +3528,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.scramble(voice as PitchwheelVoice, random)
         REVEL -> Revel.scramble(voice as RevelVoice, random)
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
+        TRIO -> Trio.macrosFor(voice as TrioVoice).associate { it.name to random.nextFloat() }
         OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
         FLOCK -> Flock.scramble(voice as FlockVoice, random)
         OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
@@ -3521,6 +3589,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.render(voice as PitchwheelVoice, macros)
         REVEL -> Revel.render(voice as RevelVoice, macros)
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
+        TRIO -> Trio.render(voice as TrioVoice, macros)
         OSPREY -> Osprey.render(voice as OspreyVoice, macros)
         FLOCK -> Flock.render(voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
@@ -3580,6 +3649,7 @@ private enum class Engine {
         PITCHWHEEL -> Pitchwheel.drumClassFor(voice as PitchwheelVoice, macros)
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
+        TRIO -> DrumClass.TONAL
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         FLOCK -> Flock.drumClassFor(voice as FlockVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
@@ -3634,6 +3704,7 @@ private enum class Engine {
         PITCHWHEEL -> PitchwheelPatch(name, voice as PitchwheelVoice, macros)
         REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
+        TRIO -> TrioPatch(name, voice as TrioVoice, macros)
         OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
         FLOCK -> FlockPatch(name, voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)

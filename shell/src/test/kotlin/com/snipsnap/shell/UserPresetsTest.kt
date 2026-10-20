@@ -67,6 +67,7 @@ import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
 import com.snipsnap.synth.TinesVoice
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.TonewheelVoice
 import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.VoxVoice
@@ -268,6 +269,12 @@ class UserPresetsTest {
                 assertEquals(preset, promoted, "${preset.name}: complete note, seed, velocity and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is TrioPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("TrioPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = TrioPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete performance promotion")
             } else if (preset is OrphicaPatch) {
                 assertEquals(preset, orphicaFromRosterLine(line), "${preset.name}: complete microsound recipe promotion")
             } else if (preset is StoopPatch) {
@@ -800,7 +807,8 @@ class UserPresetsTest {
                 assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
                 val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
-            } else {
+            } else if (engine != TrioPatch.ENGINE) {
+                // TRIO promotion emits its complete JSON constructor directly.
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
             }
