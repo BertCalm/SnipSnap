@@ -136,6 +136,8 @@ class SynthScreenTest : ComposeScreenTest() {
     fun onset_follows_skin_and_all_four_voices_expose_their_six_live_controls() {
         show(shelfRoot())
         tap("ENGINE THUMP · TAP FOR NEXT")
+        button("ENGINE SCANNED CHAIN · TAP FOR NEXT").assertExists()
+        tap("ENGINE SCANNED CHAIN · TAP FOR NEXT")
         button("ENGINE SKIN · TAP FOR NEXT").assertExists()
         tap("ENGINE SKIN · TAP FOR NEXT")
         button("ENGINE ONSET · TAP FOR NEXT").assertExists()

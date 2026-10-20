@@ -337,3 +337,8 @@ testkit/trio-audition-model2/
 testkit/trio-audition-model3/
 testkit/trio-audition-model4/
 testkit/trio-musical-bank/
+
+# Reproducible scanned-chain experiment audio and offline listening artifacts.
+testkit/scanned-chain-audition/
+testkit/scanned-chain-audition.zip
+testkit/scanned-chain-listen.html

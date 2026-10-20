@@ -12,6 +12,16 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /** Sixteen finite C-minor-pentatonic notes with complete scanned-chain recipes. */
+    fun scannedChain(): List<ArrangedPad?> {
+        val voices = List(8) { ScannedChainVoice.PLUCK } + List(4) { ScannedChainVoice.METAL } + List(4) { ScannedChainVoice.BLOOM }
+        return voices.mapIndexed { index, voice ->
+            val scaleIndex = when { index < 8 -> index; index < 12 -> index - 8; else -> index - 12 }
+            val patch = ScannedChainPresets.forVoice(voice).single().copy(name = "Chain ${index + 1}", midi = 48 + PENTATONIC[scaleIndex])
+            pad(patch, DrumClass.TONAL)
+        }
+    }
+
     /** The finite TRIO conversations, in the same order as its factory preset bank. */
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
