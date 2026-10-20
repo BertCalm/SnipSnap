@@ -12,6 +12,9 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /** The finite TRIO conversations, in the same order as its factory preset bank. */
+    fun trio(): List<ArrangedPad?> = TrioKits.classic()
+
     /**
      * Twelve dry model-2 VENT pads in C minor pentatonic: bass, short note,
      * percussive hit and long texture for PULSE, COIL and PLUME. Four slots

@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -163,9 +164,11 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
     }
 
     private fun waitForUndo(type: BoardType = BoardType.WIDE) {
-        waitFor("WIDE's undo availability check", timeoutMillis = 60_000) {
-            compose.onNodeWithContentDescription(type.name, useUnmergedTree = true)
-                .fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription) == "Undo available"
+        // A board change can replace this scope on the next frame; absence means keep waiting.
+        waitFor("${type.name}'s undo availability check", timeoutMillis = 60_000) {
+            val card = compose.onAllNodesWithContentDescription(type.name, useUnmergedTree = true)
+                .fetchSemanticsNodes().singleOrNull()
+            card?.config?.getOrNull(SemanticsProperties.StateDescription) == "Undo available"
         }
     }
 

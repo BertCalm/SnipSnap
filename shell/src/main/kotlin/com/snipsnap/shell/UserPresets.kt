@@ -38,6 +38,7 @@ import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.Vent
 import java.io.File
@@ -400,7 +401,9 @@ object UserPresets {
      * arguments before the macros. OVERLAP likewise keeps its explicit model, geometry reference
      * note and velocity through the complete JSON constructor in its factory
      * promotion table. OBBLIGATO retains its note, strike, seed and renderer model
-     * through the complete JSON constructor. Names and embedded JSON are escaped Kotlin string literals.
+     * through the complete JSON constructor. TRIO retains its note, velocity and complete
+     * seeded performance, including the synthesis model. Names and embedded JSON are escaped
+     * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is ChamberPatch) {
@@ -433,10 +436,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OrphicaPatch.fromJsonText($recipe),"
         }
-        if (patch is LacquerPatch) {
+        if (patch is LacquerPatch || patch is TrioPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+            val constructor = if (patch is TrioPatch) "TrioPatch" else "LacquerPatch"
+            return "$constructor.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         if (patch is StoopPatch) {
