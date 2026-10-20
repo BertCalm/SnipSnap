@@ -1327,6 +1327,18 @@ tasks.register<JavaExec>("generateRelayAudition") {
     if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }
 
+/** ONSET's dry four-voice experiment, preserved accepted sounds and compact MPC acceptance kit. */
+tasks.register<JavaExec>("generateOnsetAudition") {
+    group = "distribution"
+    description = "Render 20 ONSET raw/matched hits, 3 four-voice beats, first-pass kick references, listening page and 16-pad MPC sample kit under testkit/onset-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OnsetAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/onset-audition")
+    providers.gradleProperty("onsetReferenceDir").orNull?.let { args("--reference-dir=$it") }
+}
+
 /** CREASE's reproducible dry prototype matrix and standalone audition assets. */
 tasks.register<JavaExec>("generateCreaseAudition") {
     group = "distribution"

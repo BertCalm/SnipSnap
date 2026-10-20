@@ -85,6 +85,51 @@ class RushBoardIntegrationTest {
         }
     }
 
+    @Test fun `board audio edits clear only the current WAV fingerprint while previews and no op keeps retain it`() {
+        val m = model("Fingerprint")
+        val originalAudio = bytes(m)
+        val provenance = mapOf("renderer" to "IMPORTED", "importedFrom" to "Audition.zip", "origin" to "keep this")
+        fun fingerprintCurrent(): KitPad = m.update(1) {
+            it.copy(source = provenance + ("rawSha256" to sha(bytes(m))))
+        }
+        val original = fingerprintCurrent()
+        val beforePreview = files(m.kitDir)
+        BoardSheet.preview(m, 1, .7f, BoardType.RUSH)
+        assertEquals(original, BoardSheet.apply(m, 1, 0f, BoardType.RUSH))
+        assertEquals(original.source, m.pad(1)!!.source)
+        assertEquals(beforePreview, files(m.kitDir))
+
+        // Clearing the fingerprint is an internal consequence of adoption,
+        // never permission for a caller to change unrelated pad provenance.
+        assertFailsWith<IllegalArgumentException> {
+            m.replaceBoardPad(1, original, original.copy(source = mapOf("origin" to "changed")))
+        }
+        val rush = BoardSheet.apply(m, 1, .7f, BoardType.RUSH)
+        assertEquals(provenance, rush.source)
+        assertEquals(rush.source, m.pad(1)!!.source)
+
+        val stampedRush = fingerprintCurrent()
+        val beforeNoop = files(m.kitDir)
+        BoardSheet.preview(m, 1, .35f, BoardType.WIDE)
+        assertEquals(stampedRush, BoardSheet.apply(m, 1, .7f, BoardType.RUSH))
+        assertEquals(stampedRush.source, m.pad(1)!!.source)
+        assertEquals(beforeNoop, files(m.kitDir), "preview and same-board same-AMT KEEP do not invalidate a valid fingerprint")
+
+        val wide = BoardSheet.apply(m, 1, .35f, BoardType.WIDE)
+        val wideAudio = bytes(m)
+        assertEquals(provenance, wide.source, "switching boards invalidates only the current WAV hash")
+        fingerprintCurrent()
+        val removed = BoardSheet.remove(m, 1)
+        assertEquals(provenance, removed.source)
+        assertContentEquals(originalAudio, bytes(m))
+        assertEquals(original.recipe, removed.recipe)
+        fingerprintCurrent()
+        val undone = BoardSheet.undo(m, 1)
+        assertEquals(provenance, undone.source)
+        assertEquals(wide.recipe, undone.recipe)
+        assertContentEquals(wideAudio, bytes(m))
+    }
+
     @Test fun `switching WIDE to RUSH at the same amount previews and prints the original baseline`() {
         val m = model("Switch")
         val original = WavReader.read(File(m.kitDir, "main.wav"))

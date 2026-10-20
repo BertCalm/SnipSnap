@@ -403,6 +403,7 @@ object RushAuditionGenerator {
         "synth/src/main/kotlin/com/snipsnap/synth/Resin.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/Vox.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/Thump.kt",
+        "synth/src/main/kotlin/com/snipsnap/synth/Punch.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt",
         "audio/src/main/kotlin/com/snipsnap/audio/Loudness.kt",
         "audio/src/main/kotlin/com/snipsnap/audio/Cleanup.kt",

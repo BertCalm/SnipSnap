@@ -198,9 +198,13 @@ class KitBuilderModel private constructor(
             velocityLayers = expected.velocityLayers,
             recipe = expected.recipe,
         ) == expected) { "a board can change only audio files, velocity layers and its recipe" }
-        kit = kit.copy(pads = kit.pads.map { if (it.slot == slot) replacement else it })
+        // This fingerprint names the previous current WAV, not its provenance.
+        // Even REMOVE and UNDO adopt different audio; exports fingerprint that
+        // result again. Keep the caller guard strict before clearing this key.
+        val adopted = replacement.copy(source = replacement.source - "rawSha256")
+        kit = kit.copy(pads = kit.pads.map { if (it.slot == slot) adopted else it })
         dirty = true
-        return replacement
+        return adopted
     }
 
     /**
@@ -517,10 +521,18 @@ class KitBuilderModel private constructor(
         require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
         moveToBin(pad.sampleFile)
         WavWriter.write(File(kitDir, pad.sampleFile), processed)
-        // An unlabelled audio replacement cannot retain a board inventory:
+        // The imported audition's fingerprint describes the previous WAV.
+        // Keep its provenance, but never carry that current-file claim onto
+        // regenerated or treated audio; exporters fingerprint the new file.
+        // An unlabelled audio replacement also cannot retain a board inventory:
         // its hashes describe the old sound. Other legacy recipes keep the
         // existing preserve-on-null behavior; an explicit new recipe wins.
-        return update(slot) { it.copy(recipe = recipe ?: it.recipe?.takeUnless { old -> "boardPad" in old.entries }) }
+        return update(slot) {
+            it.copy(
+                recipe = recipe ?: it.recipe?.takeUnless { old -> "boardPad" in old.entries },
+                source = it.source - "rawSha256",
+            )
+        }
     }
 
     /**
