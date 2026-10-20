@@ -58,11 +58,15 @@ class PatchesTest {
         assertEquals(PatchTypes.engines, patches.map { it.engine }.toSet(), "every engine sends one saved sound through the door")
         for (patch in patches) {
             val fields = patch.toJsonValue().entries
-            if (patch is OpenSkyPatch) {
-                // OPENSKY saves a complete model-3 control snapshot rather
-                // than inheriting voice defaults when a field is missing.
-                assertFailsWith<JsonException>("OPENSKY requires its complete saved macro snapshot") {
-                    Patches.fromJsonValue(JsonValue.Obj(fields - "macros"))
+            assertEquals(patch.macros, Patches.fromJsonValue(JsonValue.Obj(fields)).macros,
+                "${patch.engine}: complete saved controls survive the dispatcher")
+            if (patch is OpenSkyPatch || patch is OnsetPatch) {
+                // These formats pin complete control snapshots instead of
+                // inheriting newer voice defaults when a field is missing.
+                for (incomplete in listOf(fields - "macros", fields + ("macros" to JsonValue.Null))) {
+                    assertFailsWith<JsonException>("${patch.engine} requires its complete saved macro snapshot") {
+                        Patches.fromJsonValue(JsonValue.Obj(incomplete))
+                    }
                 }
             } else {
                 val absent = Patches.fromJsonValue(JsonValue.Obj(fields - "macros"))

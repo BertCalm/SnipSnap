@@ -291,7 +291,18 @@ object XpnImporter {
                 }
                 require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
 
-                val kit = Kit(kitName, pads)
+                // Only the selected program's own adjacent sidecar may restore
+                // history; a different kit.json elsewhere in a pack has no claim.
+                val sidecarName = programEntry.name.substringBeforeLast('/', "")
+                    .let { if (it.isEmpty()) KitStore.FILE_NAME else "$it/${KitStore.FILE_NAME}" }
+                val sidecars = entries.filter { it.name == sidecarName }
+                require(sidecars.size <= 1) { "duplicate kit sidecar '$sidecarName' - refused" }
+                val sidecarText = sidecars.singleOrNull()?.let { entry ->
+                    zip.getInputStream(entry).use {
+                        com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar $sidecarName")
+                    }.toString(Charsets.UTF_8)
+                }
+                val kit = ImportSidecar.restore(Kit(kitName, pads), sidecarText, staging, sidecarName)
                 KitStore.save(kit, staging)
                 // Only now, with everything down safely, does destDir
                 // change: the pre-existing-kit check above already

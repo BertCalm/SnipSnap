@@ -34,7 +34,7 @@ class SourceAttributionCardCopyTest {
             assertTrue(outcome.primary.isDirectory, "the app must hand the whole program folder to CardCopy")
             val plan = CardCopy.plan(listOfNotNull(outcome.primary, outcome.companion))
             assertEquals(setOf(kit.name), plan.map { it.segments.first() }.toSet())
-            assertEquals(setOf("${kit.name}.xpm", sample, SourceAttribution.fileName(kit)),
+            assertEquals(setOf("${kit.name}.xpm", sample, SourceAttribution.fileName(kit), com.snipsnap.kit.KitStore.FILE_NAME),
                 plan.filterNot { it.isDirectory }.map { it.name }.toSet())
 
             val card = File(temp, "card").apply { mkdirs() }
