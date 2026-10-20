@@ -54,21 +54,21 @@ object CausticAuditionGenerator {
         output.parentFile.mkdirs()
         val originalFiles = snapshotOriginalFiles(output)
         val staging = Files.createTempDirectory(output.parentFile.toPath(), ".caustic-audition-building-").toFile()
-        for (name in listOf("audition.zip", "depth-audition.zip")) {
+        for (name in listOf("audition.zip", "depth-audition.zip", "alloy-bloom.zip")) {
             File(output, name).takeIf { it.isFile }?.let { archive ->
                 archive.copyTo(File(staging, name))
                 check(sha256(archive.readBytes()) == sha256(File(staging, name).readBytes())) { "published archive copy changed: $name" }
             }
         }
         // A failed rerender must not leave a previous run's success manifest or pack.
-        for (name in listOf("manifest.json", "manifest.js", "diagnostics.json", "alloy-bloom.zip")) {
+        for (name in listOf("manifest.json", "manifest.js", "diagnostics.json", "alloy-body.zip")) {
             File(output, name).delete()
         }
         try {
             generate(repo, staging, originalFiles)
             if (output.exists()) check(output.deleteRecursively()) { "could not replace generated audition directory $output" }
             Files.move(staging.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            println("CAUSTIC: 36 preserved clips, 8 Alloy bloom candidates and separate portable packs written to $output")
+            println("CAUSTIC: 44 preserved clips, 4 Fuller body clips and separate portable packs written to $output")
         } finally {
             if (staging.exists()) staging.deleteRecursively()
         }
@@ -76,8 +76,8 @@ object CausticAuditionGenerator {
 
     private fun generate(repo: File, root: File, originalFiles: Map<String, String>) {
         val sourceRevision = revision(repo)
-        val cases = cases() + depthCases() + alloyCases()
-        check(cases.size == 44 && cases.map { it.id }.toSet().size == cases.size)
+        val cases = cases() + depthCases() + alloyCases() + bodyCases()
+        check(cases.size == 48 && cases.map { it.id }.toSet().size == cases.size)
         val heard = cases.mapIndexed { index, case ->
             println("CAUSTIC ${index + 1}/${cases.size}: ${case.id}")
             val rendered = case.recipe.inspect()
@@ -106,9 +106,10 @@ object CausticAuditionGenerator {
         val maximumRawPeak = heard.maxOf { peak(it.rendered.raw) }
         val rawGain = minOf(1.0, .90 / heard.filter { it.case.recipe.config.model == 2 }.maxOf { peak(it.rendered.raw) })
         val alloyGain = minOf(1.0, .90 / heard.filter { it.case.recipe.config.model == 3 }.maxOf { peak(it.rendered.raw) })
+        val bodyGain = minOf(1.0, .90 / heard.filter { it.case.recipe.config.model == 4 }.maxOf { peak(it.rendered.raw) })
         val records = heard.map { clip ->
             val case = clip.case
-            val clipGain = when (case.recipe.config.model) { 1 -> 1.0; 2 -> rawGain; else -> alloyGain }
+            val clipGain = when (case.recipe.config.model) { 1 -> 1.0; 2 -> rawGain; 3 -> alloyGain; else -> bodyGain }
             val native = Snip(FloatArray(clip.rendered.raw.size) { (clip.rendered.raw[it] * clipGain).toFloat() }, 1, RATE)
             val matched = AuditionLevel.level(Snip(clip.rendered.raw.copyOf(), 1, RATE))
             check(native.samples.all { it.isFinite() && abs(it) < 1f }) { "${case.id}: native PCM would clip" }
@@ -127,9 +128,10 @@ object CausticAuditionGenerator {
                 "profile" to when (case.recipe.config.model) {
                     1 -> "Original"
                     3 -> if (case.recipe.config.bloom == .5) "Alloy Bloom" else "Alloy Deep"
+                    4 -> "Fuller body"
                     else -> case.recipe.config.character.name.lowercase().replaceFirstChar { it.uppercase() }
                 },
-                "revision" to when (case.recipe.config.model) { 1 -> "static-1"; 2 -> "depth-2"; else -> "alloy-bloom-3" },
+                "revision" to when (case.recipe.config.model) { 1 -> "static-1"; 2 -> "depth-2"; 3 -> "alloy-bloom-3"; else -> "alloy-body-4" },
                 "bloom" to case.recipe.config.bloom,
                 "rawExportGain" to clipGain,
                 "midi" to case.recipe.config.midi, "velocity" to case.recipe.config.velocity,
@@ -146,11 +148,17 @@ object CausticAuditionGenerator {
                             else when (case.recipe.config.midi) { 36 -> "register-low"; 84 -> "register-high"; else -> "mechanism-full" }
                     }.metrics))
                     else -> {
-                        val preferred = heard.first { it.case.id == alloyReference(case.recipe.config.midi, case.recipe.config.focus) }.metrics
-                        clip.metrics + mapOf(
-                            "normalizedBandDistanceFromAlloy" to bandDistance(clip.metrics, preferred),
-                            "earlyEnergyDbFromAlloy" to 20 * log10((clip.metrics.getValue("earlyRms") as Number).toDouble() / (preferred.getValue("earlyRms") as Number).toDouble()),
-                            "lateEnergyDbFromAlloy" to 20 * log10((clip.metrics.getValue("lateRms") as Number).toDouble() / (preferred.getValue("lateRms") as Number).toDouble()),
+                        val preferred = heard.first { it.case.id == alloyReference(case.recipe.config.midi, case.recipe.config.focus) }
+                        val main = if (case.recipe.config.model == 4) mainComparison(clip.rendered.raw, preferred.rendered.raw) else emptyMap()
+                        if (case.id == "alloy-body-c4") {
+                            check(main.getValue("mainResidualAfterGainFit") > .2 && main.getValue("mainNormalizedSpectralL1") > .2) {
+                                "Fuller body does not sufficiently change the audible .15–1.5s body after gain matching: $main"
+                            }
+                        }
+                        clip.metrics + main + mapOf(
+                            "normalizedBandDistanceFromAlloy" to bandDistance(clip.metrics, preferred.metrics),
+                            "earlyEnergyDbFromAlloy" to 20 * log10((clip.metrics.getValue("earlyRms") as Number).toDouble() / (preferred.metrics.getValue("earlyRms") as Number).toDouble()),
+                            "lateEnergyDbFromAlloy" to 20 * log10((clip.metrics.getValue("lateRms") as Number).toDouble() / (preferred.metrics.getValue("lateRms") as Number).toDouble()),
                             "reference" to alloyReference(case.recipe.config.midi, case.recipe.config.focus),
                         )
                     }
@@ -170,9 +178,9 @@ object CausticAuditionGenerator {
             "modeCount" to heard.first { it.case.recipe.variant == Caustic.Mode.FULL }.rendered.modalEnergy.size,
             "depthModeCount" to heard.first { it.case.recipe.config.model == 2 }.rendered.modalEnergy.size,
             "rawExportGain" to 1.0,
-            "rawExportGains" to linkedMapOf("original" to 1.0, "depth" to rawGain, "alloy" to alloyGain),
+            "rawExportGains" to linkedMapOf("original" to 1.0, "depth" to rawGain, "alloy" to alloyGain, "body" to bodyGain),
             "originalClipCount" to 24, "revisionClipCount" to 12, "alloyClipCount" to 8,
-            "previousClipCount" to 36,
+            "bodyClipCount" to 4, "previousClipCount" to 44,
             "originalFilesVerified" to originalFiles.size,
             "publishedFilesVerified" to originalFiles.size,
             "maximumRawPeak" to maximumRawPeak,
@@ -184,23 +192,23 @@ object CausticAuditionGenerator {
             "pitchToleranceCents" to ROOT_TOLERANCE_CENTS,
             "totalPreparationMillis" to heard.sumOf { it.rendered.prepareMillis },
             "totalRenderMillis" to heard.sumOf { it.rendered.renderMillis },
-            "portableRecipeReplay" to "Original full-control and all C4 depth/bloom candidates replayed sample for sample; every recipe round-tripped exactly.",
-            "leveling" to "Native: original release gain 1 unchanged; depth and Alloy bloom revisions each share their own recorded gain. Matched: existing AuditionLevel loudest-200-ms rule applied separately to each clip.",
-            "checks" to listOf("finite raw/output/modal diagnostics", "raw and modal peaks below prototype ceiling 8", "no exported clipping", "FFT root and broadband pitch estimate within 20 cents with periodicity confidence at least .3", "raw full/short-window classifier avoids drum classes", "exact recipe round trips and representative sample replay"),
+            "portableRecipeReplay" to "Original full-control and all C4 candidates replayed sample for sample; every recipe round-tripped exactly.",
+            "leveling" to "Native: each revision retains its own recorded common gain. Matched: existing AuditionLevel loudest-200-ms rule applied separately to each clip.",
+            "checks" to listOf("finite raw/output/modal diagnostics", "raw and modal peaks below prototype ceiling 8", "no exported clipping", "FFT root and broadband pitch estimate within 20 cents with periodicity confidence at least .3", "raw full/short-window classifier avoids drum classes", "C4 .15–1.5s gain-fitted residual and normalized spectral L1 both exceed .2", "exact recipe round trips and representative sample replay"),
             "limits" to listOf("Static circular geometry only", "No ORBIT, deformation, SCATTER or HOLD", "Finite notes; no seamless-loop claim", "No phone picker or factory-preset integration", "Geometry density maxima do not guarantee phase-coherent audio maxima", "Pitch and spectra are measurements, not listening acceptance"),
         )
         val manifest = linkedMapOf<String, Any?>(
-            "title" to "CAUSTIC · Alloy bloom",
-            "description" to "Alloy was preferred. This narrow comparison keeps its source, attack, pitch and geometry, extending only the decay of selected companion resonances. Compare Preferred Alloy, Bloom and Deep at the same notes and pickup positions. All 36 earlier clips remain unchanged.",
-            "model" to 3, "generatedAt" to Instant.now().toString(),
-            "downloads" to linkedMapOf("full" to "alloy-bloom.zip", "depth" to "depth-audition.zip", "original" to "audition.zip"),
+            "title" to "CAUSTIC · Fuller body",
+            "description" to "One candidate against Preferred Alloy. A longer, softer tonal excitation drives the same resonant material, adding weight through the audible body rather than only extending its quiet tail. Pitch, geometry, modal frequencies and decay settings remain fixed. All 44 earlier clips remain unchanged.",
+            "model" to 4, "generatedAt" to Instant.now().toString(),
+            "downloads" to linkedMapOf("full" to "alloy-body.zip", "bloom" to "alloy-bloom.zip", "depth" to "depth-audition.zip", "original" to "audition.zip"),
             "sourceRevision" to sourceRevision, "summary" to summary, "clips" to records,
         )
         val manifestText = Json.write(json(manifest))
         File(root, "manifest.json").writeText(manifestText + "\n")
         File(root, "manifest.js").writeText("window.CAUSTIC_MANIFEST = $manifestText;\n")
         val diagnostics = linkedMapOf<String, Any?>(
-            "model" to 3, "sourceRevision" to sourceRevision, "summary" to summary,
+            "model" to 4, "sourceRevision" to sourceRevision, "summary" to summary,
             "clips" to heard.map { clip -> linkedMapOf(
                 "id" to clip.case.id, "recipe" to clip.case.recipe.toJsonValue(), "metrics" to clip.metrics,
                 "pickupDensities" to clip.rendered.densities,
@@ -214,7 +222,7 @@ object CausticAuditionGenerator {
         check(File(assets, "index.html").isFile) { "CAUSTIC listening page assets are missing: $assets" }
         assets.copyRecursively(root, overwrite = true)
         File(root, "README.txt").writeText(
-            "CAUSTIC static prototype, original model 1, depth model 2 and Alloy bloom model 3.\n\nOpen index.html locally; manifest.js makes the pack work without a server.\n" +
+            "CAUSTIC static prototype, models 1–4 including one Fuller body comparison.\n\nOpen index.html locally; manifest.js makes the pack work without a server.\n" +
                 "Each recipes/*.json is a complete CausticRecipe accepted by CausticRecipe.fromJsonText.\n" +
                 "Rebuild this pack: ./gradlew :synth:generateCausticAudition\n" +
                 "Every revision retains its recorded common gain. Matched WAVs use the project's AuditionLevel rule.\n" +
@@ -233,9 +241,11 @@ object CausticAuditionGenerator {
                 records.filter { it["model"] == 2 || it["id"] in depthIds }, "CAUSTIC · depth and character", 2)
         }
         val preferredIds = setOf("depth-alloy-c2", "depth-alloy-c4", "depth-alloy-c6", "depth-alloy-sparse")
-        writePack(root, "alloy-bloom.zip", manifest, diagnostics,
+        if (!File(root, "alloy-bloom.zip").isFile) writePack(root, "alloy-bloom.zip", manifest, diagnostics,
             records.filter { it["model"] == 3 || it["id"] in preferredIds }, "CAUSTIC · Alloy bloom", 3)
-        check(File(root, "alloy-bloom.zip").length() < 25L * 1024 * 1024) { "Alloy bloom pack exceeds 25 MiB" }
+        writePack(root, "alloy-body.zip", manifest, diagnostics,
+            records.filter { it["model"] == 4 || it["id"] in preferredIds }, "CAUSTIC · Fuller body", 4)
+        check(File(root, "alloy-body.zip").length() < 25L * 1024 * 1024) { "Fuller body pack exceeds 25 MiB" }
     }
 
     private fun cases(): List<Case> {
@@ -324,6 +334,59 @@ object CausticAuditionGenerator {
                     seconds = 8.0, model = 3, character = Caustic.Character.ALLOY, bloom = bloom)),
                 comparison = alloyReference(midi, focus), recommendedOrder = 1 + locationIndex * 2 + candidateIndex)
         }
+    }
+
+    private fun bodyCases(): List<Case> = listOf(60 to .19, 36 to .19, 84 to .19, 60 to .85).mapIndexed { index, (midi, focus) ->
+        val position = if (focus == .85) "sparse" else when (midi) { 36 -> "c2"; 84 -> "c6"; else -> "c4" }
+        Case("alloy-body-$position", "Fuller body · ${if (position == "sparse") "sparse pickup" else position.uppercase()}",
+            "One fixed candidate: a 35 ms tonal attack and 1.5-second tonal decay drive the same Alloy resonances more strongly. " +
+                "The bright edge, modal frequencies, gains, geometry and decay settings are retained; BLOOM is zero. " +
+                "SOURCE .50, FOCUS ${if (focus == .85) ".850" else ".190"}, velocity .75. Judge the main note at .15–1.5 seconds using level-matched playback.",
+            "body", "body-$position",
+            CausticRecipe(Caustic.Config(source = .5, focus = focus, midi = midi, velocity = .75,
+                seconds = 8.0, model = 4, character = Caustic.Character.ALLOY, bloom = 0.0)),
+            comparison = alloyReference(midi, focus), recommendedOrder = 1 + index)
+    }
+
+    /** Actual matched audition signal in the audible body, independent of its later tail. */
+    private fun mainComparison(candidate: FloatArray, reference: FloatArray): Map<String, Double> {
+        val a = AuditionLevel.level(Snip(reference.copyOf(), 1, RATE)).samples
+        val b = AuditionLevel.level(Snip(candidate.copyOf(), 1, RATE)).samples
+        val from = (.15 * RATE).toInt()
+        val to = (1.5 * RATE).toInt()
+        val ea = (from until to).sumOf { a[it].toDouble() * a[it] }.coerceAtLeast(1e-30)
+        val eb = (from until to).sumOf { b[it].toDouble() * b[it] }.coerceAtLeast(1e-30)
+        val dot = (from until to).sumOf { a[it].toDouble() * b[it] }
+        val gain = dot / ea
+        val residual = sqrt((from until to).sumOf { val e = b[it] - gain * a[it]; e * e } / eb)
+        fun spectrum(samples: FloatArray): DoubleArray {
+            val frames = to - from
+            var n = 1
+            while (n < frames) n *= 2
+            val re = FloatArray(n) { i -> if (i < frames)
+                (samples[from + i] * (.5 - .5 * cos(2 * PI * i / (frames - 1)))).toFloat() else 0f }
+            val im = FloatArray(n)
+            Fft.forward(re, im)
+            val bands = DoubleArray(96)
+            for (k in 1 until n / 2) {
+                val hz = k * RATE / n.toDouble()
+                if (hz !in 20.0..20_000.0) continue
+                val band = (ln(hz / 20) / ln(1000.0) * bands.size).toInt().coerceIn(bands.indices)
+                bands[band] += re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            }
+            val sum = bands.sum().coerceAtLeast(1e-30)
+            return DoubleArray(bands.size) { bands[it] / sum }
+        }
+        val sa = spectrum(a)
+        val sb = spectrum(b)
+        return linkedMapOf(
+            "mainFromSeconds" to .15, "mainToSeconds" to 1.5,
+            "mainFittedGain" to gain,
+            "mainCosineSimilarity" to dot / sqrt(ea * eb),
+            "mainResidualAfterGainFit" to residual,
+            "mainNormalizedSpectralL1" to sa.indices.sumOf { abs(sa[it] - sb[it]) },
+            "mainMatchedRmsChangeDb" to 10 * log10(eb / ea),
+        )
     }
 
     private fun validate(case: Case, r: Caustic.Rendered) {
@@ -446,7 +509,7 @@ object CausticAuditionGenerator {
         val file = File(root, "manifest.json")
         if (!file.isFile) return emptyMap()
         val manifest = Json.parse(file.readText()).obj()
-        val originalIds = (cases() + depthCases()).map { it.id }.toSet()
+        val originalIds = (cases() + depthCases() + alloyCases()).map { it.id }.toSet()
         val out = linkedMapOf<String, String>()
         for (item in manifest.getValue("clips").arr()) {
             val clip = item.obj()
@@ -458,7 +521,7 @@ object CausticAuditionGenerator {
                 out[path] = actual
             }
         }
-        check(out.size == 108) { "expected 108 published audio/recipe files; found ${out.size}" }
+        check(out.size == 132) { "expected 132 published audio/recipe files; found ${out.size}" }
         return out
     }
 
@@ -488,7 +551,8 @@ object CausticAuditionGenerator {
                     "originalClipCount" to selected.count { it["model"] == 1 },
                     "revisionClipCount" to selected.count { it["model"] == 2 },
                     "alloyClipCount" to selected.count { it["model"] == 3 },
-                    "previousClipCount" to selected.count { (it["model"] as Int) < 3 },
+                    "bodyClipCount" to selected.count { it["model"] == 4 },
+                    "previousClipCount" to selected.count { (it["model"] as Int) < 4 },
                     "originalClipsOmitted" to (selected.count { it["model"] == 1 } < 24))
             val subset = LinkedHashMap(manifest).apply {
                 put("title", title); put("model", model); put("clips", selected); put("summary", summary)

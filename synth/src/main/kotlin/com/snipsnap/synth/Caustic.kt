@@ -23,7 +23,7 @@ import kotlin.math.sqrt
  * coefficients, rather than tracing paths or approximating their envelope at audio rate.
  */
 object Caustic {
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     const val RATE = WavWriter.MPC_SAMPLE_RATE
     private const val INTERNAL_RATE = RATE * 4
     private const val SOURCE_DECAY = 1.10
@@ -65,6 +65,9 @@ object Caustic {
             require(bloom.isFinite() && bloom in 0.0..1.0) { "CAUSTIC bloom must be in 0..1" }
             require(model >= 3 || bloom == 0.0) { "CAUSTIC legacy models require bloom0" }
             require(model != 3 || character == Character.ALLOY) { "CAUSTIC model3 requires ALLOY" }
+            require(model != 4 || character == Character.ALLOY && bloom == 0.0) {
+                "CAUSTIC model4 requires ALLOY with bloom0"
+            }
         }
     }
 
@@ -388,7 +391,10 @@ object Caustic {
     private fun profile(c: Config): RichProfile = when (c.character) {
         Character.BODY -> RichProfile(c.character, 1.55, .045, .11, .008, 65.0, 45.0, .72)
         Character.REED -> RichProfile(c.character, 1.25, .016, .080, .004, 78.0, 125.0, .78)
-        Character.ALLOY -> RichProfile(c.character, .64, .006, .006, .0005, 70.0, 1_500.0, .68, c.bloom)
+        Character.ALLOY -> if (c.model == 4)
+            // A sustained pressure drive under the unchanged preferred Alloy metal onset.
+            RichProfile(c.character, 1.5, .035, .006, .0005, 210.0, 1_500.0, .68)
+        else RichProfile(c.character, .64, .006, .006, .0005, 70.0, 1_500.0, .68, c.bloom)
     }
 
     /** Two independently delayed source envelopes, each represented exactly by two exponentials. */

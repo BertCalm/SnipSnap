@@ -2201,3 +2201,10 @@ body.has-player footer {
     margin-top:13px;
   }
 }
+
+.depth-profile-grid.two-profiles {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.profile-fuller {
+  --profile-accent:#d0ef97;
+}

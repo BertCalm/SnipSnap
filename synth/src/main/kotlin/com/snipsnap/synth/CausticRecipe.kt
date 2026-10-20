@@ -22,6 +22,9 @@ data class CausticRecipe(
         }
         require(config.model >= 3 || config.bloom == 0.0) { "CAUSTIC older models have no BLOOM control" }
         require(config.model != 3 || config.character == Caustic.Character.ALLOY) { "CAUSTIC model 3 requires ALLOY" }
+        require(config.model != 4 || config.character == Caustic.Character.ALLOY && config.bloom == 0.0) {
+            "CAUSTIC model 4 requires ALLOY with BLOOM 0"
+        }
     }
 
     fun inspect(cancelled: () -> Boolean = { false }): Caustic.Rendered =
@@ -51,7 +54,7 @@ data class CausticRecipe(
 
     companion object {
         const val FORMAT = "snipsnap.caustic.static-prototype"
-        const val VERSION = 3
+        const val VERSION = 4
 
         fun fromJsonText(text: String): CausticRecipe = fromJsonValue(Json.parse(text))
 

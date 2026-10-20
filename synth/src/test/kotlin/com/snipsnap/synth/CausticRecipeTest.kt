@@ -83,6 +83,23 @@ class CausticRecipeTest {
         assertFailsWith<IllegalArgumentException> { CausticRecipe(baseline.copy(model = 3, character = Caustic.Character.REED)) }
     }
 
+    @Test fun `model four has one explicit fixed Alloy body recipe`() {
+        val config = Caustic.Config(model = 4, character = Caustic.Character.ALLOY, bloom = 0.0, seconds = .12)
+        val recipe = CausticRecipe(config)
+        val restored = CausticRecipe.fromJsonText(recipe.toJsonText())
+        assertEquals(recipe, restored)
+        assertEquals(4, recipe.toJsonValue().entries.getValue("version").int())
+        assertEquals(0.0, recipe.toJsonValue().entries.getValue("configuration").obj().getValue("bloom").num())
+        assertContentEquals(recipe.inspect().raw, restored.inspect().raw)
+        assertFailsWith<IllegalArgumentException> { CausticRecipe(config.copy(bloom = .5)) }
+        assertFailsWith<IllegalArgumentException> { CausticRecipe(config.copy(character = Caustic.Character.REED)) }
+        for (model in 1..3) {
+            val legacy = CausticRecipe(config.copy(model = model, character = if (model == 1) Caustic.Character.BODY else Caustic.Character.ALLOY))
+            assertEquals(model, legacy.toJsonValue().entries.getValue("version").int())
+            assertEquals(legacy, CausticRecipe.fromJsonText(legacy.toJsonText()))
+        }
+    }
+
     @Test fun `model one JSON shape remains backward compatible and version fields stay explicit`() {
         val recipe = CausticRecipe(Caustic.Config(model = 1))
         val value = recipe.toJsonValue()

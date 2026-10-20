@@ -21,10 +21,10 @@ controls, register/velocity probes and local notes.
 ./gradlew --no-daemon test
 ```
 
-The generator writes `testkit/caustic-audition/`: 44 finite notes, shared-gain
+The generator writes `testkit/caustic-audition/`: 48 finite notes, shared-gain
 and independently matched PCM24 WAVs, complete JSON recipes, measurements and
-source fingerprints. All 36 recordings from the first two studies retain their
-IDs and bytes. Separate original, depth and Alloy-bloom ZIPs keep each download
+source fingerprints. All 44 recordings from the first three studies retain their
+IDs and bytes. Separate original, depth, Alloy-bloom and Alloy-body ZIPs keep each download
 compact. Use a local server or published page for decoded Web Audio playback.
 The downloaded pack also supports local media playback. Repeat replays a finite
 recording; it is not a HOLD or seam test.
@@ -102,11 +102,23 @@ resonances fixed. Model 3 adds one explicit `bloom` value: it lengthens the
 companion resonances for partials 2–7 by up to 1.7 times their original T60. At
 zero bloom it reproduces model 2 exactly. Half and full bloom provide two
 controlled comparisons at C2, C4, C6 and a sparse pickup position. The new
-notes run for eight seconds so the added ring can be heard.
+notes ran for eight seconds to expose the late ring.
 
-This pass explores a longer metallic body while preserving the preferred
-attack. The existing source and pickup controls still determine the coherent
-excitation. It adds no output reverb or extra oscillators.
+The owner found Bloom and Deep indistinguishable in normal listening.
+Subsequent checks confirmed almost identical main-note spectra: their larger
+relative changes occurred in a quiet tail. These recordings remain archived;
+tail-energy percentages alone do not establish an audible choice.
+
+Model 4 offers one fixed Fuller body comparison against the preferred Alloy.
+It retains the metal transient, modal frequencies, gains, spatial routing and
+lifetimes, but changes tonal excitation to a 35 ms attack, 1.5 s decay and
+three times the force. This targets the audible body at 0.15–1.5 seconds. Tests
+and exports compare normalized spectra and gain-fitted waveform differences in
+that window, alongside pitch, headroom and exact legacy preservation.
+
+The existing source and pickup controls still determine coherent excitation.
+No output reverb or extra oscillators create this contrast. Model 4 requires
+ALLOY and zero bloom; recipe schema 4 stores that explicit fixed model choice.
 
 ## Comparisons and verification
 

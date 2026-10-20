@@ -292,6 +292,79 @@ class CausticTest {
         }
     }
 
+    @Test
+    fun `Alloy fuller body changes the main note after scalar gain matching`() {
+        val c = Caustic.Config(model = 4, character = Caustic.Character.ALLOY,
+            source = .5, focus = .19, seconds = 1.8)
+        val a = Caustic.inspect(c.copy(model = 2))
+        val b = Caustic.inspect(c)
+        val from = (.15 * Caustic.RATE).toInt(); val to = (1.5 * Caustic.RATE).toInt()
+        val gain = (from until to).sumOf { a.raw[it].toDouble() * b.raw[it] } /
+            (from until to).sumOf { a.raw[it].toDouble() * a.raw[it] }
+        val residual = sqrt((from until to).sumOf {
+            val e = b.raw[it] - gain * a.raw[it]; e * e
+        } / (from until to).sumOf { b.raw[it].toDouble() * b.raw[it] })
+        assertTrue(residual > .2, "Fuller body main-window gain-fitted residual $residual")
+        val sa = logSpectrum(a.raw, .15, 1.5); val sb = logSpectrum(b.raw, .15, 1.5)
+        val distance = sa.indices.sumOf { abs(sa[it] - sb[it]) }
+        assertTrue(distance > .2, "Fuller body main-window normalized spectrum distance $distance")
+        assertContentEquals(b.raw, Caustic.inspect(c).raw)
+        val sparse = Caustic.inspect(c.copy(focus = .85))
+        val sparseSpectrum = logSpectrum(sparse.raw, .15, 1.5)
+        assertTrue(sb.indices.sumOf { abs(sb[it] - sparseSpectrum[it]) } > .08,
+            "Fuller body must retain geometric coloration in the main note")
+        assertTrue(Caustic.inspect(c.copy(velocity = 0.0, seconds = .3)).raw.all { it == 0f })
+        for (bad in listOf<() -> Caustic.Config>(
+            { c.copy(character = Caustic.Character.REED) }, { c.copy(bloom = .5) },
+        )) assertFailsWith<IllegalArgumentException> { bad() }
+    }
+
+    @Test
+    fun `Alloy fuller body keeps C2 C4 C6 pitch and headroom at maximum velocity`() {
+        for (midi in listOf(36, 60, 84)) for ((source, focus) in listOf(0.0 to .12, .5 to .19, 1.0 to .245)) {
+            val r = Caustic.inspect(Caustic.Config(model = 4, character = Caustic.Character.ALLOY,
+                midi = midi, source = source, focus = focus, velocity = 1.0, seconds = 1.2))
+            assertTrue(r.raw.all { it.isFinite() })
+            assertTrue(r.diagnostics.rawPeak in .001.. .99,
+                "MIDI$midi source$source fuller body peak ${r.diagnostics.rawPeak}")
+            val pitch = assertNotNull(Pitch.detect(Snip(r.raw, 1, Caustic.RATE), fromSec = .5f, windowSec = .35f))
+            assertTrue(pitch.confidence >= .3)
+            val cents = 1200 * kotlin.math.ln(pitch.hz / r.diagnostics.noteHz) / kotlin.math.ln(2.0)
+            assertTrue(abs(cents) < 20, "MIDI$midi source$source fuller body pitch drift $cents cents")
+        }
+    }
+
+    @Test
+    fun `Alloy fuller body retains exact causal tonal and edge path compression`() {
+        val c = Caustic.Config(model = 4, character = Caustic.Character.ALLOY, midi = 24, delayCycles = 2.0)
+        val times = DoubleArray(100) { it * .0031 } + doubleArrayOf(.5, 1.0, 1.5)
+        for (mode in listOf(Caustic.Mode.FULL, Caustic.Mode.PHASE_DISABLED)) {
+            val p = Caustic.transferProbe(c, times, mode)
+            val peak = p.exact.maxOf { abs(it) }.coerceAtLeast(1e-20)
+            val error = p.exact.indices.maxOf { abs(p.exact[it] - p.compressed[it]) } / peak
+            assertTrue(error < 2e-10, "Fuller body $mode direct delayed transfer error $error")
+        }
+    }
+
+    private fun logSpectrum(samples: FloatArray, start: Double, end: Double): DoubleArray {
+        val from = (start * Caustic.RATE).toInt(); val frames = ((end - start) * Caustic.RATE).toInt()
+        var n = 1
+        while (n < frames) n *= 2
+        val re = FloatArray(n) { i -> if (i < frames)
+            (samples[from + i] * (.5 - .5 * cos(2 * PI * i / (frames - 1)))).toFloat() else 0f }
+        val im = FloatArray(n)
+        Fft.forward(re, im)
+        val out = DoubleArray(96)
+        for (k in 1 until n / 2) {
+            val hz = k * Caustic.RATE / n.toDouble()
+            if (hz !in 20.0..20_000.0) continue
+            val band = (kotlin.math.ln(hz / 20) / kotlin.math.ln(1000.0) * out.size).toInt().coerceIn(out.indices)
+            out[band] += re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+        }
+        val total = out.sum().coerceAtLeast(1e-30)
+        return DoubleArray(out.size) { out[it] / total }
+    }
+
     private fun relativeDifference(a: DoubleArray, b: DoubleArray): Double =
         sqrt(a.indices.sumOf { val d = a[it] - b[it]; d * d } / a.sumOf { it * it }.coerceAtLeast(1e-30))
 
