@@ -47,7 +47,7 @@ class Mpc3ExporterTest {
         val dataDir = File(dest, "MPC3 Kit_[TrackData]")
         assertTrue(dataDir.isDirectory, "WAVs live in the sibling _[TrackData] folder")
         assertEquals(
-            setOf("A01_Kick_01.wav", "A02_Snare_01.wav"),
+            setOf("A01_Kick_01.wav", "A02_Snare_01.wav", "kit.json"),
             dataDir.listFiles()!!.map { it.name }.toSet(),
         )
 

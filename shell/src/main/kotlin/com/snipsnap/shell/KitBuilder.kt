@@ -542,10 +542,18 @@ class KitBuilderModel private constructor(
         require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
         moveToBin(pad.sampleFile)
         WavWriter.write(File(kitDir, pad.sampleFile), processed)
-        // An unlabelled audio replacement cannot retain a WIDE inventory:
+        // The imported audition's fingerprint describes the previous WAV.
+        // Keep its provenance, but never carry that current-file claim onto
+        // regenerated or treated audio; exporters fingerprint the new file.
+        // An unlabelled audio replacement also cannot retain a WIDE inventory:
         // its hashes describe the old sound. Other legacy recipes keep the
         // existing preserve-on-null behavior; an explicit new recipe wins.
-        return update(slot) { it.copy(recipe = recipe ?: it.recipe?.takeUnless { old -> "boardPad" in old.entries }) }
+        return update(slot) {
+            it.copy(
+                recipe = recipe ?: it.recipe?.takeUnless { old -> "boardPad" in old.entries },
+                source = it.source - "rawSha256",
+            )
+        }
     }
 
     /**

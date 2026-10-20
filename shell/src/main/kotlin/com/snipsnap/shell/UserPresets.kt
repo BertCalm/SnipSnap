@@ -15,6 +15,7 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OrigamiPatch
@@ -464,6 +465,9 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is OnsetPatch) {
+            return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
+        }
         if (patch is OvenPatch) {
             return "OvenPatch(\"$name\", OvenVoice.${patch.voice}, mapOf($macros), midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
         }

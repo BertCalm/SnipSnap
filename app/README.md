@@ -76,7 +76,7 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 49 engines: THUMP, SKIN, TINES, VELVET,
+The SYNTH source picker has 50 engines: THUMP, SKIN, ONSET, TINES, VELVET,
 VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
 CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE and ORIGAMI.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT

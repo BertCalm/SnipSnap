@@ -746,7 +746,13 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == ObbligatoPatch.ENGINE) {
+            if (engine == "ONSET") {
+                // ONSET's promotion writes its constructor directly so the
+                // saved renderer version is explicit, independent of a helper.
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("OnsetPatch("))
+                assertTrue("modelVersion = " in UserPresets.rosterLine(patch))
+            } else if (engine == ObbligatoPatch.ENGINE) {
                 val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")
             } else if (engine == com.snipsnap.synth.OverlapPatch.ENGINE) {
