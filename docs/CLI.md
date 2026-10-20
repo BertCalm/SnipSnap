@@ -158,6 +158,8 @@ threshold by.
 ```
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
+snipsnap synth TRIO ENSEMBLE --all --out <dir>
+snipsnap synth TRIO ENSEMBLE --midi 67 --velocity 0.6 --tempo 120 --beats 3 --out <dir>
 snipsnap synth OVEN FELT --all --midi 60 --velocity 0.65 --out <dir>
 snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
@@ -220,10 +222,16 @@ before any output is written. HARMONIC supports the captured HOLD loop.
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
 | BELLOWS | 48–72 |
 | MURMUR | 36–96 |
+| TRIO | 48–84 |
 | OSPREY | 36–84 |
 | OPENSKY | 0–127 finite; HALO instrument root 36–96 |
 | VENT | 36–84 |
 | WICK | 24–84 |
+
+TRIO provides TRES, BERIMBAU, CHARANGO and ENSEMBLE voices. `--tempo 60..200`
+and `--beats 1..4` edit the finite performance while preserving its saved seed,
+articulation and model. The selected beats must fit within two seconds;
+the output remains a 3.5-second one-shot with room for the replies to decay.
 
 ALLOY, OVEN, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA

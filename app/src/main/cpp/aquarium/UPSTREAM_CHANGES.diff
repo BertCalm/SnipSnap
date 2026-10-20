@@ -1,0 +1,935 @@
+--- upstream/Source/DSP/Effects/AquaticFXSuite.h
++++ private/DSP/Effects/AquaticFXSuite.h
+@@ -3,13 +3,16 @@
+ #pragma once
+ #include "MultibandCompressor.h"
+ #include "../FastMath.h"
+-#include <juce_audio_processors/juce_audio_processors.h>
++#include <algorithm>
++#include <string>
++#include <stdexcept>
++#include <cstdint>
+ #include <array>
+ #include <vector>
+ #include <cmath>
+ #include <random>
+ 
+-namespace xoceanus
++namespace snipsnap::aquarium::detail
+ {
+ 
+ //==============================================================================
+@@ -64,13 +67,14 @@
+ 
+     /// Cache all aqua_ parameter pointers once per prepareToPlay.
+     /// Call this from MasterFXChain::cacheParameterPointers().
+-    void cacheParameterPointers(juce::AudioProcessorValueTreeState& apvts);
++    void setSeed(uint32_t seed);
++    void applyParameterValues(const float* values) noexcept;
+ 
+     //--------------------------------------------------------------------------
+     // Static parameter layout factory
+     // Call from XOceanusProcessor::createParameterLayout() to add all aqua_ params.
+     //--------------------------------------------------------------------------
+-    static void addParameters(juce::AudioProcessorValueTreeState::ParameterLayout& layout);
++
+ 
+ private:
+     //==========================================================================
+@@ -96,13 +100,12 @@
+         float linGain = 1.0f;  // linear gain
+ 
+         /// Recompute coefficients. Call when fc or resonance changes (with smoothing).
+-        void updateCoeffs(float fc, float resonance, double sampleRate)
++        void updateCoeffs(float fc, float resonance, double sampleRate, float gainPrewarp = 1.0f)
+         {
+             constexpr float pi = 3.14159265358979323846f;
+-            float g = fastTan(pi * fc / static_cast<float>(sampleRate));
+-            // Clamp g to avoid instability at extreme frequencies
+-            g = std::max(0.0001f, std::min(g, 0.9999f));
+-            k = 0.02f + resonance * 1.98f; // [0.02, 2.0]
++            fc = std::clamp(fc, 20.0f, static_cast<float>(sampleRate) * 0.45f);
++            float g = std::tan(pi * fc / static_cast<float>(sampleRate)) * gainPrewarp;
++            k = 2.0f - std::clamp(resonance, 0.0f, 1.0f) * 1.98f;
+             a1 = 1.0f / (1.0f + g * (g + k));
+             a2 = g * a1;
+             a3 = g * a2;
+@@ -113,7 +116,7 @@
+         {
+             // linGain = 10^(gainDb/20)
+             linGain = fastPow2(gainDb * (1.0f / 6.0205999f));
+-            sqrtGain = fastPow2(gainDb * (1.0f / 12.411f)); // 10^(dB/40)
++            sqrtGain = std::sqrt(linGain);
+         }
+ 
+         /// Process one sample through the SVF core, returning high-shelf output.
+@@ -124,11 +127,12 @@
+             float v2 = ic2 + a2 * ic1 + a3 * v3;
+             ic1 = flushDenormal(2.0f * v1 - ic1);
+             ic2 = flushDenormal(2.0f * v2 - ic2);
+-            float hp = v3 - k * v1 - v2; // high-pass
++            float hp = x - k * v1 - v2; // high-pass
+             float bp = v1;               // band-pass
+             float lp = v2;               // low-pass
+-            // High shelf: output = HP + sqrt(gain)*BP + gain*LP
+-            return hp + sqrtGain * bp + linGain * lp;
++            // Corrected TPT SVF high shelf: DC=1, Nyquist=linear gain; zero dB=x.
++            (void)hp; (void)bp; (void)lp;
++            return linGain * x + k * (1.0f - sqrtGain) * sqrtGain * v1 + (1.0f - linGain) * v2;
+         }
+ 
+         /// Returns low-shelf output.
+@@ -139,11 +143,12 @@
+             float v2 = ic2 + a2 * ic1 + a3 * v3;
+             ic1 = flushDenormal(2.0f * v1 - ic1);
+             ic2 = flushDenormal(2.0f * v2 - ic2);
+-            float hp = v3 - k * v1 - v2;
++            float hp = x - k * v1 - v2;
+             float bp = v1;
+             float lp = v2;
+-            // Low shelf: gain*(HP + sqrt(gain)*BP) + LP
+-            return linGain * (hp + sqrtGain * bp) + lp;
++            // Corrected TPT SVF low shelf: DC=linear gain, Nyquist=1; zero dB=x.
++            (void)hp; (void)bp; (void)lp;
++            return x + k * (sqrtGain - 1.0f) * v1 + (linGain - 1.0f) * v2;
+         }
+ 
+         /// Returns bell/peak output.
+@@ -154,9 +159,9 @@
+             float v2 = ic2 + a2 * ic1 + a3 * v3;
+             ic1 = flushDenormal(2.0f * v1 - ic1);
+             ic2 = flushDenormal(2.0f * v2 - ic2);
+-            // Bell: input + (bellGain - k) * BP
++            // Bell: input + k*(linear gain - 1)*BP; zero dB=x.
+             float bellGainLin = fastPow2(bellGainDb * (1.0f / 6.0205999f));
+-            return x + (bellGainLin - k) * v1;
++            return x + k * (bellGainLin - 1.0f) * v1;
+         }
+ 
+         /// Returns lowpass output (for Tide auto-filter).
+@@ -242,6 +247,7 @@
+         double sr = 0.0;  // Sentinel: must be set by prepare() before use
+ 
+         // PRNG state (xorshift32 — no heap, deterministic)
++        uint32_t initialSeed = 0xDEADBEEFu;
+         uint32_t rngState = 0xDEADBEEFu;
+ 
+         float nextRand()
+@@ -256,6 +262,7 @@
+         void prepare(double sampleRate)
+         {
+             sr = sampleRate;
++            rngState = initialSeed;
+             int maxDelaySamples = static_cast<int>(kMaxDelayMs * sampleRate / 1000.0) + 16;
+             for (int v = 0; v < kMaxVoices; ++v)
+             {
+@@ -272,6 +279,7 @@
+ 
+         void reset()
+         {
++            rngState = initialSeed;
+             for (auto& v : voices)
+             {
+                 std::fill(v.delayLineL.begin(), v.delayLineL.end(), 0.0f);
+@@ -312,10 +320,8 @@
+             float srF = static_cast<float>(sr);
+ 
+             // Ornstein-Uhlenbeck parameters
+-            constexpr float theta = 2.0f;
+-            float sigma = 0.3f * diffusion;
+-            float dt = 1.0f / srF;
+-            float sqrtDt = std::sqrt(dt);
++            float retention = std::exp(-2.0f * 3.14159265f * std::clamp(rate, 0.001f, 2.0f) / srF);
++            float innovation = 0.3f * diffusion * std::sqrt(3.0f * (1.0f - retention * retention));
+ 
+             // HP feedback filter coeff (~80 Hz)
+             float hpCoeff = 1.0f - fastExp(-2.0f * 3.14159265f * 80.0f / srF);
+@@ -337,10 +343,7 @@
+                     Voice& vx = voices[v];
+ 
+                     // --- Ornstein-Uhlenbeck walk ---
+-                    float noise = nextRand() * sigma * sqrtDt;
+-                    vx.ouV += (-theta * vx.ouX * dt + noise);
+-                    vx.ouV *= 0.999f; // velocity damping
+-                    vx.ouX += vx.ouV;
++                    vx.ouX = retention * vx.ouX + innovation * nextRand();
+                     // Clamp walk to [-1, 1]
+                     vx.ouX = std::max(-1.0f, std::min(1.0f, vx.ouX));
+ 
+@@ -405,6 +408,7 @@
+         float shState = 0.0f;
+         float shTimer = 0.0f;
+         float shSlew = 0.0f;
++        uint32_t initialSeed = 0x12345678u, rngState = 0x12345678u;
+ 
+         TPT_SVF svfL;
+         TPT_SVF svfR;
+@@ -414,6 +418,7 @@
+         void prepare(double sampleRate)
+         {
+             sr = sampleRate;
++            rngState = initialSeed;
+             lfoPhase = 0.0f;
+             lfoPhaseR = 0.0f;
+             shState = 0.0f;
+@@ -425,6 +430,7 @@
+ 
+         void reset()
+         {
++            rngState = initialSeed;
+             lfoPhase = 0.0f;
+             lfoPhaseR = 0.0f;
+             shState = 0.0f;
+@@ -473,9 +479,9 @@
+                 float lfoL =
+                     computeLFOSample(lfoPhase, shape, shState, shSlew, shTimer, srF / effectiveRate, slewSamples);
+                 // R channel uses offset phase
+-                float tmpPhaseR = lfoPhaseR;
++                float tmpPhaseR = std::fmod(lfoPhase + stereoPhaseRad, 2.0f * 3.14159265f);
+                 float dummyShState = shState, dummyShSlew = shSlew, dummyShTimer = shTimer;
+-                float lfoR = computeLFOSample(tmpPhaseR, shape, dummyShState, dummyShSlew, dummyShTimer,
++                float lfoR = (shape == Shape::SampleAndHold) ? lfoL : computeLFOSample(tmpPhaseR, shape, dummyShState, dummyShSlew, dummyShTimer,
+                                               srF / effectiveRate, slewSamples);
+ 
+                 // Advance main phase
+@@ -551,7 +557,8 @@
+                 {
+                     shTim -= periodSamples;
+                     // New random target in [-1, 1] — use sin to avoid PRNG dependency
+-                    shSt = fastSin(phase + shTim * 0.1f);
++                    rngState ^= rngState << 13; rngState ^= rngState >> 17; rngState ^= rngState << 5;
++                    shSt = static_cast<float>(static_cast<int32_t>(rngState)) / 2147483648.0f;
+                 }
+                 // Slew toward target
+                 float diff = shSt - shSl;
+@@ -709,7 +716,7 @@
+                     // position cannot escape the buffer at high sample rates (e.g. 192 kHz where
+                     // srScale=4 would push the raw offset past the len*8 padding).
+                     int effectiveDelay =
+-                        juce::jlimit(1, len - 1, static_cast<int>(kPrimeLengths48k[ch] * srScale * size * 2.7f + 1));
++                        std::clamp(static_cast<int>(kPrimeLengths48k[ch] * srScale * size * 2.7f + 1), 1, len - 1);
+                     int rp = ((delays[ch].writePos - effectiveDelay) + len) % len;
+                     float raw = delays[ch].buffer[rp];
+ 
+@@ -843,10 +850,12 @@
+                 gainSmoothed = flushDenormal(gainSmoothed);
+ 
+                 // Update SVF coefficients and gain every sample (they're smoothed)
+-                svfL.updateCoeffs(freqSmoothed, res, sr);
+-                svfR.updateCoeffs(freqSmoothed, res, sr);
+                 svfL.updateGain(gainSmoothed);
+                 svfR.updateGain(gainSmoothed);
++                float shelfPrewarp = (mode == Mode::HighShelf) ? std::sqrt(svfL.sqrtGain) :
++                                     (mode == Mode::LowShelf) ? 1.0f / std::sqrt(svfL.sqrtGain) : 1.0f;
++                svfL.updateCoeffs(freqSmoothed, res, sr, shelfPrewarp);
++                svfR.updateCoeffs(freqSmoothed, res, sr, shelfPrewarp);
+ 
+                 float inL = L[i];
+                 float inR = R[i];
+@@ -1008,11 +1017,10 @@
+ 
+                 float shimL = 0.0f, shimR = 0.0f;
+ 
+-                if (gateL || gateR)
+-                {
++                { // Clock the feed-forward shimmer continuously, including closed gate.
+                     // Full-wave rectification
+-                    float rectL = absL * driveGain;
+-                    float rectR = absR * driveGain;
++                    float rectL = gateL ? absL * driveGain : 0.0f;
++                    float rectR = gateR ? absR * driveGain : 0.0f;
+ 
+                     // 2-pole HP filter on rectified signal (cascade of 1-pole HP)
+                     // HP = x - LP
+@@ -1064,15 +1072,14 @@
+                     float fracR = pitchReadR - static_cast<float>(static_cast<int>(pitchReadR));
+                     shimR = pitchBufR[rpR0] * (1.0f - fracR) + pitchBufR[rpR1] * fracR;
+ 
+-                    // Scale feedback by intensity (max 0.7 to prevent runaway)
++                    // Feed-forward shimmer level (upstream has no pitch-shift feedback connection).
+                     shimL *= std::min(shimmerBlend, 0.7f);
+                     shimR *= std::min(shimmerBlend, 0.7f);
+ 
+                     // Stereo spread: allpass phase rotation on R
+-                    float apPrev = apStateR;
+                     apStateR = flushDenormal(-apG * shimR + apStateL + apG * apStateR);
+                     apStateL = flushDenormal(shimR);
+-                    shimR = apG * shimR + apPrev;
++                    shimR = apStateR;
+                     shimR = shimR * spread + shimL * (1.0f - spread);
+                 }
+ 
+@@ -1099,88 +1106,72 @@
+ 
+         float foldback(float x, float ceiling) const
+         {
+-            while (x > ceiling)
+-                x = 2.0f * ceiling - x;
+-            while (x < -ceiling)
+-                x = -2.0f * ceiling - x;
+-            return x;
++            const float period = 4.0f * ceiling;
++            float t = std::fmod(x + ceiling, period);
++            if (t < 0.0f) t += period;
++            return t <= 2.0f * ceiling ? t - ceiling : 3.0f * ceiling - t;
+         }
+     } biolume;
+ 
+-    //==========================================================================
+-    // Cached parameter pointers
+-    //==========================================================================
+-    struct CachedParams
++    struct Parameters
+     {
+-        // Stage 1: Fathom
+-        std::atomic<float>* fathomMix = nullptr;
+-        std::atomic<float>* fathomDepth = nullptr;
+-        std::atomic<float>* fathomLowGain = nullptr;
+-        std::atomic<float>* fathomMidGain = nullptr;
+-        std::atomic<float>* fathomHighGain = nullptr;
+-        std::atomic<float>* fathomLowXover = nullptr;
+-        std::atomic<float>* fathomHiXover = nullptr;
+-        std::atomic<float>* fathomChar = nullptr;
+-
+-        // Stage 2: Drift
+-        std::atomic<float>* driftMix = nullptr;
+-        std::atomic<float>* driftVoices = nullptr;
+-        std::atomic<float>* driftDepth = nullptr;
+-        std::atomic<float>* driftRate = nullptr;
+-        std::atomic<float>* driftDiffusion = nullptr;
+-        std::atomic<float>* driftFeedback = nullptr;
+-        std::atomic<float>* driftSpread = nullptr;
+-        std::atomic<float>* driftSpace = nullptr;
+-        std::atomic<float>* driftMovement = nullptr;
+-
+-        // Stage 3: Tide
+-        std::atomic<float>* tideMix = nullptr;
+-        std::atomic<float>* tideMode = nullptr;
+-        std::atomic<float>* tideRate = nullptr;
+-        std::atomic<float>* tideDepth = nullptr;
+-        std::atomic<float>* tideShape = nullptr;
+-        std::atomic<float>* tideSyncEn = nullptr;
+-        std::atomic<float>* tideSyncDiv = nullptr;
+-        std::atomic<float>* tideFilterFreq = nullptr;
+-        std::atomic<float>* tideFilterRes = nullptr;
+-        std::atomic<float>* tideStereoPhase = nullptr;
+-        std::atomic<float>* tideMovement = nullptr;
+-
+-        // Stage 4: Reef
+-        std::atomic<float>* reefMix = nullptr;
+-        std::atomic<float>* reefSize = nullptr;
+-        std::atomic<float>* reefDecay = nullptr;
+-        std::atomic<float>* reefDamping = nullptr;
+-        std::atomic<float>* reefDensity = nullptr;
+-        std::atomic<float>* reefPredelay = nullptr;
+-        std::atomic<float>* reefWidth = nullptr;
+-        std::atomic<float>* reefSpace = nullptr;
+-
+-        // Stage 5: Surface
+-        std::atomic<float>* surfaceMix = nullptr;
+-        std::atomic<float>* surfaceFreq = nullptr;
+-        std::atomic<float>* surfaceGain = nullptr;
+-        std::atomic<float>* surfaceRes = nullptr;
+-        std::atomic<float>* surfaceMode = nullptr;
+-        std::atomic<float>* surfaceSweep = nullptr;
+-        std::atomic<float>* surfaceSweepRng = nullptr;
+-        std::atomic<float>* surfaceCoupling = nullptr;
+-
+-        // Stage 6: Biolume
+-        std::atomic<float>* biolumeMix = nullptr;
+-        std::atomic<float>* biolumeThresh = nullptr;
+-        std::atomic<float>* biolumeDrive = nullptr;
+-        std::atomic<float>* biolumeHpFreq = nullptr;
+-        std::atomic<float>* biolumeShimmer = nullptr;
+-        std::atomic<float>* biolumeSatMode = nullptr;
+-        std::atomic<float>* biolumeSpread = nullptr;
+-        std::atomic<float>* biolumeChar = nullptr;
++        float fathomMix = 0.0f;
++        float fathomDepth = 0.5f;
++        float fathomLowGain = 1.0f;
++        float fathomMidGain = 1.0f;
++        float fathomHighGain = 1.0f;
++        float fathomLowXover = 200.0f;
++        float fathomHiXover = 3000.0f;
++        float fathomChar = 0.5f;
++        float driftMix = 0.0f;
++        float driftVoices = 3.0f;
++        float driftDepth = 8.0f;
++        float driftRate = 0.07f;
++        float driftDiffusion = 0.4f;
++        float driftFeedback = 0.0f;
++        float driftSpread = 0.8f;
++        float driftSpace = 0.5f;
++        float driftMovement = 0.5f;
++        float tideMix = 0.0f;
++        float tideMode = 0.0f;
++        float tideRate = 0.5f;
++        float tideDepth = 0.6f;
++        float tideShape = 0.0f;
++        float tideSyncEn = 0.0f;
++        float tideSyncDiv = 3.0f;
++        float tideFilterFreq = 800.0f;
++        float tideFilterRes = 0.3f;
++        float tideStereoPhase = 90.0f;
++        float tideMovement = 0.5f;
++        float reefMix = 0.0f;
++        float reefSize = 0.5f;
++        float reefDecay = 0.4f;
++        float reefDamping = 0.5f;
++        float reefDensity = 0.6f;
++        float reefPredelay = 8.0f;
++        float reefWidth = 0.8f;
++        float reefSpace = 0.5f;
++        float surfaceMix = 0.0f;
++        float surfaceFreq = 4000.0f;
++        float surfaceGain = 0.0f;
++        float surfaceRes = 0.3f;
++        float surfaceMode = 0.0f;
++        float surfaceSweep = 0.5f;
++        float surfaceSweepRng = 1.0f;
++        float surfaceCoupling = 0.0f;
++        float biolumeMix = 0.0f;
++        float biolumeThresh = -18.0f;
++        float biolumeDrive = 0.4f;
++        float biolumeHpFreq = 4000.0f;
++        float biolumeShimmer = 0.5f;
++        float biolumeSatMode = 0.0f;
++        float biolumeSpread = 0.6f;
++        float biolumeChar = 0.5f;
+     } params;
+-
+     double sr = 0.0;  // Sentinel: must be set by prepare() before use
+     int blockSize = 512;
+ 
+-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AquaticFXSuite)
++
+ };
+ 
+ //==============================================================================
+@@ -1189,6 +1180,8 @@
+ 
+ inline void AquaticFXSuite::prepare(double sampleRate, int samplesPerBlock)
+ {
++    if (!std::isfinite(sampleRate) || sampleRate < 8000 || sampleRate > 192000 || samplesPerBlock < 1)
++        throw std::invalid_argument("Invalid sample rate or block size");
+     sr = sampleRate;
+     blockSize = samplesPerBlock;
+ 
+@@ -1198,6 +1191,7 @@
+     reef.prepare(sampleRate, samplesPerBlock);
+     surface.prepare(sampleRate);
+     biolume.prepare(sampleRate);
++    reset();
+ }
+ 
+ inline void AquaticFXSuite::reset()
+@@ -1212,19 +1206,20 @@
+ 
+ inline void AquaticFXSuite::processBlock(float* L, float* R, int numSamples, double bpm)
+ {
+-    juce::ScopedNoDenormals noDenormals; // Issue #902: FTZ/DAZ protection (missed in original Wave 1 chains)
++    if (sr <= 0 || numSamples < 0 || !L || !R) throw std::logic_error("Prepare processor and supply valid channels first");
++
+     //------------------------------------------------------------------
+     // Stage 1 — Fathom
+     //------------------------------------------------------------------
+     {
+-        float mix = params.fathomMix ? params.fathomMix->load() : 0.0f;
+-        float depth = params.fathomDepth ? params.fathomDepth->load() : 0.5f;
+-        float lowGain = params.fathomLowGain ? params.fathomLowGain->load() : 1.0f;
+-        float midGain = params.fathomMidGain ? params.fathomMidGain->load() : 1.0f;
+-        float highGain = params.fathomHighGain ? params.fathomHighGain->load() : 1.0f;
+-        float lowXover = params.fathomLowXover ? params.fathomLowXover->load() : 200.0f;
+-        float hiXover = params.fathomHiXover ? params.fathomHiXover->load() : 3000.0f;
+-        float character = params.fathomChar ? params.fathomChar->load() : 0.5f;
++        float mix = params.fathomMix;
++        float depth = params.fathomDepth;
++        float lowGain = params.fathomLowGain;
++        float midGain = params.fathomMidGain;
++        float highGain = params.fathomHighGain;
++        float lowXover = params.fathomLowXover;
++        float hiXover = params.fathomHiXover;
++        float character = params.fathomChar;
+ 
+         fathom.processBlock(L, R, numSamples, mix, depth, lowGain, midGain, highGain, lowXover, hiXover, character);
+     }
+@@ -1233,19 +1228,19 @@
+     // Stage 2 — Drift
+     //------------------------------------------------------------------
+     {
+-        float mix = params.driftMix ? params.driftMix->load() : 0.0f;
+-        float voices = params.driftVoices ? params.driftVoices->load() : 3.0f;
+-        float depth = params.driftDepth ? params.driftDepth->load() : 8.0f;
+-        float feedback = params.driftFeedback ? params.driftFeedback->load() : 0.0f;
+-        float spread = params.driftSpread ? params.driftSpread->load() : 0.8f;
+-        float space = params.driftSpace ? params.driftSpace->load() : 0.5f;
+-        float movement = params.driftMovement ? params.driftMovement->load() : 0.5f;
++        float mix = params.driftMix;
++        float voices = params.driftVoices;
++        float depth = params.driftDepth;
++        float feedback = params.driftFeedback;
++        float spread = params.driftSpread;
++        float space = params.driftSpace;
++        float movement = params.driftMovement;
+ 
+         // SPACE macro scales stereo spread (0=mono, 1=maximum spread)
+         float effectiveSpread = spread * space;
+         // MOVEMENT macro overrides rate (0.001→2.0 Hz) and diffusion (0.05→0.80)
+-        float movRate = 0.001f * fastPow2(movement * fastLog2(2000.0f));
+-        float movDiff = 0.05f + movement * 0.75f;
++        float movRate = 0.001f * fastPow2(movement * fastLog2(2000.0f)) * params.driftRate / 0.07f;
++        float movDiff = std::clamp((0.05f + movement * 0.75f) * params.driftDiffusion / 0.4f, 0.0f, 1.0f);
+ 
+         drift.processBlock(L, R, numSamples, static_cast<int>(voices + 0.5f), depth, movRate, movDiff, feedback,
+                            effectiveSpread, mix);
+@@ -1255,20 +1250,20 @@
+     // Stage 3 — Tide
+     //------------------------------------------------------------------
+     {
+-        float mix = params.tideMix ? params.tideMix->load() : 0.0f;
+-        float modeF = params.tideMode ? params.tideMode->load() : 0.0f;
+-        float rate = params.tideRate ? params.tideRate->load() : 0.5f;
+-        float depth = params.tideDepth ? params.tideDepth->load() : 0.6f;
+-        float shapeF = params.tideShape ? params.tideShape->load() : 0.0f;
+-        float syncEnF = params.tideSyncEn ? params.tideSyncEn->load() : 0.0f;
+-        float syncDivF = params.tideSyncDiv ? params.tideSyncDiv->load() : 3.0f;
+-        float filterFreq = params.tideFilterFreq ? params.tideFilterFreq->load() : 800.0f;
+-        float filterRes = params.tideFilterRes ? params.tideFilterRes->load() : 0.3f;
+-        float stereoPhD = params.tideStereoPhase ? params.tideStereoPhase->load() : 90.0f;
+-        float movement = params.tideMovement ? params.tideMovement->load() : 0.5f;
++        float mix = params.tideMix;
++        float modeF = params.tideMode;
++        float rate = params.tideRate;
++        float depth = params.tideDepth;
++        float shapeF = params.tideShape;
++        float syncEnF = params.tideSyncEn;
++        float syncDivF = params.tideSyncDiv;
++        float filterFreq = params.tideFilterFreq;
++        float filterRes = params.tideFilterRes;
++        float stereoPhD = params.tideStereoPhase;
++        float movement = params.tideMovement;
+ 
+         // MOVEMENT macro: rate = 0.01 * 2^(movement * log2(800))
+-        rate = 0.01f * fastPow2(movement * fastLog2(800.0f));
++        rate = 0.01f * fastPow2(movement * fastLog2(800.0f)) * params.tideRate / 0.5f;
+ 
+         TideStage::Mode mode = static_cast<TideStage::Mode>(static_cast<int>(modeF + 0.5f));
+         TideStage::Shape shape = static_cast<TideStage::Shape>(static_cast<int>(shapeF + 0.5f));
+@@ -1279,7 +1274,7 @@
+         float stereoPhaseRad = stereoPhD * (3.14159265f / 180.0f);
+ 
+         // Set R channel phase from initial offset
+-        tide.lfoPhaseR = tide.lfoPhase + stereoPhaseRad;
++        // Stereo offset is resolved sample by sample inside Tide.
+ 
+         tide.processBlock(L, R, numSamples, mix, mode, rate, depth, shape, syncEnabled, syncDiv, bpm, filterFreq,
+                           filterRes, stereoPhaseRad);
+@@ -1289,18 +1284,18 @@
+     // Stage 4 — Reef
+     //------------------------------------------------------------------
+     {
+-        float mix = params.reefMix ? params.reefMix->load() : 0.0f;
+-        float size = params.reefSize ? params.reefSize->load() : 0.5f;
+-        float decay = params.reefDecay ? params.reefDecay->load() : 0.4f;
+-        float damping = params.reefDamping ? params.reefDamping->load() : 0.5f;
+-        float density = params.reefDensity ? params.reefDensity->load() : 0.6f;
+-        float predelay = params.reefPredelay ? params.reefPredelay->load() : 8.0f;
+-        float width = params.reefWidth ? params.reefWidth->load() : 0.8f;
+-        float space = params.reefSpace ? params.reefSpace->load() : 0.5f;
++        float mix = params.reefMix;
++        float size = params.reefSize;
++        float decay = params.reefDecay;
++        float damping = params.reefDamping;
++        float density = params.reefDensity;
++        float predelay = params.reefPredelay;
++        float width = params.reefWidth;
++        float space = params.reefSpace;
+ 
+         // SPACE macro morphs size (0.1→1.0) and decay (0.1→0.8)
+-        size = 0.1f + space * 0.9f;
+-        decay = 0.1f + space * 0.7f;
++        size = std::clamp((0.1f + space * 0.9f) * params.reefSize / 0.5f, 0.0f, 1.0f);
++        decay = std::clamp((0.1f + space * 0.7f) * params.reefDecay / 0.4f, 0.0f, 0.99f);
+ 
+         reef.processBlock(L, R, numSamples, mix, size, decay, damping, density, predelay, width);
+     }
+@@ -1309,14 +1304,14 @@
+     // Stage 5 — Surface
+     //------------------------------------------------------------------
+     {
+-        float mix = params.surfaceMix ? params.surfaceMix->load() : 0.0f;
+-        float freq = params.surfaceFreq ? params.surfaceFreq->load() : 4000.0f;
+-        float gain = params.surfaceGain ? params.surfaceGain->load() : 0.0f;
+-        float res = params.surfaceRes ? params.surfaceRes->load() : 0.3f;
+-        float modeF = params.surfaceMode ? params.surfaceMode->load() : 0.0f;
+-        float sweep = params.surfaceSweep ? params.surfaceSweep->load() : 0.5f;
+-        float sweepRngF = params.surfaceSweepRng ? params.surfaceSweepRng->load() : 1.0f;
+-        float coupling = params.surfaceCoupling ? params.surfaceCoupling->load() : 0.0f;
++        float mix = params.surfaceMix;
++        float freq = params.surfaceFreq;
++        float gain = params.surfaceGain;
++        float res = params.surfaceRes;
++        float modeF = params.surfaceMode;
++        float sweep = params.surfaceSweep;
++        float sweepRngF = params.surfaceSweepRng;
++        float coupling = params.surfaceCoupling;
+ 
+         SurfaceStage::Mode mode = static_cast<SurfaceStage::Mode>(static_cast<int>(modeF + 0.5f));
+         // sweepOctaves: 0 = Narrow (1 oct), 1 = Wide (4 oct)
+@@ -1329,14 +1324,14 @@
+     // Stage 6 — Biolume
+     //------------------------------------------------------------------
+     {
+-        float mix = params.biolumeMix ? params.biolumeMix->load() : 0.0f;
+-        float thresh = params.biolumeThresh ? params.biolumeThresh->load() : -18.0f;
+-        float drive = params.biolumeDrive ? params.biolumeDrive->load() : 0.4f;
+-        float hpFreq = params.biolumeHpFreq ? params.biolumeHpFreq->load() : 4000.0f;
+-        float shimmer = params.biolumeShimmer ? params.biolumeShimmer->load() : 0.5f;
+-        float satModeF = params.biolumeSatMode ? params.biolumeSatMode->load() : 0.0f;
+-        float spread = params.biolumeSpread ? params.biolumeSpread->load() : 0.6f;
+-        float character = params.biolumeChar ? params.biolumeChar->load() : 0.5f;
++        float mix = params.biolumeMix;
++        float thresh = params.biolumeThresh;
++        float drive = params.biolumeDrive;
++        float hpFreq = params.biolumeHpFreq;
++        float shimmer = params.biolumeShimmer;
++        float satModeF = params.biolumeSatMode;
++        float spread = params.biolumeSpread;
++        float character = params.biolumeChar;
+ 
+         BiolumeStage::SatMode satMode = static_cast<BiolumeStage::SatMode>(static_cast<int>(satModeF + 0.5f));
+ 
+@@ -1344,147 +1339,67 @@
+     }
+ }
+ 
+-inline void AquaticFXSuite::cacheParameterPointers(juce::AudioProcessorValueTreeState& apvts)
++
++inline void AquaticFXSuite::setSeed(uint32_t seed)
+ {
+-    auto get = [&](const char* id) -> std::atomic<float>*
+-    {
+-        auto* p = apvts.getRawParameterValue(id);
+-        return p;
+-    };
+-
+-    // Fathom
+-    params.fathomMix = get("aqua_fathom_mix");
+-    params.fathomDepth = get("aqua_fathom_depth");
+-    params.fathomLowGain = get("aqua_fathom_lowGain");
+-    params.fathomMidGain = get("aqua_fathom_midGain");
+-    params.fathomHighGain = get("aqua_fathom_highGain");
+-    params.fathomLowXover = get("aqua_fathom_lowXover");
+-    params.fathomHiXover = get("aqua_fathom_highXover");
+-    params.fathomChar = get("aqua_fathom_character");
+-
+-    // Drift
+-    params.driftMix = get("aqua_drift_mix");
+-    params.driftVoices = get("aqua_drift_voices");
+-    params.driftDepth = get("aqua_drift_depth");
+-    params.driftRate = get("aqua_drift_rate");
+-    params.driftDiffusion = get("aqua_drift_diffusion");
+-    params.driftFeedback = get("aqua_drift_feedback");
+-    params.driftSpread = get("aqua_drift_stereoSpread");
+-    params.driftSpace = get("aqua_drift_space");
+-    params.driftMovement = get("aqua_drift_movement");
+-
+-    // Tide
+-    params.tideMix = get("aqua_tide_mix");
+-    params.tideMode = get("aqua_tide_mode");
+-    params.tideRate = get("aqua_tide_rate");
+-    params.tideDepth = get("aqua_tide_depth");
+-    params.tideShape = get("aqua_tide_shape");
+-    params.tideSyncEn = get("aqua_tide_syncEnabled");
+-    params.tideSyncDiv = get("aqua_tide_syncDiv");
+-    params.tideFilterFreq = get("aqua_tide_filterFreq");
+-    params.tideFilterRes = get("aqua_tide_filterRes");
+-    params.tideStereoPhase = get("aqua_tide_stereoPhase");
+-    params.tideMovement = get("aqua_tide_movement");
+-
+-    // Reef
+-    params.reefMix = get("aqua_reef_mix");
+-    params.reefSize = get("aqua_reef_size");
+-    params.reefDecay = get("aqua_reef_decay");
+-    params.reefDamping = get("aqua_reef_damping");
+-    params.reefDensity = get("aqua_reef_density");
+-    params.reefPredelay = get("aqua_reef_predelay");
+-    params.reefWidth = get("aqua_reef_width");
+-    params.reefSpace = get("aqua_reef_space");
+-
+-    // Surface
+-    params.surfaceMix = get("aqua_surface_mix");
+-    params.surfaceFreq = get("aqua_surface_freq");
+-    params.surfaceGain = get("aqua_surface_gain");
+-    params.surfaceRes = get("aqua_surface_resonance");
+-    params.surfaceMode = get("aqua_surface_mode");
+-    params.surfaceSweep = get("aqua_surface_sweep");
+-    params.surfaceSweepRng = get("aqua_surface_sweepRange");
+-    params.surfaceCoupling = get("aqua_surface_coupling");
+-
+-    // Biolume
+-    params.biolumeMix = get("aqua_biolume_mix");
+-    params.biolumeThresh = get("aqua_biolume_threshold");
+-    params.biolumeDrive = get("aqua_biolume_drive");
+-    params.biolumeHpFreq = get("aqua_biolume_hpFreq");
+-    params.biolumeShimmer = get("aqua_biolume_shimmer");
+-    params.biolumeSatMode = get("aqua_biolume_satMode");
+-    params.biolumeSpread = get("aqua_biolume_spread");
+-    params.biolumeChar = get("aqua_biolume_character");
++    drift.initialSeed = seed ? seed : 1u;
++    tide.initialSeed = (seed ^ 0xA5A5A5A5u) ? (seed ^ 0xA5A5A5A5u) : 1u;
+ }
+ 
+-inline void AquaticFXSuite::addParameters(juce::AudioProcessorValueTreeState::ParameterLayout& layout)
++inline void AquaticFXSuite::applyParameterValues(const float* values) noexcept
+ {
+-    using AP = juce::AudioParameterFloat;
+-    using NR = juce::NormalisableRange<float>;
+-
+-    //--- Stage 1: Fathom ---
+-    layout.add(std::make_unique<AP>("aqua_fathom_mix", "Fathom Mix", NR(0.0f, 1.0f, 0.001f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_fathom_depth", "Fathom Depth", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-    layout.add(std::make_unique<AP>("aqua_fathom_lowGain", "Fathom Low Gain", NR(0.0f, 2.0f, 0.001f), 1.0f));
+-    layout.add(std::make_unique<AP>("aqua_fathom_midGain", "Fathom Mid Gain", NR(0.0f, 2.0f, 0.001f), 1.0f));
+-    layout.add(std::make_unique<AP>("aqua_fathom_highGain", "Fathom High Gain", NR(0.0f, 2.0f, 0.001f), 1.0f));
+-    layout.add(std::make_unique<AP>("aqua_fathom_lowXover", "Fathom Low Xover", NR(60.0f, 800.0f, 1.0f), 200.0f));
+-    layout.add(std::make_unique<AP>("aqua_fathom_highXover", "Fathom Hi Xover", NR(1000.0f, 12000.0f, 1.0f), 3000.0f));
+-    layout.add(std::make_unique<AP>("aqua_fathom_character", "Fathom Character", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-
+-    //--- Stage 2: Drift ---
+-    layout.add(std::make_unique<AP>("aqua_drift_mix", "Drift Mix", NR(0.0f, 1.0f, 0.001f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_drift_voices", "Drift Voices", NR(2.0f, 6.0f, 1.0f), 3.0f));
+-    layout.add(std::make_unique<AP>("aqua_drift_depth", "Drift Depth", NR(0.0f, 40.0f, 0.01f), 8.0f));
+-    layout.add(std::make_unique<AP>("aqua_drift_rate", "Drift Rate", NR(0.001f, 2.0f, 0.001f), 0.07f));
+-    layout.add(std::make_unique<AP>("aqua_drift_diffusion", "Drift Diffusion", NR(0.0f, 1.0f, 0.001f), 0.4f));
+-    layout.add(std::make_unique<AP>("aqua_drift_feedback", "Drift Feedback", NR(0.0f, 0.7f, 0.001f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_drift_stereoSpread", "Drift Spread", NR(0.0f, 1.0f, 0.001f), 0.8f));
+-    layout.add(std::make_unique<AP>("aqua_drift_space", "Drift Space", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-    layout.add(std::make_unique<AP>("aqua_drift_movement", "Drift Movement", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-
+-    //--- Stage 3: Tide ---
+-    layout.add(std::make_unique<AP>("aqua_tide_mix", "Tide Mix", NR(0.0f, 1.0f, 0.001f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_tide_mode", "Tide Mode", NR(0.0f, 2.0f, 1.0f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_tide_rate", "Tide Rate", NR(0.01f, 8.0f, 0.001f), 0.5f));
+-    layout.add(std::make_unique<AP>("aqua_tide_depth", "Tide Depth", NR(0.0f, 1.0f, 0.001f), 0.6f));
+-    layout.add(std::make_unique<AP>("aqua_tide_shape", "Tide Shape", NR(0.0f, 2.0f, 1.0f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_tide_syncEnabled", "Tide Sync Enable", NR(0.0f, 1.0f, 1.0f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_tide_syncDiv", "Tide Sync Div", NR(0.0f, 7.0f, 1.0f), 3.0f));
+-    layout.add(std::make_unique<AP>("aqua_tide_filterFreq", "Tide Filter Freq", NR(100.0f, 8000.0f, 1.0f), 800.0f));
+-    layout.add(std::make_unique<AP>("aqua_tide_filterRes", "Tide Filter Res", NR(0.0f, 0.95f, 0.001f), 0.3f));
+-    layout.add(std::make_unique<AP>("aqua_tide_stereoPhase", "Tide Stereo Phase", NR(0.0f, 180.0f, 0.1f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_tide_movement", "Tide Movement", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-
+-    //--- Stage 4: Reef ---
+-    layout.add(std::make_unique<AP>("aqua_reef_mix", "Reef Mix", NR(0.0f, 1.0f, 0.001f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_reef_size", "Reef Size", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-    layout.add(std::make_unique<AP>("aqua_reef_decay", "Reef Decay", NR(0.0f, 1.0f, 0.001f), 0.4f));
+-    layout.add(std::make_unique<AP>("aqua_reef_damping", "Reef Damping", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-    layout.add(std::make_unique<AP>("aqua_reef_density", "Reef Density", NR(0.0f, 1.0f, 0.001f), 0.6f));
+-    layout.add(std::make_unique<AP>("aqua_reef_predelay", "Reef Predelay", NR(0.0f, 50.0f, 0.1f), 8.0f));
+-    layout.add(std::make_unique<AP>("aqua_reef_width", "Reef Width", NR(0.0f, 1.0f, 0.001f), 0.8f));
+-    layout.add(std::make_unique<AP>("aqua_reef_space", "Reef Space", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-
+-    //--- Stage 5: Surface ---
+-    layout.add(std::make_unique<AP>("aqua_surface_mix", "Surface Mix", NR(0.0f, 1.0f, 0.001f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_surface_freq", "Surface Freq", NR(200.0f, 16000.0f, 1.0f), 4000.0f));
+-    layout.add(std::make_unique<AP>("aqua_surface_gain", "Surface Gain", NR(-18.0f, 18.0f, 0.1f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_surface_resonance", "Surface Resonance", NR(0.0f, 1.0f, 0.001f), 0.3f));
+-    layout.add(std::make_unique<AP>("aqua_surface_mode", "Surface Mode", NR(0.0f, 2.0f, 1.0f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_surface_sweep", "Surface Sweep", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-    layout.add(std::make_unique<AP>("aqua_surface_sweepRange", "Surface Sweep Range", NR(0.0f, 1.0f, 1.0f), 1.0f));
+-    layout.add(std::make_unique<AP>("aqua_surface_coupling", "Surface Coupling", NR(0.0f, 1.0f, 0.001f), 0.0f));
+-
+-    //--- Stage 6: Biolume ---
+-    layout.add(std::make_unique<AP>("aqua_biolume_mix", "Biolume Mix", NR(0.0f, 1.0f, 0.001f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_biolume_threshold", "Biolume Threshold", NR(-60.0f, 0.0f, 0.1f), -18.0f));
+-    layout.add(std::make_unique<AP>("aqua_biolume_drive", "Biolume Drive", NR(0.0f, 1.0f, 0.001f), 0.4f));
+-    layout.add(std::make_unique<AP>("aqua_biolume_hpFreq", "Biolume HP Freq", NR(2000.0f, 12000.0f, 1.0f), 4000.0f));
+-    layout.add(std::make_unique<AP>("aqua_biolume_shimmer", "Biolume Shimmer", NR(0.0f, 1.0f, 0.001f), 0.5f));
+-    layout.add(std::make_unique<AP>("aqua_biolume_satMode", "Biolume Sat Mode", NR(0.0f, 2.0f, 1.0f), 0.0f));
+-    layout.add(std::make_unique<AP>("aqua_biolume_spread", "Biolume Spread", NR(0.0f, 1.0f, 0.001f), 0.6f));
+-    layout.add(std::make_unique<AP>("aqua_biolume_character", "Biolume Character", NR(0.0f, 1.0f, 0.001f), 0.5f));
++    params.fathomMix = values[0];
++    params.fathomDepth = values[1];
++    params.fathomLowGain = values[2];
++    params.fathomMidGain = values[3];
++    params.fathomHighGain = values[4];
++    params.fathomLowXover = values[5];
++    params.fathomHiXover = values[6];
++    params.fathomChar = values[7];
++    params.driftMix = values[8];
++    params.driftVoices = values[9];
++    params.driftDepth = values[10];
++    params.driftRate = values[11];
++    params.driftDiffusion = values[12];
++    params.driftFeedback = values[13];
++    params.driftSpread = values[14];
++    params.driftSpace = values[15];
++    params.driftMovement = values[16];
++    params.tideMix = values[17];
++    params.tideMode = values[18];
++    params.tideRate = values[19];
++    params.tideDepth = values[20];
++    params.tideShape = values[21];
++    params.tideSyncEn = values[22];
++    params.tideSyncDiv = values[23];
++    params.tideFilterFreq = values[24];
++    params.tideFilterRes = values[25];
++    params.tideStereoPhase = values[26];
++    params.tideMovement = values[27];
++    params.reefMix = values[28];
++    params.reefSize = values[29];
++    params.reefDecay = values[30];
++    params.reefDamping = values[31];
++    params.reefDensity = values[32];
++    params.reefPredelay = values[33];
++    params.reefWidth = values[34];
++    params.reefSpace = values[35];
++    params.surfaceMix = values[36];
++    params.surfaceFreq = values[37];
++    params.surfaceGain = values[38];
++    params.surfaceRes = values[39];
++    params.surfaceMode = values[40];
++    params.surfaceSweep = values[41];
++    params.surfaceSweepRng = values[42];
++    params.surfaceCoupling = values[43];
++    params.biolumeMix = values[44];
++    params.biolumeThresh = values[45];
++    params.biolumeDrive = values[46];
++    params.biolumeHpFreq = values[47];
++    params.biolumeShimmer = values[48];
++    params.biolumeSatMode = values[49];
++    params.biolumeSpread = values[50];
++    params.biolumeChar = values[51];
+ }
+ 
+-} // namespace xoceanus
++} // namespace snipsnap::aquarium::detail
+--- upstream/Source/DSP/Effects/MultibandCompressor.h
++++ private/DSP/Effects/MultibandCompressor.h
+@@ -5,7 +5,7 @@
+ #include <algorithm>
+ #include "../FastMath.h"
+ 
+-namespace xoceanus
++namespace snipsnap::aquarium::detail
+ {
+ 
+ //==============================================================================
+@@ -128,13 +128,12 @@
+             {
+                 // Detect level (peak, stereo-linked)
+                 float detect = std::max(std::fabs(bandL[b]), std::fabs(bandR[b]));
+-                float detectDb = (detect > 1e-10f) ? 6.0205999f * fastLog2(detect) : -100.0f;
++                
+ 
+                 // Envelope follower
+-                float target = std::fabs(detectDb);
+-                float coeff = (target > envState[b]) ? attackCoeff : releaseCoeff;
+-                envState[b] = flushDenormal(envState[b] + coeff * (detectDb - envState[b]));
+-                float envDb = envState[b];
++                float coeff = (detect > envState[b]) ? attackCoeff : releaseCoeff;
++                envState[b] = flushDenormal(envState[b] + coeff * (detect - envState[b]));
++                float envDb = gainToDb(envState[b]);
+ 
+                 // Compute gain reduction/boost
+                 float gainDb = 0.0f;
+@@ -225,7 +224,7 @@
+         lpState[0][3] = flushDenormal(lpState[0][3] + lpCoeffHigh * (lpState[0][2] - lpState[0][3]));
+         float midL = lpState[0][3];
+ 
+-        lpState[1][2] = flushDenormal(lpState[1][2] + lpCoeffHigh * (midHighL - lpState[1][2]));
++        lpState[1][2] = flushDenormal(lpState[1][2] + lpCoeffHigh * (midHighR - lpState[1][2]));
+         lpState[1][3] = flushDenormal(lpState[1][3] + lpCoeffHigh * (lpState[1][2] - lpState[1][3]));
+         float midR = lpState[1][3];
+ 
+@@ -265,4 +264,4 @@
+     float mix = 0.0f;
+ };
+ 
+-} // namespace xoceanus
++} // namespace snipsnap::aquarium::detail
+--- upstream/Source/DSP/FastMath.h
++++ private/DSP/FastMath.h
+@@ -4,8 +4,9 @@
+ #include <cmath>
+ #include <cstdint>
+ #include <cstring>
+-
+-namespace xoceanus
++#include <algorithm>
++
++namespace snipsnap::aquarium::detail
+ {
+ 
+ //==============================================================================
+@@ -51,18 +52,7 @@
+ /// Accurate to ~6% across [-10, 10]. Suitable for envelopes and gain curves.
+ inline float fastExp(float x)
+ {
+-    // Clamp to avoid overflow/underflow in the integer conversion
+-    if (x < -87.0f)
+-        return 0.0f;
+-    if (x > 88.0f)
+-        return 3.4028235e+38f;
+-
+-    // Schraudolph's approximation: interpret float bits as integer
+-    // 2^23 / ln(2) = 12102203.16, bias = 127 * 2^23 = 1065353216
+-    int32_t bits = static_cast<int32_t>(12102203.0f * x + 1065353216.0f);
+-    float result;
+-    std::memcpy(&result, &bits, sizeof(result));
+-    return result;
++    return std::exp(std::clamp(x, -87.0f, 88.0f));
+ }
+ 
+ //------------------------------------------------------------------------------
+@@ -203,33 +193,7 @@
+ /// type-safe, no UB).
+ inline float fastPow2(float x)
+ {
+-    if (x < -126.0f)
+-        return 0.0f;
+-    if (x > 127.0f)
+-        return 1.7014118e+38f;
+-
+-    // Split into integer and fractional parts
+-    float xi = static_cast<float>(static_cast<int>(x));
+-    float xf = x - xi;
+-    if (xf < 0.0f)
+-    {
+-        xf += 1.0f;
+-        xi -= 1.0f;
+-    }
+-
+-    // Minimax cubic approximation of 2^xf on [0,1).
+-    // L∞ error ~0.02% (vs ~3.3% for the old quadratic).
+-    // Coefficients fitted to minimize worst-case error over [0,1).
+-    float mantissa = 1.0f + xf * (0.6930971f + xf * (0.2402835f + xf * 0.0520323f));
+-
+-    // Reconstruct float from integer exponent + mantissa bits (memcpy — no UB).
+-    int32_t bits;
+-    std::memcpy(&bits, &mantissa, sizeof(bits));
+-    bits += static_cast<int32_t>(xi) << 23;
+-
+-    float result;
+-    std::memcpy(&result, &bits, sizeof(result));
+-    return result;
++    return std::exp2(std::clamp(x, -126.0f, 127.0f));
+ }
+ 
+ //------------------------------------------------------------------------------
+@@ -255,7 +219,7 @@
+     if (db <= -100.0f)
+         return 0.0f;
+     // 10^(db/20) = e^(db * ln(10)/20) = e^(db * 0.11512925)
+-    return fastExp(db * 0.11512925f);
++    return std::exp2(db / 6.0205999f);
+ }
+ 
+ //------------------------------------------------------------------------------
+@@ -346,4 +310,4 @@
+     return x * (105.0f + 10.0f * x2) / (105.0f + 45.0f * x2 + x2 * x2);
+ }
+ 
+-} // namespace xoceanus
++} // namespace snipsnap::aquarium::detail

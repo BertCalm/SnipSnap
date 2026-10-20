@@ -66,6 +66,7 @@ import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
 import com.snipsnap.synth.TinesVoice
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.TonewheelVoice
 import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.VoxVoice
@@ -262,6 +263,12 @@ class UserPresetsTest {
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is TrioPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("TrioPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = TrioPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete performance promotion")
             } else if (preset is OrphicaPatch) {
                 assertEquals(preset, orphicaFromRosterLine(line), "${preset.name}: complete microsound recipe promotion")
             } else if (preset is StoopPatch) {
@@ -729,7 +736,13 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == ObbligatoPatch.ENGINE) {
+            if (engine == "ONSET") {
+                // ONSET's promotion writes its constructor directly so the
+                // saved renderer version is explicit, independent of a helper.
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("OnsetPatch("))
+                assertTrue("modelVersion = " in UserPresets.rosterLine(patch))
+            } else if (engine == ObbligatoPatch.ENGINE) {
                 val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")
             } else if (engine == com.snipsnap.synth.OverlapPatch.ENGINE) {
@@ -777,7 +790,8 @@ class UserPresetsTest {
                 assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
                 val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
-            } else {
+            } else if (engine != TrioPatch.ENGINE) {
+                // TRIO promotion emits its complete JSON constructor directly.
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
             }

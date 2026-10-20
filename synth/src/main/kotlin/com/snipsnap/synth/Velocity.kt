@@ -189,6 +189,10 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
+        // brightness axis. Its velocity layers keep the saved model and blend
+        // intact and use the existing soften fallback.
+        is OnsetPatch -> Onset.macrosFor(patch.voice)
         is ThumpPatch -> Thump.macrosFor(patch.voice).let { specs ->
             // SNARE's TONE stopped being a brightness macro when the snare
             // became a membrane-plus-wires voice - see [SNARE_TONE_EXCLUDED]
@@ -262,6 +266,7 @@ object Velocity {
         is NacrePatch -> Nacre.macrosFor(patch.voice)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
+        is TrioPatch -> Trio.macrosFor(patch.voice)
     }
 
     /**
@@ -405,6 +410,7 @@ object Velocity {
         is NacrePatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
+        is TrioPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()
@@ -412,7 +418,7 @@ object Velocity {
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
         is MagnetPatch, is PluckPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
         is SnapPatch, is TerraPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
-        is VelvetPatch, is VoxPatch,
+        is VelvetPatch, is VoxPatch, is OnsetPatch,
         -> null
     }
 

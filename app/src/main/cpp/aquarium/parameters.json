@@ -1,0 +1,270 @@
+{
+  "aqua_fathom_mix": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0
+  },
+  "aqua_fathom_depth": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_fathom_lowGain": {
+    "min": 0.0,
+    "max": 2.0,
+    "default": 1.0
+  },
+  "aqua_fathom_midGain": {
+    "min": 0.0,
+    "max": 2.0,
+    "default": 1.0
+  },
+  "aqua_fathom_highGain": {
+    "min": 0.0,
+    "max": 2.0,
+    "default": 1.0
+  },
+  "aqua_fathom_lowXover": {
+    "min": 60.0,
+    "max": 800.0,
+    "default": 200.0
+  },
+  "aqua_fathom_highXover": {
+    "min": 1000.0,
+    "max": 12000.0,
+    "default": 3000.0
+  },
+  "aqua_fathom_character": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_drift_mix": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0
+  },
+  "aqua_drift_voices": {
+    "min": 2.0,
+    "max": 6.0,
+    "default": 3.0,
+    "step": 1
+  },
+  "aqua_drift_depth": {
+    "min": 0.0,
+    "max": 40.0,
+    "default": 8.0
+  },
+  "aqua_drift_rate": {
+    "min": 0.001,
+    "max": 2.0,
+    "default": 0.07
+  },
+  "aqua_drift_diffusion": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.4
+  },
+  "aqua_drift_feedback": {
+    "min": 0.0,
+    "max": 0.7,
+    "default": 0.0
+  },
+  "aqua_drift_stereoSpread": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.8
+  },
+  "aqua_drift_space": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_drift_movement": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_tide_mix": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0
+  },
+  "aqua_tide_mode": {
+    "min": 0.0,
+    "max": 2.0,
+    "default": 0.0,
+    "step": 1
+  },
+  "aqua_tide_rate": {
+    "min": 0.01,
+    "max": 8.0,
+    "default": 0.5
+  },
+  "aqua_tide_depth": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.6
+  },
+  "aqua_tide_shape": {
+    "min": 0.0,
+    "max": 2.0,
+    "default": 0.0,
+    "step": 1
+  },
+  "aqua_tide_syncEnabled": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0,
+    "step": 1
+  },
+  "aqua_tide_syncDiv": {
+    "min": 0.0,
+    "max": 7.0,
+    "default": 3.0,
+    "step": 1
+  },
+  "aqua_tide_filterFreq": {
+    "min": 100.0,
+    "max": 8000.0,
+    "default": 800.0
+  },
+  "aqua_tide_filterRes": {
+    "min": 0.0,
+    "max": 0.95,
+    "default": 0.3
+  },
+  "aqua_tide_stereoPhase": {
+    "min": 0.0,
+    "max": 180.0,
+    "default": 0.0
+  },
+  "aqua_tide_movement": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_reef_mix": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0
+  },
+  "aqua_reef_size": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_reef_decay": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.4
+  },
+  "aqua_reef_damping": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_reef_density": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.6
+  },
+  "aqua_reef_predelay": {
+    "min": 0.0,
+    "max": 50.0,
+    "default": 8.0
+  },
+  "aqua_reef_width": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.8
+  },
+  "aqua_reef_space": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_surface_mix": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0
+  },
+  "aqua_surface_freq": {
+    "min": 200.0,
+    "max": 16000.0,
+    "default": 4000.0
+  },
+  "aqua_surface_gain": {
+    "min": -18.0,
+    "max": 18.0,
+    "default": 0.0
+  },
+  "aqua_surface_resonance": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.3
+  },
+  "aqua_surface_mode": {
+    "min": 0.0,
+    "max": 2.0,
+    "default": 0.0,
+    "step": 1
+  },
+  "aqua_surface_sweep": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_surface_sweepRange": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 1.0,
+    "step": 1
+  },
+  "aqua_surface_coupling": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0
+  },
+  "aqua_biolume_mix": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.0
+  },
+  "aqua_biolume_threshold": {
+    "min": -60.0,
+    "max": 0.0,
+    "default": -18.0
+  },
+  "aqua_biolume_drive": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.4
+  },
+  "aqua_biolume_hpFreq": {
+    "min": 2000.0,
+    "max": 12000.0,
+    "default": 4000.0
+  },
+  "aqua_biolume_shimmer": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  "aqua_biolume_satMode": {
+    "min": 0.0,
+    "max": 2.0,
+    "default": 0.0,
+    "step": 1
+  },
+  "aqua_biolume_spread": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.6
+  },
+  "aqua_biolume_character": {
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  }
+}

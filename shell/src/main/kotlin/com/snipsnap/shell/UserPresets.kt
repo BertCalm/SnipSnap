@@ -15,6 +15,7 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.ObbligatoPatch
@@ -37,6 +38,7 @@ import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.Vent
 import java.io.File
@@ -399,7 +401,9 @@ object UserPresets {
      * arguments before the macros. OVERLAP likewise keeps its explicit model, geometry reference
      * note and velocity through the complete JSON constructor in its factory
      * promotion table. OBBLIGATO retains its note, strike, seed and renderer model
-     * through the complete JSON constructor. Names and embedded JSON are escaped Kotlin string literals.
+     * through the complete JSON constructor. TRIO retains its note, velocity and complete
+     * seeded performance, including the synthesis model. Names and embedded JSON are escaped
+     * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
         if (patch is ChamberPatch) {
@@ -432,10 +436,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OrphicaPatch.fromJsonText($recipe),"
         }
-        if (patch is LacquerPatch) {
+        if (patch is LacquerPatch || patch is TrioPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+            val constructor = if (patch is TrioPatch) "TrioPatch" else "LacquerPatch"
+            return "$constructor.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         if (patch is StoopPatch) {
@@ -458,6 +463,9 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is OnsetPatch) {
+            return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
+        }
         if (patch is OvenPatch) {
             return "OvenPatch(\"$name\", OvenVoice.${patch.voice}, mapOf($macros), midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
         }

@@ -13,6 +13,28 @@ tasks.register<JavaExec>("generateFilamentAudition") {
     args(providers.gradleProperty("filamentOutput").orNull ?: "${rootDir}/testkit/filament-audition")
 }
 
+/** The retained DRAMA development comparisons. */
+tasks.register<JavaExec>("generateTrioAudition") {
+    group = "distribution"
+    description = "Render TRIO solos, alliances, moving relationships and companion entrances with raw/matched audio and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
+}
+
+/** The playable TRIO bank, musical phrases and sixteen-pad MPC acceptance kit. */
+tasks.register<JavaExec>("generateTrioMusicalBank") {
+    group = "distribution"
+    description = "Render TRIO presets, musical demos and the regenerable MPC kit with its listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioMusicalBankGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioMusicalOutput").orNull ?: "${rootDir}/testkit/trio-musical-bank")
+}
+
 /** First finite CHAMBER proof: a shared quartet, mixed boundaries and causal listening comparisons. */
 tasks.register<JavaExec>("generateChamberAudition") {
     group = "distribution"
@@ -352,6 +374,14 @@ dependencies {
     testImplementation(project(":xpm"))
     // The MPC 3 generators write native tracks with embedded groove clips.
     testImplementation(project(":mpc3"))
+}
+
+// The native processor and the JVM recipe reader share one canonical registry.
+// This is data copying only: the JVM module still builds without an Android SDK.
+tasks.processResources {
+    from(rootProject.file("app/src/main/cpp/aquarium/parameters.json")) {
+        into("com/snipsnap/synth/aquarium")
+    }
 }
 
 // Java 17 bytecode so the Android app can consume this module directly.
@@ -1325,6 +1355,18 @@ tasks.register<JavaExec>("generateRelayAudition") {
     args("${rootDir}/testkit/relay-audition")
     if (project.hasProperty("relayQuick")) args("--quick")
     if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
+}
+
+/** ONSET's dry four-voice experiment, preserved accepted sounds and compact MPC acceptance kit. */
+tasks.register<JavaExec>("generateOnsetAudition") {
+    group = "distribution"
+    description = "Render 20 ONSET raw/matched hits, 3 four-voice beats, first-pass kick references, listening page and 16-pad MPC sample kit under testkit/onset-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OnsetAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/onset-audition")
+    providers.gradleProperty("onsetReferenceDir").orNull?.let { args("--reference-dir=$it") }
 }
 
 /** CREASE's reproducible dry prototype matrix and standalone audition assets. */
