@@ -236,7 +236,11 @@ class CausticTest {
 
     @Test
     fun `Alloy bloom zero exactly preserves the preferred model2 in every diagnostic`() {
-        val c = Caustic.Config(model = 2, character = Caustic.Character.ALLOY, seconds = .65)
+        val preferred = Caustic.Config(model = 2, character = Caustic.Character.ALLOY,
+            source = .5, focus = .19, seconds = .65)
+        assertContentEquals(Caustic.inspect(preferred).raw, Caustic.inspect(preferred.copy(model = 3)).raw)
+        // The legacy fixed-gain bypass needs lower excitation to stay inside its raw-state guard.
+        val c = preferred.copy(velocity = .1)
         for (mode in Caustic.Mode.entries) {
             val old = Caustic.inspect(c, mode)
             val bloomZero = Caustic.inspect(c.copy(model = 3), mode)
