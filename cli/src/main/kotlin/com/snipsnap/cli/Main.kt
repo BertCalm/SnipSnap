@@ -76,7 +76,7 @@ object Cli {
         |                        (TRIO: TRES/BERIMBAU/CHARANGO/ENSEMBLE; --midi 48..84
         |                        --velocity 0..1 --tempo 60..200 --beats 1..4; gesture <=2s)
         |                        render factory presets to wav, to hear them
-        |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO: --midi N --velocity 0..1)
+        |                        (ORIGAMI/ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO: --midi N --velocity 0..1)
         |                        (CREASE: ROUND/PINCH/RUBBER; --model 1|2|3;
         |                        six factory positions with saved root and velocity)
         |                        (OBBLIGATO AIR_REED: --seed N sets players;

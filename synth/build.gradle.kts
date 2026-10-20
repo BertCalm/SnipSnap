@@ -331,6 +331,21 @@ tasks.register<JavaExec>("generateVentVoiceAudition") {
     args("${rootDir}/testkit/vent-voice-audition")
 }
 
+/** Three finite ORIGAMI voices, unfolded comparisons and note-relative geometry sweeps. */
+tasks.register<JavaExec>("generateOrigamiAudition") {
+    group = "distribution"
+    description = "Render the ORIGAMI first-listen raw/matched WAVs, recipes, measurements and offline listening page."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OrigamiAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/origami-audition")
+    if (project.hasProperty("origamiQuick")) args("--quick")
+    if (project.hasProperty("origamiEmbedAudio")) args("--embed-audio")
+    if (project.hasProperty("origamiRefreshPage")) args("--refresh-page")
+    project.findProperty("origamiBaseline")?.toString()?.let { args("--comparison-baseline=$it") }
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"

@@ -101,6 +101,7 @@ object Patches {
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
             WickPatch.ENGINE -> WickPatch.fromJsonValue(value)
+            OrigamiPatch.ENGINE -> OrigamiPatch.fromJsonValue(value)
             ChamberPatch.ENGINE -> ChamberPatch.fromJsonValue(value)
             TidalPatch.ENGINE -> TidalPatch.fromJsonValue(value)
             NacrePatch.ENGINE -> NacrePatch.fromJsonValue(value)

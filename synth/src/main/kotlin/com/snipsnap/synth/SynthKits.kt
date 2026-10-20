@@ -863,6 +863,40 @@ object SynthKits {
     }
 
     /**
+     * Eight CRANE notes climb C minor pentatonic, followed by the six model-4 presets and
+     * the accepted FAN/STILL source tones. Every pad is a dry finite tonal note with its
+     * complete editable recipe; TUNE chooses the note without an overriding MIDI field.
+     */
+    fun origami(): List<ArrangedPad?> {
+        fun arranged(patch: OrigamiPatch): ArrangedPad {
+            val midi = patch.midi ?: Origami.midiFor(patch.voice, patch.macros.getValue("TUNE"))
+            require(midi in Origami.MIDI_MIN..Origami.MIDI_MAX) { "ORIGAMI starter note out of range: $midi" }
+            return pad(patch, DrumClass.TONAL).copy(
+                displayName = patch.name,
+                source = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi), "rootOrigin" to "authored"),
+                oneShot = true,
+            )
+        }
+        val crane = OrigamiPresets.forVoice(OrigamiVoice.CRANE).first()
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            val midi = Origami.MIDI_MIN + semitone
+            require(midi in Origami.MIDI_MIN..Origami.MIDI_MAX) { "ORIGAMI starter note out of range: $midi" }
+            crane.copy(
+                name = "Paper ${index + 1}",
+                macros = crane.macros + ("TUNE" to (midi - Origami.MIDI_MIN) / Origami.TUNE_SEMITONES.toFloat()),
+            )
+        }
+        val sources = listOf(OrigamiVoice.FAN, OrigamiVoice.STILL).map { voice ->
+            val reference = OrigamiPresets.forVoice(voice).first()
+            reference.copy(
+                name = if (voice == OrigamiVoice.FAN) "Fan Source" else "Still Source",
+                macros = reference.macros + mapOf("FOLD" to 0f, "MOTION" to 0f),
+            )
+        }
+        return (notes + OrigamiPresets.all() + sources).map(::arranged)
+    }
+
+    /**
      * A dry groove kit: anchored bass and tine rows, then a muted/bright clav pair,
      * hollow organ, whistle, bright fifth chord and octave bell answer. The final two pads hold.
      * Exact note, source registration, answer and chord voicing stay in every recipe.

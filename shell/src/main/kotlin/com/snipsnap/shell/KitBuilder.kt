@@ -69,6 +69,8 @@ class KitBuilderModel private constructor(
      * matching read side). Defaults to empty: a live capture (GRAB/HOLD off
      * the mic ring) never touched a snip file and has nothing honest to tag
      * here.
+     * [knownRootMidi] lets a synthesized note use its authored root instead of
+     * pitch detection, while retaining the kit's normal in-key transposition.
      */
     fun assign(
         slot: Int,
@@ -76,16 +78,19 @@ class KitBuilderModel private constructor(
         drumClass: DrumClass = DrumClass.UNKNOWN,
         displayName: String? = null,
         source: Map<String, String> = emptyMap(),
+        knownRootMidi: Int? = null,
     ): KitPad {
         require(snip.frameCount > 0) { "won't assign an empty snip" }
+        require(knownRootMidi == null || drumClass == DrumClass.TONAL) { "a known root requires tonal audio" }
+        val knownTune = knownRootMidi?.let { tuningForKnownRoot(it) }
         val stem = nextStem(slot, drumClass)
         WavWriter.write(File(kitDir, "$stem.wav"), snip)
 
         // Retune on assign (F5.3): with a key set, a tonal pad lands in it
         // through the tune fields the MPC pad already has - audio
         // untouched, the kick untouched, an unpitched hit never corrected.
-        val tune = kit.key?.takeIf { drumClass == DrumClass.TONAL }?.let { key ->
-            com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale)
+        val tune = knownTune ?: kit.key?.takeIf { drumClass == DrumClass.TONAL }?.let { key ->
+            com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale)?.let { it.tuneCoarse to it.tuneFine }
         }
         val previous = kit.pad(slot)
         val pad = KitPad(
@@ -96,14 +101,28 @@ class KitBuilderModel private constructor(
             drumClass = drumClass,
             colorHex = AutoPlace.colorFor(drumClass),
             muteGroup = AutoPlace.muteGroupFor(drumClass),
-            tuneCoarse = tune?.tuneCoarse ?: 0,
-            tuneFine = tune?.tuneFine ?: 0,
-            source = source,
+            tuneCoarse = tune?.first ?: 0,
+            tuneFine = tune?.second ?: 0,
+            source = if (knownRootMidi == null) source else source + mapOf(
+                "rootMidi" to knownRootMidi.toString(),
+                "rootNote" to com.snipsnap.audio.Scales.nameOf(knownRootMidi),
+                "rootOrigin" to "authored",
+            ),
         )
         kit = kit.copy(pads = kit.pads.filter { it.slot != slot } + pad)
         previous?.let { deleteIfUnreferenced(it) }
         dirty = true
         return pad
+    }
+
+    /** An authored equal-tempered note needs only whole-semitone key placement. */
+    fun tuningForKnownRoot(rootMidi: Int): Pair<Int, Int> {
+        require(rootMidi in 0..127) { "known root must be MIDI 0..127" }
+        val key = kit.key ?: return 0 to 0
+        val target = com.snipsnap.audio.Scales.nearestInKey(
+            com.snipsnap.audio.Scales.midiToHz(rootMidi), key.rootSemitone, key.scale,
+        )
+        return (target - rootMidi) to 0
     }
 
     /**
@@ -222,21 +241,27 @@ class KitBuilderModel private constructor(
 
     /**
      * IN KEY: retune every TONAL pad onto the nearest note of the kit's
-     * key, via the tune fields the MPC pad already has — audio untouched,
-     * unpitched pads and non-tonal classes never "corrected". Returns the
-     * slots that moved. No key set, nothing happens.
+     * key, via the tune fields the MPC pad already has - audio untouched,
+     * unpitched pads and non-tonal classes never "corrected". A validated
+     * authored-root stamp retains exact synth tuning; other audio follows
+     * the pitch detector. Returns the slots that moved. No key set, nothing happens.
      */
     fun retuneTonalPads(): List<Int> {
         val key = kit.key ?: return emptyList()
         val moved = mutableListOf<Int>()
         for (pad in kit.pads) {
             if (pad.drumClass != DrumClass.TONAL) continue
-            val snip = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
-            val tune = com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale) ?: continue
-            if (tune.tuneCoarse == pad.tuneCoarse && tune.tuneFine == pad.tuneFine) continue
+            val authoredRoot = pad.source.takeIf { it["rootOrigin"] == "authored" }
+                ?.get("rootMidi")?.toIntOrNull()?.takeIf { it in 0..127 }
+            val tune = if (authoredRoot != null) tuningForKnownRoot(authoredRoot) else {
+                val snip = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+                val detected = com.snipsnap.audio.Tuner.inKey(snip, key.rootSemitone, key.scale) ?: continue
+                detected.tuneCoarse to detected.tuneFine
+            }
+            if (tune.first == pad.tuneCoarse && tune.second == pad.tuneFine) continue
             kit = kit.copy(
                 pads = kit.pads.map {
-                    if (it.slot == pad.slot) it.copy(tuneCoarse = tune.tuneCoarse, tuneFine = tune.tuneFine) else it
+                    if (it.slot == pad.slot) it.copy(tuneCoarse = tune.first, tuneFine = tune.second) else it
                 },
             )
             moved += pad.slot
