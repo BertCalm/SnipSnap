@@ -1420,6 +1420,28 @@ tasks.register<JavaExec>("generateOpenSkyAudition") {
     args("${rootDir}/testkit/opensky-audition")
 }
 
+/** A finite scanned-chain experiment: frozen versus moving physics, with saved source shapes. */
+tasks.register<JavaExec>("generateScannedChainAudition") {
+    group = "distribution"
+    description = "Render the experimental scanned-chain frozen/moving comparisons, source previews, manifest and listening page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScannedChainAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/scanned-chain-audition")
+}
+
+/** Isolated controls on the unchanged scanned-chain listening core. */
+tasks.register<JavaExec>("generateScannedChainSweeps") {
+    group = "distribution"
+    description = "Render the scanned-chain parameter sweeps, shared-level comparisons and auditable sweep manifest."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScannedChainSweepGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/scanned-chain-audition")
+}
+
 /** Production model 3 materials at three native velocities, with matched comparisons. */
 tasks.register<JavaExec>("generateShoalMaterialAudition") {
     group = "distribution"

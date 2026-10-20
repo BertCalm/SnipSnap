@@ -71,6 +71,8 @@ import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RelayVoice
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.ScannedChain
+import com.snipsnap.synth.ScannedChainPatch
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Spool
@@ -128,7 +130,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -265,6 +267,7 @@ object SynthCommand {
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
                 BellowsPatch.ENGINE -> Bellows.midiRange(BellowsVoice.valueOf(voice))
                 MurmurPatch.ENGINE -> Murmur.MIN_MIDI..Murmur.MAX_MIDI
+                ScannedChainPatch.ENGINE -> ScannedChain.MIDI_MIN..ScannedChain.MIDI_MAX
                 ObbligatoPatch.ENGINE -> Obbligato.MIDI_MIN..Obbligato.MIDI_MAX
                 OrphicaPatch.ENGINE -> Orphica.MIDI_MIN..Orphica.MIDI_MAX
                 OspreyPatch.ENGINE -> Osprey.MIDI_MIN..Osprey.MIDI_MAX
@@ -286,7 +289,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TRIO and OHM, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TRIO and OHM, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -415,6 +418,7 @@ object SynthCommand {
                     macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to 0f),
                 )
                 is MurmurPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is ScannedChainPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ObbligatoPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OrphicaPatch -> patch.copy(
                     config = patch.config.copy(
