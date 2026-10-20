@@ -61,6 +61,11 @@ roughly six-second loops at three FLOW settings, without changing the finite pre
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
 
+**Scanned Chain.** [`SCANNED_CHAIN.md`](SCANNED_CHAIN.md) describes the editable
+render-to-pad voice, three presets, factory/drawn/sample shapes and complete
+patch recall. The earlier [listening experiment](SCANNED_CHAIN_EXPERIMENT.md)
+and its published comparisons remain available separately.
+
 **Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
 first-listen prototype, complete room recipes, passive feedback model and
 playback limits. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)

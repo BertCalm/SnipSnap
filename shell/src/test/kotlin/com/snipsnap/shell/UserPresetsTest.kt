@@ -35,6 +35,7 @@ import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.ScannedChainPatch
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.VentPatch
@@ -278,6 +279,11 @@ class UserPresetsTest {
             } else if (preset is OpenSkyPatch) {
                 val promoted = openSkyFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete source, articulation and render-state promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is ScannedChainPatch) {
+                val promoted = scannedChainFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete shape, physical settings and render-state promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is VentPatch) {
@@ -752,6 +758,17 @@ class UserPresetsTest {
         return OpenSkyPatch.fromJsonText(recipe)
     }
 
+    private fun scannedChainFromRosterLine(line: String): ScannedChainPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("ScannedChainPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return ScannedChainPatch.fromJsonText(recipe)
+    }
+
     private fun origamiFromRosterLine(line: String): OrigamiPatch {
         val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
         assertEquals("fromJsonText", call.name)
@@ -798,6 +815,10 @@ class UserPresetsTest {
             } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == ScannedChainPatch.ENGINE) {
+                val decoder = ScannedChainPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(ScannedChainPatch::class.java, decoder.returnType,
+                    "SCANNED_CHAIN promotion names its public complete-JSON constructor")
             } else if (engine == ShoalPatch.ENGINE) {
                 // SHOAL promotes the complete constructor directly: passing a held harmonic
                 // recipe through the finite WOOD helper first would reject it or lose metadata.
