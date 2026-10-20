@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Dry, finite OHM family encounters and their replayable listening evidence. */
+tasks.register<JavaExec>("generateOhmAudition") {
+    group = "distribution"
+    description = "Render OHM solo/argument/communion comparisons, control trials and the audition page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/ohm-audition")
+}
+
 /** The retained DRAMA development comparisons. */
 tasks.register<JavaExec>("generateTrioAudition") {
     group = "distribution"
