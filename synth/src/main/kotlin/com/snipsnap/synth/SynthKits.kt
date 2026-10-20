@@ -12,6 +12,17 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /** Sixteen dry, finite prototype encounters; long samples play once despite LOOP classification. */
+    fun tidal(): List<ArrangedPad?> {
+        val notes = intArrayOf(48, 51, 53, 55, 58)
+        return TidalVoice.entries.flatMap { voice ->
+            notes.map { midi ->
+                val patch = TidalPatch("${voice.name} $midi", voice, Tidal.defaults(voice), midi = midi)
+                pad(patch, Tidal.drumClassFor(voice, patch.macros))
+            } + TidalPresets.forVoice(voice).map { patch -> pad(patch, Tidal.drumClassFor(voice, patch.macros)) }
+        }
+    }
+
     /** The finite TRIO conversations, in the same order as its factory preset bank. */
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 

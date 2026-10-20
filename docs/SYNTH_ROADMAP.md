@@ -6,6 +6,15 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
+**Tidal first-listen prototype (2026-10-20).** PAIR and STREAM adapt a softened
+restricted two-center encounter into two original harmonic populations, persistent
+cohorts, surviving cores, and extended ringing strands. The finite prototype has
+replayable recipes, a dry listening matrix with mechanism comparisons, and a
+prototype kit outside the factory roster and phone picker. HOLD remains zero;
+reconstruction, the other voices, and factory expansion follow listening review.
+See [TIDAL.md](TIDAL.md) for model limits, reproducibility, and the listening gate.
+The owner's listening verdict remains pending.
+
 **Chamber first-listen prototype (2026-10-18).** HYBRID and AQUARIUM place a
 simultaneously struck membrane, bar, cowbell and triangle in a rectangular room
 with ten independent material regions. Physical early paths, surface excitation,
