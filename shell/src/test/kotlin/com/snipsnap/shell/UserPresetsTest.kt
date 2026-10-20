@@ -35,6 +35,9 @@ import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmPatch
+import com.snipsnap.synth.OhmVoice
 import com.snipsnap.synth.ScannedChainPatch
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.ObbligatoPatch
@@ -111,6 +114,32 @@ class UserPresetsTest {
     /** A kick the player wrecked: SCRAMBLE's own odd floats, nothing a table would round. */
     private val wrecked = ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK) + Thump.scramble(ThumpVoice.KICK, Random(7)))
     private val snare = ThumpPatch("MY KICK", ThumpVoice.SNARE, Thump.defaults(ThumpVoice.SNARE))
+
+    @Test
+    fun `saved OHM encounters keep model seed and gesture on the shelf and in promotion`() {
+        val root = shelf()
+        try {
+            for (model in listOf(1, 2)) {
+                val source = OhmPatch("MY FAMILY", linkedMapOf("TOUCH" to .27f, "COMMUNE" to .73f),
+                    midi = 57, velocity = .35f, seed = -905, gesture = OhmGesture.GATHER, model = model)
+                UserPresets.save(root, source, nowMillis = model.toLong())
+                val back = UserPresets.read(root).single()
+                assertEquals(source, back.patch, "a restart retains the full encounter")
+                val line = UserPresets.rosterLine(back.patch)
+                assertEquals("p(OhmVoice.STRING, \"MY FAMILY\", \"TOUCH\" to 0.27f, \"COMMUNE\" to 0.73f)" +
+                    ".copy(midi = 57, velocity = 0.35f, seed = -905, gesture = OhmGesture.GATHER, model = $model),", line)
+                assertEquals("OhmPresets.kt\n  $line\n", UserPresets.renderAll(listOf(back)))
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `OHM factory names reserve only their own voice shelf`() {
+        assertEquals(UserPresets.Check.Factory("GATHER"), UserPresets.check(" gather ", "OHM", "STRING", emptyList()))
+        assertEquals(UserPresets.Check.Fresh("MY FAMILY"), UserPresets.check("my family", "OHM", "STRING", emptyList()))
+    }
 
     @Test
     fun `a saved preset survives a restart and re-renders the same bytes`() {
@@ -227,6 +256,7 @@ class UserPresetsTest {
                 "BELLOWS" to BellowsVoice.entries.map { it.name },
                 "MURMUR" to MurmurVoice.entries.map { it.name },
                 "OSPREY" to OspreyVoice.entries.map { it.name },
+                "OHM" to OhmVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {

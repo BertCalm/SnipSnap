@@ -307,6 +307,10 @@ testkit/shoal-playable-audition/
 # Experimental single-source brass validation outputs.
 testkit/brass-grow-prototype/
 
+# Reproducible OHM listening assets; sources and recipes live under synth/.
+testkit/ohm-audition/
+testkit/ohm-audition-v1/
+
 # CHAMBER finite first-listen WAVs, diagnostics, page and prototype export regenerate locally.
 testkit/chamber-audition/
 testkit/SnipSnap Chamber Prototype Kit/

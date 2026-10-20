@@ -76,9 +76,9 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 52 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
+The SYNTH source picker has 53 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
 VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO and ORIGAMI.
+CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI and OHM.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
@@ -140,6 +140,12 @@ OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
 owner's positive feedback; final listening and phone/MPC handoff remain open for
 its fifteen presets and sixteen-pad starter.
+OHM adds STRING with five auditioned model-2 family encounters: Solo, Argument,
+Communion, Quiet Company and Gather. NOTE, VELOCITY and STEADY/GATHER sit beside
+TOUCH, BODY, LENGTH, MEDDLING and COMMUNE. Its complete recipe survives navigation,
+editing, saving and pad placement, including legacy model-1 recipes. These are
+finite notes; SPREAD references the saved native note. The existing audition
+preserves the original renderer and the accepted control-range comparisons.
 PRISM adds six additive voices, thirty-six factory presets and a dry pitched
 starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
 includes the full bank and the original/revised GLASS comparisons.

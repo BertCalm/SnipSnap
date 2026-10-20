@@ -268,6 +268,7 @@ object Velocity {
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
+        is OhmPatch -> Ohm.MACROS
     }
 
     /**
@@ -413,6 +414,7 @@ object Velocity {
         is OvenPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
+        is OhmPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()
