@@ -657,6 +657,17 @@ tasks.register<JavaExec>("generateWideAudition") {
     args(project.findProperty("wideOutput")?.toString() ?: "${rootDir}/testkit/wide-audition")
 }
 
+/** RUSH's reproducible compound-board listening proof, including level response. */
+tasks.register<JavaExec>("generateRushAudition") {
+    group = "distribution"
+    description = "Render RUSH original/intensity, cumulative-stage and input-level stereo/mono comparisons."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RushAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("rushOutput")?.toString() ?: "${rootDir}/testkit/rush-audition")
+}
+
 tasks.register<JavaExec>("generateStringMachineAudition") {
     group = "distribution"
     description = "Render the four string-machine presets' gate (as landed, bare voice, control), manifest and listening page under testkit/stringmachine-audition/."

@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -27,6 +28,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.synth.BoardType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -126,16 +128,16 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         }
     }
 
-    private fun wideAmount() = compose.onNode(
-        hasContentDescription("AMT") and hasAnyAncestor(hasContentDescription("WIDE")),
+    private fun boardAmount(type: BoardType = BoardType.WIDE) = compose.onNode(
+        hasContentDescription("AMT") and hasAnyAncestor(hasContentDescription(type.name)),
         useUnmergedTree = true,
     )
 
-    private fun amountText(): String = wideAmount().fetchSemanticsNode().config
+    private fun amountText(type: BoardType = BoardType.WIDE): String = boardAmount(type).fetchSemanticsNode().config
         .getOrNull(SemanticsProperties.StateDescription) ?: error("WIDE AMT has no state description")
 
-    private fun dialAmount(amount: Float) {
-        wideAmount().performSemanticsAction(SemanticsActions.SetProgress) { change ->
+    private fun dialAmount(amount: Float, type: BoardType = BoardType.WIDE) {
+        boardAmount(type).performSemanticsAction(SemanticsActions.SetProgress) { change ->
             assertTrue("WIDE AMT refused $amount", change(amount))
         }
         pump()
@@ -153,16 +155,16 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
     private fun savedPad(entry: KitShelf.Entry, slot: Int = 1): KitPad =
         KitStore.load(entry.dir).pad(slot) ?: error("saved pad $slot disappeared")
 
-    private fun waitForKept(amount: Float) {
+    private fun waitForKept(amount: Float, type: BoardType = BoardType.WIDE) {
         waitFor("KEEP to report its saved amount", timeoutMillis = 60_000) {
-            BoardSheet.read(lastUpdatedKit?.pad(1)?.recipe)?.amount == amount
+            BoardSheet.read(lastUpdatedKit?.pad(1)?.recipe) == BoardSheet.Applied(amount, type)
         }
-        waitForText("WIDE kept at ${(amount * 100).toInt()}%")
+        waitForText("${type.name} kept at ${(amount * 100).toInt()}%")
     }
 
-    private fun waitForUndo() {
+    private fun waitForUndo(type: BoardType = BoardType.WIDE) {
         waitFor("WIDE's undo availability check", timeoutMillis = 60_000) {
-            compose.onNodeWithContentDescription("WIDE", useUnmergedTree = true)
+            compose.onNodeWithContentDescription(type.name, useUnmergedTree = true)
                 .fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription) == "Undo available"
         }
     }
@@ -233,4 +235,65 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         assertArrayEquals(keptAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
         assertEquals("35%", amountText())
     }
+
+    @Test
+    fun rush_selection_is_staged_and_switch_undo_remove_keep_the_shared_original() {
+        val entry = kit(listOf(1, 2))
+        val original = entry.kit.pad(1)!!
+        val originalAudio = File(entry.dir, original.sampleFile).readBytes()
+        show(entry)
+        dialAmount(.35f)
+        activate("KEEP")
+        waitForKept(.35f)
+        val wide = savedPad(entry)
+        val wideAudio = File(entry.dir, wide.sampleFile).readBytes()
+        val beforeSelection = files(entry.dir)
+
+        activate("Choose RUSH")
+        waitForText("RUSH · SWELL & MOTION")
+        dialAmount(.55f, BoardType.RUSH)
+
+        assertEquals("55%", amountText(BoardType.RUSH))
+        assertEquals("choosing another board must remain staged", beforeSelection, files(entry.dir))
+        assertEquals(wide, savedPad(entry))
+        waitForText("WIDE is active. KEEP replaces it from the original.")
+        compose.onNodeWithContentDescription("REMOVE", useUnmergedTree = true).assertIsNotEnabled()
+
+        activate("KEEP")
+        waitForKept(.55f, BoardType.RUSH)
+        val rush = savedPad(entry)
+        assertEquals(BoardType.RUSH, BoardSheet.read(rush.recipe)!!.type)
+        assertNotEquals(wide.sampleFile, rush.sampleFile)
+        activate("${PadBanks.tag(2)} ►")
+        waitForText("PAD ${PadBanks.tag(2)}")
+        assertEquals("70%", amountText())
+        activate("◄ ${PadBanks.tag(1)}")
+        waitForText("PAD ${PadBanks.tag(1)}")
+        waitForText("RUSH · SWELL & MOTION")
+        assertEquals("55%", amountText(BoardType.RUSH))
+        assertEquals(rush, savedPad(entry))
+        waitForUndo(BoardType.RUSH)
+        activate("UNDO")
+        waitForKept(.35f)
+        assertEquals(wide, savedPad(entry))
+        assertArrayEquals(wideAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
+        assertEquals("35%", amountText())
+
+        activate("Choose RUSH")
+        dialAmount(.55f, BoardType.RUSH)
+        activate("KEEP")
+        waitForKept(.55f, BoardType.RUSH)
+        activate("REMOVE")
+        waitFor("RUSH REMOVE to restore the opaque original recipe", timeoutMillis = 60_000) {
+            lastUpdatedKit?.pad(1) == original
+        }
+        assertEquals(original, savedPad(entry))
+        assertArrayEquals(originalAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
+        waitForUndo()
+        activate("UNDO")
+        waitForKept(.55f, BoardType.RUSH)
+        assertEquals(rush, savedPad(entry))
+        assertEquals("55%", amountText(BoardType.RUSH))
+    }
+
 }
