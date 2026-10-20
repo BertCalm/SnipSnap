@@ -120,7 +120,7 @@ object FilamentAuditionGenerator {
                 metrics["classifierGateApplies"] = classifierGateApplies
                 metrics["classifierGatePolicy"] = when {
                     d.loop -> "Held sustain is analyzed over 1.2 seconds of repeated periodic audio; classification is not a recurrence proof and does not gate a short held buffer."
-                    classifierGateApplies -> "Standard finite defaults, presets, note/velocity clips and new musical examples must avoid percussion classes in the first 1.2 seconds."
+                    classifierGateApplies -> "Finite onsets are screened against KICK, SNARE, CLAP, HAT_OPEN, HAT_CLOSED and TOM in the first 1.2 seconds. The classifier's generic PERC fallback is allowed; pitch metrics are reported separately."
                     case.kind == "mechanism" -> "Exempt diagnostic mechanism fixture; classification remains reported."
                     case.group == "collect" -> "Exempt collector-isolation fixture; classification remains reported."
                     case.kind == "limit" -> "Exempt structural-limit fixture, including intentional silence; classification remains reported."
@@ -371,7 +371,9 @@ object FilamentAuditionGenerator {
             "allocationNote" to "Budgets partition launch power at every branch and bend. Delayed coherent output energies need not add; THROUGH, escaped-input and halo SPILL are separately available in selected clips.",
             "comparisonNote" to "The character pairs share explicit controls, root, velocity and seed but select different saved renderer models; source equality is not required across versions. All original fixed-excitation guards remain active. Gain-matched spectral distance uses normalized 12-band power from the same 8192-frame window starting at 0.15 seconds inside a shared first-1.2-second analysis buffer. Early/body/late windows report source and mix power centroids and RMS without perceptual acceptance thresholds.",
             "collectorBalanceNote" to "Weighted THROUGH/SPILL RMS applies the collector coefficients to each stem. The independent power share excludes coherent cross terms and is a balance comparison, not an additive accounting of mixed output energy.",
-            "classifierNote" to "Full-file classification can read LOOP because finite files exceed 1.5 seconds. Standard finite defaults, presets, note/velocity clips and all new musical character/context/sweep examples screen the first 1.2 seconds against percussion families. Original geometry, collector, diagnostic and extreme-sweep fixtures retain explicit exemptions. Held sustain classification uses 1.2 seconds of repeated periodic audio solely for analysis; independent preceding/current state and PCM measurements remain the recurrence evidence.",
+            "classifierNote" to "Full-file classification can read LOOP because finite files exceed 1.5 seconds. Standard finite defaults, presets, note/velocity clips and new musical examples screen the first 1.2 seconds against KICK, SNARE, CLAP, HAT_OPEN, HAT_CLOSED and TOM. Generic PERC is an allowed fallback for brighter material; classification is not pitch evidence. Original geometry, collector, diagnostic and extreme-sweep fixtures retain explicit exemptions. Held sustain classification uses repeated periodic audio solely for analysis; independent preceding/current state and PCM measurements remain the recurrence evidence.",
+            "classifierScreenedFamilies" to TangleMeasure.drumClasses.map { it.name },
+            "classifierAllowsGenericPerc" to true,
             "runtime" to linkedMapOf(
                 "javaVersion" to System.getProperty("java.version"), "vm" to System.getProperty("java.vm.name"),
                 "os" to System.getProperty("os.name"), "architecture" to System.getProperty("os.arch"),

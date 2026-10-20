@@ -63,6 +63,31 @@ Model 1 keeps the shorter original period and its original audio exactly.
 current twelve recipes use model 2. The audition's character comparisons
 keep the note, velocity, controls and configuration fixed across models.
 
+The expanded audition has 125 successful clips: the original 88 plus 37
+comparison, recipe, context, sweep and mechanism clips. All 366 original WAVs
+retain their exact SHA256 fingerprints. Thirty-five new ordinary saved patches
+also decode and reproduce their native samples exactly. Twelve revised presets
+range from a focused held THREAD to a halo-led held CURL; the nine total held
+clips retain independently rendered PCM evidence.
+
+In the shared-note character comparisons, the revised mixed-output spectral
+centroids develop as follows. The analysis windows are early (0.04–0.18 s),
+body (0.20–0.55 s) and late (0.75–1.15 s), at MIDI 48 and velocity 0.7.
+
+| Voice | Early | Body | Late |
+| --- | ---: | ---: | ---: |
+| THREAD | 246 Hz | 179 Hz | 149 Hz |
+| PULSE | 280 Hz | 210 Hz | 155 Hz |
+| CURL | 181 Hz | 342 Hz | 511 Hz |
+
+These measurements support the different shedding and blooming gestures;
+they do not replace listening. The corresponding requested-root errors stay
+within three cents. Seventy finite examples pass the screen for kick, snare,
+clap, hat and tom classifications. Generic PERC is the classifier's permitted
+fallback for some brighter harmonic material; pitch and confidence are measured
+separately. Native output keeps its fixed gain, so use Matched to compare tone
+across models without their native loudness difference.
+
 ## Model and evidence
 
 Launch amplitudes have a normalized squared sum. At each site, retention,
